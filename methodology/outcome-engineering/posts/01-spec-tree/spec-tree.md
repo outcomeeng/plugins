@@ -1,12 +1,16 @@
-# The Spec Tree: Making Value Explicit, Spec–Test Drift Visible, and Agent Context Deterministic
+# Growing a Spec Tree for Deterministic Context
 
-"How things are done around here" is culture — constraints earned over the lifetime of a team, rarely written down because humans reconstruct them from proximity, conversation, and memory.
+"How things are done around here" is culture — norms, shortcuts and constraints earned over the lifetime of a team. They are sometimes written down but rarely up-to-date because humans construct and maintain them through conversation and practice. AI coding agents are missing out on all of this. They don't internalize the expensive lessons acquired during outages and lack tacit knowledge.
 
-Agents can't. They miss debates, they don't internalize expensive lessons learned during outages, and they carry no tacit rationale forward. When context is missing, an agent fills in the gaps — confidently, often wrong. Three failure modes compound each other once a codebase outgrows a single context window.
+When context is missing, agents fills in the gaps — always confidently, often wrong. In my interactions with Claude Code and Codex, I keep observing three distinct failure modes, which compound each other once a codebase outgrows a single context window.
 
-### Value drift
+The first is the drift of value, where value refers to the whole raison d'être for the project. This phenomenon is observed by any euphoric vibe coder as they keep tweaking their product and suddenly observe that things that seemed to have been working suddenly very clearly don't work anymore. Spec-driven development (SDD), i.e., supporting the development of software by some form of specification, has been touted as the antidote to this. Böckeler [distinguishes three variants of SDD](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html)
 
-Spec-driven development, i.e., the development of software driven by some form of specification, has been growing in popularity since 2024. Böckeler [categorizes its variants](https://martinfowler.com/articles/exploring-gen-ai/sdd-3-tools.html) as *spec-first* (the spec generates tasks and is discarded), *spec-anchored* (the spec stays in the repo as living documentation), and *spec-as-source* (the spec is the source of truth that code is derived from). Tools like [Spec Kit](https://github.com/github/spec-kit), [Kiro](https://kiro.dev/), and [OpenSpec](https://openspec.dev/) all address variants of the same problem: how to get agents to respect constraints.
+- *Spec-first:* the spec generates tasks and is discarded,
+- *spec-anchored:* the spec stays in the repo as living documentation, and
+- *spec-as-source:* (the spec is the source of truth that code is derived from).
+
+Tools like [Spec Kit](https://github.com/github/spec-kit), [Kiro](https://kiro.dev/), and [OpenSpec](https://openspec.dev/) all address variants of the same problem: how to get agents to respect constraints.
 
 But even when specs are kept, the progress signal remains task completion. When the spec captures only *what to build*, the product is defined by "what we did" rather than "what it is." Dead code accumulates because nobody can tie it back to a purpose. Change requests from product look arbitrary because the value function isn't in the artifact being changed. If the only persistent artifact is output, output becomes permanent.
 
@@ -89,7 +93,13 @@ spx/
 
 Numeric prefixes encode dependency order within each directory. A decision at a lower index constrains every sibling with a higher index — and that sibling's descendants. All three decisions share index 15: they are independent of each other but constrain everything at index 21 and above. The test harness at index 21 is an **enabler node** (`.enabler` suffix): infrastructure that higher-index nodes depend on.
 
-Prefixes use gaps (15, 21, 32…) so new nodes can slot in without renumbering — the same [fractional indexing](https://www.figma.com/blog/realtime-editing-of-ordered-sequences/) scheme Figma uses for layer ordering.
+Prefixes use a sparse integer distribution to predictably space nodes and absorb future insertions. By establishing a sufficiently large coordinate space upfront, new nodes cleanly slot into the existing integer gaps. In my experience with projects up to 100k lines of code, two-digit prefixes are sufficient. To distribute an expected maximum of $N$ nodes evenly across a two-digit range from $i_{\textrm{min}} = 10$ to $i_{\textrm{max}} = 99$, the index $i_k$ for the $k$-th item is calculated as
+
+$$i_k = i_{\textrm{min}} + \left\lfloor k \times \frac{i_{\textrm{max}}-i_{\textrm{min}}}{N+1} \right\rfloor$$
+
+For $N=7$, this leads to a sequence $i_k = 21, 32, 43, 54, 65, 76, 87$, where
+
+$$i_k = 10 +  k \times 11.$$
 
 The product grows. Enablers build on each other; outcomes deliver customer-facing value at higher indices:
 
@@ -103,6 +113,10 @@ spx/
 │   ├── test-harness.md
 │   └── tests/
 │       └── test-harness.unit.test.ts
+├── 22-e2e-harness.enabler/
+│   ├── e2e-harness.md
+│   └── tests/
+│       └── e2e-harness.e2e.test.ts
 ├── 32-parse-directory-tree.enabler/
 │   ├── parse-directory-tree.md
 │   ├── 21-spx-lock-state.enabler/
@@ -159,6 +173,8 @@ spx/
 **Enabler nodes** (`.enabler` suffix) exist to serve other nodes — infrastructure that would be removed if all its dependents were retired. **Outcome nodes** (`.outcome` suffix) each express one hypothesis and the testable assertions that define its output. Position in the tree implies scope: `21-test-harness.enabler/` at the root level serves all nodes in the product; `21-parent-child-links.enabler/` nested inside `54-spx-tree-interpretation.outcome/` serves only its sibling nodes and their descendants. The spec file inside each node is `{slug}.md` — no type suffix, no numeric prefix. Enabler specs start with `## Enables`; outcome specs with `## Outcome`.
 
 When a behavior spans multiple nodes, the assertion lives in the lowest common ancestor. The ancestor's spec captures cross-cutting behaviors; child nodes handle their local concerns. If an ancestor accumulates too many cross-cutting assertions, that is a signal to extract a shared enabler at a lower index.
+
+Fractional indexing can be used as an escape hatch to avoid cascading renumbering in the rare event a gap is fully exhausted. To insert a new node `integration-harness` between `21-test-harness.enabler` and `22-e2e-harness.enabler`, one would use `20.5-integration-harness`
 
 Adding a new outcome — say, formatting `spx` output as JSON or as a table — means inserting a child node under `76-cli-integration.outcome/`:
 
