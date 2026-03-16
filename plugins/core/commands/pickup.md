@@ -204,11 +204,39 @@ Format the handoff in a clear, readable way:
 
 ### 4. Offer Next Steps
 
-After presenting the handoff, use the `AskUserQuestion` to ask the user:
+After presenting the handoff, propose 2-3 concrete next steps using `AskUserQuestion`. Each proposal **must name the specific skills** the agent will invoke to carry it out.
 
-- "Would you like me to read any files mentioned in the handoff?"
-- "Should I continue with the work remaining?"
-- "Do you want to modify the plan?"
+**Format each option as:** `[action summary] → [/skill-1, /skill-2, ...]`
+
+Example `AskUserQuestion` call:
+
+```json
+{
+  "questions": [
+    {
+      "question": "How would you like to proceed?",
+      "header": "Next steps",
+      "multiSelect": false,
+      "options": [
+        {
+          "label": "Continue remaining work",
+          "description": "Implement the status rollup feature → /understanding, /contextualizing, /coding-typescript"
+        },
+        {
+          "label": "Review what changed",
+          "description": "Read files from the handoff and assess current state → /contextualizing"
+        },
+        {
+          "label": "Adjust the plan",
+          "description": "Discuss changes to scope or approach before starting work"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Why skills must be named:** The user needs to know what the agent will do and how, not just vaguely "continue work." Naming skills makes the proposal actionable and reviewable.
 
 ---
 
