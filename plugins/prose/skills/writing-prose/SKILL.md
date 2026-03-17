@@ -11,7 +11,7 @@ Write prose that reads as varied, specific, and human. These are the craft princ
 
 <quick_start>
 
-Use common verbs. Vary sentence openings. One rhetorical move per paragraph. Say it once well. Length matches substance.
+Use common verbs. Vary sentence openings. One rhetorical move per paragraph. Say it once well. Length matches substance. Zero tolerance for patterns in `references/patterns-to-avoid.md` -- never use any of them, not even once.
 
 </quick_start>
 
@@ -47,7 +47,7 @@ Participial phrases at sentence endings should add new information. "The bridge 
 
 "From X to Y" implies a fully continuous spectrum. Use it only when there's a meaningful continuum with a middle that matters to the point. When listing two or more loosely related things, just list them.
 
-Build toward your point directly. Negating alternatives before stating what something is manufactures tension the content doesn't earn.
+Build toward your point directly. Never negate before stating what something is: "Not unkind -- direct" and "It's not X -- it's Y" are machine-writing tells. State what the thing is. If asserting significance ("There's a difference, and it matters"), cut it -- the content should demonstrate the difference without the author vouching for it.
 
 Every sentence needs a subject and a verb. After making a claim, resist illustrating it with a trail of verbless fragments. If examples are worth giving, put them in complete sentences.
 
@@ -126,5 +126,6 @@ Prose is good when:
 - Metaphors appear once and move on
 - The piece ends without announcing its ending
 - Length matches the amount of new information
+- Zero instances of any pattern from `references/patterns-to-avoid.md` -- no negative parallelism, no authenticity adverbs, no asserting significance, none of them
 
 </success_criteria>

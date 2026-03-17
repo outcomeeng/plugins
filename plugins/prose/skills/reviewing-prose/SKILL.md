@@ -11,7 +11,7 @@ Detect and fix formulaic patterns that signal machine-generated or lazy writing.
 
 <quick_start>
 
-**Core rule**: Any pattern used once might be fine. The problem is when multiple appear together or when one repeats.
+**Core rule**: Zero tolerance. Every pattern in the reference catalog is a violation. Do not excuse any instance as "single use" or "it lands here." If a sentence triggers a pattern, flag it. If a sentence triggers two patterns simultaneously, it is the highest priority flag.
 
 **Before reviewing**, read `${SKILL_DIR}/references/patterns-to-avoid.md` for the complete catalog of 30+ anti-patterns across 6 categories.
 
@@ -52,7 +52,8 @@ Review is complete when:
 - Every flagged violation names the specific pattern and category
 - Every flag includes a concrete rewrite, not just a label
 - The summary gives a count, identifies the most frequent category, and assesses overall quality
-- No false positives -- single isolated uses of a pattern are noted but not flagged as violations
+- Zero tolerance -- every pattern match is flagged as a violation, never excused as "single use" or "it works here"
+- Co-occurring patterns in a single sentence are the highest-priority flags
 
 </success_criteria>
 
