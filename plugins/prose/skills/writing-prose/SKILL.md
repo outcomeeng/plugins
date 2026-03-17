@@ -47,6 +47,8 @@ Participial phrases at sentence endings should add new information. "The bridge 
 
 "From X to Y" implies a fully continuous spectrum. Use it only when there's a meaningful continuum with a middle that matters to the point. When listing two or more loosely related things, just list them.
 
+Build toward your point directly. Negating alternatives before stating what something is manufactures tension the content doesn't earn.
+
 Every sentence needs a subject and a verb. After making a claim, resist illustrating it with a trail of verbless fragments. If examples are worth giving, put them in complete sentences.
 
 </sentence_structure>
