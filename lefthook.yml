@@ -5,6 +5,10 @@ pre-commit:
       run: python3 scripts/fix-xml-spacing.py {staged_files}
       stage_fixed: true
       priority: 0
+    validate-skill-frontmatter:
+      glob: "**/SKILL.md"
+      run: python3 scripts/validate-skill-frontmatter.py {staged_files}
+      priority: 5
     validate-marketplace:
       glob: "*.json"
       run: claude plugin validate .
