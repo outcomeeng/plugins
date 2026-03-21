@@ -7,28 +7,80 @@ A Claude Code plugin marketplace (`outcomeeng/claude`) for [Outcome Engineering]
 1. **RTFM:** Follow state-of-the-art (SOTA) model prompting guidance, such as [structured prompts based on XML tags](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/use-xml-tags#tagging-best-practices)
 2. **KILO:**: *Keep It Local and Observable,* to facilitate discovery by agents by keeping the golden source for all specifications locally within the project's Git repository
 
-## Quick Install
+## Quick Start
 
-Add this marketplace and install plugins directly from GitHub:
+### 1. Install the SPX CLI
+
+```bash
+npm install -g @outcomeeng/spx
+```
+
+SPX is the developer CLI for spec-driven development. See [@outcomeeng/spx on npm](https://www.npmjs.com/package/@outcomeeng/spx) for details.
+
+### 2. Add the marketplace and install plugins
 
 ```bash
 # Add the marketplace
 claude plugin marketplace add outcomeeng/claude
 
-# Install plugins you want
-claude plugin install core@outcomeeng        # /commit, /handoff, /pickup
-claude plugin install claude@outcomeeng      # meta-skills for creating/auditing
-claude plugin install test@outcomeeng        # /testing (foundational)
-claude plugin install typescript@outcomeeng  # TypeScript engineering
-claude plugin install python@outcomeeng      # Python engineering
-claude plugin install spec-tree@outcomeeng   # Spec Tree framework
-claude plugin install spx@outcomeeng         # SPX commands (/rtfm, /clarify)
+# Recommended plugins
+claude plugin install spx@outcomeeng         # productivity commands
+claude plugin install test@outcomeeng        # testing methodology
 claude plugin install prose@outcomeeng       # writing and reviewing prose
+claude plugin install claude@outcomeeng      # meta-skills for plugin development
 ```
 
-Now slash commands like `/commit`, `/handoff`, `/pickup` and skills like `/testing-typescript` are available in all your projects.
+### 3. Use skills and commands
 
-### Update Plugins
+**`spx` — productivity commands:**
+
+```text
+> /commit                          # commit with Conventional Commits
+> /handoff                         # create context handoff for next session
+> /pickup                          # continue from a previous handoff
+> /rtfm                            # load specs and testing before coding
+> /clarify                         # gather requirements before executing
+```
+
+**`test` — testing methodology:**
+
+```text
+> /testing                         # route through the 5-stage testing methodology
+> Write tests for the parser       # Claude invokes /testing automatically
+```
+
+**`prose` — writing and reviewing:**
+
+```text
+> /writing-prose                   # activate prose craft for long-form text
+> /reviewing-prose                 # review text for formulaic patterns
+> Write a blog post about X        # Claude invokes /writing-prose automatically
+```
+
+**`claude` — plugin development:**
+
+```text
+> /creating-skills                 # create a new SKILL.md with guidance
+> /auditing-skills                 # audit an existing skill for best practices
+> /creating-commands               # create a new slash command
+```
+
+### Language plugins (install per project)
+
+```bash
+claude plugin install typescript@outcomeeng  # TypeScript engineering
+claude plugin install python@outcomeeng      # Python engineering
+```
+
+These add language-specific skills like `/testing-typescript`, `/coding-python`, `/reviewing-typescript`, etc.
+
+### Spec Tree framework (for spec-driven projects)
+
+```bash
+claude plugin install spec-tree@outcomeeng   # Spec Tree framework
+```
+
+### Updating plugins
 
 ```bash
 # Update this marketplace
@@ -57,19 +109,6 @@ Meta-skills for Claude Code plugin development.
 
 Credit: `/creating-skills` is inspired by [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills).
 
-### core
-
-Productivity commands and skills.
-
-| Type    | Name                  | Purpose                                 |
-| ------- | --------------------- | --------------------------------------- |
-| Skill   | `/committing-changes` | Commit message guidance                 |
-| Command | `/commit`             | Git commit with Conventional Commits    |
-| Command | `/handoff`            | Create timestamped context handoff      |
-| Command | `/pickup`             | Load and continue from previous handoff |
-
-Credit: `/handoff` is inspired by [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources/tree/main?tab=readme-ov-file#context-handoff).
-
 ### spec-tree
 
 Spec Tree framework for spec-driven development. Supersedes `spx-legacy`.
@@ -86,7 +125,7 @@ Spec Tree framework for spec-driven development. Supersedes `spx-legacy`.
 
 ### spx
 
-Commands for spec-driven development projects.
+Productivity commands for spec-driven development. Includes commit workflow, context handoffs, and spec-aware commands.
 
 | Type    | Name                  | Purpose                                 |
 | ------- | --------------------- | --------------------------------------- |
@@ -96,6 +135,19 @@ Commands for spec-driven development projects.
 | Command | `/pickup`             | Load and continue from previous handoff |
 | Command | `/rtfm`               | Load specs and testing before coding    |
 | Command | `/clarify`            | Clarify ambiguous requirements          |
+
+Credit: `/handoff` is inspired by [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources/tree/main?tab=readme-ov-file#context-handoff).
+
+### core
+
+Lightweight alternative to `spx` for projects that don't use spec-driven development. Provides the same `/commit`, `/handoff`, and `/pickup` commands without the spec-aware commands (`/rtfm`, `/clarify`). Install `spx` instead if your project has an `spx/` directory.
+
+| Type    | Name                  | Purpose                                 |
+| ------- | --------------------- | --------------------------------------- |
+| Skill   | `/committing-changes` | Commit message guidance                 |
+| Command | `/commit`             | Git commit with Conventional Commits    |
+| Command | `/handoff`            | Create timestamped context handoff      |
+| Command | `/pickup`             | Load and continue from previous handoff |
 
 ### test
 
