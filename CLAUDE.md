@@ -271,6 +271,13 @@ The test plugin provides BDD testing methodology with three-level testing:
 | 2: Integration | "Does it work with real dependencies?" | Documented test harnesses        |
 | 3: E2E         | "Does it work for users?"              | Documented credentials           |
 
+### Skills
+
+| Skill              | Purpose                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| `/testing`         | Foundational testing methodology (5 stages, 5 factors)        |
+| `/reviewing-tests` | Foundational test review protocol (loaded by language skills) |
+
 **Core rules:**
 
 - No mocking - use dependency injection at Level 1, real dependencies at Level 2+
@@ -288,6 +295,7 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `/testing-typescript`                | TypeScript-specific testing patterns (requires `/testing`) |
 | `/coding-typescript`                 | Implementation workhorse with remediation loop             |
 | `/reviewing-typescript`              | Strict code review with zero-tolerance                     |
+| `/reviewing-typescript-tests`        | TypeScript test review (requires `/reviewing-tests`)       |
 | `/architecting-typescript`           | ADR producer with testing strategy                         |
 | `/reviewing-typescript-architecture` | ADR validator against testing principles                   |
 | `/orchestrating-typescript`          | Orchestrate story implementation through skills            |
@@ -318,6 +326,7 @@ Complete Python development workflow with testing, implementation, and review.
 | `/testing-python`                | Python-specific testing patterns (requires `/testing`) |
 | `/coding-python`                 | Implementation workhorse with remediation loop         |
 | `/reviewing-python`              | Strict code review with zero-tolerance                 |
+| `/reviewing-python-tests`        | Python test review (requires `/reviewing-tests`)       |
 | `/architecting-python`           | ADR producer with testing strategy                     |
 | `/reviewing-python-architecture` | ADR validator against testing principles               |
 | `/orchestrating-python`          | Orchestrate story implementation through skills        |
@@ -870,7 +879,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   └── skills/
 │   │       ├── writing-prose/
 │   │       └── reviewing-prose/
-│   ├── python/                   # Version: 0.11.3
+│   ├── python/                   # Version: 0.11.4
 │   │   ├── commands/
 │   │   │   └── auto-python.md
 │   │   └── skills/
@@ -891,17 +900,18 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   │   └── rtfm.md
 │   │   └── skills/
 │   │       └── committing-changes/
-│   ├── spx-legacy/               # Version: 0.1.2 (deprecated → spec-tree)
+│   ├── spx-legacy/               # Version: 0.1.3 (deprecated → spec-tree)
 │   │   └── skills/
 │   │       └── (9 skills)
-│   ├── test/                     # Version: 0.3.1
+│   ├── test/                     # Version: 0.4.0
 │   │   └── skills/
-│   │       └── testing/
-│   └── typescript/               # Version: 0.8.9
+│   │       ├── testing/
+│   │       └── reviewing-tests/
+│   └── typescript/               # Version: 0.9.0
 │       ├── commands/
 │       │   └── auto-typescript.md
 │       └── skills/
-│           └── (6 skills)
+│           └── (7 skills)
 ├── spx/                           # Specs as durable map
 │   └── CLAUDE.md                 # Specs directory guide
 └── CLAUDE.md                      # This file

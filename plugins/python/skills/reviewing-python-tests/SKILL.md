@@ -3,252 +3,50 @@ name: reviewing-python-tests
 description: >-
   ALWAYS invoke this skill when reviewing Python tests for evidentiary value and spec compliance.
   NEVER review tests without this skill.
-allowed-tools: Read, Bash, Glob, Grep
 ---
 
 <objective>
-Determine if tests provide genuine evidence that outcomes are fulfilled through adversarial review. Reject tests that can pass while outcomes remain unfulfilled.
+Python-specific test review. Extends `/reviewing-tests` with Python testing patterns, property-based testing requirements, and Python code quality checks.
 
-**THE ADVERSARIAL QUESTION:**
-
-> How could these tests pass while the assertion remains unfulfilled?
-
-If you can answer that question, the tests are **REJECTED**.
 </objective>
 
 <quick_start>
-**PREREQUISITE**: Reference these skills when reporting findings:
+**PREREQUISITE**: Read these skills first — they are the law:
 
-- `/testing` - Methodology (5 stages, 5 factors, 7 exceptions)
-- `/standardizing-python-testing` - Python testing standards
+- `/reviewing-tests` — Foundational review protocol (Phases 1–4: spec structure, evidentiary integrity, lower-level assumptions, ADR/PDR compliance)
+- `/testing` — Methodology (5 stages, 5 factors, 7 exceptions)
+- `/standardizing-python-testing` — Python testing standards
 
-Review protocol has 6 phases - stop at first rejection:
+Execute the 4 foundational phases from `/reviewing-tests` first, then continue with the Python-specific phases below.
 
-1. **Spec structure validation** - Gherkin format, test links exist, level appropriateness
-2. **Evidentiary integrity** - Adversarial test, dependency handling, harness verification
-3. **Property-based testing** - MANDATORY for parsers, serializers, math, complex algorithms
-4. **Lower-level assumptions** - Check for stories/features, evaluate coverage
-5. **ADR/PDR compliance** - Identify applicable decision records, verify constraints
-6. **Test quality** - Type annotations, no mocking, magic values
+**Python-specific grep patterns** for foundational Phase 2 (evidentiary integrity):
+
+```bash
+# Find silent skips (REJECT if on required deps)
+grep -rn "pytest.mark.skipif" {test_dir}
+grep -rn "pytest.skip" {test_dir}
+
+# Find mocking (any = REJECT)
+grep -rn "@patch\|Mock()\|MagicMock\|mocker\." {test_dir}
+```
+
+**Python filename conventions** for foundational Phase 1.2 (test file linkage):
+
+| Level | Filename suffix   | Example                       |
+| ----- | ----------------- | ----------------------------- |
+| 1     | `_unit.py`        | `test_uart_tx_unit.py`        |
+| 2     | `_integration.py` | `test_uart_tx_integration.py` |
+| 3     | `_e2e.py`         | `test_uart_tx_e2e.py`         |
 
 When reporting findings, cite source skills:
 
-- "Per /testing Stage 2 Factor 2, database dependency requires Level 2"
+- "Per /reviewing-tests Phase 1.1, assertion type must match test strategy"
 - "Per /standardizing-python-testing, parsers MUST have property-based tests"
-
-Use bash commands to verify:
-
-```bash
-# Check test file links exist
-ls -la {container}/tests/{linked_file}
-
-# Find silent skips (REJECT if on required deps)
-grep -rn "pytest.mark.skipif" {test_dir}
-
-# Find mocking (any = REJECT)
-grep -rn "@patch\|Mock()\|MagicMock" {test_dir}
-
-# Find property-based tests (REQUIRED for parsers/serializers)
-grep -rn "@given\|hypothesis" {test_dir}
-```
 
 </quick_start>
 
-<verdict>
-There is no middle ground. No "mostly good." No "acceptable with caveats."
-
-- **APPROVED**: Tests provide genuine evidence for all outcomes at appropriate levels
-- **REJECT**: Any deficiency, missing link, silent skip, or evidentiary gap
-
-A missing comma is REJECT. A philosophical disagreement about test structure is REJECT. If it's not APPROVED, it's REJECT.
-</verdict>
-
-<context>
-This skill protects the test suite from phantom evidence. A single evidentiary gap means CI can go green while promised outcomes remain unfulfilled. The cost of false approval is infinite; the cost of false rejection is rework.
-</context>
-
-<review_protocol>
-Execute these phases IN ORDER. Stop at first REJECT.
-
-<phase name="spec_structure_validation">
-For each assertion in the spec, verify:
-
-**1.1 Assertion Format**
-
-Assertions MUST use one of five typed formats. No code in specs.
-
-| Type            | Quantifier                     | Test strategy   | Format pattern                                     |
-| --------------- | ------------------------------ | --------------- | -------------------------------------------------- |
-| **Scenario**    | There exists (this case works) | Example-based   | `Given ... when ... then ... ([test](...))`        |
-| **Mapping**     | For all over finite set        | Parameterized   | `{input} maps to {output} ([test](...))`           |
-| **Conformance** | External oracle                | Tool validation | `{output} conforms to {standard} ([test](...))`    |
-| **Property**    | For all over type space        | Property-based  | `{invariant} holds for all {domain} ([test](...))` |
-| **Compliance**  | ALWAYS/NEVER rules             | Review or test  | `ALWAYS/NEVER: {rule} ([review]/[test](...))`      |
-
-```markdown
-<!-- ✅ CORRECT: Typed assertions with inline test links -->
-
-### Scenarios
-
-- Given a UartTx configured for 8N1 at 115200 baud, when byte 0x55 is written, then TX line outputs start bit, 8 data bits (LSB first), and stop bit ([test](tests/test_uart_tx_unit.py))
-
-### Properties
-
-- Serialization is deterministic: same input always produces the same output ([test](tests/test_serialize_unit.py))
-
-### Compliance
-
-- ALWAYS: signal writes use non-blocking assignment — PDR-12 two-phase tick ([review](../../12-simulation-execution.pdr.md))
-```
-
-<!-- ❌ REJECT: Code in spec -->
-
-```python
-def test_uart_tx():
-    uart = UartTx(domain, data_bits=8)
-    ...
-```
-
-**If spec contains code examples**: REJECT. Specs are durable; code drifts.
-
-**Assertion type must match test strategy:**
-
-| Assertion Type | Required Test Pattern      | REJECT if                                    |
-| -------------- | -------------------------- | -------------------------------------------- |
-| Scenario       | Example-based tests        | Missing concrete inputs/outputs              |
-| Mapping        | Parameterized tests        | Only example-based (not all cases covered)   |
-| Property       | `@given` / hypothesis      | Only example-based (must use property-based) |
-| Conformance    | Tool validation            | Manual checks instead of tool                |
-| Compliance     | `[review]` or `[test]` tag | No tag indicating verification method        |
-
-**1.2 Test File Linkage**
-
-**Inline test links are contractual.** Every `([test](...))` link in an assertion must resolve to an actual file. Stale links = REJECT.
-
-Specs may use either format:
-
-- **Inline links** (spec-tree format): `([test](tests/test_uart_tx_unit.py))` embedded in assertions
-- **Test Files tables** (spx-legacy format): Separate table with File/Level/Harness columns
-
-Both are contractual — every link must resolve.
-
-This is distinct from the **Analysis section** (stories only), which documents the agent's codebase examination. Analysis references may diverge from implementation as understanding deepens — do NOT reject specs for stale Analysis references.
-
-**Check:**
-
-1. Link syntax is valid Markdown: `[test](path)` or `[display](path)`
-2. Linked file EXISTS at specified path
-3. Level matches filename suffix (`.unit.py` = Level 1, `.integration.py` = Level 2, `.e2e.py` = Level 3)
-
-```bash
-# Verify linked files exist (extract paths from inline links or tables)
-ls -la {container}/tests/{linked_file}
-```
-
-**If link is broken or file missing**: REJECT.
-
-**1.3 Level Appropriateness**
-
-Evidence lives at specific levels. Verify each assertion is tested at the correct level:
-
-| Evidence Type              | Minimum Level | Example                                  |
-| -------------------------- | ------------- | ---------------------------------------- |
-| Pure computation/algorithm | 1             | Protocol timing, math correctness        |
-| Component interaction      | 2             | TX→RX loopback, multi-entity simulation  |
-| Project-specific binary    | 2             | Verilator lint, external tool invocation |
-| Real credentials/services  | 3             | Cloud APIs, payment providers            |
-
-**If assertion is tested at wrong level**: REJECT.
-
-**If story-level assertion appears in feature spec**: Note as structural issue (stories should be created), but continue review.
-
-**GATE 1**: Before proceeding to Phase 2, verify:
-
-- [ ] All assertions use typed format (Scenario/Mapping/Conformance/Property/Compliance — no code in specs)
-- [ ] Assertion type matches test strategy (Property assertions have `@given`, Mapping have parameterized tests, etc.)
-- [ ] All test file links resolve (inline `([test](...))` or table links — ran `ls` for each)
-- [ ] All assertions tested at appropriate level
-
-If any check fails, STOP and REJECT with detailed findings.
-</phase>
-
-<phase name="evidentiary_integrity">
-For each test file, verify it provides genuine evidence.
-
-**2.1 The Adversarial Test**
-
-Ask: **How could this test pass while the assertion remains unfulfilled?**
-
-| Scenario                                                   | Verdict |
-| ---------------------------------------------------------- | ------- |
-| Test asserts something other than what assertion specifies | REJECT  |
-| Test uses hardcoded values that happen to match            | REJECT  |
-| Test doesn't actually exercise the code path               | REJECT  |
-| Test mocks the thing it's supposed to verify               | REJECT  |
-| Test can pass with broken implementation                   | REJECT  |
-
-**2.2 Dependency Availability**
-
-**CRITICAL: Missing dependencies MUST FAIL, not skip.**
-
-Search for silent skip patterns:
-
-```bash
-# Find skipif patterns
-grep -rn "pytest.mark.skipif" {test_dir}
-grep -rn "pytest.skip" {test_dir}
-```
-
-**Evaluate each skip:**
-
-| Pattern                                                 | Verdict                                          |
-| ------------------------------------------------------- | ------------------------------------------------ |
-| `skipif(not verilator_available())` on HDL tests        | **REJECT** - Required dependency must fail       |
-| `skipif(not HAS_HYPOTHESIS)` on property tests          | **REJECT** - Test infrastructure must be present |
-| `skipif(sys.platform != "linux")` for platform-specific | REVIEW - May be legitimate                       |
-| `skipif(os.environ.get("CI"))`                          | REVIEW - What is being skipped?                  |
-
-**The Silent Skip Problem:**
-
-```python
-# ❌ REJECT: This allows CI to go green with zero HDL verification
-@pytest.mark.skipif(not verilator_available(), reason="Verilator not available")
-def test_generates_lint_clean_verilog(): ...
-
-
-# ✅ CORRECT: Fail loudly if required dependency missing
-def test_generates_lint_clean_verilog():
-    if not verilator_available():
-        pytest.fail("Verilator is REQUIRED. Install with: brew install verilator")
-    ...
-```
-
-**If tests silently skip on required dependencies**: REJECT. This is evidentiary fraud - CI goes green while providing zero verification.
-
-**2.3 Harness Verification**
-
-If assertion specifies a harness in the Test Files table:
-
-1. Harness must exist and be specified (in `spx/` or `{project}_testing/`)
-2. Harness must have its own tests
-3. Harness failures must cause test failures, not skips
-
-```bash
-# Check if harness is specified and exists
-grep -r "Harness" {container}/*.md
-ls -la {harness_path}
-```
-
-**If harness is referenced but doesn't exist or isn't tested**: REJECT.
-
-**GATE 2**: Before proceeding to Phase 3, verify:
-
-- [ ] Each test file reviewed for adversarial test (can it pass while assertion fails?)
-- [ ] Ran grep for skipif patterns, evaluated each found
-- [ ] Any harnesses referenced have been verified to exist
-
-If any check fails, STOP and REJECT with detailed findings.
-</phase>
+<python_phases>
+Execute these AFTER completing the 4 foundational phases from `/reviewing-tests`.
 
 <phase name="property_based_testing">
 Per `/testing` and `/standardizing-python-testing`, property-based testing is **MANDATORY** for:
@@ -260,7 +58,7 @@ Per `/testing` and `/standardizing-python-testing`, property-based testing is **
 | Mathematical operations | Algebraic properties     | `@given(st.integers())`   |
 | Complex algorithms      | Invariant preservation   | `@given(valid_inputs())`  |
 
-**3.1 Identify Applicable Code Types**
+**5.1 Identify Applicable Code Types**
 
 ```bash
 # Find parsers and serializers
@@ -270,13 +68,13 @@ grep -rn "def parse\|def encode\|def decode\|def serialize\|def deserialize" {sr
 grep -rn "@given\|from hypothesis" {test_dir}
 ```
 
-**3.2 Evaluate Coverage**
+**5.2 Evaluate Coverage**
 
 For each identified parser/serializer/math operation:
 
 | Found                                      | Verdict    |
 | ------------------------------------------ | ---------- |
-| `@given` decorator with roundtrip property | ✓ PASS     |
+| `@given` decorator with roundtrip property | PASS       |
 | Only example-based tests                   | **REJECT** |
 | No tests at all                            | **REJECT** |
 
@@ -292,7 +90,7 @@ def test_parse_json_simple() -> None:
 # Missing: @given(st.text()) + roundtrip property
 ```
 
-**3.3 Verify Property Quality**
+**5.3 Verify Property Quality**
 
 Property tests must test meaningful properties, not just "doesn't crash":
 
@@ -312,112 +110,17 @@ def test_roundtrip(value: JsonValue) -> None:
     assert parse(format(value)) == value
 ```
 
-**GATE 3**: Before proceeding to Phase 4, verify:
+**GATE 5**: Before proceeding to Phase 6, verify:
 
 - [ ] Identified all parsers, serializers, math operations, complex algorithms in code under test
 - [ ] Ran grep for `@given` patterns in test files
 - [ ] Each applicable code type has property-based tests with meaningful properties
 
 If any check fails, STOP and REJECT with detailed findings citing `/standardizing-python-testing`.
+
 </phase>
 
-<phase name="lower_level_assumptions">
-Features assume stories have tested what can be tested at story level. Capabilities assume features have done their job.
-
-**4.1 Check for Lower-Level Specs**
-
-```bash
-# For a feature, check if stories exist
-ls -d {feature_path}/*-*.story/ 2>/dev/null
-
-# For a capability, check if features exist
-ls -d {capability_path}/*-*.feature/ 2>/dev/null
-```
-
-**4.2 Evaluate Assumptions**
-
-| Scenario                              | Action                                                            |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| Lower-level specs exist with tests    | Verify assumptions align                                          |
-| Lower-level specs exist without tests | Note gap, continue review                                         |
-| Lower-level specs don't exist         | Note structural issue, evaluate if tests are appropriately coarse |
-
-**Key principle**: Specs are DURABLE. They DEMAND outcomes. A spec must NEVER say "stories are pending" or "tests will be added later." If lower-level decomposition is needed, those specs should exist.
-
-**If spec contains language about missing/pending specs**: REJECT. Specs are not working documents.
-
-**Atemporal voice** (Durable Map Rule): Specs state product truth. They NEVER narrate code history, current state, or migration plans. Any temporal language is a REJECTION — no section gets a pass.
-
-**Temporal patterns to reject in specs:**
-
-- "The current `module.py` has..." — narrates code state
-- "The file `deprecated/old.py` does not exist" — narrates filesystem state
-- "We need to replace..." / "We need to migrate..." — narrates a plan, not a truth
-- "Currently X uses..." — snapshot that expires
-- "The existing implementation..." — references code, not architecture
-- "X has accumulated without..." — narrates drift
-- "Previously..." / "Before this..." — there is no before
-
-Code that doesn't conform to a spec is discovered through code review and test coverage analysis — the spec itself never names files to delete or code to replace.
-
-**4.3 Integration Test Assumptions**
-
-For integration tests (Level 2), verify they don't duplicate story-level evidence:
-
-| Integration Test Should    | Integration Test Should NOT              |
-| -------------------------- | ---------------------------------------- |
-| Verify component contracts | Re-test algorithm correctness            |
-| Verify interoperation      | Exhaustively test edge cases             |
-| Assume story tests passed  | Provide coarse coverage of unit concerns |
-
-**If integration tests are doing story-level work because stories don't exist**: Note as structural issue. Tests may be legitimately coarse in transitional state, but this should be flagged.
-
-**GATE 4**: Before proceeding to Phase 5, verify:
-
-- [ ] Checked for lower-level specs (stories within features, features within capabilities)
-- [ ] No temporal language in spec — no "pending", "will be added", "currently", "the existing", references to specific files to delete
-- [ ] Integration tests are not duplicating unit-level work
-
-If any check fails, STOP and REJECT with detailed findings.
-</phase>
-
-<phase name="decision_record_compliance">
-Check test code against decision records.
-
-**5.1 Identify Applicable ADRs/PDRs**
-
-```bash
-# Find decision records referenced in spec
-grep -o '\[.*\](.*\.\(adr\|pdr\)\.md)' {spec_file}
-
-# Find ADRs/PDRs in ancestry
-ls {capability_path}/*.adr.md {capability_path}/*.pdr.md
-ls {feature_path}/*.adr.md {feature_path}/*.pdr.md 2>/dev/null
-```
-
-**5.2 Verify Compliance**
-
-For each decision record, check test code follows its constraints:
-
-| Decision Constraint                         | What to Check                                               |
-| ------------------------------------------- | ----------------------------------------------------------- |
-| "Use `int(signal)` not `_raw()`"            | `grep "_raw()" {test_files}`                                |
-| "Use `yield`, `yield n`, not string states" | `grep 'yield "' {test_files}`                               |
-| "No mocking"                                | `grep -e "@patch" -e "Mock(" -e "MagicMock" {test_files}`   |
-| "Lifecycle state names" (PDR)               | `grep -e "Draft" -e "Published" -e "Archived" {test_files}` |
-
-**If tests violate ADR/PDR constraints**: REJECT.
-
-**GATE 5**: Before proceeding to Phase 6, verify:
-
-- [ ] Identified all applicable ADRs/PDRs (spec references + ancestry)
-- [ ] Ran grep for each decision-record constraint against test files
-- [ ] No ADR/PDR violations found
-
-If any check fails, STOP and REJECT with detailed findings.
-</phase>
-
-<phase name="test_quality">
+<phase name="python_test_quality">
 Verify tests follow Python testing patterns per `/standardizing-python-testing`.
 
 **6.1 Type Annotations**
@@ -461,58 +164,18 @@ grep -rn "assert.*==" {test_dir} | grep -E "[0-9]+"
 - [ ] Magic values use named constants (or are self-documenting)
 - [ ] Test organization checklist passes
 
-If all gates passed, issue APPROVED. Otherwise, REJECT with detailed findings.
+If all gates passed (foundational 1–4 + Python 5–6), issue APPROVED. Otherwise, REJECT with detailed findings.
+
 </phase>
 
-</review_protocol>
-
-<failure_modes>
-Failures from actual usage:
-
-**Failure 1: Approved tests with silent skips**
-
-- What happened: Agent saw pytest output with all tests passing, approved
-- Why it failed: Tests had `@pytest.mark.skipif` decorators for required dependencies - CI went green with 0 HDL verification
-- How to avoid: ALWAYS run grep for skipif patterns in Phase 2.2. Any skipif on a required dependency (verilator, hypothesis, etc.) is automatic REJECT
-
-**Failure 2: Missed broken test links**
-
-- What happened: Agent checked link syntax but didn't verify files exist
-- Why it failed: Spec had `[test_foo.unit](tests/test_foo.unit.py)` but file was actually named `test_foo_unit.py`
-- How to avoid: Run `ls -la {container}/tests/{file}` for EVERY linked file in Phase 1.2. Don't trust link syntax alone.
-
-**Failure 3: Approved tests that mocked the SUT**
-
-- What happened: Agent searched for `@patch` but tests used `MagicMock()` inline
-- Why it failed: Grep pattern didn't catch all mocking variants
-- How to avoid: Use complete grep pattern: `grep -rn "@patch\|Mock()\|MagicMock\|mocker\." {test_dir}`
-
-**Failure 4: Missed ADR constraint violation**
-
-- What happened: Agent found ADRs but didn't systematically check each constraint
-- Why it failed: ADR said "use `int(signal)` not `_raw()`" but tests used `_raw()` directly
-- How to avoid: For EACH ADR constraint, write and run a grep command. Document what you searched for.
-
-**Failure 5: Compared coverage at wrong granularity**
-
-- What happened: Agent saw 39% coverage for one story and flagged as insufficient
-- Why it failed: Multiple stories share one implementation file; per-story coverage is meaningless
-- How to avoid: Always compare coverage at the implementation file level, not story level
-
-**Failure 6: Approved parser without property-based tests**
-
-- What happened: Agent saw comprehensive example-based tests for a JSON parser, approved
-- Why it failed: Example tests don't catch edge cases that property-based tests would find (Unicode, escaping, deeply nested structures)
-- How to avoid: Per `/standardizing-python-testing`, parsers MUST have property-based tests. Run `grep -rn "@given" {test_dir}` and verify roundtrip properties exist.
-
-</failure_modes>
+</python_phases>
 
 <concrete_examples>
 **Example 1: APPROVED verdict**
 
 Reviewing `spx/01-uart/03-transmitter.story/`
 
-Phase 1 checks:
+Phase 1 checks (from /reviewing-tests):
 
 ```bash
 $ grep -A 5 "^### Scenarios" transmitter.story.md
@@ -525,7 +188,7 @@ $ ls -la tests/test_uart_tx_unit.py
 ✓ File exists, Level 1 matches _unit.py suffix
 ```
 
-Phase 2 checks:
+Phase 2 checks (from /reviewing-tests, using Python grep patterns):
 
 ```bash
 $ grep -rn "pytest.mark.skipif" tests/
@@ -537,7 +200,7 @@ $ grep -rn "@patch\|Mock()\|MagicMock" tests/
 ✓ No mocking
 ```
 
-Phase 5 checks:
+Phase 6 checks (Python-specific):
 
 ```bash
 $ grep -rn "def test_" tests/ | grep -v "-> None"
@@ -545,7 +208,7 @@ $ grep -rn "def test_" tests/ | grep -v "-> None"
 ✓ All test functions have -> None
 ```
 
-**Verdict: APPROVED** - All outcomes have genuine evidentiary coverage at appropriate levels.
+**Verdict: APPROVED** - All assertions have genuine evidentiary coverage at appropriate levels.
 
 ---
 
@@ -566,99 +229,32 @@ tests/test_verilog_gen.unit.py:15:@pytest.mark.skipif(not verilator_available(),
 | - | ----------- | --------------------------- | ----------------------------- | ------------------------------------------------ |
 | 1 | Silent Skip | test_verilog_gen.unit.py:15 | skipif on required dependency | Change to pytest.fail() if verilator unavailable |
 
-**How Tests Could Pass While Outcome Fails:**
+**How Tests Could Pass While Assertion Fails:**
 
 CI environment doesn't have Verilator installed. Test is silently skipped. CI goes green. The assertion "generates lint-clean Verilog" has zero verification. Users deploy code that produces invalid Verilog.
 
 </concrete_examples>
 
-<output_format>
-<approve_template>
-
-```markdown
-## Test Review: {container_path}
-
-### Verdict: APPROVED
-
-All outcomes have genuine evidentiary coverage at appropriate levels.
-
-### Outcomes Verified
-
-| # | Outcome | Level | Test File | Evidence Quality |
-| - | ------- | ----- | --------- | ---------------- |
-| 1 | {name}  | {N}   | {file}    | Genuine          |
-
-### ADR/PDR Compliance
-
-| Decision Record | Status    |
-| --------------- | --------- |
-| {name}          | Compliant |
-```
-
-</approve_template>
-
-<reject_template>
-
-```markdown
-## Test Review: {container_path}
-
-### Verdict: REJECT
-
-{One-sentence summary of primary rejection reason}
-
-### Rejection Reasons
-
-| # | Category | Location    | Issue   | Required Fix |
-| - | -------- | ----------- | ------- | ------------ |
-| 1 | {cat}    | {file:line} | {issue} | {fix}        |
-
-### Detailed Findings
-
-#### {Category}: {Issue Title}
-
-**Location**: `{file}:{line}`
-
-**Problem**: {Detailed explanation of why this is a rejection}
-
-**Evidence**:
-```
-
-{Code snippet or grep output showing the issue}
-
-```
-**Required Fix**: {Specific action to resolve}
-
----
-
-### How Tests Could Pass While Outcome Fails
-
-{Explain the evidentiary gap - how could these tests go green while the promised assertion remains unfulfilled?}
-```
-
-</reject_template>
-
-</output_format>
-
 <rejection_triggers>
-Quick reference for common rejection triggers:
+Quick reference — includes both foundational triggers (from `/reviewing-tests`) and Python-specific triggers:
 
-| Category            | Trigger                                                                      | Verdict |
-| ------------------- | ---------------------------------------------------------------------------- | ------- |
-| **Spec Structure**  | Code examples in spec                                                        | REJECT  |
-| **Spec Structure**  | Assertion type doesn't match test strategy (Property without `@given`, etc.) | REJECT  |
-| **Spec Structure**  | Missing or broken test file links (inline or table)                          | REJECT  |
-| **Spec Structure**  | Language about "pending" specs                                               | REJECT  |
-| **Spec Structure**  | Temporal language ("currently", "the existing", file references)             | REJECT  |
-| **Level**           | Outcome tested at wrong level                                                | REJECT  |
-| **Dependencies**    | `skipif` on required dependency                                              | REJECT  |
-| **Dependencies**    | Harness referenced but missing                                               | REJECT  |
-| **Property-Based**  | Parser without `@given` roundtrip test                                       | REJECT  |
-| **Property-Based**  | Serializer without `@given` roundtrip test                                   | REJECT  |
-| **Property-Based**  | Math operation without property tests                                        | REJECT  |
-| **Decision Record** | Test violates ADR/PDR constraint                                             | REJECT  |
-| **Python**          | Missing `-> None` on test                                                    | REJECT  |
-| **Python**          | Mocking (`@patch`, `Mock()`)                                                 | REJECT  |
-| **Evidentiary**     | Test can pass with broken impl                                               | REJECT  |
+| Category            | Trigger                                                                      | Verdict | Source           |
+| ------------------- | ---------------------------------------------------------------------------- | ------- | ---------------- |
+| **Spec Structure**  | Code examples in spec                                                        | REJECT  | /reviewing-tests |
+| **Spec Structure**  | Assertion type doesn't match test strategy (Property without `@given`, etc.) | REJECT  | /reviewing-tests |
+| **Spec Structure**  | Missing or broken test file links (inline or table)                          | REJECT  | /reviewing-tests |
+| **Spec Structure**  | Language about "pending" specs                                               | REJECT  | /reviewing-tests |
+| **Spec Structure**  | Temporal language ("currently", "the existing", file references)             | REJECT  | /reviewing-tests |
+| **Level**           | Assertion tested at wrong level                                              | REJECT  | /reviewing-tests |
+| **Dependencies**    | `skipif` on required dependency                                              | REJECT  | /reviewing-tests |
+| **Dependencies**    | Harness referenced but missing                                               | REJECT  | /reviewing-tests |
+| **Decision Record** | Test violates ADR/PDR constraint                                             | REJECT  | /reviewing-tests |
+| **Evidentiary**     | Test can pass with broken impl                                               | REJECT  | /reviewing-tests |
+| **Property-Based**  | Parser without `@given` roundtrip test                                       | REJECT  | Python Phase 5   |
+| **Property-Based**  | Serializer without `@given` roundtrip test                                   | REJECT  | Python Phase 5   |
+| **Property-Based**  | Math operation without property tests                                        | REJECT  | Python Phase 5   |
+| **Python**          | Missing `-> None` on test                                                    | REJECT  | Python Phase 6   |
+| **Python**          | Mocking (`@patch`, `Mock()`)                                                 | REJECT  | Python Phase 6   |
 
 </rejection_triggers>
 
@@ -666,25 +262,11 @@ Quick reference for common rejection triggers:
 Task is complete when:
 
 - [ ] Verdict is APPROVED or REJECT (no middle ground)
-- [ ] All 6 phases executed in order (or stopped at first REJECT)
-- [ ] All gates passed (or documented why gate failed)
+- [ ] All 4 foundational phases from `/reviewing-tests` executed
+- [ ] Both Python-specific phases (5–6) executed
 - [ ] Property-based test coverage verified for parsers/serializers/math/algorithms
 - [ ] Each rejection reason has file:line location
 - [ ] Evidentiary gap explained (how tests could pass while assertion fails)
-- [ ] Output follows specified format (APPROVED or REJECT template)
-
-**Verification command**:
-
-```bash
-# Your output should contain exactly one of these:
-grep -c "### Verdict: APPROVED" review_output.md  # Should be 1 for approve
-grep -c "### Verdict: REJECT" review_output.md   # Should be 1 for reject
-```
+- [ ] Output follows format from `/reviewing-tests` (APPROVED or REJECT template)
 
 </success_criteria>
-
-<cardinal_rule>
-**If you can explain how the tests could pass while the assertion remains unfulfilled, the tests are REJECTED.**
-
-Your job is to protect the test suite from phantom evidence. A rejected review that catches an evidentiary gap is worth infinitely more than an approval that lets one through.
-</cardinal_rule>
