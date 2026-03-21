@@ -882,7 +882,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   └── skills/
 │   │       ├── managing-specs/
 │   │       └── understanding-specs/
-│   ├── spx/                      # Version: 0.9.2 — SPX commands
+│   ├── spx/                      # Version: 0.10.0 — SPX commands
 │   │   ├── commands/
 │   │   │   ├── clarify.md
 │   │   │   ├── commit.md
