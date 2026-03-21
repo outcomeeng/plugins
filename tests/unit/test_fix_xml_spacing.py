@@ -79,9 +79,7 @@ class TestNeedsBlankLineBeforeTag:
 
     def test_blank_line_already_present_returns_false(self) -> None:
         # When the last line is blank, we don't need another
-        result = fix_xml_spacing.needs_blank_line_before_tag(
-            ["- list item\n", "\n"]
-        )
+        result = fix_xml_spacing.needs_blank_line_before_tag(["- list item\n", "\n"])
         # The function checks if output_lines[-1].strip() == "" which would be True
         # But it also checks if LIST_ITEM_RE matches prev.rstrip("\n")
         # prev = "\n", prev.rstrip("\n") = "", LIST_ITEM_RE won't match ""
@@ -181,9 +179,7 @@ class TestProcessClosingTag:
         assert modified is None
 
     def test_empty_output_returns_false(self) -> None:
-        should_skip, modified = fix_xml_spacing.process_closing_tag(
-            "</section>\n", []
-        )
+        should_skip, modified = fix_xml_spacing.process_closing_tag("</section>\n", [])
         assert should_skip is False
         assert modified is None
 
@@ -236,9 +232,7 @@ class TestFixFile:
     """End-to-end tests for file fixing."""
 
     def test_no_changes_needed(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write("# Header\n\nSome text\n")
             f.flush()
             path = Path(f.name)
@@ -253,9 +247,7 @@ class TestFixFile:
         content = "- item 1\n- item 2\n</section>\n"
         expected = "- item 1\n- item 2\n\n</section>\n"
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)
@@ -271,9 +263,7 @@ class TestFixFile:
         content = "text\n  </section>\n"
         expected = "text\n</section>\n"
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)
@@ -289,9 +279,7 @@ class TestFixFile:
         content = "```\n- item\n</section>\n```\n"
         # Inside fence, no changes should be made
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)
@@ -307,9 +295,7 @@ class TestFixFile:
         # ~~~ inside ``` fence shouldn't close the fence
         content = "```\n~~~\n- item\n</tag>\n~~~\n```\n"
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)
@@ -325,9 +311,7 @@ class TestFixFile:
         content = "- item\n</section>\n- item2\n</section2>\n"
         expected = "- item\n\n</section>\n- item2\n\n</section2>\n"
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".md", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(content)
             f.flush()
             path = Path(f.name)

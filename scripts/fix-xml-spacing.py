@@ -68,9 +68,7 @@ def process_fence_marker(
     return in_fence, fence, None
 
 
-def process_closing_tag(
-    line: str, output_lines: list[str]
-) -> tuple[bool, str | None]:
+def process_closing_tag(line: str, output_lines: list[str]) -> tuple[bool, str | None]:
     """Process closing XML tag and return (should_skip_default_append, modified_line)."""
     m_close = CLOSING_TAG_RE.match(line)
     if not m_close or not output_lines:
@@ -95,9 +93,7 @@ def fix_file(path: Path) -> bool:
 
     for line in lines:
         # Track fence state
-        new_fence, new_fence_marker, _ = process_fence_marker(
-            line, in_fence, fence
-        )
+        new_fence, new_fence_marker, _ = process_fence_marker(line, in_fence, fence)
         if new_fence != in_fence or new_fence_marker != fence:
             in_fence = new_fence
             fence = new_fence_marker
