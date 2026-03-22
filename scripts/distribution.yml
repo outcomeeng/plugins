@@ -11,37 +11,35 @@ github_org: outcomeeng
 
 repos:
   foundation:
-    description: "Foundation skills: testing, prose, plugin development, frontend design"
+    description: "Foundation skills: prose, plugin development, frontend design"
     plugins:
-      - test
       - prose
       - claude
       - frontend
 
   spec-tree:
     description: "Spec Tree skills for spec-driven development"
-    prerequisites:
-      - "outcomeeng/foundation (for /testing methodology)"
     plugins:
       - spec-tree
 
   typescript:
     description: "TypeScript engineering skills"
     prerequisites:
-      - "outcomeeng/foundation (for /testing and /reviewing-tests)"
+      - "outcomeeng/spec-tree (for /testing and /reviewing-tests)"
     plugins:
       - typescript
 
   python:
     description: "Python engineering skills"
     prerequisites:
-      - "outcomeeng/foundation (for /testing and /reviewing-tests)"
+      - "outcomeeng/spec-tree (for /testing and /reviewing-tests)"
     plugins:
       - python
 
   legacy:
     description: "Deprecated Outcome Engineering skills (superseded by spec-tree)"
     plugins:
+      - test
       - spx-legacy
       - specs
       - core
