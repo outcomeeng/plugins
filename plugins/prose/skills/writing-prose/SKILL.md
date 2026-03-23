@@ -13,7 +13,7 @@ Write prose that reads as varied, specific, and human. These are the craft princ
 
 <quick_start>
 
-Use common verbs. Vary sentence openings. One rhetorical move per paragraph. Say it once well. Length matches substance. Zero tolerance for patterns in `references/patterns-to-avoid.md` -- never use any of them, not even once.
+Use common verbs. Vary sentence openings. One rhetorical move per paragraph. Say it once well. Length matches substance. Zero tolerance for patterns in `/standardizing-prose` -- never use any of them, not even once.
 
 </quick_start>
 
@@ -128,6 +128,6 @@ Prose is good when:
 - Metaphors appear once and move on
 - The piece ends without announcing its ending
 - Length matches the amount of new information
-- Zero instances of any pattern from `references/patterns-to-avoid.md` -- no negative parallelism, no authenticity adverbs, no asserting significance, none of them
+- Zero instances of any pattern from `/standardizing-prose` -- no negative parallelism, no authenticity adverbs, no asserting significance, none of them
 
 </success_criteria>

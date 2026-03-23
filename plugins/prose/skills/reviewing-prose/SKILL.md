@@ -15,7 +15,7 @@ Detect and fix formulaic patterns that signal machine-generated or lazy writing.
 
 **Core rule**: Zero tolerance. Every pattern in the reference catalog is a violation. Do not excuse any instance as "single use" or "it lands here." If a sentence triggers a pattern, flag it. If a sentence triggers two patterns simultaneously, it is the highest priority flag.
 
-**Before reviewing**, read `${SKILL_DIR}/references/patterns-to-avoid.md` for the complete catalog of 30+ anti-patterns across 6 categories.
+**Before reviewing**, read `/standardizing-prose` for the complete catalog of 30+ anti-patterns across 6 categories.
 
 </quick_start>
 
@@ -39,7 +39,7 @@ Six categories of patterns to detect. Each is detailed with examples in the refe
 
 <workflow>
 
-1. Read the patterns reference: `${SKILL_DIR}/references/patterns-to-avoid.md`
+1. Read `/standardizing-prose` for the anti-pattern catalog
 2. Read the text to review
 3. Flag each violation with the specific pattern name and category
 4. Suggest concrete rewrites -- don't just say "avoid X", show the fix
@@ -61,8 +61,8 @@ Review is complete when:
 
 <reference_index>
 
-| File                              | When to Read               |
-| --------------------------------- | -------------------------- |
-| `references/patterns-to-avoid.md` | Always -- before reviewing |
+| Skill                  | When to Read               |
+| ---------------------- | -------------------------- |
+| `/standardizing-prose` | Always -- before reviewing |
 
 </reference_index>
