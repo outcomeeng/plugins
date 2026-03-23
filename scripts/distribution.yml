@@ -42,4 +42,4 @@ repos:
       - test
       - spx-legacy
       - specs
-      - core
+      - legacy

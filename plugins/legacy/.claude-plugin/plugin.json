@@ -1,14 +1,14 @@
 {
-  "name": "core",
-  "version": "0.4.31",
-  "description": "Core productivity: /committing-changes skill, /commit, /handoff, /pickup commands",
+  "name": "legacy",
+  "version": "0.5.0",
+  "description": "Standalone /commit, /handoff, /pickup for projects without the spx CLI",
   "author": {
     "name": "Simon Heimlicher"
   },
   "repository": "https://github.com/outcomeeng/claude",
   "license": "MIT",
   "keywords": [
-    "core",
+    "legacy",
     "git",
     "commit",
     "conventional-commits",

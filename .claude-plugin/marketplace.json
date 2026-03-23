@@ -8,9 +8,9 @@
   },
   "plugins": [
     {
-      "name": "core",
-      "source": "./plugins/core",
-      "description": "Core productivity: /committing-changes skill, /commit, /handoff, /pickup commands"
+      "name": "legacy",
+      "source": "./plugins/legacy",
+      "description": "Standalone /commit, /handoff, /pickup for projects without the spx CLI"
     },
     {
       "name": "claude",

@@ -13,21 +13,29 @@ A Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engin
 
 ## Quick Start
 
-### 1. Add the marketplace and install plugins
+### 1. Install the spx CLI
+
+```bash
+npm install -g @outcomeeng/spx
+```
+
+The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for spec-driven development. Required by all engineering plugins.
+
+### 2. Add the marketplace and install plugins
 
 ```bash
 # Add the marketplace
 claude plugin marketplace add outcomeeng/claude
 
-# Core: spec-driven development
+# Spec-driven development (requires spx CLI)
 claude plugin install spec-tree@outcomeeng
 
-# Recommended additions
-claude plugin install prose@outcomeeng       # writing and reviewing prose
-claude plugin install claude@outcomeeng      # meta-skills for plugin development
+# Language plugins (install per project, require spx CLI)
+claude plugin install python@outcomeeng
+claude plugin install typescript@outcomeeng
 ```
 
-### 2. Bootstrap your spec tree
+### 3. Bootstrap your spec tree
 
 ```text
 > /bootstrap                       # set up a new spec tree
@@ -35,7 +43,7 @@ claude plugin install claude@outcomeeng      # meta-skills for plugin developmen
 
 ![Scaffold result — product spec, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
-### 3. Author, implement, commit
+### 4. Author, implement, commit
 
 ```text
 > /author outcome for search       # author a new outcome node
@@ -45,11 +53,11 @@ claude plugin install claude@outcomeeng      # meta-skills for plugin developmen
 > /commit                          # commit with Conventional Commits
 ```
 
-### Language plugins (install per project)
+### Also available (no spx CLI required)
 
 ```bash
-claude plugin install typescript@outcomeeng  # TypeScript engineering
-claude plugin install python@outcomeeng      # Python engineering
+claude plugin install prose@outcomeeng       # writing and reviewing prose
+claude plugin install claude@outcomeeng      # meta-skills for plugin development
 ```
 
 ### Updating plugins
@@ -83,7 +91,7 @@ The core of [Outcome Engineering](https://outcome.engineering). Three phases: sp
 | Skill   | `/understanding`      | 1     | Foundation skill — loaded before any other      |
 | Skill   | `/contextualizing`    | 1     | Deterministic context loading from tree         |
 | Skill   | `/bootstrapping`      | 1     | Interview user, scaffold new spec tree          |
-| Skill   | `/authoring`          | 1     | Add, define, create specs and features          |
+| Skill   | `/authoring`          | 1     | Add, define, create specs and nodes             |
 | Skill   | `/decomposing`        | 1     | Break down, split, scope work                   |
 | Skill   | `/refactoring`        | 1     | Move nodes, re-scope, extract shared enablers   |
 | Skill   | `/aligning`           | 1     | Review, check consistency, audit, find gaps     |
@@ -100,11 +108,9 @@ The core of [Outcome Engineering](https://outcome.engineering). Three phases: sp
 | Command | `/handoff`            |       | Create timestamped context handoff              |
 | Command | `/pickup`             |       | Load and continue from previous handoff         |
 
-Credit: `/handoff` is inspired by [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources/tree/main?tab=readme-ov-file#context-handoff).
-
 ### typescript
 
-Complete TypeScript development workflow.
+Complete TypeScript development workflow. Requires spx CLI.
 
 | Type  | Name                                 | Purpose                            |
 | ----- | ------------------------------------ | ---------------------------------- |
@@ -117,7 +123,7 @@ Complete TypeScript development workflow.
 
 ### python
 
-Complete Python development workflow.
+Complete Python development workflow. Requires spx CLI.
 
 | Type    | Name                             | Purpose                            |
 | ------- | -------------------------------- | ---------------------------------- |
@@ -130,7 +136,7 @@ Complete Python development workflow.
 
 ### prose
 
-Prose craft skills for writing and reviewing.
+Prose craft skills for writing and reviewing. No spx CLI required.
 
 | Type  | Name               | Purpose                                      |
 | ----- | ------------------ | -------------------------------------------- |
@@ -139,7 +145,7 @@ Prose craft skills for writing and reviewing.
 
 ### claude
 
-Meta-skills for Claude Code plugin development.
+Meta-skills for Claude Code plugin development. No spx CLI required.
 
 | Type  | Name                  | Purpose                         |
 | ----- | --------------------- | ------------------------------- |
@@ -150,19 +156,19 @@ Meta-skills for Claude Code plugin development.
 | Skill | `/auditing-commands`  | Audit slash commands            |
 | Skill | `/auditing-subagents` | Audit subagent configurations   |
 
-Credit: These meta skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills).
+Credit: These meta skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The commands `/handoff` and `/pickup` are based on `/whats-next` from the same project.
 
 ### frontend
 
-Frontend design and styling.
+Frontend design and styling. No spx CLI required.
 
 | Type  | Name                  | Purpose                                |
 | ----- | --------------------- | -------------------------------------- |
 | Skill | `/designing-frontend` | Create distinctive frontend interfaces |
 
-### core
+### legacy
 
-Standalone commit workflow for projects that don't use the Spec Tree.
+Standalone `/commit`, `/handoff`, `/pickup` for projects without the spx CLI. Install `spec-tree` instead if you have spx.
 
 | Type    | Name                  | Purpose                                 |
 | ------- | --------------------- | --------------------------------------- |
@@ -170,8 +176,6 @@ Standalone commit workflow for projects that don't use the Spec Tree.
 | Command | `/commit`             | Git commit with Conventional Commits    |
 | Command | `/handoff`            | Create timestamped context handoff      |
 | Command | `/pickup`             | Load and continue from previous handoff |
-
-Credit: The commands `/handoff` and `/pickup` are based on `/whats-next` in [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#context-handoff).
 
 ## Documentation
 

@@ -214,9 +214,9 @@ Meta-skills for Claude Code plugin development: creating and auditing skills, co
 | `/auditing-commands`  | Audit slash commands for best practices    |
 | `/auditing-subagents` | Audit subagent configurations              |
 
-## Core Plugin
+## Legacy Plugin
 
-Standalone commit workflow for projects that do not use the Spec Tree.
+Standalone commit workflow for projects without the spx CLI.
 
 ### Skills
 
@@ -791,7 +791,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       ├── auditing-skills/
 │   │       ├── auditing-commands/
 │   │       └── auditing-subagents/
-│   ├── core/                     # Standalone commit workflow
+│   ├── legacy/                   # Standalone commit (no spx CLI)
 │   │   ├── commands/
 │   │   │   ├── commit.md
 │   │   │   ├── handoff.md
