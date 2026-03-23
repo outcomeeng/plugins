@@ -66,7 +66,7 @@ description: Helps with charts
 - Drop the language from the negative — the agent knows which language is in play
 - Frame as "without this skill" not "directly"
 
-**Reference skills** (loaded by other skills, not user-triggered) use `disable-model-invocation: true` and a passive description instead.
+**Reference skills** (loaded by other skills, not user-triggered) use `disable-model-invocation: true` and a passive description instead. See the [Reference Skills](#reference-skills-for-shared-knowledge) section below for the full pattern.
 
 ### allowed-tools Usage
 
@@ -196,6 +196,7 @@ Before delivering, verify:
 | **Automation** | Executes workflows    | Processed files, transformed data |
 | **Analyzer**   | Extracts insights     | Reports, summaries, reviews       |
 | **Validator**  | Enforces quality      | Pass/fail assessments, scores     |
+| **Reference**  | Shares knowledge      | Standards loaded by other skills  |
 
 ### Type Selection Guide
 
@@ -216,6 +217,9 @@ EXTRACTS information or provides ANALYSIS?
 
 CHECKS quality or ENFORCES standards?
   → Validator
+
+SHARES knowledge that multiple skills need?
+  → Reference (disable-model-invocation: true)
 ```
 
 ---
@@ -573,6 +577,59 @@ Gather context to ensure successful implementation:
 | ------- | ------------ |
 | Issue 1 | [How to fix] |
 ```
+
+---
+
+## Reference Skills for Shared Knowledge
+
+**Purpose**: Hold shared domain knowledge that multiple skills need. Not invoked directly by users or Claude — loaded by other skills via `/skill-name` references.
+
+**When to use**: When two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Without a reference skill, you either duplicate the content (maintenance burden) or put it in one skill's `references/` directory where the other skill can't reach it (each skill's `${SKILL_DIR}` is isolated).
+
+**Key elements**:
+
+- `disable-model-invocation: true` in frontmatter (prevents false activations)
+- Passive description (NOT directive — no `ALWAYS`/`NEVER`)
+- `allowed-tools: Read` (read-only, no side effects)
+- Content is the shared knowledge itself, not a workflow
+
+**Example frontmatter**:
+
+```yaml
+---
+name: standardizing-python
+disable-model-invocation: true
+description: >-
+  Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
+allowed-tools: Read
+---
+```
+
+**How consuming skills reference it**:
+
+```markdown
+# In writing-prose/SKILL.md:
+
+Zero tolerance for patterns in `/standardizing-prose` -- never use any of them.
+
+# In reviewing-prose/SKILL.md:
+
+**Before reviewing**, read `/standardizing-prose` for the complete catalog of anti-patterns.
+```
+
+When Claude encounters `/standardizing-prose` in a loaded skill's text, it reads the reference skill to load the shared knowledge into context.
+
+**Naming convention**: Use `standardizing-{domain}` for standards/anti-patterns. Examples:
+
+- `standardizing-python` — Python code standards
+- `standardizing-python-testing` — Python testing standards
+- `standardizing-prose` — Prose anti-patterns
+
+**What NOT to do**:
+
+- Do NOT use directive descriptions (`ALWAYS`/`NEVER`) — causes false activations when users aren't invoking it
+- Do NOT put shared content in one skill's `references/` directory and hope the other skill can find it — `${SKILL_DIR}` is isolated per skill
+- Do NOT duplicate the same content across multiple skills' `references/` directories — creates maintenance drift
 
 ---
 

@@ -55,6 +55,7 @@ skill-name/
 | Automation | Execute workflows    | Processed files, deployments |
 | Analyzer   | Extract insights     | Reports, summaries           |
 | Validator  | Enforce quality      | Pass/fail assessments        |
+| Reference  | Share knowledge      | Standards loaded by others   |
 
 **Domain Discovery**: Research the domain BEFORE asking users. Users want expertise IN the skill.
 </essential_principles>
