@@ -66,7 +66,7 @@ This loads:
 - Ancestor ADRs/PDRs (to respect constraints)
 - Parent spec (to understand scope)
 
-**Bootstrap mode**: If creating the first artifact in an empty tree (product spec), no context is needed. Proceed directly.
+**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, invoke `/bootstrapping` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
 
 </step>
 

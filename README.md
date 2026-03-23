@@ -112,6 +112,7 @@ Spec Tree framework for spec-driven development. Three phases: spec-tree mainten
 | ------- | --------------------- | ----- | ---------------------------------------------- |
 | Skill   | `/understanding`      | 1     | Foundation skill — loaded before any other     |
 | Skill   | `/contextualizing`    | 1     | Deterministic context loading from tree        |
+| Skill   | `/bootstrapping`      | 1     | Interview user, scaffold new spec tree         |
 | Skill   | `/authoring`          | 1     | Add, define, create specs and features         |
 | Skill   | `/decomposing`        | 1     | Break down, split, scope work                  |
 | Skill   | `/refactoring`        | 1     | Move nodes, re-scope, extract shared enablers  |

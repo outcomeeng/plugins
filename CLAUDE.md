@@ -331,6 +331,7 @@ Spec-driven development with the Spec Tree framework. Three phases: spec-tree ma
 | --------------------- | ----- | --------------------------------------------------------------- |
 | `/understanding`      | 1     | Foundation skill — loaded before any other                      |
 | `/contextualizing`    | 1     | Show status, progress, what exists                              |
+| `/bootstrapping`      | 1     | Interview user, scaffold new spec tree                          |
 | `/authoring`          | 1     | Add, define, create specs and features                          |
 | `/decomposing`        | 1     | Break down, split, scope work                                   |
 | `/refactoring`        | 1     | Move nodes, re-scope, extract shared enablers                   |
@@ -868,7 +869,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   │   ├── rtfm.md
 │   │   │   └── tdd.md
 │   │   └── skills/
-│   │       └── (10 skills)
+│   │       └── (11 skills)
 │   ├── specs/                    # Legacy
 │   │   └── skills/
 │   │       ├── managing-specs/

@@ -149,59 +149,64 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 1a. Systematically ingest context to prepare for a discussion with the user.
 1b. Systematically ingest context to prepare for autonomous work.
 
-#### 2. Author Spec Tree artifacts
+#### 2. Bootstrap a new Spec Tree
 
-2a. Author from scratch from user conversation/prompt, including clarifying questions.
-2b. Extend existing artifacts with new requirements, outcomes, or decisions.
+2a. Interview user for product identity, hypothesis, and scope.
+2b. Scaffold `spx/` with product spec, CLAUDE.md, and top-level node stubs.
 
-#### 3. Decompose Spec Tree artifacts
+#### 3. Author Spec Tree artifacts
 
-3a. Systematically decompose existing higher-level nodes to lower levels.
+3a. Author from scratch from user conversation/prompt, including clarifying questions.
+3b. Extend existing artifacts with new requirements, outcomes, or decisions.
 
-#### 4. Refactor Spec Tree artifacts
+#### 4. Decompose Spec Tree artifacts
 
-4a. Review and structurally refactor (move/re-scope content) through user conversation.
-4b. Factor common aspects into shared enablers at lower indices.
+4a. Systematically decompose existing higher-level nodes to lower levels.
 
-#### 5. Align Spec Tree artifacts
+#### 5. Refactor Spec Tree artifacts
 
-5a. Clarify/augment/align/deconflict artifacts while preserving product truth.
+5a. Review and structurally refactor (move/re-scope content) through user conversation.
+5b. Factor common aspects into shared enablers at lower indices.
 
-#### 6. Lock file lifecycle (planned)
+#### 6. Align Spec Tree artifacts
+
+6a. Clarify/augment/align/deconflict artifacts while preserving product truth.
+
+#### 7. Lock file lifecycle (planned)
 
 > **Not yet implemented.** Depends on lock file tooling.
 
-6a. Create tests from assertions in existing specs.
-6b. Refactor tests when assertions or decisions change.
-6c. Update spec artifacts with test file references and lock when new test evidence reveals gaps.
+7a. Create tests from assertions in existing specs.
+7b. Refactor tests when assertions or decisions change.
+7c. Update spec artifacts with test file references and lock when new test evidence reveals gaps.
 
 ### Phase 2: Implementation — using the spec tree to build software
 
-#### 7. Write tests driven by spec assertions
+#### 8. Write tests driven by spec assertions
 
-7a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
-7b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are stale.
-7c. Generate test scaffolds from assertion types, delegating methodology to `test/testing` and language patterns to language-specific skills.
-7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
+8a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
+8b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are stale.
+8c. Generate test scaffolds from assertion types, delegating methodology to `test/testing` and language patterns to language-specific skills.
+8d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
 
-#### 8. Review test evidence against spec assertions
+#### 9. Review test evidence against spec assertions
 
-8a. Adversarial review: how could tests pass while assertions remain unfulfilled?
-8b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
-8c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
-8d. Decision record compliance from full ancestor chain.
+9a. Adversarial review: how could tests pass while assertions remain unfulfilled?
+9b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
+9c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
+9d. Decision record compliance from full ancestor chain.
 
-#### 9. Implement work items using TDD flow
+#### 10. Implement work items using TDD flow
 
-9a. Orchestrate architecture → test → code phases with review gates.
-9b. Load methodology and work item context as prerequisites.
-9c. Delegate to language-specific plugins for each phase.
+10a. Orchestrate architecture → test → code phases with review gates.
+10b. Load methodology and work item context as prerequisites.
+10c. Delegate to language-specific plugins for each phase.
 
 ### Phase 3: Commit — recording results into version control
 
-#### 10. Commit changes
+#### 11. Commit changes
 
-10a. Stage changes selectively by concern, write Conventional Commits messages.
+11a. Stage changes selectively by concern, write Conventional Commits messages.
 
 ## Skill map
 
@@ -216,18 +221,19 @@ Foundation skills load once per conversation. They emit conversation markers so 
 | Skill             | Owns                                                                                              | Marker                             | Status      |
 | ----------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- |
 | `understanding`   | Methodology, durable map worldview, decomposition semantics, ordering rules, all shared templates | `<SPEC_TREE_FOUNDATION>`           | Implemented |
-| `contextualizing` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<SPEC_TREE_CONTEXT target="...">` | Placeholder |
+| `contextualizing` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<SPEC_TREE_CONTEXT target="...">` | Implemented |
 
 #### Action layer
 
 Action skills do the work. Before starting, they check conversation history for foundation markers and invoke missing foundations.
 
-| Skill         | Use case | Scope                                                           | Status      |
-| ------------- | -------- | --------------------------------------------------------------- | ----------- |
-| `authoring`   | 2        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Placeholder |
-| `decomposing` | 3        | Systematically decompose higher-level nodes to lower levels     | Placeholder |
-| `refactoring` | 4        | Structural moves, re-scoping, factoring shared enablers         | Placeholder |
-| `aligning`    | 5        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
+| Skill           | Use case | Scope                                                           | Status      |
+| --------------- | -------- | --------------------------------------------------------------- | ----------- |
+| `bootstrapping` | 2        | Interview user, scaffold new spec tree                          | Implemented |
+| `authoring`     | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
+| `decomposing`   | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
+| `refactoring`   | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
+| `aligning`      | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
 
 #### Lock file lifecycle (planned)
 
@@ -239,9 +245,9 @@ Skills for using the spec tree to build software. Each builds on a standalone `t
 
 | Skill             | Use case | Scope                                                                | Builds on              | Status      |
 | ----------------- | -------- | -------------------------------------------------------------------- | ---------------------- | ----------- |
-| `testing`         | 7        | Write tests driven by spec assertions, evidence gap analysis         | `test/testing`         | Placeholder |
-| `reviewing-tests` | 8        | Adversarial review of test evidence against spec assertions          | `test/reviewing-tests` | Placeholder |
-| `coding`          | 9        | TDD flow: architecture → test → code with review gates at each phase | —                      | Implemented |
+| `testing`         | 8        | Write tests driven by spec assertions, evidence gap analysis         | `test/testing`         | Implemented |
+| `reviewing-tests` | 9        | Adversarial review of test evidence against spec assertions          | `test/reviewing-tests` | Implemented |
+| `coding`          | 10       | TDD flow: architecture → test → code with review gates at each phase | —                      | Implemented |
 
 `spec-tree:testing` is a **superset** of `test/testing`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:testing`; a non-spec-tree user invokes `test/testing`. No cross-plugin dependency at runtime.
 
@@ -255,7 +261,7 @@ Skills for recording results into version control.
 
 | Skill                | Use case | Scope                                                          | Status      |
 | -------------------- | -------- | -------------------------------------------------------------- | ----------- |
-| `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits | Implemented |
+| `committing-changes` | 11       | Conventional Commits with selective staging and atomic commits | Implemented |
 
 ### Commands
 
@@ -385,7 +391,7 @@ Each flow documents only what is unique to that mode. All Phase 1 action skills 
 1. Load Spec Tree methodology, structure semantics, and template index.
 2. Emit `<SPEC_TREE_FOUNDATION>` marker with loaded module summary.
 
-#### `contextualizing` (placeholder)
+#### `contextualizing`
 
 1. Intake target path/scope and operation type.
 2. Walk tree from product root to target node.
@@ -395,15 +401,25 @@ Each flow documents only what is unique to that mode. All Phase 1 action skills 
 6. If operation is `author` and no artifacts exist at target level, return empty manifest with `bootstrap=true` instead of aborting.
 7. Emit `<SPEC_TREE_CONTEXT target="full/path">` with context manifest: collected specs, open decisions, readiness status.
 
-#### `authoring` (placeholder)
+#### `bootstrapping`
 
-1. Intake node type (enabler or outcome), intended location, and path.
-2. Clarify user intent and unresolved product decisions.
-3. Draft artifact using templates from `understanding` and Spec Tree rules.
-4. Validate atemporal voice, consistency, and testability (assertions link to test files for outcomes).
-5. Return draft, open decisions, and recommended next steps (decomposition or test creation).
+1. Check for existing product spec — redirect to `authoring` if tree already exists.
+2. Interview user for product identity, hypothesis, and scope.
+3. Identify top-level nodes (3–7 concerns), classify as enabler or outcome.
+4. Present scaffold plan and wait for confirmation.
+5. Create `spx/` with product spec, CLAUDE.md, and top-level node stubs.
+6. Recommend next steps (fill assertions with `authoring`, decompose with `decomposing`).
 
-#### `decomposing` (placeholder)
+#### `authoring`
+
+1. Detect empty tree → invoke `bootstrapping` if no product spec exists.
+2. Intake node type (enabler or outcome), intended location, and path.
+3. Clarify user intent and unresolved product decisions.
+4. Draft artifact using templates from `understanding` and Spec Tree rules.
+5. Validate atemporal voice, consistency, and testability (assertions link to test files for outcomes).
+6. Return draft, open decisions, and recommended next steps (decomposition or test creation).
+
+#### `decomposing`
 
 1. Intake source node and target decomposition depth.
 2. Apply decomposition methodology (enabler vs outcome, scope, sparse integer ordering).
@@ -411,7 +427,7 @@ Each flow documents only what is unique to that mode. All Phase 1 action skills 
 4. Validate decomposition quality (no excessive nesting, correct node types, no misplaced assertions).
 5. Return decomposition output with rationale for splits and boundaries.
 
-#### `refactoring` (placeholder)
+#### `refactoring`
 
 1. Intake structural change request (move, re-scope, extract shared enabler).
 2. Analyze impact across hierarchy and decision records.
@@ -429,7 +445,7 @@ Each flow documents only what is unique to that mode. All Phase 1 action skills 
 
 ### Phase 2: Implementation
 
-#### `testing` (placeholder)
+#### `testing`
 
 Superset of `test/testing`. Incorporates the full methodology, adds tree-specific concerns.
 
@@ -440,7 +456,7 @@ Superset of `test/testing`. Incorporates the full methodology, adds tree-specifi
 5. For assertions lacking tests, generate scaffolds using assertion type to select test pattern. Delegate methodology decisions (level, doubles) to the 5-stage router. Delegate language patterns to language-specific skills.
 6. Report evidence summary: which assertions have tests, which don't, which are stale.
 
-#### `reviewing-tests` (placeholder)
+#### `reviewing-tests`
 
 Superset of `test/reviewing-tests`. Incorporates the full adversarial review protocol, adds tree-specific concerns.
 
