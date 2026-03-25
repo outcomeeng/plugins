@@ -41,6 +41,7 @@ Invoke `/understanding` before any spec-tree work. The skill reads 3 core refere
    - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
    - `references/ordering-rules.md` — sparse integer ordering, dependency encoding (used by `/authoring`, `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
+   - `references/potential-nodes.md` — `spx/POTENTIAL` convention, quality gate integration (used by `/authoring`, `/testing`)
 4. Note template and example locations (read only when authoring):
    - `templates/product/product-name.product.md`
    - `templates/decisions/decision-name.adr.md`

@@ -26,9 +26,9 @@ Within these phases:
 
 ## Spec Tree methodology
 
-Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec, its tests, and a lock file. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-test drift.
+Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec and its tests. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-test drift.
 
-Every node begins with an outcome hypothesis — a belief about what change it will produce. Assertions define testable claims about the output. Lock files use Git blob hashes to bind spec content to test evidence, making drift visible before anyone runs a test.
+Every node begins with an outcome hypothesis — a belief about what change it will produce. Assertions define testable claims about the output. Nodes progress through four states: **Spec** (spec only), **Potential** (spec + tests, implementation not started), **Failing** (implementation exists but tests fail), and **Realized** (tests pass).
 
 The tree structure enables deterministic context injection: the path from root to any node defines exactly what context an agent receives, replacing heuristic search with curated, reviewable context.
 
@@ -37,8 +37,8 @@ The tree structure enables deterministic context injection: the path from root t
 - **Spec Tree** — git-native product structure in `spx/`
 - **Enabler nodes** (`.enabler`) — infrastructure that higher-index nodes depend on
 - **Outcome nodes** (`.outcome`) — hypotheses with testable assertions
-- **Lock file** (`spx-lock.yaml`) — Git blob hashes binding spec to test evidence
 - **Deterministic context injection** — tree structure defines agent context
+- **Four node states** — Spec → Potential → Failing → Realized
 
 ### Node types
 
@@ -102,31 +102,18 @@ For N=7: sequence 21, 32, 43, 54, 65, 76, 87.
 
 Fractional indexing (e.g., `20.5-slug`) is the escape hatch when integer gaps are exhausted.
 
-### Lock files and drift detection (planned)
+### Node states
 
-> **Not yet implemented.** This section describes the target design for `spx-lock.yaml`. No lock file tooling exists yet.
+A node's state is derived from what exists and whether tests pass:
 
-`spx-lock.yaml` will bind spec content to test evidence via Git blob hashes:
+| State         | Condition                                  | What it means                        |
+| ------------- | ------------------------------------------ | ------------------------------------ |
+| **Spec**      | Spec exists, no tests                      | Intent defined, no evidence yet      |
+| **Potential** | Spec + tests exist, implementation doesn't | Tests excluded via `spx/POTENTIAL`   |
+| **Failing**   | Spec + tests + implementation, tests fail  | Reality hasn't caught up to the spec |
+| **Realized**  | Spec + tests + implementation, tests pass  | Evidence confirms the spec           |
 
-```yaml
-schema: spx-lock/v1
-blob: a3b7c12
-tests:
-  - path: tests/file.unit.test.ts
-    blob: 9d4e5f2
-```
-
-- Edit the spec: blob hash changes, node is visibly stale before tests run.
-- Lock files are deterministic: same state produces same file. Two agents produce identical locks.
-- Lock is written only when all tests pass.
-
-Node states derived from lock:
-
-| State          | Condition                                 | Required action          |
-| -------------- | ----------------------------------------- | ------------------------ |
-| **Needs work** | No lock file exists                       | Write tests, then lock   |
-| **Stale**      | Spec or test blob changed since last lock | Re-lock (`spx lock`)     |
-| **Valid**      | All blobs match                           | None -- evidence current |
+Potential and failing are natural, healthy states. They are not problems to fix urgently.
 
 ### Deterministic context injection
 
@@ -172,41 +159,33 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 6a. Clarify/augment/align/deconflict artifacts while preserving product truth.
 
-#### 7. Lock file lifecycle (planned)
-
-> **Not yet implemented.** Depends on lock file tooling.
-
-7a. Create tests from assertions in existing specs.
-7b. Refactor tests when assertions or decisions change.
-7c. Update spec artifacts with test file references and lock when new test evidence reveals gaps.
-
 ### Phase 2: Implementation — using the spec tree to build software
 
-#### 8. Write tests driven by spec assertions
+#### 7. Write tests driven by spec assertions
 
-8a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
-8b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are stale.
-8c. Generate test scaffolds from assertion types, delegating methodology to `test/testing` and language patterns to language-specific skills.
-8d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
+7a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
+7b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are broken.
+7c. Generate test scaffolds from assertion types, delegating methodology to `test/testing` and language patterns to language-specific skills.
+7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
 
-#### 9. Review test evidence against spec assertions
+#### 8. Review test evidence against spec assertions
 
-9a. Adversarial review: how could tests pass while assertions remain unfulfilled?
-9b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
-9c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
-9d. Decision record compliance from full ancestor chain.
+8a. Adversarial review: how could tests pass while assertions remain unfulfilled?
+8b. Tree-level coverage: are all assertions across a subtree covered? Are there orphaned tests?
+8c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
+8d. Decision record compliance from full ancestor chain.
 
-#### 10. Implement work items using TDD flow
+#### 9. Implement work items using TDD flow
 
-10a. Orchestrate architecture → test → code phases with review gates.
-10b. Load methodology and work item context as prerequisites.
-10c. Delegate to language-specific plugins for each phase.
+9a. Orchestrate architecture → test → code phases with review gates.
+9b. Load methodology and work item context as prerequisites.
+9c. Delegate to language-specific plugins for each phase.
 
 ### Phase 3: Commit — recording results into version control
 
-#### 11. Commit changes
+#### 10. Commit changes
 
-11a. Stage changes selectively by concern, write Conventional Commits messages.
+10a. Stage changes selectively by concern, write Conventional Commits messages.
 
 ## Skill map
 
@@ -235,19 +214,15 @@ Action skills do the work. Before starting, they check conversation history for 
 | `refactoring`   | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
 | `aligning`      | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
 
-#### Lock file lifecycle (planned)
-
-Lock file management (`spx-lock.yaml`) is a separate concern from test creation or methodology. It binds spec content to test evidence via Git blob hashes and detects drift. This is not yet designed as a skill — it may become a CLI tool, a skill, or part of `spec-tree:testing` once that skill is implemented.
-
 ### Phase 2: Implementation
 
 Skills for using the spec tree to build software. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
 
 | Skill             | Use case | Scope                                                                | Builds on              | Status      |
 | ----------------- | -------- | -------------------------------------------------------------------- | ---------------------- | ----------- |
-| `testing`         | 8        | Write tests driven by spec assertions, evidence gap analysis         | `test/testing`         | Implemented |
-| `reviewing-tests` | 9        | Adversarial review of test evidence against spec assertions          | `test/reviewing-tests` | Implemented |
-| `coding`          | 10       | TDD flow: architecture → test → code with review gates at each phase | —                      | Implemented |
+| `testing`         | 7        | Write tests driven by spec assertions, evidence gap analysis         | `test/testing`         | Implemented |
+| `reviewing-tests` | 8        | Adversarial review of test evidence against spec assertions          | `test/reviewing-tests` | Implemented |
+| `coding`          | 9        | TDD flow: architecture → test → code with review gates at each phase | —                      | Implemented |
 
 `spec-tree:testing` is a **superset** of `test/testing`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:testing`; a non-spec-tree user invokes `test/testing`. No cross-plugin dependency at runtime.
 
@@ -261,7 +236,7 @@ Skills for recording results into version control.
 
 | Skill                | Use case | Scope                                                          | Status      |
 | -------------------- | -------- | -------------------------------------------------------------- | ----------- |
-| `committing-changes` | 11       | Conventional Commits with selective staging and atomic commits | Implemented |
+| `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits | Implemented |
 
 ### Commands
 
@@ -293,17 +268,13 @@ Commands provide dynamic context injection and invoke the corresponding skill.
   - Returns context manifest or abort with remediation
   - Bootstrap mode: returns empty manifest with `bootstrap=true` when authoring into an empty tree (no abort)
 - **Action skills** (`authoring`, `decomposing`, `refactoring`, `aligning`) do not duplicate foundation content. They reference `understanding` for templates and methodology.
-- **Lock file lifecycle** is a separate planned concern (not yet assigned to a skill):
-  - Lock file binding between spec content and test evidence
-  - Writes `spx-lock.yaml` only when all tests pass
-  - Detects stale nodes (spec or test blob changed since last lock)
 
 ### Phase 2: Implementation
 
 - **`testing`** owns spec-tree test writing (superset of `test/testing`):
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
   - Extracts typed assertions from spec nodes, determines what evidence is demanded
-  - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are stale
+  - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are broken
   - Generates test scaffolds from assertion types (Scenario → example-based, Property → property-based, etc.)
   - Loads deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests
 - **`reviewing-tests`** owns spec-tree test review (superset of `test/reviewing-tests`):

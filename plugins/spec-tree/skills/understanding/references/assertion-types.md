@@ -117,8 +117,8 @@ A single spec can contain assertions of different types. Group them under typed 
 
 ### Scenarios
 
-- Given a tree with one stale child, when status is computed, parent reports stale ([test](tests/status.unit.test.{ext}))
-- Given a tree with all valid children, when status is computed, parent reports valid ([test](tests/status.unit.test.{ext}))
+- Given a tree with one failing child, when status is computed, parent reports failing ([test](tests/status.unit.test.{ext}))
+- Given a tree with all realized children, when status is computed, parent reports realized ([test](tests/status.unit.test.{ext}))
 
 ### Mappings
 

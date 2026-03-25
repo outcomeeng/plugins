@@ -102,6 +102,22 @@ uv run --extra dev pytest {story_path}/tests/ -v
 
 Tests should FAIL with ImportError or AssertionError (implementation doesn't exist yet).
 
+### Step 5: Handle Potential Nodes
+
+If the implementation module doesn't exist yet, tests fail on import — breaking the quality gate. Add the node to `spx/POTENTIAL` and run the project's sync command:
+
+```bash
+# Add node path to spx/POTENTIAL (paths relative to spx/)
+echo "76-risc-v.outcome" >> spx/POTENTIAL
+
+# Sync to pyproject.toml
+just sync-potential
+```
+
+This excludes the node's tests from pytest, mypy, and pyright until the implementation exists. Ruff still checks style. See the spec-tree `/understanding` skill's `references/potential-nodes.md` for the full convention.
+
+Remove the entry from `spx/POTENTIAL` when implementation begins.
+
 </write_mode_workflow>
 
 <fix_mode_workflow>

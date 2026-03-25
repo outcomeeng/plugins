@@ -10,7 +10,7 @@ CONTRIBUTING TO faster iteration cycles and higher spec-test coverage across the
 
 - Given a node with all passing tests, when status is computed, then the node reports "realized" ([test](tests/status-rollup.unit.test.{ext}))
 - Given a node with one failing test, when status is computed, then the node reports "failing" ([test](tests/status-rollup.unit.test.{ext}))
-- Given a node with no tests, when status is computed, then the node reports "needs work" ([test](tests/status-rollup.unit.test.{ext}))
+- Given a node with no tests, when status is computed, then the node reports "spec" ([test](tests/status-rollup.unit.test.{ext}))
 - Given a parent with mixed child statuses, when status is rolled up, then the parent reports the worst child status ([test](tests/status-rollup.unit.test.{ext}))
 
 ### Mappings

@@ -105,6 +105,8 @@ For each assertion needing a new test:
 
 Delegate language-specific patterns to `/testing-python` or `/testing-typescript`.
 
+**Potential nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a contract defining what WILL be tested. Add the node's path to `spx/POTENTIAL` and run the project's sync command so the quality gate excludes these tests. Remove the entry when implementation begins. See `${SKILL_DIR}/../understanding/references/potential-nodes.md`.
+
 </step>
 
 <step name="update_links">

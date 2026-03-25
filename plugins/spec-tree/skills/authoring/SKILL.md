@@ -197,6 +197,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
+4. If the implementation doesn't exist yet: add the node path to `spx/POTENTIAL` and run the project's sync command. This excludes the node's tests from the quality gate until implementation begins. See `${SKILL_DIR}/../understanding/references/potential-nodes.md`.
 
 **For decision records:**
 

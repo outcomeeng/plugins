@@ -65,23 +65,26 @@ These operations do not exist in the Spec Tree:
 
 A node's state is derived from its spec and tests:
 
-- **Needs work** — the spec exists but has no tests. The potential is unrealized.
-- **Failing** — tests exist but don't pass. The spec and reality disagree.
-- **Realized** — tests pass. The spec describes something true about the product.
+- **Spec** — the spec exists but has no tests. Intent is defined, no evidence yet.
+- **Potential** — the spec and tests exist but the implementation doesn't. Tests are excluded from the quality gate via `spx/POTENTIAL`. See `references/potential-nodes.md`.
+- **Failing** — spec, tests, and implementation exist, but tests fail. Reality hasn't caught up to the spec.
+- **Realized** — spec, tests, and implementation exist, and tests pass. Evidence confirms the spec.
 
-Failing is a natural, healthy state. Every spec edit may cause tests to fail. This is the system working as designed — not a problem to fix urgently.
+Potential and failing are natural, healthy states. Potential nodes declare intent — the spec defines what the product will do, and the tests define how to prove it. Failing nodes mean reality hasn't caught up to the spec yet. Neither is a problem to fix urgently.
 
 </node_states>
 
 <common_agent_mistakes>
 
-| Agent impulse                  | Correct response                                         |
-| ------------------------------ | -------------------------------------------------------- |
-| "Task complete, closing story" | Nothing to close. If tests pass, the node is realized.   |
-| "Moving to done"               | There is no done. The spec stays where it is.            |
-| "Archiving completed work"     | Do not archive. The spec is the permanent record.        |
-| "Setting status to complete"   | Do not set status. Run tests — passing tests = realized. |
-| "This spec is outdated"        | Either it's still true (keep it) or prune it.            |
-| "Creating a new ticket for X"  | Create or edit a spec. Specs are not tickets.            |
+| Agent impulse                   | Correct response                                         |
+| ------------------------------- | -------------------------------------------------------- |
+| "Task complete, closing story"  | Nothing to close. If tests pass, the node is realized.   |
+| "Moving to done"                | There is no done. The spec stays where it is.            |
+| "Archiving completed work"      | Do not archive. The spec is the permanent record.        |
+| "Setting status to complete"    | Do not set status. Run tests — passing tests = realized. |
+| "This spec is outdated"         | Either it's still true (keep it) or prune it.            |
+| "Creating a new ticket for X"   | Create or edit a spec. Specs are not tickets.            |
+| "Tests fail — module not found" | This is a potential node. Add it to `spx/POTENTIAL`.     |
+| "Excluding tests is cheating"   | Potential exclusion is declared intent, not cheating.    |
 
 </common_agent_mistakes>

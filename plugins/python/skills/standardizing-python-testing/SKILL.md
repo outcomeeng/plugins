@@ -897,6 +897,40 @@ def test_verbose_mode_produces_detailed_output() -> None:
 
 </rejection_criteria>
 
+<potential_node_exclusion>
+
+## Potential Node Exclusion
+
+When tests are written before the implementation exists (potential nodes), they import non-existent modules and break type checkers and the test runner. The spec-tree convention uses `spx/POTENTIAL` as the source of truth. A sync script translates this into Python tool configuration.
+
+### Sync Script Pattern
+
+Use `tomlkit` for safe TOML round-tripping (preserves comments, formatting, whitespace). The sync script reads `spx/POTENTIAL` and updates `pyproject.toml`:
+
+| Tool        | Config key                          | Entry format           |
+| ----------- | ----------------------------------- | ---------------------- |
+| **pytest**  | `[tool.pytest.ini_options] addopts` | `--ignore=spx/{node}/` |
+| **mypy**    | `[tool.mypy] exclude`               | `^spx/{escaped_node}/` |
+| **pyright** | `[tool.pyright] exclude`            | `spx/{node}/`          |
+| **ruff**    | NOT excluded                        | Style always checked   |
+
+The script detects previously-synced entries by value pattern (paths matching `spx/*.outcome/` or `spx/*.enabler/`) and replaces them with the current `spx/POTENTIAL` contents. No marker comments needed — the values are self-identifying.
+
+### Ruff Always Checks
+
+Do NOT exclude potential nodes from ruff. Test files are valid Python with correct style. Only type checkers (which resolve imports) and the test runner (which executes imports) need exclusion.
+
+### Justfile Recipe
+
+```makefile
+sync-potential:
+    uv run python scripts/sync_potential.py
+```
+
+Run after editing `spx/POTENTIAL`. The script is idempotent.
+
+</potential_node_exclusion>
+
 <success_criteria>
 Code follows these standards when:
 
