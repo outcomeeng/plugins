@@ -6,11 +6,39 @@ Claude Code plugin marketplace (`outcomeeng/claude`) for spec-driven development
 
 We develop this marketplace as a product using its own Spec Tree. The product specs are in `spx/` (the durable map).
 
-## Always use `AskUserQuestion` Tool
+## Historical Context
 
-**Always use the `AskUserQuestion` tool to obtain guidance from the user, such as: discover context, obtain rationale, as well as to support the user in makking the right call by asking critical questions before blindly following the user's requests**
+The Outcome Engineering methodology has evolved through three generations. Only the current one is active.
 
-**NEVER ask the user any questions without using the `AskUserQuestion` tool**
+| Generation              | Plugin       | Directory     | Node types                     | Context skill          | Status      |
+| ----------------------- | ------------ | ------------- | ------------------------------ | ---------------------- | ----------- |
+| 1st (Jul 2025–Jan 2026) | `specs`      | `specs/work/` | `capability → feature → story` | `/understanding-specs` | **Legacy**  |
+| 2nd (Jan–Mar 2026)      | `spx-legacy` | `spx/`        | `capability → feature → story` | `/understanding-spx`   | **Legacy**  |
+| 3rd (Mar 2026–)         | `spec-tree`  | `spx/`        | `enabler`, `outcome`           | `/contextualizing`     | **Current** |
+
+**What changed across generations:**
+
+- **1st → 2nd**: Moved from `specs/work/` to `spx/`, adopted durable map principles and sparse integer ordering. The three-level hierarchy (`capability/feature/story`) remained.
+- **2nd → 3rd**: Replaced the fixed three-level hierarchy with two recursive node types (`enabler`, `outcome`) that nest to arbitrary depth. Replaced `understanding-spx` with `contextualizing`. Merged the separate `spx` and `code` plugins into `spec-tree`.
+
+**Why legacy plugins still exist:** The `specs` and `spx-legacy` plugins remain in the repository for projects that haven't migrated. They are not installed in new projects.
+
+## Critical Rules
+
+- ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See skill table below.
+- ⚠️ **NEVER write code without invoking a skill first** - See skill table below
+- ⚠️ **NEVER write tests in `tests/`** - Write in `spx/.../tests/` (co-located with specs)
+- ⚠️ **NEVER manually navigate `spx/` hierarchy** - Use `/contextualizing spx/path/to/node` skill
+- ⚠️ **ALWAYS read CLAUDE.md in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's CLAUDE.md FIRST if it exists
+- ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
+- ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
+- ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in Python comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. The `semgrep` rule enforces this.
+- ⚠️ **NEVER edit `package.json` for dependency changes** - Use `just add`/`just remove` — they update package.json, lockfile, and venv atomically
+- ⚠️ **NEVER manually delete untracked files or empty directories** - Git doesn't track empty dirs; `.DS_Store` and `__pycache__` are gitignored artifacts. Use `just run clean` to remove them
+- ⚠️ **NEVER use agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST happen in the main conversation context. Agents lack context, create unauthorized files, conflict on shared config, and make unasked-for changes.
+- ✅ **Always use `just run test`** - Never bare pytest (just run loads .env automatically)
+- ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
+- ✅ **Use `AskUserQuestion` for structured questions with predefined options.** Do NOT use it for open-ended questions where the user needs to provide free-form context — just ask in plain text instead.
 
 ## Markdown Formatting Rules
 
@@ -280,12 +308,6 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `/architecting-typescript`           | ADR producer with testing strategy             |
 | `/reviewing-typescript-architecture` | ADR validator against testing principles       |
 
-### Commands
-
-| Command            | Purpose                           |
-| ------------------ | --------------------------------- |
-| `/auto-typescript` | Implement work items sequentially |
-
 ### Core Principles
 
 - No mocking - dependency injection only
@@ -307,12 +329,6 @@ Complete Python development workflow with testing, implementation, and review.
 | `/reviewing-python-tests`        | Python test review                             |
 | `/architecting-python`           | ADR producer with testing strategy             |
 | `/reviewing-python-architecture` | ADR validator against testing principles       |
-
-### Commands
-
-| Command        | Purpose                           |
-| -------------- | --------------------------------- |
-| `/auto-python` | Implement work items sequentially |
 
 ### Core Principles
 
@@ -352,6 +368,7 @@ Spec-driven development with the Spec Tree framework. Three phases: spec-tree ma
 | `/rtfm`      | Stop ad hoc work and follow the methodology         |
 | `/clarify`   | Clarify ambiguous requirements                      |
 | `/handoff`   | Create timestamped context handoff                  |
+| `/realize`   | Realize all potential nodes from `spx/POTENTIAL`    |
 | `/pickup`    | Load and continue from previous handoff             |
 
 ## Discovering Other Installed Skills
@@ -807,8 +824,6 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       ├── writing-prose/
 │   │       └── reviewing-prose/
 │   ├── python/
-│   │   ├── commands/
-│   │   │   └── auto-python.md
 │   │   └── skills/
 │   │       └── (6 skills)
 │   ├── spec-tree/                # Spec Tree — 3 phases
@@ -819,6 +834,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   │   ├── commit.md
 │   │   │   ├── handoff.md
 │   │   │   ├── pickup.md
+│   │   │   ├── realize.md
 │   │   │   ├── rtfm.md
 │   │   │   └── tdd.md
 │   │   └── skills/
@@ -828,8 +844,6 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       ├── testing/
 │   │       └── reviewing-tests/
 │   └── typescript/
-│       ├── commands/
-│       │   └── auto-typescript.md
 │       └── skills/
 │           └── (7 skills)
 ├── spx/                           # Specs as durable map
