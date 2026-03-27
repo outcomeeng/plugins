@@ -20,13 +20,14 @@ Invoke `/understanding` before any spec-tree work. The skill reads 3 core refere
 
 <principles>
 
-1. **FOUNDATION, NOT CONTEXT** — This skill loads methodology; it does not load project-specific artifacts. Use `/contextualizing` for target-specific context injection.
-2. **LOAD ONCE** — Check for `<SPEC_TREE_FOUNDATION>` marker before loading. If present, skip.
-3. **SPECS ARE PERMANENT** — The Spec Tree is a durable map. Nothing moves, nothing closes. Read `references/durable-map.md`.
-4. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
-5. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review.
-6. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
-7. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
+1. **TRUTH FLOWS DOWN** — Specs declare. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never weaken a spec to match code or tests. Read `references/durable-map.md`.
+2. **FOUNDATION, NOT CONTEXT** — This skill loads methodology; it does not load project-specific artifacts. Use `/contextualizing` for target-specific context injection.
+3. **LOAD ONCE** — Check for `<SPEC_TREE_FOUNDATION>` marker before loading. If present, skip.
+4. **SPECS ARE DECLARATIONS** — The Spec Tree is a durable, declarative map. Nothing moves, nothing closes. Specs declare product truth.
+5. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
+6. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertions derive from PDRs/ADRs, not from code or tests.
+7. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
+8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
 
 </principles>
 
@@ -34,14 +35,14 @@ Invoke `/understanding` before any spec-tree work. The skill reads 3 core refere
 
 1. Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If present, skip — already loaded.
 2. Read core references (always loaded):
-   - `references/durable-map.md` — specs as permanent truth, atemporal voice, node states
+   - `references/durable-map.md` — truth hierarchy, declarative model, atemporal voice, node states
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
 3. Note operational references (loaded on demand by other skills):
    - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
    - `references/ordering-rules.md` — sparse integer ordering, dependency encoding (used by `/authoring`, `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
-   - `references/potential-nodes.md` — `spx/POTENTIAL` convention, quality gate integration (used by `/authoring`, `/testing`)
+   - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
 4. Note template and example locations (read only when authoring):
    - `templates/product/product-name.product.md`
    - `templates/decisions/decision-name.adr.md`
@@ -54,7 +55,7 @@ Invoke `/understanding` before any spec-tree work. The skill reads 3 core refere
 ```text
 <SPEC_TREE_FOUNDATION>
 Loaded: durable-map, node-types, assertion-types
-Operational references available: decomposition-semantics, ordering-rules, what-goes-where, potential-nodes
+Operational references available: decomposition-semantics, ordering-rules, what-goes-where, excluded-nodes
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
@@ -67,6 +68,7 @@ Examples available in: examples/
 - [ ] Three core reference files read and understood
 - [ ] Operational reference, template, and example locations known
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
+- [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
 - [ ] Methodology loaded: enabler vs outcome distinction, three-part hypothesis structure
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria

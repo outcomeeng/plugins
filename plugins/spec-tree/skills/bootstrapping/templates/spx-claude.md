@@ -129,11 +129,11 @@ Every assertion must link to at least one test file.
 
 ---
 
-## Potential Nodes
+## Excluded Nodes
 
-Nodes with specs and tests but no implementation are listed in `spx/POTENTIAL`. Their tests are excluded from the quality gate (test runner + type checkers). Linting always applies — style is checked regardless of implementation existence.
+Nodes with specs and tests but no implementation are listed in `spx/EXCLUDE`. Their tests are excluded from the quality gate (test runner + type checkers). Linting always applies — style is checked regardless of implementation existence.
 
-Run the project's sync command after editing `spx/POTENTIAL` to update tool configuration.
+Run the project's sync command after editing `spx/EXCLUDE` to update tool configuration.
 
 Remove entries when implementation begins and tests should start running.
 
