@@ -33,6 +33,8 @@ spx/
 3. **Co-location**: Tests live with their spec in `tests/`.
 4. **Atemporal voice**: Specs state product truth. Never narrate history.
 5. **Deterministic context**: The tree path defines what context an agent receives.
+6. **Decision records win by hierarchy**: If a spec contradicts an ADR or PDR in its ancestry, the spec is wrong. Rewrite the spec to align with the decision record before any implementation work.
+7. **Decision records updated in-place**: When a decision changes, update the ADR/PDR directly. No "superseded" workflow.
 
 ---
 

@@ -33,6 +33,8 @@ spx/
 3. **Co-location**: Tests live with their spec in `tests/`.
 4. **Atemporal voice**: Specs state product truth. Never narrate history.
 5. **Deterministic context**: The tree path defines what context an agent receives.
+6. **Decision records win by hierarchy**: If a spec contradicts an ADR or PDR in its ancestry, the spec is wrong. Rewrite the spec to align with the decision record before any implementation work.
+7. **Decision records updated in-place**: When a decision changes, update the ADR/PDR directly. No "superseded" workflow.
 
 ---
 
@@ -42,7 +44,22 @@ Numeric prefixes encode dependency order: lower index constrains higher. Same in
 
 Formula for N items: `i_k = 10 + floor(k * 89 / (N + 1))`
 
-**ALWAYS use full path when referencing nodes** — indices are sibling-unique, not globally unique.
+For N=7: 21, 32, 43, 54, 65, 76, 87.
+
+```text
+15-auth-strategy.adr.md              # Constrains everything at 16+
+21-test-harness.enabler/             # Depends on 15; constrains 22+
+32-auth.outcome/                     # Independent of billing
+32-billing.outcome/                  # Independent of auth
+43-integration.outcome/              # Depends on BOTH 32s
+```
+
+**ALWAYS use full path when referencing nodes** — indices are sibling-unique, not globally unique:
+
+| Wrong                  | Correct                                     |
+| ---------------------- | ------------------------------------------- |
+| "32-parser.outcome"    | "21-infra.enabler/32-parser.outcome"        |
+| "implement outcome-43" | "implement 21-infra.enabler/43-api.outcome" |
 
 ---
 
