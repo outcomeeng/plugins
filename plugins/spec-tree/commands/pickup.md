@@ -2,18 +2,29 @@
 name: pickup
 description: Load a handoff document to continue previous work
 argument-hint: [--list]
-allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion
+allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 ---
 
-## Current Context
-
+<context>
 **Git status:**
 !`git status --short || echo "Not in a git repo"`
 
 **Available sessions:**
 !`spx session todo || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
+</context>
 
-Load a handoff document from `.spx/sessions/todo/` to continue previous work in the current context.
+<objective>
+
+Load and claim a handoff session to continue work from a previous context. The pickup workflow is structured to ensure the receiving agent does not repeat the previous agent's mistakes:
+
+1. **Skills first** — know what to invoke before touching any code
+2. **Nodes second** — understand what was worked on and its current state
+3. **Escape hatches** — check for PLAN.md / DEFICIENCIES.md in node directories
+4. **Action last** — resume work with full context
+
+</objective>
+
+<session_management>
 
 ## Session Commands
 
@@ -36,7 +47,7 @@ spx session show <id>
 ## Session Directory Structure
 
 Sessions are organized by status in the **root worktree.**
-**IMPORTANT:** The `spx` CLI is aware of Git worktrees and manages all session state in a gitignore'd directory in the root worktree (i.e., as a sibling to the actual `.git` directory).
+**IMPORTANT:** The `spx` CLI is aware of Git worktrees and manages all session state in a gitignored directory in the root worktree (i.e., as a sibling to the actual `.git` directory).
 
 The session files are Markdown files within subdirectories of the base `.spx/sessions` directory:
 
@@ -47,51 +58,30 @@ The session files are Markdown files within subdirectories of the base `.spx/ses
 └── archive/   # Completed
 ```
 
-## Behavior
+</session_management>
+
+<workflow>
+
+## Phase 1: Claim session
 
 ### Default (no arguments)
 
-Claim and load the **highest priority** (or oldest if same priority) session using `--auto`.
+Claim the **highest priority** (or oldest if same priority) session:
+
+```bash
+spx session pickup --auto
+```
+
+The `spx` CLI handles:
+
+- Selecting highest priority (or oldest if tied)
+- Atomic move from `todo/` to `doing/`
+- Outputting `<PICKUP_ID>...</PICKUP_ID>` marker for `/handoff` to find
+- Displaying the claimed session content
 
 ### With `--list` flag
 
 Check if `$ARGUMENTS` contains `--list` to activate list mode.
-
-Present all available todo sessions and use `AskUserQuestion` tool to let the user select which one to load.
-
-## Workflow
-
-### 1. List Available Sessions
-
-```bash
-# List all todo sessions
-spx session todo
-
-# Or get JSON for parsing
-spx session todo --json
-```
-
-### 2a. Default Mode (auto-claim)
-
-1. Claim the highest priority available session:
-   ```bash
-   spx session pickup --auto
-   ```
-   The `spx` CLI handles:
-   - Selecting highest priority (or oldest if tied)
-   - Atomic move from `todo/` to `doing/`
-   - Outputting `<PICKUP_ID>...</PICKUP_ID>` marker for `/handoff` to find
-   - Displaying the claimed session content
-
-2. Present formatted summary including:
-   - Metadata (timestamp, branch, project)
-   - Original task
-   - Work remaining
-   - Note that this session has been claimed for this session
-
-3. Offer to read files mentioned in the handoff if they exist
-
-### 2b. List Mode (`--list` flag)
 
 1. Get all todo sessions:
    ```bash
@@ -99,101 +89,121 @@ spx session todo --json
    ```
 
 2. Parse each session to extract:
-   - Session ID (e.g., `2026-01-08_16-30-22`)
-   - Priority and tags from metadata
-   - Original task from `<original_task>` section
+   - Session ID
+   - Priority and tags from frontmatter
+   - Nodes from `<nodes>` section (or `<original_task>` for legacy sessions)
 
-3. Use `AskUserQuestion` tool to present options:
-   - **Question**: "Which handoff would you like to load?"
-   - **Header**: "Handoff"
-   - **Options**: Each session with format:
-     - **Label**: `YYYY-MM-DD HH:MM [priority] (tags)`
-     - **Description**: First 100 chars of original task
+3. Use `AskUserQuestion` to present options:
 
-Example `AskUserQuestion` call:
+   ```json
+   {
+     "questions": [{
+       "question": "Which handoff would you like to load?",
+       "header": "Handoff",
+       "multiSelect": false,
+       "options": [
+         { "label": "2026-03-29 14:22 [high] (test-harness)", "description": "TDD phase 7 on 43-fixtures.enabler — tests written, implementation needed" },
+         { "label": "2026-03-28 09:15 [medium] (auth)", "description": "Spec authoring on 32-auth.outcome — assertions need review" }
+       ]
+     }]
+   }
+   ```
 
-```json
-{
-  "questions": [
-    {
-      "question": "Which handoff would you like to load?",
-      "header": "Handoff",
-      "multiSelect": false,
-      "options": [
-        {
-          "label": "2026-01-08 16:30 [high] (refactor)",
-          "description": "Implement /handoff and /pickup commands for context preservation"
-        },
-        {
-          "label": "2026-01-08 14:15 [medium] (auth)",
-          "description": "Add OAuth2 authentication flow with token refresh"
-        },
-        {
-          "label": "2026-01-07 22:45 [low]",
-          "description": "Debug performance issues in API gateway"
-        }
-      ]
-    }
-  ]
-}
-```
-
-1. After user selection, claim the chosen session:
+4. Claim the chosen session:
    ```bash
    spx session pickup <selected-session-id>
    ```
 
-2. Present the claimed session content
+## Phase 2: Present skills checklist
 
-### 3. Present Handoff Content
+**This phase comes BEFORE loading node context.** The skills checklist tells the agent what to invoke and what to avoid.
 
-Format the handoff in a clear, readable way:
+Read the `<skills>` section from the session file and present it prominently:
 
-```markdown
-# Handoff: [Session ID]
+### Critical — invoke before starting work
 
-**Project**: [project name]
-**Branch**: [branch name]
-**Status**: [git status]
-**Priority**: [priority]
-**Tags**: [tags]
+> These skills are REQUIRED. The previous agent identified them as essential.
 
-## Original Task
+List each skill with its reasoning.
 
-[Original task description]
+### Missed — do not repeat these mistakes
 
-## Work Completed
+> The previous agent skipped these skills and it caused problems. Learn from their experience.
 
-[Summary of completed work]
+List each missed skill with what went wrong.
 
-## Work Remaining
+### Next action — where to resume
 
-[List of remaining tasks]
+> This is where the previous agent left off.
 
-## Attempted Approaches
+Show the recommended skill and TDD flow position.
 
-[Failed approaches and learnings]
+## Phase 3: Load node context
 
-## Critical Context
+For each node in the `<nodes>` section:
 
-[Important context to preserve]
+1. **Present status**: Show what was done and what remains
 
-## Current State
+2. **Check for escape hatches**:
+   ```bash
+   Glob: "spx/{node-path}/PLAN.md"
+   Glob: "spx/{node-path}/DEFICIENCIES.md"
+   ```
+   If found, read and present them — these contain important non-durable context the previous agent persisted as a hedge.
 
-[Current state of deliverables]
+3. **Suggest context loading**:
+   "To load full spec context for this node, invoke `/contextualizing {node-path}`"
+
+## Phase 4: Present persisted artifacts
+
+Show the `<persisted>` section:
+
+- What was committed (the agent can trust these are in place)
+- What is uncommitted (may need `/commit` before continuing)
+- What insights were written to CLAUDE.md/memory/skills
+- What escape hatches were written and where
+
+## Phase 5: Present coordination context
+
+Show the `<coordination>` section — cross-cutting context that does not belong to any single node. This may include:
+
+- Why the previous session ended
+- Dependencies between nodes
+- Environment or setup requirements
+- Open questions or pending decisions
+
+## Phase 6: Offer next steps
+
+Use `AskUserQuestion`:
+
+```json
+{
+  "questions": [{
+    "question": "How would you like to proceed?",
+    "header": "Next step",
+    "multiSelect": false,
+    "options": [
+      { "label": "Load context and continue", "description": "Invoke /contextualizing on the target node, then resume the TDD flow" },
+      { "label": "Review escape hatches first", "description": "Read PLAN.md / DEFICIENCIES.md in detail before deciding" },
+      { "label": "Start fresh", "description": "Use the handoff for context but take a different approach" }
+    ]
+  }]
+}
 ```
 
-### 4. Offer Next Steps
+</workflow>
 
-After presenting the handoff, use the `AskUserQuestion` to ask the user:
+<legacy_compatibility>
 
-- "Would you like me to read any files mentioned in the handoff?"
-- "Should I continue with the work remaining?"
-- "Do you want to modify the plan?"
+Sessions created by the legacy `/handoff` command (pre-structured format) use `<original_task>` instead of `<nodes>`. Handle gracefully:
 
----
+1. If `<nodes>` section is missing, fall back to `<original_task>` + `<work_remaining>`
+2. If `<skills>` section is missing, remind the agent to check which skills apply
+3. Present legacy sessions with a note: "This session uses the legacy format — skills checklist and node anchoring are not available"
 
-## Error Handling
+</legacy_compatibility>
+
+<error_handling>
 
 **No sessions directory or empty**:
 
@@ -205,10 +215,7 @@ Use `/handoff` to create a handoff document.
 **Only doing sessions exist**:
 
 ```
-Found only doing sessions - these are claimed by active sessions.
-
-Current doing sessions:
-[list from: spx session list --status doing]
+Found only doing sessions — these are claimed by active agents.
 ```
 
 Present options via `AskUserQuestion`:
@@ -224,57 +231,44 @@ Showing raw content:
 [show file content via spx session show <id>]
 ```
 
-## Examples
+</error_handling>
 
-### Load highest priority session
-
-```bash
-/pickup
-```
-
-### Select from list
-
-```bash
-/pickup --list
-```
-
-## Implementation Notes
+<implementation_notes>
 
 - Session IDs use format: `YYYY-MM-DD_HH-MM-SS`
 - Sessions organized in subdirectories: `todo/`, `doing/`, `archive/`
-- Extract sections using XML tags: `<metadata>`, `<original_task>`, etc.
-- Handle missing sections gracefully
+- Extract sections using pseudo-XML tags: `<nodes>`, `<skills>`, `<persisted>`, `<coordination>`
+- Handle missing sections gracefully (especially for legacy sessions)
 - Priority order: high > medium > low (oldest first within same priority)
 - Limit list to most recent 10 sessions to keep UI manageable
-- `spx` CLI handles atomic operations - never touch any session files manually except to read them
+- `spx` CLI handles atomic operations — never touch any session files manually except to read them
 
-## Self-Organizing Handoff System
+</implementation_notes>
 
-This command works with `/handoff` to create a self-organizing handoff workflow:
+<system_description>
 
-**The Claim Mechanism:**
+This command works with `/handoff` to create a self-organizing handoff system:
 
-1. `/pickup` claims a session using `spx session pickup`
-2. `spx` CLI atomically moves session from `todo/` to `doing/`
-3. Only one agent can successfully claim each session
-4. Agent works on the claimed session throughout the conversation
+1. **`/pickup`** claims a session: moves from `todo` to `doing`
+2. Agent works on the claimed task, guided by the skills checklist and node context
+3. **`/handoff`** creates new session in `todo` AND moves the `doing` session to `archive`
+4. Result: Only available `todo` sessions remain, no manual cleanup needed
 
-**Automatic Cleanup:**
+**Parallel agents**: Multiple agents can run `/pickup` simultaneously — the `spx` CLI ensures atomic operations and no race conditions.
 
-- When the session ends with `/handoff`, it:
-  - Creates a new session in `todo/`
-  - Archives the `doing/` session (superseded by new handoff)
-  - Leaves only available `todo/` sessions
+</system_description>
 
-**Parallel Agent Safety:**
+<success_criteria>
 
-- Multiple agents can run `/pickup` simultaneously
-- `spx` CLI ensures atomic operations - no race conditions
-- Priority-based selection with FIFO within same priority
-- No duplicate work
+A successful pickup:
 
-**Visual Status:**
+- [ ] Session claimed via `spx session pickup`
+- [ ] `<PICKUP_ID>` marker present in conversation for `/handoff` to find later
+- [ ] Skills checklist presented BEFORE any work starts
+- [ ] Each anchored node's status presented
+- [ ] PLAN.md / DEFICIENCIES.md checked and read if present
+- [ ] Persisted artifacts acknowledged
+- [ ] Clear next action identified
+- [ ] Agent knows which skills to invoke and which to avoid
 
-- `todo/*.md` = Available for pickup
-- `doing/*.md` = Currently being worked on
-- `archive/*.md` = Completed (future)
+</success_criteria>

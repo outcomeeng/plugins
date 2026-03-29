@@ -1,6 +1,6 @@
 {
   "name": "spec-tree",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "description": "Spec Tree: git-native product structure with commit workflow, session management, and spec-driven development",
   "author": {
     "name": "Simon Heimlicher"
