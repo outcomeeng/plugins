@@ -20,9 +20,9 @@ allowed-tools:
 !`git branch --show-current || echo "Not in a git repo"`
 
 **Current Sessions:**
-!`spx session list`
+!`spx session list || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
-Create a comprehensive, detailed handoff document with UTC timestamp that captures all context from the current conversation. This allows continuing the work in a fresh context with complete precision.
+Create a comprehensive session handoff document that captures all relevant context from the current conversation. This allows continuing the work in a fresh context, using all the skills that were identified to be crucial and incorporating all the lessons learned from user feedback.
 </context>
 
 <session_management>
@@ -38,10 +38,11 @@ spx session handoff
 #   <HANDOFF_ID>2026-01-17_15-11-02</HANDOFF_ID>
 #   <SESSION_FILE>/path/to/.spx/sessions/todo/2026-01-17_15-11-02.md</SESSION_FILE>
 
-# Then use Write tool to write content to <SESSION_FILE> path
+# Then ensure it is empty using the Read tool with <SESSION_FILE> path.
+# Then use the Write tool to write the following content to <SESSION_FILE> path
 
-# List sessions by status
-spx session list [--status todo|doing|archive]
+# List sessions by status (includes `todo` and `doing` by default)
+spx session list [--status todo|doing|archive] [--json]
 
 # Archive a session
 spx session archive <session-id>
@@ -49,24 +50,27 @@ spx session archive <session-id>
 
 ## Session Directory Structure
 
-Sessions are organized by status in subdirectories:
+Sessions are organized by status in the **root worktree.**
+**IMPORTANT:** The `spx` CLI is aware of Git worktrees and manages all session state in a gitignore'd directory in the root worktree (i.e., as a sibling to the actual `.git` directory).
+
+The session files are Markdown files within subdirectories of the base `.spx/sessions` directory:
 
 ```
 .spx/sessions/
 ├── todo/      # Available for pickup
 ├── doing/     # Currently claimed
-└── archive/   # Completed (future)
+└── archive/   # Completed
 ```
 
 </session_management>
 
 <multi_agent_awareness>
 
-**Multiple agents may be working in parallel.** The todo queue contains work for ALL agents, not just this session. Never archive or even delete todo sessions - they belong to the shared work queue.
+**Multiple agents may be working in parallel.** The todo queue contains work for ALL agents across ALL worktrees, not just this session. Never archive or even delete todo sessions - they belong to the shared work queue.
 
-- `todo/` = Shared work queue (DO NOT archive others' work)
-- `doing/` = Claimed by active agents (only archive YOUR claimed session)
-- `archive/` = Completed work (safe to prune old entries)
+- `todo` = Shared work queue (DO NOT archive others' work)
+- `doing` = Claimed by active agents (only archive YOUR claimed session)
+- `archive` = Completed work (safe to prune old entries)
 
 </multi_agent_awareness>
 
@@ -80,11 +84,11 @@ Check for prune flag: `$ARGUMENTS` will contain `--prune` if present.
 </arguments>
 
 <instructions>
-**PRIORITY: Comprehensive detail and precision over brevity.** The goal is to enable someone (or a fresh Claude instance) to pick up exactly where you left off with zero information loss.
+**PRIORITY: Comprehensive detail and precision over brevity.** The goal is to enable another AI agent like you to pick up exactly where you left off with zero information loss. The most important context to preserve is all the things that you got wrong because without your help, the next AI agent will make the same mistakes again and the user will become increasingly frustrated.
 
 Adapt the level of detail to the task type (coding, research, analysis, writing, configuration, etc.) but maintain comprehensive coverage:
 
-1. **Original Task**: Identify what was initially requested (not new scope or side tasks)
+1. **Original Intent**: Identify the intent behind what the user initially requested (not new scope or side tasks). This should be the **final understanding of user intent** you gained during clarification rounds with the user.
 
 2. **Work Completed**: Document everything accomplished in detail
    - All artifacts created, modified, or analyzed (files, documents, research findings, etc.)
@@ -308,7 +312,7 @@ Refactor session management to use spx session CLI
 spx session archive 2026-01-08_14-59-03
 ```
 
-Output: `Deleted session: 2026-01-08_14-59-03`
+Output: `Archived session: 2026-01-08_14-59-03`
 
 **Step 5: Confirm to user**
 
@@ -319,17 +323,11 @@ Output: `Deleted session: 2026-01-08_14-59-03`
 <system_description>
 This command works with `/pickup` to create a self-organizing handoff system:
 
-1. **`/pickup`** claims a session: moves from `todo/` to `doing/`
+1. **`/pickup`** claims a session: moves from `todo` to `doing`
 2. Agent works on the claimed task throughout the session
-3. **`/handoff`** creates new session in `todo/` AND deletes the `doing/` session
-4. Result: Only available `todo/` sessions remain, no manual cleanup needed
+3. **`/handoff`** creates new session in `todo` AND moves the `doing` session to `archive`
+4. Result: Only available `todo` sessions remain, no manual cleanup needed
 
 **Parallel agents**: Multiple agents can run `/pickup` simultaneously - the CLI handles atomic operations to prevent conflicts.
-
-**Visual Status**:
-
-- `todo/*.md` = Available for pickup (queue of work)
-- `doing/*.md` = Currently being worked on (claimed by active session)
-- New handoffs are created in `todo/` (ready for next session)
 
 </system_description>

@@ -11,7 +11,7 @@ allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion
 !`git status --short || echo "Not in a git repo"`
 
 **Available sessions:**
-!`spx session list`
+!`spx session todo || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
 Load a handoff document from `.spx/sessions/todo/` to continue previous work in the current context.
 
@@ -20,7 +20,10 @@ Load a handoff document from `.spx/sessions/todo/` to continue previous work in 
 All session management uses `spx session` CLI commands:
 
 ```bash
-# List sessions by status
+# List sessions in status `todo`
+spx session todo [--json]
+
+# List sessions by status (includes `todo` and `doing` by default)
 spx session list [--status todo|doing|archive] [--json]
 
 # Claim a session (move todo -> doing)
@@ -28,6 +31,20 @@ spx session pickup [id] [--auto]
 
 # Show session content
 spx session show <id>
+```
+
+## Session Directory Structure
+
+Sessions are organized by status in the **root worktree.**
+**IMPORTANT:** The `spx` CLI is aware of Git worktrees and manages all session state in a gitignore'd directory in the root worktree (i.e., as a sibling to the actual `.git` directory).
+
+The session files are Markdown files within subdirectories of the base `.spx/sessions` directory:
+
+```
+.spx/sessions/
+├── todo/      # Available for pickup
+├── doing/     # Currently claimed
+└── archive/   # Completed
 ```
 
 ## Behavior
@@ -48,10 +65,10 @@ Present all available todo sessions and use `AskUserQuestion` tool to let the us
 
 ```bash
 # List all todo sessions
-spx session list --status todo
+spx session todo
 
 # Or get JSON for parsing
-spx session list --status todo --json
+spx session todo --json
 ```
 
 ### 2a. Default Mode (auto-claim)
@@ -60,7 +77,7 @@ spx session list --status todo --json
    ```bash
    spx session pickup --auto
    ```
-   The CLI handles:
+   The `spx` CLI handles:
    - Selecting highest priority (or oldest if tied)
    - Atomic move from `todo/` to `doing/`
    - Outputting `<PICKUP_ID>...</PICKUP_ID>` marker for `/handoff` to find
@@ -78,7 +95,7 @@ spx session list --status todo --json
 
 1. Get all todo sessions:
    ```bash
-   spx session list --status todo --json
+   spx session todo --json
    ```
 
 2. Parse each session to extract:
@@ -229,7 +246,7 @@ Showing raw content:
 - Handle missing sections gracefully
 - Priority order: high > medium > low (oldest first within same priority)
 - Limit list to most recent 10 sessions to keep UI manageable
-- CLI handles atomic operations - no manual file moves needed
+- `spx` CLI handles atomic operations - never touch any session files manually except to read them
 
 ## Self-Organizing Handoff System
 
@@ -238,7 +255,7 @@ This command works with `/handoff` to create a self-organizing handoff workflow:
 **The Claim Mechanism:**
 
 1. `/pickup` claims a session using `spx session pickup`
-2. CLI atomically moves session from `todo/` to `doing/`
+2. `spx` CLI atomically moves session from `todo/` to `doing/`
 3. Only one agent can successfully claim each session
 4. Agent works on the claimed session throughout the conversation
 
@@ -246,13 +263,13 @@ This command works with `/handoff` to create a self-organizing handoff workflow:
 
 - When the session ends with `/handoff`, it:
   - Creates a new session in `todo/`
-  - Deletes the `doing/` session (superseded by new handoff)
+  - Archives the `doing/` session (superseded by new handoff)
   - Leaves only available `todo/` sessions
 
 **Parallel Agent Safety:**
 
 - Multiple agents can run `/pickup` simultaneously
-- CLI ensures atomic operations - no race conditions
+- `spx` CLI ensures atomic operations - no race conditions
 - Priority-based selection with FIFO within same priority
 - No duplicate work
 
