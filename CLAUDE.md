@@ -702,6 +702,18 @@ The script respects code fences and won't modify content inside `` ``` `` blocks
 
 ## Restrictions on Using `!` Expansion in Commands
 
+**Quoting:** When a fallback echo string contains double quotes (e.g., a command name), use single quotes for the outer string:
+
+```bash
+# ✅ Single quotes outside, double quotes inside
+!`spx session list || echo 'Ask user to install: "npm install --global @outcomeeng/spx"'`
+
+# ❌ Double quotes with escapes — triggers "ambiguous syntax" permission error
+!`spx session list || echo "Ask user to install: \"npm install --global @outcomeeng/spx\""`
+```
+
+**Other restrictions:**
+
 ```bash
 # Avoid shell operators such as `(N)` (nullglob in zsh)
 Error: Bash command permission check failed for pattern "!ls .spx/sessions/TODO_*.md(N) | wc -l | xargs printf "TODO: %s\n" && ls .spx/sessions/DOING_*.md(N) | wc -l | xargs printf "DOING: %s\n"": This command uses shell operators that require approval for safety
