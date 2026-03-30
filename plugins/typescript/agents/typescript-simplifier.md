@@ -23,7 +23,7 @@ MUST preserve dependency injection patterns - NEVER remove injected parameters o
 MUST preserve type safety - NEVER remove type guards, generic constraints, strict types, or explicit annotations.
 MUST honor path alias rules - NEVER introduce imports with 2+ levels of `../` to stable locations (use `@/`, `@testing/`, `@lib/`).
 MUST follow project standards from CLAUDE.md when present.
-MUST verify refactored code would pass `/reviewing-typescript` checklist.
+MUST verify refactored code would pass `/auditing-typescript` checklist.
 
 NEVER modify code that lacks test coverage - flag it and stop.
 NEVER modify code with inadequate tests (mocking, implementation testing) - flag it and stop.
@@ -208,7 +208,7 @@ Present results as:
 - [ ] Tests pass (same tests that passed before)
 - [ ] Code compiles without errors (`tsc --noEmit`)
 - [ ] Functionality preserved (same test assertions pass)
-- [ ] Would pass /reviewing-typescript checklist
+- [ ] Would pass /auditing-typescript checklist
 
 </output_format>
 

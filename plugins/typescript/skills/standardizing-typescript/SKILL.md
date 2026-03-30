@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-TypeScript code standards enforced by tsc strict mode, eslint, and manual review. Defines what `/coding-typescript` must follow and `/reviewing-typescript` enforces.
+TypeScript code standards enforced by tsc strict mode, eslint, and manual review. Defines what `/coding-typescript` must follow and `/auditing-typescript` enforces.
 </objective>
 
 <quick_start>
@@ -19,7 +19,7 @@ Code follows these standards when tsc strict mode and eslint checks pass. See su
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other TypeScript skills reference these standards. You typically don't invoke this directly—invoke `/coding-typescript`, `/testing-typescript`, or `/reviewing-typescript` instead.
+This is a reference skill. Other TypeScript skills reference these standards. You typically don't invoke this directly—invoke `/coding-typescript`, `/testing-typescript`, or `/auditing-typescript` instead.
 
 These standards apply to ALL TypeScript code: production and test code alike.
 </reference_note>
@@ -270,7 +270,7 @@ if (!apiKey) {
 }
 ```
 
-Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. See `/reviewing-typescript` for false positive handling.
+Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. See `/auditing-typescript` for false positive handling.
 
 **ESLint rules enforced:**
 

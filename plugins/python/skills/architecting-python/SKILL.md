@@ -125,7 +125,7 @@ When a downstream skill must abort, it provides this structured message:
 
 ### Skill
 
-{coding-python | reviewing-python}
+{coding-python | auditing-python}
 
 ### ADR Reference
 
@@ -296,12 +296,12 @@ Use the project's template. Each ADR must include:
 
 ### Phase 5: Submit to Architecture Reviewer (MANDATORY)
 
-**CRITICAL:** Before outputting ADRs, you MUST submit them to reviewing-python-architecture for validation against `/testing` principles.
+**CRITICAL:** Before outputting ADRs, you MUST submit them to auditing-python-architecture for validation against `/testing` principles.
 
 **Submission Process:**
 
 1. **Invoke the reviewer:**
-   Use the Skill tool to invoke reviewing-python-architecture with your ADRs
+   Use the Skill tool to invoke auditing-python-architecture with your ADRs
 
 2. **If REJECTED:**
    - Read violations and principle references
@@ -492,7 +492,7 @@ See `/testing` for methodology and `/testing-python` for Python patterns.
    - {constraint from [Type Safety](spx/21-type-safety.adr.md)}
    - {constraint from [Clone Tree](spx/10-snapshots.enabler/21-clone-tree.adr.md)}
 
-2. **reviewing-python must verify**:
+2. **auditing-python must verify**:
    - {verification from [Type Safety](spx/21-type-safety.adr.md)}
    - {verification from [Clone Tree](spx/10-snapshots.enabler/21-clone-tree.adr.md)}
 

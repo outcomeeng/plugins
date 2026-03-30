@@ -1,8 +1,8 @@
 ---
-name: reviewing-typescript
+name: auditing-python
 description: >-
-  ALWAYS invoke this skill when reviewing TypeScript code or validating implementations.
-  NEVER review code without this skill.
+  ALWAYS invoke this skill when auditing Python code or validating implementations.
+  NEVER audit code without this skill.
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 ---
 
@@ -29,8 +29,8 @@ Adversarial code review. Find design flaws through code comprehension, not check
 <quick_start>
 
 1. Read `/testing` for testing methodology (the law)
-2. Read `/testing-typescript` for TypeScript testing standards
-3. Read `/standardizing-typescript` for code standards
+2. Read `/standardizing-python-testing` for Python testing standards
+3. Read `/standardizing-python` for code standards
 4. Load project review config if it exists (Phase 0)
 5. Run automated gates — linters and project validation (Phase 1)
 6. Run tests with coverage (Phase 2)
@@ -80,40 +80,35 @@ When reviewing tests, you MUST verify:
 
 1. **Check decision records** — ADR testing strategy and PDR behavior constraints
 2. **Verify tests are at correct levels** — Level 1 for unit logic, Level 2 for real dependencies, etc.
-3. **REJECT any mocking** — `vi.mock()`, `jest.mock()` = REJECTED
+3. **REJECT any mocking** — `@patch`, `Mock()`, `MagicMock` = REJECTED
 4. **Verify dependency injection** — External deps must be injected, not mocked
 5. **Verify behavior testing** — Tests must verify outcomes, not implementation
 
 **Rejection Criteria for Tests**
 
-| Violation                   | Example                                    | Verdict  |
-| --------------------------- | ------------------------------------------ | -------- |
-| Uses mocking                | `vi.mock('execa')`                         | REJECTED |
-| Tests implementation        | `expect(mockFn).toHaveBeenCalledWith(...)` | REJECTED |
-| Wrong level                 | Unit test for Chrome automation            | REJECTED |
-| No escalation justification | Level 3 without explanation                | REJECTED |
-| Arbitrary test data         | `"test@example.com"` hardcoded             | REJECTED |
-| Deep relative import        | `from "../../../../../../tests/helpers"`   | REJECTED |
+| Violation                   | Example                        | Verdict  |
+| --------------------------- | ------------------------------ | -------- |
+| Uses mocking                | `@patch("subprocess.run")`     | REJECTED |
+| Tests implementation        | `mock.assert_called_with(...)` | REJECTED |
+| Wrong level                 | Unit test for Dropbox OAuth    | REJECTED |
+| No escalation justification | Level 3 without explanation    | REJECTED |
+| Arbitrary test data         | `"test@example.com"` hardcoded | REJECTED |
+| Deep relative import        | `from .....helpers import x`   | REJECTED |
+| sys.path manipulation       | `sys.path.insert(0, ...)`      | REJECTED |
 
-```typescript
-// ❌ REJECT: Mocking
-vi.mock("execa", () => ({ execa: vi.fn() }));
+```python
+# ❌ REJECT: Mocking
+@patch("mymodule.subprocess.run")
+def test_sync(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    ...
 
-it("runs command", async () => {
-  await runCommand(args);
-  expect(execa).toHaveBeenCalled(); // Tests implementation
-});
 
-// ✅ ACCEPT: Dependency Injection
-it("GIVEN valid args WHEN running THEN returns success", async () => {
-  const deps: CommandDeps = {
-    execa: vi.fn().mockResolvedValue({ exitCode: 0 }),
-  };
-
-  const result = await runCommand(args, deps);
-
-  expect(result.success).toBe(true); // Tests behavior
-});
+# ✅ ACCEPT: Dependency Injection
+def test_sync() -> None:
+    deps = SyncDependencies(run_command=lambda cmd: (0, "", ""))
+    result = sync_files(src, dest, deps)
+    assert result.success
 ```
 
 </test_verification>
@@ -126,22 +121,22 @@ Execute these phases IN ORDER. Do not skip phases.
 
 1. Determine the target files/directories to review
 2. **Load project review config**: Check `CLAUDE.md`/`README.md` for project-specific validation commands, test runners, and infrastructure requirements. If the project defines a review configuration at a known location, load it for project-specific anti-patterns.
-3. Check if the project has its own tool configurations in `tsconfig.json`, `package.json`
+3. Check if the project has its own tool configurations in `pyproject.toml`
 
 **Phase 1: Automated Gates**
 
-Run the project's validation command. This catches linter-enforced rules from `/standardizing-typescript` — type annotations, naming, magic numbers, unused imports, security rules, etc.
+Run the project's validation command. This catches linter-enforced rules from `/standardizing-python` — type annotations, naming, magic numbers, bare excepts, unused imports, security rules, etc.
 
 ```bash
 # Use whatever the project defines in CLAUDE.md
-# Common: pnpm validate, npm run check, make check, just validate
+# Common: pre-commit run --all-files, make check, just validate, ruff check + mypy
 ```
 
 **Blocking**: Any non-zero exit code = REJECTED. Do not proceed to manual review.
 
-**Do NOT manually re-check what linters catch.** If the project's linters are properly configured per `/standardizing-typescript`, they handle type safety, naming, magic numbers, unused imports, commented-out code, and security rules. Your time is for Phase 3.
+**Do NOT manually re-check what linters catch.** If the project's linters are properly configured per `/standardizing-python`, they handle type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules. Your time is for Phase 3.
 
-**Note**: Some `/standardizing-typescript` rules require manual verification — deep relative imports, unqualified `any`, `@ts-ignore` without justification. These are checked during Phase 3 code comprehension.
+**Note**: Some `/standardizing-python` rules require manual verification — deep relative imports, `sys.path` manipulation, unqualified `Any`, `# type: ignore` without justification. These are checked during Phase 3 code comprehension.
 
 **Phase 2: Test Execution**
 
@@ -198,9 +193,9 @@ After examining all functions individually, look at the file as a whole:
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Near-duplicate blocks**                 | Two or more blocks that differ by one expression or boolean condition. Could they be unified or parameterized?                                          |
 | **Inconsistent delegation**               | Method A delegates to a helper. Method B inlines the same logic. Why the inconsistency?                                                                 |
-| **Redundant parameter threading**         | Instance attributes (`this.x`) aliased to locals, then passed as parameters to the class's own methods. Pick one approach.                              |
+| **Redundant parameter threading**         | Instance attributes (`self.x`) aliased to locals, then passed as parameters to the class's own methods. Pick one approach.                              |
 | **Constants outside their domain**        | A constant named for one concept (e.g., `READ_BIT`) used to mean something unrelated (e.g., "set valid high"). The name lies about the value's purpose. |
-| **Per-call allocation of immutable data** | Objects, arrays, or maps created on every call when the data never changes after init. Compute once, store as property.                                 |
+| **Per-call allocation of immutable data** | Dicts, lists, or objects created on every call when the data never changes after init. Compute once, store as attribute.                                |
 | **Redundant operations**                  | Doing X immediately before calling a function that also does X as its first action.                                                                     |
 | **Reimplemented stdlib**                  | Code that manually implements what the standard library or framework already provides.                                                                  |
 
@@ -212,7 +207,7 @@ For the codebase as a whole, verify:
 - **Dependency injection** — Are external dependencies injected via parameters, or imported as globals?
 - **Single responsibility** — Does each module/class do one thing? Does each function do one thing?
 - **Error quality** — Do errors include what failed and with what input? Or just "Something went wrong"?
-- **Domain exceptions** — Are there custom exceptions for domain errors, or is everything generic `Error`?
+- **Domain exceptions** — Are there custom exceptions for domain errors, or is everything generic `ValueError`/`RuntimeError`?
 
 **Phase 4: ADR/PDR Compliance**
 
@@ -239,7 +234,7 @@ Check that implementation follows all applicable ADR/PDR constraints:
 | ------------------------------------ | ----------------------------------- | -------- |
 | "Use dependency injection" (ADR)     | Direct imports of external services | REJECTED |
 | "Level 1 tests for logic" (ADR)      | Unit tests hitting network          | REJECTED |
-| "No class components" (ADR)          | React class component added         | REJECTED |
+| "No ORM" (ADR)                       | SQLAlchemy models introduced        | REJECTED |
 | "Lifecycle is Draft→Published" (PDR) | Added hidden `Archived` state       | REJECTED |
 
 **Phase 5: Determine Verdict**
@@ -262,9 +257,9 @@ Test level is indicated by filename suffix:
 
 | Test Level | Filename Pattern        | Example                   |
 | ---------- | ----------------------- | ------------------------- |
-| Level 1    | `*.unit.test.ts`        | `parsing.unit.test.ts`    |
-| Level 2    | `*.integration.test.ts` | `cli.integration.test.ts` |
-| Level 3    | `*.e2e.test.ts`         | `workflow.e2e.test.ts`    |
+| Level 1    | `test_*.unit.py`        | `test_parsing.unit.py`    |
+| Level 2    | `test_*.integration.py` | `test_cli.integration.py` |
+| Level 3    | `test_*.e2e.py`         | `test_workflow.e2e.py`    |
 
 **If tests fail**: The verdict becomes REJECTED with reason "Tests don't pass."
 
@@ -306,8 +301,8 @@ When verdict is **REJECTED**, provide actionable feedback:
 
 | # | File:Line   | Category       | Issue             | Suggested Fix         |
 | - | ----------- | -------------- | ----------------- | --------------------- |
-| 1 | `foo.ts:42` | Dead parameter | `sda` never used  | Remove from signature |
-| 2 | `bar.ts:17` | Near-duplicate | Differs by 1 line | Extract helper        |
+| 1 | `foo.py:42` | Dead parameter | `sda` never used  | Remove from signature |
+| 2 | `bar.py:17` | Near-duplicate | Differs by 1 line | Extract helper        |
 
 ### Required Actions
 
@@ -354,8 +349,8 @@ Not all findings are real issues. Context matters.
 
 **When a Finding is a False Positive**
 
-1. **Context changes the threat model**: Security rule (child_process exec) in a CLI tool where inputs come from the user invoking the tool, not untrusted external sources
-2. **The code is intentionally doing something the rule warns against**: Using `eval` for a REPL implementation with sandboxing
+1. **Context changes the threat model**: S603 (subprocess call) in a CLI tool where inputs come from the user invoking the tool, not untrusted external sources
+2. **The code is intentionally doing something the rule warns against**: Using `pickle` for internal caching with no untrusted input
 3. **The calling context guarantees safety**: A parameter that looks dead but is required by an interface/protocol contract
 
 **When a Finding is NOT a False Positive**
@@ -365,18 +360,16 @@ Not all findings are real issues. Context matters.
 - The code runs in a web service, API, or multi-tenant environment
 - The surprise in step 3.1 has no good explanation
 
-**Required Disable Comment Format**
+**Required Noqa Format**
 
-When suppressing a rule, the disable comment MUST include justification:
+When suppressing a rule, the noqa comment MUST include justification:
 
-```typescript
-// GOOD - explains why it's safe
-// eslint-disable-next-line security/detect-child-process -- CLI tool, cmd from trusted config
-const result = execSync(cmd);
+```python
+# GOOD - explains why it's safe
+result = subprocess.run(cmd)  # noqa: S603 - CLI tool, cmd built from trusted config
 
-// BAD - no justification
-// eslint-disable-next-line security/detect-child-process
-const result = execSync(cmd);
+# BAD - no justification
+result = subprocess.run(cmd)  # noqa: S603
 ```
 
 **Application Context Guide**
@@ -429,14 +422,14 @@ For `APPROVED`, include no notes/warnings/caveats sections.
 
 | File:Line   | Category   | Finding              |
 | ----------- | ---------- | -------------------- |
-| `foo.ts:42` | [category] | [what surprised you] |
+| `foo.py:42` | [category] | [what surprised you] |
 
 ### ADR/PDR Compliance
 
 | Decision Record | Status    | Evidence            |
 | --------------- | --------- | ------------------- |
-| `NN-foo.adr.md` | PASS/FAIL | `path/file.ts:line` |
-| `NN-bar.pdr.md` | PASS/FAIL | `path/file.ts:line` |
+| `NN-foo.adr.md` | PASS/FAIL | `path/file.py:line` |
+| `NN-bar.pdr.md` | PASS/FAIL | `path/file.py:line` |
 
 ### Required Actions (REJECTED Only)
 

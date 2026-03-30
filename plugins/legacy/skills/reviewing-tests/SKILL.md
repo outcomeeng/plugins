@@ -2,7 +2,7 @@
 name: reviewing-tests
 disable-model-invocation: true
 description: >-
-  Foundational test review methodology. Loaded by /reviewing-python-tests and /reviewing-typescript-tests, not invoked directly.
+  Foundational test review methodology. Loaded by /auditing-python-tests and /auditing-typescript-tests, not invoked directly.
 ---
 
 <objective>
@@ -19,7 +19,7 @@ If you can answer that question, the tests are **REJECTED**.
 <quick_start>
 **PREREQUISITE**: Reference `/testing` for methodology (5 stages, 5 factors, 7 exceptions).
 
-This is a foundational skill. Language-specific skills (`/reviewing-python-tests`, `/reviewing-typescript-tests`) load this first and add language-specific phases.
+This is a foundational skill. Language-specific skills (`/auditing-python-tests`, `/auditing-typescript-tests`) load this first and add language-specific phases.
 
 Review protocol has 4 foundational phases — stop at first rejection:
 

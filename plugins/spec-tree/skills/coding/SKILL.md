@@ -24,16 +24,16 @@ Orchestrate the spec-tree TDD flow for a work item. Eight phases, strictly seque
 
 Phases 1–2 are always the same. Phases 3–8 use the language you are writing. You know what language you are writing — use the corresponding plugin.
 
-| Phase | Purpose                | Python                           | TypeScript                           |
-| ----- | ---------------------- | -------------------------------- | ------------------------------------ |
-| 1     | Load methodology       | `/understanding`                 | `/understanding`                     |
-| 2     | Load work item context | `/contextualizing`               | `/contextualizing`                   |
-| 3     | Architect              | `/architecting-python`           | `/architecting-typescript`           |
-| 4     | Architecture review    | `/reviewing-python-architecture` | `/reviewing-typescript-architecture` |
-| 5     | Write tests            | `/testing-python`                | `/testing-typescript`                |
-| 6     | Test review            | `/reviewing-python-tests`        | `/reviewing-typescript-tests`        |
-| 7     | Implement              | `/coding-python`                 | `/coding-typescript`                 |
-| 8     | Code review            | `/reviewing-python`              | `/reviewing-typescript`              |
+| Phase | Purpose                | Python                          | TypeScript                          |
+| ----- | ---------------------- | ------------------------------- | ----------------------------------- |
+| 1     | Load methodology       | `/understanding`                | `/understanding`                    |
+| 2     | Load work item context | `/contextualizing`              | `/contextualizing`                  |
+| 3     | Architect              | `/architecting-python`          | `/architecting-typescript`          |
+| 4     | Architecture audit     | `/auditing-python-architecture` | `/auditing-typescript-architecture` |
+| 5     | Write tests            | `/testing-python`               | `/testing-typescript`               |
+| 6     | Test audit             | `/auditing-python-tests`        | `/auditing-typescript-tests`        |
+| 7     | Implement              | `/coding-python`                | `/coding-typescript`                |
+| 8     | Code audit             | `/auditing-python`              | `/auditing-typescript`              |
 
 </skill_map>
 

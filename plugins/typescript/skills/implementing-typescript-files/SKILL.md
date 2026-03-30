@@ -136,12 +136,12 @@ Invoke `/coding-typescript` to implement:
 
 ### Step 4: Review
 
-Invoke `/reviewing-typescript` to review the implementation.
+Invoke `/auditing-typescript` to review the implementation.
 
 **If review identifies issues:**
 
 1. Use `/coding-typescript` to fix issues
-2. Re-invoke `/reviewing-typescript`
+2. Re-invoke `/auditing-typescript`
 3. Repeat until the reviewer approves
 
 **If review approves:**
@@ -171,11 +171,11 @@ eslint src/
 <skill_invocations>
 **Skills this workflow invokes:**
 
-| Skill                   | Purpose                        | When                 |
-| ----------------------- | ------------------------------ | -------------------- |
-| `/testing-typescript`   | Test design methodology        | Before writing tests |
-| `/coding-typescript`    | Implementation (RED/GREEN/REF) | After test design    |
-| `/reviewing-typescript` | Code review                    | After implementation |
+| Skill                  | Purpose                        | When                 |
+| ---------------------- | ------------------------------ | -------------------- |
+| `/testing-typescript`  | Test design methodology        | Before writing tests |
+| `/coding-typescript`   | Implementation (RED/GREEN/REF) | After test design    |
+| `/auditing-typescript` | Code review                    | After implementation |
 
 </skill_invocations>
 
@@ -208,7 +208,7 @@ Update tracking as you complete each file.
 - [ ] Tests use dependency injection (no mocking)
 - [ ] Implementation passes all tests
 - [ ] Code uses constants pattern (no repeated literals)
-- [ ] File passed `/reviewing-typescript` approval
+- [ ] File passed `/auditing-typescript` approval
 
 ## All Files Complete
 

@@ -28,7 +28,7 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 
 **Does NOT contain:** Outcomes, assertions, test references, or implementation code.
 
-**Verified by:** Architecture review skills (e.g., `/reviewing-typescript-architecture`).
+**Verified by:** Architecture audit skills (e.g., `/auditing-typescript-architecture`).
 
 </adr>
 

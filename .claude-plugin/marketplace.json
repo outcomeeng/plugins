@@ -25,12 +25,12 @@
     {
       "name": "typescript",
       "source": "./plugins/typescript",
-      "description": "TypeScript engineering: /testing-typescript, /coding-typescript, /reviewing-typescript, /architecting-typescript, /reviewing-typescript-architecture, typescript-simplifier agent"
+      "description": "TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent"
     },
     {
       "name": "python",
       "source": "./plugins/python",
-      "description": "Python engineering: /testing-python, /coding-python, /reviewing-python, /architecting-python, /reviewing-python-architecture"
+      "description": "Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture"
     },
     {
       "name": "specs",

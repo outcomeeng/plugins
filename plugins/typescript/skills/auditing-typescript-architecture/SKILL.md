@@ -1,8 +1,8 @@
 ---
-name: reviewing-typescript-architecture
+name: auditing-typescript-architecture
 description: >-
-  ALWAYS invoke this skill when reviewing ADRs or architecture decisions.
-  NEVER review architecture decisions without this skill.
+  ALWAYS invoke this skill when auditing ADRs or architecture decisions.
+  NEVER audit architecture decisions without this skill.
 allowed-tools: Read, Grep
 ---
 

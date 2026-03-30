@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Python code standards enforced by linters (ruff, mypy) and manual review. Defines what `/coding-python` must follow and `/reviewing-python` enforces.
+Python code standards enforced by linters (ruff, mypy) and manual review. Defines what `/coding-python` must follow and `/auditing-python` enforces.
 </objective>
 
 <quick_start>
@@ -19,7 +19,7 @@ Code follows these standards when all ruff rules and mypy checks pass. See summa
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Python skills reference these standards. You typically don't invoke this directly—invoke `/coding-python`, `/testing-python`, or `/reviewing-python` instead.
+This is a reference skill. Other Python skills reference these standards. You typically don't invoke this directly—invoke `/coding-python`, `/testing-python`, or `/auditing-python` instead.
 
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>
@@ -330,7 +330,7 @@ data = pickle.loads(untrusted_bytes)
 requests.get(url, verify=False)
 ```
 
-Context matters for security rules — a CLI tool invoked by the user has different trust boundaries than a web service. See `/reviewing-python` for false positive handling.
+Context matters for security rules — a CLI tool invoked by the user has different trust boundaries than a web service. See `/auditing-python` for false positive handling.
 
 **Ruff rules enforced:**
 

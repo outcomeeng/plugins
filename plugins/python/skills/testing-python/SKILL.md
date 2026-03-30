@@ -22,7 +22,7 @@ Write or fix test files for a node specification. This skill handles both:
    - Action: Follow full workflow below
 
 2. **FIX mode** - Tests exist but were rejected by reviewer
-   - Check: Recent `/reviewing-python-tests` output shows REJECT with specific issues
+   - Check: Recent `/auditing-python-tests` output shows REJECT with specific issues
    - Action: Read the rejection, fix the specific issues, re-run tests
 
 **Always check which mode before proceeding.**
@@ -126,7 +126,7 @@ Remove the entry from `spx/EXCLUDE` when implementation begins.
 
 ### Step 1: Read Rejection Feedback
 
-Find the most recent `/reviewing-python-tests` output. Look for:
+Find the most recent `/auditing-python-tests` output. Look for:
 
 - Specific file:line locations
 - Issue categories (evidentiary gap, missing property tests, etc.)

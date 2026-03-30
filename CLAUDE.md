@@ -298,14 +298,14 @@ Complete TypeScript development workflow with testing, implementation, and revie
 
 ### Skills
 
-| Skill                                | Purpose                                        |
-| ------------------------------------ | ---------------------------------------------- |
-| `/testing-typescript`                | TypeScript-specific testing patterns           |
-| `/coding-typescript`                 | Implementation workhorse with remediation loop |
-| `/reviewing-typescript`              | Strict code review with zero-tolerance         |
-| `/reviewing-typescript-tests`        | TypeScript test review                         |
-| `/architecting-typescript`           | ADR producer with testing strategy             |
-| `/reviewing-typescript-architecture` | ADR validator against testing principles       |
+| Skill                               | Purpose                                           |
+| ----------------------------------- | ------------------------------------------------- |
+| `/testing-typescript`               | TypeScript-specific testing patterns              |
+| `/coding-typescript`                | Implementation workhorse with remediation loop    |
+| `/auditing-typescript`              | Strict code audit with zero-tolerance             |
+| `/auditing-typescript-tests`        | TypeScript test evidence audit (4-property model) |
+| `/architecting-typescript`          | ADR producer with testing strategy                |
+| `/auditing-typescript-architecture` | ADR audit against testing principles              |
 
 ### Core Principles
 
@@ -320,14 +320,14 @@ Complete Python development workflow with testing, implementation, and review.
 
 ### Skills
 
-| Skill                            | Purpose                                        |
-| -------------------------------- | ---------------------------------------------- |
-| `/testing-python`                | Python-specific testing patterns               |
-| `/coding-python`                 | Implementation workhorse with remediation loop |
-| `/reviewing-python`              | Strict code review with zero-tolerance         |
-| `/reviewing-python-tests`        | Python test review                             |
-| `/architecting-python`           | ADR producer with testing strategy             |
-| `/reviewing-python-architecture` | ADR validator against testing principles       |
+| Skill                           | Purpose                                        |
+| ------------------------------- | ---------------------------------------------- |
+| `/testing-python`               | Python-specific testing patterns               |
+| `/coding-python`                | Implementation workhorse with remediation loop |
+| `/auditing-python`              | Strict code audit with zero-tolerance          |
+| `/auditing-python-tests`        | Python test evidence audit (4-property model)  |
+| `/architecting-python`          | ADR producer with testing strategy             |
+| `/auditing-python-architecture` | ADR audit against testing principles           |
 
 ### Core Principles
 

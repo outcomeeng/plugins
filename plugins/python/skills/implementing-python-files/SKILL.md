@@ -25,9 +25,9 @@ File → Step 1 → Step 2 → Step 3 → Step 4 → Next File
 
 1. **Analyze file context** - Understand what the file should do
 2. **Write tests** - Invoke `/testing-python` → tests written
-3. **Review tests** - Invoke `/reviewing-python-tests` → APPROVE/REJECT
+3. **Review tests** - Invoke `/auditing-python-tests` → APPROVE/REJECT
 4. **Implement** - Invoke `/coding-python` → code written
-5. **Review code** - Invoke `/reviewing-python` → APPROVE/REJECT
+5. **Review code** - Invoke `/auditing-python` → APPROVE/REJECT
 6. **Next file** - Repeat until all files complete
 
 </quick_start>
@@ -94,7 +94,7 @@ The skill will:
 
 ### Step 3: Review Tests
 
-Invoke `/reviewing-python-tests`:
+Invoke `/auditing-python-tests`:
 
 **If REJECT:** Fix issues, re-invoke until APPROVE.
 **If APPROVE:** Proceed to Step 4.
@@ -112,7 +112,7 @@ The skill will:
 
 ### Step 5: Review Code
 
-Invoke `/reviewing-python`:
+Invoke `/auditing-python`:
 
 **If REJECT:** Fix issues, re-invoke until APPROVE.
 **If APPROVE:** File is complete. Proceed to next file.
@@ -121,12 +121,12 @@ Invoke `/reviewing-python`:
 
 <skill_sequence>
 
-| Step | Skill                     | Purpose               |
-| ---- | ------------------------- | --------------------- |
-| 2    | `/testing-python`         | Write tests           |
-| 3    | `/reviewing-python-tests` | Review tests          |
-| 4    | `/coding-python`          | Write implementation  |
-| 5    | `/reviewing-python`       | Review implementation |
+| Step | Skill                    | Purpose               |
+| ---- | ------------------------ | --------------------- |
+| 2    | `/testing-python`        | Write tests           |
+| 3    | `/auditing-python-tests` | Review tests          |
+| 4    | `/coding-python`         | Write implementation  |
+| 5    | `/auditing-python`       | Review implementation |
 
 </skill_sequence>
 
@@ -155,9 +155,9 @@ Files to implement:
 ## File Complete
 
 - [ ] Tests exist and verify correct behaviors
-- [ ] Tests approved by `/reviewing-python-tests`
+- [ ] Tests approved by `/auditing-python-tests`
 - [ ] Implementation passes all tests
-- [ ] Code approved by `/reviewing-python`
+- [ ] Code approved by `/auditing-python`
 
 ## All Files Complete
 

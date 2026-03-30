@@ -114,27 +114,27 @@ The core of [Outcome Engineering](https://outcome.engineering). Three phases: sp
 
 Complete TypeScript development workflow. Requires spx CLI.
 
-| Type  | Name                                 | Purpose                            |
-| ----- | ------------------------------------ | ---------------------------------- |
-| Agent | `typescript-simplifier`              | Simplify code for maintainability  |
-| Skill | `/testing-typescript`                | TypeScript-specific testing        |
-| Skill | `/coding-typescript`                 | Implementation with remediation    |
-| Skill | `/reviewing-typescript`              | Strict code review                 |
-| Skill | `/architecting-typescript`           | ADR producer with testing strategy |
-| Skill | `/reviewing-typescript-architecture` | ADR validator                      |
+| Type  | Name                                | Purpose                            |
+| ----- | ----------------------------------- | ---------------------------------- |
+| Agent | `typescript-simplifier`             | Simplify code for maintainability  |
+| Skill | `/testing-typescript`               | TypeScript-specific testing        |
+| Skill | `/coding-typescript`                | Implementation with remediation    |
+| Skill | `/auditing-typescript`              | Strict code audit                  |
+| Skill | `/architecting-typescript`          | ADR producer with testing strategy |
+| Skill | `/auditing-typescript-architecture` | ADR audit                          |
 
 ### python
 
 Complete Python development workflow. Requires spx CLI.
 
-| Type    | Name                             | Purpose                            |
-| ------- | -------------------------------- | ---------------------------------- |
-| Command | `/autopython`                    | Autonomous implementation          |
-| Skill   | `/testing-python`                | Python-specific testing patterns   |
-| Skill   | `/coding-python`                 | Implementation with remediation    |
-| Skill   | `/reviewing-python`              | Strict code review                 |
-| Skill   | `/architecting-python`           | ADR producer with testing strategy |
-| Skill   | `/reviewing-python-architecture` | ADR validator                      |
+| Type    | Name                            | Purpose                            |
+| ------- | ------------------------------- | ---------------------------------- |
+| Command | `/autopython`                   | Autonomous implementation          |
+| Skill   | `/testing-python`               | Python-specific testing patterns   |
+| Skill   | `/coding-python`                | Implementation with remediation    |
+| Skill   | `/auditing-python`              | Strict code audit                  |
+| Skill   | `/architecting-python`          | ADR producer with testing strategy |
+| Skill   | `/auditing-python-architecture` | ADR audit                          |
 
 ### prose
 

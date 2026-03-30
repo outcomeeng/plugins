@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Define Python testing standards and patterns that other skills reference. Not invoked directly—invoke `/testing-python` (to write tests) or `/reviewing-python-tests` (to review tests) instead. These standards apply to ALL Python test code.
+Define Python testing standards and patterns that other skills reference. Not invoked directly—invoke `/testing-python` (to write tests) or `/auditing-python-tests` (to audit tests) instead. These standards apply to ALL Python test code.
 </objective>
 
 <quick_start>
