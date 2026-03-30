@@ -31,9 +31,9 @@ allowed-tools:
 
 <objective>
 
-Handoff is **proper session closure**, not note-taking. The goal is to persist everything the agent learned into durable structures BEFORE creating the session file. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
+Handoff is **proper session closure**, not note-taking. The agent must reflect deeply on what it learned before persisting anything — five structured perspectives force introspection that produces the right persistence decisions. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
 
-The receiving agent benefits from durable persistence even if the session is never picked up: insights in skills help all future agents, PLAN.md in a node is discoverable via `/contextualizing`, and spec amendments are permanent product truth.
+**Reflect, then persist, then hand off.** The reflection (Phase 2) is the most important phase. Without it, the agent will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and DEFICIENCIES.md files are worse than none — the reflection phase catches and fixes them.
 
 </objective>
 
@@ -141,86 +141,115 @@ Scan the conversation for spec-tree nodes that were worked on. For each node, re
 
 If "Create a node now" → invoke `/authoring` to create the node, then return to this phase.
 
-## Phase 2: Persist durable artifacts (tier 1)
+## Phase 2: Reflect
 
-For each anchored node, check:
+**Work through all five perspectives internally before presenting anything to the user.** This is the most important phase — it produces the input for everything that follows. Do not rush. Do not skip perspectives.
 
-- Are there uncommitted spec amendments or test files?
-- Are there assertion updates that should be written to the spec?
-- Is the test status consistent with the spec assertions?
+For each perspective, think about what you learned, what changed, and what the next agent needs. Check existing escape hatches (PLAN.md, DEFICIENCIES.md) against current reality — stale escape hatches are worse than none.
 
-**Do NOT commit** — that is `/commit`'s job. Record what is committed vs uncommitted so the receiving agent knows the state.
+### Perspective 1: Lessons learned
 
-## Phase 3: Persist reusable insights (tier 2)
+What did you learn during this session that changes how future agents should work on this codebase?
 
-Scan the conversation for insights that belong in durable methodology:
+- **User corrections** — things the user had to repeat or correct. What rule would have prevented the mistake?
+- **Methodology gaps** — skills that were inadequate or missing. What should change?
+- **Coding patterns** — patterns that worked or failed. What should be codified?
 
-- **User corrections** — things the user had to repeat or correct → CLAUDE.md or memory
-- **Pattern discoveries** — coding patterns, testing patterns, tooling gotchas → relevant skill or CLAUDE.md
-- **Skill gaps** — skills that were missing or inadequate → note for skill improvement
+For each lesson, determine persistence target:
 
-Collect all insights, then propose them to the user in a single `AskUserQuestion` with `multiSelect: true`:
+- Amend a spec (if a spec was wrong or incomplete)
+- Update CLAUDE.md (if it's a project-wide rule)
+- Update a skill (if it's a methodology gap)
+- Session file only (if it's task-specific)
+
+### Perspective 2: Deficiencies identified
+
+What is broken, missing, or wrong that you did not fix?
+
+- **Spec deficiencies** — assertions that are wrong, missing, or untestable
+- **Implementation gaps** — known bugs, missing edge cases, incomplete features
+- **Test gaps** — assertions without test coverage, tests that don't test what they claim
+
+For each deficiency, determine persistence target:
+
+- Fix the spec directly (if an assertion is wrong — this is a durable fix)
+- Write or update DEFICIENCIES.md in the node directory (if the fix is deferred)
+
+**Critical**: Read any existing DEFICIENCIES.md for each anchored node. Check every item — are items listed as open now fixed? Are there new deficiencies not yet listed? A stale DEFICIENCIES.md will mislead the next agent.
+
+### Perspective 3: Insights about the path forward
+
+What do you now understand about how the remaining work should proceed?
+
+- **Approach decisions** — what approach was chosen and why alternatives were rejected
+- **Remaining steps** — what concrete steps remain, in what order
+- **Dependencies** — what must happen before what
+
+For each insight, determine persistence target:
+
+- Amend a spec (if the insight changes what the spec says)
+- Write or update PLAN.md in the node directory (if it's a concrete plan for remaining work)
+- Remove PLAN.md (if all planned steps are now complete — a done plan is a stale plan)
+- Session file only (if it's coordination context)
+
+**Critical**: Read any existing PLAN.md for each anchored node. Are steps listed as remaining now complete? Is the plan still the right approach? Update or remove — never leave a stale plan.
+
+### Perspective 4: Skills used
+
+Which skills did you invoke, which should you have invoked, and which does the next agent need?
+
+- **Critical skills** — always include `/understanding` and `/contextualizing {node}` for each anchored node, plus language-specific skills that were used
+- **Missed skills** — skills that SHOULD have been invoked but were not. What problems did skipping them cause?
+- **Next skill** — what specific skill should the receiving agent invoke first, and why
+
+### Perspective 5: Starting point
+
+Where exactly should the next agent begin?
+
+- **Node path** — full path to the node (e.g., `spx/21-foo.enabler/32-bar.outcome`)
+- **TDD flow position** — which phase (1-8) per the `/coding` skill
+- **First action** — the specific skill invocation that resumes work
+
+## Phase 3: Propose persistence plan
+
+Present the combined output of all five perspectives as a single `AskUserQuestion` with `multiSelect: true`. Group items by type:
 
 ```json
 {
   "questions": [{
-    "question": "Which insights should be persisted durably?",
-    "header": "Insights",
+    "question": "Review persistence proposal — select items to approve:",
+    "header": "Persist",
     "multiSelect": true,
     "options": [
-      { "label": "[Insight summary]", "description": "→ CLAUDE.md: [why this is a project-wide rule]" },
-      { "label": "[Insight summary]", "description": "→ Memory: [why this is a user preference]" },
-      { "label": "[Insight summary]", "description": "→ Skip: task-specific, include in handoff only" }
+      { "label": "[Lesson] summary", "description": "→ target: CLAUDE.md / spec / skill (with reason)" },
+      { "label": "[Deficiency] summary", "description": "→ target: fix spec / DEFICIENCIES.md in spx/{node}" },
+      { "label": "[Insight] summary", "description": "→ target: amend spec / PLAN.md in spx/{node} / remove stale PLAN.md" },
+      { "label": "[Skip] N items", "description": "→ session file only (coordination context)" }
     ]
   }]
 }
 ```
 
-Write approved insights BEFORE creating the session file. Record what was persisted in the `<persisted>` section.
+Items the user does not select are included in the session file's `<coordination>` section as ephemeral context. Items the user selects are written in Phase 4.
 
-## Phase 4: Handle remaining non-durable information (tier 3/4)
+**AskUserQuestion is limited to 4 options.** If there are more than 3 actionable items, batch them by perspective (one question per perspective with items as options). The "[Skip]" option always appears as the last option in the last question.
 
-Remaining context not captured in tiers 1-2 includes: implementation plans, known gaps, dead ends, environment notes, approach-level mistakes.
+## Phase 4: Execute and hand off
 
-**Batch related items by node**, then ask the user for each batch:
+### Step 1: Write approved persistence items
 
-```json
-{
-  "questions": [{
-    "question": "Where should the remaining context for `spx/{node}` go?",
-    "header": "Disposition",
-    "multiSelect": false,
-    "options": [
-      { "label": "Include in handoff", "description": "Ephemeral — goes in the session file's coordination section" },
-      { "label": "Write to PLAN.md", "description": "Escape hatch — remaining steps, written to spx/{node}/PLAN.md" },
-      { "label": "Write to DEFICIENCIES.md", "description": "Escape hatch — known gaps or weaknesses, written to spx/{node}/DEFICIENCIES.md" }
-    ]
-  }]
-}
-```
+For each approved item from Phase 3:
 
-Write escape-hatch files if chosen. These are discoverable by `/contextualizing` but are NOT durable spec-tree artifacts.
+- **Spec amendments**: Edit the spec file directly
+- **CLAUDE.md / memory / skill updates**: Write the insight
+- **DEFICIENCIES.md**: Write or update in the node directory. Remove fixed items, add new ones.
+- **PLAN.md**: Write, update, or remove in the node directory. Never leave a stale plan.
 
-## Phase 5: Skills audit
+### Step 2: Record committed vs uncommitted state
 
-Review the conversation and document three categories:
+For each anchored node, check `git status` and record what is committed vs uncommitted. Do NOT commit — that is `/commit`'s job.
 
-**Critical skills** — essential for the receiving agent:
-
-- Always include `/understanding` and `/contextualizing {target-node}` for each anchored node
-- Include language-specific skills that were used (e.g., `/testing-python`, `/coding-python`)
-
-**Missed skills** — skills that SHOULD have been invoked but were not:
-
-- What problems did skipping them cause?
-- Why are they crucial? (This prevents the next agent from repeating the mistake)
-
-**Next action** — what the receiving agent should do first:
-
-- Which skill to invoke (e.g., `/reviewing-python` if implementation is complete)
-- TDD flow position: which phase (1-8) on which node
-
-## Phase 6: Create session file
+### Step 3: Create session file
 
 1. **Check for claimed session**: Search conversation for `<PICKUP_ID>` marker from `spx session pickup`. This is the doing session to archive after creating the new handoff.
 
@@ -232,7 +261,7 @@ Review the conversation and document three categories:
 
 3. **Read the session file** to confirm it exists and is empty.
 
-4. **Write the session file** using the format in the `<session_format>` section.
+4. **Write the session file** using the format in the `<session_format>` section. The `<skills>` section comes from Perspective 4, the `<nodes>` section from Perspective 5, and the `<coordination>` section from unapproved items in Phase 3.
 
 5. **Archive claimed session** (if found in step 1):
    ```bash
@@ -327,28 +356,38 @@ Nodes worked on:
 - `spx/21-test-harness.enabler/32-temp-files.enabler` — tests written and passing, implementation complete
 - `spx/21-test-harness.enabler/43-fixtures.enabler` — spec authored, tests written but failing
 
-**Phase 2: Check durable artifacts**
+**Phase 2: Reflect**
 
-- `32-temp-files.enabler`: 3 test files committed, spec has linked assertions
-- `43-fixtures.enabler`: spec committed, 2 test files uncommitted in `tests/`
+Agent works through all five perspectives internally:
 
-**Phase 3: Persist insights**
+1. **Lessons**: User corrected import pattern twice — relative imports where absolute were required. Rule: "always use absolute imports from the package root." Also: `tempfile.NamedTemporaryFile` needs `delete=False` on Windows — a coding pattern worth codifying.
+2. **Deficiencies**: No existing DEFICIENCIES.md. The `43-fixtures.enabler` spec has 5 assertions but 2 are untestable without the implementation — not a deficiency, just the TDD sequence.
+3. **Insights**: Existing PLAN.md in `43-fixtures.enabler` is stale — steps 1-3 are complete, only steps 4-5 remain. The approach (context managers over explicit cleanup) was validated and should stay.
+4. **Skills**: Used `/testing-python`, skipped `/coding-python` on first attempt which caused import violations. Next agent must invoke `/coding-python` before writing implementation.
+5. **Starting point**: `43-fixtures.enabler`, TDD phase 7 (implement), invoke `/coding-python`.
 
-Agent proposes: "Python tempfile.NamedTemporaryFile needs `delete=False` on Windows"
-User approves → written to CLAUDE.md
+**Phase 3: Propose persistence plan**
 
-**Phase 4: Disposition of remaining context**
+Agent presents:
 
-Agent asks about remaining implementation steps for `43-fixtures.enabler`.
-User chooses → Write to PLAN.md in `spx/21-test-harness.enabler/43-fixtures.enabler/`
+```text
+AskUserQuestion (multiSelect: true):
+"Review persistence proposal — select items to approve:"
 
-**Phase 5: Skills audit**
+☑ [Lesson] Add to CLAUDE.md: "always use absolute imports from package root"
+☑ [Lesson] Add to CLAUDE.md: "tempfile.NamedTemporaryFile needs delete=False on Windows"
+☑ [Insight] Update PLAN.md in 43-fixtures.enabler: remove completed steps 1-3, keep 4-5
+☐ [Skip] 2 items → session file only (skills audit, coordination)
+```
 
-- Critical: `/understanding`, `/contextualizing`, `/testing-python`
-- Missed: `/coding-python` — skipped in first attempt, led to import pattern violations
-- Next: `/coding-python` on `43-fixtures.enabler` (TDD phase 7)
+User approves first three items.
 
-**Phase 6: Create session file**
+**Phase 4: Execute and hand off**
+
+1. Writes both CLAUDE.md entries
+2. Updates PLAN.md — removes steps 1-3, keeps steps 4-5
+3. Records git state: `32-temp-files.enabler` committed, `43-fixtures.enabler/tests/` uncommitted
+4. Creates session file:
 
 ```bash
 spx session handoff
@@ -456,12 +495,12 @@ This command works with `/pickup` to create a self-organizing handoff system:
 A successful handoff:
 
 - [ ] All anchored nodes identified with status and TDD position
-- [ ] Durable artifacts checked — committed vs uncommitted recorded
-- [ ] Reusable insights proposed to user and persisted if approved
-- [ ] Remaining non-durable context dispositioned via `AskUserQuestion`
-- [ ] Skills audit complete — critical, missed, and next action documented
+- [ ] All five reflection perspectives worked through (lessons, deficiencies, insights, skills, starting point)
+- [ ] Existing PLAN.md and DEFICIENCIES.md checked for staleness — updated or removed if stale
+- [ ] Combined persistence proposal presented to user and approved items written
+- [ ] Committed vs uncommitted state recorded for each node
 - [ ] Session file created via `spx session handoff`
 - [ ] Claimed doing session archived (if applicable)
-- [ ] Session file is a thin coordination envelope, not a narrative dump
+- [ ] Session file is a thin coordination envelope — bulk of value persisted durably
 
 </success_criteria>
