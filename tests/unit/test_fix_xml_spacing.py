@@ -2,18 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.util
 import tempfile
 from pathlib import Path
 
-# Import the script as a module
-_spec = importlib.util.spec_from_file_location(
-    "fix_xml_spacing",
-    Path(__file__).parent.parent.parent / "scripts" / "fix-xml-spacing.py",
-)
-assert _spec is not None and _spec.loader is not None
-fix_xml_spacing = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(fix_xml_spacing)
+from outcomeeng.scripts import fix_xml_spacing
 
 
 # =============================================================================

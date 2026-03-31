@@ -6,21 +6,13 @@ Git/subprocess functions (clone_or_fetch, commit_and_push) are Level 2.
 
 from __future__ import annotations
 
-import importlib.util
 import os
 import textwrap
 from pathlib import Path
 
 import pytest
 
-# Import the script as a module (same pattern as test_fix_xml_spacing)
-_spec = importlib.util.spec_from_file_location(
-    "distribute_skills",
-    Path(__file__).parent.parent.parent / "scripts" / "distribute_skills.py",
-)
-assert _spec is not None and _spec.loader is not None
-distribute_skills = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(distribute_skills)
+from outcomeeng.scripts import distribute_skills
 
 
 # =============================================================================

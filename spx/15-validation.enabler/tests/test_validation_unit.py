@@ -6,22 +6,15 @@ in spx/15-validation.enabler/validation.md.
 
 from __future__ import annotations
 
-import importlib.util
 import textwrap
 from pathlib import Path
 
-# Load the script as a module (it uses hyphens in the filename).
-_script = (
-    Path(__file__).resolve().parents[3] / "scripts" / "validate-skill-frontmatter.py"
+from outcomeeng.scripts.validate_skill_frontmatter import (
+    STANDARD_FIELDS,
+    get_valid_fields,
+    main,
+    validate_file,
 )
-_spec = importlib.util.spec_from_file_location("validate_skill_frontmatter", _script)
-assert _spec is not None and _spec.loader is not None
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
-
-validate_file = _mod.validate_file
-get_valid_fields = _mod.get_valid_fields
-STANDARD_FIELDS = _mod.STANDARD_FIELDS
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +111,7 @@ def test_non_skill_file_skipped(tmp_path: Path) -> None:
     )
     # Pass the non-SKILL.md file to main() — it should be filtered out,
     # producing exit code 0 (no errors) despite the bogus field.
-    exit_code = _mod.main([str(tmp_path / "README.md")], valid_fields=STANDARD_FIELDS)
+    exit_code = main([str(tmp_path / "README.md")], valid_fields=STANDARD_FIELDS)
     assert exit_code == 0
 
 

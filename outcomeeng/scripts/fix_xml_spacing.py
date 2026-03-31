@@ -1,4 +1,13 @@
-#!/usr/bin/env python3
+"""Fix XML tag spacing in markdown files.
+
+Adds blank lines before closing pseudo-XML tags that follow unordered lists,
+and removes indentation from closing tags. Respects code fences.
+
+Usage::
+
+    uv run python -m outcomeeng.scripts.fix_xml_spacing FILE [FILE ...]
+"""
+
 from __future__ import annotations
 
 import re

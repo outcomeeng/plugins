@@ -10,20 +10,12 @@ Level 2 by the pre-commit hook itself.
 
 from __future__ import annotations
 
-import importlib.util
 import subprocess
 from pathlib import Path
 
 import pytest
 
-# Load the script as a module.
-_script = Path(__file__).resolve().parents[3] / "scripts" / "validate-plugins.py"
-_spec = importlib.util.spec_from_file_location("validate_plugins", _script)
-assert _spec is not None and _spec.loader is not None
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
-
-discover_targets = _mod.discover_targets
+from outcomeeng.scripts.validate_plugins import discover_targets, main
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +88,7 @@ def test_failed_validation_exits_nonzero_and_reports(
             )
         return subprocess.CompletedProcess(cmd, returncode=0, stdout="ok", stderr="")
 
-    exit_code = _mod.main([str(tmp_path)], runner=fake_runner)
+    exit_code = main([str(tmp_path)], runner=fake_runner)
 
     assert exit_code != 0
     captured = capsys.readouterr()
@@ -111,7 +103,7 @@ def test_failed_validation_exits_nonzero_and_reports(
 def test_no_targets_exits_nonzero(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    exit_code = _mod.main([str(tmp_path)])
+    exit_code = main([str(tmp_path)])
     assert exit_code != 0
     captured = capsys.readouterr()
     assert captured.err  # some error message printed

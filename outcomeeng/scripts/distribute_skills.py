@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
 """Distribute skills from the monorepo to downstream repos.
 
-Reads scripts/distribution.yml for the mapping of downstream repos
+Reads distribution.yml for the mapping of downstream repos
 to source plugins, then copies skill directories to each repo.
 
-Usage:
-    python scripts/distribute_skills.py --dry-run
-    python scripts/distribute_skills.py --repo foundation
-    python scripts/distribute_skills.py --checkout-dir /tmp/downstream
-    python scripts/distribute_skills.py  # distribute all repos
+Usage::
+
+    uv run python -m outcomeeng.scripts.distribute_skills --dry-run
+    uv run python -m outcomeeng.scripts.distribute_skills --repo foundation
+    uv run python -m outcomeeng.scripts.distribute_skills  # distribute all repos
 """
 
 from __future__ import annotations
@@ -23,7 +22,7 @@ from pathlib import Path
 
 import yaml
 
-MONOREPO_ROOT = Path(__file__).resolve().parent.parent
+MONOREPO_ROOT = Path(__file__).resolve().parents[2]
 DISTRIBUTION_CONFIG = MONOREPO_ROOT / "scripts" / "distribution.yml"
 README_TEMPLATE = MONOREPO_ROOT / "scripts" / "templates" / "README.md.tpl"
 LICENSE_FILE = MONOREPO_ROOT / "LICENSE"

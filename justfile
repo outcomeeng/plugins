@@ -6,19 +6,19 @@ help:
 
 # Run all tests
 test *args:
-    python3 -m pytest {{args}}
+    uv run pytest {{args}}
 
 # Run tests with verbose output
 test-v *args:
-    python3 -m pytest -v {{args}}
+    uv run pytest -v {{args}}
 
 # Check plugin and marketplace manifests
 check-manifests:
-    python3 scripts/validate-plugins.py .
+    uv run python -m outcomeeng.scripts.validate_plugins .
 
 # Check SKILL.md frontmatter in all skills
 check-skills:
-    find plugins -name "SKILL.md" -exec python3 scripts/validate-skill-frontmatter.py {} +
+    find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
 
 # Format with dprint
 fmt *args:
@@ -27,6 +27,10 @@ fmt *args:
 # Check formatting without modifying (CI-friendly)
 fmt-check:
     dprint check
+
+# Sync excluded node exclusions from spx/EXCLUDE to pyproject.toml (pytest, mypy, pyright)
+sync-exclude:
+    uv run python -m outcomeeng.scripts.sync_exclude
 
 # Run all checks with timing summary
 check:
@@ -44,10 +48,10 @@ check:
         labels+=("$label")
         times+=("$elapsed")
     }
-    step "manifests"       python3 scripts/validate-plugins.py .
-    step "skills"          find plugins -name "SKILL.md" -exec python3 scripts/validate-skill-frontmatter.py {} +
+    step "manifests"       uv run python -m outcomeeng.scripts.validate_plugins .
+    step "skills"          find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
     step "fmt-check"       dprint check
-    step "pytest"          python3 -m pytest -v
+    step "pytest"          uv run pytest -v
     total=$((SECONDS - total_start))
     echo ""
     echo "━━━ Timing Summary ━━━"

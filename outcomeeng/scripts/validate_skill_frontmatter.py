@@ -1,22 +1,20 @@
-#!/usr/bin/env python3
 """Validate SKILL.md frontmatter fields against Claude Code's known fields.
 
 Uses two complementary sources to build the valid field set:
 
 1. **Binary extraction** — Parses the installed Claude Code CLI binary's
    embedded JavaScript to find frontmatter property access patterns.
-   This catches fields accessed via `var["field"]` or `var.field`.
 
 2. **Skill descriptor extraction** — Finds the skill constructor call in
    the binary (anchored by "skillName:") and maps its camelCase properties
-   back to YAML kebab-case field names. This catches fields like `hooks`
-   that are accessed indirectly via helper functions.
+   back to YAML kebab-case field names.
 
 The Agent Skills open standard fields serve as a minimum floor that is
 always valid regardless of extraction success.
 
-Usage:
-    python3 scripts/validate-skill-frontmatter.py [SKILL.md ...]
+Usage::
+
+    uv run python -m outcomeeng.scripts.validate_skill_frontmatter [SKILL.md ...]
 
 Exit codes:
     0 - All files valid (or no SKILL.md files in args)
@@ -45,11 +43,7 @@ STANDARD_FIELDS = frozenset(
 )
 
 # Map from camelCase JS property names (in the skill constructor) to their
-# YAML frontmatter equivalents. Built from the Claude Code source:
-#   CF7({skillName, displayName, description, allowedTools, argumentHint,
-#         argumentNames, whenToUse, version, model, disableModelInvocation,
-#         userInvocable, hooks, executionContext, agent, paths, effort, shell, ...})
-# Only properties that correspond to user-facing YAML fields are included.
+# YAML frontmatter equivalents.
 _CAMEL_TO_YAML: dict[str, str] = {
     "allowedTools": "allowed-tools",
     "argumentHint": "argument-hint",
@@ -97,19 +91,7 @@ def find_claude_binary() -> Path | None:
 
 
 def extract_fields_from_binary(binary: Path) -> frozenset[str] | None:
-    """Extract known SKILL.md frontmatter fields from the Claude binary.
-
-    Two extraction strategies:
-
-    1. **Direct access** — Find {frontmatter:VAR,content:VAR} sections and
-       extract VAR["field"] and VAR.field patterns. Catches fields like
-       `allowed-tools`, `user-invocable`, `disable-model-invocation`.
-
-    2. **Skill descriptor** — Find lines containing "skillName:" and check
-       which known constructor properties are present. Maps camelCase
-       property names back to YAML field names via _CAMEL_TO_YAML.
-       Catches fields like `hooks` that are accessed indirectly.
-    """
+    """Extract known SKILL.md frontmatter fields from the Claude binary."""
     try:
         result = subprocess.run(
             ["strings", str(binary)],
@@ -126,10 +108,6 @@ def extract_fields_from_binary(binary: Path) -> frozenset[str] | None:
     fields: set[str] = set()
 
     # Strategy 1: Bracket-notation frontmatter property access.
-    # Only bracket notation (var["field-name"]) is reliable — it uses
-    # string literals that are unambiguous YAML field names.
-    # Dot notation (var.field) is too noisy because the frontmatter
-    # variable is reused for other purposes in nearby code.
     for match in FRONTMATTER_SECTION_RE.finditer(output):
         var = re.escape(match.group(1))
         start = match.start()
@@ -140,8 +118,6 @@ def extract_fields_from_binary(binary: Path) -> frozenset[str] | None:
             fields.add(m.group(1))
 
     # Strategy 2: Skill descriptor constructor properties.
-    # Find lines with "skillName:" and check for known constructor
-    # property names, mapping them from camelCase to YAML kebab-case.
     for line in output.split("\n"):
         if "skillName:" not in line:
             continue
@@ -158,11 +134,7 @@ def get_valid_fields(
         [Path], frozenset[str] | None
     ] = extract_fields_from_binary,
 ) -> frozenset[str]:
-    """Get the set of valid SKILL.md frontmatter fields.
-
-    Tries to extract from the Claude binary first, falls back to
-    the Agent Skills standard if extraction fails.
-    """
+    """Get the set of valid SKILL.md frontmatter fields."""
     binary = binary_finder()
     if binary:
         extracted = field_extractor(binary)

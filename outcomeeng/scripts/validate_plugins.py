@@ -1,12 +1,12 @@
-#!/usr/bin/env python3
 """Discover and validate all marketplace and plugin manifests.
 
 Finds the marketplace root (.claude-plugin/marketplace.json) and all plugin
 directories (plugins/*/.claude-plugin/plugin.json), then runs
-`claude plugin validate` on each.
+``claude plugin validate`` on each.
 
-Usage:
-    python3 scripts/validate-plugins.py [root_dir]
+Usage::
+
+    uv run python -m outcomeeng.scripts.validate_plugins [root_dir]
 
 Exit codes:
     0 - All validations passed

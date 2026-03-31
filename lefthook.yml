@@ -2,16 +2,16 @@ pre-commit:
   commands:
     fix-xml-spacing:
       glob: "*.md"
-      run: python3 scripts/fix-xml-spacing.py {staged_files}
+      run: uv run python -m outcomeeng.scripts.fix_xml_spacing {staged_files}
       stage_fixed: true
       priority: 0
     validate-skill-frontmatter:
       glob: "**/SKILL.md"
-      run: python3 scripts/validate-skill-frontmatter.py {staged_files}
+      run: uv run python -m outcomeeng.scripts.validate_skill_frontmatter {staged_files}
       priority: 5
     validate-plugins:
       glob: "*.json"
-      run: python3 scripts/validate-plugins.py .
+      run: uv run python -m outcomeeng.scripts.validate_plugins .
       priority: 10
     dprint:
       glob: "*.{md,python,ts,js,json,jsonc}"
