@@ -300,14 +300,15 @@ Complete TypeScript development workflow with testing, implementation, and revie
 
 ### Skills
 
-| Skill                               | Purpose                                           |
-| ----------------------------------- | ------------------------------------------------- |
-| `/testing-typescript`               | TypeScript-specific testing patterns              |
-| `/coding-typescript`                | Implementation workhorse with remediation loop    |
-| `/auditing-typescript`              | Strict code audit with zero-tolerance             |
-| `/auditing-typescript-tests`        | TypeScript test evidence audit (4-property model) |
-| `/architecting-typescript`          | ADR producer with testing strategy                |
-| `/auditing-typescript-architecture` | ADR audit against testing principles              |
+| Skill                                    | Purpose                                                     |
+| ---------------------------------------- | ----------------------------------------------------------- |
+| `/standardizing-typescript-architecture` | ADR conventions shared by architect and auditor (reference) |
+| `/testing-typescript`                    | TypeScript-specific testing patterns                        |
+| `/coding-typescript`                     | Implementation workhorse with remediation loop              |
+| `/auditing-typescript`                   | Strict code audit with zero-tolerance                       |
+| `/auditing-typescript-tests`             | TypeScript test evidence audit (4-property model)           |
+| `/architecting-typescript`               | ADR producer with Compliance-based testability              |
+| `/auditing-typescript-architecture`      | ADR audit with structured per-concern verdict               |
 
 ### Core Principles
 
@@ -322,14 +323,15 @@ Complete Python development workflow with testing, implementation, and review.
 
 ### Skills
 
-| Skill                           | Purpose                                        |
-| ------------------------------- | ---------------------------------------------- |
-| `/testing-python`               | Python-specific testing patterns               |
-| `/coding-python`                | Implementation workhorse with remediation loop |
-| `/auditing-python`              | Strict code audit with zero-tolerance          |
-| `/auditing-python-tests`        | Python test evidence audit (4-property model)  |
-| `/architecting-python`          | ADR producer with testing strategy             |
-| `/auditing-python-architecture` | ADR audit against testing principles           |
+| Skill                                | Purpose                                                     |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `/standardizing-python-architecture` | ADR conventions shared by architect and auditor (reference) |
+| `/testing-python`                    | Python-specific testing patterns                            |
+| `/coding-python`                     | Implementation workhorse with remediation loop              |
+| `/auditing-python`                   | Strict code audit with zero-tolerance                       |
+| `/auditing-python-tests`             | Python test evidence audit (4-property model)               |
+| `/architecting-python`               | ADR producer with Compliance-based testability              |
+| `/auditing-python-architecture`      | ADR audit with structured per-concern verdict               |
 
 ### Core Principles
 
@@ -846,7 +848,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       └── reviewing-prose/
 │   ├── python/
 │   │   └── skills/
-│   │       └── (6 skills)
+│   │       └── (7 skills)
 │   ├── spec-tree/                # Spec Tree — 3 phases
 │   │   ├── commands/
 │   │   │   ├── author.md
@@ -861,7 +863,7 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       └── (11 skills)
 │   └── typescript/
 │       └── skills/
-│           └── (7 skills)
+│           └── (8 skills)
 ├── spx/                           # Specs as durable map
 │   └── CLAUDE.md                 # Specs directory guide
 └── CLAUDE.md                      # This file

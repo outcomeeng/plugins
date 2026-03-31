@@ -7,86 +7,89 @@ allowed-tools: Read, Grep
 ---
 
 <objective>
-Review ADRs against `/testing` principles, atemporal voice rules, and applicable PDR constraints. Reject any ADR that narrates code history, references existing files, or describes migration plans. Point out violations, reference the specific principle, and show correct architecture.
+Review ADRs against `/standardizing-python-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
+
+**Read `/standardizing-python-architecture` before reviewing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
 </objective>
 
-<quick_start>
+<context_loading>
+**For spec-tree work items: Load complete ADR/PDR hierarchy before reviewing.**
 
-1. Read `/testing` for methodology (5 stages, 5 factors, 7 exceptions)
-2. Check EVERY section for temporal language — reject any reference to current code, existing files, or migration plans
-3. Identify violations of testing principles and parent PDR constraints
-4. Output APPROVED or REJECTED with specific violations
-5. Show correct approach with code examples
+If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete architectural context is loaded:
 
-</quick_start>
+1. **Invoke `spec-tree:contextualizing`** with the node path
+2. **Verify all ancestor ADRs/PDRs are loaded** -- must check for consistency with decision hierarchy
+3. **Verify ADR references ancestor decisions** -- node ADRs should reference relevant ancestor ADRs/PDRs
+
+**The `spec-tree:contextualizing` skill provides:**
+
+- Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
+- TRD with technical requirements
+- Target node spec with typed assertions
+
+**Review focus:**
+
+- Does ADR contradict any ancestor ADR/PDR decisions?
+- Does ADR Compliance section include testability constraints (DI, no mocking)?
+- Does ADR use only the authoritative sections (no phantom sections)?
+- Does ADR honor atemporal voice in ALL sections?
+- Does ADR document trade-offs and consequences?
+
+**If NOT working on spec-tree work item**: Proceed directly with ADR review using provided architectural decision.
+
+</context_loading>
+
+<process>
+
+1. **Read `/standardizing-python-architecture`** for canonical conventions
+2. **Read `/testing`** for methodology (5 stages, 5 factors, 7 exceptions)
+3. **Read the ADR** completely
+4. **Check section structure** -- only authoritative sections allowed (Purpose, Context, Decision, Rationale, Trade-offs accepted, Invariants, Compliance). Flag phantom sections (Testing Strategy, Status, etc.)
+5. **Check EVERY section for temporal language** -- reject any reference to current code, existing files, or migration plans
+6. **Check Compliance section** -- must include testability constraints as MUST/NEVER rules; must NOT include level assignment tables
+7. **Check for mocking language** -- reject unittest.mock.patch, respx.mock, "mock at boundary" in any section
+8. **Verify level accuracy** -- SaaS services jump L1 to L3 (no Level 2)
+9. **Check test double usage** -- must document which `/testing` exception case applies
+10. **Identify all violations** and classify per concern
+11. **Output structured verdict** -- APPROVED or REJECTED with per-concern table
+
+</process>
+
+<failure_modes>
+
+These are real failures from past audits. Study them to avoid repeating them.
+
+**Accepted temporal language because it was in the Rationale section.** The auditor assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z." The atemporal voice rule applies to ALL sections, no exceptions.
+
+**Approved ADR with "DI Protocol" but no testing strategy in Compliance.** The auditor saw a Protocol definition in the Decision section and assumed testing was covered. The ADR had no Compliance rules enabling specific levels -- the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; a MUST rule requiring it as a parameter is.
+
+**Missed "respx.mock" in a code example.** The ADR's Compliance section showed mocking in a code block illustrating the "correct approach." The auditor only checked prose for mocking language, not code examples. Check ALL content -- prose and code blocks.
+
+**Accepted Level 2 for a SaaS service.** The auditor didn't verify the "SaaS services jump L1 to L3" rule and accepted Level 2 for Trakt.tv API testing. SaaS services cannot run locally -- there is no Level 2. This is one of the most commonly violated principles.
+
+**Flagged a phantom section but missed the real problem.** The auditor correctly rejected a Testing Strategy section but didn't check whether the Compliance section had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (in Compliance).
+
+**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. The auditor missed this because they only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
+
+</failure_modes>
 
 <principles_to_enforce>
-From `/testing`:
 
-**Level definitions** (from Stage 2 Five Factors):
+All canonical conventions are in `/standardizing-python-architecture`. Read it first. The audit checks these specific concerns:
 
-- **Level 1**: Pure computation, file I/O with temp dirs, standard dev tools (git, curl)
-  - Test directly, no doubles needed
-- **Level 2**: Real dependencies via harnesses (Docker, databases, project-specific binaries)
-  - Use real systems, not fakes
-- **Level 3**: Real credentials, external services, browsers
-  - Full real-world workflows
+**1. Section structure** -- Only authoritative sections from the ADR template. See `<adr_sections>` in `/standardizing-python-architecture` for the complete list. Flag any section not in that list.
 
-**Critical rules** (from Five Factors):
+**2. Testability in Compliance** -- The Compliance section must include MUST/NEVER rules that enable appropriate testing. See `<testability_in_compliance>` in `/standardizing-python-architecture` for the correct pattern. Level assignment tables and Testing Strategy sections are violations.
 
-- Standard dev tools (git, cat, grep, curl) are Level 1
-- Project-specific tools (Docker, PostgreSQL, Hugo) are Level 2
-- SaaS services (Trakt, GitHub API, Stripe, Auth0) jump from Level 1 → Level 3 (no Level 2)
-- Network dependencies and external services are Level 3
+**3. Atemporal voice** -- ADRs state architectural truth in ALL sections. See `<atemporal_voice>` in `/standardizing-python-architecture` for temporal patterns to reject and rewrite examples.
 
-**Mocking prohibition** (Cardinal Rule):
+**4. Mocking prohibition** -- No mocking language anywhere in the ADR. See `<di_patterns>` in `/standardizing-python-architecture` for what to check and correct ADR language.
 
-- **NO mocking. Ever.** - `/testing` cardinal rule
-- NO `unittest.mock.patch` for external services
-- NO `respx.mock` for internet APIs
-- Use dependency injection with Protocol interfaces instead
-- Test doubles (stubs, spies, fakes) only when exception case applies
+**5. Level accuracy** -- When the Compliance section references testing levels, verify against `/testing` definitions. See `<level_context>` in `/standardizing-python-architecture`. Key rule: SaaS services (Trakt, GitHub API, Stripe, Auth0) jump L1 to L3 (no Level 2).
 
-**Reality principle**:
+**6. Anti-patterns** -- Check for content that does not belong in an ADR. See `<anti_patterns>` in `/standardizing-python-architecture` for the full table. Note Python-specific anti-pattern: `src.*` import examples should use `product.*` / `product_testing.*`.
 
-- "Reality is the oracle" - tests must verify behavior against real systems
-- A fake proves your code works with your imagination, not the real system
-
-**Test doubles require exception case** (Stage 5):
-
-- Only 7 legitimate exceptions for test doubles
-- Each use must document which exception applies
-- No exception = no doubles, test at Level 2
-
-**Atemporal voice prohibition** (Durable Map Rule):
-
-- **ADRs state architectural truth. They NEVER narrate code history, current state, or migration plans.**
-- This is a REJECTION-level violation in ANY section — Context, Decision, Rationale, Compliance, all of it. No section gets a pass.
-- An ADR that references existing code ("The current X has...", "The file X does not exist") is temporal — it becomes stale the moment that code changes.
-- Code that violates an ADR is discovered through code review and test coverage analysis against the ADR's invariants. The ADR itself never names files to delete, code to replace, or implementations to migrate away from.
-
-**Temporal patterns to reject:**
-
-- "The current `module.py` has..." — narrates code state
-- "The file `deprecated/old.py` does not exist" — narrates filesystem state
-- "We need to replace..." / "We need to migrate..." — narrates a plan, not a truth
-- "Currently X uses..." — snapshot that expires
-- "The existing implementation..." — references code, not architecture
-- "After evaluating options..." — narrates decision history
-- "X has accumulated without..." — narrates drift
-- "Previously..." / "Before this..." — there is no before
-- "Going forward..." / "In the future..." — there is only the product truth
-
-**The rewrite pattern:**
-
-- TEMPORAL: "The current MmRegs class in mm.py has a @process with bus protocol logic but uses imperative add_reg() calls and _raw()."
-- ATEMPORAL: "Register banks use declarative field definitions. Bus protocol logic belongs in the Entity's tick() method, not in standalone @process decorators."
-
-- TEMPORAL: "The file deprecated/file.py does not exist and should be removed."
-- ATEMPORAL: "Register bank implementations conform to the Entity protocol." (Non-conforming code is found by code review, not by the ADR.)
-
-- TEMPORAL: "We discovered that raw signal access causes timing violations."
-- ATEMPORAL: "Raw signal access violates the two-phase simulation model. All signal writes use non-blocking assignment."
+**7. Test double exception cases** -- Any test double usage must document which of the 7 `/testing` Stage 5 exceptions applies. No exception = no doubles.
 
 </principles_to_enforce>
 
@@ -97,22 +100,33 @@ From `/testing`:
 
 **Decision:** [APPROVED | REJECTED]
 
+## Verdict
+
+| # | Concern               | Status            | Detail            |
+| - | --------------------- | ----------------- | ----------------- |
+| 1 | Section structure     | {PASS/REJECT}     | {one-line detail} |
+| 2 | Testability in Compl. | {PASS/REJECT}     | {one-line detail} |
+| 3 | Atemporal voice       | {PASS/REJECT}     | {one-line detail} |
+| 4 | Mocking prohibition   | {PASS/REJECT}     | {one-line detail} |
+| 5 | Level accuracy        | {PASS/REJECT}     | {one-line detail} |
+| 6 | Anti-patterns         | {PASS/REJECT}     | {one-line detail} |
+| 7 | Ancestor consistency  | {PASS/REJECT/N/A} | {one-line detail} |
+
 ---
 
 ## Violations
 
 ### {Violation name}
 
-**Where:** {Section name or quote identifying the location}
-**Principle violated:** /testing {section name}
+**Where:** {Section name or quoted text identifying the location}
+**Concern:** {Which concern from the verdict table}
 **Why this fails:** {Direct explanation}
 
 **Correct approach:**
 
-```{language}
+```python
 {Show what the architecture should be}
 ```
-````
 
 ---
 
@@ -128,139 +142,57 @@ From `/testing`:
 
 ## References
 
-- /testing: {section name} (principle violated)
-- /standardizing-python-testing: {section if applicable}
+- /standardizing-python-architecture: {section name}
+- /testing: {section name if applicable}
 
 ---
 
-{If REJECTED: "Revise and resubmit"}
-{If APPROVED: "Architecture meets standards"}
-
+{If REJECTED: "Revise and resubmit."}
+{If APPROVED: "Architecture meets standards."}
 ````
+
 </output_format>
 
-<review_guidelines>
+<what_to_avoid>
 
 **Don't:**
 
-- Reference specific line numbers (they change)
-- Provide grep commands
-- Explain multiple times
-- Count statistics
+- Reference specific line numbers (they change) -- use section names or quoted text
+- Provide grep commands -- focus on principles, not tooling
+- Explain the same principle multiple times -- be concise
+- Approve an ADR just because it removed a phantom section -- check that testability constraints moved to Compliance
 
 **Do:**
 
-- Reference `/testing` section names (e.g., "Stage 5 Exception 1", "Cardinal Rule")
+- Reference `/standardizing-python-architecture` section names (e.g., `<testability_in_compliance>`, `<atemporal_voice>`)
+- Reference `/testing` section names for level rules (e.g., "Stage 2 Five Factors", "Cardinal Rule")
+- Reference `/standardizing-python-testing` for Python-specific Protocol patterns
 - Show correct architecture with code examples
 - Be direct about violations
-- Reference `/standardizing-python-testing` for Python-specific patterns
-- Reject temporal language in ANY section — Context, Decision, Rationale, Compliance
+- Reject temporal language in ANY section -- Context, Decision, Rationale, Compliance
 - Show the atemporal rewrite alongside each temporal violation
 
-</review_guidelines>
+</what_to_avoid>
 
 <example_review>
-
-```markdown
-# ARCHITECTURE REVIEW
-
-**Decision:** REJECTED
-
----
-
-## Violations
-
-### Level 2 Assigned to SaaS Service
-
-**Where:** Lines 132-133
-**Principle violated:** /testing Stage 2 Factor 2
-
-Trakt.tv is a SaaS service that cannot run locally. Per /testing Five Factors:
-- SaaS services have no Level 2 - jump from Level 1 to Level 3
-
-**Correct approach:**
-
-```markdown
-| List operations | 1 | DI with TraktListProvider protocol |
-| List operations | 3 | Real Trakt API with test account |
-````
-
----
-
-### Mocking External Services
-
-**Where:** Lines 132, 133, 145
-**Principle violated:** /testing Cardinal Rule
-
-Testing Strategy says "Mock at the PyTrakt API boundary" - this violates the NO MOCKING principle.
-
-**Correct approach:**
-
-Use dependency injection per /standardizing-python-testing:
-
-```python
-class TraktListProvider(Protocol):
-    def __call__(self, list_name: str, username: str) -> Any | None: ...
-
-
-# Level 1: Inject fake implementation (Exception 1: Failure modes)
-# Level 3: Use real PyTrakt
-```
-
----
-
-### Temporal Language in Context Section
-
-**Where:** Context section
-**Principle violated:** Atemporal voice (Durable Map Rule)
-
-Context says "The current PyTrakt wrapper in trakt_client.py uses direct API calls without dependency injection, making it impossible to test at Level 1."
-
-This narrates code state — it becomes false the moment the file changes. The ADR states what the architecture IS, not what code currently exists. Non-conforming code is discovered through code review against the ADR's invariants.
-
-**Correct approach:**
-
-```markdown
-**Technical**: List operations depend on a SaaS API (Trakt.tv) that cannot
-run locally. Dependency injection isolates business logic from API transport.
-```
-
----
-
-## Required Changes
-
-1. Remove all Level 2 assignments for SaaS operations
-2. Remove "Mock at boundary" language
-3. Add DI protocol definitions per /standardizing-python-testing
-4. Document which exception case justifies any test doubles
-5. Rewrite Context section in atemporal voice — remove all references to current code state
-
----
-
-## References
-
-- /testing: Cardinal Rule (no mocking)
-- /testing: Stage 2 Factor 2 (dependency levels)
-- /testing: Stage 5 (exception cases for test doubles)
-- /standardizing-python-testing: Protocol patterns
-
----
-
-Revise and resubmit.
-
-```
+Read `${SKILL_DIR}/references/example-review.md` for a complete REJECTED review showing all concern types: SaaS Level 2 violation, mocking language, missing testability in Compliance, and temporal voice violations.
 </example_review>
 
 <success_criteria>
 Review is complete when:
 
-- [ ] Checked ALL sections for temporal language (Durable Map Rule) — Context, Decision, Rationale, Compliance
-- [ ] Checked for mocking violations (Cardinal Rule)
-- [ ] Verified level assignments match `/testing` Five Factors
-- [ ] Checked test double usage has documented exception case
-- [ ] Verified ADR never names files to delete or code to replace (code removal comes from code review, not ADRs)
+- [ ] Read `/standardizing-python-architecture` before starting review
+- [ ] Checked section structure against authoritative ADR template
+- [ ] Checked ALL sections for temporal language -- Context, Decision, Rationale, Compliance
+- [ ] Verified Compliance section includes testability constraints (MUST/NEVER for DI, no mocking)
+- [ ] Verified no phantom sections (Testing Strategy, Status, etc.)
+- [ ] Verified no mocking language anywhere in ADR (prose AND code examples)
+- [ ] Verified level assignments -- no Level 2 for SaaS services
+- [ ] Verified test double usage has documented exception case
+- [ ] Verified ADR never names files to delete or code to replace
 - [ ] Output follows format with section references (not line numbers)
-- [ ] Correct approach shown with code examples
+- [ ] Structured verdict table with per-concern status
+- [ ] Correct approach shown with code examples for each violation
+- [ ] Decision clearly stated (APPROVED/REJECTED)
 
 </success_criteria>
-```

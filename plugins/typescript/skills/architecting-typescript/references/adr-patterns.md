@@ -1,5 +1,7 @@
 # Common ADR Patterns for TypeScript
 
+These patterns show how testability constraints appear in the Compliance section. See `/standardizing-typescript-architecture` for the canonical ADR section structure.
+
 ## Pattern: External Tool Integration
 
 When integrating with external tools (Hugo, Caddy, LHCI):
@@ -9,19 +11,20 @@ When integrating with external tools (Hugo, Caddy, LHCI):
 
 Use dependency injection for all external tool invocations.
 
-### Implementation Constraints
+## Compliance
 
-1. All functions that call external tools must accept a `deps` parameter
-2. The `deps` interface must include all external dependencies
-3. Default implementations use real tools; tests inject controlled implementations
+### Recognized by
 
-### Testing Strategy
+Observable `deps` parameter in all functions that invoke external tools.
 
-| Component        | Level | Justification                          |
-| ---------------- | ----- | -------------------------------------- |
-| Command building | 1     | Pure function, no external deps        |
-| Tool invocation  | 2     | Needs real binary to verify acceptance |
-| Full workflow    | 3     | Needs real environment                 |
+### MUST
+
+- All functions that call external tools accept a `deps` parameter with a typed interface -- enables Level 1 testing of command-building logic ([review])
+- Default implementations use real tools; tests inject controlled implementations -- no mocking ([review])
+
+### NEVER
+
+- Direct `child_process.exec/spawn` without DI wrapper -- prevents isolated testing ([review])
 ```
 
 ## Pattern: Configuration Loading
@@ -33,19 +36,21 @@ When defining configuration approach:
 
 Use Zod schemas for all configuration validation.
 
-### Implementation Constraints
+## Compliance
 
-1. All config files must have corresponding Zod schemas
-2. Config loading must validate at load time, not use time
-3. Invalid config must fail fast with descriptive errors
+### Recognized by
 
-### Testing Strategy
+Zod schema accompanying every config file type. Validation at load time, not use time.
 
-| Component      | Level | Justification                   |
-| -------------- | ----- | ------------------------------- |
-| Schema parsing | 1     | Pure validation logic           |
-| File loading   | 1     | Uses DI for fs operations       |
-| Config merging | 1     | Pure function with typed inputs |
+### MUST
+
+- All config files have corresponding Zod schemas -- ensures type-safe, validated config ([review])
+- Config loading validates at load time with `.parse()` -- fail fast with descriptive errors ([review])
+
+### NEVER
+
+- Unvalidated config access at use time -- defers errors to runtime ([review])
+- `as` type assertions on config data -- bypasses validation ([review])
 ```
 
 ## Pattern: CLI Structure
@@ -57,19 +62,21 @@ When defining CLI architecture:
 
 Use Commander.js with subcommand pattern.
 
-### Implementation Constraints
+## Compliance
 
-1. Each command must be a separate module
-2. Command modules export a function that registers with Commander
-3. Commands must not contain business logic—delegate to runners
+### Recognized by
 
-### Testing Strategy
+Separate module per command. Business logic delegated to runners, not in command handlers.
 
-| Component        | Level | Justification                     |
-| ---------------- | ----- | --------------------------------- |
-| Argument parsing | 1     | Can test with Commander's parse() |
-| Command routing  | 1     | Pure function mapping             |
-| Full CLI         | 3     | Needs real invocation to verify   |
+### MUST
+
+- Each command is a separate module exporting a registration function -- enables isolated Level 1 testing ([review])
+- Commands delegate to runner functions that accept DI parameters -- separates parsing from logic ([review])
+
+### NEVER
+
+- Business logic in command handlers -- prevents isolated testing ([review])
+- Direct I/O in command modules without DI -- couples commands to environment ([review])
 ```
 
 ## Pattern: Error Handling
@@ -81,19 +88,21 @@ When defining error handling approach:
 
 Use typed error classes with structured error codes.
 
-### Implementation Constraints
+## Compliance
 
-1. All errors must extend a base AppError class
-2. Error codes must be unique and documented
-3. Error messages must be user-facing and actionable
+### Recognized by
 
-### Testing Strategy
+All thrown errors extend `AppError`. Error codes are unique and documented.
 
-| Component          | Level | Justification            |
-| ------------------ | ----- | ------------------------ |
-| Error construction | 1     | Pure class instantiation |
-| Error formatting   | 1     | Pure string formatting   |
-| Error propagation  | 1     | Can verify with DI       |
+### MUST
+
+- All errors extend a base `AppError` class with structured error codes -- enables programmatic handling ([review])
+- Error messages are user-facing and actionable -- no raw stack traces in output ([review])
+
+### NEVER
+
+- Throwing plain `Error` or string literals -- loses structure ([review])
+- Swallowing errors without logging or re-throwing -- hides failures ([review])
 ```
 
 ## Pattern: Async Operations
@@ -105,17 +114,20 @@ When defining async patterns:
 
 Use async/await with explicit error handling and timeouts.
 
-### Implementation Constraints
+## Compliance
 
-1. All async functions must have explicit return types
-2. Timeouts must be configurable via dependency injection
-3. Errors must be caught and converted to typed errors
+### Recognized by
 
-### Testing Strategy
+Explicit return types on all async functions. Timeouts configurable via DI.
 
-| Component        | Level | Justification                |
-| ---------------- | ----- | ---------------------------- |
-| Promise handling | 1     | Can test with controlled DI  |
-| Timeout behavior | 1     | Inject fake timer            |
-| Real async ops   | 2/3   | Depends on external resource |
+### MUST
+
+- All async functions have explicit return types -- prevents implicit `Promise<any>` ([review])
+- Timeouts are configurable via dependency injection -- enables Level 1 testing of timeout logic ([review])
+- Errors are caught and converted to typed `AppError` subclasses -- structured propagation ([review])
+
+### NEVER
+
+- Unhandled promise rejections -- crashes process ([review])
+- Hardcoded timeout values -- prevents testing and configuration ([review])
 ```

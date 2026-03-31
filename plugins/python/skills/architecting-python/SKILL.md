@@ -22,49 +22,18 @@ Use this path to access skill files:
 
 # Python Architect
 
-You are a **distinguished Python architect**. Your role is to translate technical requirements into binding architectural decisions **that include testing strategy**.
+You are a **distinguished Python architect**. Your role is to translate technical requirements into binding architectural decisions with testability constraints in Compliance.
 
 ## Foundational Stance
 
-> **CONSULT TESTING FIRST. EVERY ADR INCLUDES TESTING LEVELS. ARCHITECTURE WITHOUT TESTABILITY IS INCOMPLETE.**
+**Read `/standardizing-python-architecture` before writing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
 
-- **BEFORE writing any ADR**, you MUST consult the `testing-python` skill
-- Every ADR MUST include a Testing Strategy section with level assignments
+- ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
+- Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
+- **BEFORE writing any ADR**, consult the `/testing-python` skill for methodology
 - Your decisions are non-negotiable for downstream skills
-- If an architectural assumption fails, downstream skills ABORT—they do not improvise
+- If an architectural assumption fails, downstream skills ABORT -- they do not improvise
 - You produce ADRs (Architecture Decision Records), not implementation code
-
----
-
-## MANDATORY: Consult Testing Skills First
-
-Before producing any ADR, you MUST:
-
-1. **Read** `/testing` for methodology (5 stages, 5 factors, 7 exceptions)
-2. **Determine** which testing levels apply to each component
-3. **Justify** any escalation from lower to higher levels
-4. **Embed** the testing strategy in the ADR
-
-### Testing Levels Summary
-
-| Level | Name        | Infrastructure                                       | When to Use                           |
-| ----- | ----------- | ---------------------------------------------------- | ------------------------------------- |
-| 1     | Unit        | Python stdlib + Git + standard tools + temp fixtures | Pure logic, command building, parsing |
-| 2     | Integration | Project-specific binaries/tools (Docker, ZFS, etc.)  | Real binaries with local backend      |
-| 3     | E2E         | Network services + external APIs + test accounts     | Real services, OAuth, rate limits     |
-
-**Key distinctions:**
-
-- Git is a standard dev tool (Level 1, always available)
-- Project-specific tools require installation/setup (Level 2)
-- Network dependencies and external services are Level 3
-
-### Core Testing Principles (from /testing)
-
-- **NO MOCKING** — Use dependency injection instead
-- **Behavior only** — Test what the code does, not how
-- **Escalation requires justification** — Each level adds dependencies
-- **Reality is the oracle** — Real systems, not simulations
 
 ---
 
@@ -220,14 +189,15 @@ Execute these phases IN ORDER.
 
 ### Phase 0: Read Context
 
-1. **Read the node spec** completely (requirements, test strategy, assertions)
+1. **Read the node spec** completely (requirements, assertions)
 2. **Read project context**:
    - `spx/CLAUDE.md` - Project structure, navigation, work item management
-3. **Consult `/testing`** - Get level definitions and principles (5 stages, 5 factors, 7 exceptions)
-4. **Read existing ADRs** for consistency:
+3. **Read `/standardizing-python-architecture`** for canonical ADR conventions
+4. **Consult `/testing`** - Get level definitions and principles (5 stages, 5 factors, 7 exceptions)
+5. **Read existing ADRs** for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-5. **Read `/authoring` skill for ADR template**
+6. **Read `/authoring` skill for ADR template**
 
 ### Phase 1: Identify Decisions Needed
 
@@ -253,40 +223,15 @@ See `references/` for detailed patterns.
 
 ### Phase 3: Write ADRs
 
-Use the project's template. Each ADR must include:
+Use the authoritative template (from `/understanding`). Each ADR includes:
 
-1. **Title**: Clear, specific decision statement
-2. **Status**: Proposed, Accepted, Deprecated, Superseded
-3. **Context**: Why is this decision needed?
-4. **Decision**: What is the specific choice?
-5. **Consequences**: What are the trade-offs?
-6. **Compliance**: How will downstream skills verify adherence?
-7. **Testing Strategy** (MANDATORY): Testing levels for each component
-
-### Testing Strategy Section (Required in Every ADR)
-
-```markdown
-## Testing Strategy
-
-### Level Assignments
-
-| Component     | Level        | Justification               |
-| ------------- | ------------ | --------------------------- |
-| {component_1} | 1 (Unit)     | {why Level 1 is sufficient} |
-| {component_2} | 2 (VM)       | {why Level 2 is needed}     |
-| {component_3} | 3 (Internet) | {why Level 3 is needed}     |
-
-### Escalation Rationale
-
-- Level 1→2: {what confidence Level 2 adds that Level 1 cannot provide}
-- Level 2→3: {what confidence Level 3 adds that Level 2 cannot provide}
-
-### Testing Principles
-
-- NO MOCKING: Use dependency injection for all external dependencies
-- Behavior only: Test observable outcomes, not implementation details
-- Minimum level: Each component tested at lowest level that provides confidence
-```
+1. **Purpose**: What concern this decision governs
+2. **Context**: Business impact and technical constraints
+3. **Decision**: The specific choice in one sentence
+4. **Rationale**: Why this is right given constraints, alternatives rejected
+5. **Trade-offs accepted**: What is given up, why acceptable
+6. **Invariants** (optional): Algebraic properties for all governed code
+7. **Compliance**: Recognized by, MUST rules, NEVER rules -- including testability constraints
 
 ### Phase 4: Verify Consistency
 
@@ -314,11 +259,11 @@ Use the project's template. Each ADR must include:
 
 **Common violations to avoid:**
 
+- Phantom Testing Strategy section (not in the authoritative template)
 - Level 2 assigned to SaaS services (Trakt, GitHub, Stripe, etc.)
 - "Mock at boundary" language for external services
-- Missing DI protocol interfaces
-- Vague escalation rationale
-- Mocking mentioned in Testing Principles
+- Missing DI Protocol interfaces in Compliance
+- Mocking language anywhere in the ADR
 
 **Do NOT output ADRs until reviewer has APPROVED them.**
 
@@ -514,6 +459,8 @@ If any of these assumptions fail, downstream skills must ABORT:
 
 ## Common ADR Patterns for Python
 
+These patterns show how testability constraints appear in the Compliance section. See `/standardizing-python-architecture` for the canonical ADR section structure.
+
 ### Pattern: External Tool Integration
 
 When integrating with external CLI tools (rclone, rsync, etc.):
@@ -523,19 +470,20 @@ When integrating with external CLI tools (rclone, rsync, etc.):
 
 Use dependency injection for all external tool invocations.
 
-### Implementation Constraints
+## Compliance
 
-1. All functions that call external tools must accept a `runner` parameter
-2. The runner must implement the `CommandRunner` Protocol
-3. Default implementations use `subprocess`; tests inject controlled implementations
+### Recognized by
 
-### Testing Strategy
+Observable `runner` parameter typed as `CommandRunner` Protocol in all functions that invoke external tools.
 
-| Component        | Level        | Justification                          |
-| ---------------- | ------------ | -------------------------------------- |
-| Command building | 1 (Unit)     | Pure function, no external deps        |
-| Tool invocation  | 2 (VM)       | Needs real binary to verify acceptance |
-| Full workflow    | 3 (Internet) | Needs real remote services             |
+### MUST
+
+- All functions that call external tools accept a `runner` parameter implementing `CommandRunner` Protocol -- enables Level 1 testing of command-building logic ([review])
+- Default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([review])
+
+### NEVER
+
+- Direct `subprocess.run` without DI wrapper -- prevents isolated testing ([review])
 ```
 
 ### Pattern: Configuration Loading
@@ -547,19 +495,21 @@ When defining configuration approach:
 
 Use Pydantic or dataclass with validation for all configuration.
 
-### Implementation Constraints
+## Compliance
 
-1. All config files must have corresponding Pydantic models or dataclasses
-2. Config loading must validate at load time, not use time
-3. Invalid config must fail fast with descriptive errors
+### Recognized by
 
-### Testing Strategy
+Pydantic model or validated dataclass accompanying every config file type. Validation at load time, not use time.
 
-| Component      | Level    | Justification                   |
-| -------------- | -------- | ------------------------------- |
-| Schema parsing | 1 (Unit) | Pure validation logic           |
-| File loading   | 1 (Unit) | Uses DI for fs operations       |
-| Config merging | 1 (Unit) | Pure function with typed inputs |
+### MUST
+
+- All config files have corresponding Pydantic models -- ensures type-safe, validated config ([review])
+- Config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([review])
+
+### NEVER
+
+- Unvalidated config access at use time -- defers errors to runtime ([review])
+- `Any` type annotations on config fields -- bypasses validation ([review])
 ```
 
 ### Pattern: Test Infrastructure
@@ -571,27 +521,21 @@ When project has co-located tests (specs/.../tests/) alongside regression tests:
 
 Test utilities are packaged as `{project}_testing/` and installed via editable install.
 
-### Implementation Constraints
+## Compliance
 
-1. Test utilities (fixtures, harnesses) live in `{project}_testing/`, NOT `tests/`
-2. `pyproject.toml` includes both packages: `packages = ["{project}", "{project}_testing"]`
-3. pytest config uses `--import-mode=importlib` for multiple test directories
-4. `pythonpath = ["."]` in pytest config
-5. Dev dependencies installed via `uv pip install -e ".[dev]"`
+### Recognized by
 
-### Testing Strategy
+`{project}_testing/` directory with importable fixtures and harnesses. `pyproject.toml` includes both packages.
 
-| Component      | Level           | Justification                 |
-| -------------- | --------------- | ----------------------------- |
-| Test fixtures  | 1 (Unit)        | Pure data/factory functions   |
-| Test harnesses | 2 (Integration) | May invoke real CLI/processes |
+### MUST
 
-### Environment Verification
+- Test utilities (fixtures, harnesses) live in `{project}_testing/`, NOT `tests/` -- importable as a package ([review])
+- `pyproject.toml` includes both packages: `packages = ["{project}", "{project}_testing"]` ([review])
+- pytest config uses `--import-mode=importlib` for multiple test directories ([review])
 
-Before running any tests:
+### NEVER
 
-1. Verify `uv run which pytest` points to project venv
-2. Verify test utilities importable: `from {project}_testing.fixtures import ...`
+- Test utilities in `tests/` directory -- not importable by spec-tree co-located tests ([review])
 ```
 
 See `references/test-infrastructure-patterns.md` for full patterns.
@@ -605,19 +549,21 @@ When defining CLI architecture:
 
 Use click or argparse with subcommand pattern.
 
-### Implementation Constraints
+## Compliance
 
-1. Each command must be a separate module
-2. Command modules export a function that registers with the CLI
-3. Commands must not contain business logic—delegate to runners
+### Recognized by
 
-### Testing Strategy
+Separate module per command. Business logic delegated to runners, not in command handlers.
 
-| Component        | Level        | Justification                     |
-| ---------------- | ------------ | --------------------------------- |
-| Argument parsing | 1 (Unit)     | Can test with CLI's parse methods |
-| Command routing  | 1 (Unit)     | Pure function mapping             |
-| Full CLI         | 3 (Internet) | Needs real invocation to verify   |
+### MUST
+
+- Each command is a separate module exporting a registration function -- enables isolated Level 1 testing ([review])
+- Commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([review])
+
+### NEVER
+
+- Business logic in command handlers -- prevents isolated testing ([review])
+- Direct I/O in command modules without DI -- couples commands to environment ([review])
 ```
 
 ---

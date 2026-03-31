@@ -7,37 +7,15 @@ allowed-tools: Read, Write, Glob, Grep
 ---
 
 <essential_principles>
-**TESTING LEVELS IN EVERY ADR. ARCHITECTURE WITHOUT TESTABILITY IS INCOMPLETE.**
+**Read `/standardizing-typescript-architecture` before writing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
 
-- Every ADR MUST include a Testing Strategy section with level assignments
+- ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
+- Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
 - No `any` without explicit justification in ADR
 - Design for dependency injection (NO MOCKING)
 - You produce ADRs (Architecture Decision Records), not implementation code
 
 </essential_principles>
-
-<testing_levels_summary>
-
-| Level | Name        | Infrastructure                          | When to Use                                   |
-| ----- | ----------- | --------------------------------------- | --------------------------------------------- |
-| 1     | Unit        | Node.js built-ins + Git + temp fixtures | Pure logic, FS operations, git operations     |
-| 2     | Integration | Project-specific binaries/tools         | Claude Code, Hugo, Caddy, TypeScript compiler |
-| 3     | E2E         | External deps (GitHub, network, Chrome) | Full workflows with network/external services |
-
-**Key distinctions:**
-
-- Git is Level 1 (standard dev tool, always available in CI)
-- Project-specific tools require installation/setup (Level 2)
-- Network dependencies and external services are Level 3
-
-**Core Testing Principles:**
-
-- **NO MOCKING** — Use dependency injection instead
-- **Behavior only** — Test what the code does, not how
-- **Escalation requires justification** — Each level adds dependencies
-- **Reality is the oracle** — Real systems, not simulations
-
-</testing_levels_summary>
 
 <context_loading>
 **For spec-tree work items: Load complete context before creating ADRs.**
@@ -58,7 +36,7 @@ If you're creating ADRs for a spec-tree work item (enabler/outcome), ensure comp
 
 - Must not contradict ancestor ADRs/PDRs (product → ancestor hierarchy)
 - Must reference relevant ancestor decisions
-- Must include testing strategy with level assignments
+- Must include testability constraints in Compliance (MUST/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
 **If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
@@ -111,11 +89,7 @@ You produce ADRs. The scope depends on what you're deciding:
 
 See `/authoring` skill for complete ordering rules.
 
-**Within-scope dependency order**:
-
-- Capability ADRs: adr-21 must be decided before adr-37
-- Feature ADRs: adr-21 must be decided before adr-37
-- Product ADRs: adr-21 must be decided before adr-37
+**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower BSP = dependency).
 
 **Cross-scope dependencies**: Must be documented explicitly in ADR "Context" section using markdown links.
 
@@ -126,14 +100,15 @@ Execute these phases IN ORDER.
 
 **Phase 0: Read Context**
 
-1. Read the node spec completely (requirements, test strategy, assertions)
+1. Read the node spec completely (requirements, assertions)
 2. Read project context:
    - `spx/CLAUDE.md` - Project structure, navigation, work item management
-3. Invoke `/testing-typescript` to understand testing methodology
-4. Read existing ADRs for consistency:
+3. Read `/standardizing-typescript-architecture` for canonical ADR conventions
+4. Invoke `/testing-typescript` to understand testing methodology
+5. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-5. Read `/authoring` skill for ADR template
+6. Read `/authoring` skill for ADR template
 
 **Phase 1: Identify Decisions Needed**
 
@@ -157,15 +132,15 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the project's template. Each ADR must include:
+Use the authoritative template (from `/understanding`). Each ADR includes:
 
-1. **Title**: Clear, specific decision statement
-2. **Status**: Proposed, Accepted, Deprecated, Superseded
-3. **Context**: Why is this decision needed?
-4. **Decision**: What is the specific choice?
-5. **Consequences**: What are the trade-offs?
-6. **Compliance**: How will adherence be verified?
-7. **Testing Strategy** (MANDATORY): Testing levels for each component
+1. **Purpose**: What concern this decision governs
+2. **Context**: Business impact and technical constraints
+3. **Decision**: The specific choice in one sentence
+4. **Rationale**: Why this is right given constraints, alternatives rejected
+5. **Trade-offs accepted**: What is given up, why acceptable
+6. **Invariants** (optional): Algebraic properties for all governed code
+7. **Compliance**: Recognized by, MUST rules, NEVER rules -- including testability constraints
 
 **Phase 4: Verify Consistency**
 
@@ -174,34 +149,6 @@ Use the project's template. Each ADR must include:
 - Nested ADRs must not contradict parent-level ADRs
 
 </adr_creation_protocol>
-
-<testing_strategy_section>
-**Required in Every ADR:**
-
-```markdown
-## Testing Strategy
-
-### Level Assignments
-
-| Component     | Level           | Justification               |
-| ------------- | --------------- | --------------------------- |
-| {component_1} | 1 (Unit)        | {why Level 1 is sufficient} |
-| {component_2} | 2 (Integration) | {why Level 2 is needed}     |
-| {component_3} | 3 (E2E)         | {why Level 3 is needed}     |
-
-### Escalation Rationale
-
-- Level 1→2: {what confidence Level 2 adds that Level 1 cannot provide}
-- Level 2→3: {what confidence Level 3 adds that Level 2 cannot provide}
-
-### Testing Principles
-
-- NO MOCKING: Use dependency injection for all external dependencies
-- Behavior only: Test observable outcomes, not implementation details
-- Minimum level: Each component tested at lowest level that provides confidence
-```
-
-</testing_strategy_section>
 
 <what_you_do_not_do>
 
@@ -253,12 +200,6 @@ When you complete ADR creation, provide:
 
 1. {constraint from [Type Safety](spx/21-type-safety.adr.md)}
 2. {constraint from [CLI Structure](spx/32-cli.enabler/21-cli-structure.adr.md)}
-
-### Testing Strategy Summary
-
-| Component | Level | Justification |
-| --------- | ----- | ------------- |
-| ...       | ...   | ...           |
 ```
 
 </output_format>
@@ -266,9 +207,9 @@ When you complete ADR creation, provide:
 <success_criteria>
 ADR is complete when:
 
-- [ ] Testing strategy included with level assignments
+- [ ] Compliance section includes testability constraints (DI, no mocking) per `/standardizing-typescript-architecture`
 - [ ] All architectural choices documented
-- [ ] Compliance criteria defined for verification
+- [ ] Compliance criteria defined with MUST/NEVER rules for verification
 - [ ] No contradictions with existing ADRs
 - [ ] Type safety considerations addressed
 - [ ] Security boundaries identified
