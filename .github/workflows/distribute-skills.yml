@@ -6,7 +6,7 @@ on:
     paths:
       - "plugins/*/skills/**"
       - "scripts/distribution.yml"
-      - "scripts/distribute_skills.py"
+      - "outcomeeng/scripts/distribute_skills.py"
 
   workflow_dispatch:
     inputs:
@@ -47,4 +47,4 @@ jobs:
             ARGS="--repo ${{ inputs.repo }}"
           fi
 
-          python scripts/distribute_skills.py $ARGS
+          PYTHONPATH=. python -m outcomeeng.scripts.distribute_skills $ARGS
