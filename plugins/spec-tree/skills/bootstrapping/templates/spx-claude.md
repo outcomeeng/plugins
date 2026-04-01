@@ -111,7 +111,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 | "Move this under that"   | `/refactoring`     | Rename directories manually |
 | "Check these specs"      | `/aligning`        | Review without methodology  |
 | "Write tests for this"   | `/testing`         | Write tests without spec    |
-| "Start the TDD flow"     | `/coding`          | Code without architecture   |
+| "Start the TDD flow"     | `/applying`        | Code without architecture   |
 
 ---
 

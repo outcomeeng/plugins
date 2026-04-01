@@ -120,7 +120,7 @@ Scan the conversation for spec-tree nodes that were worked on. For each node, re
 - Full path (e.g., `spx/21-foo.enabler/32-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)
 - Test status (passing, failing, not yet written)
-- TDD flow position if applicable (phase 1-8 per `/coding` skill)
+- TDD flow position if applicable (phase 1-8 per `/applying` skill)
 
 **If NO spec-tree nodes were involved in this session**, use `AskUserQuestion`:
 

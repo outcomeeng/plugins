@@ -8,14 +8,14 @@ CONTRIBUTING TO faster iteration cycles and higher spec-test coverage across the
 
 ### Scenarios
 
-- Given a node with all passing tests, when status is computed, then the node reports "realized" ([test](tests/status-rollup.unit.test.{ext}))
+- Given a node with all passing tests, when status is computed, then the node reports "passing" ([test](tests/status-rollup.unit.test.{ext}))
 - Given a node with one failing test, when status is computed, then the node reports "failing" ([test](tests/status-rollup.unit.test.{ext}))
-- Given a node with no tests, when status is computed, then the node reports "spec" ([test](tests/status-rollup.unit.test.{ext}))
+- Given a node with no tests, when status is computed, then the node reports "declared" ([test](tests/status-rollup.unit.test.{ext}))
 - Given a parent with mixed child statuses, when status is rolled up, then the parent reports the worst child status ([test](tests/status-rollup.unit.test.{ext}))
 
 ### Mappings
 
-- Child status combination maps to parent status: all realized → realized, any failing → failing, any needs-work → needs-work ([test](tests/status-rollup.unit.test.{ext}))
+- Child status combination maps to parent status: all passing → passing, any failing → failing ([test](tests/status-rollup.unit.test.{ext}))
 
 ### Properties
 

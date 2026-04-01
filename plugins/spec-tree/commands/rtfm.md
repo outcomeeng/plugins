@@ -38,20 +38,20 @@ Look at what you have produced so far:
 
 ## Step 3: Start the proper flow
 
-Invoke the coding skill NOW:
+Invoke the applying skill NOW:
 
-```json
-Skill tool → { "skill": "spec-tree:coding" }
+```text
+Skill tool → { "skill": "spec-tree:applying" }
 ```
 
-This runs the full 8-phase TDD flow: methodology → context → architect → review → test → review → implement → review. Follow it from Phase 1.
+This runs the full 8-phase TDD flow: methodology → context → architect → audit → test → audit → implement → audit. Follow it from Phase 1.
 
 </process>
 
 <success_criteria>
 
 - Ad hoc work stopped
-- Coding skill invoked and proper flow started from Phase 1
+- Applying skill invoked and proper flow started from Phase 1
 - No throwaway scripts or debug code committed
 
 </success_criteria>
