@@ -8,7 +8,7 @@ hooks:
     - matcher: "Skill"
       hooks:
         - type: command
-          command: "${CLAUDE_SKILL_DIR}/scripts/enforce-gates.sh"
+          command: "${CLAUDE_PLUGIN_ROOT}/skills/applying/scripts/enforce-gates.sh"
 ---
 
 <objective>

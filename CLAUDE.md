@@ -309,7 +309,6 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `/standardizing-typescript`              | TypeScript code standards (reference, loaded by other skills) |
 | `/testing-typescript`                    | TypeScript-specific testing patterns                          |
 | `/coding-typescript`                     | Implementation workhorse with remediation loop                |
-| `/implementing-typescript-files`         | File-focused TDD with test + code audit gates                 |
 | `/auditing-typescript`                   | Strict code audit with zero-tolerance                         |
 | `/auditing-typescript-tests`             | TypeScript test evidence audit (4-property model)             |
 | `/architecting-typescript`               | ADR producer with Compliance-based testability                |
@@ -676,6 +675,30 @@ Read: templates/example.md
 
 # ✅ CORRECT - Unambiguous
 Read: ${SKILL_DIR}/templates/example.md
+```
+
+### Variable Scopes: Skill Content vs Hook Commands
+
+`${CLAUDE_SKILL_DIR}` is a **skill content** variable — it works in `!` bash injection commands and markdown text inside SKILL.md. It does NOT work in hook `command:` fields.
+
+Hook commands have their own variables:
+
+| Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
+| ----------------------- | -------------------------- | ---------------------------- | --------------------- |
+| `${CLAUDE_SKILL_DIR}`   | Skill's SKILL.md directory | Yes                          | **No**                |
+| `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
+| `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
+| `$CLAUDE_PROJECT_DIR`   | Project working directory  | No                           | **Yes**               |
+
+**For hook scripts bundled with a plugin skill**, use `${CLAUDE_PLUGIN_ROOT}` with the relative path from the plugin root:
+
+```yaml
+hooks:
+  PostToolUse:
+    - matcher: "Skill"
+      hooks:
+        - type: command
+          command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
 ```
 
 ### Nested Code Fences in Skills (MANDATORY)
