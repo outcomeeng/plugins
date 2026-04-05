@@ -4,7 +4,9 @@ description: Create timestamped handoff document for continuing work in a fresh 
 argument-hint: "[--no-session] [--prune]"
 allowed-tools:
   - Read
+  - Edit
   - Write
+  - Grep
   - Bash(spx:*)
   - Bash(git:*)
   - Glob
@@ -175,16 +177,20 @@ For each lesson, classify by nature to determine the correct persistence target:
 
 ### Perspective 2: Deficiencies identified
 
-What is broken, missing, or wrong that you did not fix?
+What is broken, missing, or wrong?
 
 - **Spec deficiencies** — assertions that are wrong, missing, or untestable
 - **Implementation gaps** — known bugs, missing edge cases, incomplete features
 - **Test gaps** — assertions without test coverage, tests that don't test what they claim
+- **Stale references** — old paths, renamed nodes, broken links anywhere in the tree
 
-For each deficiency, determine persistence target:
+**Fix it now or defer it — never propose fixing something you can fix right now.**
 
-- Fix the spec directly (if an assertion is wrong — this is a durable fix)
-- Write or update ISSUES.md in the node directory (if the fix is deferred)
+For each deficiency:
+
+1. **Can you fix it right now?** Stale references, broken links, wrong paths, simple corrections — fix them immediately using Edit/Grep. Do not propose them in Phase 3. Do not ask the user. Just fix them and note what you fixed.
+2. **Is the fix too large for this session?** Write or update ISSUES.md in the node directory.
+3. **Is a spec assertion wrong?** Fix the spec directly — this is a durable fix.
 
 **Critical**: Read any existing ISSUES.md for each anchored node. Check every item — are items listed as open now fixed? Are there new deficiencies not yet listed? A stale ISSUES.md will mislead the next agent.
 
@@ -222,6 +228,8 @@ Where exactly should the next agent begin?
 - **First action** — the specific skill invocation that resumes work
 
 ## Phase 3: Propose persistence plan
+
+**Only items that require user approval appear here.** Deficiencies you already fixed in Phase 2 are done — report them as completed work, not as proposals. The proposal contains lessons (methodology/CLAUDE.md/memory changes), deferred issues (ISSUES.md), and plan updates (PLAN.md) — things where the user should verify the target is correct.
 
 Present the combined output of all five perspectives as a single `AskUserQuestion` with `multiSelect: true`. Group items by type:
 
