@@ -314,6 +314,14 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `/architecting-typescript`               | ADR producer with Compliance-based testability                |
 | `/auditing-typescript-architecture`      | ADR audit with structured per-concern verdict                 |
 
+### Agents
+
+| Agent                             | Purpose                                                |
+| --------------------------------- | ------------------------------------------------------ |
+| `typescript-code-auditor`         | Code audit subagent (preloads auditing skill)          |
+| `typescript-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
+| `typescript-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
+
 ### Core Principles
 
 - No mocking - dependency injection only
@@ -336,6 +344,14 @@ Complete Python development workflow with testing, implementation, and review.
 | `/auditing-python-tests`             | Python test evidence audit (4-property model)               |
 | `/architecting-python`               | ADR producer with Compliance-based testability              |
 | `/auditing-python-architecture`      | ADR audit with structured per-concern verdict               |
+
+### Agents
+
+| Agent                         | Purpose                                                |
+| ----------------------------- | ------------------------------------------------------ |
+| `python-code-auditor`         | Code audit subagent (preloads auditing skill)          |
+| `python-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
+| `python-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
 
 ### Core Principles
 
@@ -367,9 +383,11 @@ Spec-driven development with the Spec Tree framework. Three phases: spec-tree ma
 
 ### Agents
 
-| Agent     | Purpose                                                         |
-| --------- | --------------------------------------------------------------- |
-| `applier` | Autonomous TDD agent — runs the full 8-phase flow as a subagent |
+| Agent                   | Purpose                                                         |
+| ----------------------- | --------------------------------------------------------------- |
+| `applier`               | Autonomous TDD agent — runs the full 8-phase flow as a subagent |
+| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)    |
+| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill)  |
 
 ### Commands
 
@@ -847,11 +865,17 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │       ├── writing-prose/
 │   │       └── reviewing-prose/
 │   ├── python/
+│   │   ├── agents/
+│   │   │   ├── python-code-auditor.md
+│   │   │   ├── python-architecture-auditor.md
+│   │   │   └── python-test-auditor.md
 │   │   └── skills/
 │   │       └── (7 skills)
 │   ├── spec-tree/                # Spec Tree — 3 phases
 │   │   ├── agents/
-│   │   │   └── applier.md
+│   │   │   ├── applier.md
+│   │   │   ├── test-evidence-auditor.md
+│   │   │   └── pdr-auditor.md
 │   │   ├── commands/
 │   │   │   ├── apply.md
 │   │   │   ├── author.md
@@ -864,6 +888,11 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   │   └── skills/
 │   │       └── (11 skills)
 │   └── typescript/
+│       ├── agents/
+│       │   ├── typescript-code-auditor.md
+│       │   ├── typescript-architecture-auditor.md
+│       │   ├── typescript-test-auditor.md
+│       │   └── typescript-simplifier.md
 │       └── skills/
 │           └── (8 skills)
 ├── pyproject.toml                 # uv project config + dev deps

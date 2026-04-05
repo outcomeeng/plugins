@@ -1,5 +1,5 @@
 ---
-name: architecture-auditor
+name: python-architecture-auditor
 description: >-
   Audit Python ADRs for conventions, testability, and voice. Use
   after writing an ADR or before implementing from it.

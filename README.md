@@ -88,27 +88,30 @@ The core of [Outcome Engineering](https://outcome.engineering). Three phases: sp
 
 </details>
 
-| Type    | Name                  | Phase | Purpose                                                            |
-| ------- | --------------------- | ----- | ------------------------------------------------------------------ |
-| Skill   | `/understanding`      | 1     | Foundation skill — loaded before any other                         |
-| Skill   | `/contextualizing`    | 1     | Deterministic context loading from tree                            |
-| Skill   | `/bootstrapping`      | 1     | Interview user, scaffold new spec tree                             |
-| Skill   | `/authoring`          | 1     | Add, define, create specs and nodes                                |
-| Skill   | `/decomposing`        | 1     | Break down, split, scope work                                      |
-| Skill   | `/refactoring`        | 1     | Move nodes, re-scope, extract shared enablers                      |
-| Skill   | `/aligning`           | 1     | Review, check consistency, audit, find gaps                        |
-| Skill   | `/testing`            | 2     | Write tests driven by spec assertions                              |
-| Skill   | `/auditing-tests`     | 2     | Audit test evidence: coupling, falsifiability, alignment, coverage |
-| Skill   | `/applying`           | 2     | TDD flow: architect, test, code + audit gates                      |
-| Skill   | `/committing-changes` | 3     | Conventional Commits with selective staging                        |
-| Command | `/bootstrap`          |       | Set up a new spec tree                                             |
-| Command | `/author`             |       | Author a spec tree artifact (auto-detects type)                    |
-| Command | `/commit`             |       | Git commit with Conventional Commits                               |
-| Command | `/apply`              |       | Run TDD flow on a subtree or from `spx/EXCLUDE`                    |
-| Command | `/rtfm`               |       | Stop ad hoc work, follow methodology                               |
-| Command | `/clarify`            |       | Clarify ambiguous requirements                                     |
-| Command | `/handoff`            |       | Create timestamped context handoff                                 |
-| Command | `/pickup`             |       | Load and continue from previous handoff                            |
+| Type    | Name                    | Phase | Purpose                                                            |
+| ------- | ----------------------- | ----- | ------------------------------------------------------------------ |
+| Skill   | `/understanding`        | 1     | Foundation skill — loaded before any other                         |
+| Skill   | `/contextualizing`      | 1     | Deterministic context loading from tree                            |
+| Skill   | `/bootstrapping`        | 1     | Interview user, scaffold new spec tree                             |
+| Skill   | `/authoring`            | 1     | Add, define, create specs and nodes                                |
+| Skill   | `/decomposing`          | 1     | Break down, split, scope work                                      |
+| Skill   | `/refactoring`          | 1     | Move nodes, re-scope, extract shared enablers                      |
+| Skill   | `/aligning`             | 1     | Review, check consistency, audit, find gaps                        |
+| Skill   | `/testing`              | 2     | Write tests driven by spec assertions                              |
+| Skill   | `/auditing-tests`       | 2     | Audit test evidence: coupling, falsifiability, alignment, coverage |
+| Skill   | `/applying`             | 2     | TDD flow: architect, test, code + audit gates                      |
+| Skill   | `/committing-changes`   | 3     | Conventional Commits with selective staging                        |
+| Agent   | `applier`               |       | Autonomous TDD agent — runs the full 8-phase flow                  |
+| Agent   | `test-evidence-auditor` |       | Test evidence audit subagent (preloads auditing skill)             |
+| Agent   | `pdr-auditor`           |       | PDR audit subagent (preloads auditing skill)                       |
+| Command | `/bootstrap`            |       | Set up a new spec tree                                             |
+| Command | `/author`               |       | Author a spec tree artifact (auto-detects type)                    |
+| Command | `/commit`               |       | Git commit with Conventional Commits                               |
+| Command | `/apply`                |       | Run TDD flow on a subtree or from `spx/EXCLUDE`                    |
+| Command | `/rtfm`                 |       | Stop ad hoc work, follow methodology                               |
+| Command | `/clarify`              |       | Clarify ambiguous requirements                                     |
+| Command | `/handoff`              |       | Create timestamped context handoff                                 |
+| Command | `/pickup`               |       | Load and continue from previous handoff                            |
 
 ### typescript
 
@@ -117,6 +120,9 @@ Complete TypeScript development workflow. Requires spx CLI.
 | Type  | Name                                | Purpose                            |
 | ----- | ----------------------------------- | ---------------------------------- |
 | Agent | `typescript-simplifier`             | Simplify code for maintainability  |
+| Agent | `typescript-code-auditor`           | Code audit subagent                |
+| Agent | `typescript-architecture-auditor`   | ADR audit subagent                 |
+| Agent | `typescript-test-auditor`           | Test evidence audit subagent       |
 | Skill | `/testing-typescript`               | TypeScript-specific testing        |
 | Skill | `/coding-typescript`                | Implementation with remediation    |
 | Skill | `/auditing-typescript`              | Strict code audit                  |
@@ -129,6 +135,9 @@ Complete Python development workflow. Requires spx CLI.
 
 | Type    | Name                            | Purpose                            |
 | ------- | ------------------------------- | ---------------------------------- |
+| Agent   | `python-code-auditor`           | Code audit subagent                |
+| Agent   | `python-architecture-auditor`   | ADR audit subagent                 |
+| Agent   | `python-test-auditor`           | Test evidence audit subagent       |
 | Command | `/autopython`                   | Autonomous implementation          |
 | Skill   | `/testing-python`               | Python-specific testing patterns   |
 | Skill   | `/coding-python`                | Implementation with remediation    |

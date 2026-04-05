@@ -1,5 +1,5 @@
 ---
-name: architecture-auditor
+name: typescript-architecture-auditor
 description: >-
   Audit TypeScript ADRs for conventions, testability, and voice. Use
   after writing an ADR or before implementing from it.
