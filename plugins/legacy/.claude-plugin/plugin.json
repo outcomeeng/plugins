@@ -1,6 +1,6 @@
 {
   "name": "legacy",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Standalone /commit, /handoff, /pickup, /testing, /reviewing-tests for projects without the spx CLI",
   "author": {
     "name": "Simon Heimlicher"

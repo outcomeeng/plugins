@@ -73,7 +73,7 @@ Read the spec's Assertions section. For each assertion, extract:
 
 **Missing test file = finding.** Record it and continue to next assertion.
 
-**Compliance assertions with `[review]` tags** are verified by reading the skill/ADR/PDR, not by tests. Skip them in the audit.
+**Compliance assertions with `[review]` or `[enforce]` tags** are not verified by tests. `[review]` is verified by human/agent judgment; `[enforce]` is verified by the lint pipeline. Skip both in the test evidence audit.
 
 </step>
 

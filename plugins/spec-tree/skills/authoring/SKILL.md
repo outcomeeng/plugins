@@ -154,9 +154,9 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templat
 **Assertion rules** (from `${CLAUDE_SKILL_DIR}/../understanding/references/assertion-types.md`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to a test file: `([test](tests/{slug}.{level}.test.{ext}))`
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests, `([enforce](path/to/config))` for lint rules, or `([review])` for human judgment
 - Match assertion type to test strategy: Scenario → example-based, Property → property-based, etc.
-- Test files don't need to exist yet — the link is a contract for what will be created
+- Test and enforce targets don't need to exist yet — the link is a contract for what will be created
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -175,9 +175,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have test links (even if test files don't exist yet)
+- [ ] All assertions have evidence links: `[test]`, `[enforce]`, or `[review]` (targets don't need to exist yet)
 - [ ] Assertion types match test strategy
 - [ ] ADR/PDR compliance rules use MUST/NEVER format with `([review])` tags
+- [ ] Spec compliance assertions use the correct evidence tag: `[test]` for behavioral tests, `[enforce]` for lint rules, `[review]` for human judgment
 - [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>

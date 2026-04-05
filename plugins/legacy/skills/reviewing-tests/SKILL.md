@@ -65,13 +65,13 @@ For each assertion in the spec, verify:
 
 Assertions MUST use one of five typed formats. No code in specs.
 
-| Type            | Quantifier                     | Test strategy   | Format pattern                                     |
-| --------------- | ------------------------------ | --------------- | -------------------------------------------------- |
-| **Scenario**    | There exists (this case works) | Example-based   | `Given ... when ... then ... ([test](...))`        |
-| **Mapping**     | For all over finite set        | Parameterized   | `{input} maps to {output} ([test](...))`           |
-| **Conformance** | External oracle                | Tool validation | `{output} conforms to {standard} ([test](...))`    |
-| **Property**    | For all over type space        | Property-based  | `{invariant} holds for all {domain} ([test](...))` |
-| **Compliance**  | ALWAYS/NEVER rules             | Review or test  | `ALWAYS/NEVER: {rule} ([review]/[test](...))`      |
+| Type            | Quantifier                     | Test strategy            | Format pattern                                     |
+| --------------- | ------------------------------ | ------------------------ | -------------------------------------------------- |
+| **Scenario**    | There exists (this case works) | Example-based            | `Given ... when ... then ... ([test](...))`        |
+| **Mapping**     | For all over finite set        | Parameterized            | `{input} maps to {output} ([test](...))`           |
+| **Conformance** | External oracle                | Tool validation          | `{output} conforms to {standard} ([test](...))`    |
+| **Property**    | For all over type space        | Property-based           | `{invariant} holds for all {domain} ([test](...))` |
+| **Compliance**  | ALWAYS/NEVER rules             | Review, test, or enforce | `ALWAYS/NEVER: {rule} ([review]/[test]/[enforce])` |
 
 ```markdown
 <!-- ✅ CORRECT: Typed assertions with inline test links -->
@@ -101,17 +101,17 @@ def test_parser():
 
 **Assertion type must match test strategy:**
 
-| Assertion Type | Required Test Pattern      | REJECT if                                    |
-| -------------- | -------------------------- | -------------------------------------------- |
-| Scenario       | Example-based tests        | Missing concrete inputs/outputs              |
-| Mapping        | Parameterized tests        | Only example-based (not all cases covered)   |
-| Property       | Property-based framework   | Only example-based (must use property-based) |
-| Conformance    | Tool validation            | Manual checks instead of tool                |
-| Compliance     | `[review]` or `[test]` tag | No tag indicating verification method        |
+| Assertion Type | Required Test Pattern                    | REJECT if                                    |
+| -------------- | ---------------------------------------- | -------------------------------------------- |
+| Scenario       | Example-based tests                      | Missing concrete inputs/outputs              |
+| Mapping        | Parameterized tests                      | Only example-based (not all cases covered)   |
+| Property       | Property-based framework                 | Only example-based (must use property-based) |
+| Conformance    | Tool validation                          | Manual checks instead of tool                |
+| Compliance     | `[review]`, `[test]`, or `[enforce]` tag | No tag indicating verification method        |
 
 **1.2 Test File Linkage**
 
-**Inline test links are contractual.** Every `([test](...))` link in an assertion must resolve to an actual file. Stale links = REJECT.
+**Inline evidence links are contractual.** Every `([test](...))` and `([enforce](...))` link in an assertion must resolve to an actual file. Stale links = REJECT.
 
 Specs may use either format:
 

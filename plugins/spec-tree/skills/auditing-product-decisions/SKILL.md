@@ -116,8 +116,8 @@ For each product invariant:
 
 For each MUST/NEVER rule:
 
-1. Is it verifiable by product review or automated test?
-2. Does it have a `([review])` or `([test](...))` tag?
+1. Is it verifiable by product review, automated test, or automated enforcement?
+2. Does it have a `([review])`, `([test](...))`, or `([enforce](...))` tag?
 3. Is it specific enough that two reviewers would agree on pass/fail?
 
 **Unverifiable or untagged compliance rule → REJECT — "unverifiable rule."**
@@ -176,13 +176,16 @@ Report flow status for each rule:
 MUST: "all pages load in under 2 seconds" ([review])
 → Referenced by: spx/.../21-performance.outcome assertions ✓
 
-NEVER: "expose internal IDs in URLs" ([review])
+NEVER: "expose internal IDs in URLs" ([enforce](eslint.config.ts))
+→ Referenced by: spx/.../21-url-safety.outcome assertions ✓
+
+NEVER: "use branded terminology in error messages" ([review])
 → Referenced by: (none) ✗ — unenforced
 ```
 
 **Any compliance rule with zero downstream assertions → REJECT — "unenforced rule."**
 
-A compliance rule verified by `[review]` still needs a downstream spec assertion or explicit review checkpoint. The `[review]` tag means "a human or agent reviews this" — but if no spec declares the behavior, there's nothing to review against.
+A compliance rule — whether tagged `[review]`, `[test]`, or `[enforce]` — still needs a downstream spec assertion. The tag means "this is how it's verified" — but if no spec declares the behavior, there's nothing to verify against.
 
 </step>
 
@@ -241,7 +244,7 @@ How to avoid: Step 3a classifies every statement. "Would a user care?" is the te
 
 **Failure 2: Approved unenforced compliance rules**
 
-Reviewer checked the PDR's Compliance section — well-written MUST/NEVER rules with `[review]` tags. Approved. No spec in the entire subtree referenced these rules. The product could violate every rule and no test or review would catch it.
+Reviewer checked the PDR's Compliance section — well-written MUST/NEVER rules with `[review]` tags. Approved. No spec in the entire subtree referenced these rules. The product could violate every rule and no test, enforcement, or review would catch it.
 
 How to avoid: Step 3f searches the governed subtree. Zero downstream assertions = unenforced = REJECT.
 

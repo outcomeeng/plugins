@@ -78,6 +78,6 @@ NN-slug.{enabler|outcome}/
 - Naming follows the project's language convention, e.g.:
   - TypeScript: `slug.unit.test.ts`, `slug.integration.test.ts`
   - Python: `test_slug_unit.py`, `test_slug_integration.py`
-- Assertions specify output, verified by test (`[test]`) or review (`[review]`)
+- Assertions specify output, verified by test (`[test]`), enforcement (`[enforce]`), or review (`[review]`)
 
 </common_structure>
