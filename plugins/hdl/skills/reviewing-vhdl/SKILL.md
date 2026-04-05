@@ -57,23 +57,23 @@ You can provide file paths, paste code, or point to a directory.
 <routing>
 After the user provides files, execute the review workflow:
 
-Read `${SKILL_DIR}/references/vhdl-idioms.md` first, then follow `${SKILL_DIR}/workflows/vhdl-review.md` exactly.
+Read `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` first, then follow `${CLAUDE_SKILL_DIR}/workflows/vhdl-review.md` exactly.
 
-| User Provides   | Reference to Read                        | Additional Context                       |
-| --------------- | ---------------------------------------- | ---------------------------------------- |
-| Design files    | `${SKILL_DIR}/references/vhdl-idioms.md` | Full review against all idiom categories |
-| Package files   | `${SKILL_DIR}/references/vhdl-idioms.md` | Focus on type discipline, naming         |
-| Testbench files | `${SKILL_DIR}/references/vhdl-idioms.md` | Testbench-specific idioms apply          |
-| Mixed           | `${SKILL_DIR}/references/vhdl-idioms.md` | Review each file in its appropriate mode |
+| User Provides   | Reference to Read                               | Additional Context                       |
+| --------------- | ----------------------------------------------- | ---------------------------------------- |
+| Design files    | `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` | Full review against all idiom categories |
+| Package files   | `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` | Focus on type discipline, naming         |
+| Testbench files | `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` | Testbench-specific idioms apply          |
+| Mixed           | `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` | Review each file in its appropriate mode |
 
 </routing>
 
 <reference_index>
 
-| File                                     | Purpose                                           |
-| ---------------------------------------- | ------------------------------------------------- |
-| `${SKILL_DIR}/references/vhdl-idioms.md` | Comprehensive idiomatic VHDL-2008 reference       |
-| `${SKILL_DIR}/workflows/vhdl-review.md`  | Step-by-step review procedure with finding format |
+| File                                            | Purpose                                           |
+| ----------------------------------------------- | ------------------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/vhdl-idioms.md` | Comprehensive idiomatic VHDL-2008 reference       |
+| `${CLAUDE_SKILL_DIR}/workflows/vhdl-review.md`  | Step-by-step review procedure with finding format |
 
 </reference_index>
 

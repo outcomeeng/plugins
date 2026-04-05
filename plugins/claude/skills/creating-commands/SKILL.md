@@ -5,14 +5,6 @@ description: >-
   NEVER create slash commands without this skill.
 ---
 
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory. Throughout this skill, we refer to it as `${SKILL_DIR}`.
-
-Reference files: `${SKILL_DIR}/references/`
-
-**IMPORTANT**: Do NOT search the project directory for skill files. If you cannot find a file, use Glob: `.claude/plugins/cache/**/creating-commands/**/*.md`
-</accessing_skill_files>
-
 <objective>
 Create effective slash commands for Claude Code that enable users to trigger reusable prompts with `/command-name` syntax. Slash commands expand as prompts in the current conversation, allowing teams to standardize workflows and operations. This skill teaches you to structure commands with XML tags, YAML frontmatter, dynamic context loading, and intelligent argument handling.
 </objective>
@@ -204,7 +196,7 @@ Determine whether a command needs arguments:
 
 - Omit `argument-hint` and don't reference `$ARGUMENTS`
 
-For detailed examples and patterns, see [${SKILL_DIR}/references/arguments.md](references/arguments.md).
+For detailed examples and patterns, see [${CLAUDE_SKILL_DIR}/references/arguments.md](references/arguments.md).
 
 </arguments_intelligence>
 
@@ -369,7 +361,7 @@ Analyze @ src/database/* for schema
 
 <common_patterns>
 
-Common command patterns with full examples are in [${SKILL_DIR}/references/patterns.md](references/patterns.md):
+Common command patterns with full examples are in [${CLAUDE_SKILL_DIR}/references/patterns.md](references/patterns.md):
 
 - **Simple analysis** — single operation, no state (e.g., security review)
 - **Git workflow** — state-dependent with `<context>` and `allowed-tools`
@@ -380,14 +372,14 @@ Common command patterns with full examples are in [${SKILL_DIR}/references/patte
 
 <reference_guides>
 
-**Arguments reference**: [${SKILL_DIR}/references/arguments.md](references/arguments.md)
+**Arguments reference**: [${CLAUDE_SKILL_DIR}/references/arguments.md](references/arguments.md)
 
 - $ARGUMENTS variable
 - Positional arguments ($1, $2, $3)
 - Parsing strategies
 - Examples from official docs
 
-**Patterns reference**: [${SKILL_DIR}/references/patterns.md](references/patterns.md)
+**Patterns reference**: [${CLAUDE_SKILL_DIR}/references/patterns.md](references/patterns.md)
 
 - Git workflows
 - Code analysis
@@ -395,7 +387,7 @@ Common command patterns with full examples are in [${SKILL_DIR}/references/patte
 - Security reviews
 - Examples from official docs
 
-**Tool restrictions**: [${SKILL_DIR}/references/tool-restrictions.md](references/tool-restrictions.md)
+**Tool restrictions**: [${CLAUDE_SKILL_DIR}/references/tool-restrictions.md](references/tool-restrictions.md)
 
 - Bash command patterns
 - Security best practices

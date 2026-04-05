@@ -14,7 +14,7 @@ Write tests driven by spec-tree assertions. This skill is a superset of the stan
 
 **PREREQUISITE**: Read the methodology reference before writing any test:
 
-- `${SKILL_DIR}/references/methodology.md` — 5-stage router, 5 factors, 7 exceptions, test double taxonomy
+- `${CLAUDE_SKILL_DIR}/references/methodology.md` — 5-stage router, 5 factors, 7 exceptions, test double taxonomy
 
 Then follow the spec-tree workflow below.
 
@@ -80,7 +80,7 @@ Report the evidence gap summary before proceeding.
 
 **Step 4: Route each assertion through the methodology**
 
-For each assertion that needs a test, apply the 5-stage router from `${SKILL_DIR}/references/methodology.md`:
+For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SKILL_DIR}/references/methodology.md`:
 
 1. **Stage 1** — What evidence does this assertion demand?
 2. **Stage 2** — At what level does that evidence live? (Use 5 factors. Respect ADRs/PDRs loaded from tree context.)
@@ -104,7 +104,7 @@ For each assertion needing a new test:
 
 Delegate language-specific patterns to `/testing-python` or `/testing-typescript`.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE` and run the project's sync command so the quality gate excludes these tests. Remove the entry when implementation begins. See `${SKILL_DIR}/../understanding/references/excluded-nodes.md`.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE` and run the project's sync command so the quality gate excludes these tests. Remove the entry when implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 
 </step>
 

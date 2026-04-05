@@ -31,48 +31,23 @@ Check Spec Tree files for conformance to templates, atemporal voice, and content
 
 </principles>
 
-<accessing_references>
-
-All conformance rules come from the understanding skill, a sibling directory to this skill.
-
-<skill_location>
-
-The understanding skill is a sibling directory to this skill. Its files are at:
-
-```text
-${SKILL_DIR}/../understanding/
-```
-
-</skill_location>
-
-<what_to_read>
+<required_references>
 
 **References (conformance rules):**
 
-- `${SKILL_DIR}/../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `${SKILL_DIR}/../understanding/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- `${CLAUDE_SKILL_DIR}/../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.adr.md` — required ADR sections
-- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `${SKILL_DIR}/../understanding/templates/product/product-name.product.md` — required product sections
-- `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md` — required enabler sections
-- `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md` — required outcome sections
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/decisions/decision-name.adr.md` — required ADR sections
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/decisions/decision-name.pdr.md` — required PDR sections
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/product/product-name.product.md` — required product sections
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md` — required enabler sections
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md` — required outcome sections
 
-</what_to_read>
-
-<troubleshooting>
-
-If you cannot find understanding's files:
-
-1. Glob: `${SKILL_DIR}/../understanding/references/*.md`
-2. Do NOT look in the user's project directory for references or templates
-
-</troubleshooting>
-
-</accessing_references>
+</required_references>
 
 <file_classification>
 
@@ -173,7 +148,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understanding` first."
-2. **Load rules**: Read all references and templates listed in `<accessing_references>` from the understanding skill's directory.
+2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
 3. **Scope**: Use user-specified path, or default to `spx/` in the project root.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.

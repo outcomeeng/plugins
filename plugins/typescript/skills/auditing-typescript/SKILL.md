@@ -62,7 +62,7 @@ Execute phases IN ORDER. Do not skip.
 
 Run the project's validation command. Catches everything linters handle: type safety, naming, magic numbers, unused imports, security rules.
 
-If the project lacks its own linter configs, use the reference configs in `${SKILL_DIR}/rules/`:
+If the project lacks its own linter configs, use the reference configs in `${CLAUDE_SKILL_DIR}/rules/`:
 
 | File                   | Purpose                                      |
 | ---------------------- | -------------------------------------------- |
@@ -141,7 +141,7 @@ Evaluate import structure using the same vocabulary as `/auditing-typescript-tes
 
 For stable locations (`lib/`, `tests/helpers/`, `shared/`), path aliases are mandatory regardless of depth.
 
-See `${SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
+See `${CLAUDE_SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
 
 **Phase 4: ADR/PDR Compliance**
 
@@ -235,7 +235,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 </what_to_avoid>
 
 <example_review>
-Read `${SKILL_DIR}/references/example-review.md` for complete APPROVED and REJECTED examples showing all concern types.
+Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for complete APPROVED and REJECTED examples showing all concern types.
 
 </example_review>
 

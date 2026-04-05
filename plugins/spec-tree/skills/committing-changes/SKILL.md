@@ -298,7 +298,7 @@ Mark breaking changes with:
 
 <reference_guides>
 
-When crafting the commit message description, read `${SKILL_DIR}/references/message-crafting.md` for:
+When crafting the commit message description, read `${CLAUDE_SKILL_DIR}/references/message-crafting.md` for:
 
 - Three description principles (no state words, content over container, don't repeat the prefix)
 - Good and bad commit message examples with explanations

@@ -9,7 +9,7 @@ description: >-
 
 Audit whether tests provide genuine evidence that spec assertions are fulfilled. Four properties must hold — coupling, falsifiability, alignment, coverage — checked in strict order. A test missing any property has zero evidentiary value regardless of code quality.
 
-Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model.md`
+Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
 </objective>
 
@@ -91,7 +91,7 @@ Read the test file's import statements. Classify each import:
 
 **Zero codebase imports → REJECT — "no coupling" (tautology).**
 
-If codebase imports exist, classify using the coupling taxonomy in `${SKILL_DIR}/references/evidence-model.md`:
+If codebase imports exist, classify using the coupling taxonomy in `${CLAUDE_SKILL_DIR}/references/evidence-model.md`:
 
 | Category   | Definition                                                  | Verdict                                    |
 | ---------- | ----------------------------------------------------------- | ------------------------------------------ |
@@ -127,7 +127,7 @@ vi.mock("../src/database", () => ({ query: vi.fn() }));
 
 **Import + mock = REJECT — "coupling severed."**
 
-**Exception**: Test doubles used under the 7 legitimate exception cases from the `/testing` methodology are not "coupling severed." The auditor must identify which exception applies and verify the double type matches. See the exception cross-reference in `${SKILL_DIR}/references/evidence-model.md`.
+**Exception**: Test doubles used under the 7 legitimate exception cases from the `/testing` methodology are not "coupling severed." The auditor must identify which exception applies and verify the double type matches. See the exception cross-reference in `${CLAUDE_SKILL_DIR}/references/evidence-model.md`.
 
 </step>
 

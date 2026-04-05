@@ -16,14 +16,14 @@ Author Spec Tree artifacts — product specs, decision records (ADR/PDR), enable
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
 
-Templates and examples live in the understanding skill's directory (`${SKILL_DIR}/../understanding/`):
+Templates and examples live in the understanding skill's directory (`${CLAUDE_SKILL_DIR}/../understanding/`):
 
-- `${SKILL_DIR}/../understanding/templates/product/product-name.product.md`
-- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.adr.md`
-- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.pdr.md`
-- `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
-- `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
-- `${SKILL_DIR}/../understanding/examples/` — filled specs for reference
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/product/product-name.product.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/decisions/decision-name.adr.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/decisions/decision-name.pdr.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/examples/` — filled specs for reference
 
 Read the appropriate template before drafting.
 
@@ -45,7 +45,7 @@ Ask or infer from context:
 | **Enabler node** | Shared infrastructure for 2+ siblings | `templates/nodes/enabler-name.md`           |
 | **Outcome node** | User-facing behavior with hypothesis  | `templates/nodes/outcome-name.md`           |
 
-If unclear which type, apply the decision table from `${SKILL_DIR}/../understanding/references/node-types.md`:
+If unclear which type, apply the decision table from `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md`:
 
 - Delivers user-facing value? → Outcome
 - Exists only to serve other nodes? → Enabler
@@ -76,7 +76,7 @@ This loads:
 
 **For product specs:** Place at `spx/{product-name}.product.md`. No index.
 
-**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign an index using the ordering rules from `${SKILL_DIR}/../understanding/references/ordering-rules.md`:
+**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign an index using the ordering rules from `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md`:
 
 - The index encodes dependency: lower constrains higher
 - An ADR/PDR at index N constrains all siblings at N+1 and above
@@ -143,15 +143,15 @@ Use `AskUserQuestion` for genuine gaps. Do not ask about information already pro
 
 **Step 5: Draft the artifact**
 
-Read the appropriate template from `${SKILL_DIR}/../understanding/templates/`. Fill it using the gathered content.
+Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templates/`. Fill it using the gathered content.
 
-**Voice rules** (from `${SKILL_DIR}/../understanding/references/durable-map.md`):
+**Voice rules** (from `${CLAUDE_SKILL_DIR}/../understanding/references/durable-map.md`):
 
 - **Atemporal**: State product truth. Never narrate history ("we discovered", "currently", "after investigating").
 - **Permanent**: Write as if this will be true forever. If it wouldn't, it's temporal.
 - **Test**: Read any sentence aloud. If it would sound wrong after the work is done, rewrite it.
 
-**Assertion rules** (from `${SKILL_DIR}/../understanding/references/assertion-types.md`):
+**Assertion rules** (from `${CLAUDE_SKILL_DIR}/../understanding/references/assertion-types.md`):
 
 - Every outcome must have at least one assertion
 - Each assertion must link to a test file: `([test](tests/{slug}.{level}.test.{ext}))`
@@ -178,7 +178,7 @@ Before writing files, check:
 - [ ] All assertions have test links (even if test files don't exist yet)
 - [ ] Assertion types match test strategy
 - [ ] ADR/PDR compliance rules use MUST/NEVER format with `([review])` tags
-- [ ] No content misplacement (per `${SKILL_DIR}/../understanding/references/what-goes-where.md`)
+- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>
 
@@ -197,7 +197,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE` and run the project's sync command. This excludes the node's tests from the quality gate until implementation begins. See `${SKILL_DIR}/../understanding/references/excluded-nodes.md`.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE` and run the project's sync command. This excludes the node's tests from the quality gate until implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 
 **For decision records:**
 

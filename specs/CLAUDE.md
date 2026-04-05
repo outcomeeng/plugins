@@ -135,7 +135,7 @@ User: "Create a PRD for the new authentication feature"
 → STOP. DO NOT search for template files in the project.
 → DO NOT grep for "*.prd.md" files.
 → IMMEDIATELY invoke: /managing-specs
-→ READ template from: ${SKILL_DIR}/templates/requirements/product-change.prd.md
+→ READ template from: ${CLAUDE_SKILL_DIR}/templates/requirements/product-change.prd.md
 → ADAPT template with authentication feature content
 ```
 
@@ -261,7 +261,7 @@ Before proceeding with ANY specs-related task:
 
 - [ ] Did I invoke the correct skill?
 - [ ] Did I wait for skill output before proceeding?
-- [ ] Did I read templates from `${SKILL_DIR}/templates/`, NOT from the project?
+- [ ] Did I read templates from `${CLAUDE_SKILL_DIR}/templates/`, NOT from the project?
 - [ ] Did I load complete context hierarchy for work items?
 - [ ] Did I verify BSP numbering through the skill, not by calculating myself?
 

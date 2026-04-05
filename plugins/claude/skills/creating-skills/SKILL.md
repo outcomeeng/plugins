@@ -5,25 +5,6 @@ description: >-
   NEVER create or modify skills without this skill.
 ---
 
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory in the loading message:
-
-```
-Base directory for this skill: /path/to/.claude/plugins/cache/{marketplace}/{plugin}/{version}/skills/creating-skills/
-```
-
-Throughout this skill, we refer to this as `${SKILL_DIR}`.
-
-Use this path for all skill file access:
-
-- References: `${SKILL_DIR}/references/`
-- Workflows: `${SKILL_DIR}/workflows/`
-- Templates: `${SKILL_DIR}/templates/`
-- Scripts: `${SKILL_DIR}/scripts/`
-
-**IMPORTANT**: Do NOT search the project directory for skill files. If you cannot find a file, use Glob: `.claude/plugins/cache/**/creating-skills/**/*.md`
-</accessing_skill_files>
-
 <essential_principles>
 Skills are prompts. All prompting best practices apply. Be clear, be direct, assume Claude is smart.
 
@@ -74,18 +55,18 @@ What would you like to do?
 <routing>
 | Response | Workflow |
 |----------|----------|
-| 1, "create", "new", "build" | `${SKILL_DIR}/workflows/create-new-skill.md` |
-| 2, "audit", "improve", "review", "check" | `${SKILL_DIR}/workflows/audit-skill.md` |
-| 3, "add workflow" | `${SKILL_DIR}/workflows/add-workflow.md` |
-| 3, "add reference" | `${SKILL_DIR}/workflows/add-reference.md` |
-| 3, "upgrade to router" | `${SKILL_DIR}/workflows/upgrade-to-router.md` |
-| 4, "patterns", "understand", "help" | Read `${SKILL_DIR}/references/skill-patterns.md` |
+| 1, "create", "new", "build" | `${CLAUDE_SKILL_DIR}/workflows/create-new-skill.md` |
+| 2, "audit", "improve", "review", "check" | `${CLAUDE_SKILL_DIR}/workflows/audit-skill.md` |
+| 3, "add workflow" | `${CLAUDE_SKILL_DIR}/workflows/add-workflow.md` |
+| 3, "add reference" | `${CLAUDE_SKILL_DIR}/workflows/add-reference.md` |
+| 3, "upgrade to router" | `${CLAUDE_SKILL_DIR}/workflows/upgrade-to-router.md` |
+| 4, "patterns", "understand", "help" | Read `${CLAUDE_SKILL_DIR}/references/skill-patterns.md` |
 
 **Intent-based routing** (if user provides clear context):
 
-- "verify content is current" → `${SKILL_DIR}/workflows/verify-skill.md`
-- "audit this skill" → `${SKILL_DIR}/workflows/audit-skill.md`
-- "create skill for X" → `${SKILL_DIR}/workflows/create-new-skill.md`
+- "verify content is current" → `${CLAUDE_SKILL_DIR}/workflows/verify-skill.md`
+- "audit this skill" → `${CLAUDE_SKILL_DIR}/workflows/audit-skill.md`
+- "create skill for X" → `${CLAUDE_SKILL_DIR}/workflows/create-new-skill.md`
 
 **After reading the workflow, follow it exactly.**
 </routing>
@@ -127,7 +108,7 @@ description: >- # Directive, ≤1024 chars. Add NEVER only if it disambiguates.
 </quick_reference>
 
 <reference_index>
-All in `${SKILL_DIR}/references/`:
+All in `${CLAUDE_SKILL_DIR}/references/`:
 
 | File                    | Purpose                                          |
 | ----------------------- | ------------------------------------------------ |
@@ -141,7 +122,7 @@ All in `${SKILL_DIR}/references/`:
 </reference_index>
 
 <workflows_index>
-All in `${SKILL_DIR}/workflows/`:
+All in `${CLAUDE_SKILL_DIR}/workflows/`:
 
 | Workflow             | Purpose                                |
 | -------------------- | -------------------------------------- |
@@ -155,7 +136,7 @@ All in `${SKILL_DIR}/workflows/`:
 </workflows_index>
 
 <templates_index>
-All in `${SKILL_DIR}/templates/`:
+All in `${CLAUDE_SKILL_DIR}/templates/`:
 
 | Template            | Purpose                       |
 | ------------------- | ----------------------------- |
@@ -170,7 +151,7 @@ All in `${SKILL_DIR}/templates/`:
 </templates_index>
 
 <scripts_index>
-All in `${SKILL_DIR}/scripts/`:
+All in `${CLAUDE_SKILL_DIR}/scripts/`:
 
 | Script            | Purpose                              |
 | ----------------- | ------------------------------------ |

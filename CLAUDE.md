@@ -602,80 +602,15 @@ description: >-
 
 ## Writing Skills with Templates
 
-### Template Access Pattern (MANDATORY)
+### Referencing Skill Files
 
-**When a skill includes templates in subdirectories, always use the `${SKILL_DIR}` variable pattern to make template locations unambiguous.**
-
-Skills are loaded from the skill's base directory (`.claude/plugins/cache/{marketplace}/{plugin}/{version}/skills/{skill-name}/`), NOT from the user's project directory. Agents frequently guess wrong and search in the project directory instead.
-
-#### Required Pattern
+Use `${CLAUDE_SKILL_DIR}` to reference files within a skill. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
 
 ```markdown
-<accessing_templates>
-
-## How to Access Templates
-
-**All templates are stored within this skill's base directory.**
-
-### Understanding Skill Directory Structure
-
-When you invoke `/{skill-name}`, Claude loads this skill from the skill's base directory. Throughout this documentation, we refer to this as `${SKILL_DIR}`.
-
-**The skill's base directory path pattern:**
-
-\`\`\`
-.claude/plugins/cache/{marketplace-name}/{plugin-name}/{version}/skills/{skill-name}/
-\`\`\`
-
-### Template Organization
-
-All templates are under `${SKILL_DIR}/templates/`:
-
-\`\`\`
-${SKILL_DIR}/
-├── SKILL.md # This file
-└── templates/
-└── {template-file}.md
-\`\`\`
-
-### How to Read Templates
-
-**Always use the skill's base directory, not the user's project directory.**
-
-\`\`\`zsh
-
-# Pattern
-
-Read: ${SKILL_DIR}/templates/{template-name}
-
-# Example: Read specific template
-
-Read: ${SKILL_DIR}/templates/example.md
-\`\`\`
-
-### Troubleshooting
-
-If you cannot find a template:
-
-1. ✅ Verify you're using the skill's base directory, NOT the project directory
-2. ✅ Ensure path starts with `${SKILL_DIR}/templates/...`
-3. ✅ Use Glob to discover: `Glob: .claude/plugins/cache/**/{skill-name}/templates/**/*.md`
-4. ❌ Do NOT look for templates in the user's project
-
-</accessing_templates>
+Read `${CLAUDE_SKILL_DIR}/references/example.md`
 ```
 
-#### Update All Template References
-
-Replace all relative paths with `${SKILL_DIR}` prefix:
-
-```bash
-# ❌ WRONG - Ambiguous
-Read: templates/example.md
-
-# ✅ CORRECT - Unambiguous
-Read: ${SKILL_DIR}/templates/example.md
-```
+Do NOT define aliases, add troubleshooting sections, or explain what the variable is. The agent sees an absolute path — not the variable.
 
 ### Variable Scopes: Skill Content vs Hook Commands
 
@@ -709,7 +644,7 @@ hooks:
 
 ```markdown
 <example_review>
-Read `${SKILL_DIR}/references/example-review.md` for a complete example.
+Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for a complete example.
 </example_review>
 ```
 

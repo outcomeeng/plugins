@@ -244,7 +244,7 @@ If invalid, fix JSON syntax before wasting a render cycle.
 **How to render:**
 
 ```bash
-cd ${SKILL_DIR}/references && uv run python render_excalidraw.py <path-to-file.excalidraw>
+cd ${CLAUDE_SKILL_DIR}/references && uv run python render_excalidraw.py <path-to-file.excalidraw>
 ```
 
 This outputs a PNG next to the `.excalidraw` file. Then use the **Read tool** on the PNG to view it.
@@ -268,7 +268,7 @@ This outputs a PNG next to the `.excalidraw` file. Then use the **Read tool** on
 **First-time setup:**
 
 ```bash
-cd ${SKILL_DIR}/references
+cd ${CLAUDE_SKILL_DIR}/references
 uv sync
 uv run playwright install chromium
 ```

@@ -5,14 +5,6 @@ description: >-
   NEVER create subagents without this skill.
 ---
 
-<accessing_skill_files>
-When this skill is invoked, Claude Code provides the base directory. Throughout this skill, we refer to it as `${SKILL_DIR}`.
-
-Reference files: `${SKILL_DIR}/references/`
-
-**IMPORTANT**: Do NOT search the project directory for skill files. If you cannot find a file, use Glob: `.claude/plugins/cache/**/creating-subagents/**/*.md`
-</accessing_skill_files>
-
 <objective>
 Subagents are specialized Claude instances that run in isolated contexts with focused roles and limited tool access. This skill teaches you how to create effective subagents, write strong system prompts, configure tool access, and orchestrate multi-agent workflows using the Task tool.
 
@@ -277,7 +269,7 @@ You can also edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [${SKILL_DIR}/references/subagents.md](references/subagents.md)
+**Subagent usage and configuration**: [${CLAUDE_SKILL_DIR}/references/subagents.md](references/subagents.md)
 
 - File format and configuration
 - Model selection (Sonnet 4.5 + Haiku 4.5 orchestration)
@@ -285,7 +277,7 @@ You can also edit subagent files directly:
 - Prompt caching optimization
 - Complete examples
 
-**Writing effective prompts**: [${SKILL_DIR}/references/writing-subagent-prompts.md](references/writing-subagent-prompts.md)
+**Writing effective prompts**: [${CLAUDE_SKILL_DIR}/references/writing-subagent-prompts.md](references/writing-subagent-prompts.md)
 
 - Core principles and XML structure
 - Description field optimization for routing
@@ -295,35 +287,35 @@ You can also edit subagent files directly:
 
 **Advanced topics**:
 
-**Evaluation and testing**: [${SKILL_DIR}/references/evaluation-and-testing.md](references/evaluation-and-testing.md)
+**Evaluation and testing**: [${CLAUDE_SKILL_DIR}/references/evaluation-and-testing.md](references/evaluation-and-testing.md)
 
 - Evaluation metrics (task completion, tool correctness, robustness)
 - Testing strategies (offline, simulation, online monitoring)
 - Evaluation-driven development
 - G-Eval for custom criteria
 
-**Error handling and recovery**: [${SKILL_DIR}/references/error-handling-and-recovery.md](references/error-handling-and-recovery.md)
+**Error handling and recovery**: [${CLAUDE_SKILL_DIR}/references/error-handling-and-recovery.md](references/error-handling-and-recovery.md)
 
 - Common failure modes and causes
 - Recovery strategies (graceful degradation, retry, circuit breakers)
 - Structured communication and observability
 - Anti-patterns to avoid
 
-**Context management**: [${SKILL_DIR}/references/context-management.md](references/context-management.md)
+**Context management**: [${CLAUDE_SKILL_DIR}/references/context-management.md](references/context-management.md)
 
 - Memory architecture (STM, LTM, working memory)
 - Context strategies (summarization, sliding window, scratchpads)
 - Managing long-running tasks
 - Prompt caching interaction
 
-**Orchestration patterns**: [${SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
+**Orchestration patterns**: [${CLAUDE_SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
 
 - Sequential, parallel, hierarchical, coordinator patterns
 - Sonnet + Haiku orchestration for cost/performance
 - Multi-agent coordination
 - Pattern selection guidance
 
-**Debugging and troubleshooting**: [${SKILL_DIR}/references/debugging-agents.md](references/debugging-agents.md)
+**Debugging and troubleshooting**: [${CLAUDE_SKILL_DIR}/references/debugging-agents.md](references/debugging-agents.md)
 
 - Logging, tracing, and correlation IDs
 - Common failure types (hallucinations, format errors, tool misuse)

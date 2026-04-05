@@ -16,12 +16,12 @@ Apply structural changes to the Spec Tree: move nodes between parents, re-scope 
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
 
-References from the understanding skill (`${SKILL_DIR}/../understanding/`):
+References from the understanding skill (`${CLAUDE_SKILL_DIR}/../understanding/`):
 
-- `${SKILL_DIR}/../understanding/references/decomposition-semantics.md` — enabler extraction, cross-cutting assertions
-- `${SKILL_DIR}/../understanding/references/ordering-rules.md` — index assignment, dependency encoding
-- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — content taxonomy (what belongs where)
-- `${SKILL_DIR}/../understanding/references/node-types.md` — enabler vs outcome
+- `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md` — enabler extraction, cross-cutting assertions
+- `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md` — index assignment, dependency encoding
+- `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md` — content taxonomy (what belongs where)
+- `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler vs outcome
 
 </quick_start>
 
@@ -118,7 +118,7 @@ Before applying changes, determine what will be affected:
 5. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
 6. Remove the old directory.
 
-**Index assignment**: Use ordering rules from `${SKILL_DIR}/../understanding/references/ordering-rules.md`. If inserting between existing siblings, use the midpoint.
+**Index assignment**: Use ordering rules from `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md`. If inserting between existing siblings, use the midpoint.
 
 </step>
 
@@ -142,7 +142,7 @@ Before applying changes, determine what will be affected:
 
 1. Determine the enabler's index — must be lower than all dependent siblings.
 2. Create the enabler directory: `{NN}-{slug}.enabler/`
-3. Write the enabler spec using the template from `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`.
+3. Write the enabler spec using the template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`.
 4. Write assertions that specify what the enabler provides.
 5. Create the `tests/` directory.
 6. Remove the shared content from each dependent node's spec.
@@ -180,7 +180,7 @@ After applying any operation:
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `${SKILL_DIR}/../understanding/references/what-goes-where.md`)
+- [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>
 

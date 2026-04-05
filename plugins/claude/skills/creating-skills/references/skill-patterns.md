@@ -584,7 +584,7 @@ Gather context to ensure successful implementation:
 
 **Purpose**: Hold shared domain knowledge that multiple skills need. Not invoked directly by users or Claude — loaded by other skills via `/skill-name` references.
 
-**When to use**: When two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Without a reference skill, you either duplicate the content (maintenance burden) or put it in one skill's `references/` directory where the other skill can't reach it (each skill's `${SKILL_DIR}` is isolated).
+**When to use**: When two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Without a reference skill, you either duplicate the content (maintenance burden) or put it in one skill's `references/` directory where the other skill can't reach it (each skill's `${CLAUDE_SKILL_DIR}` is isolated).
 
 **Key elements**:
 
@@ -628,7 +628,7 @@ When Claude encounters `/standardizing-prose` in a loaded skill's text, it reads
 **What NOT to do**:
 
 - Do NOT use directive descriptions (`ALWAYS`/`NEVER`) — causes false activations when users aren't invoking it
-- Do NOT put shared content in one skill's `references/` directory and hope the other skill can find it — `${SKILL_DIR}` is isolated per skill
+- Do NOT put shared content in one skill's `references/` directory and hope the other skill can find it — `${CLAUDE_SKILL_DIR}` is isolated per skill
 - Do NOT duplicate the same content across multiple skills' `references/` directories — creates maintenance drift
 
 ---

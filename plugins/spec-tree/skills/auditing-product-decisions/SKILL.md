@@ -9,7 +9,7 @@ description: >-
 
 Audit whether a PDR establishes enforceable product decisions that flow into spec assertions. Six properties must hold — content classification, invariant quality, compliance quality, atemporal voice, consistency, downstream flow — checked in strict order. A PDR missing any property is a declaration that nothing enforces.
 
-Read the evidence model before auditing: `${SKILL_DIR}/references/pdr-evidence-model.md`
+Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
 
 </objective>
 

@@ -21,7 +21,6 @@ If you find yourself wanting to "close" items or thinking in tasks, read these f
 <quick_start>
 Different use cases read different sections:
 
-- **Template access** → Read `<accessing_templates>` FIRST to understand where templates are located
 - **Structure definition** → Read `<structure_definition>` for spx/ directory hierarchy, BSP numbering, test co-location
 - **ADR templates** → Read `<adr_templates>` for Architectural Decision Record patterns
 - **PDR templates** → Read `<pdr_templates>` for Product Decision Record patterns
@@ -30,59 +29,6 @@ Different use cases read different sections:
 
 Use progressive disclosure - read only what you need.
 </quick_start>
-
-<accessing_templates>
-
-<how_to_access>
-**All templates are stored within this skill's base directory.**
-
-When this skill is invoked, you are provided the base directory in the loading message:
-
-```
-Base directory for this skill: {skill_dir}
-```
-
-Use this exact path for all file access. Throughout this documentation, `${SKILL_DIR}` is a placeholder—Claude must substitute it manually from the loading message.
-
-**IMPORTANT**: Do NOT search the project directory for skill files.
-</how_to_access>
-
-<template_organization>
-
-All templates are under `${SKILL_DIR}/templates/`:
-
-```
-${SKILL_DIR}/
-├── SKILL.md                                    # This file
-└── templates/
-    ├── product/
-    │   └── product.prd.md
-    ├── decisions/
-    │   ├── architectural-decision.adr.md
-    │   └── product-decision.pdr.md
-    └── outcomes/
-        ├── capability-name.capability.md
-        ├── feature-name.feature.md
-        └── story-name.story.md
-```
-
-</template_organization>
-
-<how_to_read_templates>
-
-**Always use the skill's base directory, not the user's project directory.**
-
-```bash
-# Pattern
-Read: ${SKILL_DIR}/templates/{category}/{template-name}
-
-# Example: Read feature template
-Read: ${SKILL_DIR}/templates/outcomes/feature-name.feature.md
-```
-
-</how_to_read_templates>
-
-</accessing_templates>
 
 <structure_definition>
 
@@ -325,7 +271,7 @@ ADRs document technical choices with trade-offs and consequences.
 <template_location>
 
 ```
-${SKILL_DIR}/templates/decisions/architectural-decision.adr.md
+${CLAUDE_SKILL_DIR}/templates/decisions/architectural-decision.adr.md
 ```
 
 </template_location>
@@ -336,7 +282,7 @@ Read the template and adapt:
 
 ```bash
 # Read ADR template
-Read: ${SKILL_DIR}/templates/decisions/architectural-decision.adr.md
+Read: ${CLAUDE_SKILL_DIR}/templates/decisions/architectural-decision.adr.md
 
 # Adapt for your decision
 - State the architectural concern this decision governs (atemporal voice — no history)
@@ -488,7 +434,7 @@ PDRs document product behavior decisions with trade-offs and user impact. Unlike
 <template_location>
 
 ```
-${SKILL_DIR}/templates/decisions/product-decision.pdr.md
+${CLAUDE_SKILL_DIR}/templates/decisions/product-decision.pdr.md
 ```
 
 </template_location>
@@ -499,7 +445,7 @@ Read the template and adapt:
 
 ```bash
 # Read PDR template
-Read: ${SKILL_DIR}/templates/decisions/product-decision.pdr.md
+Read: ${CLAUDE_SKILL_DIR}/templates/decisions/product-decision.pdr.md
 
 # Adapt for your decision
 - State the product behavior this decision governs (atemporal voice — no history)
@@ -623,7 +569,7 @@ Templates for Product Requirements (PRD).
 
 <prd_template>
 
-**Location**: `${SKILL_DIR}/templates/product/product.prd.md`
+**Location**: `${CLAUDE_SKILL_DIR}/templates/product/product.prd.md`
 
 **Purpose**: Product requirements - user value, customer journey, measurable outcomes
 
@@ -631,7 +577,7 @@ Templates for Product Requirements (PRD).
 
 ```bash
 # Read PRD template
-Read: ${SKILL_DIR}/templates/product/product.prd.md
+Read: ${CLAUDE_SKILL_DIR}/templates/product/product.prd.md
 
 # Adapt for product change
 - Define user value proposition
@@ -666,9 +612,9 @@ Templates for capabilities, features, and stories.
 <template_locations>
 
 ```
-${SKILL_DIR}/templates/outcomes/capability-name.capability.md
-${SKILL_DIR}/templates/outcomes/feature-name.feature.md
-${SKILL_DIR}/templates/outcomes/story-name.story.md
+${CLAUDE_SKILL_DIR}/templates/outcomes/capability-name.capability.md
+${CLAUDE_SKILL_DIR}/templates/outcomes/feature-name.feature.md
+${CLAUDE_SKILL_DIR}/templates/outcomes/story-name.story.md
 ```
 
 </template_locations>
@@ -677,19 +623,19 @@ ${SKILL_DIR}/templates/outcomes/story-name.story.md
 
 ```bash
 # For capability
-Read: ${SKILL_DIR}/templates/outcomes/capability-name.capability.md
+Read: ${CLAUDE_SKILL_DIR}/templates/outcomes/capability-name.capability.md
 Adapt: Replace {slug} with kebab-case name
        Fill functional requirements
        Add user value context
 
 # For feature
-Read: ${SKILL_DIR}/templates/outcomes/feature-name.feature.md
+Read: ${CLAUDE_SKILL_DIR}/templates/outcomes/feature-name.feature.md
 Adapt: Replace {slug} with kebab-case name
        Specify integration scope
        Define component interactions
 
 # For story
-Read: ${SKILL_DIR}/templates/outcomes/story-name.story.md
+Read: ${CLAUDE_SKILL_DIR}/templates/outcomes/story-name.story.md
 Adapt: Replace {slug} with kebab-case name
        Detail atomic implementation
        List specific functions/classes

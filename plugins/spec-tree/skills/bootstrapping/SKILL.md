@@ -106,14 +106,14 @@ Wait for user confirmation before creating files.
 
 1. Create `spx/` directory if it doesn't exist.
 
-2. Write `spx/{product-name}.product.md` using the template from `${SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill in:
+2. Write `spx/{product-name}.product.md` using the template from `${CLAUDE_SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill in:
    - Product name
    - Why this product exists
    - Three-part hypothesis (output → outcome → impact)
    - Scope (included items = the top-level nodes)
    - Product-level compliance rules (if any emerged from interview)
 
-3. Write `spx/CLAUDE.md` from the template at `${SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
+3. Write `spx/CLAUDE.md` from the template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
 
 4. For each top-level node:
    - Create directory: `spx/{NN}-{slug}.{enabler|outcome}/`

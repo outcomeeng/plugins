@@ -16,11 +16,11 @@ Decompose an existing Spec Tree node into child nodes when it contains multiple 
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
 
-Read the reference material from the understanding skill (`${SKILL_DIR}/../understanding/`) before decomposing:
+Read the reference material from the understanding skill (`${CLAUDE_SKILL_DIR}/../understanding/`) before decomposing:
 
-- `${SKILL_DIR}/../understanding/references/decomposition-semantics.md` — when to decompose, enabler vs outcome, depth, shared enabler extraction
-- `${SKILL_DIR}/../understanding/references/ordering-rules.md` — sparse integer ordering, insertion, fractional indexing
-- `${SKILL_DIR}/../understanding/references/node-types.md` — enabler and outcome structure, directory layout
+- `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md` — when to decompose, enabler vs outcome, depth, shared enabler extraction
+- `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md` — sparse integer ordering, insertion, fractional indexing
+- `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler and outcome structure, directory layout
 
 Then follow the workflow below.
 
@@ -170,13 +170,13 @@ For each child node:
 3. Create the `tests/` directory
 4. Write the spec content:
 
-**For outcomes:** Use the outcome template from `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`. Write the three-part hypothesis:
+**For outcomes:** Use the outcome template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`. Write the three-part hypothesis:
 
 - **Output** — what the software does (tested by assertions)
 - **Outcome** — measurable change in user behavior
 - **Impact** — business value
 
-**For enablers:** Use the enabler template from `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`. Write the enables statement.
+**For enablers:** Use the enabler template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`. Write the enables statement.
 
 5. Add assertions redistributed from the parent.
 
@@ -265,7 +265,7 @@ Decomposition is complete when:
 - [ ] Each child has correct node type (enabler or outcome)
 - [ ] Sparse integer indices assigned following ordering rules
 - [ ] All assertions redistributed (none lost, cross-cutting in parent)
-- [ ] Child specs written using templates from `${SKILL_DIR}/../understanding/templates/`
+- [ ] Child specs written using templates from `${CLAUDE_SKILL_DIR}/../understanding/templates/`
 - [ ] Parent spec revised to reflect decomposition
 - [ ] Validation checklist passes
 

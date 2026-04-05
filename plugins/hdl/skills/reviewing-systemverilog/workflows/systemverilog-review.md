@@ -1,5 +1,5 @@
 <required_reading>
-Read `${SKILL_DIR}/references/systemverilog-idioms.md` before starting the review. This is the authoritative reference for all idiomatic SystemVerilog patterns.
+Read `${CLAUDE_SKILL_DIR}/references/systemverilog-idioms.md` before starting the review. This is the authoritative reference for all idiomatic SystemVerilog patterns.
 
 </required_reading>
 

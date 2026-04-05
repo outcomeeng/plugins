@@ -170,7 +170,7 @@ All canonical conventions are in `/standardizing-typescript-architecture`. Read 
 </what_to_avoid>
 
 <example_review>
-Read `${SKILL_DIR}/references/example-review.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in Compliance, mocking language, and temporal voice violations.
+Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in Compliance, mocking language, and temporal voice violations.
 </example_review>
 
 <success_criteria>
