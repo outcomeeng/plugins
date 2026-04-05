@@ -22,6 +22,7 @@ Subagents enable delegation of complex tasks to specialized agents that operate 
    - **description**: When should this subagent be used?
    - **tools**: Optional comma-separated list (inherits all if omitted)
    - **model**: Optional (`opus`, `sonnet`, `haiku`, or `inherit`)
+   - **skills**: Optional array of skill names to inject at startup
 5. Write the system prompt (the subagent's instructions)
 
 </workflow>
@@ -52,7 +53,7 @@ You are a senior code reviewer focused on quality, security, and best practices.
 Provide specific, actionable feedback with file:line references.
 </output_format>
 
-```
+````
 </example>
 </quick_start>
 
@@ -93,6 +94,21 @@ Project-level subagents override user-level when names conflict.
 - If omitted: defaults to configured subagent model (usually sonnet)
 
 </field>
+
+<field name="skills">
+- Array of skill names to inject into the subagent's context at startup
+- The full SKILL.md content of each listed skill is loaded before the subagent runs
+- Subagents do NOT inherit skills from the parent conversation — list every needed skill explicitly
+- The subagent receives skill content as reference material, not as dynamically invocable skills
+- If omitted: no skills injected
+
+```yaml
+skills:
+  - auditing-typescript
+  - testing
+````
+
+</field>
 </configuration>
 
 <execution_model>
@@ -100,6 +116,7 @@ Project-level subagents override user-level when names conflict.
 **Subagents are black boxes that cannot interact with users.**
 
 Subagents run in isolated contexts and return their final output to the main conversation. They:
+
 - ✅ Can use tools like Read, Write, Edit, Bash, Grep, Glob
 - ✅ Can access MCP servers and other non-interactive tools
 - ❌ **Cannot use AskUserQuestion** or any tool requiring user interaction
@@ -113,20 +130,22 @@ The main conversation sees only the subagent's final report/output.
 **Designing workflows with subagents:**
 
 Use **main chat** for:
+
 - Gathering requirements from user (AskUserQuestion)
 - Presenting options or decisions to user
 - Any task requiring user confirmation/input
 - Work where user needs visibility into progress
 
 Use **subagents** for:
+
 - Research tasks (API documentation lookup, code analysis)
 - Code generation based on pre-defined requirements
 - Analysis and reporting (security review, test coverage)
 - Context-heavy operations that don't need user interaction
 
 **Example workflow pattern:**
-```
 
+```
 Main Chat: Ask user for requirements (AskUserQuestion)
 ↓
 Subagent: Research API and create documentation (no user interaction)
@@ -136,8 +155,8 @@ Main Chat: Review research with user, confirm approach
 Subagent: Generate code based on confirmed plan
 ↓
 Main Chat: Present results, handle testing/deployment
+```
 
-````
 </workflow_design>
 </execution_model>
 
@@ -162,11 +181,12 @@ You are a senior code reviewer specializing in security.
 </role>
 
 <focus_areas>
+
 - SQL injection vulnerabilities
 - XSS attack vectors
 - Authentication/authorization issues
 - Sensitive data exposure
-</focus_areas>
+  </focus_areas>
 
 <workflow>
 1. Read the modified files
@@ -174,7 +194,7 @@ You are a senior code reviewer specializing in security.
 3. Provide specific remediation steps
 4. Rate severity (Critical/High/Medium/Low)
 </workflow>
-````
+```
 
 </principle>
 
@@ -255,6 +275,7 @@ Run `/agents` for an interactive interface to:
 - Create new subagents
 - Edit existing subagents
 - Delete custom subagents
+
 </using_agents_command>
 
 <manual_editing>
@@ -272,6 +293,7 @@ You can also edit subagent files directly:
 **Subagent usage and configuration**: [${CLAUDE_SKILL_DIR}/references/subagents.md](references/subagents.md)
 
 - File format and configuration
+- Skill injection (`skills:` field for preloading skill content)
 - Model selection (Sonnet 4.5 + Haiku 4.5 orchestration)
 - Tool security and least privilege
 - Prompt caching optimization

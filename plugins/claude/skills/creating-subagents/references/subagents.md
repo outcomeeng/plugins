@@ -7,6 +7,9 @@ name: your-subagent-name
 description: Description of when this subagent should be invoked
 tools: tool1, tool2, tool3 # Optional - inherits all tools if omitted
 model: sonnet # Optional - specify model alias or 'inherit'
+skills: # Optional - inject skill content at startup
+  - skill-name-one
+  - skill-name-two
 ---
 
 <role>
@@ -26,14 +29,16 @@ Step-by-step process for consistency.
 
 <configuration_fields>
 
-| Field                   | Required | Description                                                                      |
-| ----------------------- | -------- | -------------------------------------------------------------------------------- |
-| `name`                  | Yes      | Unique identifier using lowercase letters and hyphens                            |
-| `description`           | Yes      | Natural language description of purpose. Include when Claude should invoke this. |
-| `tools`                 | No       | Comma-separated list. If omitted, inherits all tools from main thread            |
-| `model`                 | No       | `sonnet`, `opus`, `haiku`, or `inherit`. If omitted, uses default subagent model |
-| </configuration_fields> |          |                                                                                  |
-| </file_format>          |          |                                                                                  |
+| Field         | Required | Description                                                                        |
+| ------------- | -------- | ---------------------------------------------------------------------------------- |
+| `name`        | Yes      | Unique identifier using lowercase letters and hyphens                              |
+| `description` | Yes      | Natural language description of purpose. Include when Claude should invoke this.   |
+| `tools`       | No       | Comma-separated list. If omitted, inherits all tools from main thread              |
+| `model`       | No       | `sonnet`, `opus`, `haiku`, or `inherit`. If omitted, uses default subagent model   |
+| `skills`      | No       | Array of skill names. Full skill content injected into subagent context at startup |
+
+</configuration_fields>
+</file_format>
 
 <storage_locations>
 
@@ -379,6 +384,72 @@ Scope: Can draft email, cannot access sensitive financial data
 </audit_checklist>
 </tool_security>
 
+<skill_injection>
+Subagents can preload skills via the `skills:` frontmatter field. The full SKILL.md content of each listed skill is injected into the subagent's context at startup — not lazily loaded or dynamically invoked.
+
+<how_it_works>
+
+- Claude Code reads each skill's SKILL.md and injects the content before the subagent runs
+- The subagent sees the skill content as reference material in its context
+- The subagent does NOT invoke skills at runtime with `/skill-name` — the content is already there
+- Subagents do NOT inherit skills from the parent conversation — every needed skill must be listed explicitly
+
+</how_it_works>
+
+<when_to_use>
+
+**Use `skills:` when the subagent needs domain methodology:**
+
+- Audit subagents that need the full audit methodology (phases, evidence models, verdict format)
+- Builder subagents that need coding standards or architecture conventions
+- Any subagent that would otherwise duplicate what a skill already provides
+
+**Do NOT use `skills:` when:**
+
+- The subagent's system prompt already contains all needed instructions
+- The skill content is too large and would consume excessive context
+- The subagent needs to dynamically choose which skill to load (use main conversation instead)
+
+</when_to_use>
+
+<example>
+
+```yaml
+---
+name: typescript-code-auditor
+description: Audit TypeScript code for design flaws and ADR compliance
+tools: Read, Bash, Glob, Grep
+skills:
+  - auditing-typescript
+---
+
+<role>
+Adversarial code auditor. Follow the injected audit methodology exactly.
+</role>
+
+<constraints>
+- Read-only — produce verdicts, not code changes
+- Output structured APPROVED or REJECTED verdict
+</constraints>
+```
+
+The `auditing-typescript` skill content (phases, evidence model, verdict format) is available in the subagent's context from the start.
+
+</example>
+
+<relationship_to_context_fork>
+
+The `skills:` field is the inverse of a skill's `context: fork` property:
+
+- **`skills:` in subagent**: Subagent pulls skill content in (subagent controls the system prompt)
+- **`context: fork` in skill**: Skill pushes its content into a subagent (skill controls the system prompt)
+
+Both use the same underlying mechanism — eager injection of skill content at startup.
+
+</relationship_to_context_fork>
+
+</skill_injection>
+
 <prompt_caching>
 <benefits>
 Prompt caching for frequently-invoked subagents:
@@ -387,7 +458,8 @@ Prompt caching for frequently-invoked subagents:
 - **85% latency reduction** for cache hits
 - Cached content: ~10% cost of uncached tokens
 - Cache TTL: 5 minutes (default) or 1 hour (extended)
-  </benefits>
+
+</benefits>
 
 <cache_structure>
 **Structure prompts for caching**:
