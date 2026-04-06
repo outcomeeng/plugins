@@ -1,3 +1,8 @@
+---
+template_version: "0.18.2"
+template_source: spec-tree
+---
+
 # spx/ Directory Guide (Spec Tree)
 
 This guide explains WHEN to invoke spec-tree skills for the **{product-name}** product. It is a **router** — the skills contain the HOW.
@@ -100,18 +105,27 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 ---
 
-## Quick Reference: Skill Selection
+## Quick Reference: Skills and Agents
 
-| User Says...             | Invoke             | Do NOT                      |
-| ------------------------ | ------------------ | --------------------------- |
-| "Implement this outcome" | `/contextualizing` | Read spec files directly    |
-| "Create an outcome"      | `/authoring`       | Search for templates        |
-| "Add an ADR"             | `/authoring`       | Calculate indices yourself  |
-| "This node is too big"   | `/decomposing`     | Split nodes ad hoc          |
-| "Move this under that"   | `/refactoring`     | Rename directories manually |
-| "Check these specs"      | `/aligning`        | Review without methodology  |
-| "Write tests for this"   | `/testing`         | Write tests without spec    |
-| "Start the TDD flow"     | `/applying`        | Code without architecture   |
+Skills run in the main conversation. Agents preload the skill and run autonomously as subagents, returning structured APPROVED/REJECTED verdicts. Use agents when running multiple audits in parallel; use skills when you want to discuss findings with the user.
+
+**Delete rows that don't apply to your project.**
+
+| User Says...             | Skill                               | Agent                             |
+| ------------------------ | ----------------------------------- | --------------------------------- |
+| "Implement this outcome" | `/contextualizing`                  | —                                 |
+| "Create an outcome"      | `/authoring`                        | —                                 |
+| "Add an ADR"             | `/authoring`                        | —                                 |
+| "This node is too big"   | `/decomposing`                      | —                                 |
+| "Move this under that"   | `/refactoring`                      | —                                 |
+| "Check these specs"      | `/aligning`                         | —                                 |
+| "Write tests for this"   | `/testing`                          | —                                 |
+| "Start the TDD flow"     | `/applying`                         | `applier`                         |
+| "Audit this PDR"         | `/auditing-product-decisions`       | `pdr-auditor`                     |
+| "Audit test evidence"    | `/auditing-tests`                   | `test-evidence-auditor`           |
+| "Audit this code"        | `/auditing-{language}`              | `{language}-code-auditor`         |
+| "Audit this ADR"         | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
+| "Audit these tests"      | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
 
 ---
 

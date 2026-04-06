@@ -402,6 +402,22 @@ Spec-driven development with the Spec Tree framework. Three phases: spec-tree ma
 | `/handoff`   | Create timestamped context handoff                            |
 | `/pickup`    | Load and continue from previous handoff                       |
 
+## When to Dispatch Agents vs Invoke Skills
+
+Auditor skills can be invoked directly in the main conversation or dispatched as subagents. Each auditor agent preloads the corresponding skill via the `skills:` frontmatter field.
+
+- **One audit, user wants to discuss findings** → invoke the skill directly
+- **Multiple audits in parallel** → dispatch subagents, collect verdicts
+- **Autonomous flow (e.g., `/apply --agent`)** → the `applier` agent handles audit dispatch internally
+
+| Skill                               | Agent                             |
+| ----------------------------------- | --------------------------------- |
+| `/auditing-product-decisions`       | `pdr-auditor`                     |
+| `/auditing-tests`                   | `test-evidence-auditor`           |
+| `/auditing-{language}`              | `{language}-code-auditor`         |
+| `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
+| `/auditing-{language}-tests`        | `{language}-test-auditor`         |
+
 ## Discovering Other Installed Skills
 
 Search for `SKILL.md` in `.claude/plugins/cache/{marketplace-name}/{plugin-name}/`
