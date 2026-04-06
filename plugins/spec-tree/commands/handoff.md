@@ -224,7 +224,7 @@ Which skills did you invoke, which should you have invoked, and which does the n
 Where exactly should the next agent begin?
 
 - **Node path** — full path to the node (e.g., `spx/21-foo.enabler/32-bar.outcome`)
-- **TDD flow position** — which phase (1-8) per the `/coding` skill
+- **TDD flow position** — which phase (1-8) per the `/applying` skill
 - **First action** — the specific skill invocation that resumes work
 
 ## Phase 3: Propose persistence plan
