@@ -99,7 +99,7 @@ For each assertion needing a new test:
 1. Determine test pattern from assertion type (Step 2 table).
 2. Determine test level from methodology routing (Step 4).
 3. Create test file in the spec node's `tests/` directory.
-4. Name the file using level suffix: `test_{slug}_unit.py`, `test_{slug}_integration.py`, etc.
+4. Name the file using level suffix: `test_{slug}.unit.py`, `test_{slug}.integration.py`, etc.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
 Delegate language-specific patterns to `/testing-python` or `/testing-typescript`.

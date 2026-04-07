@@ -1,6 +1,6 @@
 <!-- Test file naming varies by language. See spx/CLAUDE.md for conventions.
      TypeScript: tests/{slug}.unit.test.ts    tests/{slug}.integration.test.ts    tests/{slug}.e2e.test.ts
-     Python:     tests/test_{slug}_unit.py     tests/test_{slug}_integration.py    tests/test_{slug}_e2e.py
+     Python:     tests/test_{slug}.unit.py     tests/test_{slug}.integration.py    tests/test_{slug}.e2e.py
      Tables below use logical names. Resolve to actual filenames when instantiating. -->
 
 # Feature: [Feature Name]

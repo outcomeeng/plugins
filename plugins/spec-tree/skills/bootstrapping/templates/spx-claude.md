@@ -145,9 +145,9 @@ Test level is encoded in the filename. **Delete sections below that don't apply 
 
 | Level | Pattern                      | Example                   |
 | ----- | ---------------------------- | ------------------------- |
-| 1     | `test_{slug}_unit.py`        | `test_parsing_unit.py`    |
-| 2     | `test_{slug}_integration.py` | `test_cli_integration.py` |
-| 3     | `test_{slug}_e2e.py`         | `test_workflow_e2e.py`    |
+| 1     | `test_{slug}.unit.py`        | `test_parsing.unit.py`    |
+| 2     | `test_{slug}.integration.py` | `test_cli.integration.py` |
+| 3     | `test_{slug}.e2e.py`         | `test_workflow.e2e.py`    |
 
 ---
 
@@ -158,7 +158,7 @@ Spec assertions link to their tests inline:
 ```markdown
 ### Scenarios
 
-- Given X, when Y, then Z ([test](tests/test_slug_unit.py))
+- Given X, when Y, then Z ([test](tests/test_slug.unit.py))
 ```
 
 Every assertion must link to at least one test file.

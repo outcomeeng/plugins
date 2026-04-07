@@ -25,9 +25,9 @@ Read `/auditing-tests` first — it defines the 4-property evidence model and or
 
 | Level | Filename suffix   | Example                       |
 | ----- | ----------------- | ----------------------------- |
-| 1     | `_unit.py`        | `test_uart_tx_unit.py`        |
-| 2     | `_integration.py` | `test_uart_tx_integration.py` |
-| 3     | `_e2e.py`         | `test_uart_tx_e2e.py`         |
+| 1     | `.unit.py`        | `test_uart_tx.unit.py`        |
+| 2     | `.integration.py` | `test_uart_tx.integration.py` |
+| 3     | `.e2e.py`         | `test_uart_tx.e2e.py`         |
 
 </quick_start>
 
@@ -244,7 +244,7 @@ Assertion: MUST: Given a UartTx configured for 8N1 at 115200 baud,
            when byte 0x55 is written, then TX line outputs start bit,
            8 data bits (LSB first), and stop bit
 Type: Scenario
-Test: tests/test_uart_tx_unit.py ✓ exists
+Test: tests/test_uart_tx.unit.py ✓ exists
 ```
 
 Coupling:
@@ -298,7 +298,7 @@ Auditing `spx/32-api.enabler/54-auth.outcome/`
 ```text
 Assertion: MUST: Given valid credentials, when authenticating,
            then a session token is returned from the database
-Test: tests/test_auth_integration.py ✓ exists
+Test: tests/test_auth.integration.py ✓ exists
 ```
 
 Coupling:
@@ -333,7 +333,7 @@ Auditing `spx/15-theme.enabler/22-contrast.outcome/`
 
 ```text
 Assertion: MUST: All theme colors meet WCAG AA contrast ratio (4.5:1)
-Test: tests/test_contrast_unit.py ✓ exists
+Test: tests/test_contrast.unit.py ✓ exists
 ```
 
 Coupling:
