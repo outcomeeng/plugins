@@ -1,7 +1,7 @@
 """Unit tests for plugin manifest validation.
 
 Tests the validate-plugins.py script against the assertions
-in spx/15-validation.enabler/validation.md (Plugin Manifest Validation).
+in [plugin-manifest.md](../plugin-manifest.md).
 
 Level 1: discovery logic is pure path computation.
 Subprocess execution of `claude plugin validate` is thin glue tested at

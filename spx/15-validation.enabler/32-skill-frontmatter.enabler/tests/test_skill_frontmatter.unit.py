@@ -1,7 +1,7 @@
 """Unit tests for SKILL.md frontmatter validation.
 
 Tests the validate-skill-frontmatter.py script against the assertions
-in spx/15-validation.enabler/validation.md.
+in [skill-frontmatter.md](../skill-frontmatter.md).
 """
 
 from __future__ import annotations
