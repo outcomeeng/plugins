@@ -12,12 +12,6 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 
 </objective>
 
-<quick_start>
-
-Invoke `/understanding` before any spec-tree work. The skill reads 3 core reference files and emits a `<SPEC_TREE_FOUNDATION>` marker. If the marker is already present in the conversation, skip.
-
-</quick_start>
-
 <principles>
 
 1. **TRUTH FLOWS DOWN** — Specs declare. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never weaken a spec to match code or tests. Read `references/durable-map.md`.

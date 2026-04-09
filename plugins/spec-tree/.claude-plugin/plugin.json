@@ -1,7 +1,7 @@
 {
   "name": "spec-tree",
-  "version": "0.18.2",
-  "description": "Spec Tree: git-native product structure with commit workflow, session management, and spec-driven development",
+  "version": "0.18.3",
+  "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, session management, and TDD flows driven by specs",
   "author": {
     "name": "Simon Heimlicher"
   },
@@ -16,6 +16,6 @@
     "spx",
     "commit",
     "handoff",
-    "spec-driven"
+    "spec-as-source"
   ]
 }

@@ -14,28 +14,6 @@ This is full injection — every collected document is read into the conversatio
 
 </objective>
 
-<quick_start>
-
-**PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
-
-Invoke with the **full path** from `spx/` to the target node:
-
-```text
-/contextualizing 21-infra.enabler/32-parser.outcome
-```
-
-**Never use bare node names** — indices are sibling-unique, not globally unique:
-
-```text
-# Wrong: ambiguous
-/contextualizing 32-parser.outcome
-
-# Right: unambiguous
-/contextualizing 21-infra.enabler/32-parser.outcome
-```
-
-</quick_start>
-
 <essential_principles>
 
 **COMPLETE CONTEXT OR ABORT. NO EXCEPTIONS.**
@@ -46,12 +24,24 @@ Invoke with the **full path** from `spx/` to the target node:
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
 - Test files are excluded — context is about specs and decisions, not evidence
+- **Always use full path** from `spx/` to target — indices are sibling-unique, not globally unique:
+  - Wrong: `/contextualizing 32-parser.outcome`
+  - Right: `/contextualizing 21-infra.enabler/32-parser.outcome`
 
 **BOOTSTRAP MODE**: When the target path doesn't exist yet and the operation is authoring, return an empty manifest with `bootstrap=true` instead of aborting. This allows creating the first node in an empty tree.
 
 </essential_principles>
 
 <workflow>
+
+<phase name="gate">
+
+**Phase GATE: Check foundation**
+
+Check conversation for `<SPEC_TREE_FOUNDATION>` marker.
+If absent → STOP. Invoke `/understanding` first, then resume from Phase 0.
+
+</phase>
 
 <phase name="locate">
 
@@ -246,6 +236,7 @@ Agent read ALL siblings including higher-index ones. Higher-index siblings may d
 
 Context loading is complete when:
 
+- [ ] `<SPEC_TREE_FOUNDATION>` marker present (loaded via `/understanding`)
 - [ ] Product spec located and read
 - [ ] All product-level ADRs/PDRs read (glob count = read count)
 - [ ] Every ancestor along the path: spec read, ADRs/PDRs read
