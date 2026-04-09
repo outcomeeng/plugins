@@ -33,6 +33,7 @@ __pycache__/
 .venv/
 venv/
 .env
+.hypothesis/
 
 # Build outputs
 dist/
