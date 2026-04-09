@@ -334,3 +334,23 @@ class TestFixFile:
             assert path.read_text() == expected
         finally:
             path.unlink()
+
+    def test_idempotent(self) -> None:
+        """Running fix_file twice produces the same output as running once."""
+        content = "- item 1\n- item 2\n</section>\ntext\n  </closing>\n"
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(content)
+            f.flush()
+            path = Path(f.name)
+
+        try:
+            fix_xml_spacing.fix_file(path)
+            after_first = path.read_text()
+
+            fix_xml_spacing.fix_file(path)
+            after_second = path.read_text()
+
+            assert after_first == after_second
+        finally:
+            path.unlink()
