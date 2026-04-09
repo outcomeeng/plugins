@@ -1,6 +1,6 @@
 # Outcome Engineering Plugin Marketplace
 
-A Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — spec-driven development where a durable map of your product drives all implementation.
+A Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where a durable map of your product, maintained as a Spec Tree, serves as the authoritative source of truth for all implementation.
 
 > `/bootstrap` interviews you about your product, then scaffolds a spec tree — the durable map that drives all implementation.
 
@@ -19,7 +19,7 @@ A Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engin
 npm install -g @outcomeeng/spx
 ```
 
-The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for spec-driven development. Required by all engineering plugins.
+The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for Spec Tree maintenance and validation. Required by all engineering plugins.
 
 ### 2. Add the marketplace and install plugins
 
@@ -27,7 +27,7 @@ The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer to
 # Add the marketplace
 claude plugin marketplace add outcomeeng/claude
 
-# Spec-driven development (requires spx CLI)
+# Spec Tree methodology (requires spx CLI)
 claude plugin install spec-tree@outcomeeng
 
 # Language plugins (install per project, require spx CLI)
@@ -203,7 +203,7 @@ Skills are distributed as standalone repositories, compatible with any agent tha
 
 | Repository                                             | Purpose                                                 | Install                                |
 | ------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------- |
-| [spec-tree](https://github.com/outcomeeng/spec-tree)   | Spec-tree skills for spec-driven development            | `npx skills add outcomeeng/spec-tree`  |
+| [spec-tree](https://github.com/outcomeeng/spec-tree)   | Spec Tree methodology skills for Outcome Engineering    | `npx skills add outcomeeng/spec-tree`  |
 | [python](https://github.com/outcomeeng/python)         | Python engineering skills                               | `npx skills add outcomeeng/python`     |
 | [typescript](https://github.com/outcomeeng/typescript) | TypeScript engineering skills                           | `npx skills add outcomeeng/typescript` |
 | [foundation](https://github.com/outcomeeng/foundation) | Foundation skills (prose, plugin development, frontend) | `npx skills add outcomeeng/foundation` |

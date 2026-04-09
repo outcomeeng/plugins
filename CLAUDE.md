@@ -1,6 +1,6 @@
 # Outcome Engineering Plugin Marketplace
 
-Claude Code plugin marketplace (`outcomeeng/claude`) for spec-driven development with [Outcome Engineering](https://outcome.engineering).
+Claude Code plugin marketplace (`outcomeeng/claude`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
 
 ## Marketplace Is a Product
 
@@ -36,6 +36,8 @@ The Outcome Engineering methodology has evolved through three generations. Only 
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
 - ⚠️ **Python skill examples use `product.*` / `product_testing.*`** - Not `src.*` or `src_testing.*`. The `src` convention is ambiguous across Python ecosystems; `product` is unambiguous and signals "the thing we're building"
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
+- ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
+- ⚠️ **Work plans MUST include audit gates** - After each structural phase (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across phases.
 
 - ✅ **Always use `just run test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
@@ -363,7 +365,7 @@ Complete Python development workflow with testing, implementation, and review.
 
 ## Spec Tree Plugin
 
-Spec-driven development with the Spec Tree framework. Three phases: spec-tree maintenance, implementation, commit.
+The Spec Tree methodology for Outcome Engineering. Three phases: spec-tree maintenance, implementation, commit.
 
 ### Skills
 

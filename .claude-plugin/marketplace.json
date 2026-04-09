@@ -1,7 +1,7 @@
 {
   "name": "outcomeeng",
   "metadata": {
-    "description": "Spec-Driven Engineering for Python and TypeScript"
+    "description": "Outcome Engineering: Spec Tree methodology for Python and TypeScript"
   },
   "owner": {
     "name": "Simon Heimlicher"

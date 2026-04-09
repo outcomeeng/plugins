@@ -1,4 +1,4 @@
-# Tutorial: Spec-Driven Development with Outcome Engineering
+# Tutorial: Outcome Engineering with the Spec Tree Methodology
 
 This tutorial walks through the full workflow — from bootstrapping a spec tree in a new or existing project to authoring specs, implementing code, and committing changes.
 

@@ -1,6 +1,6 @@
 # Document Types and Requirements
 
-Complete reference of all document types in the spec-driven development hierarchy and their requirements.
+Complete reference of all document types in the legacy Outcome Engineering hierarchy and their requirements.
 
 ## Work Item Hierarchy
 

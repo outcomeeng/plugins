@@ -18,7 +18,7 @@ repos:
       - frontend
 
   spec-tree:
-    description: "Spec Tree skills for spec-driven development"
+    description: "Spec Tree methodology skills for Outcome Engineering"
     plugins:
       - spec-tree
 
