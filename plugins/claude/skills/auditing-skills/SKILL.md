@@ -10,16 +10,6 @@ argument-hint: <skill-path>
 Evaluate SKILL.md files against best practices for structure, conciseness, progressive disclosure, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
 </objective>
 
-<quick_start>
-To audit a skill:
-
-1. Read reference documentation from creating-skills/
-2. Read the target skill's SKILL.md and any subdirectories
-3. Evaluate against best practices (YAML, Structure, Content, Anti-patterns)
-4. Generate report with findings categorized by severity
-
-</quick_start>
-
 <constraints>
 - NEVER modify files during audit - ONLY analyze and report findings
 - MUST read all reference documentation before evaluating
@@ -38,7 +28,7 @@ During audits, prioritize evaluation of:
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
 - Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
 - Conciseness and signal-to-noise ratio (every word earns its place)
-- Required XML tags (objective, quick_start, success_criteria)
+- Required XML tags (objective, success_criteria)
 - Conditional XML tags (appropriate for complexity level)
 - XML structure quality (proper closing tags, semantic naming, no hybrid markdown/XML)
 - Constraint strength (MUST/NEVER/ALWAYS vs weak modals)
@@ -82,7 +72,8 @@ Check for:
 Check for:
 - **Progressive disclosure**: SKILL.md is overview (<500 lines), detailed content in reference files, references one level deep
 - **XML structure quality**:
-  - Required tags present (objective, quick_start, success_criteria)
+  - Required tags present (objective, success_criteria)
+  - Conditional tags appropriate for skill type (quick_start for on-demand tools only — omit for foundation/gate/validator/reference skills)
   - No markdown headings in body (pure XML)
   - Proper XML nesting and closing tags
   - Conditional tags appropriate for complexity level
@@ -142,7 +133,7 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 <area name="anti_patterns">
 Flag these issues:
 - **markdown_headings_in_body**: Using markdown headings (##, ###) in skill body instead of pure XML
-- **missing_required_tags**: Missing objective, quick_start, or success_criteria
+- **missing_required_tags**: Missing objective or success_criteria
 - **hybrid_xml_markdown**: Mixing XML tags with markdown headings in body
 - **unclosed_xml_tags**: XML tags not properly closed
 - **vague_descriptions**: "helps with", "processes data"
@@ -206,9 +197,9 @@ Some skills were created before pure XML structure became the standard. When aud
 **Migration pattern**:
 
 ```
-## Quick start → <quick_start>
 ## Workflow → <workflow>
 ## Success criteria → <success_criteria>
+## Quick start → <quick_start> (only if skill is an on-demand tool)
 ```
 
 </legacy_skills_guidance>
@@ -262,19 +253,17 @@ Form filling...
 </workflow>
 ```
 
-Missing: `<objective>`, `<quick_start>`, `<success_criteria>`
+Missing: `<objective>`, `<success_criteria>`
 
-✅ Should have all three required tags:
+✅ Should have both required tags:
 
 ```xml
 <objective>What the skill does and why it matters</objective>
 
-<quick_start>Immediate actionable guidance</quick_start>
-
 <success_criteria>How to know it worked</success_criteria>
 ```
 
-**Why**: Required tags are non-negotiable for all skills.
+**Why**: Required tags are non-negotiable for all skills. `<quick_start>` is conditional — include for on-demand tool skills, omit for foundation/gate/validator/reference skills.
 </example>
 
 <example name="hybrid_xml_markdown">

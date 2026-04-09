@@ -7,7 +7,7 @@ Skills use pure XML structure for consistent parsing, efficient token usage, and
 </critical_rule>
 
 <required_tags>
-Every skill MUST have these three tags:
+Every skill MUST have these two tags:
 
 **`<objective>`**
 What the skill does and why it matters. Sets context and scope.
@@ -16,24 +16,9 @@ What the skill does and why it matters. Sets context and scope.
 <objective>Extract text and tables from PDF files, fill forms, and merge documents.</objective>
 ```
 
-**`<quick_start>`**
-Immediate, actionable guidance. Gets Claude started quickly.
-
-````text
-<quick_start>
-Extract text with pdfplumber:
-
-```python
-import pdfplumber
-with pdfplumber.open("file.pdf") as pdf:
-    text = pdf.pages[0].extract_text()
-````
-
-</quick_start>
-
-````
 **`<success_criteria>`**
 How to know the task worked. Defines completion criteria.
+
 ```text
 <success_criteria>
 A well-structured skill has:
@@ -42,7 +27,7 @@ A well-structured skill has:
 - Required tags present
 
 </success_criteria>
-````
+```
 
 </required_tags>
 
@@ -79,7 +64,9 @@ When this workflow is considered complete.
 </workflow_tags>
 
 <conditional_tags>
-Add these based on skill complexity:
+Add these based on skill complexity and purpose:
+
+**`<quick_start>`** - Immediate actionable guidance for on-demand tool skills. Include when the skill has a meaningful fast path (builders, utilities). Omit for foundation, gate, validator, and reference skills where completeness is the point — a quick_start signals "you can abbreviate" which undermines skills that must execute fully.
 
 **`<context>`** - Background or situational information needed before starting.
 
@@ -105,15 +92,22 @@ Add these based on skill complexity:
 <intelligence_rules>
 **Simple skills** (single domain, straightforward):
 
-- Required tags only: objective, quick_start, success_criteria
+- Required tags only: objective, success_criteria
+- Add quick_start if the skill is an on-demand tool with a clear fast path
 
 **Medium skills** (multiple patterns, some complexity):
 
 - Required tags + workflow/examples as needed
+- Add quick_start if there's a meaningful abbreviated invocation
 
 **Complex skills** (multiple domains, security, APIs):
 
 - Required tags + router pattern + conditional tags as appropriate
+
+**Foundation/gate/validator skills** (must execute fully):
+
+- Required tags + workflow + success_criteria
+- Omit quick_start — completeness is the point, no abbreviated path exists
 
 **Don't over-engineer simple skills. Don't under-specify complex skills.**
 </intelligence_rules>

@@ -10,9 +10,9 @@ Skills are prompts. All prompting best practices apply. Be clear, be direct, ass
 
 **Pure XML Structure**: No markdown headings (#) in skill body. Use semantic XML tags:
 
-- `<objective>` - What the skill does
-- `<quick_start>` - Immediate actionable guidance
-- `<success_criteria>` - How to know it worked
+- `<objective>` - What the skill does (required)
+- `<success_criteria>` - How to know it worked (required)
+- `<quick_start>` - Fast-path guidance (conditional — include for on-demand tools, omit for foundation/gate/validator skills)
 
 **Progressive Disclosure**: SKILL.md under 500 lines. Details go in `references/` and `workflows/`.
 
@@ -86,10 +86,11 @@ description: >- # Directive, ≤1024 chars. Add NEVER only if it disambiguates.
 
 ```text
 <objective>What the skill does</objective>
-<quick_start>Minimal working example</quick_start>
 <workflow>Step-by-step procedure</workflow>
 <success_criteria>How to know it worked</success_criteria>
 ```
+
+Add `<quick_start>` only for on-demand tool skills with a meaningful fast path.
 
 **Router Skill Structure**:
 
