@@ -23,15 +23,17 @@ Two extremes fail:
 
 Extracting fields from the installed binary at validation time keeps the ceiling current without a maintenance step. The open standard provides a floor that applies even when binary extraction fails (e.g., unusual install locations, permissions issues), preserving forward compatibility with any Agent Skills runtime.
 
-The extraction reads property access patterns from the binary's embedded JavaScript. Future CLI versions that change the frontmatter parser would require updating the extraction logic, but the patterns have been stable across releases.
+The extraction reads property access patterns from the binary's embedded JavaScript. The extraction logic is coupled to the CLI's parser representation; any change in that representation requires a corresponding change in the extraction patterns.
+
+Binary location and binary reading are performed through injectable callables so that the fallback logic is verifiable at Level 1 without filesystem coupling or process monkeypatching. Tests supply lambdas that return `None` to exercise the fallback path; production callers use the default resolvers.
 
 ## Trade-offs accepted
 
-| Trade-off                                                                  | Mitigation / reasoning                                                                               |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Extraction depends on an internal parser pattern in the Claude Code binary | The pattern is stable across releases; the open standard floor provides a safe fallback              |
-| Validation results depend on the locally installed Claude Code version     | Contributors with outdated binaries may see different validation results — acceptable for a dev tool |
-| Extraction fails silently when the binary is missing                       | The open standard floor serves as the result, still catching malformed frontmatter                   |
+| Trade-off                                                                  | Mitigation / reasoning                                                                                           |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Extraction depends on an internal parser pattern in the Claude Code binary | The open standard floor provides a safe fallback when the pattern fails to match                                 |
+| Validation results depend on the locally installed Claude Code version     | Validation is a developer tool; differences between local environments produce actionable diagnostics, not drift |
+| Extraction fails silently when the binary is missing                       | The open standard floor serves as the result, still catching malformed frontmatter                               |
 
 ## Compliance
 
@@ -43,7 +45,11 @@ The `validate_skill_frontmatter.py` script computes valid fields at runtime from
 
 - Derive Claude Code-specific fields from the installed binary at runtime — the authoritative source is the CLI, not a committed list ([review])
 - Fall back to the Agent Skills open standard floor when binary extraction fails — validation never fully breaks on a missing or unreadable binary ([review])
+- Binary location accepts an injected callable that returns the binary path or `None` — the fallback branch is verifiable at Level 1 without filesystem coupling ([review])
+- Binary field extraction accepts an injected callable that returns the extracted field set or `None` — the fallback branch is verifiable at Level 1 without process execution ([review])
 
 ### NEVER
 
 - Hardcode Claude Code-specific fields in source or configuration — any field the CLI may accept changes between releases and hardcoding creates drift ([review])
+- Use `unittest.mock.patch` on filesystem or subprocess operations in tests for this module — the injectable callables are the sanctioned seam ([review])
+- Call `shutil.which`, `Path.read_bytes`, or `subprocess.run` outside the injected resolver and reader boundaries — direct calls bypass the testability contract ([review])
