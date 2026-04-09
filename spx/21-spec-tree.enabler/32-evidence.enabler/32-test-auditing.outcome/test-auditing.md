@@ -2,7 +2,7 @@
 
 WE BELIEVE THAT an audit methodology verifying tests provide genuine evidence for spec assertions
 WILL eliminate phantom evidence (green CI with unfulfilled assertions) across all spec-tree projects
-CONTRIBUTING TO reduced rework and higher confidence in spec-driven development
+CONTRIBUTING TO reduced rework and higher confidence in Spec Tree projects
 
 ## Test Evidence Model
 
@@ -59,21 +59,21 @@ A test that produces zero coverage delta on the files it claims to verify is REJ
 
 ### Scenarios
 
-- Given a test file that imports only its test framework, when audited by `/auditing-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test-auditing.unit.test.ts))
-- Given a test file that imports a codebase module but mocks it entirely, when audited, then the verdict is REJECT with finding category "coupling severed" ([test](tests/test-auditing.unit.test.ts))
-- Given a test file that imports the correct module and verifies behavior matching the spec assertion, when audited and all properties hold, then the verdict is APPROVED ([test](tests/test-auditing.unit.test.ts))
-- Given a test file that imports the correct module but asserts on a property unrelated to the spec assertion, when audited, then the verdict is REJECT with finding category "misaligned" ([test](tests/test-auditing.unit.test.ts))
-- Given a test file where no mutation to the imported module would cause a failure, when audited, then the verdict is REJECT with finding category "unfalsifiable" ([test](tests/test-auditing.unit.test.ts))
-- Given a test file that produces zero coverage delta on the assertion-relevant source files, when audited, then the verdict is REJECT with finding category "no coverage increase" ([test](tests/test-auditing.unit.test.ts))
-- Given a test file under audit, when coverage is measured with and without the test, then the auditor reports actual percentage deltas per source file, not estimates ([test](tests/test-auditing.unit.test.ts))
+- Given a test file that imports only its test framework, when audited by `/auditing-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test_test_auditing.unit.py))
+- Given a test file that imports a codebase module but mocks it entirely, when audited, then the verdict is REJECT with finding category "coupling severed" ([test](tests/test_test_auditing.unit.py))
+- Given a test file that imports the correct module and verifies behavior matching the spec assertion, when audited and all properties hold, then the verdict is APPROVED ([test](tests/test_test_auditing.unit.py))
+- Given a test file that imports the correct module but asserts on a property unrelated to the spec assertion, when audited, then the verdict is REJECT with finding category "misaligned" ([test](tests/test_test_auditing.unit.py))
+- Given a test file where no mutation to the imported module would cause a failure, when audited, then the verdict is REJECT with finding category "unfalsifiable" ([test](tests/test_test_auditing.unit.py))
+- Given a test file that produces zero coverage delta on the assertion-relevant source files, when audited, then the verdict is REJECT with finding category "no coverage increase" ([test](tests/test_test_auditing.unit.py))
+- Given a test file under audit, when coverage is measured with and without the test, then the auditor reports actual percentage deltas per source file, not estimates ([test](tests/test_test_auditing.unit.py))
 
 ### Properties
 
-- The audit methodology classifies coupling into at least the six categories defined in the Coupling Taxonomy — distinct failure modes require distinct audit responses ([test](tests/test-auditing.unit.test.ts))
+- The audit methodology classifies coupling into at least the six categories defined in the Coupling Taxonomy — distinct failure modes require distinct audit responses ([test](tests/test_test_auditing.unit.py))
 
 ### Conformance
 
-- The `/auditing-tests` skill invokes `/contextualizing` on the target spec node before any audit phase ([test](tests/test-auditing.unit.test.ts))
+- The `/auditing-tests` skill invokes `/contextualizing` on the target spec node before any audit phase ([test](tests/test_test_auditing.unit.py))
 
 ### Compliance
 

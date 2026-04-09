@@ -54,20 +54,20 @@ Downstream: no spec assertion references this rule ✗ — unenforced
 
 ### Scenarios
 
-- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/auditing-product-decisions`, then the verdict is REJECT with finding category "architecture content" ([test](tests/pdr-auditing.unit.test.ts))
-- Given a PDR with product invariants that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable invariant" ([test](tests/pdr-auditing.unit.test.ts))
-- Given a PDR with compliance rules that no spec in the governed subtree references, when audited, then the verdict is REJECT with finding category "unenforced rule" ([test](tests/pdr-auditing.unit.test.ts))
-- Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal voice" ([test](tests/pdr-auditing.unit.test.ts))
-- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency violation" ([test](tests/pdr-auditing.unit.test.ts))
-- Given a PDR where all six properties hold, when audited, then the verdict is APPROVED ([test](tests/pdr-auditing.unit.test.ts))
+- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/auditing-product-decisions`, then the verdict is REJECT with finding category "architecture content" ([test](tests/test_pdr_auditing.unit.py))
+- Given a PDR with product invariants that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable invariant" ([test](tests/test_pdr_auditing.unit.py))
+- Given a PDR with compliance rules that no spec in the governed subtree references, when audited, then the verdict is REJECT with finding category "unenforced rule" ([test](tests/test_pdr_auditing.unit.py))
+- Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal voice" ([test](tests/test_pdr_auditing.unit.py))
+- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency violation" ([test](tests/test_pdr_auditing.unit.py))
+- Given a PDR where all six properties hold, when audited, then the verdict is APPROVED ([test](tests/test_pdr_auditing.unit.py))
 
 ### Properties
 
-- The audit methodology classifies PDR content into at least the six content types defined in the Content Classification Model — product behavior, user-facing guarantee, technology choice, implementation approach, data structure, performance implementation ([test](tests/pdr-auditing.unit.test.ts))
+- The audit methodology classifies PDR content into at least the six content types defined in the Content Classification Model — product behavior, user-facing guarantee, technology choice, implementation approach, data structure, performance implementation ([test](tests/test_pdr_auditing.unit.py))
 
 ### Conformance
 
-- The `/auditing-product-decisions` skill invokes `/contextualizing` on the PDR's location before any audit phase ([test](tests/pdr-auditing.unit.test.ts))
+- The `/auditing-product-decisions` skill invokes `/contextualizing` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.unit.py))
 
 ### Compliance
 

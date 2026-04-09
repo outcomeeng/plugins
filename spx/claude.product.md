@@ -2,12 +2,12 @@
 
 ## Why this product exists
 
-Solo developers using Claude Code need structured, spec-driven workflows that produce reliable implementations honoring specifications, tests, and architectural decisions.
+The Claude Plugin Marketplace provides the Spec Tree methodology for Outcome Engineering, establishing human-written specifications as the authoritative source of truth for product development.
 
 ## Product hypothesis
 
-WE BELIEVE THAT providing a plugin marketplace with skills for spec-driven development
-WILL reduce implementation rework by 60% through enforced context loading and test-driven flows
+WE BELIEVE THAT a plugin marketplace delivering Spec Tree methodology through skills for context loading, spec authoring, testing, and TDD implementation
+WILL reduce implementation rework by enforcing complete context and test-driven flows before any code is written
 CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted development
 
 ### Evidence of success
