@@ -101,6 +101,17 @@ def _update_list_section(
         exclude_list.append(entry)
 
 
+def _ensure_tool_exclude_list(
+    doc: tomlkit.TOMLDocument, tool_name: str
+) -> tomlkit.items.Array:
+    """Return ``[tool.{tool_name}] exclude`` array, creating the section if missing."""
+    tool_table = doc.setdefault("tool", tomlkit.table())
+    section = tool_table.setdefault(tool_name, tomlkit.table())  # type: ignore[union-attr]
+    if "exclude" not in section:  # type: ignore[operator]
+        section["exclude"] = tomlkit.array()  # type: ignore[index]
+    return section["exclude"]  # type: ignore[index,return-value]
+
+
 def sync(pyproject_path: Path, excluded_nodes: list[str]) -> bool:
     """Sync excluded nodes into pyproject.toml. Returns True if changes were made."""
     original = pyproject_path.read_text()
@@ -110,14 +121,14 @@ def sync(pyproject_path: Path, excluded_nodes: list[str]) -> bool:
     _update_pytest_addopts(doc, excluded_nodes)
 
     # 2. mypy exclude
-    mypy_exclude = doc["tool"]["mypy"]["exclude"]  # type: ignore[index]
+    mypy_exclude = _ensure_tool_exclude_list(doc, "mypy")
     mypy_entries = [to_mypy_regex(n) for n in excluded_nodes]
-    _update_list_section(mypy_exclude, mypy_entries)  # type: ignore[arg-type]
+    _update_list_section(mypy_exclude, mypy_entries)
 
     # 3. pyright exclude
-    pyright_exclude = doc["tool"]["pyright"]["exclude"]  # type: ignore[index]
+    pyright_exclude = _ensure_tool_exclude_list(doc, "pyright")
     pyright_entries = [to_pyright_path(n) for n in excluded_nodes]
-    _update_list_section(pyright_exclude, pyright_entries)  # type: ignore[arg-type]
+    _update_list_section(pyright_exclude, pyright_entries)
 
     updated = tomlkit.dumps(doc)
     if updated == original:

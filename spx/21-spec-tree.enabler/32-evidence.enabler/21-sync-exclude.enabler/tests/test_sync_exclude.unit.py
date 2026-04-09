@@ -36,6 +36,11 @@ exclude = []
 exclude = []
 """
 
+PYPROJECT_WITHOUT_MYPY_OR_PYRIGHT = """\
+[tool.pytest.ini_options]
+addopts = "-v --strict-markers"
+"""
+
 
 def _write_exclude(tmp_path: Path, content: str) -> Path:
     spx = tmp_path / "spx"
@@ -154,6 +159,29 @@ def test_idempotent_no_change(tmp_path: Path) -> None:
 
     assert changed is False
     assert pyproject.read_text() == content_after_first
+
+
+# ---------------------------------------------------------------------------
+# Scenario: pyproject.toml without [tool.mypy] or [tool.pyright] sections
+# ---------------------------------------------------------------------------
+
+
+def test_creates_missing_mypy_and_pyright_sections(tmp_path: Path) -> None:
+    pyproject = _write_pyproject(tmp_path, PYPROJECT_WITHOUT_MYPY_OR_PYRIGHT)
+    node = "76-risc-v.outcome"
+
+    changed = sync(pyproject, [node])
+
+    assert changed is True
+    doc = tomlkit.parse(pyproject.read_text())
+
+    # Missing [tool.mypy] section was created with exclude entry
+    mypy_exclude: list[str] = list(doc["tool"]["mypy"]["exclude"])  # type: ignore[index]
+    assert any("76\\-risc\\-v\\.outcome" in e for e in mypy_exclude)
+
+    # Missing [tool.pyright] section was created with exclude entry
+    pyright_exclude: list[str] = list(doc["tool"]["pyright"]["exclude"])  # type: ignore[index]
+    assert f"spx/{node}/" in pyright_exclude
 
 
 # ---------------------------------------------------------------------------
