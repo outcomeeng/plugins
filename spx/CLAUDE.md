@@ -139,8 +139,6 @@ Test level is encoded in the filename.
 | 2     | `test_{slug}.integration.py` | `test_cli.integration.py` |
 | 3     | `test_{slug}.e2e.py`         | `test_workflow.e2e.py`    |
 
-**Any test level can exist at any node.** The level describes what KIND of test, not where in the tree it lives.
-
 ---
 
 ## Assertion-Test Contract
