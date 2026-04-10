@@ -1,7 +1,8 @@
 """Unit tests for SKILL.md frontmatter validation.
 
-Tests the validate-skill-frontmatter.py script against the assertions
-in [skill-frontmatter.md](../skill-frontmatter.md).
+Tests the validate_skill_frontmatter.py wrapper and the vendored
+quick_validate.py against the assertions in
+[skill-frontmatter.md](../skill-frontmatter.md).
 """
 
 from __future__ import annotations
@@ -10,8 +11,6 @@ import textwrap
 from pathlib import Path
 
 from outcomeeng.scripts.validate_skill_frontmatter import (
-    STANDARD_FIELDS,
-    get_valid_fields,
     main,
     validate_file,
 )
@@ -22,8 +21,8 @@ from outcomeeng.scripts.validate_skill_frontmatter import (
 # ---------------------------------------------------------------------------
 
 
-def _write_skill(tmp_path: Path, content: str, filename: str = "SKILL.md") -> Path:
-    p = tmp_path / filename
+def _write_skill(tmp_path: Path, content: str) -> Path:
+    p = tmp_path / "SKILL.md"
     p.write_text(textwrap.dedent(content))
     return p
 
@@ -34,7 +33,7 @@ def _write_skill(tmp_path: Path, content: str, filename: str = "SKILL.md") -> Pa
 
 
 def test_standard_fields_accepted(tmp_path: Path) -> None:
-    skill = _write_skill(
+    _write_skill(
         tmp_path,
         """\
         ---
@@ -49,7 +48,28 @@ def test_standard_fields_accepted(tmp_path: Path) -> None:
         Body content here.
         """,
     )
-    errors = validate_file(skill, STANDARD_FIELDS)
+    errors = validate_file(tmp_path / "SKILL.md")
+    assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Scenario: Claude Code-specific field is accepted
+# ---------------------------------------------------------------------------
+
+
+def test_claude_code_field_accepted(tmp_path: Path) -> None:
+    _write_skill(
+        tmp_path,
+        """\
+        ---
+        name: my-skill
+        description: Does things
+        disable-model-invocation: true
+        ---
+        Body.
+        """,
+    )
+    errors = validate_file(tmp_path / "SKILL.md")
     assert errors == []
 
 
@@ -59,7 +79,7 @@ def test_standard_fields_accepted(tmp_path: Path) -> None:
 
 
 def test_unknown_field_produces_error(tmp_path: Path) -> None:
-    skill = _write_skill(
+    _write_skill(
         tmp_path,
         """\
         ---
@@ -70,26 +90,69 @@ def test_unknown_field_produces_error(tmp_path: Path) -> None:
         Body.
         """,
     )
-    errors = validate_file(skill, STANDARD_FIELDS)
+    errors = validate_file(tmp_path / "SKILL.md")
     assert len(errors) == 1
     assert "foo-bar" in errors[0]
 
 
 # ---------------------------------------------------------------------------
-# Scenario: no frontmatter produces no errors
+# Scenario: non-kebab-case name produces an error
 # ---------------------------------------------------------------------------
 
 
-def test_no_frontmatter_no_errors(tmp_path: Path) -> None:
-    skill = _write_skill(
+def test_bad_name_format_produces_error(tmp_path: Path) -> None:
+    _write_skill(
+        tmp_path,
+        """\
+        ---
+        name: My Skill
+        description: Does things
+        ---
+        Body.
+        """,
+    )
+    errors = validate_file(tmp_path / "SKILL.md")
+    assert len(errors) == 1
+    assert "My Skill" in errors[0]
+
+
+# ---------------------------------------------------------------------------
+# Scenario: angle brackets in description produce an error
+# ---------------------------------------------------------------------------
+
+
+def test_angle_brackets_in_description_produces_error(tmp_path: Path) -> None:
+    _write_skill(
+        tmp_path,
+        """\
+        ---
+        name: my-skill
+        description: Use <tags> for things
+        ---
+        Body.
+        """,
+    )
+    errors = validate_file(tmp_path / "SKILL.md")
+    assert len(errors) == 1
+    assert "angle bracket" in errors[0].lower()
+
+
+# ---------------------------------------------------------------------------
+# Scenario: no frontmatter produces an error
+# ---------------------------------------------------------------------------
+
+
+def test_no_frontmatter_produces_error(tmp_path: Path) -> None:
+    _write_skill(
         tmp_path,
         """\
         # Just markdown
         No frontmatter here.
         """,
     )
-    errors = validate_file(skill, STANDARD_FIELDS)
-    assert errors == []
+    errors = validate_file(tmp_path / "SKILL.md")
+    assert len(errors) == 1
+    assert "frontmatter" in errors[0].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -98,38 +161,15 @@ def test_no_frontmatter_no_errors(tmp_path: Path) -> None:
 
 
 def test_non_skill_file_skipped(tmp_path: Path) -> None:
-    _write_skill(
-        tmp_path,
-        """\
+    readme = tmp_path / "README.md"
+    readme.write_text(
+        textwrap.dedent("""\
         ---
         name: test
         description: test
         totally-bogus: yes
         ---
-        """,
-        filename="README.md",
+        """),
     )
-    # Pass the non-SKILL.md file to main() — it should be filtered out,
-    # producing exit code 0 (no errors) despite the bogus field.
-    exit_code = main([str(tmp_path / "README.md")], valid_fields=STANDARD_FIELDS)
+    exit_code = main([str(readme)])
     assert exit_code == 0
-
-
-# ---------------------------------------------------------------------------
-# Scenario: fallback to standard fields when binary unavailable
-# ---------------------------------------------------------------------------
-
-
-def test_fallback_when_binary_missing() -> None:
-    valid = get_valid_fields(binary_finder=lambda: None)
-    assert valid == STANDARD_FIELDS
-
-
-# ---------------------------------------------------------------------------
-# Scenario: fallback to standard fields when extraction fails
-# ---------------------------------------------------------------------------
-
-
-def test_fallback_when_extraction_fails() -> None:
-    valid = get_valid_fields(field_extractor=lambda _: None)
-    assert valid == STANDARD_FIELDS
