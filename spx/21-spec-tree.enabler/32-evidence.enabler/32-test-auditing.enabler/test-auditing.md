@@ -1,8 +1,8 @@
 # Test Auditing
 
-WE BELIEVE THAT an audit methodology verifying tests provide genuine evidence for spec assertions
-WILL eliminate phantom evidence (green CI with unfulfilled assertions) across all spec-tree projects
-CONTRIBUTING TO reduced rework and higher confidence in Spec Tree projects
+PROVIDES an audit methodology verifying tests provide genuine evidence for spec assertions
+SO THAT all spec-tree projects
+CAN eliminate phantom evidence (green CI with unfulfilled assertions)
 
 ## Test Evidence Model
 

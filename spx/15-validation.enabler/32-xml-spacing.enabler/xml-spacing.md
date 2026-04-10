@@ -1,10 +1,8 @@
 # XML Spacing
 
-WE BELIEVE THAT automatically fixing pseudo-XML tag spacing in markdown files before commit
-WILL eliminate formatting breakage caused by list items followed by closing tags
-CONTRIBUTING TO consistent skill rendering across all markdown parsers and formatters
-
-The `fix_xml_spacing.py` pre-commit hook adds blank lines before closing pseudo-XML tags that follow unordered lists, removes indentation from closing tags, and respects code fences.
+PROVIDES automatic fixing of pseudo-XML tag spacing in markdown files before commit
+SO THAT all skill authors
+CAN avoid formatting breakage caused by list items followed by closing tags
 
 ## Assertions
 

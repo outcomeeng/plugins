@@ -1,8 +1,8 @@
 # PDR Auditing
 
-WE BELIEVE THAT an audit methodology verifying PDRs establish enforceable product decisions that flow into spec assertions
-WILL eliminate unenforceable product decisions (compliance rules that no spec references) across all spec-tree projects
-CONTRIBUTING TO product decisions that actually govern behavior rather than existing as aspirational documents
+PROVIDES an audit methodology verifying PDRs establish enforceable product decisions that flow into spec assertions
+SO THAT all spec-tree projects
+CAN eliminate unenforceable product decisions before they accumulate
 
 ## PDR Evidence Model
 

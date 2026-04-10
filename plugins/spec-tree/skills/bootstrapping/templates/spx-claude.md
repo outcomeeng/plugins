@@ -25,12 +25,13 @@ spx/
     tests/                             # Co-located tests
     PLAN.md                            # Escape hatch: deferred plan (optional)
     ISSUES.md                          # Escape hatch: known issues (optional)
-    NN-{slug}.{enabler|outcome}/       # Children (any depth)
+    NN-{slug}.enabler/                 # Children: enablers only
   NN-{slug}.outcome/                   # Hypothesis + assertions
     {slug}.md                          # Spec file
     tests/                             # Co-located tests
     PLAN.md                            # Escape hatch: deferred plan (optional)
     ISSUES.md                          # Escape hatch: known issues (optional)
+    NN-{slug}.{enabler|outcome}/       # Children: enablers and outcomes
 ```
 
 ---
@@ -38,7 +39,7 @@ spx/
 ## Key Principles
 
 1. **Durable map**: Specs stay in place. Nothing moves because work is "done."
-2. **Two node types**: Enabler (infrastructure) and outcome (hypothesis + assertions). No other types.
+2. **Two node types**: Enabler (infrastructure, output is known) and outcome (hypothesis, output is a bet). Enablers can only contain enabler children. Outcomes can contain both.
 3. **Co-location**: Tests live with their spec in `tests/`.
 4. **Atemporal voice**: Specs state product truth. Never narrate history.
 5. **Deterministic context**: The tree path defines what context an agent receives.
@@ -68,8 +69,8 @@ For N=7: 21, 32, 43, 54, 65, 76, 87.
 
 | Wrong                  | Correct                                     |
 | ---------------------- | ------------------------------------------- |
-| "32-parser.outcome"    | "21-infra.enabler/32-parser.outcome"        |
-| "implement outcome-43" | "implement 21-infra.enabler/43-api.outcome" |
+| "32-parser.enabler"    | "21-infra.enabler/32-parser.enabler"        |
+| "implement enabler-43" | "implement 21-infra.enabler/43-api.enabler" |
 
 ---
 

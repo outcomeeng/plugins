@@ -1,6 +1,6 @@
 # Plan: update-spx implementation
 
-Concrete remaining steps to implement the [update-spx outcome](update-spx.md). Remove this file when all deliverables are in place and tests for the outcome are passing.
+Concrete remaining steps to implement the [update-spx enabler](update-spx.md). Remove this file when all deliverables are in place and tests are passing.
 
 ## Deliverables
 

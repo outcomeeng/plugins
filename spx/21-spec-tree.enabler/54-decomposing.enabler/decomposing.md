@@ -1,10 +1,8 @@
 # Decomposing
 
-WE BELIEVE THAT structured decomposition of nodes with too many assertions or independent concerns
-WILL reduce cognitive load per node and enable parallel implementation
-CONTRIBUTING TO faster development cycles and clearer spec-to-test mapping
-
-The `/decomposing` skill applies decomposition heuristics: assertion count thresholds, concern independence analysis, and depth guidelines.
+PROVIDES structured decomposition analysis for nodes with too many assertions or independent concerns
+SO THAT all spec authors
+CAN split nodes into focused children with clear scope boundaries
 
 ## Assertions
 

@@ -1,10 +1,8 @@
 # Refactoring
 
-WE BELIEVE THAT safe tree restructuring operations (move, re-scope, extract, consolidate)
-WILL keep the spec tree organized as the product evolves without losing context or breaking references
-CONTRIBUTING TO sustained navigability and reduced spec discovery friction
-
-The `/refactoring` skill handles node moves between parents, assertion re-scoping across nodes, shared enabler extraction, and duplicate consolidation.
+PROVIDES safe tree restructuring operations (move, re-scope, extract, consolidate)
+SO THAT all spec authors
+CAN reorganize the spec tree as the product evolves without losing context or breaking references
 
 ## Assertions
 

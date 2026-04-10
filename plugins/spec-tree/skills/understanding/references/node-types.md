@@ -30,7 +30,8 @@ See `templates/nodes/enabler-name.md` for the spec format.
 <outcome>
 
 **Directory suffix:** `.outcome`
-**Purpose:** Hypothesis connecting a testable output to a measurable change in user behavior and its expected business impact.
+**Spec opening:** `WE BELIEVE THAT ... WILL ... CONTRIBUTING TO ...`
+**Purpose:** A bet on which output achieves a desired user behavior change. The word "hypothesis" means genuine uncertainty — you don't know which output achieves it.
 
 The hypothesis has three parts:
 
@@ -40,15 +41,40 @@ The hypothesis has three parts:
 
 Assertions specify the **output** — not the outcome or impact. You can test what the software does; you can only hypothesize about the user behavior change and business value it leads to.
 
+**The key property of an outcome:** The majority of assertions could change while the hypothesis stays the same. A landing page that doesn't convert gets redesigned — different assertions, same outcome hypothesis. The hypothesis is stable; the output is experimental.
+
 **When to create an outcome:**
 
-- The behavior has direct or indirect user-facing value
-- You can express a hypothesis about what change its output produces
-- You can define assertions that specify the output
+- You cannot fully specify the output because the right design is uncertain
+- The same goal could be achieved by a fundamentally different set of assertions
+- You are making a bet: "this output will cause this behavior change"
+
+**When NOT to create an outcome:**
+
+- The output is fully determined by its specification (use an enabler)
+- The assertions are stable and grow only by addition (use an enabler)
+- You find yourself forcing the hypothesis (e.g., "WE BELIEVE THAT providing timestamps WILL cause agents to...") — if the hypothesis feels forced, the node is an enabler
 
 See `templates/nodes/outcome-name.md` for the spec format.
 
 </outcome>
+
+<nesting_rules>
+
+Only two parent-child combinations are valid for directory-level children (nodes):
+
+| Parent  | Valid child nodes     |
+| ------- | --------------------- |
+| Outcome | Enablers and outcomes |
+| Enabler | Enablers only         |
+
+Decision records (ADR/PDR) are files within a node directory, not child nodes. Both enablers and outcomes can contain `.adr.md` and `.pdr.md` files.
+
+**Enablers CANNOT contain outcome children.** An enabler provides infrastructure — its internals decompose into more infrastructure, never into bets. If a child has genuine uncertainty about which output achieves a desired behavior change, either the parent is mis-typed (should be an outcome) or the child is mis-typed (should be an enabler).
+
+**Diagnostic:** If you're placing an outcome under an enabler, ask whether the child's output is fully determined by its specification. If yes — if the assertions are stable and grow only by addition — it is an enabler. See `decomposition-semantics.md` for the full litmus test.
+
+</nesting_rules>
 
 <common_structure>
 

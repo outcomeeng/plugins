@@ -3,16 +3,16 @@
 # Linting (ruff) always applies.
 # Remove entries when implementation begins and tests should start running.
 
-21-spec-tree.enabler/15-context-loading.outcome
+21-spec-tree.enabler/15-context-loading.enabler
 21-spec-tree.enabler/21-templates.enabler
-21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.outcome
-21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.outcome
-21-spec-tree.enabler/43-update-spx.outcome
-21-spec-tree.enabler/54-authoring.outcome
-21-spec-tree.enabler/54-decomposing.outcome
-21-spec-tree.enabler/54-aligning.outcome
-21-spec-tree.enabler/54-refactoring.outcome
-21-spec-tree.enabler/54-bootstrapping.outcome
-21-spec-tree.enabler/65-applying.outcome
-21-spec-tree.enabler/65-committing.outcome
-21-spec-tree.enabler/76-sessions.outcome
+21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler
+21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler
+21-spec-tree.enabler/43-update-spx.enabler
+21-spec-tree.enabler/54-authoring.enabler
+21-spec-tree.enabler/54-decomposing.enabler
+21-spec-tree.enabler/54-aligning.enabler
+21-spec-tree.enabler/54-refactoring.enabler
+21-spec-tree.enabler/54-bootstrapping.enabler
+21-spec-tree.enabler/65-applying.enabler
+21-spec-tree.enabler/65-committing.enabler
+21-spec-tree.enabler/76-sessions.enabler

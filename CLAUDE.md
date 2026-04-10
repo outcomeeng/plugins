@@ -918,14 +918,14 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 ├── spx/                           # Specs as durable map
 │   ├── CLAUDE.md                 # Specs directory guide
 │   ├── 15-validation.enabler/
-│   ├── 21-context-loading.outcome/
 │   └── 21-spec-tree.enabler/
+│       ├── 15-context-loading.enabler/
 │       ├── 21-templates.enabler/
 │       ├── 32-decisions.enabler/
-│       │   └── 32-pdr-auditing.outcome/
+│       │   └── 32-pdr-auditing.enabler/
 │       └── 32-evidence.enabler/
 │           ├── 21-sync-exclude.enabler/
-│           └── 32-test-auditing.outcome/
+│           └── 32-test-auditing.enabler/
 └── CLAUDE.md                      # This file
 ```
 

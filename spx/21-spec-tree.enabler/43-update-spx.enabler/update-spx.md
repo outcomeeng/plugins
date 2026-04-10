@@ -1,8 +1,8 @@
 # Update spx/
 
-WE BELIEVE THAT detecting and applying updates to a project's `spx/CLAUDE.md` from the installed plugin template
-WILL reduce methodology drift and ensure agents in user projects have current skill and agent guidance
-CONTRIBUTING TO fewer skipped audits and correct subagent dispatch across the install base
+PROVIDES detection and application of updates to a project's `spx/CLAUDE.md` from the installed plugin template
+SO THAT all spec-tree projects
+CAN stay current with methodology changes without manual template tracking
 
 ## Assertions
 

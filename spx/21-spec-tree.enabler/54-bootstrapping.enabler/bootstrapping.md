@@ -1,10 +1,8 @@
 # Bootstrapping
 
-WE BELIEVE THAT an interactive bootstrapping flow that scaffolds an initial spec tree from user interviews
-WILL reduce the barrier to adopting the Spec Tree methodology in new projects
-CONTRIBUTING TO faster methodology adoption and consistent tree structure across projects
-
-The `/bootstrapping` skill interviews the user about their product, scaffolds the initial tree with a product spec and `spx/CLAUDE.md`, and recommends initial top-level nodes.
+PROVIDES an interactive bootstrapping flow that scaffolds an initial spec tree from user interviews
+SO THAT new projects
+CAN adopt the Spec Tree methodology with a consistent tree structure
 
 ## Assertions
 

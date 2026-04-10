@@ -1,10 +1,8 @@
 # Applying
 
-WE BELIEVE THAT an 8-phase TDD flow (architect, test, code + audit gates) driven by spec assertions
-WILL produce implementations that conform to their governing specs on the first pass
-CONTRIBUTING TO reduced implementation rework and higher spec-test-code alignment
-
-The `/applying` skill orchestrates: context loading, architecture (ADR if needed), test writing, implementation, and three audit gates (code, test evidence, architecture). The `applier` agent runs this flow autonomously as a subagent.
+PROVIDES an 8-phase TDD flow (architect, test, code + audit gates) driven by spec assertions
+SO THAT all implementation agents
+CAN produce implementations that conform to their governing specs on the first pass
 
 ## Assertions
 

@@ -248,6 +248,14 @@ Agent moved assertions between nodes and rewrote the source node's hypothesis to
 
 How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The spec tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
 
+**Failure 6: Dead code hidden by legacy tests**
+
+Agent planned to delete a set of legacy tests that duplicated newer spx/ tests. Coverage analysis showed deleting them dropped coverage on `src/foo/bar.ts` from 89% to 0%. The agent flagged it as a coverage gap to backfill. The real diagnosis: `src/foo/bar.ts` was dead code. Nothing in `src/` imported it. Its only consumer was the legacy test file the agent was about to delete. The legacy test was the sole reason the dead code "had coverage." Alongside it lived `src/commands/foo/bar.ts`, which reimplemented the same logic inline because no one noticed the pure module existed.
+
+When legacy tests are the only consumer of a `src/` module, that module is dead code. The duplication it conceals is architectural debt: either the code was never wired up, or it was replaced by an inline duplicate elsewhere without deleting the original. Deleting the legacy test is the correct move — but it must be accompanied by deleting the dead `src/` module (and consolidating the inline duplicate back into it, or vice versa).
+
+How to avoid: Before removing any legacy test that shows unique coverage, grep `src/` for consumers of every module the test imports. If the test is the only consumer, the module is dead. Do not backfill coverage for dead code — delete the dead code and consolidate any inline duplicates. This is a refactoring task (extract and unify), not a migration task.
+
 </failure_modes>
 
 <anti_patterns>

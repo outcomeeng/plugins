@@ -1,10 +1,8 @@
 # Aligning
 
-WE BELIEVE THAT systematic consistency checking across the spec tree
-WILL detect contradictions, gaps, and content misplacement before they reach implementation
-CONTRIBUTING TO reduced rework from specs that contradict their governing ADRs/PDRs
-
-The `/aligning` skill reviews specs for consistency with ancestor decision records, sibling specs, and content taxonomy rules.
+PROVIDES systematic consistency checking across the spec tree — structural conformance, atemporal voice, and content placement
+SO THAT all spec authors
+CAN detect contradictions, gaps, and content misplacement before they reach implementation
 
 ## Assertions
 

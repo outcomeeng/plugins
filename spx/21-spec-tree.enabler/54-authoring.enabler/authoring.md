@@ -1,10 +1,8 @@
 # Authoring
 
-WE BELIEVE THAT providing template-driven authoring of spec tree artifacts (product, ADR, PDR, enabler, outcome)
-WILL eliminate misplaced content and structural defects in new specs
-CONTRIBUTING TO higher first-pass spec quality and reduced alignment corrections
-
-The `/authoring` skill guides placement, index assignment, and content quality using templates from the `/understanding` foundation skill.
+PROVIDES template-driven authoring of spec tree artifacts (product specs, ADRs, PDRs, enabler nodes, outcome nodes)
+SO THAT all spec authors
+CAN create correctly structured artifacts with proper placement, indexing, and atemporal voice
 
 ## Assertions
 

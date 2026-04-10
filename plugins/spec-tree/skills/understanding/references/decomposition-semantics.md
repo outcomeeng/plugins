@@ -8,14 +8,48 @@ If it contains multiple concerns, decompose into child nodes. Each child is eith
 
 <enabler_vs_outcome>
 
-| Question                                                             | Answer  |
-| -------------------------------------------------------------------- | ------- |
-| Does it deliver user-facing value (directly or indirectly)?          | Outcome |
-| Does it exist only to serve other nodes?                             | Enabler |
-| Would you remove it if all its dependents were retired?              | Enabler |
-| Can you express a three-part hypothesis (output → outcome → impact)? | Outcome |
+The distinction is about **certainty**, not visibility or user-facing-ness.
 
-When unclear, default to **outcome**. Outcomes are the primary building blocks — each expresses a hypothesis connecting a testable output to a measurable change in user behavior and its expected business impact. Enablers emerge when you notice shared infrastructure across siblings.
+Both enablers and outcomes have assertions and tests. Both specify outputs. The question is: **do you know whether this output achieves the desired effect?**
+
+**Enabler:** The output is known. Context loading walks the tree deterministically. A parser transforms input to output according to a grammar. A validation pipeline checks fields against a schema. You can specify exactly what these things do and there's no question about whether they'll work — the specification IS the answer.
+
+**Outcome:** The output is a hypothesis — a bet. A landing page converts visitors — but *which* landing page design maximizes conversion? You don't know. The three-part hypothesis exists because you're making a bet: this output will produce this behavior change, contributing to this business impact. You might be wrong.
+
+### Litmus test
+
+Ask two questions about the node:
+
+1. **Could the majority of assertions change while the goal stays the same?** Yes → **Outcome.** The assertions are a bet. If the landing page doesn't convert, you redesign it — different assertions, same outcome hypothesis. The hypothesis is stable; the output is experimental.
+
+2. **Is the goal statement a behavior change you could be *wrong* about, or a capability you're guaranteeing?** If you could be wrong → **Outcome.** If you're guaranteeing a capability whose output is fully determined → **Enabler.** This catches the ambiguous case: a node whose assertions are mostly stable but whose goal is framed as a user behavior change. If the goal is "increase conversion," you could be wrong about whether this output achieves it. If the goal is "validate frontmatter fields," you're guaranteeing a capability — there's nothing to be wrong about.
+
+### The forcing question
+
+Try to write it as an enabler first. PROVIDES X SO THAT Y CAN Z. If you find yourself weakening the PROVIDES statement to accommodate assertions that don't follow from it, or adding a hedge ("WE BELIEVE..."), the node is an outcome. Use an outcome only when you *cannot* write it as an enabler because the right output is uncertain.
+
+If the forcing question still leaves you uncertain, **default to enabler.** Most nodes in a spec tree are enablers. Outcomes are rare — they exist where genuine product uncertainty lives. Don't inflate enablers into outcomes by forcing a hypothesis.
+
+### Common mistake
+
+Treating "user-facing" as the criterion. A CLI command users invoke directly can still be an enabler if its behavior is fully determined. A background process can be an outcome if the right internal design is a genuine bet about user behavior.
+
+### Decomposing outcomes
+
+When a parent node is an outcome and you are decomposing it, not every child is an outcome. Apply the forcing question to each child. If it can be written as PROVIDES X SO THAT Y CAN Z, it's an enabler. A child is an outcome only if it has its own genuine uncertainty — a separate bet about which output achieves a desired behavior change. If the child exists to serve the parent outcome (by providing identity, storage, lifecycle, or any internal capability) and its output is fully determined, it is an **enabler**.
+
+This means a typical complex feature has **one outcome at the top** and everything below it is enablers. The outcome is the product bet ("agents adopt CLI handoffs instead of manual file editing"). The enablers are the machinery that makes the bet testable ("session identity," "atomic claiming," "CLI surface"). Do not inflate internal decomposition into fake outcomes.
+
+### Decomposing enablers
+
+When a parent node is an enabler and you are decomposing it, **children are always enablers** (or decision records). An enabler decomposes into more infrastructure, never into bets. See `node-types.md` `<nesting_rules>` for the full constraint.
+
+If you find a child under an enabler that seems to need an outcome hypothesis, one of two things is wrong:
+
+- The parent should be an outcome (it carries genuine uncertainty), or
+- The child's output is actually fully determined and should be written as an enabler
+
+To resolve: apply the forcing question to the parent. If the parent cannot be written as PROVIDES X SO THAT Y CAN Z without forcing it, retype the parent as an outcome.
 
 </enabler_vs_outcome>
 

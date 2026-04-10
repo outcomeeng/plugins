@@ -1,10 +1,8 @@
 # Sessions
 
-WE BELIEVE THAT conversation handoff and pickup via timestamped session documents
-WILL enable work continuity across Claude Code sessions without context loss
-CONTRIBUTING TO uninterrupted development flow and reduced context re-discovery time
-
-The `/handoff` command creates a timestamped session document capturing tree state, active work, and deferred items. The `/pickup` command loads a session and resumes work. Sessions are stored in `.spx/sessions/` (gitignored, separate from the spec tree).
+PROVIDES conversation handoff and pickup via timestamped session documents
+SO THAT all Claude Code sessions
+CAN maintain work continuity without context loss
 
 ## Assertions
 

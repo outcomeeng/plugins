@@ -127,9 +127,10 @@ Before drafting, gather what's needed for the artifact type:
 - Which siblings depend on it?
 - What assertions specify its output?
 
-**Outcome:**
+**Outcome (gate — answer the forcing question before proceeding):**
 
-- What is the three-part hypothesis?
+- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md`: try to write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
+- Only if the forcing question confirms genuine uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
   - Impact: business value
@@ -170,6 +171,8 @@ Before writing files, check:
 
 - [ ] Correct artifact type for the content
 - [ ] Placed in the right directory at the right index
+- [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` `<nesting_rules>` section)
+- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it should be an enabler (see `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
 - [ ] Atemporal voice throughout — no temporal markers
@@ -281,6 +284,14 @@ Common temporal patterns from user input and their atemporal rewrites:
 - TEMPORAL: "After investigating performance issues, we decided to add caching."
 - ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in ADR-22."
 
+**Failure 6: Junk-drawer container names**
+
+Agent created a parent outcome named "advanced operations" that grouped prune, archive, and "future retention features." Six months later the same directory held archive, prune, dry-run, batch deletion, and a new hypothesis for session compaction — unrelated concerns glued together by a name that accepted anything.
+
+A container name must describe what the container contains. If the name would accept arbitrary future scope ("advanced", "core", "misc", "utilities", "helpers", "operations"), it is wrong — the agent who added the next feature will find a plausible reason to drop it in.
+
+How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the honest answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
+
 </failure_modes>
 
 <anti_patterns>
@@ -294,6 +305,8 @@ Common temporal patterns from user input and their atemporal rewrites:
 **Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs have compliance rules (MUST/NEVER) verified by review, not by tests.
 
 **Numbering from 1.** Indices start at 10+ and use the sparse distribution formula. Never use single-digit indices.
+
+**Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. If your parent spec reads "X provides A, B, and C (these are the child nodes)", you have written a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualizing` walk the tree to surface children.
 
 </anti_patterns>
 

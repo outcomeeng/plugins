@@ -1,10 +1,8 @@
 # Committing
 
-WE BELIEVE THAT a commit workflow enforcing Conventional Commits with selective staging
-WILL produce atomic, well-described commits that map cleanly to spec tree changes
-CONTRIBUTING TO traceable git history and easier change review
-
-The `/committing-changes` skill guides commit message structure, scope selection, and staged file review. The `/commit` command invokes it with auto-detected context.
+PROVIDES a commit workflow enforcing Conventional Commits with selective staging
+SO THAT all developers
+CAN produce atomic, well-described commits that map cleanly to spec tree changes
 
 ## Assertions
 

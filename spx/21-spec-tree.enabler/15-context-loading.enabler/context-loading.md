@@ -1,8 +1,8 @@
 # Context Loading
 
-WE BELIEVE THAT loading complete spec-tree context deterministically before any implementation work
-WILL eliminate implementations that miss requirements or violate architectural decisions
-CONTRIBUTING TO reduced rework and higher first-pass implementation quality
+PROVIDES deterministic context loading that walks the tree from product root to target, collecting all ancestor specs, lower-index sibling specs, and ADRs/PDRs
+SO THAT all implementation and authoring skills
+CAN operate with complete, verified context before any work begins
 
 ## Assertions
 

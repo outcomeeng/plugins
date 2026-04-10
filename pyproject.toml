@@ -27,39 +27,39 @@ python-preference = "only-managed"
 testpaths = ["spx", "tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --import-mode=importlib --ignore=spx/21-spec-tree.enabler/15-context-loading.outcome/ --ignore=spx/21-spec-tree.enabler/21-templates.enabler/ --ignore=spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.outcome/ --ignore=spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.outcome/ --ignore=spx/21-spec-tree.enabler/43-update-spx.outcome/ --ignore=spx/21-spec-tree.enabler/54-authoring.outcome/ --ignore=spx/21-spec-tree.enabler/54-decomposing.outcome/ --ignore=spx/21-spec-tree.enabler/54-aligning.outcome/ --ignore=spx/21-spec-tree.enabler/54-refactoring.outcome/ --ignore=spx/21-spec-tree.enabler/54-bootstrapping.outcome/ --ignore=spx/21-spec-tree.enabler/65-applying.outcome/ --ignore=spx/21-spec-tree.enabler/65-committing.outcome/ --ignore=spx/21-spec-tree.enabler/76-sessions.outcome/"
+addopts = "-v --tb=short --import-mode=importlib --ignore=spx/21-spec-tree.enabler/15-context-loading.enabler/ --ignore=spx/21-spec-tree.enabler/21-templates.enabler/ --ignore=spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/ --ignore=spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler/ --ignore=spx/21-spec-tree.enabler/43-update-spx.enabler/ --ignore=spx/21-spec-tree.enabler/54-authoring.enabler/ --ignore=spx/21-spec-tree.enabler/54-decomposing.enabler/ --ignore=spx/21-spec-tree.enabler/54-aligning.enabler/ --ignore=spx/21-spec-tree.enabler/54-refactoring.enabler/ --ignore=spx/21-spec-tree.enabler/54-bootstrapping.enabler/ --ignore=spx/21-spec-tree.enabler/65-applying.enabler/ --ignore=spx/21-spec-tree.enabler/65-committing.enabler/ --ignore=spx/21-spec-tree.enabler/76-sessions.enabler/"
 pythonpath = ["."]
 
 [tool.mypy]
 exclude = [
-  "^spx/21\\-spec\\-tree\\.enabler/15\\-context\\-loading\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/21\\-templates\\.enabler/",
-  "^spx/21\\-spec\\-tree\\.enabler/32\\-decisions\\.enabler/32\\-pdr\\-auditing\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/32\\-evidence\\.enabler/32\\-test\\-auditing\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/43\\-update\\-spx\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/54\\-authoring\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/54\\-decomposing\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/54\\-aligning\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/54\\-refactoring\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/54\\-bootstrapping\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/65\\-applying\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/65\\-committing\\.outcome/",
-  "^spx/21\\-spec\\-tree\\.enabler/76\\-sessions\\.outcome/",
+    "^spx/21\\-spec\\-tree\\.enabler/15\\-context\\-loading\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/21\\-templates\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/32\\-decisions\\.enabler/32\\-pdr\\-auditing\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/32\\-evidence\\.enabler/32\\-test\\-auditing\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/43\\-update\\-spx\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/54\\-authoring\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/54\\-decomposing\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/54\\-aligning\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/54\\-refactoring\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/54\\-bootstrapping\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/65\\-applying\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/65\\-committing\\.enabler/",
+    "^spx/21\\-spec\\-tree\\.enabler/76\\-sessions\\.enabler/"
 ]
 
 [tool.pyright]
 exclude = [
-  "spx/21-spec-tree.enabler/15-context-loading.outcome/",
-  "spx/21-spec-tree.enabler/21-templates.enabler/",
-  "spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.outcome/",
-  "spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.outcome/",
-  "spx/21-spec-tree.enabler/43-update-spx.outcome/",
-  "spx/21-spec-tree.enabler/54-authoring.outcome/",
-  "spx/21-spec-tree.enabler/54-decomposing.outcome/",
-  "spx/21-spec-tree.enabler/54-aligning.outcome/",
-  "spx/21-spec-tree.enabler/54-refactoring.outcome/",
-  "spx/21-spec-tree.enabler/54-bootstrapping.outcome/",
-  "spx/21-spec-tree.enabler/65-applying.outcome/",
-  "spx/21-spec-tree.enabler/65-committing.outcome/",
-  "spx/21-spec-tree.enabler/76-sessions.outcome/",
+    "spx/21-spec-tree.enabler/15-context-loading.enabler/",
+    "spx/21-spec-tree.enabler/21-templates.enabler/",
+    "spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/",
+    "spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler/",
+    "spx/21-spec-tree.enabler/43-update-spx.enabler/",
+    "spx/21-spec-tree.enabler/54-authoring.enabler/",
+    "spx/21-spec-tree.enabler/54-decomposing.enabler/",
+    "spx/21-spec-tree.enabler/54-aligning.enabler/",
+    "spx/21-spec-tree.enabler/54-refactoring.enabler/",
+    "spx/21-spec-tree.enabler/54-bootstrapping.enabler/",
+    "spx/21-spec-tree.enabler/65-applying.enabler/",
+    "spx/21-spec-tree.enabler/65-committing.enabler/",
+    "spx/21-spec-tree.enabler/76-sessions.enabler/"
 ]
