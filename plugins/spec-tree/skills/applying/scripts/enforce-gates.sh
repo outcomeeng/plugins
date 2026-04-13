@@ -11,7 +11,7 @@ case "$SKILL" in
     jq -n '{
       "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
-        "additionalContext": "GATE: Architecture phase complete. Invoke the architecture auditing skill NOW before proceeding to Phase 5 (tests)."
+        "additionalContext": "GATE: Architecture step complete. Invoke the architecture auditing skill NOW before proceeding to Step 5 (tests)."
       }
     }'
     ;;
@@ -19,7 +19,7 @@ case "$SKILL" in
     jq -n '{
       "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
-        "additionalContext": "GATE: Testing phase complete. Invoke the test auditing skill NOW before proceeding to Phase 7 (implementation)."
+        "additionalContext": "GATE: Testing step complete. Invoke the test auditing skill NOW before proceeding to Step 7 (implementation)."
       }
     }'
     ;;
@@ -27,7 +27,7 @@ case "$SKILL" in
     jq -n '{
       "hookSpecificOutput": {
         "hookEventName": "PostToolUse",
-        "additionalContext": "GATE: Implementation phase complete. Invoke the code auditing skill NOW before declaring done."
+        "additionalContext": "GATE: Implementation step complete. Invoke the code auditing skill NOW before declaring done."
       }
     }'
     ;;

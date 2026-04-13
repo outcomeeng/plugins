@@ -38,7 +38,7 @@ If `$ARGUMENTS` contains `--agent`, extract the node path from the remaining arg
 Agent tool → { "subagent_type": "spec-tree:applier", "prompt": "Apply the spec-tree TDD flow to node: {node-path}" }
 ```
 
-The agent runs the full 8-phase flow autonomously and returns when complete. Stop here — do not continue to Step 1.
+The agent runs the full 8-step flow autonomously and returns when complete. Stop here — do not continue to Step 1.
 
 ## Step 1: Determine the work queue
 
@@ -58,7 +58,7 @@ For each node path, in order:
 
 **3a. Remove from EXCLUDE**
 
-If the node is listed in `spx/EXCLUDE`, remove its line. Then run the project's sync command (defined in `spx/CLAUDE.md`) so the node's tests join the quality gate.
+If the node is listed in `spx/EXCLUDE`, remove its line. The `spx` CLI will automatically include the node's tests in subsequent `spx test passing` runs.
 
 **3b. Load context**
 
@@ -72,7 +72,7 @@ Skill tool → { "skill": "spec-tree:contextualizing", "args": "spx/{node-path}"
 Skill tool → { "skill": "spec-tree:applying" }
 ```
 
-This runs the full 8-phase flow: methodology, context, architect, audit, test, audit, implement, audit.
+This runs the full 8-step flow: methodology, context, architect, audit, test, audit, implement, audit.
 
 **3d. Commit the applied node**
 
@@ -89,7 +89,7 @@ Do NOT stop or ask the user. Proceed immediately to the next node.
 If a node's TDD flow fails (audit gate rejects after max retries, tests won't pass, or implementation blocked):
 
 - STOP the loop — do not skip to the next node
-- Report which node failed and at which phase
+- Report which node failed and at which step
 - Leave remaining nodes in `spx/EXCLUDE`
 
 ## Step 5: Report

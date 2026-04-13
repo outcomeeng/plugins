@@ -64,7 +64,7 @@ The session files are Markdown files within subdirectories of the base `.spx/ses
 
 <workflow>
 
-## Phase 1: Claim session
+## Step 1: Claim session
 
 ### Default (no arguments)
 
@@ -104,7 +104,7 @@ Check if `$ARGUMENTS` contains `--list` to activate list mode.
        "header": "Handoff",
        "multiSelect": false,
        "options": [
-         { "label": "2026-03-29 14:22 [high] (test-harness)", "description": "TDD phase 7 on 43-fixtures.enabler — tests written, implementation needed" },
+         { "label": "2026-03-29 14:22 [high] (test-harness)", "description": "TDD step 7 on 43-fixtures.enabler — tests written, implementation needed" },
          { "label": "2026-03-28 09:15 [medium] (auth)", "description": "Spec authoring on 32-auth.outcome — assertions need review" }
        ]
      }]
@@ -116,9 +116,9 @@ Check if `$ARGUMENTS` contains `--list` to activate list mode.
    spx session pickup <selected-session-id>
    ```
 
-## Phase 2: Present skills checklist
+## Step 2: Present skills checklist
 
-**This phase comes BEFORE loading node context.** The skills checklist tells the agent what to invoke and what to avoid.
+**This step comes BEFORE loading node context.** The skills checklist tells the agent what to invoke and what to avoid.
 
 Read the `<skills>` section from the session file and present it prominently:
 
@@ -140,7 +140,7 @@ List each missed skill with what went wrong.
 
 Show the recommended skill and TDD flow position.
 
-## Phase 3: Load node context
+## Step 3: Load node context
 
 For each node in the `<nodes>` section:
 
@@ -156,7 +156,7 @@ For each node in the `<nodes>` section:
 3. **Suggest context loading**:
    "To load full spec context for this node, invoke `/contextualizing {node-path}`"
 
-## Phase 4: Present persisted artifacts
+## Step 4: Present persisted artifacts
 
 Show the `<persisted>` section:
 
@@ -165,7 +165,7 @@ Show the `<persisted>` section:
 - What insights were written to CLAUDE.md/memory/skills
 - What escape hatches were written and where
 
-## Phase 5: Present coordination context
+## Step 5: Present coordination context
 
 Show the `<coordination>` section — cross-cutting context that does not belong to any single node. This may include:
 
@@ -174,7 +174,7 @@ Show the `<coordination>` section — cross-cutting context that does not belong
 - Environment or setup requirements
 - Open questions or pending decisions
 
-## Phase 6: Invoke /contextualizing (MANDATORY)
+## Step 6: Invoke /contextualizing (MANDATORY)
 
 **Do NOT offer the user a choice here. Do NOT propose fixing bugs, writing code, or any other work.**
 

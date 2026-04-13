@@ -72,7 +72,7 @@ claude plugin marketplace update outcomeeng
 
 ### spec-tree
 
-The core of [Outcome Engineering](https://outcome.engineering). Three phases: spec-tree maintenance, implementation, commit.
+The core of [Outcome Engineering](https://outcome.engineering). Three steps: **declare** (write specs), **spec** (write tests), **apply** (write implementation). Audit gates operate within each step.
 
 <details>
 <summary><strong><code>/bootstrap</code> in action</strong> — interactive product interview and scaffold</summary>
@@ -88,30 +88,30 @@ The core of [Outcome Engineering](https://outcome.engineering). Three phases: sp
 
 </details>
 
-| Type    | Name                    | Phase | Purpose                                                            |
-| ------- | ----------------------- | ----- | ------------------------------------------------------------------ |
-| Skill   | `/understanding`        | 1     | Foundation skill — loaded before any other                         |
-| Skill   | `/contextualizing`      | 1     | Deterministic context loading from tree                            |
-| Skill   | `/bootstrapping`        | 1     | Interview user, scaffold new spec tree                             |
-| Skill   | `/authoring`            | 1     | Add, define, create specs and nodes                                |
-| Skill   | `/decomposing`          | 1     | Break down, split, scope work                                      |
-| Skill   | `/refactoring`          | 1     | Move nodes, re-scope, extract shared enablers                      |
-| Skill   | `/aligning`             | 1     | Review, check consistency, audit, find gaps                        |
-| Skill   | `/testing`              | 2     | Write tests driven by spec assertions                              |
-| Skill   | `/auditing-tests`       | 2     | Audit test evidence: coupling, falsifiability, alignment, coverage |
-| Skill   | `/applying`             | 2     | TDD flow: architect, test, code + audit gates                      |
-| Skill   | `/committing-changes`   | 3     | Conventional Commits with selective staging                        |
-| Agent   | `applier`               |       | Autonomous TDD agent — runs the full 8-phase flow                  |
-| Agent   | `test-evidence-auditor` |       | Test evidence audit subagent (preloads auditing skill)             |
-| Agent   | `pdr-auditor`           |       | PDR audit subagent (preloads auditing skill)                       |
-| Command | `/bootstrap`            |       | Set up a new spec tree                                             |
-| Command | `/author`               |       | Author a spec tree artifact (auto-detects type)                    |
-| Command | `/commit`               |       | Git commit with Conventional Commits                               |
-| Command | `/apply`                |       | Run TDD flow on a subtree or from `spx/EXCLUDE`                    |
-| Command | `/rtfm`                 |       | Stop ad hoc work, follow methodology                               |
-| Command | `/clarify`              |       | Clarify ambiguous requirements                                     |
-| Command | `/handoff`              |       | Create timestamped context handoff                                 |
-| Command | `/pickup`               |       | Load and continue from previous handoff                            |
+| Type    | Name                    | Step    | Purpose                                                 |
+| ------- | ----------------------- | ------- | ------------------------------------------------------- |
+| Skill   | `/understanding`        | declare | Foundation skill — loaded before any other              |
+| Skill   | `/contextualizing`      | declare | Deterministic context loading from tree                 |
+| Skill   | `/bootstrapping`        | declare | Interview user, scaffold new spec tree                  |
+| Skill   | `/authoring`            | declare | Add, define, create specs and nodes                     |
+| Skill   | `/decomposing`          | declare | Break down, split, scope work                           |
+| Skill   | `/refactoring`          | declare | Move nodes, re-scope, extract shared enablers           |
+| Skill   | `/aligning`             | declare | Check consistency, conformance, find gaps (audit gate)  |
+| Skill   | `/testing`              | spec    | Write tests driven by spec assertions                   |
+| Skill   | `/auditing-tests`       | spec    | Audit test evidence quality (audit gate)                |
+| Skill   | `/applying`             | *all*   | Orchestrator: declare + spec + apply with audit gates   |
+| Skill   | `/committing-changes`   | apply   | Conventional Commits with selective staging             |
+| Agent   | `applier`               |         | Autonomous TDD agent — runs the full flow as a subagent |
+| Agent   | `test-evidence-auditor` |         | Test evidence audit subagent (preloads auditing skill)  |
+| Agent   | `pdr-auditor`           |         | PDR audit subagent (preloads auditing skill)            |
+| Command | `/bootstrap`            |         | Set up a new spec tree                                  |
+| Command | `/author`               |         | Author a spec tree artifact (auto-detects type)         |
+| Command | `/commit`               |         | Git commit with Conventional Commits                    |
+| Command | `/apply`                |         | Run TDD flow on a subtree or from `spx/EXCLUDE`         |
+| Command | `/rtfm`                 |         | Stop ad hoc work, follow methodology                    |
+| Command | `/clarify`              |         | Clarify ambiguous requirements                          |
+| Command | `/handoff`              |         | Create timestamped context handoff                      |
+| Command | `/pickup`               |         | Load and continue from previous handoff                 |
 
 ### typescript
 

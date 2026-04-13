@@ -6,20 +6,22 @@ All skills in this document belong to the `spec-tree` plugin. Skill names have n
 
 ## Design principles
 
-The `spec-tree` plugin covers three phases with distinct concerns:
+Three methodology steps drive all work. Audit gates operate within each step. See `plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative reference.
 
-1. **Spec-tree** — creating and maintaining the spec tree (the product structure itself).
-2. **Implementation** — using the spec tree to build software (TDD flow driven by specs).
-3. **Commit** — recording results into version control.
+1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
+2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
+3. **Apply** — write implementation code that makes tests pass. Node becomes Passing.
 
-Within these phases:
+Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`, not durable artifacts.
+
+Within these steps:
 
 - Foundation skills load once per conversation using marker pattern (no persistent state).
 - `understanding` is the single shared library: methodology, structure, templates.
 - `contextualizing` handles deterministic context injection from tree structure.
 - Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
 - `testing` and `auditing-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
-- `coding` orchestrates the TDD flow: architecture, tests, code — with review gates at each phase.
+- `applying` orchestrates the full declare → spec → apply flow with audit gates at each step.
 - `committing-changes` enforces Conventional Commits with selective staging and atomic commits.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
@@ -28,7 +30,7 @@ Within these phases:
 
 Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec and its tests. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-test drift.
 
-Every node begins with an outcome hypothesis — a belief about what change it will produce. Assertions define testable claims about the output. Nodes progress through four states: **Spec** (spec only), **Potential** (spec + tests, implementation not started), **Failing** (implementation exists but tests fail), and **Realized** (tests pass).
+Every node begins with an outcome hypothesis — a belief about what change it will produce. Assertions define testable claims about the output. Nodes progress through four states: **Declared** (spec only), **Specified** (spec + tests, implementation not started), **Failing** (implementation exists but tests fail), and **Passing** (tests pass).
 
 The tree structure enables deterministic context injection: the path from root to any node defines exactly what context an agent receives, replacing heuristic search with curated, reviewable context.
 
@@ -38,7 +40,7 @@ The tree structure enables deterministic context injection: the path from root t
 - **Enabler nodes** (`.enabler`) — infrastructure that higher-index nodes depend on
 - **Outcome nodes** (`.outcome`) — hypotheses with testable assertions
 - **Deterministic context injection** — tree structure defines agent context
-- **Four node states** — Spec → Potential → Failing → Realized
+- **Four node states** — Declared → Specified → Failing → Passing
 
 ### Node types
 
@@ -108,12 +110,12 @@ A node's state is derived from what exists and whether tests pass:
 
 | State         | Condition                                  | What it means                        |
 | ------------- | ------------------------------------------ | ------------------------------------ |
-| **Spec**      | Spec exists, no tests                      | Intent defined, no evidence yet      |
-| **Potential** | Spec + tests exist, implementation doesn't | Tests excluded via `spx/EXCLUDE`     |
+| **Declared**  | Spec exists, no tests                      | Intent defined, no evidence yet      |
+| **Specified** | Spec + tests exist, implementation doesn't | Tests excluded via `spx/EXCLUDE`     |
 | **Failing**   | Spec + tests + implementation, tests fail  | Reality hasn't caught up to the spec |
-| **Realized**  | Spec + tests + implementation, tests pass  | Evidence confirms the spec           |
+| **Passing**   | Spec + tests + implementation, tests pass  | Evidence confirms the spec           |
 
-Potential and failing are natural, healthy states. They are not problems to fix urgently.
+Specified and failing are natural, healthy states. They are not problems to fix urgently.
 
 ### Deterministic context injection
 
@@ -129,7 +131,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 ## Intent model (use cases)
 
-### Phase 1: Spec-tree — creating and maintaining the product structure
+### Declare — write specs, decisions, and assertions
 
 #### 1. Understand Spec Tree context
 
@@ -159,7 +161,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 6a. Clarify/augment/align/deconflict artifacts while preserving product truth.
 
-### Phase 2: Implementation — using the spec tree to build software
+### Spec — write tests that make assertions verifiable
 
 #### 7. Write tests driven by spec assertions
 
@@ -175,13 +177,13 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 8c. Cross-cutting assertion review: evidence at the right place for assertions at ancestor nodes?
 8d. Decision record compliance from full ancestor chain.
 
+### Apply — write implementation and commit
+
 #### 9. Implement work items using TDD flow
 
-9a. Orchestrate architecture → test → code phases with review gates.
+9a. Orchestrate architecture → test → code steps with review gates.
 9b. Load methodology and work item context as prerequisites.
-9c. Delegate to language-specific plugins for each phase.
-
-### Phase 3: Commit — recording results into version control
+9c. Delegate to language-specific plugins for each step.
 
 #### 10. Commit changes
 
@@ -189,9 +191,9 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 ## Skill map
 
-### Phase 1: Spec-tree
+### Declare
 
-Skills for creating and maintaining the spec tree itself.
+Skills for building and maintaining the durable map — specs, decisions, assertions.
 
 #### Foundation layer
 
@@ -214,46 +216,44 @@ Action skills do the work. Before starting, they check conversation history for 
 | `refactoring`   | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
 | `aligning`      | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
 
-### Phase 2: Implementation
+### Spec
 
-Skills for using the spec tree to build software. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
+Skills for writing tests that make assertions verifiable. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
 
-| Skill            | Use case | Scope                                                                | Builds on             | Status      |
-| ---------------- | -------- | -------------------------------------------------------------------- | --------------------- | ----------- |
-| `testing`        | 7        | Write tests driven by spec assertions, evidence gap analysis         | `test/testing`        | Implemented |
-| `auditing-tests` | 8        | Adversarial review of test evidence against spec assertions          | `test/auditing-tests` | Implemented |
-| `coding`         | 9        | TDD flow: architecture → test → code with review gates at each phase | —                     | Implemented |
+| Skill            | Use case | Scope                                                        | Builds on             | Status      |
+| ---------------- | -------- | ------------------------------------------------------------ | --------------------- | ----------- |
+| `testing`        | 7        | Write tests driven by spec assertions, evidence gap analysis | `test/testing`        | Implemented |
+| `auditing-tests` | 8        | Adversarial review of test evidence against spec assertions  | `test/auditing-tests` | Implemented |
 
 `spec-tree:testing` is a **superset** of `test/testing`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:testing`; a non-spec-tree user invokes `test/testing`. No cross-plugin dependency at runtime.
 
 `spec-tree:auditing-tests` is a **superset** of `test/auditing-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
 
-`spec-tree:applying` orchestrates the TDD flow. Phases 1–2 load methodology and context via Phase 1 foundation skills. Phases 3–8 delegate to language-specific plugins (Python or TypeScript) for architecture, testing, and implementation — each with a review gate that loops until approved.
+### Apply
 
-### Phase 3: Commit
-
-Skills for recording results into version control.
+Skills for writing implementation code and committing results. `applying` is an orchestrator that spans all three steps (declare → spec → apply) with audit gates — it exists because agents skip declaring prerequisites without guardrails.
 
 | Skill                | Use case | Scope                                                          | Status      |
 | -------------------- | -------- | -------------------------------------------------------------- | ----------- |
+| `applying`           | 9        | Orchestrator: declare → spec → apply with audit gates          | Implemented |
 | `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits | Implemented |
 
 ### Commands
 
 Commands provide dynamic context injection and invoke the corresponding skill.
 
-| Command    | Phase | Invokes              | Purpose                                                       |
-| ---------- | ----- | -------------------- | ------------------------------------------------------------- |
-| `/clarify` | 1     | —                    | Gather requirements through questioning before acting         |
-| `/handoff` | 1     | —                    | Create timestamped handoff for session continuity             |
-| `/pickup`  | 1     | —                    | Load handoff document to continue previous work               |
-| `/apply`   | 2     | `applying`           | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
-| `/rtfm`    | 2     | `applying`           | Stop ad hoc work, restart proper TDD flow                     |
-| `/commit`  | 3     | `committing-changes` | Git commit with auto-injected branch/status/diff              |
+| Command    | Step    | Invokes              | Purpose                                                       |
+| ---------- | ------- | -------------------- | ------------------------------------------------------------- |
+| `/clarify` | declare | —                    | Gather requirements through questioning before acting         |
+| `/handoff` | —       | —                    | Create timestamped handoff for session continuity             |
+| `/pickup`  | —       | —                    | Load handoff document to continue previous work               |
+| `/apply`   | *all*   | `applying`           | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
+| `/rtfm`    | *all*   | `applying`           | Stop ad hoc work, restart proper TDD flow                     |
+| `/commit`  | apply   | `committing-changes` | Git commit with auto-injected branch/status/diff              |
 
 ## Ownership model
 
-### Phase 1: Spec-tree
+### Declare
 
 - **`understanding`** is the single shared library for all Spec Tree knowledge:
   - Durable map worldview (specs are permanent product documentation)
@@ -269,7 +269,7 @@ Commands provide dynamic context injection and invoke the corresponding skill.
   - Bootstrap mode: returns empty manifest with `bootstrap=true` when authoring into an empty tree (no abort)
 - **Action skills** (`authoring`, `decomposing`, `refactoring`, `aligning`) do not duplicate foundation content. They reference `understanding` for templates and methodology.
 
-### Phase 2: Implementation
+### Spec
 
 - **`testing`** owns spec-tree test writing (superset of `test/testing`):
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
@@ -277,19 +277,18 @@ Commands provide dynamic context injection and invoke the corresponding skill.
   - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are broken
   - Generates test scaffolds from assertion types (Scenario → example-based, Property → property-based, etc.)
   - Loads deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests
-- **`auditing-tests`** owns spec-tree test review (superset of `test/auditing-tests`):
+- **`auditing-tests`** owns spec-tree test review (audit gate within spec step):
   - Incorporates full adversarial review protocol (4 phases, binary verdict)
   - Tree-level coverage: are all assertions across a subtree covered? Orphaned test files?
   - Cross-cutting assertion review: evidence at the right place for ancestor-level assertions
   - Decision record compliance from full ancestor chain (not just manually found ADRs/PDRs)
-- **`coding`** owns the TDD implementation flow:
-  - 8-phase orchestration: methodology → context → architect → review → test → review → implement → review
-  - Phases 1–2 reuse Phase 1 foundation skills (`understanding`, `contextualizing`)
-  - Phases 3–8 delegate to language-specific plugins (Python or TypeScript)
+
+### Apply
+
+- **`applying`** orchestrates the full declare → spec → apply flow:
+  - Spans all three steps because agents skip declaring prerequisites without guardrails
+  - Delegates to language-specific plugins (Python or TypeScript) for architecture, testing, and implementation
   - Three review gates that loop until approved — no exceptions
-
-### Phase 3: Commit
-
 - **`committing-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
@@ -297,12 +296,12 @@ Commands provide dynamic context injection and invoke the corresponding skill.
 
 ## Marker-based state detection
 
-Phase 1 foundation skills emit XML markers into the conversation when loaded. All skills that depend on spec-tree context — Phase 1 action skills and Phase 2 skills (`testing`, `auditing-tests`, `coding`) — check for these markers before starting work. Phase 3 (`committing-changes`) operates independently and does not check markers. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
+Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`committing-changes`) operate independently. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
 
-| Marker                                   | Emitted by        | Checked by                                | Meaning                              |
-| ---------------------------------------- | ----------------- | ----------------------------------------- | ------------------------------------ |
-| `<SPEC_TREE_FOUNDATION>`                 | `understanding`   | Phase 1 action skills, all Phase 2 skills | Methodology and templates are loaded |
-| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualizing` | Phase 1 action skills, all Phase 2 skills | Target artifacts are loaded          |
+| Marker                                   | Emitted by        | Checked by                         | Meaning                              |
+| ---------------------------------------- | ----------------- | ---------------------------------- | ------------------------------------ |
+| `<SPEC_TREE_FOUNDATION>`                 | `understanding`   | Declare action skills, spec skills | Methodology and templates are loaded |
+| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualizing` | Declare action skills, spec skills | Target artifacts are loaded          |
 
 **Decision rule:**
 
@@ -339,7 +338,7 @@ Action skills reference templates with: `Read: ${UNDERSTANDING_DIR}/templates/no
 
 ## Conversational flow contract
 
-Phase 1 spec-tree action skills follow this interaction contract:
+Declare action skills follow this interaction contract:
 
 1. **Intake** -- Ask for target path/scope and intended operation.
 2. **Foundation gate** -- Check for `<SPEC_TREE_FOUNDATION>` marker; invoke `understanding` if absent.
@@ -349,13 +348,13 @@ Phase 1 spec-tree action skills follow this interaction contract:
 6. **Evidence gate** -- Verify spec assertions have test evidence. (Placeholder — not yet active.)
 7. **Deliver** -- Summarize changes, decisions, and next actions.
 
-Phase 2 (`coding`) has its own 8-phase flow that reuses steps 1–3 internally. Phase 3 (`committing-changes`) has no dependency on spec-tree foundations.
+`applying` has its own 8-step flow that reuses steps 1–3 internally. `committing-changes` has no dependency on spec-tree foundations.
 
 ## Mode-specific flows
 
-### Phase 1: Spec-tree
+### Declare
 
-Each flow documents only what is unique to that mode. All Phase 1 action skills share the standard preflight (steps 1–3) and postflight (steps 6–7) from the conversational flow contract above.
+Each flow documents only what is unique to that mode. All declare action skills share the standard preflight (steps 1–3) and postflight (steps 6–7) from the conversational flow contract above.
 
 #### `understanding`
 
@@ -414,7 +413,7 @@ Each flow documents only what is unique to that mode. All Phase 1 action skills 
 4. Apply clarification or deconfliction updates.
 5. Validate cross-node consistency and report unresolved conflicts.
 
-### Phase 2: Implementation
+### Spec
 
 #### `testing`
 
@@ -439,18 +438,20 @@ Superset of `test/auditing-tests`. Incorporates the full adversarial review prot
 6. Decision record compliance from full ancestor chain loaded via `contextualizing` (not just manually found ADRs/PDRs).
 7. Binary verdict: APPROVED or REJECT. No middle ground.
 
-#### `coding`
+### Apply
+
+#### `applying`
+
+Orchestrates the full declare → spec → apply flow. Spans all three steps because agents skip declaring prerequisites without guardrails.
 
 1. Load methodology via `understanding` (once per session).
 2. Load work item context via `contextualizing` (every node).
 3. Architect: produce ADR via language-specific `/architecting-[language]` skill.
-4. Review architecture via `/reviewing-[language]-architecture` — loop until APPROVED.
+4. Review architecture via `/auditing-[language]-architecture` — loop until APPROVED.
 5. Test: write tests via `/testing-[language]` skill.
-6. Review tests via `/reviewing-[language]-tests` — loop until APPROVED.
+6. Review tests via `/auditing-[language]-tests` — loop until APPROVED.
 7. Implement: write code via `/coding-[language]` skill.
-8. Review code via `/reviewing-[language]` — loop until APPROVED.
-
-### Phase 3: Commit
+8. Review code via `/auditing-[language]` — loop until APPROVED.
 
 #### `committing-changes`
 

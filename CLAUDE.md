@@ -37,7 +37,7 @@ The Outcome Engineering methodology has evolved through three generations. Only 
 - ⚠️ **Python skill examples use `product.*` / `product_testing.*`** - Not `src.*` or `src_testing.*`. The `src` convention is ambiguous across Python ecosystems; `product` is unambiguous and signals "the thing we're building"
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
-- ⚠️ **Work plans MUST include audit gates** - After each structural phase (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across phases.
+- ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
 
 - ✅ **Always use `just run test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
@@ -365,32 +365,40 @@ Complete Python development workflow with testing, implementation, and review.
 
 ## Spec Tree Plugin
 
-The Spec Tree methodology for Outcome Engineering. Three phases: spec-tree maintenance, implementation, commit.
+The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative methodology reference.
+
+| Step        | What happens                  | Node state after |
+| ----------- | ----------------------------- | ---------------- |
+| **Declare** | Write spec (assertions)       | Declared         |
+| **Spec**    | Write tests (make verifiable) | Specified        |
+| **Apply**   | Write implementation code     | Passing          |
+
+Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a durable artifact.
 
 ### Skills
 
-| Skill                         | Phase | Purpose                                                                     |
-| ----------------------------- | ----- | --------------------------------------------------------------------------- |
-| `/understanding`              | 1     | Foundation skill — loaded before any other                                  |
-| `/contextualizing`            | 1     | Show status, progress, what exists                                          |
-| `/bootstrapping`              | 1     | Interview user, scaffold new spec tree                                      |
-| `/authoring`                  | 1     | Add, define, create specs, decisions, and nodes                             |
-| `/decomposing`                | 1     | Break down, split, scope work                                               |
-| `/refactoring`                | 1     | Move nodes, re-scope, extract shared enablers                               |
-| `/aligning`                   | 1     | Review, check consistency, audit, find gaps                                 |
-| `/testing`                    | 2     | Write tests driven by spec assertions (superset of legacy plugin)           |
-| `/auditing-tests`             | 2     | Audit test evidence quality: coupling, falsifiability, alignment, coverage  |
-| `/auditing-product-decisions` | 2     | Audit PDR evidence: content, invariants, compliance, voice, downstream flow |
-| `/applying`                   | 2     | TDD flow: architect, test, code + audit gates                               |
-| `/committing-changes`         | 3     | Conventional Commits with selective staging                                 |
+| Skill                         | Step    | Purpose                                                                |
+| ----------------------------- | ------- | ---------------------------------------------------------------------- |
+| `/understanding`              | declare | Foundation skill — loaded before any other                             |
+| `/contextualizing`            | declare | Deterministic context loading from tree                                |
+| `/bootstrapping`              | declare | Interview user, scaffold new spec tree                                 |
+| `/authoring`                  | declare | Add, define, create specs, decisions, and nodes                        |
+| `/decomposing`                | declare | Break down, split, scope work                                          |
+| `/refactoring`                | declare | Move nodes, re-scope, extract shared enablers                          |
+| `/aligning`                   | declare | Check consistency, conformance, find gaps (audit gate)                 |
+| `/testing`                    | spec    | Write tests driven by spec assertions (superset of legacy plugin)      |
+| `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                               |
+| `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                |
+| `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates |
+| `/committing-changes`         | apply   | Conventional Commits with selective staging                            |
 
 ### Agents
 
-| Agent                   | Purpose                                                         |
-| ----------------------- | --------------------------------------------------------------- |
-| `applier`               | Autonomous TDD agent — runs the full 8-phase flow as a subagent |
-| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)    |
-| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill)  |
+| Agent                   | Purpose                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| `applier`               | Autonomous TDD agent — runs the full 8-step flow as a subagent |
+| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)   |
+| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill) |
 
 ### Commands
 

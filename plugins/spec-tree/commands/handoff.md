@@ -35,7 +35,7 @@ allowed-tools:
 
 Handoff is **proper session closure**, not note-taking. The agent must reflect deeply on what it learned before persisting anything — five structured perspectives force introspection that produces the right persistence decisions. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
 
-**Reflect, then persist, then hand off.** The reflection (Phase 2) is the most important phase. Without it, the agent will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection phase catches and fixes them.
+**Reflect, then persist, then hand off.** The reflection (Step 2) is the most important step. Without it, the agent will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection step catches and fixes them.
 
 </objective>
 
@@ -105,7 +105,7 @@ The session files are Markdown files within subdirectories of the base `.spx/ses
 
 <arguments>
 
-**`--no-session`**: Run the full reflection and persistence protocol (phases 1–3) but skip session file creation in phase 4. All approved items are persisted to their durable targets (specs, CLAUDE.md, skills, memory, escape hatches). Unapproved items are dropped — there is no session file to hold them.
+**`--no-session`**: Run the full reflection and persistence protocol (steps 1–3) but skip session file creation in step 4. All approved items are persisted to their durable targets (specs, CLAUDE.md, skills, memory, escape hatches). Unapproved items are dropped — there is no session file to hold them.
 
 Use `--no-session` (or the `/release` alias) when closing a session without handing off to another agent — the work is either complete or the durable persistence is sufficient for any future agent to reconstruct context via `/contextualizing`.
 
@@ -119,14 +119,14 @@ Check for flags: `$ARGUMENTS` will contain `--no-session` and/or `--prune` if pr
 
 <workflow>
 
-## Phase 1: Anchor to nodes
+## Step 1: Anchor to nodes
 
 Scan the conversation for spec-tree nodes that were worked on. For each node, record:
 
 - Full path (e.g., `spx/21-foo.enabler/32-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)
 - Test status (passing, failing, not yet written)
-- TDD flow position if applicable (phase 1-8 per `/applying` skill)
+- TDD flow position if applicable (step 1-8 per `/applying` skill)
 
 **If NO spec-tree nodes were involved in this session**, use `AskUserQuestion`:
 
@@ -145,11 +145,11 @@ Scan the conversation for spec-tree nodes that were worked on. For each node, re
 }
 ```
 
-If "Create a node now" → invoke `/authoring` to create the node, then return to this phase.
+If "Create a node now" → invoke `/authoring` to create the node, then return to this step.
 
-## Phase 2: Reflect
+## Step 2: Reflect
 
-**Work through all five perspectives internally before presenting anything to the user.** This is the most important phase — it produces the input for everything that follows. Do not rush. Do not skip perspectives.
+**Work through all five perspectives internally before presenting anything to the user.** This is the most important step — it produces the input for everything that follows. Do not rush. Do not skip perspectives.
 
 For each perspective, think about what you learned, what changed, and what the next agent needs. Check existing escape hatches (PLAN.md, ISSUES.md) against current reality — stale escape hatches are worse than none.
 
@@ -188,7 +188,7 @@ What is broken, missing, or wrong?
 
 For each deficiency:
 
-1. **Can you fix it right now?** Stale references, broken links, wrong paths, simple corrections — fix them immediately using Edit/Grep. Do not propose them in Phase 3. Do not ask the user. Just fix them and note what you fixed.
+1. **Can you fix it right now?** Stale references, broken links, wrong paths, simple corrections — fix them immediately using Edit/Grep. Do not propose them in Step 3. Do not ask the user. Just fix them and note what you fixed.
 2. **Is the fix too large for this session?** Write or update ISSUES.md in the node directory.
 3. **Is a spec assertion wrong?** Fix the spec directly — this is a durable fix.
 
@@ -224,12 +224,12 @@ Which skills did you invoke, which should you have invoked, and which does the n
 Where exactly should the next agent begin?
 
 - **Node path** — full path to the node (e.g., `spx/21-foo.enabler/32-bar.outcome`)
-- **TDD flow position** — which phase (1-8) per the `/applying` skill
+- **TDD flow position** — which step (1-8) per the `/applying` skill
 - **First action** — the specific skill invocation that resumes work
 
-## Phase 3: Propose persistence plan
+## Step 3: Propose persistence plan
 
-**Only items that require user approval appear here.** Deficiencies you already fixed in Phase 2 are done — report them as completed work, not as proposals. The proposal contains lessons (methodology/CLAUDE.md/memory changes), deferred issues (ISSUES.md), and plan updates (PLAN.md) — things where the user should verify the target is correct.
+**Only items that require user approval appear here.** Deficiencies you already fixed in Step 2 are done — report them as completed work, not as proposals. The proposal contains lessons (methodology/CLAUDE.md/memory changes), deferred issues (ISSUES.md), and plan updates (PLAN.md) — things where the user should verify the target is correct.
 
 Present the combined output of all five perspectives as a single `AskUserQuestion` with `multiSelect: true`. Group items by type:
 
@@ -260,15 +260,15 @@ Present the combined output of all five perspectives as a single `AskUserQuestio
 
 This lets the user verify at a glance that each lesson is going to the right place.
 
-Items the user selects are written in Phase 4. Items the user does not select are included in the session file's `<coordination>` section as ephemeral context — or dropped entirely if `--no-session` is set.
+Items the user selects are written in Step 4. Items the user does not select are included in the session file's `<coordination>` section as ephemeral context — or dropped entirely if `--no-session` is set.
 
 **AskUserQuestion is limited to 4 options.** If there are more than 3 actionable items, batch them by perspective (one question per perspective with items as options). The "[Skip]" option always appears as the last option in the last question.
 
-## Phase 4: Execute and hand off
+## Step 4: Execute and hand off
 
 ### Step 1: Write approved persistence items
 
-For each approved item from Phase 3:
+For each approved item from Step 3:
 
 - **Spec amendments**: Edit the spec file directly
 - **CLAUDE.md / memory / skill updates**: Write the insight
@@ -295,7 +295,7 @@ For each anchored node, check `git status` and record what is committed vs uncom
 
 3. **Read the session file** to confirm it exists and is empty.
 
-4. **Write the session file** using the format in the `<session_format>` section. The `<skills>` section comes from Perspective 4, the `<nodes>` section from Perspective 5, and the `<coordination>` section from unapproved items in Phase 3.
+4. **Write the session file** using the format in the `<session_format>` section. The `<skills>` section comes from Perspective 4, the `<nodes>` section from Perspective 5, and the `<coordination>` section from unapproved items in Step 3.
 
 5. **Archive claimed session** (if found in step 1):
    ```bash
@@ -353,7 +353,7 @@ Spec-tree nodes worked on. The receiving agent should invoke
 
 ## Next action
 - [skill to invoke] — [what to do and why]
-- TDD flow position: phase [N] ([phase name]) on `spx/{node-path}`
+- TDD flow position: step [N] ([step name]) on `spx/{node-path}`
 
 </skills>
 
@@ -383,14 +383,14 @@ Only include information that CANNOT be derived from the spec tree or git histor
 
 <example>
 
-**Phase 1: Identify anchored nodes**
+**Step 1: Identify anchored nodes**
 
 Nodes worked on:
 
 - `spx/21-test-harness.enabler/32-temp-files.enabler` — tests written and passing, implementation complete
 - `spx/21-test-harness.enabler/43-fixtures.enabler` — spec authored, tests written but failing
 
-**Phase 2: Reflect**
+**Step 2: Reflect**
 
 Agent works through all five perspectives internally:
 
@@ -398,9 +398,9 @@ Agent works through all five perspectives internally:
 2. **Deficiencies**: No existing ISSUES.md. The `43-fixtures.enabler` spec has 5 assertions but 2 are untestable without the implementation — not a deficiency, just the TDD sequence.
 3. **Insights**: Existing PLAN.md in `43-fixtures.enabler` is stale — steps 1-3 are complete, only steps 4-5 remain. The approach (context managers over explicit cleanup) was validated and should stay.
 4. **Skills**: Used `/testing-python`, skipped `/coding-python` on first attempt which caused import violations. Next agent must invoke `/coding-python` before writing implementation.
-5. **Starting point**: `43-fixtures.enabler`, TDD phase 7 (implement), invoke `/coding-python`.
+5. **Starting point**: `43-fixtures.enabler`, TDD step 7 (implement), invoke `/coding-python`.
 
-**Phase 3: Propose persistence plan**
+**Step 3: Propose persistence plan**
 
 Agent presents:
 
@@ -416,7 +416,7 @@ AskUserQuestion (multiSelect: true):
 
 User approves first three items.
 
-**Phase 4: Execute and hand off**
+**Step 4: Execute and hand off**
 
 1. Writes CLAUDE.md entry (absolute imports), adds tempfile caveat to `coding-python/references/`
 2. Updates PLAN.md — removes steps 1-3, keeps steps 4-5
@@ -470,7 +470,7 @@ Spec-tree nodes worked on. The receiving agent should invoke
 
 ## Next action
 - `/coding-python` — continue TDD flow for fixtures enabler
-- TDD flow position: phase 7 (implement) on `spx/21-test-harness.enabler/43-fixtures.enabler`
+- TDD flow position: step 7 (implement) on `spx/21-test-harness.enabler/43-fixtures.enabler`
 
 </skills>
 

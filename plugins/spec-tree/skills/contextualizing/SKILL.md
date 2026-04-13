@@ -34,18 +34,18 @@ This is full injection — every collected document is read into the conversatio
 
 <workflow>
 
-<phase name="gate">
+<step name="gate">
 
-**Phase GATE: Check foundation**
+**Step GATE: Check foundation**
 
 Check conversation for `<SPEC_TREE_FOUNDATION>` marker.
-If absent → STOP. Invoke `/understanding` first, then resume from Phase 0.
+If absent → STOP. Invoke `/understanding` first, then resume from Step 0.
 
-</phase>
+</step>
 
-<phase name="locate">
+<step name="locate">
 
-**Phase 0: Locate target node**
+**Step 0: Locate target node**
 
 ```bash
 # Find the product file
@@ -64,11 +64,11 @@ If the target path doesn't exist:
 
 Extract the path segments from product root to target. Each segment is a directory to walk.
 
-</phase>
+</step>
 
-<phase name="product">
+<step name="product">
 
-**Phase 1: Load product-level context**
+**Step 1: Load product-level context**
 
 ```bash
 # Read product spec
@@ -86,11 +86,11 @@ Glob: "spx/*-*.pdr.md"
 
 **Verification**: Count files returned by globs. Count files actually read. These must match.
 
-</phase>
+</step>
 
-<phase name="walk">
+<step name="walk">
 
-**Phase 2: Walk the tree from root to target**
+**Step 2: Walk the tree from root to target**
 
 For each directory along the path from product root to the target node:
 
@@ -130,11 +130,11 @@ Lower-index siblings' ADRs/PDRs are NOT read — only the sibling's spec itself.
 
 Siblings with the same index as the target are independent — they neither constrain nor are constrained by the target. List them but do not read.
 
-</phase>
+</step>
 
-<phase name="target">
+<step name="target">
 
-**Phase 3: Load target node context**
+**Step 3: Load target node context**
 
 ```bash
 # Read target spec
@@ -157,11 +157,11 @@ Glob: "spx/{target-path}/ISSUES.md"
 
 **If PLAN.md or ISSUES.md exist, read them.** These are non-durable escape hatches left by previous agents via `/handoff`. They contain deferred plans or known issues that the next agent must be aware of.
 
-</phase>
+</step>
 
-<phase name="summary">
+<step name="summary">
 
-**Phase 4: Emit context marker and summary**
+**Step 4: Emit context marker and summary**
 
 Emit the `<SPEC_TREE_CONTEXT>` marker with all collected information:
 
@@ -194,7 +194,7 @@ Higher-index siblings (depend on target): {list}
 </SPEC_TREE_CONTEXT>
 ```
 
-</phase>
+</step>
 
 </workflow>
 

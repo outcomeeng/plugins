@@ -12,54 +12,54 @@ hooks:
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight phases, strictly sequential. Three review gates that loop until APPROVED — no exceptions, no soft passes.
+Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential. Three review gates that loop until APPROVED — no exceptions, no soft passes. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
 
 </objective>
 
 <quick_start>
 
-1. Load methodology (Phase 1 — once per session)
-2. Load work item context (Phase 2 — every node)
-3. Architect → audit until APPROVED (Phases 3–4)
-4. Test → audit until APPROVED (Phases 5–6)
-5. Implement → audit until APPROVED (Phases 7–8)
+1. Load methodology (Step 1 — once per session)
+2. Load work item context (Step 2 — every node)
+3. Architect → audit until APPROVED (Steps 3–4)
+4. Test → audit until APPROVED (Steps 5–6)
+5. Implement → audit until APPROVED (Steps 7–8)
 
 </quick_start>
 
 <language_detection>
 
-Before starting Phase 3, determine the project language:
+Before starting Step 3, determine the project language:
 
 - `tsconfig.json` exists → **TypeScript**
 - `pyproject.toml` or `setup.py` exists → **Python**
 - Both exist → check the spec node for language indicators, or ask the user
 
-Use the detected language for ALL Phases 3–8. Do not switch mid-flow.
+Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
 
 </language_detection>
 
 <skill_map>
 
-Phases 1–2 are language-independent. Phases 3–8 use the detected language.
+Steps 1–2 are language-independent. Steps 3–8 use the detected language.
 
-| Phase | Purpose            | TypeScript                                                | Python                                  |
-| ----- | ------------------ | --------------------------------------------------------- | --------------------------------------- |
-| 1     | Load methodology   | `Skill("spec-tree:understanding")`                        | same                                    |
-| 2     | Load context       | `Skill("spec-tree:contextualizing", args: "{node-path}")` | same                                    |
-| 3     | Architect          | `Skill("architecting-typescript")`                        | `Skill("architecting-python")`          |
-| 4     | Architecture audit | `Skill("auditing-typescript-architecture")`               | `Skill("auditing-python-architecture")` |
-| 5     | Write tests        | `Skill("testing-typescript")`                             | `Skill("testing-python")`               |
-| 6     | Test audit         | `Skill("auditing-typescript-tests")`                      | `Skill("auditing-python-tests")`        |
-| 7     | Implement          | `Skill("coding-typescript")`                              | `Skill("coding-python")`                |
-| 8     | Code audit         | `Skill("auditing-typescript")`                            | `Skill("auditing-python")`              |
+| Step | Purpose            | TypeScript                                                | Python                                  |
+| ---- | ------------------ | --------------------------------------------------------- | --------------------------------------- |
+| 1    | Load methodology   | `Skill("spec-tree:understanding")`                        | same                                    |
+| 2    | Load context       | `Skill("spec-tree:contextualizing", args: "{node-path}")` | same                                    |
+| 3    | Architect          | `Skill("architecting-typescript")`                        | `Skill("architecting-python")`          |
+| 4    | Architecture audit | `Skill("auditing-typescript-architecture")`               | `Skill("auditing-python-architecture")` |
+| 5    | Write tests        | `Skill("testing-typescript")`                             | `Skill("testing-python")`               |
+| 6    | Test audit         | `Skill("auditing-typescript-tests")`                      | `Skill("auditing-python-tests")`        |
+| 7    | Implement          | `Skill("coding-typescript")`                              | `Skill("coding-python")`                |
+| 8    | Code audit         | `Skill("auditing-typescript")`                            | `Skill("auditing-python")`              |
 
 **You MUST invoke the exact Skill tool call shown.** Do not substitute, skip, or reorder.
 
 </skill_map>
 
-<phases>
+<steps>
 
-<phase number="1" name="Load methodology" frequency="once per session">
+<step number="1" name="Load methodology" frequency="once per session">
 
 Invoke `/understanding`.
 
@@ -67,9 +67,9 @@ This loads the spec-tree methodology — node types, assertion formats, durable 
 
 **Do not proceed until complete.**
 
-</phase>
+</step>
 
-<phase number="2" name="Load work item context" frequency="every node">
+<step number="2" name="Load work item context" frequency="every node">
 
 Invoke `/contextualizing` with the node path.
 
@@ -79,65 +79,65 @@ Load the full context hierarchy for the specific node — parent chain, sibling 
 
 **Do not proceed until complete.**
 
-</phase>
+</step>
 
-<phase number="3" name="Architect">
+<step number="3" name="Architect">
 
 Invoke the architecting skill for the detected language.
 
 Produce the ADR(s) for the work item. The architecture must be complete before audit.
 
-</phase>
+</step>
 
-<phase number="4" name="Architecture audit" gate="true">
+<step number="4" name="Architecture audit" gate="true">
 
 Invoke the architecture audit skill for the detected language.
 
-**REJECT → fix → re-invoke this phase.** Loop until APPROVED.
+**REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
-</phase>
+</step>
 
-<phase number="5" name="Write tests">
+<step number="5" name="Write tests">
 
 Invoke the testing skill for the detected language.
 
 Write tests for all assertions in the spec. Tests come before implementation — no exceptions.
 
-</phase>
+</step>
 
-<phase number="6" name="Test audit" gate="true">
+<step number="6" name="Test audit" gate="true">
 
 Invoke the test audit skill for the detected language.
 
-**REJECT → fix → re-invoke this phase.** Loop until APPROVED.
+**REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
-</phase>
+</step>
 
-<phase number="7" name="Implement">
+<step number="7" name="Implement">
 
 Invoke the coding skill for the detected language.
 
-Write implementation code. All tests from Phase 5 must pass.
+Write implementation code. All tests from Step 5 must pass.
 
-</phase>
+</step>
 
-<phase number="8" name="Code audit" gate="true">
+<step number="8" name="Code audit" gate="true">
 
 Invoke the code audit skill for the detected language.
 
-**REJECT → fix → re-invoke this phase.** Loop until APPROVED.
+**REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
-</phase>
+</step>
 
-</phases>
+</steps>
 
 <review_gates>
 
-Phases 4, 6, and 8 are blocking review gates. Each audit skill emits `APPROVED` or `REJECT`.
+Steps 4, 6, and 8 are blocking review gates. Each audit skill emits `APPROVED` or `REJECT`.
 
-- Before starting Phase 5: scan the conversation for the Phase 4 verdict. If `APPROVED` is not present, stop — invoke Phase 4.
-- Before starting Phase 7: scan the conversation for the Phase 6 verdict. If `APPROVED` is not present, stop — invoke Phase 6.
-- Before declaring success: scan the conversation for the Phase 8 verdict. If `APPROVED` is not present, stop — invoke Phase 8.
+- Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
+- Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
+- Before declaring success: scan the conversation for the Step 8 verdict. If `APPROVED` is not present, stop — invoke Step 8.
 
 On `REJECT`: fix the findings, re-invoke the same audit skill, and scan again.
 
@@ -160,11 +160,11 @@ This is not slower. The ad hoc script you were about to write takes the same eff
 
 Scan the conversation for these markers before declaring done:
 
-- [ ] `SPEC_TREE_FOUNDATION` marker present (Phase 1)
-- [ ] `SPEC_TREE_CONTEXT` marker present (Phase 2)
-- [ ] Phase 4 audit skill emitted `APPROVED`
-- [ ] Phase 6 audit skill emitted `APPROVED`
-- [ ] Phase 8 audit skill emitted `APPROVED`
+- [ ] `SPEC_TREE_FOUNDATION` marker present (Step 1)
+- [ ] `SPEC_TREE_CONTEXT` marker present (Step 2)
+- [ ] Step 4 audit skill emitted `APPROVED`
+- [ ] Step 6 audit skill emitted `APPROVED`
+- [ ] Step 8 audit skill emitted `APPROVED`
 - [ ] All tests pass
 
 </success_criteria>

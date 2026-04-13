@@ -44,14 +44,14 @@ Invoke the applying skill NOW:
 Skill tool → { "skill": "spec-tree:applying" }
 ```
 
-This runs the full 8-phase TDD flow: methodology → context → architect → audit → test → audit → implement → audit. Follow it from Phase 1.
+This runs the full 8-step TDD flow: methodology → context → architect → audit → test → audit → implement → audit. Follow it from Step 1.
 
 </process>
 
 <success_criteria>
 
 - Ad hoc work stopped
-- Applying skill invoked and proper flow started from Phase 1
+- Applying skill invoked and proper flow started from Step 1
 - No throwaway scripts or debug code committed
 
 </success_criteria>

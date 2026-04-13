@@ -154,13 +154,13 @@ The skill extracts typed assertions from the spec, determines what test evidence
 
 ## 6. Implement with TDD
 
-The `/apply` command starts the full TDD flow — architecture, tests, then code — with review gates at each phase:
+The `/apply` command starts the full TDD flow — architecture, tests, then code — with review gates at each step:
 
 ```text
 > /apply spx/21-auth.outcome
 ```
 
-This invokes the `/applying` skill, which orchestrates 8 phases:
+This invokes the `/applying` skill, which orchestrates 8 steps:
 
 1. Load methodology (`/understanding`)
 2. Load work item context (`/contextualizing`)
@@ -240,11 +240,11 @@ If you catch yourself writing code without specs, debugging without tests, or sk
 > /rtfm
 ```
 
-This stops the current ad hoc work and restarts the proper TDD flow from Phase 1. It's a corrective command — use it when you realize you're off track.
+This stops the current ad hoc work and restarts the proper TDD flow from Step 1. It's a corrective command — use it when you realize you're off track.
 
 ## Workflow summary
 
-| Phase         | What you do                                       | Command/Skill                    |
+| Step          | What you do                                       | Command/Skill                    |
 | ------------- | ------------------------------------------------- | -------------------------------- |
 | **Setup**     | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx` |
 | **Bootstrap** | Create spec tree for your product                 | `/bootstrap`                     |
