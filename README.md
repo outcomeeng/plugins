@@ -97,6 +97,7 @@ The core of [Outcome Engineering](https://outcome.engineering). Three steps: **d
 | Skill   | `/decomposing`          | declare | Break down, split, scope work                           |
 | Skill   | `/refactoring`          | declare | Move nodes, re-scope, extract shared enablers           |
 | Skill   | `/aligning`             | declare | Check consistency, conformance, find gaps (audit gate)  |
+| Skill   | `/interviewing`         | declare | Domain-agnostic interview methodology                   |
 | Skill   | `/testing`              | spec    | Write tests driven by spec assertions                   |
 | Skill   | `/auditing-tests`       | spec    | Audit test evidence quality (audit gate)                |
 | Skill   | `/applying`             | *all*   | Orchestrator: declare + spec + apply with audit gates   |

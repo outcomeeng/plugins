@@ -377,20 +377,21 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 
 ### Skills
 
-| Skill                         | Step    | Purpose                                                                |
-| ----------------------------- | ------- | ---------------------------------------------------------------------- |
-| `/understanding`              | declare | Foundation skill — loaded before any other                             |
-| `/contextualizing`            | declare | Deterministic context loading from tree                                |
-| `/bootstrapping`              | declare | Interview user, scaffold new spec tree                                 |
-| `/authoring`                  | declare | Add, define, create specs, decisions, and nodes                        |
-| `/decomposing`                | declare | Break down, split, scope work                                          |
-| `/refactoring`                | declare | Move nodes, re-scope, extract shared enablers                          |
-| `/aligning`                   | declare | Check consistency, conformance, find gaps (audit gate)                 |
-| `/testing`                    | spec    | Write tests driven by spec assertions (superset of legacy plugin)      |
-| `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                               |
-| `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                |
-| `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates |
-| `/committing-changes`         | apply   | Conventional Commits with selective staging                            |
+| Skill                         | Step    | Purpose                                                                 |
+| ----------------------------- | ------- | ----------------------------------------------------------------------- |
+| `/understanding`              | declare | Foundation skill — loaded before any other                              |
+| `/contextualizing`            | declare | Deterministic context loading from tree                                 |
+| `/bootstrapping`              | declare | Interview user, scaffold new spec tree                                  |
+| `/authoring`                  | declare | Add, define, create specs, decisions, and nodes                         |
+| `/decomposing`                | declare | Break down, split, scope work                                           |
+| `/refactoring`                | declare | Move nodes, re-scope, extract shared enablers                           |
+| `/aligning`                   | declare | Check consistency, conformance, find gaps (audit gate)                  |
+| `/interviewing`               | declare | Domain-agnostic interview methodology (used by bootstrapping/authoring) |
+| `/testing`                    | spec    | Write tests driven by spec assertions (superset of legacy plugin)       |
+| `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                                |
+| `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
+| `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
+| `/committing-changes`         | apply   | Conventional Commits with selective staging                             |
 
 ### Agents
 

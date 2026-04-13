@@ -50,7 +50,7 @@
     {
       "name": "spec-tree",
       "source": "./plugins/spec-tree",
-      "description": "Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /testing, /auditing-tests, /auditing-product-decisions, /coding, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
+      "description": "Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /auditing-product-decisions, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
     },
     {
       "name": "visual",
