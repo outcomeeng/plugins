@@ -6,6 +6,12 @@ Claude Code plugin marketplace (`outcomeeng/claude`) delivering the Spec Tree me
 
 We develop this marketplace as a product using its own Spec Tree. The product specs are in `spx/` (the durable map).
 
+## Claude Code Methodology
+
+Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
+
+Spec-tree methodology rules (node types, states, assertion types, ordering) live in `plugins/spec-tree/skills/understanding/references/` and are authoritative over `methodology/`.
+
 ## Historical Context
 
 The Outcome Engineering methodology has evolved through three generations. Only the current one is active.
@@ -41,7 +47,7 @@ The Outcome Engineering methodology has evolved through three generations. Only 
 
 - ✅ **Always use `just run test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
-- ✅ **Use `AskUserQuestion` for structured questions with predefined options.** Do NOT use it for open-ended questions where the user needs to provide free-form context — just ask in plain text instead.
+- ✅ **ALWAYS USE `AskUserQuestion` for structured questions with predefined options.** Do NOT use it for open-ended questions where the user needs to provide free-form context — just ask in plain text instead.
 - ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
 
