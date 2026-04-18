@@ -507,9 +507,9 @@ Tests stay with their specs permanently. No graduation.
 | `*.integration.test.{ts,py}` | Level 2            | Real dependencies via harness |
 | `*.e2e.test.{ts,py}`         | Level 3            | Full system with credentials  |
 
-**The invariant**: All tests in `spx/.../tests/` MUST NOT PASS unless the spec has been implemented COMPLETELY. The `status.yaml` file tracks verification.
+**The invariant**: All tests in `spx/.../tests/` MUST NOT PASS unless the spec has been implemented completely. Node state is derived from test results — passing tests mean the node is Passing, failing tests mean Failing. No stored status file; reality is the oracle.
 
-**No graduation**: Tests remain co-located with their specs. Story tests become part of the feature's test suite, organized by filename rather than directory.
+**No graduation**: Tests remain co-located with their specs regardless of nesting depth. Descendant tests stay in their own node's `tests/` directory, addressed by filename path rather than promoted to an ancestor.
 
 ---
 
