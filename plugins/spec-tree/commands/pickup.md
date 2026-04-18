@@ -188,6 +188,12 @@ Skill tool → { "skill": "spec-tree:contextualizing", "args": "spx/{node-path}"
 
 After context is loaded, THEN ask how to proceed — the loaded context will inform what options make sense.
 
+## Step 7: Verify coordination claims before triaging
+
+When the coordination section reports failing tests, known bugs, or specific errors, **run them first** before proposing fixes. The coordination section is a point-in-time snapshot; commits may have landed between handoff-write and pickup-claim that resolved listed failures. Running the tests is cheap (one command); triaging a non-existent failure wastes time and risks mis-diagnosis.
+
+This applies after `/contextualizing` (Step 6) completes, as the agent shifts from loading context to proposing action.
+
 </workflow>
 
 <legacy_compatibility>
@@ -266,6 +272,7 @@ A successful pickup:
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
+- [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Agent knows which skills to invoke and which to avoid
 
 </success_criteria>
