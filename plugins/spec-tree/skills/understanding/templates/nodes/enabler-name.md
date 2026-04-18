@@ -27,5 +27,5 @@ Only include assertion type headings that apply to this node.
 ### Compliance
 
 - ALWAYS: {observable behavior that holds} — {why} ([test](tests/{slug}.unit.test.{ext}))
-- NEVER: {prohibited behavior verified by lint} — {why} ([enforce](path/to/config))
+- NEVER: {prohibited behavior} — {why} ([test](tests/{slug}.unit.test.{ext}))
 - ALWAYS: {semantic constraint requiring judgment} — {why} ([review])

@@ -117,7 +117,7 @@ For each product invariant:
 For each MUST/NEVER rule:
 
 1. Is it verifiable by product review, automated test, or automated enforcement?
-2. Does it have a `([review])`, `([test](...))`, or `([enforce](...))` tag?
+2. Does it have a `([review])` or `([test](...))` tag?
 3. Is it specific enough that two reviewers would agree on pass/fail?
 
 **Unverifiable or untagged compliance rule → REJECT — "unverifiable rule."**
@@ -176,7 +176,7 @@ Report flow status for each rule:
 MUST: "all pages load in under 2 seconds" ([review])
 → Referenced by: spx/.../21-performance.outcome assertions ✓
 
-NEVER: "expose internal IDs in URLs" ([enforce](eslint.config.ts))
+NEVER: "expose internal IDs in URLs" ([test](tests/url-safety.unit.test.ts))
 → Referenced by: spx/.../21-url-safety.outcome assertions ✓
 
 NEVER: "use branded terminology in error messages" ([review])
@@ -185,7 +185,7 @@ NEVER: "use branded terminology in error messages" ([review])
 
 **Any compliance rule with zero downstream assertions → REJECT — "unenforced rule."**
 
-A compliance rule — whether tagged `[review]`, `[test]`, or `[enforce]` — still needs a downstream spec assertion. The tag means "this is how it's verified" — but if no spec declares the behavior, there's nothing to verify against.
+A compliance rule — whether tagged `[review]` or `[test]` — still needs a downstream spec assertion. The tag means "this is how it's verified" — but if no spec declares the behavior, there's nothing to verify against.
 
 </step>
 

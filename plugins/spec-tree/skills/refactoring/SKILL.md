@@ -173,7 +173,7 @@ Before applying changes, determine what will be affected:
 
 After applying any operation:
 
-- [ ] No broken evidence links — every `([test](...))` and `([enforce](...))` in affected specs resolves to an existing file
+- [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
 - [ ] No empty nodes — every node has at least one assertion
 - [ ] Index ordering preserved — enablers at lower indices than dependents
@@ -228,7 +228,7 @@ How to avoid: In the impact analysis step, glob for all ADRs/PDRs in the source 
 
 Agent moved a node and its `tests/` directory but didn't update the assertion evidence links in ancestor specs that referenced `([test](old-path/tests/...))`. The assertions still claimed coverage, but the links pointed to nonexistent files.
 
-How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks "every `([test](...))` and `([enforce](...))` resolves to an existing file" — run it.
+How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks "every `([test](...))` resolves to an existing file" — run it.
 
 **Failure 3: Consolidated nodes with different hypotheses**
 

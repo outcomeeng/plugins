@@ -81,7 +81,7 @@ Product invariants are guarantees users can rely on. They must be:
 Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 
 1. **Verifiability** — can a reviewer, test, or lint rule determine pass/fail?
-2. **Tagging** — `([review])` for human/agent review, `([test](...))` for automated test verification, `([enforce](...))` for automated static analysis
+2. **Tagging** — `([review])` for human/agent review, `([test](...))` for automated verification (including tests that exercise a lint rule)
 3. **Specificity** — two independent reviewers would agree on the verdict
 
 **Good compliance rules:**
@@ -94,7 +94,7 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 
 ### NEVER
 
-- Expose internal database IDs in user-facing URLs ([enforce](eslint.config.ts))
+- Expose internal database IDs in user-facing URLs ([test](tests/url-safety.unit.test.ts))
 - Display raw error messages from backend services to users ([review])
 ```
 
@@ -134,7 +134,7 @@ The critical property. A compliance rule that no spec assertion references is an
 **What counts as "referenced":**
 
 - A spec assertion that directly tests the behavior the rule requires
-- A spec assertion whose `[test]` or `[enforce]` link verifies the rule
+- A spec assertion whose `[test]` link verifies the rule
 - A `[review]` reference pointing back to the PDR
 
 **What does NOT count:**
@@ -162,6 +162,6 @@ Rule 3: "MUST: default to dark theme when no preference detected"
 
 **Why this matters:**
 
-Unenforced rules create false confidence. Stakeholders read the PDR and believe the product guarantees certain behaviors. But no spec declares it, no test verifies it, no lint rule enforces it, and no review checks it. The guarantee exists only on paper. This is the PDR equivalent of a tautological test — it looks like evidence but provides none.
+Unenforced rules create false confidence. Stakeholders read the PDR and believe the product guarantees certain behaviors. But no spec declares it, no test verifies it, and no review checks it. The guarantee exists only on paper. This is the PDR equivalent of a tautological test — it looks like evidence but provides none.
 
 </downstream_flow>
