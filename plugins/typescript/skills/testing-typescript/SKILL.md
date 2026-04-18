@@ -1017,3 +1017,27 @@ it("rejects invalid config with descriptive error", () => {
   expect(result.error).toContain("url");
 });
 ```
+
+### Playwright `{ request }` fixture does not inherit browser-context cookies
+
+Playwright's `{ request }` fixture uses its own test-scoped `APIRequestContext` that does NOT share cookies with the browser `BrowserContext`. Cookies set via `context.addCookies([...])` (e.g. by a `beforeEach` helper that encrypts a flag-override cookie) do not reach `{ request }`.
+
+```typescript
+// ❌ WRONG: request fixture — no cookie inheritance
+test.beforeEach(async ({ context }) => {
+  await context.addCookies([{ name: "override", value: ENCRYPTED, path: "/", domain: "localhost" }]);
+});
+
+test("API returns flag-gated payload", async ({ request }) => {
+  const response = await request.get("/api/data"); // cookie absent
+  expect(await response.json()).toContain(FLAGGED_ITEM); // fails
+});
+
+// ✅ RIGHT: context.request — shares cookies with browser context
+test("API returns flag-gated payload", async ({ context }) => {
+  const response = await context.request.get("/api/data"); // cookie present
+  expect(await response.json()).toContain(FLAGGED_ITEM);
+});
+```
+
+`page.request` also shares cookies with the browser context and works when a test already needs a page.
