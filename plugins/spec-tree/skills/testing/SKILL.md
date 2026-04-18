@@ -42,13 +42,13 @@ This loads:
 
 Parse the target spec node. Extract all typed assertions and their test links:
 
-| Type            | Pattern in spec                                    | Test strategy            |
-| --------------- | -------------------------------------------------- | ------------------------ |
-| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based            |
-| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized            |
-| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation          |
-| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based           |
-| **Compliance**  | `ALWAYS/NEVER: {rule} ([review]/[test]/[enforce])` | Review, test, or enforce |
+| Type            | Pattern in spec                                    | Test strategy   |
+| --------------- | -------------------------------------------------- | --------------- |
+| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based   |
+| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized   |
+| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation |
+| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based  |
+| **Compliance**  | `ALWAYS/NEVER: {rule} ([review]/[test])`           | Review or test  |
 
 Record each assertion with:
 
@@ -65,12 +65,12 @@ Record each assertion with:
 
 For each assertion:
 
-| Status            | Condition                                         | Action                                     |
-| ----------------- | ------------------------------------------------- | ------------------------------------------ |
-| **Covered**       | Test link exists and resolves to a file           | Verify in Step 4                           |
-| **Missing link**  | No `([test])`, `([enforce])`, or `([review])` tag | Must add evidence link                     |
-| **Broken link**   | Link present but file doesn't exist               | Must create test file                      |
-| **No assertions** | Spec has no typed assertions                      | Spec needs work first — do not write tests |
+| Status            | Condition                               | Action                                     |
+| ----------------- | --------------------------------------- | ------------------------------------------ |
+| **Covered**       | Test link exists and resolves to a file | Verify in Step 4                           |
+| **Missing link**  | No `([test])` or `([review])` tag       | Must add evidence link                     |
+| **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
+| **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
 
 Report the evidence gap summary before proceeding.
 
@@ -104,7 +104,7 @@ For each assertion needing a new test:
 
 Delegate language-specific patterns to `/testing-python` or `/testing-typescript`.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE` and run the project's sync command so the quality gate excludes these tests. Remove the entry when implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 
 </step>
 
@@ -112,7 +112,7 @@ Delegate language-specific patterns to `/testing-python` or `/testing-typescript
 
 **Step 6: Update spec assertion links**
 
-After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for tests, `[enforce]` for lint rules, or `[review]` for human judgment.
+After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification (including tests that exercise lint rules), or `[review]` for human judgment.
 
 </step>
 

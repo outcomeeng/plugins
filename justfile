@@ -28,10 +28,6 @@ fmt *args:
 fmt-check:
     dprint check
 
-# Sync excluded node exclusions from spx/EXCLUDE to pyproject.toml (pytest, mypy, pyright)
-sync-exclude:
-    uv run python -m outcomeeng.scripts.sync_exclude
-
 # Run all checks with timing summary
 check:
     #!/usr/bin/env bash

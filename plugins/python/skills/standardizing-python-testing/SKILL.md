@@ -901,33 +901,24 @@ def test_verbose_mode_produces_detailed_output() -> None:
 
 ## Specified Node Exclusion
 
-When tests are written before the implementation exists (specified nodes), they import non-existent modules and break type checkers and the test runner. The spec-tree convention uses `spx/EXCLUDE` as the source of truth. A sync script translates this into Python tool configuration.
+When tests are written before the implementation exists (specified nodes), they import non-existent modules and break type checkers and the test runner. The spec-tree convention uses `spx/EXCLUDE` as the source of truth. The `spx` CLI reads this file and skips excluded nodes at invocation time.
 
-### Sync Script Pattern
+### How It Works
 
-Use `tomlkit` for safe TOML round-tripping (preserves comments, formatting, whitespace). The sync script reads `spx/EXCLUDE` and updates `pyproject.toml`:
+`spx test passing` reads `spx/EXCLUDE` and passes exclusion flags to each tool:
 
-| Tool        | Config key                          | Entry format           |
-| ----------- | ----------------------------------- | ---------------------- |
-| **pytest**  | `[tool.pytest.ini_options] addopts` | `--ignore=spx/{node}/` |
-| **mypy**    | `[tool.mypy] exclude`               | `^spx/{escaped_node}/` |
-| **pyright** | `[tool.pyright] exclude`            | `spx/{node}/`          |
-| **ruff**    | NOT excluded                        | Style always checked   |
+| Tool        | Exclusion mechanism                 |
+| ----------- | ----------------------------------- |
+| **pytest**  | `--ignore=spx/{node}/`              |
+| **mypy**    | Excluded from check scope           |
+| **pyright** | Excluded from check scope           |
+| **ruff**    | NOT excluded — style always checked |
 
-The script detects previously-synced entries by value pattern (paths matching `spx/*.outcome/` or `spx/*.enabler/`) and replaces them with the current `spx/EXCLUDE` contents. No marker comments needed — the values are self-identifying.
+`spx` never writes to `pyproject.toml` or any project configuration file. The project's own tools always run against all files.
 
 ### Ruff Always Checks
 
 Do NOT exclude specified nodes from ruff. Test files are valid Python with correct style. Only type checkers (which resolve imports) and the test runner (which executes imports) need exclusion.
-
-### Justfile Recipe
-
-```makefile
-sync-exclude:
-    uv run python scripts/sync_exclude.py
-```
-
-Run after editing `spx/EXCLUDE`. The script is idempotent.
 
 </specified_node_exclusion>
 

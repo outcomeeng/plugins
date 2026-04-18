@@ -103,17 +103,14 @@ Tests should FAIL with ImportError or AssertionError (implementation doesn't exi
 
 ### Step 5: Handle Specified Nodes
 
-If the implementation module doesn't exist yet, tests fail on import — breaking the quality gate. Add the node to `spx/EXCLUDE` and run the project's sync command:
+If the implementation module doesn't exist yet, tests fail on import — breaking the quality gate. Add the node to `spx/EXCLUDE`:
 
 ```bash
 # Add node path to spx/EXCLUDE (paths relative to spx/)
 echo "76-risc-v.outcome" >> spx/EXCLUDE
-
-# Sync to pyproject.toml
-just sync-exclude
 ```
 
-This excludes the node's tests from pytest, mypy, and pyright until the implementation exists. Ruff still checks style. See the spec-tree `/understanding` skill's `references/excluded-nodes.md` for the full convention.
+The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Ruff still checks style. See the spec-tree `/understanding` skill's `references/excluded-nodes.md` for the full convention.
 
 Remove the entry from `spx/EXCLUDE` when implementation begins.
 

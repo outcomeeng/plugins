@@ -89,6 +89,7 @@ This loads:
 - Enablers that others depend on get lower indices
 - Independent outcomes can share the same index
 - Derive the slug from the concern name (lowercase, hyphenated)
+- **When adding 2+ new sibling nodes in one pass, invoke `/decomposing` first.** Decomposing forces a pairwise-independence check across the proposed siblings before drafting any of them. Same-index assignment is only valid when each sibling at that index is independent of every other sibling at that index. The `/aligning` audit catches violations after the fact, but fixing them requires directory renames and link-reference updates that decomposing-first would have prevented.
 
 Present the proposed placement to the user before creating files.
 
@@ -155,9 +156,9 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templat
 **Assertion rules** (from `${CLAUDE_SKILL_DIR}/../understanding/references/assertion-types.md`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests, `([enforce](path/to/config))` for lint rules, or `([review])` for human judgment
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), or `([review])` for human judgment
 - Match assertion type to test strategy: Scenario → example-based, Property → property-based, etc.
-- Test and enforce targets don't need to exist yet — the link is a contract for what will be created
+- Test targets don't need to exist yet — the link is a contract for what will be created
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
@@ -178,10 +179,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]`, `[enforce]`, or `[review]` (targets don't need to exist yet)
+- [ ] All assertions have evidence links: `[test]` or `[review]` (targets don't need to exist yet)
 - [ ] Assertion types match test strategy
 - [ ] ADR/PDR compliance rules use MUST/NEVER format with `([review])` tags
-- [ ] Spec compliance assertions use the correct evidence tag: `[test]` for behavioral tests, `[enforce]` for lint rules, `[review]` for human judgment
+- [ ] Spec compliance assertions use the correct evidence tag: `[test]` for automated verification (including tests that exercise a lint rule), `[review]` for human judgment
 - [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>
@@ -201,7 +202,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 1. Create the directory
 2. Write the spec file
 3. Create the `tests/` directory
-4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE` and run the project's sync command. This excludes the node's tests from the quality gate until implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
+4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 
 **For decision records:**
 

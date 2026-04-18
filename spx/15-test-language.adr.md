@@ -18,7 +18,7 @@ Python (pytest) is the test language for all spec-tree nodes.
 
 Two categories of testable artifacts exist:
 
-1. **Infrastructure scripts** (validation, sync-exclude, distribute, xml-spacing) — Python implementations tested with pytest.
+1. **Infrastructure scripts** (validation, distribute, xml-spacing) — Python implementations tested with pytest.
 2. **Skill behavior** (PDR auditing, test auditing, context loading) — skills are prompt engineering artifacts. Their behavior is tested by exercising observable effects (file outputs, structured verdicts) via Python test harnesses.
 
 ## Trade-offs accepted

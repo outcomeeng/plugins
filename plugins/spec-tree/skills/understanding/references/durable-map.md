@@ -93,7 +93,7 @@ These operations do not exist in the Spec Tree:
 A node's state is derived from its spec and tests:
 
 - **Declared** — spec exists, no tests. The declaration stands, but nothing verifies it yet.
-- **Specified** — spec and tests exist, but the implementation doesn't. Tests are excluded from the quality gate via `spx/EXCLUDE`. See `references/excluded-nodes.md`.
+- **Specified** — spec and tests exist, but the implementation doesn't. The node is listed in `spx/EXCLUDE`; the `spx` CLI skips it when running `spx test passing`. See `references/excluded-nodes.md`.
 - **Failing** — spec, tests, and implementation exist, but tests fail. The implementation is in violation.
 - **Passing** — spec, tests, and implementation exist, and tests pass.
 

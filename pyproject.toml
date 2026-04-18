@@ -10,7 +10,6 @@ dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",
   "pyyaml>=6.0",
-  "tomlkit>=0.13",
 ]
 
 [build-system]
@@ -27,39 +26,9 @@ python-preference = "only-managed"
 testpaths = ["spx", "tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --import-mode=importlib --ignore=spx/21-spec-tree.enabler/15-context-loading.enabler/ --ignore=spx/21-spec-tree.enabler/21-templates.enabler/ --ignore=spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/ --ignore=spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler/ --ignore=spx/21-spec-tree.enabler/43-update-spx.enabler/ --ignore=spx/21-spec-tree.enabler/54-authoring.enabler/ --ignore=spx/21-spec-tree.enabler/54-decomposing.enabler/ --ignore=spx/21-spec-tree.enabler/54-aligning.enabler/ --ignore=spx/21-spec-tree.enabler/54-refactoring.enabler/ --ignore=spx/21-spec-tree.enabler/54-bootstrapping.enabler/ --ignore=spx/21-spec-tree.enabler/65-applying.enabler/ --ignore=spx/21-spec-tree.enabler/65-committing.enabler/ --ignore=spx/21-spec-tree.enabler/76-sessions.enabler/"
+addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
 
 [tool.mypy]
-exclude = [
-    "^spx/21\\-spec\\-tree\\.enabler/15\\-context\\-loading\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/21\\-templates\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/32\\-decisions\\.enabler/32\\-pdr\\-auditing\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/32\\-evidence\\.enabler/32\\-test\\-auditing\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/43\\-update\\-spx\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/54\\-authoring\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/54\\-decomposing\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/54\\-aligning\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/54\\-refactoring\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/54\\-bootstrapping\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/65\\-applying\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/65\\-committing\\.enabler/",
-    "^spx/21\\-spec\\-tree\\.enabler/76\\-sessions\\.enabler/"
-]
 
 [tool.pyright]
-exclude = [
-    "spx/21-spec-tree.enabler/15-context-loading.enabler/",
-    "spx/21-spec-tree.enabler/21-templates.enabler/",
-    "spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/",
-    "spx/21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler/",
-    "spx/21-spec-tree.enabler/43-update-spx.enabler/",
-    "spx/21-spec-tree.enabler/54-authoring.enabler/",
-    "spx/21-spec-tree.enabler/54-decomposing.enabler/",
-    "spx/21-spec-tree.enabler/54-aligning.enabler/",
-    "spx/21-spec-tree.enabler/54-refactoring.enabler/",
-    "spx/21-spec-tree.enabler/54-bootstrapping.enabler/",
-    "spx/21-spec-tree.enabler/65-applying.enabler/",
-    "spx/21-spec-tree.enabler/65-committing.enabler/",
-    "spx/21-spec-tree.enabler/76-sessions.enabler/"
-]

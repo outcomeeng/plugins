@@ -1,6 +1,6 @@
 <overview>
 
-When a spec and its tests are authored before the implementation exists, the node is in **specified** state. Tests import from modules that don't exist yet, so they break type checkers (unresolved imports) and test runners (ImportError). The `spx/EXCLUDE` file lists these nodes and a sync mechanism excludes them from the quality gate.
+When a spec and its tests are authored before the implementation exists, the node is in **specified** state. Tests import from modules that don't exist yet, so they break type checkers (unresolved imports) and test runners (ImportError). The `spx/EXCLUDE` file lists these nodes. The `spx` CLI reads this file and filters excluded nodes at invocation time.
 
 </overview>
 
@@ -11,10 +11,9 @@ When a spec and its tests are authored before the implementation exists, the nod
 ```text
 # Nodes excluded from the quality gate.
 # Specs and tests exist. Implementation does not.
-# Tests are excluded from pytest and type checking.
+# spx test passing skips these nodes.
 # Linting still runs — style is checked regardless.
 #
-# Run the project's sync command after editing.
 # Remove entries when implementation begins.
 
 57-subsystems.outcome/32-risc-v.outcome
@@ -28,17 +27,19 @@ When a spec and its tests are authored before the implementation exists, the nod
 
 <quality_gate_integration>
 
-A sync mechanism reads `spx/EXCLUDE` and updates the project's tool configuration to exclude specified nodes. The specific tools and configuration format are language-specific — the spec-tree plugin defines the convention, language plugins define the implementation.
+The `spx` CLI reads `spx/EXCLUDE` and filters paths at invocation time. It never writes to project configuration files (`pyproject.toml`, `package.json`, `tsconfig.json`). The project's own tools always run against all files — `spx` handles scoping.
 
-| Tool category    | Exclusion behavior                                                     |
-| ---------------- | ---------------------------------------------------------------------- |
-| **Linter**       | NOT excluded — style is checked regardless of implementation existence |
-| **Type checker** | Excluded — imports from non-existent modules cause unresolvable errors |
-| **Test runner**  | Excluded — imports fail at collection time                             |
+`spx` discovers tests by walking `spx/**/tests/`, groups files by extension, and dispatches to the correct runner per group. A single tree can contain tests in multiple languages.
+
+| Tool category    | `spx test`                 | `spx test passing`                   |
+| ---------------- | -------------------------- | ------------------------------------ |
+| **Test runner**  | Runs all discovered tests  | Skips EXCLUDE entries                |
+| **Type checker** | Checks all spec-tree files | Skips EXCLUDE entries                |
+| **Linter**       | Checks all spec-tree files | Checks all — style is always checked |
 
 **Linters always check.** A specified test file is still valid code with correct style. Excluding it from linting would mask real quality issues.
 
-**The sync is a build step, not a hack.** It translates `spx/EXCLUDE` (the source of truth) into the native configuration format each tool expects.
+**No config manipulation.** `spx` passes exclusion flags to each tool at invocation time (e.g., `--ignore` for pytest, `--exclude` for vitest). The project's own `pyproject.toml` or `tsconfig.json` is never touched by spec-tree tooling.
 
 </quality_gate_integration>
 
@@ -46,8 +47,8 @@ A sync mechanism reads `spx/EXCLUDE` and updates the project's tool configuratio
 
 | Event                        | Action                                         |
 | ---------------------------- | ---------------------------------------------- |
-| Author spec + tests          | Add node path to `spx/EXCLUDE`, run sync       |
-| Begin implementation         | Remove node from `spx/EXCLUDE`, run sync       |
+| Author spec + tests          | Add node path to `spx/EXCLUDE`                 |
+| Begin implementation         | Remove node from `spx/EXCLUDE`                 |
 | Tests start passing          | Node transitions from failing → passing        |
 | Implementation removed later | Add node back to `spx/EXCLUDE` if tests remain |
 
