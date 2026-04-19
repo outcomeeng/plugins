@@ -6,56 +6,35 @@ Issues discovered during contradiction analysis of `spx/EXCLUDE`, sync-exclude, 
 
 Fixed: `methodology/skills/skill-structure.md` now uses "Declared / Specified / Failing / Passing" matching `durable-map.md`. Also replaced "three phases: spec-tree maintenance, implementation, commit" with "three steps: declare, spec, apply" across all docs and skills. Upstream `outcomeeng/methodology` repo still needs updating.
 
-## 2. spx CLI must own all quality gate concerns
+## ~~2. spx CLI must own all quality gate concerns~~ (FIXED)
 
-No document states that `spx` owns test execution, linting, type checking, and validation for spec-tree artifacts. The current model has `spx spec apply` writing exclusions into `pyproject.toml` — the new design has `spx` invoking tools directly with the right flags at runtime.
+Fixed: `excluded-nodes.md` and `sync-exclude.md` rewritten to describe `spx` CLI as quality gate owner. Skills updated. Commit `30cb7b7`.
 
-**Design decision:** `spx` discovers tests by walking `spx/**/tests/`, groups by file extension, dispatches to the correct runner per group. `spx test passing` skips EXCLUDE entries. `spx test` runs everything. Same pattern for lint, type check, validate.
+## ~~3. Spec-tree must never write project config files~~ (FIXED)
 
-**Files to update:** `methodology/skills/skill-structure.md` (add quality gate section). Plugin references: `excluded-nodes.md`, `durable-map.md`. Skills: `testing`, `authoring`, `bootstrapping/templates/spx-claude.md`.
+Fixed: `excluded-nodes.md` states "No config manipulation" and `sync-exclude.md` has NEVER compliance assertion. Commit `30cb7b7`.
 
-## 3. Spec-tree must never write project config files
+## ~~4. `excluded-nodes.md` falsely claims language plugins own sync implementation~~ (FIXED)
 
-Core principle missing from all layers: spec-tree tools never write to `pyproject.toml`, `package.json`, `tsconfig.json`, or any project-owned config. The project's own tools tell the truth about the whole project. `spx` handles scoping at invocation time.
+Fixed: `excluded-nodes.md` rewritten — no language plugin references remain. Commit `30cb7b7`.
 
-**Consequence:** `spx spec apply` in its current form (writing to `pyproject.toml`) becomes deprecated. The `LanguageAdapter.applyExclusions()` interface evolves from "write config" to "build command flags".
+## ~~5. `sync-exclude.md` spec overpromises reusability~~ (FIXED)
 
-**Files to update:** `excluded-nodes.md` (remove config-writing description). `sync-exclude.md` spec (rewrite to reflect invocation-time filtering). `spx` CLI `spec/apply/` module (redesign).
+Fixed: spec rewritten — now says "SO THAT spec-tree projects in any language CAN..." and describes `spx` CLI invocation logic. Commit `30cb7b7`.
 
-## 4. `excluded-nodes.md` falsely claims language plugins own sync implementation
+## ~~6. TypeScript plugin has zero EXCLUDE support~~ (FIXED)
 
-Line 31: "the spec-tree plugin defines the convention, language plugins define the implementation." The implementation lives in `outcomeeng/scripts/sync_exclude.py` (marketplace package), not in any language plugin. Under the new design, `spx` CLI owns it entirely.
+Fixed: `spx` CLI owns quality gate and is language-agnostic — `spx test passing` works for any language. Commit `30cb7b7`.
 
-**File to update:** `plugins/spec-tree/skills/understanding/references/excluded-nodes.md`
+## ~~7. Conflicting sync commands across Python skills~~ (FIXED)
 
-## 5. `sync-exclude.md` spec overpromises reusability
+Fixed: all `sync-exclude` references removed from plugins. Zero matches remain. Commit `30cb7b7`.
 
-Says "SO THAT Python projects using spec-tree CAN..." but the script is embedded in `outcomeeng/scripts/`, uses `Path(__file__).parents[2]` for repo root, and requires the `outcomeeng` package. No external project can use it.
+## 8. Multi-language test discovery missing from methodology (PARTIAL)
 
-Under the new design, `spx` CLI replaces this script entirely. The spec needs rewriting to describe `spx`'s invocation-time filtering, not a distributable sync script.
+Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.md` spec (mapping assertions for pytest/vitest). The `status.yaml` reference in `testing-foundation.md` was removed in commit `391e9e5`.
 
-**File to update:** `spx/21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler/sync-exclude.md`
-
-## 6. TypeScript plugin has zero EXCLUDE support
-
-The Python plugin (`testing-python`, `standardizing-python-testing`) documents the EXCLUDE pattern. The TypeScript plugin has no mention of `spx/EXCLUDE`, no sync script, no "specified nodes" step in its testing skill. A TypeScript project using spec-tree would hit a wall after authoring specs and tests.
-
-**Resolution:** `spx` CLI owning quality gate makes this moot — `spx test passing` works regardless of language. But until that's implemented, the gap exists.
-
-## 7. Conflicting sync commands across Python skills
-
-- `spx/CLAUDE.md` line 163: `just sync-exclude`
-- `testing-python/SKILL.md` line 113: `just sync-exclude`
-- `standardizing-python-testing/SKILL.md` line 927: `uv run python scripts/sync_exclude.py` (wrong path)
-- Actual script: `uv run python -m outcomeeng.scripts.sync_exclude`
-
-**Resolution:** All references become `spx test passing` (or similar) once `spx` CLI owns quality gate. Until then, the wrong path in `standardizing-python-testing` is a bug.
-
-## 8. Multi-language test discovery missing from methodology
-
-`spx` should walk the tree and dispatch to the correct runner per file extension. A single `spx/` tree can have Python and TypeScript tests. The `15-test-language.adr.md` ("Python for all nodes") is a project-local choice, not a methodology constraint.
-
-**Files to update:** `methodology/skills/skill-structure.md` (add multi-language principle). `methodology/testing/testing-foundation.md` mentions `status.yaml` (line 510) which is dead — status is derived from test results.
+**Remaining:** upstream `outcomeeng/methodology` repo still needs the multi-language principle added to `spec-tree-reference.md`.
 
 ## 9. `committing-changes` references `just check`
 
