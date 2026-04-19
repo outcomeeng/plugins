@@ -39,6 +39,8 @@ skill-name/
 | Reference  | Share knowledge      | Standards loaded by others   |
 
 **Domain Discovery**: Research the domain BEFORE asking users. Users want expertise IN the skill.
+
+**Prompt Craft**: Read `/standardizing-agent-prompts` for voice, description, constraint, and anti-pattern conventions before writing prompt text.
 </essential_principles>
 
 <intake>

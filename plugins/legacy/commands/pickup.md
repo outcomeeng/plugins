@@ -204,7 +204,7 @@ Format the handoff in a clear, readable way:
 
 ### 4. Build Proposals with Skill Plans
 
-After presenting the handoff, build concrete proposals that tell the user exactly what the agent will do. Each proposal must name the skills the agent will invoke, so the user can evaluate the approach before work begins.
+After presenting the handoff, build concrete proposals that tell the user exactly what Claude will do. Each proposal must name the skills Claude will invoke, so the user can evaluate the approach before work begins.
 
 **Step 4a: Inventory available skills**
 

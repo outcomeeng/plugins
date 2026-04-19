@@ -40,9 +40,12 @@ This ensures subagents follow proper structure, configuration, pure XML formatti
 1. Locate the creating-subagents skill and its references:
    - Use Glob: `.claude/plugins/cache/**/creating-subagents/SKILL.md`
    - Then read its `references/subagents.md`, `references/writing-subagent-prompts.md`
-2. Before penalizing any missing section, search entire file for equivalent content under different tag names
-3. Read the subagent configuration file at `$ARGUMENTS`
-4. Evaluate against best practices from steps 1-2, focusing on functionality over formatting
+2. Locate and read the standardizing-agent-prompts skill:
+   - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
+   - Covers voice, description style, constraint language, and anti-patterns
+3. Before penalizing any missing section, search entire file for equivalent content under different tag names
+4. Read the subagent configuration file at `$ARGUMENTS`
+5. Evaluate against best practices from steps 1-3, focusing on functionality over formatting
 
 **Use ACTUAL patterns from references, not memory.**
 </critical_workflow>
@@ -86,6 +89,16 @@ These issues significantly hurt effectiveness - flag as critical:
 - All XML tags properly opened and closed
 - No hybrid XML/markdown structure
 - Note: Markdown formatting WITHIN content (bold, italic, lists, code blocks) is acceptable
+
+</area>
+
+<area name="prompt_craft" priority="must-fix">
+Check against `/standardizing-agent-prompts` conventions:
+
+- **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
+- **Description style**: Directive pattern for description field. Matches user speech
+- **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
+- **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
 
 </area>
 

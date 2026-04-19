@@ -208,7 +208,7 @@ AND {additional assertion}
 {ADRs and PDRs that constrain this story}
 ```
 
-**Note:** Stories have an **Analysis** section that proves the agent examined the codebase. This is unique to stories.
+**Note:** Stories have an **Analysis** section that proves Claude examined the codebase. This is unique to stories.
 
 ## Step 6: Validate Decomposition
 
@@ -256,7 +256,7 @@ For each story:
 
 **Feature:** "SPI Master"
 
-**Wrong approach (what the agent did):**
+**Wrong approach (what Claude did):**
 Put all outcomes in the feature spec.
 
 **Correct approach:**

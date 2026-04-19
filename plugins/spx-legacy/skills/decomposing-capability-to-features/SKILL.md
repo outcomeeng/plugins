@@ -278,7 +278,7 @@ AFTER:
 
 ## The SPI Anti-Pattern (What NOT to Do)
 
-The agent created this feature spec with 5 outcomes:
+Claude created this feature spec with 5 outcomes:
 
 | Outcome                           | Type         | Action              |
 | --------------------------------- | ------------ | ------------------- |

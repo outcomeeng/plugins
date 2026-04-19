@@ -48,13 +48,16 @@ During audits, prioritize evaluation of:
 2. Read creating-skills/references/use-xml-tags.md for required/conditional tags, XML structure requirements
 3. Read creating-skills/references/skill-patterns.md for YAML, naming, progressive disclosure patterns
 4. Read creating-skills/references/core-principles.md for XML structure, conciseness, context window principles
-5. Handle edge cases:
+5. Locate and read the standardizing-agent-prompts skill:
+   - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
+   - Covers voice, description style, constraint language, and anti-patterns
+6. Handle edge cases:
    - If reference files are missing or unreadable, note in findings under "Configuration Issues" and proceed with available content
    - If YAML frontmatter is malformed, flag as critical issue
    - If skill references external files that don't exist, flag as critical issue and recommend fixing broken references
    - If skill is <100 lines, note as "simple skill" in context and evaluate accordingly
-6. Read the skill files (SKILL.md and any references/, docs/, scripts/ subdirectories)
-7. Evaluate against best practices from steps 1-4
+7. Read the skill files (SKILL.md and any references/, docs/, scripts/ subdirectories)
+8. Evaluate against best practices from steps 1-5
 
 **Use ACTUAL patterns from references, not memory.**
 </critical_workflow>
@@ -127,6 +130,18 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 - Procedural = HOW to do steps
 - Operational = how to KNOW you did it right
 - Skills need both; flag if heavily imbalanced toward procedural
+
+</area>
+
+<area name="prompt_craft">
+Check against `/standardizing-agent-prompts` conventions:
+
+- **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
+- **Description style**: Directive pattern (ALWAYS + optional NEVER). Language-after-artifact ordering. Matches user speech
+- **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks. No weak modals ("should", "try to", "consider") in constraints
+- **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "processes data", "please", "if possible"). No structural anti-patterns (explaining Claude to Claude, motivational prose, empty disclaimers)
+- **Conciseness**: Only information Claude doesn't already have. Concrete over abstract
+- **Failure modes**: Written from actual experience, use "Claude" as subject, structured as what/why/how-to-avoid
 
 </area>
 

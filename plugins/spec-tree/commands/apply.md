@@ -38,7 +38,7 @@ If `$ARGUMENTS` contains `--agent`, extract the node path from the remaining arg
 Agent tool → { "subagent_type": "spec-tree:applier", "prompt": "Apply the spec-tree TDD flow to node: {node-path}" }
 ```
 
-The agent runs the full 8-step flow autonomously and returns when complete. Stop here — do not continue to Step 1.
+Claude runs the full 8-step flow autonomously and returns when complete. Stop here — do not continue to Step 1.
 
 ## Step 1: Determine the work queue
 

@@ -33,9 +33,9 @@ allowed-tools:
 
 <objective>
 
-Handoff is **proper session closure**, not note-taking. The agent must reflect deeply on what it learned before persisting anything — five structured perspectives force introspection that produces the right persistence decisions. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
+Handoff is **proper session closure**, not note-taking. Reflect deeply on what was learned before persisting anything — five structured perspectives force introspection that produces the right persistence decisions. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
 
-**Reflect, then persist, then hand off.** The reflection (Step 2) is the most important step. Without it, the agent will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection step catches and fixes them.
+**Reflect, then persist, then hand off.** The reflection (Step 2) is the most important step. Without it, Claude will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection step catches and fixes them.
 
 </objective>
 
@@ -50,7 +50,7 @@ All information discovered during a session falls into one of four tiers. Persis
 | 3    | Node-local (PLAN.md, ISSUES.md)         | Escape hatch | Remaining steps, known gaps — non-durable but discoverable via `/contextualizing` |
 | 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral    | Coordination only: node list, skill checklist, cross-cutting context              |
 
-**Tier 3 is an escape hatch, not a home.** The agent MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
+**Tier 3 is an escape hatch, not a home.** MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
 
 </persistence_hierarchy>
 

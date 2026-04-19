@@ -52,13 +52,16 @@ During audits, prioritize evaluation of:
 1. Locate the creating-commands skill and its references:
    - Use Glob: `.claude/plugins/cache/**/creating-commands/SKILL.md`
    - Then read the SKILL.md, and its `references/arguments.md`, `references/patterns.md`, `references/tool-restrictions.md`
-2. Handle edge cases:
+2. Locate and read the standardizing-agent-prompts skill:
+   - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
+   - Covers voice, description style, constraint language, and anti-patterns
+3. Handle edge cases:
    - If reference files are missing or unreadable, note in findings under "Configuration Issues" and proceed with available content
    - If YAML frontmatter is malformed, flag as critical issue
    - If command references external files that don't exist, flag as critical issue and recommend fixing broken references
    - If command is <10 lines, note as "simple command" in context and evaluate accordingly
-3. Read the command file at `$ARGUMENTS`
-4. Evaluate against best practices from steps 1-2
+4. Read the command file at `$ARGUMENTS`
+5. Evaluate against best practices from steps 1-3
 
 **Use ACTUAL patterns from references, not memory.**
 </critical_workflow>
@@ -100,6 +103,16 @@ Check for:
 - **Clarity**: Prompt is clear, direct, specific
 - **Structure**: Multi-step workflows properly structured with numbered steps or sections
 - **File references**: Uses @ prefix for file references when appropriate
+
+</area>
+
+<area name="prompt_craft">
+Check against `/standardizing-agent-prompts` conventions:
+
+- **Voice**: Uses imperative mood for instructions, "Claude" for failure modes/tendencies. Never "the agent", "the model", or "you"
+- **Constraint language**: Strong modal verbs (MUST/NEVER/ALWAYS) in constraint blocks
+- **Anti-patterns**: No banned phrases ("helpful assistant", "helps with", "please", "if possible"). No structural anti-patterns (explaining Claude to Claude, motivational prose)
+- **Conciseness**: Only information Claude doesn't already have
 
 </area>
 

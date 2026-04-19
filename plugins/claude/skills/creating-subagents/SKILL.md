@@ -9,6 +9,8 @@ description: >-
 Subagents are specialized Claude instances that run in isolated contexts with focused roles and limited tool access. This skill teaches you how to create effective subagents, write strong system prompts, configure tool access, and orchestrate multi-agent workflows using the Task tool.
 
 Subagents enable delegation of complex tasks to specialized agents that operate autonomously without user interaction, returning their final output to the main conversation.
+
+Read `/standardizing-agent-prompts` for voice, description, constraint, and anti-pattern conventions before writing prompt text.
 </objective>
 
 <quick_start>

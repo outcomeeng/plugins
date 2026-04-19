@@ -7,6 +7,8 @@ description: >-
 
 <objective>
 Create effective slash commands for Claude Code that enable users to trigger reusable prompts with `/command-name` syntax. Slash commands expand as prompts in the current conversation, allowing teams to standardize workflows and operations. This skill teaches you to structure commands with XML tags, YAML frontmatter, dynamic context loading, and intelligent argument handling.
+
+Read `/standardizing-agent-prompts` for voice, description, constraint, and anti-pattern conventions before writing prompt text.
 </objective>
 
 <quick_start>

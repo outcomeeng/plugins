@@ -44,7 +44,7 @@ Each section should be independently understandable: its elements, internal arro
 <anti_patterns>
 
 - **Don't generate the entire diagram in one response.** You will hit the output token limit and produce truncated, broken JSON. Even if the diagram is small enough to fit, splitting into sections produces better results.
-- **Don't use a coding agent** to generate the JSON. The agent won't have sufficient context about the skill's rules, and the coordination overhead negates any benefit.
+- **Don't use a coding agent** to generate the JSON. A separate agent won't have sufficient context about the skill's rules, and the coordination overhead negates any benefit.
 - **Don't write a Python generator script.** The templating and coordinate math seem helpful but introduce a layer of indirection that makes debugging harder. Hand-crafted JSON with descriptive IDs is more maintainable.
 
 </anti_patterns>

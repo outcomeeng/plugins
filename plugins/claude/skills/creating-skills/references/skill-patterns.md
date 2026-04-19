@@ -63,7 +63,7 @@ description: Helps with charts
 **Negative constraint rules:**
 
 - Use `NEVER` not "Do not"
-- Drop the language from the negative — the agent knows which language is in play
+- Drop the language from the negative — Claude knows which language is in play
 - Frame as "without this skill" not "directly"
 
 **Reference skills** (loaded by other skills, not user-triggered) use `disable-model-invocation: true` and a passive description instead. See the [Reference Skills](#reference-skills-for-shared-knowledge) section below for the full pattern.

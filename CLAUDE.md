@@ -244,14 +244,15 @@ Meta-skills for Claude Code plugin development: creating and auditing skills, co
 
 ### Skills
 
-| Skill                 | Purpose                                    |
-| --------------------- | ------------------------------------------ |
-| `/creating-skills`    | Create and refine Claude Code skills       |
-| `/creating-commands`  | Create slash commands with XML structure   |
-| `/creating-subagents` | Create and configure subagents             |
-| `/auditing-skills`    | Audit skills for best practices compliance |
-| `/auditing-commands`  | Audit slash commands for best practices    |
-| `/auditing-subagents` | Audit subagent configurations              |
+| Skill                          | Purpose                                                |
+| ------------------------------ | ------------------------------------------------------ |
+| `/standardizing-agent-prompts` | Voice, description, constraint conventions (reference) |
+| `/creating-skills`             | Create and refine Claude Code skills                   |
+| `/creating-commands`           | Create slash commands with XML structure               |
+| `/creating-subagents`          | Create and configure subagents                         |
+| `/auditing-skills`             | Audit skills for best practices compliance             |
+| `/auditing-commands`           | Audit slash commands for best practices                |
+| `/auditing-subagents`          | Audit subagent configurations                          |
 
 ## Legacy Plugin
 

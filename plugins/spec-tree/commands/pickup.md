@@ -118,7 +118,7 @@ Check if `$ARGUMENTS` contains `--list` to activate list mode.
 
 ## Step 2: Present skills checklist
 
-**This step comes BEFORE loading node context.** The skills checklist tells the agent what to invoke and what to avoid.
+**This step comes BEFORE loading node context.** The skills checklist tells Claude what to invoke and what to avoid.
 
 Read the `<skills>` section from the session file and present it prominently:
 
@@ -160,7 +160,7 @@ For each node in the `<nodes>` section:
 
 Show the `<persisted>` section:
 
-- What was committed (the agent can trust these are in place)
+- What was committed (trust these are in place)
 - What is uncommitted (may need `/commit` before continuing)
 - What insights were written to CLAUDE.md/memory/skills
 - What escape hatches were written and where
@@ -192,7 +192,7 @@ After context is loaded, THEN ask how to proceed — the loaded context will inf
 
 When the coordination section reports failing tests, known bugs, or specific errors, **run them first** before proposing fixes. The coordination section is a point-in-time snapshot; commits may have landed between handoff-write and pickup-claim that resolved listed failures. Running the tests is cheap (one command); triaging a non-existent failure wastes time and risks mis-diagnosis.
 
-This applies after `/contextualizing` (Step 6) completes, as the agent shifts from loading context to proposing action.
+This applies after `/contextualizing` (Step 6) completes, as Claude shifts from loading context to proposing action.
 
 </workflow>
 
@@ -201,7 +201,7 @@ This applies after `/contextualizing` (Step 6) completes, as the agent shifts fr
 Sessions created by the legacy `/handoff` command (pre-structured format) use `<original_task>` instead of `<nodes>`. Handle gracefully:
 
 1. If `<nodes>` section is missing, fall back to `<original_task>` + `<work_remaining>`
-2. If `<skills>` section is missing, remind the agent to check which skills apply
+2. If `<skills>` section is missing, check which skills apply
 3. Present legacy sessions with a note: "This session uses the legacy format — skills checklist and node anchoring are not available"
 
 </legacy_compatibility>

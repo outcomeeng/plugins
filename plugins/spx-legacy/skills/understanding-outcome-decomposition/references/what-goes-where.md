@@ -107,7 +107,7 @@ Specs define states that should exist. Each level has specific content.
 **Contract vs. Context:**
 
 - **Contract** sections are durable truth. References must resolve. Stale links = defect.
-- **Context** sections document the agent's examination. References may diverge as understanding deepens — this is expected, not a defect.
+- **Context** sections document Claude's examination. References may diverge as understanding deepens — this is expected, not a defect.
 
 ### Outcome Scoping
 

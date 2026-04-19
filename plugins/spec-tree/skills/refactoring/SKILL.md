@@ -250,7 +250,7 @@ How to avoid: When rewriting specs after structural changes, treat the rewrite a
 
 **Failure 6: Dead code hidden by legacy tests**
 
-Agent planned to delete a set of legacy tests that duplicated newer spx/ tests. Coverage analysis showed deleting them dropped coverage on `src/foo/bar.ts` from 89% to 0%. The agent flagged it as a coverage gap to backfill. The real diagnosis: `src/foo/bar.ts` was dead code. Nothing in `src/` imported it. Its only consumer was the legacy test file the agent was about to delete. The legacy test was the sole reason the dead code "had coverage." Alongside it lived `src/commands/foo/bar.ts`, which reimplemented the same logic inline because no one noticed the pure module existed.
+Claude planned to delete a set of legacy tests that duplicated newer spx/ tests. Coverage analysis showed deleting them dropped coverage on `src/foo/bar.ts` from 89% to 0%. Claude flagged it as a coverage gap to backfill. The real diagnosis: `src/foo/bar.ts` was dead code. Nothing in `src/` imported it. Its only consumer was the legacy test file Claude was about to delete. The legacy test was the sole reason the dead code "had coverage." Alongside it lived `src/commands/foo/bar.ts`, which reimplemented the same logic inline because no one noticed the pure module existed.
 
 When legacy tests are the only consumer of a `src/` module, that module is dead code. The duplication it conceals is architectural debt: either the code was never wired up, or it was replaced by an inline duplicate elsewhere without deleting the original. Deleting the legacy test is the correct move — but it must be accompanied by deleting the dead `src/` module (and consolidating the inline duplicate back into it, or vice versa).
 

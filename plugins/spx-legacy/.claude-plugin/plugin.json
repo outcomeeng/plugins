@@ -1,6 +1,6 @@
 {
   "name": "spx-legacy",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Legacy Outcome Engineering (spx/): PRDs, ADRs, capabilities, features, stories",
   "author": {
     "name": "Simon Heimlicher"

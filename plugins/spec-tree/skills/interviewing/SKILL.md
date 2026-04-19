@@ -1,9 +1,21 @@
 ---
 name: interviewing
 description: >-
-  ALWAYS invoke this skill when conducting structured interviews to gather
-  requirements, specifications, or design decisions through Q&A.
-  NEVER interview users or gather requirements without this skill.
+  ALWAYS invoke this skill BEFORE asking the user anything during creation or
+  modification of any artifact (spec, ADR, PDR, test, code, doc, plan, config).
+  TRIGGERS — load the instant you notice: about to call AskUserQuestion; about
+  to type a "?" addressed to the user; about to say "approve?" / "ready?" /
+  "shall I?" / "does this look right?"; about to present a draft and invite
+  feedback; about to enumerate options in prose and ask the user to pick; stuck
+  between two implementation paths; scope unclear; design decision emerged
+  mid-work. The skill governs question design — whether to ask at all (often
+  the answer is "just execute"), one round or multi-round, how to frame options
+  so each round materially narrows the solution space, and which questions to
+  skip because you can resolve them yourself by reading code. NEVER call
+  AskUserQuestion without this skill. NEVER present a draft and ask for
+  approval without this skill — the skill tells you whether approval is
+  warranted or whether to just execute. NEVER ask a plain-text question during
+  creation/modification work without this skill.
 argument-hint: <file-path-or-requirement>
 ---
 
@@ -166,31 +178,31 @@ All in `${CLAUDE_SKILL_DIR}/workflows/`:
 
 **Failure 1: Question spiral without coverage progress**
 
-Agent asks 15+ questions all drilling into one area (e.g., "API Design") while ignoring other pending areas on the coverage map. The interview grows without making the coverage map advance. User gets frustrated; context window fills with narrow detail.
+Claude asks 15+ questions all drilling into one area (e.g., "API Design") while ignoring other pending areas on the coverage map. The interview grows without making the coverage map advance. User gets frustrated; context window fills with narrow detail.
 
 How to avoid: Before each question, check the coverage map. If an area is at 3+ consecutive questions and still not marked [done], ask yourself whether you're probing a real gap or just exploring. Move to the next pending area when the current one has enough signal to draft the spec section — depth is for unclear cases, not comprehensive documentation.
 
 **Failure 2: Accepting vague answers without pushback**
 
-User responds with "we'll figure it out later" or "just make it work for the common case." Agent records the non-answer and moves on. The resulting spec has holes that surface during implementation.
+User responds with "we'll figure it out later" or "just make it work for the common case." Claude records the non-answer and moves on. The resulting spec has holes that surface during implementation.
 
 How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user genuinely doesn't know, record it as an open decision with a `([review])` tag, not as a resolved assertion.
 
 **Failure 3: Losing coverage state in long conversations**
 
-After 30+ turns, the agent loses track of which areas are [done] vs [pending]. Coverage map stops being displayed. Questions start repeating or missing obvious areas. Context compression eats the early interview.
+After 30+ turns, Claude loses track of which areas are [done] vs [pending]. Coverage map stops being displayed. Questions start repeating or missing obvious areas. Context compression eats the early interview.
 
 How to avoid: Display the coverage map before EVERY question, not just the first one. The display is a forcing function — writing it out pulls the state back into active context. If you catch yourself not displaying it, that's the signal to stop and re-read your own previous turns.
 
 **Failure 4: Generated spec doesn't trace back to interview**
 
-Spec is written from the agent's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — agent can't answer.
+Spec is written from Claude's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — agent can't answer.
 
 How to avoid: Every section of the generated spec must trace to a specific coverage area explored in the interview. Every assertion must map to something the user said. The decisions log is NOT optional — if there was any pushback, disagreement, or trade-off, it belongs in the log with the user's final answer.
 
 **Failure 5: Skipping pre-analysis to get to questions faster**
 
-Agent invokes `/interviewing`, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that the agent didn't do its homework.
+Claude invokes `/interviewing`, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
 
 How to avoid: Pre-Analysis Protocol is non-negotiable. Launch the Explore agent before the first question. Share the brief. The user should never have to tell you something that exists in the codebase or docs.
 

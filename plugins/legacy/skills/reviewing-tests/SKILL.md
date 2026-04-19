@@ -120,7 +120,7 @@ Specs may use either format:
 
 Both are contractual — every link must resolve.
 
-This is distinct from the **Analysis section** (stories only), which documents the agent's codebase examination. Analysis references may diverge from implementation as understanding deepens — do NOT reject specs for stale Analysis references.
+This is distinct from the **Analysis section** (stories only), which documents Claude's codebase examination. Analysis references may diverge from implementation as understanding deepens — do NOT reject specs for stale Analysis references.
 
 **Check:**
 

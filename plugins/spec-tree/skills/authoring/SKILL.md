@@ -203,6 +203,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 2. Write the spec file
 3. Create the `tests/` directory
 4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
+5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.unit.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. Without the EXCLUDE entry, `spx validation all` fails on every forward `[test]` link.
 
 **For decision records:**
 
@@ -287,9 +288,9 @@ Common temporal patterns from user input and their atemporal rewrites:
 
 **Failure 6: Junk-drawer container names**
 
-Agent created a parent outcome named "advanced operations" that grouped prune, archive, and "future retention features." Six months later the same directory held archive, prune, dry-run, batch deletion, and a new hypothesis for session compaction — unrelated concerns glued together by a name that accepted anything.
+Claude created a parent outcome named "advanced operations" that grouped prune, archive, and "future retention features." Six months later the same directory held archive, prune, dry-run, batch deletion, and a new hypothesis for session compaction — unrelated concerns glued together by a name that accepted anything.
 
-A container name must describe what the container contains. If the name would accept arbitrary future scope ("advanced", "core", "misc", "utilities", "helpers", "operations"), it is wrong — the agent who added the next feature will find a plausible reason to drop it in.
+A container name must describe what the container contains. If the name would accept arbitrary future scope ("advanced", "core", "misc", "utilities", "helpers", "operations"), it is wrong — Claude will always find a plausible reason to drop the next feature in.
 
 How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the honest answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
