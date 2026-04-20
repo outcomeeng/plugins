@@ -1,7 +1,7 @@
 ---
 name: auditing-typescript-architecture
 description: >-
-  ALWAYS invoke this skill when auditing ADRs for TypeScript or after writing an ADR.
+  ALWAYS invoke this skill when auditing ADRs for TypeScript or after writing or editing one.
   NEVER implement from an unaudited ADR.
 allowed-tools: Read, Grep
 ---

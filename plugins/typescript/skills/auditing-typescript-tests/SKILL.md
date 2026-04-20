@@ -1,7 +1,7 @@
 ---
 name: auditing-typescript-tests
 description: >-
-  ALWAYS invoke this skill when auditing tests for TypeScript or after writing tests.
+  ALWAYS invoke this skill when auditing tests for TypeScript or after writing or editing tests.
   NEVER use auditing-typescript for test code.
 ---
 
@@ -173,6 +173,15 @@ fc.assert(
   }),
 );
 ```
+
+**Probe every named constant's value.** Lint rules that forbid string literals in assertions force authors to wrap values in named constants. The audit must check whether each constant improves evidence or merely follows the letter of the rule. For each named constant in the test file, ask:
+
+1. **Does the name add meaning the literal lacks?** `VARIANT_HDL_ENGINEER = "hdl-engineer"` in a file that never explains why this variant matters adds no meaning — a fresh-per-call generator (`fc.sample(fc.stringMatching(...), 1)[0]`) produces stronger evidence because the test passes for any valid input shape, not a single chosen string.
+2. **Does the name bind the test to a canonical source?** `BOOLEAN_DEFAULT = false` does not — `false` is self-documenting. `FLAG_KEYS.showPricing` imported from the canonical registry does — it ties the test to the production declaration.
+3. **Does the constant duplicate implementation state?** `WARNING_TAG = "[flag-overrides]"` in a test, when the implementation exports `MALFORMED_WARNING`, duplicates the prefix without binding. The test keeps passing if the impl prefix changes — the constant lied. Import from the module under test.
+4. **Do composed constants (`JSON_PREVIEW_TRUE = \`{"${FLAG_KEY_PREVIEW}":true}\``) improve clarity?** Usually no — readers must mentally evaluate the template. A literal JSON string or a generator in the test body reads more directly.
+
+Reject named-constant ceremony as misalignment: the constant's presence implies evidence strength that the test does not actually deliver.
 
 </supplement>
 
@@ -361,23 +370,32 @@ Reviewer spent the entire audit checking for `as any`, verifying return types, a
 
 How to avoid: Essential principles — no code quality checks. Check the four evidence properties only.
 
+**Failure 5: Rubber-stamped named constants without probing their value**
+
+The test file declared `BOOLEAN_DEFAULT = false`, `JSON_PREVIEW_TRUE = \`{"${FLAG_KEY_PREVIEW}":true}\``,`WARNING_TAG = "[flag-overrides]"`, and a dozen other named constants. The auditor saw "named constants present, project rule satisfied" and approved. The constants were ceremony:`BOOLEAN_DEFAULT`renamed`false`, the JSON composition added indirection to inputs the rule doesn't even govern, and`WARNING_TAG` duplicated the implementation's warning prefix without binding (the impl could change the prefix and the test would keep passing against the stale duplicate).
+
+How to avoid: Alignment supplement — probe every named constant. Does the name add meaning? Does it bind to a canonical source? Does it duplicate implementation state? Reject ceremony.
+
 </failure_modes>
 
 <rejection_triggers>
 
-| Category           | Trigger                                                     | Property       |
-| ------------------ | ----------------------------------------------------------- | -------------- |
-| **Coupling**       | Zero codebase imports (only framework/library)              | Coupling       |
-| **Coupling**       | Only `import type` — erased at runtime                      | Coupling       |
-| **Coupling**       | Barrel import of wrong export (false coupling)              | Coupling       |
-| **Coupling**       | Import present but assertion-relevant function never called | Coupling       |
-| **Falsifiability** | `vi.mock` / `jest.mock` replaces imported module            | Falsifiability |
-| **Falsifiability** | `vi.spyOn` / `jest.spyOn` with `.mockReturnValue`           | Falsifiability |
-| **Falsifiability** | Cannot name a concrete mutation that would fail the test    | Falsifiability |
-| **Alignment**      | Parser/serializer without `fc.assert` roundtrip             | Alignment      |
-| **Alignment**      | Property assertion tested with only examples                | Alignment      |
-| **Alignment**      | Test exercises different behavior than assertion describes  | Alignment      |
-| **Coverage**       | Zero delta with baseline < 100% on assertion-relevant files | Coverage       |
+| Category           | Trigger                                                                                                                               | Property       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **Coupling**       | Zero codebase imports (only framework/library)                                                                                        | Coupling       |
+| **Coupling**       | Only `import type` — erased at runtime                                                                                                | Coupling       |
+| **Coupling**       | Barrel import of wrong export (false coupling)                                                                                        | Coupling       |
+| **Coupling**       | Import present but assertion-relevant function never called                                                                           | Coupling       |
+| **Falsifiability** | `vi.mock` / `jest.mock` replaces imported module                                                                                      | Falsifiability |
+| **Falsifiability** | `vi.spyOn` / `jest.spyOn` with `.mockReturnValue`                                                                                     | Falsifiability |
+| **Falsifiability** | Cannot name a concrete mutation that would fail the test                                                                              | Falsifiability |
+| **Alignment**      | Parser/serializer without `fc.assert` roundtrip                                                                                       | Alignment      |
+| **Alignment**      | Property assertion tested with only examples                                                                                          | Alignment      |
+| **Alignment**      | Test exercises different behavior than assertion describes                                                                            | Alignment      |
+| **Alignment**      | Named constant renames a self-documenting literal (`BOOLEAN_DEFAULT = false`)                                                         | Alignment      |
+| **Alignment**      | Named constant duplicates implementation state without importing it (`WARNING_TAG = "[flag-overrides]"` when impl exports the string) | Alignment      |
+| **Alignment**      | Composed constants add indirection to non-assertion inputs (template literals wrapping other constants)                               | Alignment      |
+| **Coverage**       | Zero delta with baseline < 100% on assertion-relevant files                                                                           | Coverage       |
 
 </rejection_triggers>
 
