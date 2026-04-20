@@ -10,6 +10,8 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 > **PREREQUISITE: Run through the `/testing` router first.**
 >
 > This skill provides TypeScript-specific implementations for decisions made there. Do NOT skip the router—it determines WHAT to test and at WHAT level. This skill shows HOW to implement that decision in TypeScript.
+>
+> After loading `/standardizing-typescript`, check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root. Read each file that exists before writing or revising tests.
 
 **Note on Analysis sections:** When reading node specs, the Analysis section documents what the spec author examined. It provides context but is not binding — implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
 
@@ -36,12 +38,12 @@ After running through the `/testing` router, use this mapping:
 
 ## TypeScript Tooling by Level
 
-| Level            | Infrastructure                                  | Speed | Framework  |
-| ---------------- | ----------------------------------------------- | ----- | ---------- |
-| 1: Unit          | Node.js stdlib + temp dirs + standard dev tools | <50ms | Vitest     |
-| 2: Integration   | Docker containers + project-specific binaries   | <1s   | Vitest     |
-| 3: E2E (CLI/API) | Network services + external APIs                | <30s  | Vitest     |
-| 3: E2E (Browser) | Chrome + real user flows                        | <30s  | Playwright |
+| Level | Infrastructure                                  | Speed | Framework  |
+| ----- | ----------------------------------------------- | ----- | ---------- |
+| 1     | Node.js stdlib + temp dirs + standard dev tools | <50ms | Vitest     |
+| 2     | Docker containers + project-specific binaries   | <1s   | Vitest     |
+| 3     | Network services + external APIs                | <30s  | Vitest     |
+| 3     | Chrome + real user flows                        | <30s  | Playwright |
 
 **Standard dev tools** (Level 1): git, node, npm, curl—available in CI without setup.
 **Project-specific tools** (Level 2): Docker, Hugo, Caddy, PostgreSQL—require installation.
@@ -189,7 +191,7 @@ class OrderProcessor {
   constructor(private repository: OrderRepository) {}
 
   async process(order: Order): Promise<void> {
-    // Validation (pure) mixed with persistence (integration)
+    // Validation (level 1) mixed with persistence (level 2, depends on database)
     if (!order.items.length) {
       throw new ValidationError("Empty order");
     }
@@ -618,7 +620,7 @@ describe("UserRepository", () => {
 
 ---
 
-## Level 2: Integration Patterns
+## Level 2 Patterns
 
 When the router determines Level 2 is appropriate, use real dependencies via typed harnesses.
 
@@ -675,7 +677,7 @@ async function createHugoHarness(fixturePath?: string): Promise<HugoHarness> {
 ```typescript
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-describe("Hugo Integration", () => {
+describe("Hugo build", () => {
   let harness: HugoHarness;
 
   beforeAll(async () => {
@@ -760,7 +762,7 @@ async function createPostgresHarness(): Promise<PostgresHarness> {
 
 ---
 
-## Level 3: E2E Patterns
+## Level 3 Patterns
 
 When the router determines Level 3 is required (real credentials, external services).
 
@@ -814,7 +816,7 @@ function requireCredentials(): Credentials {
 ```typescript
 import { describe, expect, it } from "vitest";
 
-describe("LHCI E2E", () => {
+describe("LHCI", () => {
   const credentials = loadCredentials();
 
   it.skipIf(!credentials)("uploads audit results", async () => {
@@ -831,7 +833,7 @@ describe("LHCI E2E", () => {
 });
 ```
 
-### Playwright for Browser E2E
+### Playwright for Browser
 
 ```typescript
 // spx/.../tests/checkout.e2e.spec.ts (Playwright)

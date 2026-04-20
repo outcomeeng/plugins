@@ -15,6 +15,10 @@ Canonical ADR conventions for TypeScript projects. Defines what sections an ADR 
 This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architecting-typescript` to write ADRs or `/auditing-typescript-architecture` to review them.
 </reference_note>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/typescript-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization.
+</repo_local_overlay>
+
 <adr_sections>
 
 The ADR template (from `/understanding`) defines exactly these sections:

@@ -24,6 +24,10 @@ This is a reference skill. Other TypeScript skills reference these standards. Yo
 These standards apply to ALL TypeScript code: production and test code alike.
 </reference_note>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/typescript.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization.
+</repo_local_overlay>
+
 ---
 
 <type_safety>

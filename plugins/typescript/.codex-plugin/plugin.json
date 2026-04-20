@@ -1,6 +1,6 @@
 {
   "name": "typescript",
-  "version": "0.14.2",
+  "version": "0.15.0",
   "description": "TypeScript development workflow with testing, implementation, review, and architecture skills",
   "author": {
     "name": "Simon Heimlicher",
@@ -27,10 +27,7 @@
     "longDescription": "TypeScript development workflows covering testing, implementation, review, and architecture guidance.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
-    "capabilities": [
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Read", "Write"],
     "websiteURL": "https://outcome.engineering"
   }
 }

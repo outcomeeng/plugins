@@ -1,12 +1,14 @@
 ---
 name: architecting-typescript
 description: >-
-  ALWAYS invoke this skill when writing or editing ADRs for TypeScript.
+  ALWAYS invoke this skill when writing ADRs for TypeScript.
 allowed-tools: Read, Write, Glob, Grep
 ---
 
 <essential_principles>
 **Read `/standardizing-typescript-architecture` before writing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
+
+After reading `/standardizing-typescript-architecture`, check for `spx/local/typescript-architecture.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
 
 - ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
 - Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
