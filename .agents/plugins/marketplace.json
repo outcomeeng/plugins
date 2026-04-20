@@ -1,0 +1,104 @@
+{
+  "name": "outcomeeng",
+  "interface": {
+    "displayName": "Outcome Engineering Plugins"
+  },
+  "plugins": [
+    {
+      "name": "claude",
+      "source": {
+        "source": "local",
+        "path": "./plugins/claude"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "frontend",
+      "source": {
+        "source": "local",
+        "path": "./plugins/frontend"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Design"
+    },
+    {
+      "name": "hdl",
+      "source": {
+        "source": "local",
+        "path": "./plugins/hdl"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "prose",
+      "source": {
+        "source": "local",
+        "path": "./plugins/prose"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Writing"
+    },
+    {
+      "name": "python",
+      "source": {
+        "source": "local",
+        "path": "./plugins/python"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "spec-tree",
+      "source": {
+        "source": "local",
+        "path": "./plugins/spec-tree"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "typescript",
+      "source": {
+        "source": "local",
+        "path": "./plugins/typescript"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "visual",
+      "source": {
+        "source": "local",
+        "path": "./plugins/visual"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Design"
+    }
+  ]
+}
