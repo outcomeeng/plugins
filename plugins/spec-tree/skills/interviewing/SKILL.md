@@ -1,21 +1,10 @@
 ---
 name: interviewing
 description: >-
-  ALWAYS invoke this skill BEFORE asking the user anything during creation or
-  modification of any artifact (spec, ADR, PDR, test, code, doc, plan, config).
-  TRIGGERS — load the instant you notice: about to call AskUserQuestion; about
-  to type a "?" addressed to the user; about to say "approve?" / "ready?" /
-  "shall I?" / "does this look right?"; about to present a draft and invite
-  feedback; about to enumerate options in prose and ask the user to pick; stuck
-  between two implementation paths; scope unclear; design decision emerged
-  mid-work. The skill governs question design — whether to ask at all (often
-  the answer is "just execute"), one round or multi-round, how to frame options
-  so each round materially narrows the solution space, and which questions to
-  skip because you can resolve them yourself by reading code. NEVER call
-  AskUserQuestion without this skill. NEVER present a draft and ask for
-  approval without this skill — the skill tells you whether approval is
-  warranted or whether to just execute. NEVER ask a plain-text question during
-  creation/modification work without this skill.
+  ALWAYS invoke BEFORE asking the user anything while creating or modifying any
+  artifact (spec, ADR, PDR, test, code, doc). Triggers: AskUserQuestion,
+  seeking draft approval, stuck on scope or design. NEVER ask without this
+  skill.
 argument-hint: <file-path-or-requirement>
 ---
 

@@ -294,6 +294,18 @@ A container name must describe what the container contains. If the name would ac
 
 How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the honest answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
+**Failure 7: Testable MUST/NEVER tagged `[review]` instead of `[test]`**
+
+Claude wrote PDR compliance rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state. ([review])" and "Running `install` twice for the same rule is a no-op the second time. ([review])". Both rules describe behaviors any level 1 test can falsify — write a test that simulates a crash between temp-write and rename, diff the resulting settings.json against the pre-state; run `install` twice and diff. An `[review]` tag on a rule an automated test can falsify is a rejection-worthy audit finding — it means the rule will not be enforced by CI and will silently regress.
+
+How to avoid: before writing `[review]`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, the tag is `[test]` — write it and link it. Reserve `[review]` for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[review]` tags there rot silently.
+
+**Failure 8: Over-multiplying decision records in small trees**
+
+Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust project with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: 15-build.adr.md." The four ADRs collapsed into one `15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a project with no commits yet.
+
+How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
+
 </failure_modes>
 
 <anti_patterns>
@@ -309,6 +321,10 @@ How to avoid: read the proposed container name aloud and ask "what would I refus
 **Numbering from 1.** Indices start at 10+ and use the sparse distribution formula. Never use single-digit indices.
 
 **Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. If your parent spec reads "X provides A, B, and C (these are the child nodes)", you have written a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualizing` walk the tree to surface children.
+
+**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a project with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
+
+**Tagging testable MUST/NEVER rules with `[review]`.** `[review]` silences CI enforcement — any rule tagged `[review]` will not fail a build when violated. If a concrete automated test can falsify the rule, the tag is `[test]` and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they are never `[review]`. Reserve `[review]` for semantic constraints no automated check can falsify.
 
 </anti_patterns>
 
