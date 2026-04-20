@@ -1,0 +1,36 @@
+{
+  "name": "spec-tree",
+  "version": "0.19.3",
+  "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, session management, and TDD flows driven by specs",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "spec-tree",
+    "outcome-engineering",
+    "enabler",
+    "outcome",
+    "deterministic-context",
+    "spx",
+    "commit",
+    "handoff",
+    "spec-as-source"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Spec Tree",
+    "shortDescription": "Outcome Engineering with Spec Tree skills",
+    "longDescription": "Spec Tree methodology skills for contextualizing, authoring, decomposing, applying, and auditing durable specs.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}
