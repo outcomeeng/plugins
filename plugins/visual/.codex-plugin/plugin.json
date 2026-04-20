@@ -1,0 +1,30 @@
+{
+  "name": "visual",
+  "version": "0.2.3",
+  "description": "Visual diagrams: /excalidrawing (Excalidraw JSON generation)",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "excalidraw",
+    "diagrams",
+    "visual"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Visual Diagrams",
+    "shortDescription": "Create Excalidraw-based visual diagrams",
+    "longDescription": "Visual-diagram workflows for generating and refining Excalidraw JSON diagrams.",
+    "developerName": "Outcome Engineering",
+    "category": "Design",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "frontend",
+  "version": "0.0.3",
+  "description": "Design and build beautiful web UI that doesn't look generic",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "design",
+    "frontend"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Frontend Design",
+    "shortDescription": "Design and build intentional web interfaces",
+    "longDescription": "Frontend design workflows for building distinctive web UI without generic layouts.",
+    "developerName": "Outcome Engineering",
+    "category": "Design",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

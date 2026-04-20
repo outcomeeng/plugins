@@ -1,0 +1,32 @@
+{
+  "name": "prose",
+  "version": "0.2.1",
+  "description": "Prose craft: /writing-prose (always active), /reviewing-prose (on request)",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "prose",
+    "writing",
+    "reviewing",
+    "editing",
+    "style"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Prose Craft",
+    "shortDescription": "Write and review prose with stronger style control",
+    "longDescription": "Prose-writing and prose-review workflows for editing, critique, and style guidance.",
+    "developerName": "Outcome Engineering",
+    "category": "Writing",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

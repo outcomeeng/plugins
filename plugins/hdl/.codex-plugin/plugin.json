@@ -1,0 +1,34 @@
+{
+  "name": "hdl",
+  "version": "0.2.2",
+  "description": "HDL engineering: idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 code review with synthesizability analysis",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "vhdl",
+    "systemverilog",
+    "verilog",
+    "fpga",
+    "asic",
+    "hdl",
+    "synthesis"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "HDL Engineering",
+    "shortDescription": "Review VHDL and SystemVerilog designs",
+    "longDescription": "Hardware-description-language review workflows for idiomatic VHDL-2008 and SystemVerilog code.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "typescript",
+  "version": "0.14.2",
+  "description": "TypeScript development workflow with testing, implementation, review, and architecture skills",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "typescript",
+    "code",
+    "architecture",
+    "testing",
+    "review",
+    "simplification",
+    "tdd",
+    "bdd",
+    "sdd"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "TypeScript Engineering",
+    "shortDescription": "TypeScript testing, coding, and architecture skills",
+    "longDescription": "TypeScript development workflows covering testing, implementation, review, and architecture guidance.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

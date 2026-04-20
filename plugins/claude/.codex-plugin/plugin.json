@@ -1,0 +1,34 @@
+{
+  "name": "claude",
+  "version": "0.3.1",
+  "description": "Claude Code plugin agents, commands, and skills",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "claude code",
+    "claude",
+    "plugin",
+    "marketplace",
+    "skill",
+    "command",
+    "agent"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Claude Plugin Development",
+    "shortDescription": "Meta-skills for creating and auditing Codex assets",
+    "longDescription": "Create and audit skills and related plugin-development assets for Codex workflows.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

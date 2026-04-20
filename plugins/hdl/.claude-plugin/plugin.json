@@ -1,6 +1,6 @@
 {
   "name": "hdl",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "HDL engineering: idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 code review with synthesizability analysis",
   "author": {
     "name": "Simon Heimlicher"
