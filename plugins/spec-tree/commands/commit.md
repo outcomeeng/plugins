@@ -9,19 +9,19 @@ argument-hint: [files-to-stage]
 **Arguments:** `$ARGUMENTS`
 
 **Current branch:**
-!`git branch --show-current`
+!`git branch --show-current || echo 'Not a git repo'`
 
 **Status:**
-!`git status --short`
+!`git status --short || echo 'Not a git repo'`
 
 **Staged changes:**
-!`git diff --cached --stat`
+!`git diff --cached --stat || echo 'Not a git repo'`
 
 **Unstaged changes:**
-!`git diff --stat`
+!`git diff --stat || echo 'Not a git repo'`
 
 **Recent commits (for style reference):**
-!`git log --oneline -5`
+!`git log --oneline -5 || echo 'Not a git repo'`
 
 ---
 
