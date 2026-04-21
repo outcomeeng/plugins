@@ -724,8 +724,8 @@ allowed-tools: SequentialThinking
 ### 2. Load Dynamic Context When Needed
 
 ```markdown
-Current state: ! `git status`
-Recent activity: ! `git log --oneline -5`
+Current state: ! `git status || echo 'Not a git repo'`
+Recent activity: ! `git log --oneline -5 || echo 'Not a git repo'`
 ```
 
 ### 3. Reference Files Explicitly

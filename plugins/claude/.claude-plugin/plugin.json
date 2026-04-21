@@ -1,6 +1,6 @@
 {
   "name": "claude",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Claude Code plugin agents, commands, and skills",
   "author": {
     "name": "Simon Heimlicher"
