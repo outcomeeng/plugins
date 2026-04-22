@@ -10,6 +10,8 @@ allowed-tools: Read, Grep
 Review ADRs against `/standardizing-typescript-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 
 **Read `/standardizing-typescript-architecture` before reviewing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
+
+After reading `/standardizing-typescript-architecture`, check for `spx/local/typescript-architecture.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
 </objective>
 
 <context_loading>
@@ -41,7 +43,7 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 
 <process>
 
-1. **Read `/standardizing-typescript-architecture`** for canonical conventions
+1. **Read `/standardizing-typescript-architecture`**, then `spx/local/typescript-architecture.md` if present, for canonical conventions
 2. **Verify an ADR exists.** If the module makes architectural decisions (module layout, library choice, DI patterns) without an ADR, the absence is the violation — REJECT immediately. Do not treat missing ADRs as N/A.
 3. **Read the ADR** completely
 4. **Check section structure** -- only authoritative sections allowed (Purpose, Context, Decision, Rationale, Trade-offs accepted, Invariants, Compliance). Flag phantom sections (Testing Strategy, Status, etc.)
@@ -176,7 +178,7 @@ Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for a complete REJECTED 
 <success_criteria>
 Review is complete when:
 
-- [ ] Read `/standardizing-typescript-architecture` before starting review
+- [ ] Read `/standardizing-typescript-architecture` and `spx/local/typescript-architecture.md` (if present) before starting review
 - [ ] Checked section structure against authoritative ADR template
 - [ ] Checked ALL sections for temporal language -- Context, Decision, Rationale, Compliance
 - [ ] Verified Compliance section includes testability constraints (MUST/NEVER for DI, no mocking)

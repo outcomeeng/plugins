@@ -30,15 +30,17 @@ See `<codebase_discovery>` in SKILL.md for complete guidance.
 # 1. Read project docs (highest authority)
 Read: README.md, docs/, CLAUDE.md
 
-# 2. Check available libraries
+# 2. Read the relevant skill/spec first
+Read: the skill and spec docs that define the pattern you are about to use
+
+# 3. Check available libraries
 Read: package.json → dependencies, devDependencies
 
-# 3. Find prior art
-Grep: patterns similar to your task
-Glob: files in directories where you'll write
+# 4. Locate reusable artifacts
+Glob/Grep: actual modules, harnesses, fixtures, registries, entrypoints
 
-# 4. Detect conventions
-Read: 3-5 existing files in target directory
+# 5. Confirm file placement
+Read: files in target directory
 ```
 
 ### Discovery Output
@@ -46,13 +48,13 @@ Read: 3-5 existing files in target directory
 Before proceeding to Phase 1, document:
 
 - **Libraries to use**: (from package.json, don't add new ones)
-- **Prior art found**: (existing utilities, patterns to follow)
-- **Conventions detected**: (naming, structure, error handling)
+- **Authoritative rules loaded**: (skill/spec/docs that govern this work)
+- **Reusable artifacts found**: (existing utilities, harnesses, fixtures, registries)
 - **Utilities to reuse**: (don't reinvent what exists)
 
 **Remember the hierarchy**: `docs/` > `CLAUDE.md` > `specs` > `SKILL.md` >>> existing code
 
-Existing code is REFERENCE, not authority. When docs and code conflict, docs win.
+Existing code is REFERENCE, not authority. Use code search to find artifacts, never to decide methodology or conventions. When docs and code conflict, docs win.
 
 ## Phase 1: Write Tests First (TDD)
 

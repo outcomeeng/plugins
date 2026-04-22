@@ -14,11 +14,13 @@ This skill is read-only. It produces verdicts, not commits or fixes.
 
 **Test evidence quality is audited by `/auditing-typescript-tests`.** This skill audits implementation code, not test code. If test files are in scope, delegate to `/auditing-typescript-tests`.
 
+**Before reviewing code, read `/standardizing-typescript`.** After that, check for `spx/local/typescript.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
+
 </objective>
 
 <quick_start>
 
-1. Read `/testing` for methodology + `/testing-typescript` for TypeScript patterns
+1. Read `/standardizing-typescript`, then `spx/local/typescript.md` if present, then `/testing` for methodology + `/testing-typescript` for TypeScript patterns
 2. Load project config: `CLAUDE.md`, `tsconfig.json`, `package.json` (Phase 0)
 3. Run automated gates -- project validation command (Phase 1, blocking)
 4. Run tests -- verify all pass (Phase 2, blocking)

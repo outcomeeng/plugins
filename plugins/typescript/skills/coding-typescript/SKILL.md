@@ -20,6 +20,10 @@ Use this path to access skill files:
 **IMPORTANT**: Do NOT search the project directory for skill files.
 </accessing_skill_files>
 
+<reference_loading>
+Before discovery or implementation, read `/standardizing-typescript`. After that, check for `spx/local/typescript.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
+</reference_loading>
+
 <essential_principles>
 **NO MOCKING. DEPENDENCY INJECTION. BEHAVIOR ONLY. TEST FIRST.**
 
@@ -130,28 +134,30 @@ Run these searches before implementation:
 # 1. Read project documentation
 Read: README.md, docs/, CLAUDE.md, CONTRIBUTING.md
 
-# 2. Check available dependencies (don't add what exists)
+# 2. Load the authoritative methodology
+Read: relevant skills and spec docs before inferring any convention
+
+# 3. Check available dependencies (don't add what exists)
 Read: package.json → dependencies, devDependencies
 
-# 3. Find prior art for what you're building
-Grep: function names, class names, patterns similar to your task
-Glob: files in similar directories (src/utils/, src/services/, etc.)
+# 4. Locate concrete artifacts to reuse
+Glob/Grep: actual modules, harnesses, fixtures, registries, and entrypoints
 
-# 4. Detect project conventions
+# 5. Confirm local file placement
 Read: existing files in the same directory you'll write to
 ```
 
 ### What to Discover
 
-| Question                        | How to Find                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------------ |
-| What libraries are available?   | `package.json` → dependencies                                                  |
-| How does this project handle X? | `Grep` for similar patterns                                                    |
-| What utilities already exist?   | `Glob` for `**/utils/**`, `**/helpers/**`, `**/fixtures/**`, `**/harnesses/**` |
-| What's the naming convention?   | Read 3-5 files in the target directory                                         |
-| What error classes exist?       | `Grep` for `extends Error`                                                     |
-| What logging pattern is used?   | `Grep` for `logger`, `console.log`, `debug`                                    |
-| How are configs structured?     | `Glob` for `**/*.config.*`, `**/config/**`                                     |
+| Question                                            | How to Answer It                                                                |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| What conventions govern this work?                  | Read the relevant skill, spec, ADR/PDR, `CLAUDE.md`, and project docs first     |
+| What libraries are available?                       | `package.json` → dependencies                                                   |
+| What concrete modules already exist to reuse?       | `Glob`/`Grep` for actual modules, registries, harnesses, fixtures, and helpers  |
+| What error classes already exist?                   | Locate existing error modules; do not infer policy from random call sites       |
+| What logging facility already exists?               | Locate the logger module or logging package, then follow documented rules       |
+| How are configs structured?                         | Find config modules and config docs; do not infer config policy from ad hoc use |
+| If this is a script, which arg parser is canonical? | Read `package.json`, docs, and existing checked-in `scripts/` entrypoints       |
 
 ### Discovery Anti-Patterns
 
@@ -167,19 +173,42 @@ function fetch_user_by_id() {} // Project uses camelCase
 
 // ❌ WRONG: New error class when domain errors exist
 class MyError extends Error {} // Project has @/errors
+
+// ❌ WRONG: Inferring architecture from grep results
+// "I saw three files use pattern X, so pattern X is the standard"
 ```
+
+**Authority rule**: Skills, specs, ADRs/PDRs, `CLAUDE.md`, and project docs answer "how should this be done?" Code search answers only "where is the existing artifact I should reuse?"
+
+### Script Entry Points
+
+If you are editing a checked-in entrypoint under `scripts/`, treat it as boundary code:
+
+- use the repository's canonical argument parsing library
+- do not hand-roll `process.argv` parsing
+- keep the script thin and dispatch to one orchestrator module or a small dispatcher
+- allow relative imports, boundary env parsing, and console output when that avoids circular dependency problems
+
+Before changing script behavior, answer these questions:
+
+- Where is the orchestrator module this script should call?
+- If the orchestrator touches a boundary, where is the harness?
+- If there is no harness, where is the fixture data?
+- Where is the spec for the orchestrator or harness?
+- Where are the tests for the orchestrator or harness?
 
 ### Discovery Checklist
 
 Before writing code, confirm:
 
+- [ ] Loaded the relevant skill and spec documents before inferring conventions
 - [ ] Read `package.json` — know what libraries are available
-- [ ] Searched for prior art — found (or confirmed none exists)
-- [ ] Identified naming conventions from existing files
-- [ ] Found existing utilities to reuse (or confirmed none exist)
-- [ ] Checked for existing error classes, loggers, configs
+- [ ] Located reusable modules, harnesses, fixtures, registries, or helpers
+- [ ] Identified the canonical logger/config/error modules from docs or known entrypoints
+- [ ] If editing `scripts/`, identified the canonical argument parsing library
+- [ ] If editing `scripts/`, found the orchestrator's spec and tests (or the harness/fixture gap)
 
-**If discovery reveals existing patterns that conflict with this skill's guidance, follow the project's documented patterns.**
+**Never treat grep results as authority.** If existing code conflicts with the skill, spec, or docs, the documented rule wins.
 
 </codebase_discovery>
 

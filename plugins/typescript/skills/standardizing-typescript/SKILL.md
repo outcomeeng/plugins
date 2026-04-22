@@ -21,7 +21,7 @@ Code follows these standards when tsc strict mode and eslint checks pass. See su
 <reference_note>
 This is a reference skill. Other TypeScript skills reference these standards. You typically don't invoke this directly—invoke `/coding-typescript`, `/testing-typescript`, or `/auditing-typescript` instead.
 
-These standards apply to ALL TypeScript code: production and test code alike.
+These standards apply to ALL TypeScript code, including tests and scripts. `/standardizing-typescript-testing` adds stricter rules for test code.
 </reference_note>
 
 <repo_local_overlay>
@@ -120,46 +120,33 @@ function handle(value: string | number): void {
 
 ---
 
-<named_constants>
+<production_constants>
 
-Test values and configuration must use named constants, not inline literals.
+Production code must name domain-significant literals and export reusable constants from the module that owns them.
 
 ```typescript
 // ✅ REQUIRED: Named constants at module level
-const VALID_SCORE = 85;
 const MIN_SCORE = 0;
 const MAX_SCORE = 100;
-const VALID_INPUT = "simple";
-const EXPECTED_RESULT = 42;
+const DEFAULT_SCORE = 85;
 
-describe("ScoreValidation", () => {
-  it("accepts valid score", () => {
-    expect(validateScore(VALID_SCORE)).toBe(true);
-  });
+export function validateScore(score: number): boolean {
+  return score >= MIN_SCORE && score <= MAX_SCORE;
+}
 
-  it("rejects above maximum", () => {
-    expect(validateScore(MAX_SCORE + 1)).toBe(false);
-  });
-});
+validateScore(DEFAULT_SCORE);
 
-// ❌ REJECTED: Magic values
-describe("ScoreValidationBad", () => {
-  it("accepts valid score", () => {
-    expect(validateScore(85)).toBe(true); // What is 85?
-  });
-
-  it("rejects above maximum", () => {
-    expect(validateScore(101)).toBe(false); // Magic number
-  });
-});
+// ❌ REJECTED: Inline domain literals
+export function validateScoreBad(score: number): boolean {
+  return score >= 0 && score <= 100;
+}
 ```
 
-**Why named constants matter:**
+**Why named constants matter in production code:**
 
-- Sharing between tests and production code
-- Clear documentation of what values mean
-- Easy updates when requirements change
-- Self-documenting test intent
+- Exported constants become the canonical source for tests and other modules
+- Thresholds, command flags, and status tokens stay synchronized
+- Code communicates domain meaning instead of unexplained literals
 
 **ESLint rules enforced:**
 
@@ -172,13 +159,82 @@ describe("ScoreValidationBad", () => {
 
 ```typescript
 // ✅ OK: Idiomatic values are exempt
-expect(results.length).toBe(0);
-expect(count).toBe(1);
+if (results.length === 0) {
+  return;
+}
+if (count === 1) {
+  doThing();
+}
 const first = items[0];
 const last = items[items.length - 1];
 ```
 
-</named_constants>
+For test values, fixture placement, and inline diagnostics, follow `/standardizing-typescript-testing`.
+
+</production_constants>
+
+---
+
+<source_of_truth_registries>
+
+Closed sets must have one runtime source of truth. Use `as const` registries or tuples, then derive unions and schemas from that declaration instead of duplicating string unions by hand.
+
+```typescript
+export const AUTH_PROVIDER_TYPES = {
+  TEMPORARY: "temporary",
+  TRACKED: "tracked",
+} as const;
+
+export type AuthProviderType = (typeof AUTH_PROVIDER_TYPES)[keyof typeof AUTH_PROVIDER_TYPES];
+
+export const authProviderSchema = z.enum(
+  Object.values(AUTH_PROVIDER_TYPES) as [string, ...string[]],
+);
+```
+
+Hand-maintained unions that can drift from the runtime registry are rejected.
+
+</source_of_truth_registries>
+
+---
+
+<script_boundaries>
+
+Checked-in entrypoints in `scripts/` are boundary code.
+
+Scripts may:
+
+- parse arguments
+- read and normalize environment variables at the boundary
+- format terminal output
+- dispatch to one orchestrator module or a small dispatcher
+- map the final result to a process exit code at the outermost `main`
+
+Scripts must NOT become the home of business logic, workflow policy, or transforms that deserve their own specification.
+
+**Canonical argument parsing**
+
+Every repository must converge on one argument parsing library. Script entrypoints must use the repo's canonical parser instead of manual parsing with `process.argv`, ad hoc loops, or mixed parser libraries.
+
+```typescript
+// ❌ REJECTED: manual parsing
+const args = process.argv.slice(2);
+const dryRun = args.includes("--dry-run");
+const target = args[args.indexOf("--target") + 1];
+
+// ✅ REQUIRED: repository-canonical parser
+const options = parseArgsWithRepoStandard(process.argv.slice(2));
+```
+
+**Boundary flexibility**
+
+- Relative imports are acceptable inside `scripts/`
+- Boundary env parsing is acceptable inside `scripts/`
+- `console.*` is acceptable inside `scripts/` for terminal output
+
+Imported orchestrator modules should still follow the normal codebase standards for configuration, logging, and specification coverage.
+
+</script_boundaries>
 
 ---
 
@@ -274,7 +330,7 @@ if (!apiKey) {
 }
 ```
 
-Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. See `/auditing-typescript` for false positive handling.
+Context matters for security rules—a CLI tool invoked by the user has different trust boundaries than a web service. Reading env vars in `scripts/` is acceptable boundary behavior; imported modules should prefer typed config once past that boundary. See `/auditing-typescript` for false positive handling.
 
 **ESLint rules enforced:**
 
@@ -301,7 +357,7 @@ const unusedVariable = 42;
 //   return 42;
 // }
 
-// ❌ REJECTED: console.log in production code (no-console)
+// ❌ REJECTED: console.log in application/runtime modules (no-console)
 function process(data: string): void {
   console.log("Processing:", data);
   // ...
@@ -328,8 +384,10 @@ function handle(input: string): void {
 | Rule                              | What it catches                  |
 | --------------------------------- | -------------------------------- |
 | @typescript-eslint/no-unused-vars | Unused variables and imports     |
-| no-console                        | `console.log` in production code |
+| no-console                        | `console.log` in runtime modules |
 | (manual)                          | Dead code or commented-out code  |
+
+`scripts/` entrypoints are the exception: console output is acceptable there because they are terminal boundaries. Imported modules should still use the repo's normal logging pattern.
 
 </code_hygiene>
 
@@ -359,11 +417,13 @@ import { tokenize } from "./tokens";
 
 ```typescript
 // ❌ REJECTED: Deep relative to infrastructure
-import { createTree } from "../../../../../../tests/helpers";
+import { getRepoRoot } from "../../../../../../src/lib/paths";
 
 // ✅ REQUIRED: Path alias
-import { createTree } from "@testing/helpers";
+import { getRepoRoot } from "@lib/paths";
 ```
+
+`scripts/` entrypoints are the exception: relative imports are acceptable there because they are boundary modules and often need to avoid circular dependency tangles. Imported orchestrator modules should still follow the normal alias rules for stable infrastructure.
 
 **Anti-Patterns**
 
@@ -385,7 +445,6 @@ import { helper } from "lib/utils"; // Only works if CWD is project root
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@testing/*": ["tests/*"],
       "@lib/*": ["src/lib/*"]
     }
   }
@@ -394,11 +453,10 @@ import { helper } from "lib/utils"; // Only works if CWD is project root
 
 **2. Common path alias patterns:**
 
-| Alias        | Maps to     | Purpose                    |
-| ------------ | ----------- | -------------------------- |
-| `@/*`        | `src/*`     | Main application code      |
-| `@testing/*` | `tests/*`   | Test helpers and utilities |
-| `@lib/*`     | `src/lib/*` | Shared library code        |
+| Alias    | Maps to     | Purpose               |
+| -------- | ----------- | --------------------- |
+| `@/*`    | `src/*`     | Main application code |
+| `@lib/*` | `src/lib/*` | Shared library code   |
 
 **3. Usage with path aliases:**
 
@@ -406,7 +464,6 @@ import { helper } from "lib/utils"; // Only works if CWD is project root
 // ✅ REQUIRED: Stable infrastructure via alias
 import { processData } from "@/features/processing";
 import { Logger } from "@lib/logger";
-import { createMockContext } from "@testing/helpers";
 
 // ✅ ACCEPTABLE: Module-internal relative
 import { Position } from "./position";
@@ -426,7 +483,7 @@ import { tokenize } from "./tokens";
 | Type assertion without narrowing | `return x as string`                        | @typescript-eslint/consistent-type-assertions |
 | Unconstrained generic            | `function f<T>(x: T)`                       | tsc strict mode                               |
 | Union without narrowing          | `value.toUpperCase()` on `string \| number` | tsc strict mode                               |
-| Magic numbers in tests           | `expect(result).toBe(42)`                   | @typescript-eslint/no-magic-numbers           |
+| Unnamed domain literals          | `return score >= 0 && score <= 100`         | @typescript-eslint/no-magic-numbers           |
 | Empty catch block                | `catch (err) {}`                            | no-empty                                      |
 | Unhandled promise                | `fetchData();` without await                | @typescript-eslint/no-floating-promises       |
 | Missing error context            | `throw new Error('failed')`                 | manual review                                 |
