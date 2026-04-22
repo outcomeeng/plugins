@@ -412,6 +412,9 @@ class TestGenerateReadme:
         )
 
         assert "npx skills add outcomeeng/foundation" in result
+        assert "outcomeeng/plugins" in result
+        assert "claude plugin marketplace add outcomeeng/plugins" in result
+        assert "codex plugin marketplace add outcomeeng/plugins" in result
 
     def test_includes_prerequisites(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(distribute_skills, "README_TEMPLATE", Path("/nonexistent"))

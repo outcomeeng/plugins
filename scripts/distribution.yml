@@ -5,7 +5,7 @@
 # which skills to copy to each downstream repo.
 #
 # Only skills/ directories are distributed (SKILL.md + subdirectories).
-# Commands, agents, and plugin metadata are Claude-specific and stay here.
+# Commands, agents, and plugin metadata stay in the shared marketplace repo.
 
 github_org: outcomeeng
 

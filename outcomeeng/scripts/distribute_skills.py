@@ -26,6 +26,7 @@ MONOREPO_ROOT = Path(__file__).resolve().parents[2]
 DISTRIBUTION_CONFIG = MONOREPO_ROOT / "scripts" / "distribution.yml"
 README_TEMPLATE = MONOREPO_ROOT / "scripts" / "templates" / "README.md.tpl"
 LICENSE_FILE = MONOREPO_ROOT / "LICENSE"
+MARKETPLACE_REPO = "plugins"
 
 # Directories inside a plugin that are NOT distributed (Claude-specific)
 SKIP_DIRS = {"commands", "agents", ".claude-plugin"}
@@ -138,6 +139,8 @@ Install these first:
         repo_name=repo_name,
         description=repo_config["description"],
         github_org=github_org,
+        marketplace_repo=MARKETPLACE_REPO,
+        marketplace_slug=f"{github_org}/{MARKETPLACE_REPO}",
         skill_table=skill_table,
         skill_count=len(skills),
         prerequisites=prereq_section,
@@ -148,8 +151,8 @@ DEFAULT_README_TEMPLATE = """# {repo_name}
 
 {description}
 
-> This repo is auto-generated from [outcomeeng/claude](https://github.com/{github_org}/claude).
-> For the Claude Code plugin marketplace, use `claude plugin marketplace add {github_org}/claude`.
+> This repo is auto-generated from [{marketplace_slug}](https://github.com/{marketplace_slug}).
+> For the shared marketplace, use `claude plugin marketplace add {marketplace_slug}` or `codex plugin marketplace add {marketplace_slug}`.
 
 ## Install
 
@@ -332,7 +335,7 @@ def distribute_repo(
 
     # Check for changes and commit
     if has_changes(repo_path):
-        message = f"Update skills from outcomeeng/claude@{source_sha[:7]}"
+        message = f"Update skills from {github_org}/{MARKETPLACE_REPO}@{source_sha[:7]}"
         commit_and_push(repo_path, message)
         print(f"  Pushed changes to {github_org}/{repo_name}")
     else:
@@ -370,7 +373,7 @@ def main() -> None:
     repos = config["repos"]
     source_sha = get_source_sha()
 
-    print(f"Source: outcomeeng/claude @ {source_sha[:7]}")
+    print(f"Source: {github_org}/{MARKETPLACE_REPO} @ {source_sha[:7]}")
 
     # Determine checkout directory
     if args.checkout_dir:
