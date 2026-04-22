@@ -1,167 +1,311 @@
-# Testing Methodology
+# Testing Methodology Reference
 
-Tests are evidence, not bureaucracy. Every test must answer: "Will the code under test correctly implement the specified outcomes?" If a test doesn't provide evidence about production behavior, delete it.
+This file is the local methodology payload for the `testing` skill. Keep it self-contained inside the plugin.
 
-## Essential principles
+## Non-negotiable rules
 
-- **No mocking. Ever.** Mocking gives you tests that pass while production code fails. If you feel you need to mock, redesign with dependency injection or test at a different level.
-- **Reality is the oracle.** Test against real systems whenever possible. A test that passes against a fake proves nothing about production.
-- **Test doubles are exceptions, not defaults.** The seven exception cases in Stage 5 are the ONLY legitimate uses.
+- No mocking. Ever.
+- Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
+- Test doubles are exceptions, not defaults. The seven exception cases in Stage 5 are the only legitimate reasons to avoid the real dependency.
+- Route every assertion through all five stages. Do not skip ahead.
+- Name tests by subject, evidence mode, execution level, and optional runner.
+
+## Why tests exist
+
+Every test should serve at least one of these purposes:
+
+1. **Prove behavior**: confirm that a requirement, scenario, or invariant holds in production-relevant execution.
+2. **Catch failures early**: detect concrete breakages before users, operators, or downstream systems see them.
+3. **Improve debugging economics**: place evidence at the lowest level that can prove the claim so diagnosis is fast when something breaks.
+
+If a test serves none of these purposes, delete it.
+
+## Before you write any test
+
+Every test must answer these questions:
+
+1. What production behavior could be wrong?
+2. If this test passes, what does it prove about the real system?
+3. What failure would this catch before users see it?
+
+If you cannot answer all three, stop.
+
+## The evidence trap
+
+Agents often skip the evidence question. They see code and decide to test the shape of the code instead of the behavior that matters.
+
+- **Wrong**: See `OrderProcessor` calling `repository.save()`, create an `InMemoryRepository`, and claim persistence is covered.
+- **Right**: Ask what evidence is needed, realize the question is whether orders persist correctly, then test with a real database at the lowest level that can prove persistence.
+
+## Separate the axes
+
+Do not collapse evidence, execution pain, and tool choice into one label.
+
+- **Evidence mode** describes what kind of proof the test provides.
+- **Execution level** describes how painful the test is to run.
+- **Runner** describes which tool executes the test.
+
+Examples:
+
+- A temporary-directory test can still be `L1` when the machine almost certainly has a filesystem, the setup cost is trivial, and the runtime is cheap.
+- A Playwright test can be `L2` or `L3` depending on whether it uses only local infrastructure or requires remote systems and credentials.
+
+The runner does not define the level, and the level does not define the runner.
+
+## Evidence modes
+
+Use evidence terms that describe what the test proves:
+
+- `scenario`: an end-to-end behavior within the chosen level
+- `mapping`: inputs map to outputs or requests map to actions
+- `conformance`: behavior matches an external or internal contract
+- `property`: an invariant holds across many generated cases
+- `compliance`: required rules, boundaries, or safety constraints hold
+
+## Execution levels
+
+Use `L1`, `L2`, and `L3` to describe execution pain and environment dependence.
+
+- `L1`: almost certainly available, cheap, local, safe, deterministic
+- `L2`: real but heavier local infrastructure or setup
+- `L3`: remote, shared, credentialed, or network-dependent systems
+
+Examples:
+
+- `L1`: pure logic, tmp files, normal filesystem work, git, repo-required test runners, and standard subprocesses expected on a working machine
+- `L2`: local dev servers, Docker, browsers, project-specific binaries, full bootstrap or install costs, and other real local dependencies that are slower or less ubiquitous
+- `L3`: network access, shared environments, live third-party services, and anything requiring credentials
 
 ## Five-stage router
 
-Before writing ANY test, route through all five stages. Do not skip ahead.
+Before writing any test, route through all five stages.
 
-| Stage | Outcome                                               | Next Step                                               |
-| ----- | ----------------------------------------------------- | ------------------------------------------------------- |
-| 1     | Evidence identified                                   | Stage 2                                                 |
-| 2     | Level 2 or 3 required                                 | Use real dependencies. DONE.                            |
-| 2     | Level 1 appropriate                                   | Stage 3                                                 |
-| 3A    | Pure computation                                      | Test directly, no doubles. DONE.                        |
-| 3B    | Can extract pure part                                 | Extract, test pure at L1, integration at L2. DONE.      |
-| 3C    | Glue/orchestration code                               | Stage 4                                                 |
-| 4     | Real system works (reliable, safe, cheap, observable) | Use real at Level 2. DONE.                              |
-| 4     | Real system doesn't work for testing                  | Stage 5                                                 |
-| 5     | Exception case matches                                | Use appropriate double, document which exception. DONE. |
-| 5     | No exception matches                                  | Don't write L1 for this code. Test at L2. DONE.         |
+| Stage | Outcome                                              | Next Step                                                                           |
+| ----- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| 1     | Evidence identified                                  | Stage 2                                                                             |
+| 2     | `L2` or `L3` required                                | Use real dependencies at that level. DONE.                                          |
+| 2     | `L1` appropriate                                     | Stage 3                                                                             |
+| 3A    | Pure computation                                     | Test directly at `L1`. No doubles. DONE.                                            |
+| 3B    | Can extract the pure part                            | Extract, test pure at `L1`, cover boundary behavior at the right outer level. DONE. |
+| 3C    | Glue or orchestration code                           | Stage 4                                                                             |
+| 4     | Real system works: reliable, safe, cheap, observable | Use the real system at the current level. DONE.                                     |
+| 4     | Real system does not work for this proof             | Stage 5                                                                             |
+| 5     | Exception case matches                               | Use the appropriate double and record the exception. DONE.                          |
+| 5     | No exception matches                                 | Move the test outward to the lowest real level that can prove it. DONE.             |
 
 ### Stage 1: What evidence do you need?
 
-Before writing any test, answer:
+Answer these questions before writing the test:
 
-1. **What behavior could be wrong in production?** Not "what code am I testing" but what could actually fail for users?
-2. **If this test passes, what does that prove about the real system?** A test that proves nothing about production is waste.
-3. **What failure would this test catch that would otherwise reach users?** If you can't name a concrete failure, you don't need the test.
+1. What behavior could actually fail for users, operators, or downstream systems?
+2. If this test passes, what does that prove about the real system?
+3. What concrete failure would reach production without this test?
 
-**The Evidence Trap:** Agents often skip this stage. They see code and think "I need to test this." That's backwards.
+Use the evidence mode that matches the proof:
 
-- **Wrong**: See `OrderProcessor` that calls `repository.save()` → create `InMemoryRepository` fake → write test that passes
-- **Right**: Ask "What evidence do I need?" → "Evidence that orders persist correctly" → fake repository proves nothing about persistence → test at Level 2 with real database
+- `scenario` for user-visible or workflow-visible behavior
+- `mapping` for deterministic input-output or request-action transforms
+- `conformance` for contracts and protocol boundaries
+- `property` for invariants across a large input space
+- `compliance` for rules, boundaries, and safety constraints
 
 ### Stage 2: At what level does that evidence live?
 
-Use the five factors to determine where evidence can be proven.
+Choose the level from operational reality, not from habit.
 
 **Factor 1: What does the spec promise?**
 
-| Spec Promise                      | Minimum Level | Why                                |
-| --------------------------------- | ------------- | ---------------------------------- |
-| "Prices are calculated correctly" | Level 1       | Pure calculation                   |
-| "User can export data as CSV"     | Level 1       | File I/O with temp dirs is Level 1 |
-| "CLI processes Hugo site"         | Level 2       | Project-specific binary            |
-| "Database query returns users"    | Level 2       | Real database required             |
-| "User can complete checkout"      | Level 3       | Real payment provider              |
-| "Works in Safari"                 | Level 3       | Real browser required              |
+| Spec Promise                                    | Minimum Level | Why                             |
+| ----------------------------------------------- | ------------- | ------------------------------- |
+| "Prices are calculated correctly"               | `L1`          | Pure calculation                |
+| "User can export data as CSV"                   | `L1`          | File I/O with tmp dirs is cheap |
+| "CLI processes a Hugo site"                     | `L2`          | Project-specific binary         |
+| "Database query returns users"                  | `L2`          | Real database required          |
+| "User can complete checkout with live provider" | `L3`          | Remote provider required        |
+| "Works in Safari against the live site"         | `L3`          | Real browser and remote system  |
 
 **Factor 2: What dependencies are involved?**
 
-| Dependency                             | Minimum Level |
-| -------------------------------------- | ------------- |
-| None (pure function)                   | Level 1       |
-| File system (temp dirs)                | Level 1       |
-| Standard dev tools (git, node, curl)   | Level 1       |
-| Database                               | Level 2       |
-| External HTTP API                      | Level 2       |
-| Project-specific binary (Hugo, ffmpeg) | Level 2       |
-| Browser API                            | Level 3       |
-| Third-party service (live)             | Level 3       |
-| Real credentials                       | Level 3       |
+| Dependency                          | Minimum Level |
+| ----------------------------------- | ------------- |
+| None, pure function                 | `L1`          |
+| File system with tmp dirs           | `L1`          |
+| Standard dev tools: git, node, curl | `L1`          |
+| Database                            | `L2`          |
+| External HTTP API                   | `L2` or `L3`  |
+| Project-specific binary             | `L2`          |
+| Browser API                         | `L2` or `L3`  |
+| Live third-party service            | `L3`          |
+| Real credentials                    | `L3`          |
 
-**Factor 3: How complex is YOUR code?**
+**Factor 3: How much value does `L1` add?**
 
-| Code Type                               | Level 1 Value                |
-| --------------------------------------- | ---------------------------- |
-| Your logic (algorithms, parsers, rules) | HIGH - test thoroughly       |
-| Library wiring (argparse, Zod, YAML)    | LOW - trust the library      |
-| Simple glue code                        | LOW - covered by integration |
+| Code Type                              | `L1` Value                                 |
+| -------------------------------------- | ------------------------------------------ |
+| Your logic: algorithms, parsers, rules | High - test thoroughly                     |
+| Library wiring: Zod, YAML, CLI parsing | Low - trust the library                    |
+| Simple orchestration code              | Low - outer-level coverage is often enough |
 
-**Factor 4: Debuggability needs**
+**Factor 4: Will lower-level evidence speed up debugging?**
 
-When a Level 2/3 test fails, will a Level 1 test help find the bug faster?
-
-| Scenario                                        | Add Level 1? | Reason                                 |
-| ----------------------------------------------- | ------------ | -------------------------------------- |
-| Integration test fails on complex algorithm     | YES          | Level 1 isolates the algorithm         |
-| Integration test fails on argparse flag parsing | NO           | Trust argparse; check your usage       |
-| E2E test fails on payment flow                  | MAYBE        | If payment calculation is complex, yes |
+| Scenario                                        | Add `L1`? | Reason                                 |
+| ----------------------------------------------- | --------- | -------------------------------------- |
+| `L2` database-backed test fails on pricing math | Yes       | `L1` isolates the algorithm            |
+| `L2` flag parsing around a mature library fails | No        | Check your usage and boundary          |
+| `L3` checkout flow fails                        | Maybe     | Add `L1` if the local logic is complex |
 
 **Factor 5: Where does achievable confidence live?**
 
-| You Want to Know...           | Achievable At |
-| ----------------------------- | ------------- |
-| Your math is correct          | Level 1       |
-| Your SQL is valid             | Level 2       |
-| The API accepts your requests | Level 2       |
-| Users can complete the flow   | Level 3       |
+| You Need to Know...              | Achievable At |
+| -------------------------------- | ------------- |
+| Your math is correct             | `L1`          |
+| Your SQL is valid                | `L2`          |
+| The API accepts your requests    | `L2` or `L3`  |
+| Users can complete the live flow | `L3`          |
 
-**Level selection decision:**
+Decision:
 
-- Evidence lives at Level 3 → Use real environment. DONE.
-- Evidence lives at Level 2 → Use real dependencies. DONE.
-- Evidence lives at Level 1 → Go to Stage 3.
+- Evidence lives at `L3` -> use the real environment there.
+- Evidence lives at `L2` -> use real dependencies there.
+- Evidence lives at `L1` -> go to Stage 3.
 
-**If evidence requires Level 2 or 3, stop here.** Use real dependencies. Do not fake what you can test for real.
+If the proof lives at `L2` or `L3`, stop. Use the real dependencies at that level.
 
-### Stage 3: What kind of Level 1 code is this?
+### Stage 3: What kind of `L1` code is this?
 
-**3A: Pure computation** — Given inputs, compute outputs. No external state, no side effects. Test directly. No doubles needed. DONE.
+**3A: Pure computation**
 
-**3B: Code with dependencies — can you extract?** Extract the pure computation from the dependency interaction. Test the pure part at Level 1, test integration at Level 2. DONE. The fake repository was never needed.
+Given inputs, compute outputs. No external state, no side effects. Test directly at `L1`. No doubles needed. DONE.
 
-**3C: Glue/orchestration code — can't extract.** The behavior IS the interaction with the dependency. Go to Stage 4.
+**3B: Code with dependencies, but the pure part can be extracted**
+
+Extract the computation from the dependency interaction. Test the pure part at `L1`, and cover the boundary behavior at the right outer level. DONE.
+
+**3C: Glue or orchestration code**
+
+The behavior is the interaction with the dependency. Go to Stage 4.
 
 ### Stage 4: Can the real system produce the behavior?
 
-| Question                                                   | If YES   | If NO         |
-| ---------------------------------------------------------- | -------- | ------------- |
-| **Reliably?** (deterministic, not flaky)                   | Continue | Go to Stage 5 |
-| **Safely?** (won't charge money, send emails, delete data) | Continue | Go to Stage 5 |
-| **Cheaply?** (won't cost $$ or take hours)                 | Continue | Go to Stage 5 |
-| **Observably?** (can see what you need to assert)          | Continue | Go to Stage 5 |
+| Question                                                | If YES   | If NO         |
+| ------------------------------------------------------- | -------- | ------------- |
+| Reliably? Deterministic and not flaky                   | Continue | Go to Stage 5 |
+| Safely? No destructive side effect for normal test runs | Continue | Go to Stage 5 |
+| Cheaply? No painful runtime or setup cost               | Continue | Go to Stage 5 |
+| Observably? The needed assertions are visible           | Continue | Go to Stage 5 |
 
-If YES to all: Use real system at Level 2. DONE.
+If all four answers are yes, use the real system at the current level. DONE.
 
 ### Stage 5: Which exception applies?
 
-Now and only now may you consider test doubles. Match a specific exception.
+Only now may you use a test double. Match a specific exception.
 
-| Exception                | When                                                                                   | Double Type                           |
-| ------------------------ | -------------------------------------------------------------------------------------- | ------------------------------------- |
-| 1. Failure modes         | Test behavior under specific failures (timeouts, connection resets, throttling)        | Stub returning predetermined errors   |
-| 2. Interaction protocols | Correctness depends on conversation pattern (multi-step workflows, pagination, sagas)  | Spy that records calls                |
-| 3. Time and concurrency  | Deterministic control over timing (retries with jitter, token refresh races, debounce) | Fake clock, controllable scheduler    |
-| 4. Safety                | Real system is destructive (payment providers, email sending, destructive admin APIs)  | Stub that records but doesn't execute |
-| 5. Combinatorial cost    | 100+ scenarios AND hours of runtime with real system                                   | Configurable fake                     |
-| 6. Observability         | Verify details the real system can't expose (headers, batching, idempotency keys)      | Spy that records request details      |
-| 7. Contract testing      | Third-party API you don't control, verify serialization/parsing                        | Contract stub                         |
+| Exception                | When                                                                                | Double Type                            |
+| ------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------- |
+| 1. Failure simulation    | Need specific failures: timeouts, resets, throttling, full disks, permission errors | Stub returning predetermined errors    |
+| 2. Interaction protocols | Correctness depends on the sequence or shape of calls                               | Spy that records calls                 |
+| 3. Time and concurrency  | Need deterministic control of clocks, retries, scheduling, races, debounce          | Fake clock or controllable scheduler   |
+| 4. Safety                | Real system is destructive: charges money, sends mail, mutates shared admin state   | Stub that records but does not execute |
+| 5. Combinatorial cost    | The real dependency makes broad evidence prohibitively expensive                    | Configurable fake                      |
+| 6. Observability         | The required signal is hidden by the real dependency                                | Spy that records boundary details      |
+| 7. Contract probes       | Need controlled verification at a contract boundary                                 | Contract stub                          |
 
-**If no exception applies:** Don't use test doubles. Re-examine Stage 3B, test at Level 2, or accept no Level 1 test for this code.
+If no exception applies, do not use a double. Move outward to the lowest real level that can prove the behavior.
 
 ## Test double taxonomy
 
-| Double Type | Purpose                           | Use For                                          |
-| ----------- | --------------------------------- | ------------------------------------------------ |
-| **Stub**    | Returns predetermined responses   | Exceptions 1 (Failure), 4 (Safety), 7 (Contract) |
-| **Spy**     | Records calls for verification    | Exceptions 2 (Interaction), 6 (Observability)    |
-| **Fake**    | Simplified working implementation | Exceptions 3 (Time), 5 (Combinatorial)           |
-| **Mock**    | Strict expectation verification   | Exception 2 (strict sequence only)               |
-| **Dummy**   | Placeholder that's never called   | Satisfying type requirements                     |
+| Double Type | Purpose                           | Use For                                     |
+| ----------- | --------------------------------- | ------------------------------------------- |
+| **Stub**    | Returns predetermined responses   | Failure simulation, safety, contract probes |
+| **Spy**     | Records calls for verification    | Interaction protocols, observability        |
+| **Fake**    | Simplified working implementation | Time control, combinatorial cost            |
+| **Dummy**   | Placeholder that is never called  | Satisfying type requirements                |
 
-**Critical distinction:** Mock (BAD default) = framework intercepts method calls on real objects. Test double (OK when exception applies) = you provide an alternative implementation via dependency injection.
+Framework mocks stay forbidden. If call recording is required, supply a spy through dependency injection.
 
-## Four-part test progression
+## Trust the library when it already owns the problem
 
-| Phase                   | What You're Testing                      | Confidence Level |
-| ----------------------- | ---------------------------------------- | ---------------- |
-| 1. Typical cases        | Happy paths, common scenarios            | Baseline         |
-| 2. Edge/boundary cases  | Limits, special values, error conditions | Robustness       |
-| 3. Systematic coverage  | Loops, state transitions, combinations   | Completeness     |
-| 4. Property-based tests | Invariants that hold for all inputs      | Deep correctness |
+Do not re-prove behavior that a well-scoped library already owns unless your product adds logic around it.
 
-Not every function needs all four phases. Simple utilities: Phase 1 + 2. Complex algorithms: all four. Glue code: Phase 1 only.
+Focus test effort on:
 
-**Property-based tests are MANDATORY for:** parsers (parse(format(x)) === x), mathematical operations, serialization/deserialization, complex algorithms where edge cases are hard to enumerate.
+- your orchestration
+- your mapping logic
+- your invariants
+- your failure handling
+- your boundary behavior
 
-## Cardinal rule
+## Four-part progression
 
-**Mocking is always wrong. There is no exception.** The seven exception cases use test doubles (stubs, spies, fakes), not mocks.
+| Phase                   | What You Are Testing                | Confidence Gain  |
+| ----------------------- | ----------------------------------- | ---------------- |
+| 1. Typical cases        | Happy paths and common scenarios    | Baseline         |
+| 2. Edge and boundary    | Limits, special values, error cases | Robustness       |
+| 3. Systematic coverage  | Loops, states, combinations         | Completeness     |
+| 4. Property-based tests | Invariants across generated inputs  | Deep correctness |
+
+Simple utilities often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level proof.
+
+Property-based tests are mandatory candidates for:
+
+- parsers and serializers
+- mathematical transformations
+- seed-driven generators
+- normalization rules
+- algorithms with edge cases that are hard to enumerate
+
+## Debuggability rules
+
+A good test failure narrows the search space.
+
+- Put evidence at the lowest level that can prove the claim.
+- Prefer direct assertions over indirect side-channel checks.
+- Keep setup proportional to the proof.
+- Redesign the test if a failure would not tell you what broke.
+
+## Anti-patterns
+
+Avoid these patterns:
+
+- Writing tests because a layer or file class "should have tests"
+- Choosing a label first and then searching for evidence to fit it
+- Promoting cheap local-real tests into slower schedules just because they touch the filesystem, git, or subprocesses
+- Treating browser coverage as inherently remote or credentialed
+- Treating runner choice as a proxy for cost or realism
+- Adding doubles when the real dependency is already cheap, deterministic, and observable
+- Writing tests that cannot name the failure they would catch
+
+## Naming and co-location
+
+Keep tests next to the governing spec work, and name them for what they prove and how painful they are to run.
+
+Canonical filename model:
+
+- TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
+- Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
+
+Canonical evidence tokens:
+
+- `scenario`
+- `mapping`
+- `conformance`
+- `property`
+- `compliance`
+
+Canonical level tokens:
+
+- `l1`
+- `l2`
+- `l3`
+
+Canonical runner rule:
+
+- Omit the runner token for the default runner.
+- Add an explicit token for non-default runners.
+- `playwright` is the explicit non-default runner example.
+
+Examples:
+
+- `dispatch.mapping.l1.test.ts`
+- `browser-auth.scenario.l2.playwright.test.ts`
+- `test_seeded_generators.property.l1.py`
