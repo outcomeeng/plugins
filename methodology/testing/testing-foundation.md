@@ -513,6 +513,22 @@ Tests stay with their specs permanently. No graduation.
 
 ---
 
+## Script Entry Points
+
+Checked-in entrypoints under `scripts/` are boundary code.
+
+They may:
+
+- parse arguments
+- read environment variables
+- format terminal output
+- dispatch to one orchestrator module or a small dispatcher
+- map the final result to an exit code
+
+They must use the repository's canonical argument parsing library. Do not hand-roll parsing with `process.argv`.
+
+The imported orchestrator module carries the real specification and evidence. Script tests stay thin: parser wiring, dispatch, exit-code mapping, and observable output. The orchestrator is what gets the real harnesses, fixtures, and outcome-level tests.
+
 ## When You Don't Know: Stop and Ask
 
 ### For Level 2 Tests
