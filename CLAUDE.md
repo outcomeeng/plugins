@@ -1,12 +1,25 @@
 # Outcome Engineering Plugin Marketplace
 
-Claude Code plugin marketplace (`outcomeeng/claude`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
+Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
+
+`CLAUDE.md` is the canonical repo instruction file. `AGENTS.md` is a symlink to this file so Codex and Claude Code share the same project instructions.
 
 ## Marketplace Is a Product
 
 We develop this marketplace as a product using its own Spec Tree. The product specs are in `spx/` (the durable map).
 
-## Claude Code Methodology
+## Runtime Surfaces
+
+This repository publishes two plugin surfaces from the same source tree:
+
+- `.claude-plugin` for Claude Code plugins, commands, and agents
+- `.codex-plugin` for Codex skill bundles
+
+Shared plugins ship both manifests where supported. `legacy`, `specs`, and `spx-legacy` remain Claude Code-only.
+
+## Marketplace Methodology
+
+This file covers repository rules that apply across both agents.
 
 Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
@@ -97,6 +110,13 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 
 - [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices) - Agentic coding patterns
 
+### OpenAI / Codex Resources
+
+- [Codex](https://openai.com/codex) - Codex product overview
+- [Codex Overview](https://platform.openai.com/docs/codex/overview) - Codex cloud and local workflow overview
+- `codex --help` - Local CLI reference
+- `codex plugin --help` - Local plugin management reference
+
 ## Version Management
 
 ### Versioning Rules (Conservative Approach)
@@ -130,20 +150,21 @@ All plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 
 ### Files to Update When Bumping Version
 
-**Plugin version** (always update):
+**Plugin manifest version** (update every manifest that exists for the plugin you changed):
 
 ```bash
 plugins/{plugin-name}/.claude-plugin/plugin.json
+plugins/{plugin-name}/.codex-plugin/plugin.json
 ```
 
 ```json
 {
-  "name": "claude",
+  "name": "{plugin-name}",
   "version": "0.4.0" // ← Update this
 }
 ```
 
-**Marketplace catalog** (optional, only if description changes):
+**Claude marketplace catalog** (optional, only if description changes):
 
 ```bash
 .claude-plugin/marketplace.json
@@ -160,6 +181,8 @@ plugins/{plugin-name}/.claude-plugin/plugin.json
   ]
 }
 ```
+
+**Codex marketplace registration:** Codex does not use a checked-in root marketplace catalog in this repository. `codex plugin marketplace add outcomeeng/plugins` registers the marketplace source locally and reads plugin manifests from the repository.
 
 **IMPORTANT:** Validate after any changes:
 
@@ -183,9 +206,9 @@ git commit -m "chore: bump versions"
 
 ```bash
 # 1. Make your changes to skills/commands/etc
-# 2. Update version numbers in plugin.json files
+# 2. Update version numbers in the relevant plugin.json files
 # 3. Stage everything together
-git add plugins/*/skills/ plugins/*/.claude-plugin/plugin.json
+git add plugins/*/skills/ plugins/*/.claude-plugin/plugin.json plugins/*/.codex-plugin/plugin.json
 # 4. Create ONE commit with both the changes and version bumps
 git commit -m "refactor(skills): simplify descriptions
 
@@ -230,17 +253,17 @@ For spec-tree users, `/testing` from the spec-tree plugin is a superset that als
 
 ### Skill Invocation
 
-Claude Code skills cannot automatically invoke other skills. However, skills can:
+Skills in this marketplace cannot automatically invoke other skills. However, they can:
 
-1. Instruct Claude to read another skill file first
+1. Instruct the agent to read another skill file first
 2. Reference foundational concepts by skill name
-3. Be invoked sequentially by the user/Claude
+3. Be invoked sequentially by the user or agent
 
 ---
 
 ## Claude Plugin
 
-Meta-skills for Claude Code plugin development: creating and auditing skills, commands, and subagents.
+Meta-skills for Claude Code and Codex plugin development: creating and auditing skills, commands, and subagents.
 
 ### Skills
 
@@ -439,7 +462,11 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 
 ## Discovering Other Installed Skills
 
-Search for `SKILL.md` in `.claude/plugins/cache/{marketplace-name}/{plugin-name}/`
+In this repository, search `plugins/*/skills/*/SKILL.md`.
+
+For installed Claude Code plugins, search for `SKILL.md` in `.claude/plugins/cache/{marketplace-name}/{plugin-name}/`.
+
+For Codex, inspect the registered marketplace source and the plugin directories under `plugins/*/.codex-plugin/`.
 
 ## Proactive Skill Invocation
 
@@ -817,6 +844,7 @@ Error: Bash command permission check failed for pattern "!find .spx/sessions -ma
 1. **Read the context**: Check [CLAUDE.md](CLAUDE.md:1) (this file) for current structure and versioning rules
 2. **Check existing commands**: Use Glob to find existing `.md` files in `plugins/*/commands/`
 3. **Review plugin structure**: Each plugin has its own `plugin.json` in `.claude-plugin/`
+   - Codex-capable plugins also have `.codex-plugin/plugin.json`
 
 ### After Adding/Modifying Commands or Skills
 
@@ -835,7 +863,8 @@ Error: Bash command permission check failed for pattern "!find .spx/sessions -ma
 
    ```bash
    # Location: plugins/{plugin-name}/.claude-plugin/plugin.json
-   # Update "version" field according to rules above
+   # And plugins/{plugin-name}/.codex-plugin/plugin.json when that manifest exists
+   # Update the "version" field according to rules above
    ```
 
 4. **Update marketplace description** (only if needed):
@@ -856,12 +885,14 @@ Error: Bash command permission check failed for pattern "!find .spx/sessions -ma
    git commit -m "type(scope): your changes including version bump"
    ```
 
+   If `plugins/{plugin-name}/.codex-plugin/plugin.json` exists, stage that manifest in the same commit too.
+
 **Validation**: Run `just check` before committing. The pre-commit hook also validates, but catching errors earlier is faster.
 
 ### Quick Reference: File Locations
 
 ```
-outcomeeng/claude/                  # Marketplace: outcomeeng
+outcomeeng/plugins/                 # Marketplace: outcomeeng
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace catalog
 ├── .spx/                          # Tool operational (gitignored)
@@ -871,6 +902,8 @@ outcomeeng/claude/                  # Marketplace: outcomeeng
 │   └── testing/                  # Test infrastructure
 ├── plugins/
 │   ├── claude/                   # Meta-skills for plugin development
+│   │   ├── .claude-plugin/       # Claude Code manifest
+│   │   ├── .codex-plugin/        # Codex manifest
 │   │   └── skills/
 │   │       ├── creating-skills/
 │   │       ├── creating-commands/

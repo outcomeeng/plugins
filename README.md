@@ -1,6 +1,13 @@
 # Outcome Engineering Plugin Marketplace
 
-A Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where a durable map of your product, maintained as a Spec Tree, serves as the authoritative source of truth for all implementation.
+A combined Codex and Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where a durable map of your product, maintained as a Spec Tree, serves as the authoritative source of truth for all implementation.
+
+This repository publishes two plugin surfaces from the same source tree:
+
+- `.claude-plugin` packages for Claude Code plugins, commands, and agents
+- `.codex-plugin` packages for Codex skill bundles
+
+`AGENTS.md` is a symlink to [`CLAUDE.md`](CLAUDE.md), so Codex and Claude Code read the same repo-level instructions.
 
 > `/bootstrap` interviews you about your product, then scaffolds a spec tree — the durable map that drives all implementation.
 
@@ -21,21 +28,53 @@ npm install -g @outcomeeng/spx
 
 The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for Spec Tree maintenance and validation. Required by all engineering plugins.
 
-### 2. Add the marketplace and install plugins
+### 2. Add the marketplace
+
+#### Claude Code
 
 ```bash
-# Add the marketplace
-claude plugin marketplace add outcomeeng/claude
+claude plugin marketplace add outcomeeng/plugins
+```
 
+#### Codex
+
+```bash
+codex plugin marketplace add outcomeeng/plugins
+```
+
+Codex registers the marketplace source and reads the shared `.codex-plugin` bundles directly from it.
+
+### 3. Install or use plugins
+
+#### Claude Code
+
+```bash
 # Spec Tree methodology (requires spx CLI)
 claude plugin install spec-tree@outcomeeng
 
 # Language plugins (install per project, require spx CLI)
 claude plugin install python@outcomeeng
 claude plugin install typescript@outcomeeng
+
+# Optional plugins
+claude plugin install prose@outcomeeng
+claude plugin install claude@outcomeeng
 ```
 
-### 3. Bootstrap your spec tree
+#### Codex
+
+After adding the marketplace, Codex can use the shared skill plugins published from this repository:
+
+- `spec-tree`
+- `python`
+- `typescript`
+- `prose`
+- `claude`
+- `frontend`
+- `visual`
+- `hdl`
+
+### 4. Bootstrap your spec tree
 
 ```text
 > /bootstrap                       # set up a new spec tree
@@ -43,7 +82,7 @@ claude plugin install typescript@outcomeeng
 
 ![Scaffold result — product spec, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
-### 4. Author, implement, commit
+### 5. Author, implement, commit
 
 ```text
 > /author outcome for search       # author a new outcome node
@@ -55,24 +94,29 @@ claude plugin install typescript@outcomeeng
 
 See the [full tutorial](docs/tutorial.md) for the complete workflow — from bootstrapping to handoffs.
 
-### Also available (no spx CLI required)
-
-```bash
-claude plugin install prose@outcomeeng       # writing and reviewing prose
-claude plugin install claude@outcomeeng      # meta-skills for plugin development
-```
-
 ### Updating plugins
+
+#### Claude Code
 
 ```bash
 claude plugin marketplace update outcomeeng
 ```
 
+#### Codex
+
+```bash
+codex plugin marketplace upgrade outcomeeng
+```
+
 ## Plugins
+
+Unless marked otherwise, the skills described below are available in both Claude Code and Codex. Commands and agents are Claude Code-only.
 
 ### spec-tree
 
 The core of [Outcome Engineering](https://outcome.engineering). Three steps: **declare** (write specs), **spec** (write tests), **apply** (write implementation). Audit gates operate within each step.
+
+Codex support: the same skill set is available through the `spec-tree` Codex plugin. The slash commands and bundled agents listed below are Claude Code-only.
 
 <details>
 <summary><strong><code>/bootstrap</code> in action</strong> — interactive product interview and scaffold</summary>
@@ -118,6 +162,8 @@ The core of [Outcome Engineering](https://outcome.engineering). Three steps: **d
 
 Complete TypeScript development workflow. Requires spx CLI.
 
+Codex support: the same skills are available through the `typescript` Codex plugin. The agents listed below are Claude Code-only.
+
 | Type  | Name                                | Purpose                            |
 | ----- | ----------------------------------- | ---------------------------------- |
 | Agent | `typescript-simplifier`             | Simplify code for maintainability  |
@@ -133,6 +179,8 @@ Complete TypeScript development workflow. Requires spx CLI.
 ### python
 
 Complete Python development workflow. Requires spx CLI.
+
+Codex support: the same skills are available through the `python` Codex plugin. `/autopython` and the agents listed below are Claude Code-only.
 
 | Type    | Name                            | Purpose                            |
 | ------- | ------------------------------- | ---------------------------------- |
@@ -157,7 +205,7 @@ Prose craft skills for writing and reviewing. No spx CLI required.
 
 ### claude
 
-Meta-skills for Claude Code plugin development. No spx CLI required.
+Meta-skills for Claude Code and Codex plugin development. No spx CLI required.
 
 | Type  | Name                  | Purpose                         |
 | ----- | --------------------- | ------------------------------- |
@@ -189,7 +237,7 @@ HDL engineering skills for VHDL and SystemVerilog code review. No spx CLI requir
 
 ### legacy
 
-Standalone `/commit`, `/handoff`, `/pickup` for projects without the spx CLI. Install `spec-tree` instead if you have spx.
+Claude Code-only. Standalone `/commit`, `/handoff`, `/pickup` for projects without the spx CLI. Install `spec-tree` instead if you have spx.
 
 | Type    | Name                  | Purpose                                 |
 | ------- | --------------------- | --------------------------------------- |
@@ -211,9 +259,18 @@ Skills are distributed as standalone repositories, compatible with any agent tha
 
 ## Documentation
 
+### Claude Code
+
 - [Claude Code Plugins](https://code.claude.com/docs/en/plugins)
 - [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
 - [Plugins Reference](https://code.claude.com/docs/en/plugins-reference)
+
+### Codex
+
+- [Codex](https://openai.com/codex)
+- [Codex Overview](https://platform.openai.com/docs/codex/overview)
+- `codex plugin --help`
+- `codex plugin marketplace --help`
 
 ## License
 
