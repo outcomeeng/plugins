@@ -63,7 +63,7 @@ function validateScore(score: number): boolean {
 export const MIN_SCORE = 0;
 export const MAX_SCORE = 100;
 
-// spx/.../tests/scoring.unit.test.ts
+// spx/.../tests/scoring.mapping.l1.test.ts
 import { MIN_SCORE, validateScore } from "@/scoring";
 
 it("rejects below minimum", () => {

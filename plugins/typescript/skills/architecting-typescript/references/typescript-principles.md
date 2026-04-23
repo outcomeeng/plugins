@@ -73,8 +73,8 @@ await exec(`hugo --destination ${outputDir}`); // Shell interpolation
 ## Testability by Design
 
 - Design for dependency injection (NO MOCKING)
-- Assign testing levels to each component in ADRs
-- Pure functions enable Level 1 testing
+- Define Compliance constraints that make the right evidence levels achievable
+- Pure functions enable `l1` testing
 - Design for the minimum level that provides confidence
 
 ```typescript
@@ -89,7 +89,7 @@ export async function runLhci(
   config: Config,
   deps: LhciDependencies,
 ): Promise<LhciResult> {
-  // Can be tested at Level 1 with controlled deps
+  // Can be tested at l1 with controlled deps
 }
 
 // BAD: Not testable without mocking

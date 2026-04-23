@@ -35,8 +35,8 @@ interface BuildDependencies {
   run: (cmd: string[], opts?: ExecOptions) => Promise<ExecResult>;
 }
 
-// Level 1: inject controlled implementation
-// Level 2: inject real binary wrapper
+// l1: inject controlled implementation
+// l2: inject real binary wrapper
 ```
 
 ---
@@ -55,7 +55,7 @@ interface BuildDependencies {
 ### MUST
 
 - All external tool invocations accept a dependency-injected runner
-  parameter -- enables Level 1 testing of command logic ([review])
+  parameter -- enables `l1` testing of command logic ([review])
 
 ### NEVER
 
@@ -75,7 +75,7 @@ interface BuildDependencies {
 
 ### Temporal Language in Context Section
 
-**Where:** Context section, "The current BuildRunner class in build.ts shells out to Hugo directly without dependency injection, making unit testing impossible."
+**Where:** Context section, "The current BuildRunner class in build.ts shells out to Hugo directly without dependency injection, making `l1` testing impossible."
 **Concern:** Atemporal voice
 **Why this fails:** Narrates code state -- becomes false the moment the file changes. The ADR states what the architecture IS, not what code currently exists.
 

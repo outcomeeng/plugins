@@ -7,160 +7,197 @@ allowed-tools: Read
 ---
 
 <objective>
-Define TypeScript testing standards and patterns that other skills reference. Not invoked directly -- invoke `/testing-typescript` to write tests or `/auditing-typescript-tests` to audit them instead. Load `/standardizing-typescript` before this reference. These standards apply to ALL TypeScript test code.
+Define TypeScript-specific test standards loaded by `/testing-typescript`, `/coding-typescript`, `/architecting-typescript`, and `/auditing-typescript-tests`.
+
+Read `/testing` first when deciding what evidence to create. Read `/standardizing-typescript` before this reference when writing or reviewing TypeScript test code. These standards apply to all TypeScript tests.
 </objective>
 
-<quick_start>
-Reference this skill for:
+<core_model>
+Every TypeScript test file name encodes three independent axes:
 
-- Level routing from `/testing` decisions into TypeScript
-- Level tooling and framework expectations
-- File naming conventions
-- Dependency injection and allowed doubles
-- Harness ownership and path alias usage
-- Property-based testing requirements
-- Source-owned values, inline diagnostics, and test-data policy
-- Fixture and harness placement
-- Test anti-patterns to reject
+| Axis     | Tokens                                                         | Meaning                                    |
+| -------- | -------------------------------------------------------------- | ------------------------------------------ |
+| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of proof the test provides       |
+| Level    | `l1`, `l2`, `l3`                                               | How painful the test is to run             |
+| Runner   | optional token such as `playwright`                            | Which non-default runner executes the file |
 
-</quick_start>
+Evidence, level, and runner are orthogonal:
 
-<repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/typescript-tests.md` at the repository root. Read that file after `spx/local/typescript.md` if it exists and apply it as the repo-local specialization.
-</repo_local_overlay>
+- A Playwright test can be `l2` or `l3`
+- A filesystem test can be `l1` when it uses cheap temp dirs
+- A `scenario` test can run at any level
+- A runner token appears only when the runner is not the default
 
-<router_to_typescript_mapping>
-After running through `/testing`, use this mapping:
+</core_model>
 
-| Router Decision                                 | TypeScript Implementation                        |
-| ----------------------------------------------- | ------------------------------------------------ |
-| **Stage 2 → Level 1**                           | Vitest + temp dirs + type-safe DI                |
-| **Stage 2 → Level 2**                           | Vitest + harness classes + Docker                |
-| **Stage 2 → Level 3**                           | Vitest (CLI/API) or Playwright (browser)         |
-| **Stage 3A** (Pure computation)                 | Pure functions with explicit types               |
-| **Stage 3B** (Extract pure part)                | Factor into typed pure functions + thin wrappers |
-| **Stage 5 Exception 1** (Failure modes)         | Interface + stub class returning errors          |
-| **Stage 5 Exception 2** (Interaction protocols) | Spy class with typed call recording              |
-| **Stage 5 Exception 3** (Time/concurrency)      | `vi.useFakeTimers()` or injected clock           |
-| **Stage 5 Exception 4** (Safety)                | Stub class that records but doesn't execute      |
-| **Stage 5 Exception 6** (Observability)         | Spy class capturing typed request details        |
+<file_naming>
+Use this canonical TypeScript pattern:
 
-</router_to_typescript_mapping>
+```text
+<subject>.<evidence>.<level>[.<runner>].test.ts
+```
+
+Examples:
+
+| Purpose                               | File                                      |
+| ------------------------------------- | ----------------------------------------- |
+| Cheap behavior scenario               | `config-loader.scenario.l1.test.ts`       |
+| Deterministic input-output mapping    | `route-parser.mapping.l1.test.ts`         |
+| Local browser flow through Playwright | `checkout.scenario.l2.playwright.test.ts` |
+| Live webhook contract                 | `stripe-webhook.conformance.l3.test.ts`   |
+| Safety boundary                       | `pii-redaction.compliance.l1.test.ts`     |
+| Generated invariant                   | `slug-roundtrip.property.l1.test.ts`      |
+
+Do not use legacy file suffixes such as `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, or `.spec.ts` as the signal for evidence, level, or runner.
+</file_naming>
 
 <level_tooling>
+Choose the level from execution pain and dependency availability:
 
-| Level          | Infrastructure                                  | Framework  | Speed |
-| -------------- | ----------------------------------------------- | ---------- | ----- |
-| 1: Unit        | Node.js stdlib + temp dirs + standard dev tools | Vitest     | <50ms |
-| 2: Integration | Docker containers + project-specific binaries   | Vitest     | <1s   |
-| 3: E2E         | Network services + external APIs                | Vitest     | <30s  |
-| 3: Browser E2E | Chrome + real user flows                        | Playwright | <30s  |
+| Level | Infrastructure                                     | Default runner | Typical runtime |
+| ----- | -------------------------------------------------- | -------------- | --------------- |
+| `l1`  | Node.js stdlib, temp dirs, repo-required dev tools | Vitest         | milliseconds    |
+| `l2`  | Docker, browsers, dev servers, project binaries    | Vitest         | seconds         |
+| `l3`  | Remote services, credentials, shared environments  | Vitest         | seconds/minutes |
 
-**Standard dev tools** (Level 1): git, node, npm, curl -- available in CI without setup.
-**Project-specific tools** (Level 2): Docker, Hugo, Caddy, PostgreSQL -- require installation.
+Use `playwright` as the runner token when Playwright is the non-default runner:
+
+- `browser-menu.scenario.l2.playwright.test.ts` for a local browser flow
+- `production-login.scenario.l3.playwright.test.ts` for a credentialed remote flow
+
+Keep runner configuration aligned with the filename pattern:
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["spx/**/*.test.ts"],
+    exclude: ["**/*.playwright.test.ts"],
+  },
+});
+```
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./spx",
+  testMatch: "**/*.playwright.test.ts",
+});
+```
 
 </level_tooling>
 
-<file_naming>
-Test filenames encode the evidence level:
+<router_mapping>
+After `/testing` chooses the evidence and level, implement it with these TypeScript patterns:
 
-| Level | Filename suffix        | Example                       |
-| ----- | ---------------------- | ----------------------------- |
-| 1     | `.unit.test.ts`        | `uart-tx.unit.test.ts`        |
-| 2     | `.integration.test.ts` | `uart-tx.integration.test.ts` |
-| 3     | `.e2e.test.ts`         | `uart-tx.e2e.test.ts`         |
+| Router Decision                            | TypeScript implementation                         |
+| ------------------------------------------ | ------------------------------------------------- |
+| Stage 2 -> `l1`                            | Vitest, typed factories, temp dirs, pure helpers  |
+| Stage 2 -> `l2`                            | Vitest or Playwright with local real dependencies |
+| Stage 2 -> `l3`                            | Vitest or Playwright with credentials or network  |
+| Stage 3A: pure computation                 | Direct tests of typed pure functions              |
+| Stage 3B: extract pure part                | Pure helper at `l1`, boundary at outer level      |
+| Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors       |
+| Stage 5 exception 2: interaction protocols | Spy class with typed call recording               |
+| Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`            |
+| Stage 5 exception 4: safety                | Class that records intent without side effects    |
+| Stage 5 exception 5: combinatorial cost    | Configurable fake with real-shaped behavior       |
+| Stage 5 exception 6: observability         | Spy that captures hidden boundary details         |
+| Stage 5 exception 7: contract probes       | Stub validated against the contract schema        |
 
-</file_naming>
+</router_mapping>
 
 <dependency_injection>
-Tests verify behavior against real code paths. Do not use `vi.mock`, `jest.mock`, or `vi.spyOn(...).mockReturnValue(...)` as substitutes for the dependency itself.
+Tests verify behavior through real code paths. Avoid framework-level replacement of the dependency under test.
 
-Use controlled implementations that preserve the real interface:
+Forbidden patterns:
 
-- **Failure modes**: class implementing an interface and throwing realistic errors
-- **Interaction protocols**: class with call-recording state
-- **Time/concurrency**: `vi.useFakeTimers()` or injected clock dependency
-- **Safety**: class that records intent without destructive effects
-- **Observability**: class capturing request details that the real integration hides
+- `vi.mock(...)` replacing the module that should provide evidence
+- `jest.mock(...)` replacing the module that should provide evidence
+- `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-These doubles belong in test-owned code. They live next to the test, in `testing/harnesses/`, or in a shared helper package behind a stable alias such as `@testing/*`.
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/testing` Stage 5 exception.
+
+```typescript
+interface PaymentGateway {
+  charge(amountCents: number): Promise<ChargeResult>;
+}
+
+class RecordingGateway implements PaymentGateway {
+  readonly charges: number[] = [];
+
+  async charge(amountCents: number): Promise<ChargeResult> {
+    this.charges.push(amountCents);
+    return { id: "test-charge", status: "approved" };
+  }
+}
+```
+
 </dependency_injection>
 
 <property_based_testing>
-Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property. Example-based tests alone are insufficient.
+Property assertions about parsers, serializers, mathematical operations, or invariant-preserving algorithms require `fast-check` and a meaningful property.
 
-| Code type               | Required property        | Framework                |
+| Code type               | Required property        | Pattern                  |
 | ----------------------- | ------------------------ | ------------------------ |
-| Parsers                 | `parse(format(x)) == x`  | fast-check / `fc.assert` |
-| Serialization           | `decode(encode(x)) == x` | fast-check / `fc.assert` |
-| Mathematical operations | Algebraic properties     | fast-check / `fc.assert` |
-| Complex algorithms      | Invariant preservation   | fast-check / `fc.assert` |
+| Parsers                 | `parse(format(x)) == x`  | `fc.assert(fc.property)` |
+| Serialization           | `decode(encode(x)) == x` | `fc.assert(fc.property)` |
+| Mathematical operations | algebraic laws           | `fc.assert(fc.property)` |
+| Complex algorithms      | invariant preservation   | `fc.assert(fc.property)` |
 
-Properties must assert something falsifiable. `fc.assert` that only checks "does not throw" is a rejection case.
+`fc.assert` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
 </property_based_testing>
 
 <test_data_policy>
-Prefer canonical sources over duplicated literals in tests.
+Use source-owned values when the production system owns them.
 
-- Import source-owned copy, selectors, ids, routes, feature-flag keys, and similar declarations from the production module that owns them.
-- Keep descriptive test titles and `expect(..., "message")` diagnostics inline at the call site. Do not wrap them in local constants.
-- When a repeated value is test-local, generate it or place it in a harness instead of creating ad hoc local constants.
-- Stable test-only fixture strings, dates, ids, and expected-output snippets belong in `testing/fixtures/{domain}.ts`.
-- When tests need an aggregate of source-owned values for convenience, create a test-owned harness module. Do not create production re-export wrappers only to simplify test imports.
+- Import routes, selectors, ids, feature flags, registry names, and public constants from the module that owns them
+- Keep descriptive test titles and assertion diagnostics inline
+- Put stable test-only strings, ids, dates, and expected-output snippets in `testing/fixtures/{domain}.ts`
+- Put shared harnesses, generated data, and Stage 5 doubles in `testing/harnesses/`
+- Use aliases such as `@testing/*` for shared test infrastructure
+- Use co-located `./helpers` only when the helper serves one test file
 
 </test_data_policy>
 
-<harness_ownership>
-Test-owned infrastructure stays in test-owned code:
-
-- Shared helpers and doubles: `testing/harnesses/`
-- Stable fixture data: `testing/fixtures/`
-- Co-located helpers that exist only for one test file: `./helpers`
-
-Use path aliases such as `@testing/*` for shared test infrastructure. Avoid deep relative imports into stable test infrastructure.
-</harness_ownership>
-
 <script_testing>
-Checked-in entrypoints under `scripts/` get thin tests.
+Checked-in `scripts/` entrypoints get thin tests:
 
-- Test argument parsing through the repository's canonical parser
-- Test dispatch into the orchestrator
-- Test exit-code mapping and observable terminal output
+- Argument parsing through the repository's canonical parser
+- Dispatch into the imported orchestrator
+- Exit-code mapping and observable terminal output
 
-Do NOT treat the script file as the main unit of behavior. The imported orchestrator module carries the real specification and evidence.
-
-For script-driven work, ask the same harness-first questions:
-
-1. Where is the harness for the orchestrator's boundary?
-2. If there is no harness, where is the fixture data?
-3. Where is the spec for the orchestrator or harness?
-4. Where are the tests for the orchestrator or harness?
-
+The orchestrator carries the main behavioral evidence. Script files should stay small and route to tested modules.
 </script_testing>
 
 <anti_patterns>
-Reject these patterns in TypeScript tests:
+Reject or rewrite these patterns:
 
-- `vi.mock`, `jest.mock`, or `vi.spyOn(...).mockReturnValue(...)` replacing the dependency under test
-- Property assertions implemented only with examples
-- Source-owned values copied into local constants instead of imported from production modules
-- Titles and assertion diagnostics extracted into constant declarations
-- Production `src/` modules created only to aggregate values for tests
+- Legacy file suffixes: `.unit.test.ts`, `.integration.test.ts`, `.e2e.test.ts`, `.spec.ts`
+- Runner-level collapse: assuming Playwright means `l3`
+- Level-evidence collapse: assuming `scenario` means high-cost execution
+- Framework mocks replacing the dependency under test
+- Property claims implemented only with examples
+- Source-owned values copied into local constants
+- Production modules created only to aggregate values for tests
 - Deep relative imports into stable shared test infrastructure
-- Manual argument parsing in checked-in script tests when the repo has a canonical parser
+- Manual argument parsing in script tests when the repo has a canonical parser
 
 </anti_patterns>
 
 <success_criteria>
-TypeScript tests follow this reference when:
+TypeScript test guidance follows this standard when:
 
-- `/testing` determines the level and exception path first
-- Filenames communicate the intended evidence level
-- Doubles preserve the real interface instead of replacing it with mocking APIs
-- Property assertions use `fast-check` with meaningful properties
-- Source-owned values are imported from their canonical modules
-- Repeated test-local data lives in generators, fixtures, or harnesses
+- `/testing` determines the evidence mode, execution level, and exception path before implementation
+- Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
+- Runner configuration uses explicit runner tokens instead of `.spec.ts`
+- Doubles are passed through dependency injection and mapped to a Stage 5 exception
+- Property assertions use meaningful `fast-check` properties
+- Source-owned values come from the owning production module
 - Shared test infrastructure lives in test-owned code behind stable aliases
-- Script entrypoints stay thin while orchestrators carry the real harness-backed evidence
 
 </success_criteria>

@@ -221,7 +221,7 @@ Assertion mapping:
 Assertion: MUST: Given a config file with nested sections, when parsed,
            then all section values are accessible by dotted path
 Type: Scenario
-Test: tests/config-parser.unit.test.ts ✓ exists
+Test: tests/config-parser.scenario.l1.test.ts ✓ exists
 ```
 
 Coupling:
@@ -275,7 +275,7 @@ Auditing `spx/32-api.enabler/54-auth.outcome/`
 ```text
 Assertion: MUST: Given valid credentials, when authenticating,
            then a session token is returned from the database
-Test: tests/auth.integration.test.ts ✓ exists
+Test: tests/auth.scenario.l2.test.ts ✓ exists
 ```
 
 Coupling:
@@ -309,7 +309,7 @@ Auditing `spx/15-theme.enabler/22-contrast.outcome/`
 
 ```text
 Assertion: MUST: All theme colors meet WCAG AA contrast ratio (4.5:1)
-Test: tests/contrast.unit.test.ts ✓ exists
+Test: tests/contrast.compliance.l1.test.ts ✓ exists
 ```
 
 Coupling:

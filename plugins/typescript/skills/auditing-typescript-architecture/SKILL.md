@@ -85,7 +85,7 @@ All canonical conventions are in `/standardizing-typescript-architecture`. Read 
 
 **4. Mocking prohibition** -- No mocking language anywhere in the ADR. See `<di_patterns>` in `/standardizing-typescript-architecture` for what to check and correct ADR language.
 
-**5. Level accuracy** -- When the Compliance section references testing levels, verify against `/testing` definitions. See `<level_context>` in `/standardizing-typescript-architecture`. Key rule: SaaS services jump L1 to L3 (no Level 2).
+**5. Level accuracy** -- When the Compliance section references testing levels, verify against `/testing` definitions. See `<level_context>` in `/standardizing-typescript-architecture`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
 
 **6. Anti-patterns** -- Check for content that does not belong in an ADR. See `<anti_patterns>` in `/standardizing-typescript-architecture` for the full table.
 

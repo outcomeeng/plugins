@@ -57,7 +57,7 @@ Apply `/testing-typescript` skill principles. Tests MUST:
 - Use dependency injection, NOT mocking (`vi.mock()`, `jest.mock()` = REJECT)
 - Test behavior (what code does), NOT implementation (how it does it)
 - Use real implementations with test-friendly behavior, NOT mock functions
-- Be at the appropriate level (Unit/Integration/E2E)
+- Encode the appropriate evidence mode and level (`l1`/`l2`/`l3`)
 
 **Rejection Criteria:**
 

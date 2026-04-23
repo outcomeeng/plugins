@@ -55,7 +55,7 @@ Observable DI parameters in all functions that invoke external tools.
 ### MUST
 
 - All external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([review])
-- Configuration accepts typed inputs, not environment reads -- enables Level 1 verification of config logic ([review])
+- Configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([review])
 
 ### NEVER
 
@@ -72,12 +72,12 @@ Observable DI parameters in all functions that invoke external tools.
 
 | Component        | Level | Justification                   |
 | ---------------- | ----- | ------------------------------- |
-| Command building | 1     | Pure function, no external deps |
-| Hugo invocation  | 2     | Needs real Hugo binary          |
+| Command building | `l1`  | Pure function, no external deps |
+| Hugo invocation  | `l2`  | Needs real Hugo binary          |
 
 ### Escalation Rationale               <-- downstream concern for /testing
 
-- Level 1->2: Hugo binary required for acceptance
+- `l1` -> `l2`: Hugo binary required for acceptance
 ```
 
 **Why:** Level assignments depend on the spec's assertions, the project's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
@@ -111,7 +111,7 @@ An ADR that references existing code ("The current X has...", "The file X does n
 - ATEMPORAL: "Build implementations conform to the BuildDependencies interface."
 
 - TEMPORAL: "We discovered that direct execa calls make testing impossible."
-- ATEMPORAL: "Direct process invocation prevents Level 1 testing. Dependency injection enables isolated unit verification."
+- ATEMPORAL: "Direct process invocation prevents `l1` testing. Dependency injection enables isolated behavior verification."
 
 </atemporal_voice>
 
@@ -128,8 +128,8 @@ interface BuildDependencies {
   resolveVersion: (tool: string) => Promise<string>;
 }
 
-// Level 1: inject controlled implementation
-// Level 2+: inject real implementation
+// l1: inject controlled implementation
+// l2/l3: inject real implementation
 function buildSite(
   config: BuildConfig,
   deps: BuildDependencies,
@@ -163,20 +163,20 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs to understand testing levels to write effective Compliance rules. The auditor needs them to verify that Compliance rules enable the right levels. These definitions come from `/testing`.
 
-| Level | Name        | TypeScript Infrastructure               | When to Use                                   |
-| ----- | ----------- | --------------------------------------- | --------------------------------------------- |
-| 1     | Unit        | Node.js built-ins + Git + temp fixtures | Pure logic, FS operations, git operations     |
-| 2     | Integration | Project-specific binaries/tools         | Hugo, Caddy, Claude Code, Docker, TS compiler |
-| 3     | E2E         | External deps (GitHub, network, Chrome) | Full workflows with external services         |
+| Level | TypeScript infrastructure               | When to use                                   |
+| ----- | --------------------------------------- | --------------------------------------------- |
+| `l1`  | Node.js built-ins + Git + temp fixtures | Pure logic, FS operations, git operations     |
+| `l2`  | Project-specific binaries/tools         | Hugo, Caddy, Claude Code, Docker, TS compiler |
+| `l3`  | External deps (GitHub, network, Chrome) | Full workflows with external services         |
 
 **Key rules:**
 
-- Git is Level 1 (standard dev tool, always available in CI)
-- Project-specific tools require installation/setup (Level 2)
-- Network dependencies and external services are Level 3
-- SaaS services jump L1 to L3 (no Level 2)
+- Git is `l1` (standard dev tool, always available in CI)
+- Project-specific tools require installation/setup (`l2`)
+- Network dependencies and external services are `l3`
+- SaaS services jump `l1` to `l3` (no `l2`)
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as parameter" makes Level 1 possible for the logic around the tool. "NEVER call external API directly" means Level 3 for the real call, Level 1 for the business logic.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 
 </level_context>
 

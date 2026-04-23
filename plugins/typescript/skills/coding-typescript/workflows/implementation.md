@@ -60,7 +60,7 @@ Existing code is REFERENCE, not authority. Use code search to find artifacts, ne
 
 For each function/class to implement:
 
-1. **Create test file** if it doesn't exist: `test/unit/{module}.test.ts`
+1. **Create test file** if it doesn't exist, following `/standardizing-typescript-tests`: `{module}.scenario.l1.test.ts`
 2. **Write test cases** following the debuggability progression (see `references/test-patterns.md`)
 3. **Run tests** to confirm they fail (red phase)
 
@@ -85,8 +85,8 @@ testing/
     └── index.ts         # Test harnesses
 
 spx/{node-path}/tests/   # Co-located tests (Outcome Engineering framework)
-├── core.unit.test.ts               # Level 1
-└── core.integration.test.ts        # Level 2
+├── core.mapping.l1.test.ts
+└── core.scenario.l2.test.ts
 ```
 
 ### Code Standards

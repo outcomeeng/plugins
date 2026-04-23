@@ -19,7 +19,7 @@ Observable `deps` parameter in all functions that invoke external tools.
 
 ### MUST
 
-- All functions that call external tools accept a `deps` parameter with a typed interface -- enables Level 1 testing of command-building logic ([review])
+- All functions that call external tools accept a `deps` parameter with a typed interface -- enables `l1` testing of command-building logic ([review])
 - Default implementations use real tools; tests inject controlled implementations -- no mocking ([review])
 
 ### NEVER
@@ -70,7 +70,7 @@ Separate module per command. Business logic delegated to runners, not in command
 
 ### MUST
 
-- Each command is a separate module exporting a registration function -- enables isolated Level 1 testing ([review])
+- Each command is a separate module exporting a registration function -- enables isolated `l1` testing ([review])
 - Commands delegate to runner functions that accept DI parameters -- separates parsing from logic ([review])
 
 ### NEVER
@@ -123,7 +123,7 @@ Explicit return types on all async functions. Timeouts configurable via DI.
 ### MUST
 
 - All async functions have explicit return types -- prevents implicit `Promise<any>` ([review])
-- Timeouts are configurable via dependency injection -- enables Level 1 testing of timeout logic ([review])
+- Timeouts are configurable via dependency injection -- enables `l1` testing of timeout logic ([review])
 - Errors are caught and converted to typed `AppError` subclasses -- structured propagation ([review])
 
 ### NEVER
