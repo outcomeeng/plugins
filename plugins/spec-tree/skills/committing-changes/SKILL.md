@@ -10,17 +10,6 @@ allowed-tools: Read, Glob, Grep, Bash
 Write effective git commit messages following Conventional Commits standard with selective staging, atomic commits, and domain-specific type conventions.
 </objective>
 
-<quick_start>
-
-1. **Run project validation first**: Check CLAUDE.md for `just check`, `pnpm run check`, etc.
-2. Review changes: `git status`, `git diff`
-3. **Classify changes by concern** — group by type+scope, split if multiple groups
-4. Stage specific files for ONE concern: `git add path/to/file.ts` (never `git add .`)
-5. Write message: `type(scope): description` (imperative, under 50 chars)
-6. Commit, then repeat from step 4 for remaining concerns
-
-</quick_start>
-
 <success_criteria>
 
 A successful commit has:
@@ -33,15 +22,6 @@ A successful commit has:
 - Clean diff review confirms expected changes only
 
 </success_criteria>
-
-<capabilities>
-
-- Guides selective file staging (never `git add .`)
-- Writes commit messages in Conventional Commits format
-- Verifies atomic commit principles
-- Adapts commit types to project domain
-
-</capabilities>
 
 <exclusions>
 
@@ -81,7 +61,7 @@ This skill may be referenced during the commit phase of a code review. In that c
 3. **Include work item reference** — Add `Refs: {capability}/{feature}/{story}` in footer
 4. **Verify tests pass** — All tests must pass before committing
 
-The reviewing skill provides the specific file list and work item context. This skill provides the commit protocol mechanics.
+The reviewing skill provides the specific file list and work item context.
 
 </review_workflow_context>
 
@@ -98,7 +78,7 @@ After gathering context (`git status`, `git diff`), classify every changed and u
 3. Assign each file a scope (module, plugin, component).
 4. Group files that share the same type AND scope — each group is one commit.
 
-**Split signals — if ANY of these are true, you MUST split into multiple commits:**
+**Split signals — MUST split into multiple commits if ANY of these are true:**
 
 - Files need different commit types (e.g., `spec` for a design doc + `feat` for implementation)
 - Files belong to different scopes (e.g., `methodology/` spec + `plugins/` code)
@@ -146,8 +126,6 @@ npm run check     # npm scripts
 make check        # Makefile targets
 make lint
 ```
-
-**Why before staging?** Many project commands (formatters, linters with auto-fix) modify files. Running them after staging means you need to re-stage the fixed files. Run validation first, then stage.
 
 **Step 1: Selective Staging**
 
@@ -304,22 +282,6 @@ When crafting the commit message description, read `${CLAUDE_SKILL_DIR}/referenc
 - Good and bad commit message examples with explanations
 
 </reference_guides>
-
-<decision_tree>
-
-```text
-Is this a new user feature?           → feat:
-Is this fixing a bug?                 → fix:
-Is this improving performance?        → perf:
-Is this code reorganization?          → refactor:
-Is this build/dependencies?           → build:
-Is this CI/CD?                        → ci:
-Is this documentation?                → docs:
-Is this adding/changing tests?        → test:
-Is this context/workflow docs?        → ctx: (if project uses it)
-```
-
-</decision_tree>
 
 <critical_rules>
 
