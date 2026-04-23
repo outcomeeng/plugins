@@ -65,6 +65,20 @@ hooks-install:
 hooks-run:
     lefthook run pre-commit
 
+# Push the current branch, then refresh local Claude and Codex marketplace installs
+push-marketplace *push_args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tool in git claude codex; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            echo "Missing required tool: $tool" >&2
+            exit 1
+        fi
+    done
+    git push {{push_args}}
+    claude plugin marketplace update outcomeeng
+    codex plugin marketplace upgrade outcomeeng
+
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:
     find . -type f -name '.DS_Store' -delete 2>/dev/null || true
