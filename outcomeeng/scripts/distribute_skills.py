@@ -282,6 +282,10 @@ def commit_and_push(repo_path: Path, message: str) -> None:
         text=True,
     )
     if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout, file=sys.stdout)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
         raise subprocess.CalledProcessError(
             result.returncode,
             result.args,
