@@ -637,11 +637,18 @@ Only present findings after all checks pass.
 </validation>
 
 <final_step>
-After presenting findings, offer:
+Before offering next steps, reason about the findings:
 
-1. Implement all fixes automatically
-2. Show detailed examples for specific issues
-3. Focus on critical issues only
-4. Other
+1. **Identify sequencing conflicts** — do any fixes interfere with or subsume others? (e.g., extracting to a workflow file makes heading conversion happen inside the new file — fixing headings in-place first means redoing them during extraction)
+2. **Find the forcing decision** — which choice, once made, determines the shape of everything else?
+3. **Group remaining fixes** — which can be committed immediately vs which depend on the forcing decision?
+
+Present the forcing decision as a structured choice. Each option MUST name a real trade-off — what this approach does AND what it defers or makes easier. Never offer options where one sounds obviously correct.
+
+**Good option**: "Restructure first — extract workflow → headings disappear naturally in the new file. One pass, no rework. Higher upfront effort."
+
+**Bad option**: "Fix everything" — no trade-off stated, sounds obviously correct, requires no judgment.
+
+If one option sounds obviously better than the others, the option set is wrong — redesign it.
 
 </final_step>
