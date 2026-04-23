@@ -152,7 +152,7 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 | Decision Record Constraint           | Violation Example                   | Verdict  |
 | ------------------------------------ | ----------------------------------- | -------- |
 | "Use dependency injection" (ADR)     | Direct imports of external services | REJECTED |
-| "Level 1 tests for logic" (ADR)      | Unit tests hitting network          | REJECTED |
+| "`l1` tests for logic" (ADR)         | `l1` tests hitting network          | REJECTED |
 | "No ORM" (ADR)                       | SQLAlchemy models introduced        | REJECTED |
 | "Lifecycle is Draft→Published" (PDR) | Added hidden `Archived` state       | REJECTED |
 

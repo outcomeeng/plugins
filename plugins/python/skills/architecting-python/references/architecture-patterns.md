@@ -239,7 +239,7 @@ Each module/class has one reason to change.
 ### Module Structure
 
 ```
-src/
+product/
 ├── domain/              # Business logic (changes for business reasons)
 │   ├── entities.py
 │   ├── services.py
@@ -416,13 +416,12 @@ Standard Python project layout:
 ```
 project/
 ├── pyproject.toml          # Project config, dependencies
-├── src/
-│   └── mypackage/
-│       ├── __init__.py
-│       ├── domain/         # Business logic
-│       ├── adapters/       # External integrations
-│       ├── ports/          # Interfaces
-│       └── main.py         # Entry point
+├── product/
+│   ├── __init__.py
+│   ├── domain/         # Business logic
+│   ├── adapters/       # External integrations
+│   ├── ports/          # Interfaces
+│   └── main.py         # Entry point
 ├── mypackage_testing/      # Test utilities (fixtures, harnesses) - INSTALLABLE
 │   ├── __init__.py
 │   ├── fixtures/           # Test data factories
@@ -431,10 +430,10 @@ project/
     ├── CLAUDE.md           # Navigation and work item management
     └── NN-{slug}.enabler/
         └── NN-{slug}.outcome/
-            └── tests/      # Co-located tests with level suffix naming
-                ├── test_foo.unit.py
-                ├── test_bar.integration.py
-                └── test_baz.e2e.py
+            └── tests/      # Co-located tests with evidence/level naming
+                ├── test_foo.mapping.l1.py
+                ├── test_bar.scenario.l2.py
+                └── test_baz.conformance.l3.py
 ```
 
 **Key**: Test utilities in `mypackage_testing/` are installed via `uv pip install -e ".[dev]"`. Co-located tests in `spx/.../tests/` import from `mypackage_testing.fixtures`. See `test-infrastructure-patterns.md`.

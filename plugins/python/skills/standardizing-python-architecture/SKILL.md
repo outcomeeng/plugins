@@ -51,7 +51,7 @@ Observable Protocol parameters in all functions that invoke external tools or se
 ### MUST
 
 - All external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables isolated testing without mocking ([review])
-- Configuration accepts typed inputs via Pydantic models, not environment reads -- enables Level 1 verification of config logic ([review])
+- Configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([review])
 
 ### NEVER
 
@@ -68,12 +68,12 @@ Observable Protocol parameters in all functions that invoke external tools or se
 
 | Component        | Level        | Justification                          |
 | ---------------- | ------------ | -------------------------------------- |
-| Command building | 1 (Unit)     | Pure function, no external deps        |
-| Tool invocation  | 2 (VM)       | Needs real binary to verify acceptance |
+| Command building | `l1`         | Pure function, no external deps        |
+| Tool invocation  | `l2`         | Needs real binary to verify acceptance |
 
 ### Escalation Rationale               <-- downstream concern for /testing
 
-- Level 1->2: Real binary required for acceptance
+- `l1` -> `l2`: Real binary required for acceptance
 ```
 
 **Why:** Level assignments depend on the spec's assertions, the project's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
@@ -126,8 +126,8 @@ class CommandRunner(Protocol):
     def run(self, cmd: list[str]) -> tuple[int, str, str]: ...
 
 
-# Level 1: inject controlled implementation
-# Level 2+: inject real implementation
+# l1: inject controlled implementation
+# l2/l3: inject real implementation
 def sync_files(
     source: Path,
     dest: Path,
@@ -162,20 +162,20 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs to understand testing levels to write effective Compliance rules. The auditor needs them to verify that Compliance rules enable the right levels. These definitions come from `/testing`.
 
-| Level | Name        | Python Infrastructure                                | When to Use                           |
-| ----- | ----------- | ---------------------------------------------------- | ------------------------------------- |
-| 1     | Unit        | Python stdlib + Git + standard tools + temp fixtures | Pure logic, command building, parsing |
-| 2     | Integration | Project-specific binaries/tools (Docker, ZFS, etc.)  | Real binaries with local backend      |
-| 3     | E2E         | Network services + external APIs + test accounts     | Real services, OAuth, rate limits     |
+| Level | Python infrastructure                                | When to use                           |
+| ----- | ---------------------------------------------------- | ------------------------------------- |
+| `l1`  | Python stdlib + Git + standard tools + temp fixtures | Pure logic, command building, parsing |
+| `l2`  | Project-specific binaries/tools (Docker, ZFS, etc.)  | Real binaries with local backend      |
+| `l3`  | Network services + external APIs + test accounts     | Real services, OAuth, rate limits     |
 
 **Key rules:**
 
-- Git is Level 1 (standard dev tool, always available in CI)
-- Project-specific tools require installation/setup (Level 2)
-- Network dependencies and external services are Level 3
-- SaaS services (Trakt, GitHub API, Stripe, Auth0) jump L1 to L3 (no Level 2)
+- Git is `l1` (standard dev tool, always available in CI)
+- Project-specific tools require installation/setup (`l2`)
+- Network dependencies and external services are `l3`
+- SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`)
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as Protocol parameter" makes Level 1 possible for the logic around the tool. "NEVER call external API directly" means Level 3 for the real call, Level 1 for the business logic.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as Protocol parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 
 </level_context>
 

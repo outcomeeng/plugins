@@ -13,7 +13,7 @@ Test infrastructure is an architectural concern. Design it once in ADRs, not ad-
 ### Symptom: "Module not found" When Running Tests
 
 ```bash
-$ uv run pytest specs/work/doing/.../tests/test_foo.py
+$ just run test spx/.../tests/test_foo.scenario.l1.py
 ModuleNotFoundError: No module named 'click'  # But click IS installed!
 ```
 
@@ -44,7 +44,7 @@ uv run which pytest
 ### The Problem: Tests Can't Import Shared Code
 
 ```python
-# specs/work/doing/.../tests/test_foo.py
+# spx/.../tests/test_foo.scenario.l1.py
 from tests.fixtures import create_user  # ❌ ModuleNotFoundError
 ```
 
@@ -75,9 +75,9 @@ project/
 │   └── harnesses/
 │       ├── __init__.py
 │       └── cli.py          # CLIHarness, etc.
-└── specs/                  # Co-located tests (per Outcome Engineering framework)
+└── spx/                    # Co-located tests (per Outcome Engineering framework)
     └── .../tests/
-        └── test_foo.py     # from mypackage_testing.fixtures import create_user
+        └── test_foo.scenario.l1.py # from mypackage_testing.fixtures import create_user
 ```
 
 **Step 2: pyproject.toml**
@@ -100,7 +100,7 @@ uv pip install -e ".[dev]"  # Installs both packages in editable mode
 **Step 4: Import**
 
 ```python
-# specs/work/doing/.../tests/test_foo.py
+# spx/.../tests/test_foo.scenario.l1.py
 from mypackage_testing.fixtures import create_user  # ✅ Works everywhere
 ```
 
@@ -112,9 +112,8 @@ from mypackage_testing.fixtures import create_user  # ✅ Works everywhere
 
 ```
 project/
-├── spx/.../21-foo.outcome/tests/test_generics.py  # Co-located tests
-├── spx/.../54-bar.outcome/tests/test_generics.py  # DIFFERENT co-located tests (same filename!)
-└── legacy/tests/test_generics.py              # Legacy tests
+├── spx/.../21-foo.outcome/tests/test_generics.scenario.l1.py  # Co-located tests
+└── spx/.../54-bar.outcome/tests/test_generics.mapping.l1.py   # Different evidence file
 ```
 
 pytest gets confused: "imported module 'test_generics' has this **file** attribute..."
@@ -141,11 +140,11 @@ pythonpath = ["."]
 
 ## Excluding Out-of-Scope Code
 
-### The Problem: Broken legacy code fails `just check`
+### The Problem: Broken out-of-scope code fails `just check`
 
 ```bash
 $ just check
-ERROR legacy/tests/test_emitter.py - ImportError: cannot import name 'HDLEmitterBase'
+ERROR archive/tests/test_emitter.py - ImportError: cannot import name 'HDLEmitterBase'
 ```
 
 ### Fix: Explicit Exclusions in Check Commands
@@ -153,52 +152,46 @@ ERROR legacy/tests/test_emitter.py - ImportError: cannot import name 'HDLEmitter
 ```makefile
 # justfile
 
-# Run all checks - excludes legacy/
+# Run all checks - excludes archived work/
 check: lint typecheck
-    uv run pytest mypackage_testing/ specs/work/doing/ --ignore=legacy/
+    just run test mypackage_testing/ spx/ --ignore=archive/
 
 # Coverage commands also need exclusion
 test-cov:
-    uv run pytest --cov=mypackage --cov-report=term --ignore=legacy/
-
-# Legacy has its own quarantined commands
-test-legacy:
-    uv run pytest legacy/tests/ -v  # Expected to fail
+    just run test --cov=mypackage --cov-report=term --ignore=archive/
 ```
 
 ---
 
-## ADR Section: Test Infrastructure
+## ADR Compliance: Test Infrastructure
 
-Every Python project ADR should include:
+Every Python project ADR governing test infrastructure should express rules in Compliance:
 
 ````markdown
-## Test Infrastructure
+## Compliance
 
-### Test Utility Package
+### MUST
 
-Test utilities (fixtures, harnesses, helpers) are packaged as `{project}_testing/`:
+- Test utilities (fixtures, harnesses, helpers) are packaged as `{project}_testing/`
+- `pyproject.toml` includes `{project}` and `{project}_testing` as installable packages
+- pytest uses `--import-mode=importlib` when co-located test files can share module names
 
-- Location: `{project}_testing/` (sibling to main package)
-- Installation: `uv pip install -e ".[dev]"`
-- Import: `from {project}_testing.fixtures import ...`
+### NEVER
 
-### pytest Configuration
+- Tests mutate `sys.path` to import shared fixtures or harnesses
 
 ```toml
 [tool.pytest.ini_options]
 addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
 ```
-````
 
 ### Test Locations
 
-| Type             | Location           | Runs in `just check` |
-| ---------------- | ------------------ | -------------------- |
-| Co-located tests | `specs/.../tests/` | Yes                  |
-| Regression tests | `tests/`           | Yes                  |
-| Legacy tests     | `legacy/tests/`    | No (quarantined)     |
+| Type             | Location         | Runs in `just check` |
+| ---------------- | ---------------- | -------------------- |
+| Co-located tests | `spx/.../tests/` | Yes                  |
+| Regression tests | `tests/`         | Yes                  |
 
 ### Environment Verification
 
@@ -206,8 +199,8 @@ Before running tests, verify:
 
 1. `uv run which pytest` → must be `.venv/bin/pytest`
 2. Dev deps installed → `uv pip install -e ".[dev]"`
-
 ````
+
 ---
 
 ## Verification Checklist
@@ -227,7 +220,7 @@ uv run python -c "from mypackage_testing.fixtures import ...; print('OK')"
 # 3. pytest config has importlib mode
 grep "import-mode" pyproject.toml
 # Expected: --import-mode=importlib in addopts
-````
+```
 
 ---
 

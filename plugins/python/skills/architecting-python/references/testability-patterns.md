@@ -117,11 +117,11 @@ def test_parse_user_never_crashes_on_any_name(name: str) -> None:
 
 ---
 
-### Situation 5: Verifying Integration
+### Situation 5: Proving `l2` or `l3` Behavior
 
-**When**: You need to verify components work together correctly.
+**When**: You need real local dependencies (`l2`) or remote/credentialed dependencies (`l3`) to prove the assertion.
 
-**What you need**: Integration tests that exercise the real interactions.
+**What you need**: Scenario or conformance tests that exercise real interactions.
 
 **Example**:
 
@@ -129,7 +129,7 @@ def test_parse_user_never_crashes_on_any_name(name: str) -> None:
 def test_user_service_creates_and_retrieves_user(
     db_connection: Connection,
 ) -> None:
-    """Integration: Does the full flow work with a real database?"""
+    """Scenario: Does the full flow work with a real database?"""
     repo = PostgresUserRepository(db_connection)
     service = UserService(repo)
 
@@ -143,7 +143,7 @@ def test_user_service_creates_and_retrieves_user(
     assert retrieved.name == "John Doe"
 ```
 
-**Key property**: Uses real components (or realistic fakes) to verify the integration.
+**Key property**: Uses real components through a harness instead of replacing the dependency under test.
 
 ---
 
@@ -151,14 +151,14 @@ def test_user_service_creates_and_retrieves_user(
 
 Given a situation, select the appropriate test type.
 
-| Situation                    | Test Type                   | Characteristics                           |
-| ---------------------------- | --------------------------- | ----------------------------------------- |
-| Debugging during development | Named unit test             | Known input, expected output, debuggable  |
-| Preventing known bugs        | Regression test             | Documents the bug, exact failure scenario |
-| Documenting behavior         | Golden/known-good tests     | Executable specification                  |
-| Exploring edge cases         | Property-based (Hypothesis) | Random inputs, invariant assertions       |
-| Verifying integration        | Integration test            | Real/realistic components                 |
-| Proving E2E flow             | E2E test                    | Full system, external interfaces          |
+| Situation                    | Evidence mode               | Level cue                             |
+| ---------------------------- | --------------------------- | ------------------------------------- |
+| Debugging during development | `mapping` or `scenario`     | Usually `l1`                          |
+| Preventing known bugs        | `scenario` or `compliance`  | Lowest level that proves the failure  |
+| Documenting behavior         | `scenario`                  | Lowest level that proves the workflow |
+| Exploring edge cases         | `property`                  | Usually `l1`                          |
+| Real local dependency proof  | `scenario` or `conformance` | `l2`                                  |
+| Remote service proof         | `scenario` or `conformance` | `l3`                                  |
 
 ---
 
@@ -393,31 +393,22 @@ def test_create_timestamp() -> None:
 
 ---
 
-## ADR Testability Section
+## ADR Compliance Rules for Testability
 
-Every ADR should include a testability section:
+ADRs express testability through Compliance rules, not a separate Testing Strategy section:
 
 ```markdown
-## Testability
+## Compliance
 
-### Unit Testing Strategy
+### MUST
 
-- `calculate_total` is pure; test with various OrderLine lists
-- `CurrencyMismatchError` tested with mixed-currency inputs
+- Pure pricing rules live in functions that accept typed values and return typed results -- enables `l1` `mapping` and `property` evidence ([review])
+- Order persistence accepts a repository Protocol -- enables `l2` scenario evidence with the real database harness ([review])
+- Time-dependent behavior accepts a Clock Protocol -- enables deterministic `l1` evidence without patching globals ([review])
 
-### Integration Testing Strategy
+### NEVER
 
-- `OrderService` tested with `InMemoryOrderRepository`
-- Real database tests co-located in `spx/.../tests/test_*.integration.py`
-
-### Mocking Boundaries
-
-- `PaymentGateway` mocked via Protocol
-- `Clock` injected for time-dependent tests
-
-### Property-Based Testing
-
-- Hypothesis strategy for `OrderLine` generation
+- `unittest.mock.patch` replaces repository, payment, or clock dependencies ([review])
 - Invariant: total is always sum of line prices
 ```
 

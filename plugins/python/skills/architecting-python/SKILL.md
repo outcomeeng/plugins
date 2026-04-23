@@ -25,11 +25,11 @@ You are a **distinguished Python architect**. Your role is to translate technica
 
 ## Foundational Stance
 
-**Read `/standardizing-python-architecture` before writing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
+**Read `/standardizing-python-architecture` and `/standardizing-python-testing` before writing any ADR.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
 
 - ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
 - Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
-- **BEFORE writing any ADR**, consult the `/testing-python` skill for methodology
+- **BEFORE writing any ADR**, consult `/testing`, `/testing-python`, and `/standardizing-python-testing` for methodology and Python-specific test standards
 - Your decisions are non-negotiable for downstream skills
 - If an architectural assumption fails, downstream skills ABORT -- they do not improvise
 - You produce ADRs (Architecture Decision Records), not implementation code
@@ -141,7 +141,7 @@ Read the project's methodology:
 
 - `spx/CLAUDE.md` - Project navigation, work item status, BSP dependencies
 
-For testing methodology, invoke `/testing` (foundational) and `/testing-python` (Python patterns)
+For testing methodology, invoke `/testing` (foundational), `/standardizing-python-testing` (Python standards), and `/testing-python` (Python patterns)
 
 ### 3. Existing Decisions
 
@@ -259,7 +259,7 @@ Use the authoritative template (from `/understanding`). Each ADR includes:
 **Common violations to avoid:**
 
 - Phantom Testing Strategy section (not in the authoritative template)
-- Level 2 assigned to SaaS services (Trakt, GitHub, Stripe, etc.)
+- `l2` assigned to SaaS services (Trakt, GitHub, Stripe, etc.)
 - "Mock at boundary" language for external services
 - Missing DI Protocol interfaces in Compliance
 - Mocking language anywhere in the ADR
@@ -357,9 +357,10 @@ See `references/security-patterns.md`.
 ### Testability by Design
 
 - **Consult `/testing`** for testing strategy (methodology and levels)
+- **Consult `/standardizing-python-testing`** for Python evidence naming and DI standards
 - Design for dependency injection (NO MOCKING)
 - Assign testing levels to each component in ADRs
-- Pure functions enable Level 1 testing
+- Pure functions enable `l1` testing
 - Design for the minimum level that provides confidence
 
 ```python
@@ -376,7 +377,7 @@ def start_server(
     port_finder: PortFinder,
     runner: CommandRunner,
 ) -> ServerHandle:
-    """Can be tested at Level 1 with controlled deps."""
+    """Can be tested at l1 with controlled deps."""
     port = port_finder.get_available_port()
     runner.run(["server", "--port", str(port)])
     return ServerHandle(port=port)
@@ -477,7 +478,7 @@ Observable `runner` parameter typed as `CommandRunner` Protocol in all functions
 
 ### MUST
 
-- All functions that call external tools accept a `runner` parameter implementing `CommandRunner` Protocol -- enables Level 1 testing of command-building logic ([review])
+- All functions that call external tools accept a `runner` parameter implementing `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([review])
 - Default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([review])
 
 ### NEVER
@@ -556,7 +557,7 @@ Separate module per command. Business logic delegated to runners, not in command
 
 ### MUST
 
-- Each command is a separate module exporting a registration function -- enables isolated Level 1 testing ([review])
+- Each command is a separate module exporting a registration function -- enables isolated `l1` testing ([review])
 - Commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([review])
 
 ### NEVER

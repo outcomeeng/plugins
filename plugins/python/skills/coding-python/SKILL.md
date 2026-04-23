@@ -34,6 +34,7 @@ Before invoking this skill:
 1. **Tests must exist** - Written by `/testing-python`
 2. **Tests must be reviewed** - Approved by `/auditing-python-tests`
 3. **Spec must be loaded** - Context from `/spec-tree:contextualizing`
+4. **Standards must be loaded** - Read `/standardizing-python` and `/standardizing-python-testing`
 
 If tests don't exist or aren't approved, go back to earlier steps.
 </prerequisites>
@@ -51,7 +52,7 @@ Read the existing tests to understand:
 cat {node_path}/tests/*.py
 
 # Run tests to see failures
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 ```
 
 Understand:
@@ -85,7 +86,7 @@ class Deps:
 ### Step 3: Run Tests (Verify GREEN)
 
 ```bash
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 ```
 
 All tests should pass. If any fail, fix implementation and re-run.
@@ -102,13 +103,13 @@ Clean up while keeping tests green:
 
 ```bash
 # Type checking
-uv run --extra dev mypy src/
+just run mypy product/
 
 # Linting
-uv run --extra dev ruff check src/
+just run ruff check product/
 
 # Tests one more time
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 ```
 
 All must pass before declaring complete.
@@ -144,13 +145,13 @@ For each rejection reason:
 
 ```bash
 # Run tests
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 
 # Type checking
-uv run --extra dev mypy src/
+just run mypy product/
 
 # Linting
-uv run --extra dev ruff check src/
+just run ruff check product/
 ```
 
 ### Step 4: Report What Was Fixed
@@ -238,9 +239,9 @@ def get_user(user_id: int) -> User | None:
 
 ### Files Created/Modified
 
-| File             | Action  | Description   |
-| ---------------- | ------- | ------------- |
-| `src/handler.py` | Created | Order handler |
+| File                 | Action  | Description   |
+| -------------------- | ------- | ------------- |
+| `product/handler.py` | Created | Order handler |
 
 ### Verification
 

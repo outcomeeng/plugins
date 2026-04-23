@@ -446,14 +446,16 @@ from lib.utils import helper  # Only works if CWD is project root
 
 **Required Project Setup**
 
-**1. Use `src` layout:**
+**1. Use explicit product package layout:**
 
 ```text
 myproject/
-├── src/
-│   └── myproject/
-│       ├── __init__.py
-│       └── ...
+├── product/
+│   ├── __init__.py
+│   └── ...
+├── product_testing/
+│   ├── __init__.py
+│   └── ...
 ├── tests/
 │   ├── __init__.py
 │   └── ...

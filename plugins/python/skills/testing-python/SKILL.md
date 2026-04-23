@@ -32,6 +32,8 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Output:** Test files written to `{node}/tests/` directory
 
+**Prerequisites:** Run `/testing` first, then read `/standardizing-python` and `/standardizing-python-testing`. The foundational skill chooses evidence and level; this skill implements those decisions in Python.
+
 **Workflow:**
 
 ```
@@ -67,18 +69,18 @@ Extract from the spec:
 
 **Note on Analysis sections:** The Analysis section documents what the spec author examined. It provides context but is not binding — implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
 
-### Step 2: Determine Test Levels
+### Step 2: Determine Evidence and Level
 
 For each assertion, apply the `/testing` methodology:
 
-| Evidence Type                   | Minimum Level |
+| Evidence location               | Minimum level |
 | ------------------------------- | ------------- |
-| Pure computation/algorithm      | 1             |
-| File I/O with temp dirs         | 1             |
-| Standard dev tools (git, curl)  | 1             |
-| Project-specific binary         | 2             |
-| Database, Docker                | 2             |
-| Real credentials, external APIs | 3             |
+| Pure computation/algorithm      | `l1`          |
+| File I/O with temp dirs         | `l1`          |
+| Standard dev tools (git, curl)  | `l1`          |
+| Project-specific binary         | `l2`          |
+| Database, Docker                | `l2`          |
+| Real credentials, external APIs | `l3`          |
 
 ### Step 3: Write Test Files
 
@@ -91,12 +93,12 @@ Create test files following `/standardizing-python-testing`:
 - Named constants for all test values
 - Property-based tests for parsers/serializers/math (`@given`)
 - No mocking - use dependency injection
-- File naming indicates level (`.unit.py`, `.integration.py`, `.e2e.py`)
+- File naming follows `test_<subject>.<evidence>.<level>[.<runner>].py`
 
 ### Step 4: Verify Tests Fail (RED)
 
 ```bash
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 ```
 
 Tests should FAIL with ImportError or AssertionError (implementation doesn't exist yet).
@@ -132,27 +134,27 @@ Find the most recent `/auditing-python-tests` output. Look for:
 
 For each rejection reason:
 
-| Rejection Category     | Fix Action                                           |
-| ---------------------- | ---------------------------------------------------- |
-| Missing `-> None`      | Add return type to test functions                    |
-| Evidentiary gap        | Rewrite test to actually verify the assertion        |
-| Mocking detected       | Replace with dependency injection                    |
-| Missing property tests | Add `@given` tests for parsers/serializers           |
-| Silent skip            | Change `skipif` to `pytest.fail()` for required deps |
-| Magic values           | Extract to named constants                           |
-| Wrong filename suffix  | Use `.unit.py`, `.integration.py`, or `.e2e.py`      |
+| Rejection Category     | Fix Action                                            |
+| ---------------------- | ----------------------------------------------------- |
+| Missing `-> None`      | Add return type to test functions                     |
+| Evidentiary gap        | Rewrite test to actually verify the assertion         |
+| Mocking detected       | Replace with dependency injection                     |
+| Missing property tests | Add `@given` tests for parsers/serializers            |
+| Silent skip            | Change `skipif` to `pytest.fail()` for required deps  |
+| Magic values           | Extract to named constants                            |
+| Wrong filename axes    | Rename to the `/standardizing-python-testing` pattern |
 
 ### Step 3: Verify Fixes
 
 ```bash
 # Run tests again
-uv run --extra dev pytest {node_path}/tests/ -v
+just run test {node_path}/tests/ -v
 
 # Check types
-uv run --extra dev mypy {node_path}/tests/
+just run mypy {node_path}/tests/
 
 # Check linting
-uv run --extra dev ruff check {node_path}/tests/
+just run ruff check {node_path}/tests/
 ```
 
 ### Step 4: Report What Was Fixed
@@ -179,8 +181,8 @@ Tests run and fail for expected reasons (RED phase complete).
 Before declaring tests complete:
 
 - [ ] Each Gherkin assertion has at least one test
-- [ ] Test level matches the evidence type (per `/testing` Stage 2)
-- [ ] File names include level suffix (`.unit.py`, `.integration.py`, `.e2e.py`)
+- [ ] Evidence mode and level match `/testing` Stage 2
+- [ ] File names use `test_<subject>.<evidence>.<level>[.<runner>].py`
 - [ ] All test functions have `-> None` return type
 - [ ] All parameters have type annotations
 - [ ] Named constants used (no magic values)
@@ -194,7 +196,7 @@ Before declaring tests complete:
 
 See `/standardizing-python-testing` for:
 
-- **Level patterns** - How to write Level 1, 2, 3 tests
+- **Level patterns** - How to write `l1`, `l2`, and `l3` tests
 - **Exception implementations** - The 7 exception cases in Python
 - **Property-based testing** - Hypothesis patterns
 - **Data factories** - Factory and builder patterns
@@ -215,9 +217,9 @@ See `/standardizing-python-testing` for:
 
 ### Test Files Created
 
-| File                     | Level | Outcomes Covered |
-| ------------------------ | ----- | ---------------- |
-| `tests/test_foo.unit.py` | 1     | Outcome 1, 2     |
+| File                            | Level | Outcomes Covered |
+| ------------------------------- | ----- | ---------------- |
+| `tests/test_foo.scenario.l1.py` | `l1`  | Outcome 1, 2     |
 
 ### Test Run (RED Phase)
 

@@ -11,23 +11,22 @@ Python-specific test audit. Extends `/auditing-tests` with Python supplements fo
 
 Read `/auditing-tests` first — it defines the 4-property evidence model and ordered workflow. This skill adds only what is Python-specific.
 
+Before running the audit, load `/standardizing-python`, then `/standardizing-python-testing`.
+
 </objective>
 
 <quick_start>
 
-**PREREQUISITE**: Read `/auditing-tests` and its evidence model before auditing.
+**PREREQUISITES**:
 
-1. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
-2. At each property step, apply the Python supplement below
-3. First property failure = REJECT (skip remaining properties for that assertion)
+1. Read `/standardizing-python`
+2. Read `/standardizing-python-testing`
+3. Read `/auditing-tests` and its evidence model before auditing
+4. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
+5. At each property step, apply the Python supplement below
+6. First property failure = REJECT (skip remaining properties for that assertion)
 
-**Python filename conventions** for assertion-to-test mapping:
-
-| Level | Filename suffix   | Example                       |
-| ----- | ----------------- | ----------------------------- |
-| 1     | `.unit.py`        | `test_uart_tx.unit.py`        |
-| 2     | `.integration.py` | `test_uart_tx.integration.py` |
-| 3     | `.e2e.py`         | `test_uart_tx.e2e.py`         |
+Use the filename conventions from `/standardizing-python-testing` for assertion-to-test mapping.
 
 </quick_start>
 
@@ -137,22 +136,21 @@ def test_auth(mocker: MockerFixture) -> None:
 
 **Legitimate alternatives mapped to `/testing` exceptions:**
 
-| Exception                | Python pattern                                 | Why coupling maintained                    |
-| ------------------------ | ---------------------------------------------- | ------------------------------------------ |
-| 1. Failure modes         | Class implementing Protocol, raises error      | Tests error handling of real integration   |
-| 2. Interaction protocols | Class with call-recording list                 | Tests call sequence against real interface |
-| 3. Time/concurrency      | `patch("time.time")`, `patch("random.random")` | Tests timing logic with real code          |
-| 4. Safety                | Class that records but doesn't execute         | Tests intent without destructive effects   |
-| 5. Combinatorial cost    | Configurable class mirroring real behavior     | Tests breadth with real-shaped data        |
-| 6. Observability         | Class capturing request details                | Tests details real system hides            |
-| 7. Contract testing      | Stub validated against schema                  | Tests serialization against real contract  |
+| Exception                | Python pattern                             | Why coupling maintained                    |
+| ------------------------ | ------------------------------------------ | ------------------------------------------ |
+| 1. Failure modes         | Class implementing Protocol, raises error  | Tests error handling of real integration   |
+| 2. Interaction protocols | Class with call-recording list             | Tests call sequence against real interface |
+| 3. Time/concurrency      | Injected clock or controllable scheduler   | Tests timing logic with real code          |
+| 4. Safety                | Class that records but doesn't execute     | Tests intent without destructive effects   |
+| 5. Combinatorial cost    | Configurable class mirroring real behavior | Tests breadth with real-shaped data        |
+| 6. Observability         | Class capturing request details            | Tests details real system hides            |
+| 7. Contract testing      | Stub validated against schema              | Tests serialization against real contract  |
 
 For each test double found:
 
 1. Identify which exception applies (must be one of the 7)
 2. Verify the double is a class implementing a Protocol — not `@patch`/`Mock()`/`MagicMock`
-3. Exception 3 (time/concurrency) may legitimately use `patch("time.time")` — this is the one case where `patch` is acceptable
-4. All other `@patch`/`Mock()`/`MagicMock`/`mocker.patch` usage → coupling is severed → REJECT
+3. Any `@patch`/`Mock()`/`MagicMock`/`mocker.patch` usage replacing behavior under test → coupling is severed → REJECT
 
 </supplement>
 
@@ -199,6 +197,8 @@ def test_parse_doesnt_crash(text: str) -> None:
         pass  # No assertion about behavior
 ```
 
+For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-python-testing`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
+
 </supplement>
 
 <supplement property="coverage">
@@ -244,7 +244,7 @@ Assertion: MUST: Given a UartTx configured for 8N1 at 115200 baud,
            when byte 0x55 is written, then TX line outputs start bit,
            8 data bits (LSB first), and stop bit
 Type: Scenario
-Test: tests/test_uart_tx.unit.py ✓ exists
+Test: tests/test_uart_tx.scenario.l1.py ✓ exists
 ```
 
 Coupling:
@@ -298,7 +298,7 @@ Auditing `spx/32-api.enabler/54-auth.outcome/`
 ```text
 Assertion: MUST: Given valid credentials, when authenticating,
            then a session token is returned from the database
-Test: tests/test_auth.integration.py ✓ exists
+Test: tests/test_auth.scenario.l2.py ✓ exists
 ```
 
 Coupling:
@@ -333,7 +333,7 @@ Auditing `spx/15-theme.enabler/22-contrast.outcome/`
 
 ```text
 Assertion: MUST: All theme colors meet WCAG AA contrast ratio (4.5:1)
-Test: tests/test_contrast.unit.py ✓ exists
+Test: tests/test_contrast.compliance.l1.py ✓ exists
 ```
 
 Coupling:
