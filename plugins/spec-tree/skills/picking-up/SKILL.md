@@ -48,7 +48,7 @@ Sessions are organized in `.spx/sessions/` in the **root worktree** (gitignored,
 └── archive/   # Completed
 ```
 
-Session IDs use format `YYYY-MM-DD_HH-MM-SS`. Priority order: `high` > `medium` > `low` (oldest first within same priority). The CLI handles atomic operations — NEVER touch session files manually except to read them. Multiple agents can run `/pickup` simultaneously; the CLI prevents race conditions.
+Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS` includes a token in this format (or with a trailing `.md` suffix as in `YYYY-MM-DD_HH-MM-SS.md`), treat that token as the session identifier and act on it with `spx session show <id>` or `spx session pickup <id>` before validating any accompanying cache paths or markdown link targets. Priority order: `high` > `medium` > `low` (oldest first within same priority). The CLI handles atomic operations — NEVER touch session files manually except to read them. Multiple agents can run `/pickup` simultaneously; the CLI prevents race conditions.
 
 </session_management>
 
