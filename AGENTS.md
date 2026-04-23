@@ -492,6 +492,15 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 
 Always invoke the skill `/committing-changes` and adhere to its git commit message guidance.
 
+## After pushing marketplace changes
+
+When publishing marketplace changes from this repo, prefer the `just` helper so push and local marketplace refresh happen in one step:
+
+```bash
+just push-marketplace
+just push-marketplace origin main
+```
+
 ## Missing plugins or skills
 
 ### Claude Code
