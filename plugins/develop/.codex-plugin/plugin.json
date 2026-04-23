@@ -1,28 +1,31 @@
 {
-  "name": "claude",
-  "version": "0.3.1",
-  "description": "Claude Code plugin agents, commands, and skills",
+  "name": "develop",
+  "version": "0.4.0",
+  "description": "Create and audit plugin assets: skills, commands, subagents, and agent prompt standards",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
   },
-  "homepage": "https://github.com/outcomeeng/claude",
-  "repository": "https://github.com/outcomeeng/claude",
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
   "keywords": [
-    "claude code",
-    "claude",
+    "development",
     "plugin",
     "marketplace",
     "skill",
     "command",
-    "agent"
+    "agent",
+    "subagent",
+    "prompt",
+    "codex",
+    "claude code"
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Claude Plugin Development",
-    "shortDescription": "Meta-skills for creating and auditing Codex assets",
-    "longDescription": "Create and audit skills and related plugin-development assets for Codex workflows.",
+    "displayName": "Plugin Development",
+    "shortDescription": "Create and audit plugin assets",
+    "longDescription": "Create and audit skills, commands, subagents, and agent prompt standards for Codex and Claude Code plugin workflows.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": [

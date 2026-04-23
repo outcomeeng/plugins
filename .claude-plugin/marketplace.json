@@ -1,21 +1,16 @@
 {
   "name": "outcomeeng",
   "metadata": {
-    "description": "Outcome Engineering: Spec Tree methodology for Python and TypeScript"
+    "description": "Outcome Engineering plugin marketplace for Codex and Claude Code"
   },
   "owner": {
     "name": "Simon Heimlicher"
   },
   "plugins": [
     {
-      "name": "legacy",
-      "source": "./plugins/legacy",
-      "description": "Standalone /commit, /handoff, /pickup, /testing, /reviewing-tests for projects without the spx CLI"
-    },
-    {
-      "name": "claude",
-      "source": "./plugins/claude",
-      "description": "Claude Code meta-skills: /creating-skills"
+      "name": "develop",
+      "source": "./plugins/develop",
+      "description": "Plugin development: /creating-skills, /creating-commands, /creating-subagents"
     },
     {
       "name": "frontend",
@@ -31,16 +26,6 @@
       "name": "python",
       "source": "./plugins/python",
       "description": "Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture"
-    },
-    {
-      "name": "specs",
-      "source": "./plugins/specs",
-      "description": "Legacy specs/ projects: /managing-specs, /understanding-specs"
-    },
-    {
-      "name": "spx-legacy",
-      "source": "./plugins/spx-legacy",
-      "description": "Legacy Outcome Engineering (spx/): /writing-prd, /managing-spx, /understanding-spx, /decomposing-*, migration agents"
     },
     {
       "name": "prose",

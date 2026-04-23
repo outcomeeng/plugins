@@ -1,19 +1,22 @@
 {
-  "name": "claude",
-  "version": "0.3.2",
-  "description": "Claude Code plugin agents, commands, and skills",
+  "name": "develop",
+  "version": "0.4.0",
+  "description": "Create and audit plugin assets: skills, commands, subagents, and agent prompt standards",
   "author": {
     "name": "Simon Heimlicher"
   },
-  "repository": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
   "keywords": [
-    "claude code",
-    "claude",
+    "development",
     "plugin",
     "marketplace",
     "skill",
     "command",
-    "agent"
+    "agent",
+    "subagent",
+    "prompt",
+    "codex",
+    "claude code"
   ]
 }

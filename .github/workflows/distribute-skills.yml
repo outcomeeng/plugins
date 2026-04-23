@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     paths:
+      - ".claude-plugin/**"
       - "plugins/*/skills/**"
+      - "plugins/*/.claude-plugin/**"
+      - "plugins/*/.codex-plugin/**"
       - "scripts/distribution.yml"
       - "outcomeeng/scripts/distribute_skills.py"
       - ".github/workflows/distribute-skills.yml"

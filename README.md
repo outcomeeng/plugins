@@ -58,7 +58,7 @@ claude plugin install typescript@outcomeeng
 
 # Optional plugins
 claude plugin install prose@outcomeeng
-claude plugin install claude@outcomeeng
+claude plugin install develop@outcomeeng
 ```
 
 #### Codex
@@ -69,7 +69,7 @@ After adding the marketplace, Codex can use the shared skill plugins published f
 - `python`
 - `typescript`
 - `prose`
-- `claude`
+- `develop`
 - `frontend`
 - `visual`
 - `hdl`
@@ -203,9 +203,9 @@ Prose craft skills for writing and reviewing. No spx CLI required.
 | Skill | `/writing-prose`   | Write varied, specific, human prose          |
 | Skill | `/reviewing-prose` | Review and edit prose for formulaic patterns |
 
-### claude
+### develop
 
-Meta-skills for Claude Code and Codex plugin development. No spx CLI required.
+Meta-skills for Codex and Claude Code plugin development. No spx CLI required.
 
 | Type  | Name                  | Purpose                         |
 | ----- | --------------------- | ------------------------------- |
@@ -234,17 +234,6 @@ HDL engineering skills for VHDL and SystemVerilog code review. No spx CLI requir
 | ----- | -------------------------- | -------------------------------------------------------------------- |
 | Skill | `/reviewing-vhdl`          | Idiomatic VHDL-2008 review with synthesizability analysis            |
 | Skill | `/reviewing-systemverilog` | Idiomatic SystemVerilog IEEE 1800-2017 review for Vivado and Quartus |
-
-### legacy
-
-Claude Code-only. Standalone `/commit`, `/handoff`, `/pickup` for projects without the spx CLI. Install `spec-tree` instead if you have spx.
-
-| Type    | Name                  | Purpose                                 |
-| ------- | --------------------- | --------------------------------------- |
-| Skill   | `/committing-changes` | Commit message guidance                 |
-| Command | `/commit`             | Git commit with Conventional Commits    |
-| Command | `/handoff`            | Create timestamped context handoff      |
-| Command | `/pickup`             | Load and continue from previous handoff |
 
 ## Using with other AI agents
 

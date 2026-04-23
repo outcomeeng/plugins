@@ -14,7 +14,7 @@ repos:
     description: "Foundation skills: prose, plugin development, frontend design"
     plugins:
       - prose
-      - claude
+      - develop
       - frontend
 
   spec-tree:

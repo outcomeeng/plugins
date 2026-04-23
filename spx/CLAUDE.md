@@ -5,7 +5,7 @@ template_source: spec-tree
 
 # spx/ Directory Guide (Spec Tree)
 
-This guide explains WHEN to invoke spec-tree skills for the **Claude Plugin Marketplace** product. It is a **router** — the skills contain the HOW.
+This guide explains WHEN to invoke spec-tree skills for the **Outcome Engineering Plugin Marketplace** product. It is a **router** — the skills contain the HOW.
 
 ---
 
@@ -17,7 +17,7 @@ Two node types at any depth:
 
 ```text
 spx/
-  claude.product.md                    # Product spec (root)
+  outcomeeng.product.md                # Product spec (root)
   NN-{slug}.adr.md                     # Architecture decision
   NN-{slug}.pdr.md                     # Product decision
   NN-{slug}.enabler/                   # Shared infrastructure

@@ -16,7 +16,7 @@ All plugins get at least one enabler node in the spec tree. Plugins with impleme
 
 ## Rationale
 
-The spec tree's value derives from the truth hierarchy: specs declare, tests verify, code complies. For pure-skill plugins, the "code" layer is markdown — there is no executable to test. Forcing automated tests produces one of two bad outcomes: tautological tests that parse markdown structure (testing formatting, not behavior) or tests that invoke Claude and assert on LLM output (non-deterministic, unfalsifiable).
+The spec tree's value derives from the truth hierarchy: specs declare, tests verify, code complies. For pure-skill plugins, the "code" layer is markdown — there is no executable to test. Forcing automated tests produces one of two bad outcomes: tautological tests that parse markdown structure (testing formatting, not behavior) or tests that invoke an agent and assert on LLM output (non-deterministic, unfalsifiable).
 
 Review-based compliance assertions acknowledge that skill quality is a human judgment: "does this skill produce good results?" is answered by `/auditing-skills`, not by pytest.
 
@@ -27,7 +27,6 @@ The alternative — excluding pure-skill plugins from the tree entirely — was 
 | Trade-off                                                                         | Mitigation / reasoning                                                                 |
 | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Pure-skill plugins lack automated test evidence                                   | Auditing skills provide structured review; skill quality is inherently a judgment call |
-| Legacy plugins have no spec tree representation                                   | No testable behavior exists; spec nodes would have only vacuous assertions             |
 | Adding implementation code to a pure-skill plugin requires upgrading its coverage | This is the intended forcing function — new code brings new evidence requirements      |
 
 ## Compliance
@@ -38,11 +37,10 @@ Implementation plugins have enabler nodes with child outcomes containing `[test]
 
 ### MUST
 
-- Create at least one enabler node for every non-legacy plugin — the tree is the complete product map ([review])
+- Create at least one enabler node for every checked-in marketplace plugin — the tree is the complete product map ([review])
 - Use `[test]` evidence for assertions about executable code — review is not a substitute for automated verification ([review])
 - Use `[review]` evidence for assertions about skill/prompt quality — automated tests cannot verify prompt effectiveness ([review])
 
 ### NEVER
 
 - Create automated tests for pure-skill plugins that test markdown structure — this produces tautological evidence ([review])
-- Create spec nodes for legacy plugins (`specs`, `spx-legacy`) — no testable behavior exists ([review])

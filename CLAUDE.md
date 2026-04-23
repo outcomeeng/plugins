@@ -15,7 +15,7 @@ This repository publishes two plugin surfaces from the same source tree:
 - `.claude-plugin` for Claude Code plugins, commands, and agents
 - `.codex-plugin` for Codex skill bundles
 
-Shared plugins ship both manifests where supported. `legacy`, `specs`, and `spx-legacy` remain Claude Code-only.
+Shared plugins ship both manifests where supported.
 
 ## Marketplace Methodology
 
@@ -40,7 +40,7 @@ The Outcome Engineering methodology has evolved through three generations. Only 
 - **1st → 2nd**: Moved from `specs/work/` to `spx/`, adopted durable map principles and sparse integer ordering. The three-level hierarchy (`capability/feature/story`) remained.
 - **2nd → 3rd**: Replaced the fixed three-level hierarchy with two recursive node types (`enabler`, `outcome`) that nest to arbitrary depth. Replaced `understanding-spx` with `contextualizing`. Merged the separate `spx` and `code` plugins into `spec-tree`.
 
-**Why legacy plugins still exist:** The `specs` and `spx-legacy` plugins remain in the repository for projects that haven't migrated. They are not installed in new projects.
+Historical plugin implementations are pruned from this repository. The history table explains why old project directories or installed plugins may still appear outside this checkout.
 
 ## Critical Rules
 
@@ -174,8 +174,8 @@ plugins/{plugin-name}/.codex-plugin/plugin.json
 {
   "plugins": [
     {
-      "name": "claude",
-      "source": "./plugins/claude",
+      "name": "develop",
+      "source": "./plugins/develop",
       "description": "..." // ← Only update if description changes
     }
   ]
@@ -261,16 +261,16 @@ Skills in this marketplace cannot automatically invoke other skills. However, th
 
 ---
 
-## Claude Plugin
+## Develop Plugin
 
-Meta-skills for Claude Code and Codex plugin development: creating and auditing skills, commands, and subagents.
+Meta-skills for Codex and Claude Code plugin development: creating and auditing skills, commands, subagents, and agent prompt standards.
 
 ### Skills
 
 | Skill                          | Purpose                                                |
 | ------------------------------ | ------------------------------------------------------ |
 | `/standardizing-agent-prompts` | Voice, description, constraint conventions (reference) |
-| `/creating-skills`             | Create and refine Claude Code skills                   |
+| `/creating-skills`             | Create and refine skills                               |
 | `/creating-commands`           | Create slash commands with XML structure               |
 | `/creating-subagents`          | Create and configure subagents                         |
 | `/auditing-skills`             | Audit skills for best practices compliance             |
@@ -417,7 +417,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/refactoring`                | declare | Move nodes, re-scope, extract shared enablers                           |
 | `/aligning`                   | declare | Check consistency, conformance, find gaps (audit gate)                  |
 | `/interviewing`               | declare | Domain-agnostic interview methodology (used by bootstrapping/authoring) |
-| `/testing`                    | spec    | Write tests driven by spec assertions (superset of legacy plugin)       |
+| `/testing`                    | spec    | Write tests driven by spec assertions                                   |
 | `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                                |
 | `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
 | `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
@@ -901,7 +901,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   ├── scripts/                  # Build/validation tools
 │   └── testing/                  # Test infrastructure
 ├── plugins/
-│   ├── claude/                   # Meta-skills for plugin development
+│   ├── develop/                  # Meta-skills for plugin development
 │   │   ├── .claude-plugin/       # Claude Code manifest
 │   │   ├── .codex-plugin/        # Codex manifest
 │   │   └── skills/
@@ -911,15 +911,6 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │       ├── auditing-skills/
 │   │       ├── auditing-commands/
 │   │       └── auditing-subagents/
-│   ├── legacy/                   # Standalone commit + testing (no spx CLI)
-│   │   ├── commands/
-│   │   │   ├── commit.md
-│   │   │   ├── handoff.md
-│   │   │   └── pickup.md
-│   │   └── skills/
-│   │       ├── committing-changes/
-│   │       ├── testing/
-│   │       └── auditing-tests/
 │   ├── frontend/
 │   │   └── skills/
 │   │       └── designing-frontend/
@@ -955,14 +946,17 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   └── rtfm.md
 │   │   └── skills/
 │   │       └── (11 skills)
-│   └── typescript/
-│       ├── agents/
-│       │   ├── typescript-code-auditor.md
-│       │   ├── typescript-architecture-auditor.md
-│       │   ├── typescript-test-auditor.md
-│       │   └── typescript-simplifier.md
+│   ├── typescript/
+│   │   ├── agents/
+│   │   │   ├── typescript-code-auditor.md
+│   │   │   ├── typescript-architecture-auditor.md
+│   │   │   ├── typescript-test-auditor.md
+│   │   │   └── typescript-simplifier.md
+│   │   └── skills/
+│   │       └── (8 skills)
+│   └── visual/
 │       └── skills/
-│           └── (8 skills)
+│           └── excalidrawing/
 ├── pyproject.toml                 # uv project config + dev deps
 ├── spx/                           # Specs as durable map
 │   ├── CLAUDE.md                 # Specs directory guide
