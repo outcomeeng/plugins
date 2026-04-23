@@ -14,7 +14,7 @@ Evaluate SKILL.md files against best practices for structure, conciseness, progr
 - NEVER modify files during audit - ONLY analyze and report findings
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
-- DO NOT generate fixes unless explicitly requested by the user
+- NEVER generate fixes unless explicitly requested by the user
 - NEVER make assumptions about skill intent - flag ambiguities as findings
 - MUST complete all evaluation areas (YAML, Structure, Content, Anti-patterns)
 - ALWAYS apply contextual judgment - what matters for a simple skill differs from a complex one
@@ -57,7 +57,8 @@ During audits, prioritize evaluation of:
    - If skill references external files that don't exist, flag as critical issue and recommend fixing broken references
    - If skill is <100 lines, note as "simple skill" in context and evaluate accordingly
 7. Read the skill files (SKILL.md and any references/, docs/, scripts/ subdirectories)
-8. Evaluate against best practices from steps 1-5
+8. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples
+9. Evaluate against best practices from steps 1-5
 
 **Use ACTUAL patterns from references, not memory.**
 </critical_workflow>
@@ -231,355 +232,59 @@ Reference files in the `references/` directory should also use pure XML structur
 </reference_file_guidance>
 
 <xml_structure_examples>
-**What to flag as XML structure violations:**
-
-<example name="markdown_headings_in_body">
-❌ Flag as critical:
-```markdown
-## Quick start
-
-Extract text with pdfplumber...
-
-## Advanced features
-
-Form filling...
-
-````
-✅ Should be:
-```xml
-<quick_start>
-Extract text with pdfplumber...
-</quick_start>
-
-<advanced_features>
-Form filling...
-</advanced_features>
-````
-
-**Why**: Markdown headings in body is a critical anti-pattern. Pure XML structure required.
-</example>
-
-<example name="missing_required_tags">
-❌ Flag as critical:
-```xml
-<workflow>
-1. Do step one
-2. Do step two
-</workflow>
-```
-
-Missing: `<objective>`, `<success_criteria>`
-
-✅ Should have both required tags:
-
-```xml
-<objective>What the skill does and why it matters</objective>
-
-<success_criteria>How to know it worked</success_criteria>
-```
-
-**Why**: Required tags are non-negotiable for all skills. `<quick_start>` is conditional — include for on-demand tool skills, omit for foundation/gate/validator/reference skills.
-</example>
-
-<example name="hybrid_xml_markdown">
-❌ Flag as critical:
-```markdown
-<objective>
-PDF processing capabilities
-</objective>
-
-## Quick start
-
-Extract text...
-
-## Advanced features
-
-Form filling...
-
-````
-✅ Should be pure XML:
-```xml
-<objective>
-PDF processing capabilities
-</objective>
-
-<quick_start>
-Extract text...
-</quick_start>
-
-<advanced_features>
-Form filling...
-</advanced_features>
-````
-
-**Why**: Mixing XML with markdown headings creates inconsistent structure.
-</example>
-
-<example name="unclosed_xml_tags">
-❌ Flag as critical:
-```xml
-<objective>
-Process PDF files
-
-<quick_start>
-Use pdfplumber...
-</quick_start>
-
-````
-Missing closing tag: `</objective>`
-
-✅ Should properly close all tags:
-```xml
-<objective>
-Process PDF files
-</objective>
-
-<quick_start>
-Use pdfplumber...
-</quick_start>
-````
-
-**Why**: Unclosed tags break parsing and create ambiguous boundaries.
-</example>
-
-<example name="inappropriate_conditional_tags">
-Flag when conditional tags don't match complexity:
-
-**Over-engineered simple skill** (flag as recommendation):
-
-```xml
-<objective>Convert CSV to JSON</objective>
-<quick_start>Use pandas.to_json()</quick_start>
-<context>CSV files are common...</context>
-<workflow>Step 1... Step 2...</workflow>
-<advanced_features>See [advanced.md]</advanced_features>
-<security_checklist>Validate input...</security_checklist>
-<testing>Test with all models...</testing>
-```
-
-**Why**: Simple single-domain skill only needs required tags. Too many conditional tags add unnecessary complexity.
-
-**Under-specified complex skill** (flag as critical):
-
-```xml
-<objective>Manage payment processing with Stripe API</objective>
-<quick_start>Create checkout session</quick_start>
-<success_criteria>Payment completed</success_criteria>
-```
-
-**Why**: Payment processing needs security_checklist, validation, error handling patterns. Missing critical conditional tags.
-</example>
+Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` for annotated examples of each violation type.
 </xml_structure_examples>
 
 <operational_effectiveness_examples>
-Examples of operational effectiveness issues to flag:
-
-<example name="unverifiable_success_criteria">
-❌ Flag as critical for complex skills:
-```xml
-<success_criteria>
-Task is complete when:
-- All stories have SPX tests
-- Coverage verified
-- Legacy tests removed
-</success_criteria>
-```
-
-**Why it fails**: "Coverage verified" is not testable. Verified how? What threshold? What command?
-
-✅ Should be:
-
-````xml
-<success_criteria>
-Task is complete when:
-- All stories have SPX tests (verify: `ls spx/.../tests/*.test.ts` returns files for each story)
-- Coverage parity confirmed (verify: both commands below show same % for target files)
-  ```bash
-  pnpm vitest run tests/legacy/... --coverage | grep "target.ts"
-  pnpm vitest run spx/.../tests --coverage | grep "target.ts"
-````
-
-- Legacy tests removed via git rm (verify: `git status` shows deletions staged)
-
-**Threshold**: Coverage delta must be ≤0.5%. If larger, STOP and identify missing tests.
-</success_criteria>
-
-````
-**Why it works**: Every criterion has a verification command and a pass/fail threshold.
-</example>
-
-<example name="missing_verification_gates">
-❌ Flag as critical for multi-step skills:
-```xml
-<workflow>
-1. Read DONE.md files from worktree
-2. Create SPX tests matching DONE.md entries
-3. Verify coverage matches
-4. Remove legacy tests with git rm
-5. Create SPX-MIGRATION.md
-</workflow>
-````
-
-**Why it fails**: No stop points. Agent could remove legacy tests before verifying coverage.
-
-✅ Should be:
-
-```xml
-<workflow>1. Read DONE.md files from worktree
-2. Create SPX tests matching DONE.md entries
-
-**GATE 1**: Before proceeding, verify:
-- [ ] SPX test count matches DONE.md entry count
-- [ ] All SPX tests pass: `pnpm vitest run spx/.../tests`
-If gate fails, fix tests before continuing.
-
-3. Verify coverage matches (run both, compare percentages)
-4. Remove legacy tests with git rm
-
-**GATE 2**: Before committing, verify:
-- [ ] `pnpm test` passes
-- [ ] `git status` shows only expected changes
-If gate fails, do not commit.
-
-5. Create SPX-MIGRATION.md</workflow>
-```
-
-**Why it works**: Explicit gates prevent proceeding with broken state.
-</example>
-
-<example name="missing_failure_modes">
-❌ Flag as recommendation for complex skills:
-Skill has detailed workflow but no `<failure_modes>` section.
-
-**Why it matters**: Agents will make the same mistakes that previous agents made. Failure modes capture hard-won operational knowledge.
-
-✅ Should include:
-
-```xml
-<failure_modes>Failures from actual usage:
-
-**Failure 1: Compared coverage at wrong granularity**
-- What happened: Agent saw 39% coverage for one story and stopped, thinking migration failed
-- Why it failed: Multiple stories share one legacy file; per-story coverage is meaningless
-- How to avoid: ALWAYS compare at legacy file level, not story level
-
-**Failure 2: Removed shared legacy file too early**
-- What happened: Agent removed tests/integration/cli.test.ts after migrating story-32
-- Why it failed: Stories 43 and 54 also contributed tests to that file
-- How to avoid: Build legacy_file → [stories] map BEFORE migration. Only remove after ALL contributing stories migrated.</failure_modes>
-```
-
-**Why it works**: Future agents learn from past mistakes without repeating them.
-</example>
-
-<example name="abstract_vs_concrete_examples">
-❌ Flag as recommendation:
-```xml
-<success_criteria>
-Coverage should match between legacy and SPX tests.
-</success_criteria>
-```
-
-**Why it fails**: What does "match" mean? What numbers? How do I compare my output?
-
-✅ Should be:
-
-```xml
-<success_criteria>Coverage must match. Concrete example from actual migration:
-
-Legacy tests:
-  tests/unit/status/state.test.ts (5 tests)
-  tests/integration/status/state.integration.test.ts (19 tests)
-  Total: 24 tests, 86.3% coverage on src/status/state.ts
-
-SPX tests:
-  spx/.../21-initial.story/tests/state.unit.test.ts (5 tests)
-  spx/.../32-transitions.story/tests/state.integration.test.ts (7 tests)
-  spx/.../43-concurrent.story/tests/state.integration.test.ts (4 tests)
-  spx/.../54-edge-cases.story/tests/state.integration.test.ts (8 tests)
-  Total: 24 tests, 86.3% coverage on src/status/state.ts
-
-Verdict: ✓ Test counts match (24=24), coverage matches (86.3%=86.3%)</success_criteria>
-```
-
-**Why it works**: Agent can compare their actual output to the example and know if they succeeded.
-</example>
-
-<example name="procedural_without_operational">
-❌ Flag as critical for complex skills:
-Skill has detailed `<workflow>` (450 lines of steps) but:
-- `<success_criteria>` is 3 lines of vague statements
-- No `<verification_gates>`
-- No `<failure_modes>`
-
-**Pattern**: Heavy procedural, light operational = agents know HOW but not WHETHER they succeeded.
-
-**Why it matters**: This is the most common skill failure mode. The skill tells you what to do but not how to verify you did it right. Agents follow steps, produce wrong output, and don't realize it.
-
-✅ Balanced skill has roughly equal investment in:
-
-- Procedural content (workflow, steps, commands)
-- Operational content (success criteria, verification gates, failure modes, concrete examples)
-
-</example>
+Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated examples of each issue type.
 </operational_effectiveness_examples>
 
 <output_format>
 Audit reports use severity-based findings, not scores. Generate output using this markdown template:
 
 ```markdown
-## Audit Results: [skill-name]
+## Audit: [skill-name]
 
-### Assessment
+**Verdict**: [1-2 sentences. Is this skill fit for purpose? State the main finding concretely — e.g., "Structurally sound but 30% over size limit with no failure modes." Not "This skill has some issues."]
 
-[1-2 sentence overall assessment: Is this skill fit for purpose? What's the main takeaway?]
+**Context**: Skill type: [simple/complex/delegation/etc.] · Line count: [number] · Effort to address: [low/medium/high]
 
-### Critical Issues
+---
 
-Issues that hurt effectiveness or violate required patterns:
+### Keep these aspects
 
-1. **[Issue category]** (file:line)
-   - Current: [What exists now]
-   - Should be: [What it should be]
-   - Why it matters: [Specific impact on this skill's effectiveness]
-   - Fix: [Specific action to take]
+What's working well and why removing it would hurt — each entry names the concrete consequence of losing it:
 
-2. ...
-
-(If none: "No critical issues found.")
-
-### Recommendations
-
-Improvements that would make this skill better:
-
-1. **[Issue category]** (file:line)
-   - Current: [What exists now]
-   - Recommendation: [What to change]
-   - Benefit: [How this improves the skill]
-
-2. ...
-
-(If none: "No recommendations - skill follows best practices well.")
-
-### Strengths
-
-What's working well (keep these):
-
-- [Specific strength with location]
+- **[Strength]** (`file:line`) — [what it does] → removing this would [specific consequence: e.g., "cause Claude to flag missing <quick_start> in validator skills where omission is correct"]
 - ...
 
-### Quick Fixes
+(If none: "No clear strengths — skill needs significant work.")
 
-Minor issues easily resolved:
+---
 
-1. [Issue] at file:line → [One-line fix]
-2. ...
+### Worth improving
 
-### Context
+Changes that yield concrete, named gains:
 
-- Skill type: [simple/complex/delegation/etc.]
-- Line count: [number]
-- Estimated effort to address issues: [low/medium/high]
+1. **[Issue]** (`file:line`)
+   - Current: [what exists]
+   - Change to: [what it should be]
+   - Benefit: [specific gain — name the exact failure mode it prevents or the exact workflow step it improves. Not "improves clarity."]
+
+(If none: "No improvements needed beyond must-fix items.")
+
+---
+
+### Must fix
+
+Issues that break effectiveness or violate required patterns — each entry names what specifically fails if left unfixed:
+
+1. **[Issue]** (`file:line`)
+   - Current: [what exists]
+   - Fix: [specific action]
+   - Impact if unfixed: [what breaks — name the failure mode, not "reduces effectiveness"]
+
+(If none: "No critical issues.")
 ```
 
 Note: While this subagent uses pure XML structure, it generates markdown output for human readability.
@@ -590,13 +295,13 @@ Task is complete when:
 
 - All reference documentation files have been read and incorporated
 - All evaluation areas assessed (YAML, Structure, Content, Anti-patterns, **Operational Effectiveness**)
-- Contextual judgment applied based on skill type and complexity
-- Findings categorized by severity (Critical, Recommendations, Quick Fixes)
+- Findings use Verdict / Keep these aspects / Worth improving / Must fix structure
 - At least 3 specific findings provided with file:line locations (or explicit note that skill is well-formed)
-- Assessment provides clear, actionable guidance
-- Strengths documented (what's working well)
-- Context section includes skill type and effort estimate
-- Next-step options presented to reduce user cognitive load
+- Every "Keep" entry names what would break or degrade if the strength were removed
+- Every "Worth improving" entry names the specific failure mode prevented or workflow step improved
+- Every "Must fix" entry names the specific failure that occurs if left unfixed
+- Context section includes skill type, line count, and effort estimate
+- Next-step options presented as a structured choice with genuine trade-offs
 - **For complex/migration skills**: Explicitly evaluated verifiable success criteria, verification gates, and failure modes
 
 </success_criteria>
@@ -621,8 +326,9 @@ Before presenting audit findings, verify:
 **Quality checks**:
 
 - [ ] Findings are specific and actionable
-- [ ] "Why it matters" explains impact for THIS skill
-- [ ] Remediation steps are clear
+- [ ] Every "Keep" entry names the concrete consequence of removing the strength
+- [ ] Every "Worth improving" entry names the specific gain, not a generic improvement
+- [ ] Every "Must fix" entry names what specifically breaks if left unfixed
 - [ ] No arbitrary rules applied without contextual justification
 
 **Operational effectiveness checks** (for complex skills):
@@ -639,7 +345,7 @@ Only present findings after all checks pass.
 <final_step>
 Before offering next steps, reason about the findings:
 
-1. **Identify sequencing conflicts** — do any fixes interfere with or subsume others? (e.g., extracting to a workflow file makes heading conversion happen inside the new file — fixing headings in-place first means redoing them during extraction)
+1. **Identify sequencing conflicts** — do any must-fix items interfere with or subsume others? (e.g., extracting to a workflow file makes heading conversion happen inside the new file — fixing headings in-place first means redoing them during extraction)
 2. **Find the forcing decision** — which choice, once made, determines the shape of everything else?
 3. **Group remaining fixes** — which can be committed immediately vs which depend on the forcing decision?
 
