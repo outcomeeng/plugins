@@ -2,7 +2,7 @@
 
 Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
 
-`CLAUDE.md` is the canonical repo instruction file. `AGENTS.md` is a symlink to this file so Codex and Claude Code share the same project instructions.
+`AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same project instructions.
 
 ## Marketplace Is a Product
 
@@ -16,6 +16,22 @@ This repository publishes two plugin surfaces from the same source tree:
 - `.codex-plugin` for Codex skill bundles
 
 Shared plugins ship both manifests where supported.
+
+## Agent Runtime Guidance
+
+This file is shared by Claude Code and Codex. Follow the rule's intent with the tool names available in the current runtime.
+
+| Capability                       | Claude Code                      | Codex                                        |
+| -------------------------------- | -------------------------------- | -------------------------------------------- |
+| Structured question with choices | `AskUserQuestion`                | `request_user_input`                         |
+| Read files                       | `Read`                           | `exec_command` with `rg`, `sed`, or `cat`    |
+| Edit files                       | `Edit` / `Write`                 | `apply_patch`                                |
+| Search files                     | `Glob` / `Grep`                  | `exec_command` with `rg` or `rg --files`     |
+| Read-only research agents        | `Task` / configured subagents    | `spawn_agent` only when explicitly requested |
+| Project plugin settings          | `.claude/settings.json`          | `.codex/config.toml`                         |
+| User-level plugin registration   | `~/.claude/` via `claude plugin` | `~/.codex/config.toml` via `codex plugin`    |
+
+When these instructions say `AskUserQuestion`, Codex must use `request_user_input`. When these instructions say `Read`, `Edit`, or `Write`, Codex must use its local shell and patch tools in a way that preserves the same behavior.
 
 ## Marketplace Methodology
 
@@ -58,9 +74,9 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 - ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
 
-- ✅ **Always use `just run test`** - Never bare pytest (just run loads .env automatically)
+- ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
-- ✅ **ALWAYS USE `AskUserQuestion` for structured questions with predefined options.** Do NOT use it for open-ended questions where the user needs to provide free-form context — just ask in plain text instead.
+- ✅ **ALWAYS USE the runtime's structured-question tool for questions with predefined options.** Claude Code uses `AskUserQuestion`; Codex uses `request_user_input`. Do NOT use structured questions for open-ended questions where the user needs to provide free-form context — ask in plain text instead.
 - ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
 
@@ -460,14 +476,6 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
 | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
 
-## Discovering Other Installed Skills
-
-In this repository, search `plugins/*/skills/*/SKILL.md`.
-
-For installed Claude Code plugins, search for `SKILL.md` in `.claude/plugins/cache/{marketplace-name}/{plugin-name}/`.
-
-For Codex, inspect the registered marketplace source and the plugin directories under `plugins/*/.codex-plugin/`.
-
 ## Proactive Skill Invocation
 
 Certain skills must be invoked **automatically** when specific conditions are met, without waiting for explicit user request.
@@ -818,20 +826,22 @@ Error: Bash command permission check failed for pattern "!find .spx/sessions -ma
 
 ### ⛔ Path Restrictions
 
-**NEVER write to these locations:**
+**NEVER manually write to these locations:**
 
-- `.claude/` - Requires user permission for every operation, breaks workflow
 - `~/.claude/` - User home directory, not project-specific
 - Any path containing `.claude` in user home
+- `.claude/` files, except `.claude/settings.json` updates produced by Claude CLI project-scope plugin commands
 
 **ALWAYS write to project directories:**
 
 - `plugins/` - Plugin code, skills, commands, templates
 - `spx/` - Specs as durable map (see [spx/CLAUDE.md](spx/CLAUDE.md))
 - `.spx/` - Tool operational files (sessions, cache) - gitignored
+- `.claude/settings.json` - Claude project-scope plugin settings created by `claude plugin ... --scope project` and committed for collaborators
+- `.codex/config.toml` - Codex project-scope config for the plugin set this repository needs
 - Project root - Package files, config files
 
-**Rationale:** Claude Code requires user permission for every file operation in `.claude/` directories. This creates friction and breaks the development flow. All project artifacts belong in the project directory structure.
+**Rationale:** Manual file operations in `.claude/` require extra permission and break workflow. Claude CLI project-scope plugin commands are the exception because they update `.claude/settings.json` for the repository's shared plugin set. Codex project config belongs in `.codex/config.toml` so collaborators inherit the plugin enablement for this repo after trusting the project.
 
 ### ⛔ File Removal Restrictions
 
@@ -983,3 +993,65 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 ## How to commit
 
 Always invoke the skill `/committing-changes` and adhere to its git commit message guidance.
+
+## Missing plugins or skills
+
+### Claude Code
+
+When repo-required Claude plugins are missing, ask the user before changing project-scoped Claude settings. Use Claude's project scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
+
+```bash
+claude plugin marketplace add outcomeeng/plugins --scope project
+
+for plugin in develop python prose spec-tree; do
+  claude plugin install "${plugin}@outcomeeng" --scope project
+done
+```
+
+If an installed project-scoped plugin has been disabled, re-enable it at project scope:
+
+```bash
+for plugin in develop python prose spec-tree; do
+  claude plugin enable "${plugin}@outcomeeng" --scope project
+done
+```
+
+After changing plugin state in a running Claude Code session, run `/reload-plugins`.
+
+### Codex
+
+Codex marketplace registration is user-scoped. Ask the user before changing `~/.codex/config.toml`, then register the marketplace once:
+
+```bash
+codex plugin marketplace add outcomeeng/plugins
+```
+
+Enable plugins per project by committing `.codex/config.toml`. Keep the project list explicit so each repo gets only the plugins it needs:
+
+```toml
+[plugins."develop@outcomeeng"]
+enabled = true
+
+[plugins."prose@outcomeeng"]
+enabled = true
+
+[plugins."spec-tree@outcomeeng"]
+enabled = true
+```
+
+Add language or domain plugins only for projects that use them:
+
+```toml
+[plugins."python@outcomeeng"]
+enabled = true
+
+[plugins."typescript@outcomeeng"]
+enabled = true
+```
+
+If a user's global Codex config already enables a plugin that the project should keep off, add an explicit project override:
+
+```toml
+[plugins."typescript@outcomeeng"]
+enabled = false
+```
