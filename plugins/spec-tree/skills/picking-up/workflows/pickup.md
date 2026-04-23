@@ -26,7 +26,6 @@ For each node in the `<nodes>` section:
    Glob: "spx/{node-path}/ISSUES.md"
    ```
    If found, read and present them — these contain important non-durable context the previous agent persisted as a hedge.
-3. Suggest context loading: "To load full spec context for this node, invoke `/contextualizing {node-path}`"
 
 **Step 4: Present persisted artifacts**
 
@@ -58,13 +57,40 @@ If the session references multiple nodes, ask which node to start with. Otherwis
 Skill tool → { "skill": "spec-tree:contextualizing", "args": "spx/{node-path}" }
 ```
 
-After context is loaded, THEN ask how to proceed — the loaded context will inform what options make sense.
+After context is loaded, STOP and present a post-context checkpoint:
+
+- Target node and its current state
+- Recommended next action from the handoff
+- Persisted artifacts or coordination items that could change the next move
+
+If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume with the recommended next action.
+
+Otherwise, use `AskUserQuestion` with exactly one question and 2-4 options. The options must come from the loaded context:
+
+- Include the recommended next action as the first option
+- Include "Review persisted artifacts first" only when persisted artifacts or escape hatches exist
+- Include "Re-check coordination claims first" only when coordination reports failing tests, bugs, or errors
+- Include "Take a different approach" only when the loaded context reveals a real alternative
+
+Wait for the user's selection before continuing. The checkpoint completes only after the `AskUserQuestion` response is received.
+
+After the checkpoint completes, emit a canonical post-context marker using the claimed session id from `<PICKUP_CLAIM>`:
+
+```text
+<PICKUP_CHECKPOINT id="[claimed-session-id]" target="spx/{node-path}" mode="[ask|auto-continue]">
+  next_action: [selected or resumed next action]
+</PICKUP_CHECKPOINT>
+```
+
+If the checkpoint used `AskUserQuestion`, record the selected option in `next_action`. If `--auto-continue` was used, record the resumed next action and `mode="auto-continue"`.
+
+NEVER invoke `/applying`, author ADRs/tests/code, or edit files before this checkpoint completes.
 
 **Step 7: Verify coordination claims before triaging**
 
 When the coordination section reports failing tests, known bugs, or specific errors, run them first before proposing fixes. The coordination section is a point-in-time snapshot; commits may have landed between handoff-write and pickup-claim that resolved listed failures. Running the tests is cheap (one command); triaging a non-existent failure wastes time and risks mis-diagnosis.
 
-This applies after `/contextualizing` (Step 6) completes, as Claude shifts from loading context to proposing action.
+This applies after the post-context checkpoint in Step 6 completes, or after the explicit `--auto-continue` override is acknowledged.
 
 </process>
 
@@ -75,6 +101,9 @@ This applies after `/contextualizing` (Step 6) completes, as Claude shifts from 
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
+- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="...">`
+- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
+- [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Agent knows which skills to invoke and which to avoid
 

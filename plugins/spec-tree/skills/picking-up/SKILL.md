@@ -15,6 +15,10 @@ allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 <objective>
 Load and claim a handoff session to continue work from a previous context without repeating the previous agent's mistakes.
 
+After `/contextualizing`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
+
+Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
+
 **⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualizing` has been invoked on the target node.**
 </objective>
 
@@ -85,6 +89,16 @@ spx session pickup --auto
 
 The CLI selects by priority, moves `todo/` → `doing/` atomically, outputs the `<PICKUP_ID>...</PICKUP_ID>` marker, and displays the claimed session content.
 
+Parse the claimed session id from `<PICKUP_ID>` and immediately emit the canonical claim marker:
+
+```text
+<PICKUP_CLAIM id="[claimed-session-id]">
+claimed
+</PICKUP_CLAIM>
+```
+
+Use the `id` attribute as the canonical session identifier for all later pickup and handoff markers. If multiple pickups happen in one conversation, later steps MUST key off this `id` value.
+
 Once claimed, follow `${CLAUDE_SKILL_DIR}/workflows/pickup.md` to process the session.
 
 </claim>
@@ -118,16 +132,35 @@ Showing raw content:
 
 </error_handling>
 
+<failure_modes>
+
+**Failure 1: Claude resumed implementation immediately after `/contextualizing`**
+
+Claude loaded `/contextualizing`, then invoked `/applying` or started writing ADRs, tests, or code without a user checkpoint. The pre-context gate passed, but the workflow left the post-context transition as a suggestion instead of a requirement.
+
+How to avoid: After `/contextualizing`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/applying` or edit files before that checkpoint completes.
+
+**Failure 2: Later handoff archived the wrong doing session**
+
+Claude picked up more than one session in the same conversation, and the later handoff workflow searched for a generic pickup marker without tying it to a specific claim. The archive step then targeted the wrong doing session.
+
+How to avoid: Emit canonical pickup markers with the claimed session id and carry that same `id` through the post-context checkpoint. Later workflows must archive from the most recent canonical pickup marker, not from a bare `<PICKUP_ID>` scan.
+
+</failure_modes>
+
 <success_criteria>
 A successful pickup:
 
 - [ ] Session claimed via `spx session pickup`
-- [ ] `<PICKUP_ID>` marker present in conversation for `/handoff` to find later
+- [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
 - [ ] Skills checklist presented BEFORE any work starts
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
+- [ ] Canonical post-context marker emitted with the same session id
+- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
+- [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Agent knows which skills to invoke and which to avoid
 

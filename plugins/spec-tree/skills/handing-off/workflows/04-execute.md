@@ -50,7 +50,12 @@ For each anchored node, check `git status` and record:
 
 Otherwise:
 
-1. **Check for claimed session**: search the conversation for a `<PICKUP_ID>` marker from `spx session pickup`. This is the doing session to archive after the new handoff is created.
+1. **Check for claimed session**:
+   - Search the conversation for the most recent canonical pickup marker:
+     - Prefer `<PICKUP_CHECKPOINT id="...">`
+     - Fall back to `<PICKUP_CLAIM id="...">` when no checkpoint marker exists
+   - Use the `id` attribute from that marker as the doing session to archive after the new handoff is created.
+   - Ignore older bare `<PICKUP_ID>` markers when a canonical pickup marker exists. Multiple pickups may have happened in the same conversation; archive the session named by the most recent canonical marker only.
 
 2. **Create the handoff**:
 
@@ -102,7 +107,7 @@ State:
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
 - Session file created (unless `--no-session`) and written using `references/session-format.md`.
-- Claimed doing session archived.
+- Claimed doing session archived using the session id from the most recent canonical pickup marker.
 - Confirmation output includes handoff session ID.
 
 </success_criteria>

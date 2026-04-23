@@ -28,8 +28,16 @@
 2. Updates PLAN.md in `43-fixtures.enabler` — removes steps 1-3, keeps steps 4-5.
 3. Stages and commits session-owned files via `/committing-changes`.
 4. Records state: `32-temp-files.enabler` and `43-fixtures.enabler/tests/` committed; unrelated foreign changes remain uncommitted.
-5. Runs `spx session handoff`, parses `<HANDOFF_ID>` and `<SESSION_FILE>`.
-6. Writes session file:
+5. Finds the current pickup marker in conversation:
+
+```text
+<PICKUP_CHECKPOINT id="2026-03-29_10-15-00" target="spx/21-test-harness.enabler/43-fixtures.enabler" mode="ask">
+  next_action: /coding-python
+</PICKUP_CHECKPOINT>
+```
+
+6. Runs `spx session handoff`, parses `<HANDOFF_ID>` and `<SESSION_FILE>`.
+7. Writes session file:
 
 ```text
 ---
@@ -96,7 +104,7 @@ Cross-cutting context that doesn't belong to any single node.
 </coordination>
 ```
 
-7. Archives the claimed doing session: `spx session archive 2026-03-29_10-15-00`
-8. Confirms: "Handoff created: `2026-03-29_14-22-00`. Session-owned work committed. Archived doing session: `2026-03-29_10-15-00`."
+8. Archives the claimed doing session from the pickup marker: `spx session archive 2026-03-29_10-15-00`
+9. Confirms: "Handoff created: `2026-03-29_14-22-00`. Session-owned work committed. Archived doing session: `2026-03-29_10-15-00`."
 
 </example>

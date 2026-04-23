@@ -85,7 +85,7 @@ A successful handoff:
 - [ ] Session-owned spec, test, code, and escape-hatch changes committed before closure (workflow 04)
 - [ ] Committed vs uncommitted state recorded for each node (workflow 04)
 - [ ] Session file created via `spx session handoff` (workflow 04, unless `--no-session`)
-- [ ] Claimed doing session archived (workflow 04)
+- [ ] Claimed doing session archived using the session id from the current pickup marker (workflow 04)
 - [ ] Session file is a thin coordination envelope — bulk of value persisted durably
 
 </success_criteria>
