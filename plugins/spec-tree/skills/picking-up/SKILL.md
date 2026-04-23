@@ -91,7 +91,7 @@ Check if `$ARGUMENTS` contains `--list` to activate list mode.
 2. Parse each session to extract:
    - Session ID
    - Priority and tags from frontmatter
-   - Nodes from `<nodes>` section (or `<original_task>` for legacy sessions)
+   - Nodes from `<nodes>` section
 
 3. Use `AskUserQuestion` to present options:
 
@@ -194,16 +194,6 @@ This applies after `/contextualizing` (Step 6) completes, as Claude shifts from 
 
 </workflow>
 
-<legacy_compatibility>
-
-Sessions created by the legacy `/handoff` command (pre-structured format) use `<original_task>` instead of `<nodes>`. Handle gracefully:
-
-1. If `<nodes>` section is missing, fall back to `<original_task>` + `<work_remaining>`
-2. If `<skills>` section is missing, check which skills apply
-3. Present legacy sessions with a note: "This session uses the legacy format — skills checklist and node anchoring are not available"
-
-</legacy_compatibility>
-
 <error_handling>
 
 **No sessions directory or empty**:
@@ -239,7 +229,7 @@ Showing raw content:
 - Session IDs use format: `YYYY-MM-DD_HH-MM-SS`
 - Sessions organized in subdirectories: `todo/`, `doing/`, `archive/`
 - Extract sections using pseudo-XML tags: `<nodes>`, `<skills>`, `<persisted>`, `<coordination>`
-- Handle missing sections gracefully (especially for legacy sessions)
+- Handle missing sections gracefully
 - Priority order: high > medium > low (oldest first within same priority)
 - Limit list to most recent 10 sessions to keep UI manageable
 - `spx` CLI handles atomic operations — never touch any session files manually except to read them

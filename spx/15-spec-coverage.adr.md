@@ -22,8 +22,6 @@ Review-based compliance assertions acknowledge that skill quality is a human jud
 
 The alternative — excluding pure-skill plugins from the tree entirely — was rejected because enabler nodes still provide value: they document what the plugin provides, establish dependency relationships, and create a place to hang compliance rules that auditing skills enforce.
 
-Legacy plugins (`specs`, `spx-legacy`) are excluded from the tree entirely. They have no testable behavior that the spec tree would govern.
-
 ## Trade-offs accepted
 
 | Trade-off                                                                         | Mitigation / reasoning                                                                 |

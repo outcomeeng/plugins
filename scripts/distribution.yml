@@ -35,11 +35,3 @@ repos:
       - "outcomeeng/spec-tree (for /testing and /auditing-tests)"
     plugins:
       - python
-
-  legacy:
-    description: "Deprecated Outcome Engineering skills (superseded by spec-tree)"
-    plugins:
-      - test
-      - spx-legacy
-      - specs
-      - legacy
