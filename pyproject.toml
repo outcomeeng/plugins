@@ -1,7 +1,7 @@
 [project]
-name = "outcomeeng-claude"
+name = "outcomeeng-plugins"
 version = "0.1.0"
-description = "Outcome Engineering plugin marketplace for Claude Code"
+description = "Outcome Engineering plugin marketplace for Codex and Claude Code"
 requires-python = ">=3.14"
 
 [dependency-groups]
