@@ -4,7 +4,7 @@ PROVIDES the complete TypeScript development workflow — architecture, testing,
 SO THAT TypeScript projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The typescript plugin contains 8 skills following the foundational + language-specific pattern: `/standardizing-typescript` (reference), `/standardizing-typescript-architecture` (reference), `/testing-typescript`, `/coding-typescript`, `/auditing-typescript`, `/auditing-typescript-tests`, `/architecting-typescript`, `/auditing-typescript-architecture`. Four agents (`typescript-code-auditor`, `typescript-architecture-auditor`, `typescript-test-auditor`, `typescript-simplifier`) preload the corresponding skills.
+The typescript plugin contains 9 skills following the foundational + language-specific pattern: `/standardizing-typescript` (reference), `/standardizing-typescript-architecture` (reference), `/standardizing-typescript-tests` (reference), `/testing-typescript`, `/coding-typescript`, `/auditing-typescript`, `/auditing-typescript-tests`, `/architecting-typescript`, `/auditing-typescript-architecture`. Four agents (`typescript-code-auditor`, `typescript-architecture-auditor`, `typescript-test-auditor`, `typescript-simplifier`) preload the corresponding skills.
 
 ## Assertions
 
