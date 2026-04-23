@@ -133,165 +133,22 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 - `codex --help` - Local CLI reference
 - `codex plugin --help` - Local plugin management reference
 
-## Version Management
-
-### Versioning Rules (Conservative Approach)
-
-All plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
-
-**MAJOR version (0.x.x → 1.x.x):**
-
-- ⛔ **NEVER bump unless user explicitly requests it**
-- All plugins remain at major version `0` until stable release
-- Reserved for future stable release when all features are production-ready
-
-**MINOR version (0.3.x → 0.4.x):**
-
-- ✅ Adding new commands (e.g., new `/pickup` command)
-- ✅ Adding new skills (e.g., new `/designing-frontend` skill)
-- ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
-- ✅ Significant user experience improvements
-- 🎯 **Use sparingly** - only for substantial additions or changes
-
-**PATCH version (0.3.1 → 0.3.2):**
-
-- ✅ **Most common** - default for most changes
-- ✅ Bug fixes
-- ✅ Refactoring existing code
-- ✅ Documentation improvements
-- ✅ Small enhancements to existing features
-- ✅ Performance optimizations
-- ✅ Internal implementation changes
-- 🎯 **Use liberally** - when in doubt, use PATCH
-
-### Files to Update When Bumping Version
-
-**Plugin manifest version** (update every manifest that exists for the plugin you changed):
-
-```bash
-plugins/{plugin-name}/.claude-plugin/plugin.json
-plugins/{plugin-name}/.codex-plugin/plugin.json
-```
-
-```json
-{
-  "name": "{plugin-name}",
-  "version": "0.4.0" // ← Update this
-}
-```
-
-**Claude marketplace catalog** (optional, only if description changes):
-
-```bash
-.claude-plugin/marketplace.json
-```
-
-```json
-{
-  "plugins": [
-    {
-      "name": "develop",
-      "source": "./plugins/develop",
-      "description": "..." // ← Only update if description changes
-    }
-  ]
-}
-```
-
-**Codex marketplace registration:** Codex does not use a checked-in root marketplace catalog in this repository. `codex plugin marketplace add outcomeeng/plugins` registers the marketplace source locally and reads plugin manifests from the repository.
-
-**IMPORTANT:** Validate after any changes:
-
-```bash
-just check
-```
-
-### Version Bump Workflow
-
-**CRITICAL: Version bumps must be in the SAME commit as the changes that warrant them.**
-
-❌ **WRONG** - Separate commits:
-
-```bash
-git commit -m "refactor(skills): simplify descriptions"
-# ... then later ...
-git commit -m "chore: bump versions"
-```
-
-✅ **CORRECT** - Single atomic commit:
-
-```bash
-# 1. Make your changes to skills/commands/etc
-# 2. Update version numbers in the relevant plugin.json files
-# 3. Stage everything together
-git add plugins/*/skills/ plugins/*/.claude-plugin/plugin.json plugins/*/.codex-plugin/plugin.json
-# 4. Create ONE commit with both the changes and version bumps
-git commit -m "refactor(skills): simplify descriptions
-
-- Simplified skill descriptions from formal jargon to natural language
-- All plugins: patch version bump (descriptions improved)"
-```
-
-**Rationale:** The version number is metadata about the changes, not a separate logical change. Splitting them creates awkward history where commits have changes but outdated version numbers.
-
-**Exception:** Only create a separate version bump commit if you're bumping versions WITHOUT any code/doc changes (rare).
-
-### Version Bump Examples
-
-| Change                      | Old   | New   | Reason                          |
-| --------------------------- | ----- | ----- | ------------------------------- |
-| Add `/handoff` command      | 0.2.0 | 0.3.0 | New command = MINOR             |
-| Add self-organizing handoff | 0.3.0 | 0.4.0 | Major functional change = MINOR |
-| Fix typo in handoff.md      | 0.4.0 | 0.4.1 | Documentation fix = PATCH       |
-| Refactor pickup logic       | 0.4.1 | 0.4.2 | Refactoring = PATCH             |
-| Improve error messages      | 0.4.2 | 0.4.3 | Small enhancement = PATCH       |
-| Add `/designing-frontend`   | 0.4.3 | 0.5.0 | New skill = MINOR               |
-
-## Skill Organization Principles
-
-### Foundational + Language-Specific Pattern
-
-Skills follow a **reference pattern** to avoid duplication:
-
-1. **Foundational skill** (e.g., `/testing`) - Contains core principles, methodology, and language-agnostic patterns
-2. **Language-specific skills** (e.g., `/testing-python`, `/testing-typescript`) - Reference the foundational skill, provide only language-specific implementations
-
-For spec-tree users, `/testing` from the spec-tree plugin is a superset that also covers tree-specific concerns. The language-specific skills use unqualified names (`/testing`) so they resolve to whichever foundational skill is installed.
-
-**Usage:** Always read the foundational skill first, then the language-specific skill for concrete patterns.
-
-### Why This Pattern?
-
-- **Single source of truth** - Core principles live in one place
-- **No drift** - Changes to methodology propagate automatically
-- **Focused content** - Each skill contains only what's unique to it
-- **Maintainability** - Less duplication means less divergence over time
-
-### Skill Invocation
-
-Skills in this marketplace cannot automatically invoke other skills. However, they can:
-
-1. Instruct the agent to read another skill file first
-2. Reference foundational concepts by skill name
-3. Be invoked sequentially by the user or agent
-
----
-
 ## Develop Plugin
 
 Meta-skills for Codex and Claude Code plugin development: creating and auditing skills, commands, subagents, and agent prompt standards.
 
 ### Skills
 
-| Skill                          | Purpose                                                |
-| ------------------------------ | ------------------------------------------------------ |
-| `/standardizing-agent-prompts` | Voice, description, constraint conventions (reference) |
-| `/creating-skills`             | Create and refine skills                               |
-| `/creating-commands`           | Create slash commands with XML structure               |
-| `/creating-subagents`          | Create and configure subagents                         |
-| `/auditing-skills`             | Audit skills for best practices compliance             |
-| `/auditing-commands`           | Audit slash commands for best practices                |
-| `/auditing-subagents`          | Audit subagent configurations                          |
+| Skill                          | Purpose                                                            |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `/standardizing-skills`        | Skill authoring standards (reference, loaded by creating/auditing) |
+| `/standardizing-agent-prompts` | Voice, description, constraint conventions (reference)             |
+| `/creating-skills`             | Create and refine skills                                           |
+| `/creating-commands`           | Create slash commands with XML structure                           |
+| `/creating-subagents`          | Create and configure subagents                                     |
+| `/auditing-skills`             | Audit skills for best practices compliance                         |
+| `/auditing-commands`           | Audit slash commands for best practices                            |
+| `/auditing-subagents`          | Audit subagent configurations                                      |
 
 ## Legacy Plugin
 
@@ -503,321 +360,6 @@ Certain skills must be invoked **automatically** when specific conditions are me
 - Create nodes with incorrect indices
 - Generate specs with wrong structure
 
-## Naming Skills
-
-The `name` field in SKILL.md YAML frontmatter is how users invoke your skill (`/skill-name`).
-
-**Match user speech patterns:**
-
-- Use domain acronyms: `authoring` not `authoring-spec-tree-artifacts`
-- Use terms users actually say: `testing-python` not `python-unit-test-framework`
-- Think "CD-ROM" not "Compact Disc Read Only Memory"
-
-**Directory name must match:**
-
-- Directory: `skills/authoring/`
-- YAML name: `name: authoring`
-- User invokes: `/authoring`
-
-**Examples from this marketplace:**
-
-```yaml
-# ✅ Good: matches user speech
-name: authoring
-# Users say "author a spec"
-
-name: testing-typescript
-# Users say "test TypeScript code"
-
-name: bootstrapping
-# Users say "bootstrap the spec tree"
-```
-
-```yaml
-# ❌ Bad: nobody says these
-name: authoring-spec-tree-artifacts
-# Too verbose, doesn't match speech
-
-name: typescript-testing-framework
-# Wrong order, unnatural phrasing
-```
-
-## Writing effective descriptions
-
-The description field enables Skill discovery and should include both what the Skill does and when to use it. The description is critical for skill selection: Claude uses it to choose the right Skill from potentially 100+ available Skills. The description must provide enough detail for Claude to know when to select this Skill, while the rest of SKILL.md provides the implementation details.
-
-**Keep descriptions concise** - Claude has a character budget for all skill metadata (name, args, description). When the budget is exceeded, Claude sees only a subset of available skills, making some skills invisible.
-
-### Directive descriptions for reliable activation
-
-Research (Seleznov, 650 automated trials, Feb 2026) shows description wording has a **20x impact on activation odds**:
-
-| Style         | Activation | Example                                         |
-| ------------- | ---------- | ----------------------------------------------- |
-| Passive       | ~77%       | `Docker expert for containerization. Use when…` |
-| Expanded      | ~93%       | `…or any Docker-related task`                   |
-| **Directive** | **~100%**  | `ALWAYS invoke… Do not X directly`              |
-
-**Use directive descriptions.** The base template:
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when <triggers>.
-```
-
-**Add a NEVER constraint only when it disambiguates.** A NEVER line helps when:
-
-- The skill is the **only one** with that negative (e.g., `NEVER work on the spec tree without loading context` — only contextualizing says this)
-- Claude has a **strong built-in alternative** the negative prevents (e.g., `NEVER run git commit without this skill` — Claude would just run `git commit` directly)
-
-**Omit NEVER when it creates noise:**
-
-- Multiple skills share the same negative (e.g., `NEVER write tests` — if testing-python, testing-typescript, and spec-tree:testing all say this, it doesn't help routing)
-- The ALWAYS trigger is already specific enough (e.g., `ALWAYS invoke when writing ADRs for TypeScript` — the language + artifact already route correctly)
-
-**For language-specific skills, put the language after the artifact** to match user speech:
-
-```yaml
-# ✅ "audit ADRs for Python" — matches what users say
-ALWAYS invoke this skill when auditing ADRs for Python.
-
-# ❌ "audit Python ADRs" — unnatural phrasing
-ALWAYS invoke this skill when auditing Python ADRs.
-```
-
-See [research/skill-invocation.md](research/skill-invocation.md) for the full study and additional strategies.
-
-### Additional description guidelines
-
-**Match actual user speech, not formal jargon.** Use the exact words and phrases users say, avoiding technical or formal language. Use abbreviations if the user would (ADR not Architecture Decision Record). Avoid corporate speak ("hierarchical context ingestion protocol" → "read all specs").
-
-**Multiple Skills conflict:**
-
-If Claude uses the wrong Skill or seems confused between similar Skills, the descriptions are probably too similar. Make each description distinct by using specific trigger terms.
-
-For example, instead of two Skills with "data analysis" in both descriptions, differentiate them: one for "sales data in Excel files and CRM exports" and another for "log files and system metrics". The more specific your trigger terms, the easier it is for Claude to match the right Skill to your request.
-
-### Reference skills
-
-Skills that exist only to be loaded by other skills (e.g., `standardizing-python`) should NOT use directive descriptions — that would cause false activations. Instead, use `disable-model-invocation: true` and a passive description:
-
-```yaml
-disable-model-invocation: true
-description: >-
-  Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
-```
-
-### Effective examples
-
-**PDF Processing skill** (unique — NEVER disambiguates):
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when working with PDF files, extracting text, filling forms, or merging documents.
-  NEVER process PDFs without this skill.
-```
-
-**Git Commit Helper skill** (Claude has a strong built-in alternative):
-
-```yaml
-description: >-
-  ALWAYS invoke this skill when writing commit messages or reviewing staged changes.
-  NEVER run git commit without this skill.
-```
-
-### Examples from this marketplace
-
-**Spec Tree skills (unique negatives that disambiguate):**
-
-```yaml
-# ✅ NEVER disambiguates — only contextualizing says this
-name: contextualizing
-description: >-
-  ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree.
-  NEVER work on any part of the spec tree without loading context through this skill first.
-
-# ✅ NEVER disambiguates — only authoring says this
-name: authoring
-description: >-
-  ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes.
-  NEVER author spec tree artifacts without this skill.
-
-# ✅ NEVER disambiguates — only decomposing says this
-name: decomposing
-description: >-
-  ALWAYS invoke this skill when breaking down, splitting, scoping, or structuring spec tree nodes.
-  NEVER decompose specs without this skill.
-```
-
-```yaml
-# ❌ Bad: passive style (77% activation)
-name: contextualizing
-description: Load spec tree context before working. Use when starting implementation.
-# Problem: Claude will just read the files directly instead of invoking the skill
-
-# ❌ Bad: formal jargon
-name: authoring
-description: Systematic spec creation with outcome hypotheses and typed assertions.
-# Problem: Nobody says "outcome hypotheses"
-```
-
-**Language-specific skills (NEVER omitted — trigger is enough):**
-
-```yaml
-# ✅ Language after artifact, no NEVER (would clash with testing-typescript)
-name: testing-python
-description: >-
-  ALWAYS invoke this skill when writing or fixing tests for Python.
-
-# ✅ Same pattern — trigger differentiates
-name: testing-typescript
-description: >-
-  ALWAYS invoke this skill when writing or fixing tests for TypeScript.
-
-# ✅ Acronym, not expanded form
-name: auditing-python-architecture
-description: >-
-  ALWAYS invoke this skill when auditing ADRs for Python.
-```
-
-**Why these work:**
-
-- Language after the artifact matches user speech ("tests for Python")
-- No NEVER — multiple skills saying "NEVER write tests" doesn't help routing
-- Acronyms instead of expanded forms ("ADRs" not "architecture decisions")
-
----
-
-## Writing Skills with Templates
-
-### Referencing Skill Files
-
-Use `${CLAUDE_SKILL_DIR}` to reference files within a skill. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
-
-```markdown
-Read `${CLAUDE_SKILL_DIR}/references/example.md`
-```
-
-Do NOT define aliases, add troubleshooting sections, or explain what the variable is. The agent sees an absolute path — not the variable.
-
-### Variable Scopes: Skill Content vs Hook Commands
-
-`${CLAUDE_SKILL_DIR}` is a **skill content** variable — it works in `!` bash injection commands and markdown text inside SKILL.md. It does NOT work in hook `command:` fields.
-
-Hook commands have their own variables:
-
-| Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
-| ----------------------- | -------------------------- | ---------------------------- | --------------------- |
-| `${CLAUDE_SKILL_DIR}`   | Skill's SKILL.md directory | Yes                          | **No**                |
-| `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
-| `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
-| `$CLAUDE_PROJECT_DIR`   | Project working directory  | No                           | **Yes**               |
-
-**For hook scripts bundled with a plugin skill**, use `${CLAUDE_PLUGIN_ROOT}` with the relative path from the plugin root:
-
-```yaml
-hooks:
-  PostToolUse:
-    - matcher: "Skill"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
-```
-
-### Nested Code Fences in Skills (MANDATORY)
-
-**Never nest multiple 3-backtick code blocks inside a single 4-backtick fence in SKILL.md files.** The `markup_fmt` formatter (dprint) prematurely closes the outer fence after the first inner fence, breaking all subsequent content.
-
-**Workaround:** Move examples that need nested code fences into `references/` files. Reference them from SKILL.md:
-
-```markdown
-<example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for a complete example.
-</example_review>
-```
-
-A single inner code block inside a 4-backtick fence is fine (e.g., `<output_format>` with one template). The problem occurs with multiple inner blocks across many lines.
-
-### XML Tag Formatting (MANDATORY)
-
-**Always add a blank line before closing pseudo-XML tags that follow unordered lists.**
-
-Without the blank line, markdown parsers interpret the closing tag as part of the list item, causing incorrect indentation.
-
-```markdown
-# ❌ WRONG - Tag gets indented as part of list
-
-- Item 1
-- Item 2
-- Item 3
-
-</section>
-
-# ✅ CORRECT - Blank line prevents indentation
-
-- Item 1
-- Item 2
-- Item 3
-
-</section>
-```
-
-This applies to all pseudo-XML tags used in skills:
-
-- `</objective>`
-- `</quick_start>`
-- `</structure_definition>`
-- `</accessing_templates>`
-- `</adr_templates>`
-- `</requirement_templates>`
-- `</work_item_templates>`
-- `</success_criteria>`
-
-**Automated Enforcement:**
-
-This formatting rule is automatically enforced by the `fix-xml-spacing` pre-commit hook:
-
-- **Script**: `scripts/fix-xml-spacing.py`
-- **When**: Runs on every commit before other formatters (priority 0)
-- **What**: Detects list items followed by closing XML tags, adds blank line, removes indentation
-- **Scope**: All `*.md` files in staged changes
-- **Behavior**: Automatically stages fixed files
-
-The script respects code fences and won't modify content inside `` ``` `` blocks.
-
----
-
-## Restrictions on Using `!` Expansion in Commands
-
-**Quoting:** When a fallback echo string contains double quotes (e.g., a command name), use single quotes for the outer string:
-
-```bash
-# ✅ Single quotes outside, double quotes inside
-!`spx session list || echo 'Ask user to install: "npm install --global @outcomeeng/spx"'`
-
-# ❌ Double quotes with escapes — triggers "ambiguous syntax" permission error
-!`spx session list || echo "Ask user to install: \"npm install --global @outcomeeng/spx\""`
-```
-
-**Other restrictions:**
-
-```bash
-# Avoid shell operators such as `(N)` (nullglob in zsh)
-Error: Bash command permission check failed for pattern "!ls .spx/sessions/TODO_*.md(N) | wc -l | xargs printf "TODO: %s\n" && ls .spx/sessions/DOING_*.md(N) | wc -l | xargs printf "DOING: %s\n"": This command uses shell operators that require approval for safety
-
-# Avoid parameter substitution
-Error: Bash command permission check failed for pattern "!for f (.spx/sessions/DOING_*) print mv $f ${f/DOING/TODO}": Command contains ${} parameter substitution
-
-# Avoid loops
-Error: Bash command permission check failed for pattern "!find .spx/sessions -maxdepth 1 -name 'DOING_*' | while read f; do echo mv "$f" "$(echo "$f" | sed 's/DOING/TODO/')"; done": This Bash command contains multiple operations. The following part requires approval: while read f ;
-     do echo mv "$f" "$(echo "$f" | sed ''s/DOING/TODO/'')" ; done
-
-Error: Bash command permission check failed for pattern "!find .spx/sessions -maxdepth 1 -name 'DOING_*' | awk '{new=$0; sub(/DOING/,"TODO",new); print "mv "$0" "new}'": This Bash command contains multiple operations. The following part requires approval: awk '{new=$0;
-     sub(/DOING/,""TODO"",new); print ""mv ""$0"" ""new}'
-```
-
----
-
 ## For Claude Agents Modifying This Marketplace
 
 ### ⛔ Subagent Restrictions
@@ -851,53 +393,14 @@ Error: Bash command permission check failed for pattern "!find .spx/sessions -ma
 
 ### Before Making Changes
 
-1. **Read the context**: Check [CLAUDE.md](CLAUDE.md:1) (this file) for current structure and versioning rules
+1. **Read the context**: Check [CLAUDE.md](CLAUDE.md:1) (this file) for current structure
 2. **Check existing commands**: Use Glob to find existing `.md` files in `plugins/*/commands/`
 3. **Review plugin structure**: Each plugin has its own `plugin.json` in `.claude-plugin/`
    - Codex-capable plugins also have `.codex-plugin/plugin.json`
 
 ### After Adding/Modifying Commands or Skills
 
-**⚠️ CRITICAL: Version bumps must be in the SAME commit as your changes.** See [Version Bump Workflow](#version-bump-workflow) above.
-
-**Workflow:**
-
-1. **Make your changes** to skills, commands, templates, etc.
-
-2. **Determine version bump type** (see [Version Management](#version-management) above):
-   - **MAJOR** (0.x.x → 1.x.x): ⛔ NEVER unless user explicitly requests
-   - **MINOR** (0.3.x → 0.4.x): New command/skill OR major functional change
-   - **PATCH** (0.3.x → 0.3.1): Bug fixes, refactoring, small changes (MOST COMMON)
-
-3. **Update plugin.json version** in the same working session:
-
-   ```bash
-   # Location: plugins/{plugin-name}/.claude-plugin/plugin.json
-   # And plugins/{plugin-name}/.codex-plugin/plugin.json when that manifest exists
-   # Update the "version" field according to rules above
-   ```
-
-4. **Update marketplace description** (only if needed):
-
-   ```bash
-   # Location: .claude-plugin/marketplace.json
-   # Update description for the modified plugin (only if description changes)
-   ```
-
-5. **Document changes**: Update this [CLAUDE.md](CLAUDE.md:1) file if adding new commands/skills to the plugin tables
-
-6. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md` to match
-
-7. **Stage and commit EVERYTHING together** in ONE commit:
-
-   ```bash
-   git add plugins/{plugin-name}/ plugins/{plugin-name}/.claude-plugin/plugin.json
-   git commit -m "type(scope): your changes including version bump"
-   ```
-
-   If `plugins/{plugin-name}/.codex-plugin/plugin.json` exists, stage that manifest in the same commit too.
-
-**Validation**: Run `just check` before committing. The pre-commit hook also validates, but catching errors earlier is faster.
+Before committing, invoke `/committing-changes` — it loads marketplace-specific rules (versioning, file targets, commit workflow) from `spx/local/committing-changes.md`.
 
 ### Quick Reference: File Locations
 
@@ -915,6 +418,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   ├── .claude-plugin/       # Claude Code manifest
 │   │   ├── .codex-plugin/        # Codex manifest
 │   │   └── skills/
+│   │       ├── standardizing-skills/
 │   │       ├── creating-skills/
 │   │       ├── creating-commands/
 │   │       ├── creating-subagents/
@@ -970,6 +474,8 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 ├── pyproject.toml                 # uv project config + dev deps
 ├── spx/                           # Specs as durable map
 │   ├── CLAUDE.md                 # Specs directory guide
+│   ├── local/                    # Project-specific skill overlays
+│   │   └── committing-changes.md
 │   ├── 15-validation.enabler/
 │   └── 21-spec-tree.enabler/
 │       ├── 15-context-loading.enabler/
@@ -981,14 +487,6 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │           └── 32-test-auditing.enabler/
 └── CLAUDE.md                      # This file
 ```
-
-### Versioning Reminder
-
-**When in doubt:**
-
-- Most changes = PATCH version bump
-- New items or major changes = MINOR version bump
-- Major version stays at 0.x.x unless user requests otherwise
 
 ## How to commit
 

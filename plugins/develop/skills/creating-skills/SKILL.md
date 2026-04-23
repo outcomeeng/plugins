@@ -5,6 +5,10 @@ description: >-
   NEVER create or modify skills without this skill.
 ---
 
+<reference_loading>
+Before creating or auditing any skill, read `/standardizing-skills` to load naming conventions, description standards, template variables, and bash expansion constraints. Then check for `spx/local/standardizing-skills.md` at the repository root and read it if it exists.
+</reference_loading>
+
 <essential_principles>
 Skills are prompts. All prompting best practices apply. Be clear, be direct, assume Claude is smart.
 

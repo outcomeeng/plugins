@@ -42,23 +42,24 @@ During audits, prioritize evaluation of:
 <critical_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Locate the creating-skills skill and its references:
+1. Read `/standardizing-skills` to load naming conventions, description standards, template variables, and bash expansion constraints. Then check for `spx/local/standardizing-skills.md` and read it if it exists.
+2. Locate the creating-skills skill and its references:
    - Use Glob: `.claude/plugins/cache/**/creating-skills/SKILL.md`
    - Then read its SKILL.md for overview
-2. Read creating-skills/references/use-xml-tags.md for required/conditional tags, XML structure requirements
-3. Read creating-skills/references/skill-patterns.md for YAML, naming, progressive disclosure patterns
-4. Read creating-skills/references/core-principles.md for XML structure, conciseness, context window principles
-5. Locate and read the standardizing-agent-prompts skill:
+3. Read creating-skills/references/use-xml-tags.md for required/conditional tags, XML structure requirements
+4. Read creating-skills/references/skill-patterns.md for YAML, naming, progressive disclosure patterns
+5. Read creating-skills/references/core-principles.md for XML structure, conciseness, context window principles
+6. Locate and read the standardizing-agent-prompts skill:
    - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
    - Covers voice, description style, constraint language, and anti-patterns
-6. Handle edge cases:
+7. Handle edge cases:
    - If reference files are missing or unreadable, note in findings under "Configuration Issues" and proceed with available content
    - If YAML frontmatter is malformed, flag as critical issue
    - If skill references external files that don't exist, flag as critical issue and recommend fixing broken references
    - If skill is <100 lines, note as "simple skill" in context and evaluate accordingly
-7. Read the skill files (SKILL.md and any references/, docs/, scripts/ subdirectories)
-8. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples
-9. Evaluate against best practices from steps 1-5
+8. Read the skill files (SKILL.md and any references/, docs/, scripts/ subdirectories)
+9. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples
+10. Evaluate against best practices from steps 1-5
 
 **Use ACTUAL patterns from references, not memory.**
 </critical_workflow>
