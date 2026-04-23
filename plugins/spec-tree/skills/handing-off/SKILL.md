@@ -24,7 +24,7 @@ description: ALWAYS invoke this skill when closing a spec-tree work session, wri
 
 Handoff is **proper session closure**, not note-taking. Reflect deeply on what was learned before persisting anything — five structured perspectives force introspection that produces the right persistence decisions. The session file is a thin coordination envelope — the last resort for information that can't live anywhere else.
 
-**Reflect, then persist, then hand off.** The reflection (Step 2) is the most important step. Without it, Claude will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection step catches and fixes them.
+**Reflect, then persist, then commit, then hand off.** The reflection (Step 2) is the most important step. Without it, Claude will dump a narrative instead of making durable persistence decisions. Stale PLAN.md and ISSUES.md files are worse than none — the reflection step catches and fixes them. A handoff with uncommitted session-owned work is incomplete.
 
 </objective>
 
@@ -40,6 +40,8 @@ All information discovered during a session falls into one of four tiers. Persis
 | 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral    | Coordination only: node list, skill checklist, cross-cutting context              |
 
 **Tier 3 is an escape hatch, not a home.** MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
+
+Git commit is not a fifth tier. It is the final persistence operation after approved durable writes are complete. Session-owned spec edits, test edits, code edits, and escape hatches MUST be committed before session closure.
 
 </persistence_hierarchy>
 
@@ -94,7 +96,7 @@ The session files are Markdown files within subdirectories of the base `.spx/ses
 
 <arguments>
 
-**`--no-session`**: Run the full reflection and persistence protocol (steps 1–3) but skip session file creation in step 4. All approved items are persisted to their durable targets (specs, CLAUDE.md, skills, memory, escape hatches). Unapproved items are dropped — there is no session file to hold them.
+**`--no-session`**: Run the full reflection and persistence protocol, including the final commit, but skip session file creation in step 4. All approved items are persisted to their durable targets (specs, CLAUDE.md, skills, memory, escape hatches) and committed. Unapproved items are dropped — there is no session file to hold them.
 
 Use `--no-session` (or the `/release` alias) when closing a session without handing off to another agent — the work is either complete or the durable persistence is sufficient for any future agent to reconstruct context via `/contextualizing`.
 
@@ -253,7 +255,7 @@ Items the user selects are written in Step 4. Items the user does not select are
 
 **AskUserQuestion is limited to 4 options.** If there are more than 3 actionable items, batch them by perspective (one question per perspective with items as options). The "[Skip]" option always appears as the last option in the last question.
 
-## Step 4: Execute and hand off
+## Step 4: Execute, commit, and hand off
 
 ### Step 1: Write approved persistence items
 
@@ -264,13 +266,38 @@ For each approved item from Step 3:
 - **ISSUES.md**: Write or update in the node directory. Remove fixed items, add new ones.
 - **PLAN.md**: Write, update, or remove in the node directory. Never leave a stale plan.
 
-### Step 2: Record committed vs uncommitted state
+### Step 2: Persist session-owned changes via git
 
-For each anchored node, check `git status` and record what is committed vs uncommitted. Do NOT commit — that is `/commit`'s job.
+Handoff is blocked until session-owned files are committed.
 
-### Step 3: Create session file (skip if `--no-session`)
+1. Enumerate every file changed during the session that belongs to the session:
+   - spec files
+   - tests
+   - implementation code
+   - PLAN.md / ISSUES.md
+   - methodology files approved in Step 3
+2. Compare that list against `git status --short`.
+3. Stage only the session-owned files.
+4. Create a commit that contains the session-owned work.
 
-**If `--no-session` is set:** Skip this entire step. Archive any claimed doing session (step 3.5 below), then confirm: "Session released. All approved items persisted to durable targets. No session file created."
+Use the commit skill to do this. Do not leave commit creation to a later step.
+
+**Dirty worktree rule**: other agents or the user may have unrelated changes in the same worktree. That does not excuse leaving session-owned files uncommitted.
+
+- If unrelated changes exist but your session-owned files are clearly identifiable, stage and commit only your files.
+- If ownership is ambiguous and you cannot safely isolate your changes, STOP and ask the user. Do not create a handoff session that implies closure.
+- If the user explicitly instructs you not to commit, STOP and ask whether to abort handoff or convert to a non-closing status update instead. `/handoff` means session closure, and session closure requires a commit.
+
+### Step 3: Record committed vs uncommitted state
+
+For each anchored node, check `git status` and record what is committed vs uncommitted.
+
+- Session-owned work should now appear under `Committed`
+- Only foreign or intentionally untouched work should remain under `Uncommitted`
+
+### Step 4: Create session file (skip if `--no-session`)
+
+**If `--no-session` is set:** Skip this entire step. Archive any claimed doing session (step 4.5 below), then confirm: "Session released. All approved items persisted and committed. No session file created."
 
 **Otherwise, proceed with session file creation:**
 
@@ -298,7 +325,7 @@ For each anchored node, check `git status` and record what is committed vs uncom
    ```
    **Never delete todo or doing sessions.**
 
-7. **Confirm** handoff created with session ID.
+7. **Confirm** handoff created with session ID and that session-owned work was committed before closure.
 
 </workflow>
 
@@ -349,8 +376,8 @@ Spec-tree nodes worked on. The receiving agent should invoke
 <persisted>
 What was captured durably during session closure.
 
-- Committed: [files committed during this session]
-- Uncommitted: [files modified but not yet committed — may need `/commit`]
+- Committed: [files committed during this session, including the final handoff commit]
+- Uncommitted: [files still dirty after the handoff commit — foreign changes only]
 - Insights: [what was written to CLAUDE.md, memory, or skills]
 - Escape hatches: [PLAN.md / ISSUES.md written and in which nodes]
 
@@ -409,8 +436,9 @@ User approves first three items.
 
 1. Writes CLAUDE.md entry (absolute imports), adds tempfile caveat to `coding-python/references/`
 2. Updates PLAN.md — removes steps 1-3, keeps steps 4-5
-3. Records git state: `32-temp-files.enabler` committed, `43-fixtures.enabler/tests/` uncommitted
-4. Creates session file:
+3. Stages and commits the session-owned files
+4. Records git state: `32-temp-files.enabler` and `43-fixtures.enabler/tests/` committed; unrelated foreign changes remain uncommitted
+5. Creates session file:
 
 ```bash
 spx session handoff
@@ -466,8 +494,8 @@ Spec-tree nodes worked on. The receiving agent should invoke
 <persisted>
 What was captured durably during session closure.
 
-- Committed: `spx/21-test-harness.enabler/32-temp-files.enabler/` (spec + tests + implementation)
-- Uncommitted: `spx/21-test-harness.enabler/43-fixtures.enabler/tests/` (2 test files)
+- Committed: `spx/21-test-harness.enabler/32-temp-files.enabler/` and `spx/21-test-harness.enabler/43-fixtures.enabler/tests/` (final handoff commit created)
+- Uncommitted: unrelated foreign changes only
 - Insights: Added absolute imports rule to CLAUDE.md; added Windows tempfile caveat to `coding-python/references/`
 - Escape hatches: PLAN.md in `spx/21-test-harness.enabler/43-fixtures.enabler/`
 
@@ -491,7 +519,7 @@ spx session archive 2026-03-29_10-15-00
 
 Output: `Archived session: 2026-03-29_10-15-00`
 
-Confirm: "Handoff created: `2026-03-29_14-22-00`. Cleaned up claimed session: `2026-03-29_10-15-00`"
+Confirm: "Handoff created: `2026-03-29_14-22-00`. Session-owned work committed. Cleaned up claimed session: `2026-03-29_10-15-00`"
 
 </example>
 
@@ -521,6 +549,7 @@ A successful handoff:
 - [ ] All five reflection perspectives worked through (lessons, deficiencies, insights, skills, starting point)
 - [ ] Existing PLAN.md and ISSUES.md checked for staleness — updated or removed if stale
 - [ ] Combined persistence proposal presented to user and approved items written
+- [ ] Session-owned spec, test, code, and escape-hatch changes committed before closure
 - [ ] Committed vs uncommitted state recorded for each node
 - [ ] Session file created via `spx session handoff`
 - [ ] Claimed doing session archived (if applicable)
