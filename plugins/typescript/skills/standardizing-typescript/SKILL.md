@@ -21,7 +21,7 @@ Code follows these standards when tsc strict mode and eslint checks pass. See su
 <reference_note>
 This is a reference skill. Other TypeScript skills reference these standards. You typically don't invoke this directly—invoke `/coding-typescript`, `/testing-typescript`, or `/auditing-typescript` instead.
 
-These standards apply to ALL TypeScript code, including tests and scripts. `/standardizing-typescript-testing` adds stricter rules for test code.
+These standards apply to ALL TypeScript code, including tests and scripts. `/standardizing-typescript-tests` adds stricter rules for test code.
 </reference_note>
 
 <repo_local_overlay>
@@ -169,7 +169,7 @@ const first = items[0];
 const last = items[items.length - 1];
 ```
 
-For test values, fixture placement, and inline diagnostics, follow `/standardizing-typescript-testing`.
+For test values, fixture placement, and inline diagnostics, follow `/standardizing-typescript-tests`.
 
 </production_constants>
 

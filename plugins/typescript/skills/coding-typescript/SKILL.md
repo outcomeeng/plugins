@@ -21,7 +21,7 @@ Use this path to access skill files:
 </accessing_skill_files>
 
 <reference_loading>
-Before discovery or implementation, read `/standardizing-typescript`. After that, check for `spx/local/typescript.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
+Before discovery or implementation, read `/standardizing-typescript`, then `/standardizing-typescript-tests`. After that, check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
 </reference_loading>
 
 <essential_principles>
@@ -213,47 +213,25 @@ Before writing code, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-**For complete testing methodology, invoke `/testing-typescript` skill.**
+**For TypeScript testing guidance, load both `/standardizing-typescript-tests` and `/testing-typescript`.**
 
-The `/testing-typescript` skill provides:
+Use `/standardizing-typescript-tests` as the canonical source for:
 
-- Detailed test level selection criteria
-- Dependency injection patterns (NO MOCKING)
-- Behavior-only testing approach
-- Test organization for debuggability
-- Test co-location in Outcome Engineering framework
+- filename conventions
+- allowed doubles and dependency-injection rules
+- property-based testing requirements
+- harness ownership and fixture placement
+- source-owned test values and inline diagnostics
 
-**Quick Reference - Testing Levels:**
+Use `/testing-typescript` for:
 
-| Level           | Infrastructure                          | When to Use                                   |
-| --------------- | --------------------------------------- | --------------------------------------------- |
-| 1 (Unit)        | Node.js + Git + temp fixtures           | Pure logic, FS ops, git operations            |
-| 2 (Integration) | Project-specific binaries/tools         | Claude Code, Hugo, Caddy, TypeScript compiler |
-| 3 (E2E)         | External deps (GitHub, network, Chrome) | Full workflows with external services         |
+- router-driven level selection
+- concrete Vitest and Playwright implementation patterns
+- RED-phase expectations and test-writing workflows
+- TypeScript-specific examples for the selected test level
 
-**NO MOCKING — Use Dependency Injection Instead:**
-
-```typescript
-// ❌ FORBIDDEN: Mocking
-vi.mock("execa", () => ({ execa: vi.fn() }));
-
-// ✅ REQUIRED: Dependency Injection
-interface CommandDeps {
-  execa: typeof execa;
-}
-
-it("GIVEN valid args WHEN running THEN returns success", async () => {
-  const deps: CommandDeps = {
-    execa: vi.fn().mockResolvedValue({ exitCode: 0 }),
-  };
-
-  const result = await runCommand(args, deps);
-
-  expect(result.success).toBe(true); // Tests behavior
-});
-```
-
-</testing_levels>
+When implementation changes affect test-owned interfaces, harnesses, or fixture boundaries, keep the production code aligned with both skills rather than re-declaring testing policy here.
+</testing_methodology>
 
 <context_loading>
 **BEFORE ANY IMPLEMENTATION: Load complete specification context.**

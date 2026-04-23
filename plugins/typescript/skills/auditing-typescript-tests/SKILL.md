@@ -11,7 +11,7 @@ TypeScript-specific test audit. Extends `/auditing-tests` with TypeScript supple
 
 Read `/auditing-tests` first — it defines the 4-property evidence model and ordered workflow. This skill adds only what is TypeScript-specific.
 
-Before running the audit, load `/standardizing-typescript`, then `/standardizing-typescript-testing`, then check `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order.
+Before running the audit, load `/standardizing-typescript`, then `/standardizing-typescript-tests`, then check `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order.
 
 </objective>
 
@@ -20,7 +20,7 @@ Before running the audit, load `/standardizing-typescript`, then `/standardizing
 **PREREQUISITES**:
 
 1. Read `/standardizing-typescript`
-2. Read `/standardizing-typescript-testing`
+2. Read `/standardizing-typescript-tests`
 3. Check `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order
 4. Read `/auditing-tests` and its evidence model before auditing
 
@@ -28,13 +28,7 @@ Before running the audit, load `/standardizing-typescript`, then `/standardizing
 6. At each property step, apply the TypeScript supplement below
 7. First property failure = REJECT (skip remaining properties for that assertion)
 
-**TypeScript filename conventions** from `/standardizing-typescript-testing` for assertion-to-test mapping:
-
-| Level | Filename suffix        | Example                       |
-| ----- | ---------------------- | ----------------------------- |
-| 1     | `.unit.test.ts`        | `uart-tx.unit.test.ts`        |
-| 2     | `.integration.test.ts` | `uart-tx.integration.test.ts` |
-| 3     | `.e2e.test.ts`         | `uart-tx.e2e.test.ts`         |
+Use the filename conventions from `/standardizing-typescript-tests` for assertion-to-test mapping.
 
 </quick_start>
 
@@ -44,7 +38,7 @@ Follow the four principles from `/auditing-tests`: **COUPLING FIRST**, **RUN COV
 
 **NO CODE QUALITY CHECKS.**
 
-Type safety (`as any`, `@ts-ignore`), filename conventions, test-data organization, and import style are standards concerns enforced by `/standardizing-typescript`, `/standardizing-typescript-testing`, tsc strict mode, and ESLint. The auditor evaluates evidence quality only. A test with perfect TypeScript quality and zero evidentiary value must be REJECTED. A test with sloppy types but genuine evidence of spec fulfillment is not rejected by this audit.
+Type safety (`as any`, `@ts-ignore`), filename conventions, test-data organization, and import style are standards concerns enforced by `/standardizing-typescript`, `/standardizing-typescript-tests`, tsc strict mode, and ESLint. The auditor evaluates evidence quality only. A test with perfect TypeScript quality and zero evidentiary value must be REJECTED. A test with sloppy types but genuine evidence of spec fulfillment is not rejected by this audit.
 
 </essential_principles>
 
@@ -181,7 +175,7 @@ fc.assert(
 );
 ```
 
-For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-typescript-testing`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
+For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-typescript-tests`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
 
 </supplement>
 

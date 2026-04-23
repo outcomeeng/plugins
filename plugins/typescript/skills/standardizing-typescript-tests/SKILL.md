@@ -1,5 +1,5 @@
 ---
-name: standardizing-typescript-testing
+name: standardizing-typescript-tests
 disable-model-invocation: true
 description: >-
   TypeScript testing standards enforced across all skills. Loaded by other skills, not invoked directly.

@@ -11,9 +11,9 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 >
 > This skill provides TypeScript-specific implementations for decisions made there. Do NOT skip the router—it determines WHAT to test and at WHAT level. This skill shows HOW to implement that decision in TypeScript.
 >
-> Before writing or revising tests, load `/standardizing-typescript`, then `/standardizing-typescript-testing`, then check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order.
+> Before writing or revising tests, load `/standardizing-typescript`, then `/standardizing-typescript-tests`, then check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order.
 >
-> `/standardizing-typescript-testing` is the canonical source for filename conventions, property-based requirements, dependency-injection patterns, harness ownership, and test-data policy. This skill focuses on implementing those decisions in concrete test code.
+> `/standardizing-typescript-tests` is the canonical source for filename conventions, property-based requirements, dependency-injection patterns, harness ownership, and test-data policy. This skill focuses on implementing those decisions in concrete test code.
 
 **Note on Analysis sections:** When reading node specs, the Analysis section documents what the spec author examined. It provides context but is not binding — implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
 
