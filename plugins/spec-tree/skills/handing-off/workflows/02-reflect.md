@@ -87,30 +87,9 @@ Where exactly should the next agent begin?
 <perspective_session_scope>
 Which sessions are in this conversation's scope, and is there a mid-session handoff artifact to reconcile?
 
-**Resolve the in-scope set** (same algorithm workflow 04 uses — keep them in sync):
+**Run the canonical scope-resolution algorithm.** Read `references/scope-resolution.md` and follow every step. The algorithm covers: reading `<SESSION_SCOPE>`, the fallback recovery ladder (checkpoint scope attribute → additive rebuild), the scope-growth rule, mid-session artifact location, and the four-way classification. Do not reproduce the steps here — the reference is the single source of truth.
 
-1. Read the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup and must be reconciled at closure.
-2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Recover in this order:
-   - **Step 2a — checkpoint scope attribute (preferred)**: if the most recent `<PICKUP_CHECKPOINT id="..." scope="a,b,c">` exists, parse its `scope` attribute. That attribute carries the full scope as of the latest post-context checkpoint — use it as the authoritative resolved scope. One surviving checkpoint can recover a multi-session scope without needing every earlier claim marker.
-   - **Step 2b — additive rebuild (no checkpoint scope available)**: if no `<PICKUP_CHECKPOINT>` carries a `scope` attribute, collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker. Deduplicate by id.
-   - **Validate the recovered set**:
-     - **One id** → proceed.
-     - **More than one id** → STOP and ask the user to confirm the full scope before continuing workflow 02. NEVER silently collapse to the most recent pickup — that is the exact failure mode the additive rule exists to prevent.
-     - **Empty** → check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or stale references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation.
-3. Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another agent may own work that looks related but is not yours to close.
-
-**Fold every still-relevant fact from the in-scope sessions into durable targets first** (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits.
-
-**Locate any mid-session handoff artifact:**
-
-Did this conversation run `spx session handoff` earlier and produce a session file that is still in TODO? That file is a **workflow artifact**, not a scope member. List it separately — workflow 04 will reconcile it so the end state has zero or one handoff.
-
-**Classification for each session observed:**
-
-- **in-scope** — named in `<SESSION_SCOPE>`. Will be archived after the canonical continuation is verified.
-- **mid-session artifact** — created by this conversation's earlier `spx session handoff` and still in TODO. Workflow 04 will either rewrite it in place as the canonical continuation or archive it.
-- **unrelated** — belongs to another agent or another conversation. Leave untouched.
-- **ambiguous** — STOP and ask the user before creating a handoff.
+**Use the resolved scope to drive reflection.** For each session in the resolved scope, fold every still-relevant fact into durable targets first (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are not reflected into — workflow 04 reconciles them by rewrite-in-place or archival.
 
 The existence of a mid-session artifact is never, by itself, permission to archive an in-scope session. Permission flows from completing this workflow. A handoff replaces incorporated context; it never supplements it.
 
