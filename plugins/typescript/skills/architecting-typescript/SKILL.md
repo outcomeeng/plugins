@@ -57,7 +57,7 @@ Before creating ADRs, you must understand:
 
 Read these files to understand project structure and workflow:
 
-- `spx/CLAUDE.md` - Project navigation, work item status, BSP dependencies
+- `spx/CLAUDE.md` - Project navigation, work item status, sparse integer index dependencies
 
 For TypeScript test standards and methodology, invoke `/standardizing-typescript-tests` and `/testing-typescript`
 
@@ -82,15 +82,15 @@ You produce ADRs. The scope depends on what you're deciding:
 
 **ADR Numbering:**
 
-- BSP range: [10, 99]
-- Lower BSP = dependency (higher-BSP ADRs may rely on it)
+- Sparse integer index range: [10, 99]
+- Lower sparse integer index = dependency (higher-index ADRs may rely on it)
 - Insert using midpoint calculation: `new = floor((left + right) / 2)`
 - Append using: `new = floor((last + 99) / 2)`
 - First ADR in scope: use 21
 
 See `/authoring` skill for complete ordering rules.
 
-**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower BSP = dependency).
+**Within-scope dependency order**: adr-21 must be decided before adr-37 (lower sparse integer index = dependency).
 
 **Cross-scope dependencies**: Must be documented explicitly in ADR "Context" section using markdown links.
 

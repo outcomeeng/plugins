@@ -139,7 +139,7 @@ Read the feature spec to understand:
 
 Read the project's methodology:
 
-- `spx/CLAUDE.md` - Project navigation, work item status, BSP dependencies
+- `spx/CLAUDE.md` - Project navigation, work item status, sparse integer index dependencies
 
 For testing methodology, invoke `/testing` (foundational), `/standardizing-python-tests` (Python standards), and `/testing-python` (Python patterns)
 
@@ -165,8 +165,8 @@ You produce ADRs. The scope depends on what you're deciding:
 
 ### ADR Numbering
 
-- BSP range: [10, 99]
-- Lower BSP = dependency (higher-BSP ADRs may rely on it)
+- Sparse integer index range: [10, 99]
+- Lower sparse integer index = dependency (higher-index ADRs may rely on it)
 - Insert using midpoint calculation: `new = floor((left + right) / 2)`
 - Append using: `new = floor((last + 99) / 2)`
 - First ADR in scope: use 21

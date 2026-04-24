@@ -1,6 +1,6 @@
 {
   "name": "typescript",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "TypeScript development workflow with testing, implementation, review, and architecture skills",
   "author": {
     "name": "Simon Heimlicher"
