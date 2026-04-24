@@ -189,6 +189,34 @@ Reject or rewrite these patterns:
 
 </anti_patterns>
 
+<lint_enforcement>
+These standards are mechanically enforced by ESLint rules shipped in `${CLAUDE_SKILL_DIR}/eslint-rules/`. Coding agents MUST be able to see these rules while writing tests — this is where the standards live, not in the audit skill. The audit just invokes them.
+
+| Rule                                  | Check ID | Standard enforced                                                                                                                                                   |
+| ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audit/no-test-filename-violations`   | F1–F5    | `<file_naming>` — canonical `<subject>.<evidence>.<level>[.<runner>].test.ts`; legacy suffixes (`.unit`, `.integration`, `.e2e`, `.spec`) rejected                  |
+| `audit/no-literal-test-strings`       | L1       | `<test_data_policy>` — source-owned values; literals only in descriptive callsites (`it`/`describe`/`test`/`expect` message) and policy-defined protocol exceptions |
+| `audit/no-literal-test-numbers`       | L2       | `<test_data_policy>` — numeric literals only in `{-1, 0, 1, 2}`; precision args to `toBeCloseTo` must be named                                                      |
+| `audit/no-ad-hoc-test-constants`      | C1       | `<test_data_policy>` — module-scope `const` backed by literal data is an ad-hoc constant regardless of naming                                                       |
+| `audit/no-bdd-try-catch-anti-pattern` | B1       | BDD assertion behaviour — `expect()` inside `try/catch` without re-throw silently swallows failures                                                                 |
+| `audit/no-mock-api` (warn)            | M1–M2    | `<dependency_injection>` — surfaces mock/stub/network-replacement call sites so they can be mapped to a `/testing` Stage 5 exception                                |
+| `no-restricted-imports`               | H2       | `<test_data_policy>` — no deep relative imports into `testing/`; use `@testing/*` alias                                                                             |
+
+The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model. The heuristics (`MIN_STRING_LENGTH`, `MIN_NUMBER_DIGITS`, and the `COMMON_LITERAL_ALLOWLIST` covering HTTP methods, JS type names, Node.js builtin module specifiers, common CSS keywords) are shared between the per-file rules and the cross-file detector via `${CLAUDE_SKILL_DIR}/eslint-rules/literal-signal.ts`.
+
+The default policy files at `${CLAUDE_SKILL_DIR}/eslint-rules/config/test-string-policy.ts` and `${CLAUDE_SKILL_DIR}/eslint-rules/config/test-number-policy.ts` permit the descriptive callsites for Vitest, Jest, and Playwright, plus ARIA-role, Playwright load-state, and DOM-attribute protocol exceptions. Consumers override by shipping an `eslint.audit.config.ts` at the repo root.
+
+To invoke locally while writing tests (equivalent to what Gate 0 runs):
+
+```bash
+pnpm eslint \
+  --config ${CLAUDE_SKILL_DIR}/eslint-rules/eslint.audit.config.ts \
+  --format stylish \
+  <your-tests>/
+```
+
+</lint_enforcement>
+
 <success_criteria>
 TypeScript test guidance follows this standard when:
 
