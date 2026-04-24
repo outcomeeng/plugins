@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning"
+  vc:minVersion="1.1"
+  elementFormDefault="qualified">
+
+  <xs:annotation>
+    <xs:documentation>
+      Audit Verdict Schema (XSD 1.1).
+
+      Formalizes the XML documents produced by audit skills as the success-criterion
+      evidence for the audited artifact. The `spx validation audit-verdict` subcommand
+      validates documents against this schema plus post-schema coherence checks
+      (e.g. verdict=APPROVED requires every gate status=PASS).
+
+      See `audit-verdict-schema.md` in this enabler for the full specification of
+      which structural rules this schema enforces versus which require validator code.
+    </xs:documentation>
+  </xs:annotation>
+
+  <!-- ======================================================================
+       Shared simple types (enumerations and restrictions)
+       ====================================================================== -->
+
+  <xs:simpleType name="NonEmptyString">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="VerdictEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="APPROVED"/>
+      <xs:enumeration value="REJECT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="GateIdEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="GateStatusEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="PASS"/>
+      <xs:enumeration value="FAIL"/>
+      <xs:enumeration value="SKIPPED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="AssertionTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Scenario"/>
+      <xs:enumeration value="Mapping"/>
+      <xs:enumeration value="Conformance"/>
+      <xs:enumeration value="Property"/>
+      <xs:enumeration value="Compliance"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="PassRejectEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="PASS"/>
+      <xs:enumeration value="REJECT"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StepEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="challenge"/>
+      <xs:enumeration value="scope"/>
+      <xs:enumeration value="evidence"/>
+      <xs:enumeration value="mocks"/>
+      <xs:enumeration value="oracle"/>
+      <xs:enumeration value="harness_chain"/>
+      <xs:enumeration value="coupling"/>
+      <xs:enumeration value="falsifiability"/>
+      <xs:enumeration value="alignment"/>
+      <xs:enumeration value="coverage"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ======================================================================
+       Root
+       ====================================================================== -->
+
+  <xs:element name="audit_verdict">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="header"/>
+        <xs:element ref="gates"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ======================================================================
+       Header
+       ====================================================================== -->
+
+  <xs:element name="header">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="spec_node" type="NonEmptyString"/>
+        <xs:element name="verdict" type="VerdictEnum"/>
+        <xs:element name="timestamp" type="xs:dateTime"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ======================================================================
+       Gates — exactly three gates with ids 0, 1, 2 (all three required, distinct)
+       ====================================================================== -->
+
+  <xs:element name="gates">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="gate" minOccurs="3" maxOccurs="3" type="GateType"/>
+      </xs:sequence>
+      <xs:assert test="count(gate[@id='0']) = 1"/>
+      <xs:assert test="count(gate[@id='1']) = 1"/>
+      <xs:assert test="count(gate[@id='2']) = 1"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="GateType">
+    <xs:sequence>
+      <xs:element name="skipped_reason" type="NonEmptyString" minOccurs="0"/>
+      <xs:choice minOccurs="0">
+        <xs:element ref="findings"/>    <!-- Gate 0 content -->
+        <xs:element ref="assertions"/>  <!-- Gate 1 content -->
+        <xs:element ref="patterns"/>    <!-- Gate 2 content -->
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="id" type="GateIdEnum" use="required"/>
+    <xs:attribute name="name" type="NonEmptyString" use="required"/>
+    <xs:attribute name="status" type="GateStatusEnum" use="required"/>
+
+    <!-- SKIPPED implies skipped_reason is present -->
+    <xs:assert test="not(@status = 'SKIPPED') or skipped_reason"/>
+
+    <!-- Gate-specific content shape matches gate id -->
+    <xs:assert test="not(@id = '0') or (not(assertions) and not(patterns))"/>
+    <xs:assert test="not(@id = '1') or (not(findings) and not(patterns))"/>
+    <xs:assert test="not(@id = '2') or (not(findings) and not(assertions))"/>
+  </xs:complexType>
+
+  <!-- ======================================================================
+       Gate 0 — deterministic findings (from ESLint + spx validation literal)
+       ====================================================================== -->
+
+  <xs:element name="findings">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="finding" minOccurs="0" maxOccurs="unbounded" type="Gate0FindingType"/>
+      </xs:sequence>
+      <xs:attribute name="count" type="xs:nonNegativeInteger" use="required"/>
+      <!-- @count attribute must equal the number of <finding> children -->
+      <xs:assert test="@count = count(finding)"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Gate0FindingType">
+    <xs:sequence>
+      <xs:element name="file" type="NonEmptyString"/>
+      <xs:element name="line" type="xs:positiveInteger"/>
+      <xs:element name="check_id" type="NonEmptyString"/>
+      <xs:element name="message" type="NonEmptyString"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ======================================================================
+       Gate 1 — per-assertion audit (one <assertion> per spec assertion)
+       ====================================================================== -->
+
+  <xs:element name="assertions">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="assertion" minOccurs="0" maxOccurs="unbounded" type="Gate1AssertionType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Gate1AssertionType">
+    <xs:sequence>
+      <xs:element name="spec_file" type="NonEmptyString"/>
+      <xs:element name="assertion_text" type="NonEmptyString"/>
+      <xs:element name="assertion_type" type="AssertionTypeEnum"/>
+      <xs:element name="test_file" type="NonEmptyString"/>
+      <xs:element name="verdict" type="PassRejectEnum"/>
+      <xs:element name="findings" minOccurs="0" type="Gate1FindingsType"/>
+    </xs:sequence>
+    <xs:attribute name="index" type="xs:positiveInteger" use="required"/>
+
+    <!-- A per-assertion REJECT requires at least one finding explaining why -->
+    <xs:assert test="not(verdict = 'REJECT') or findings/finding"/>
+  </xs:complexType>
+
+  <xs:complexType name="Gate1FindingsType">
+    <xs:sequence>
+      <xs:element name="finding" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="step" type="StepEnum"/>
+            <xs:element name="detail" type="NonEmptyString"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ======================================================================
+       Gate 2 — repeated-pattern findings (architectural DRY)
+       ====================================================================== -->
+
+  <xs:element name="patterns">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="pattern" minOccurs="0" maxOccurs="unbounded" type="Gate2PatternType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="Gate2PatternType">
+    <xs:sequence>
+      <xs:element name="description" type="NonEmptyString"/>
+      <xs:element name="occurrences">
+        <xs:complexType>
+          <xs:sequence>
+            <!-- A DRY finding requires at least two occurrences — one occurrence is not duplication -->
+            <xs:element name="occurrence" minOccurs="2" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="file" type="NonEmptyString"/>
+                  <xs:element name="line" type="xs:positiveInteger"/>
+                </xs:sequence>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="extraction_target" type="NonEmptyString"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>
