@@ -5,6 +5,7 @@
   "excludes": [
     "**/node_modules",
     "**/*-lock.json",
+    "**/pnpm-lock.yaml",
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "pyproject.toml",

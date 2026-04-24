@@ -1,0 +1,17 @@
+{
+  "name": "eslint-rules-auditing-typescript-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Internal dev harness for unit-testing the ESLint rules shipped with /standardizing-typescript-tests. Consumers install their own copies of eslint and @typescript-eslint/parser; this package.json exists only to run vitest against the rules.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/eslint": "^9.6.1",
+    "@typescript-eslint/parser": "^8.23.0",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
