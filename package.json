@@ -1,0 +1,16 @@
+{
+  "name": "outcomeeng-plugins-marketplace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Node dev harness for the Outcome Engineering plugin marketplace. Houses TypeScript test infrastructure (vitest + ESLint RuleTester) that exercises the rules shipped with `/standardizing-typescript-tests`. Not a published package.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.23.0",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

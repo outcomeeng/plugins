@@ -4,13 +4,17 @@
 help:
     @just --list
 
-# Run all tests
+# Run Python tests
 test *args:
     uv run python -m pytest {{args}}
 
-# Run tests with verbose output
+# Run Python tests with verbose output
 test-v *args:
     uv run python -m pytest -v {{args}}
+
+# Run TypeScript tests via vitest
+test-ts *args:
+    pnpm test {{args}}
 
 # Check plugin and marketplace manifests
 check-manifests:
@@ -48,6 +52,7 @@ check:
     step "skills"          find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
     step "fmt-check"       dprint check
     step "pytest"          uv run python -m pytest -v
+    step "vitest"          pnpm test
     total=$((SECONDS - total_start))
     echo ""
     echo "━━━ Timing Summary ━━━"
