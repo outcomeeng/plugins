@@ -9,7 +9,7 @@ Subagent prompts should be task-specific, not generic. They define a specialized
 
 Keep markdown formatting WITHIN content (bold, italic, lists, code blocks, links).
 
-For XML structure principles, see the creating-skills skill's `references/use-xml-tags.md` (locate via Glob: `.claude/plugins/cache/**/creating-skills/references/use-xml-tags.md`) — they apply to subagents too.
+For XML structure principles, read `/standardizing-skills` — they apply to subagents too.
 </xml_structure_rule>
 
 <core_principles>

@@ -1,12 +1,7 @@
 # Workflow: Create a New Skill
 
 <required_reading>
-Read these reference files NOW:
-
-1. `references/core-principles.md`
-2. `references/use-xml-tags.md`
-3. `references/skill-patterns.md`
-
+Read `/standardizing-skills` for the full skill standards before running this workflow. Then check for `spx/local/standardizing-skills.md` at the repo root if present.
 </required_reading>
 
 <process>

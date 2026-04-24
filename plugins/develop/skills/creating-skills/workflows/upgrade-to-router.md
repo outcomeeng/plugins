@@ -1,11 +1,7 @@
 # Workflow: Upgrade Simple Skill to Router Pattern
 
 <required_reading>
-Read these reference files NOW:
-
-1. `references/core-principles.md`
-2. `references/use-xml-tags.md`
-
+Read `/standardizing-skills` for the full skill standards before running this workflow. Then check for `spx/local/standardizing-skills.md` at the repo root if present.
 </required_reading>
 
 <process>
