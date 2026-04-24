@@ -7,6 +7,7 @@
 21-spec-tree.enabler/21-templates.enabler
 21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler
 21-spec-tree.enabler/32-evidence.enabler/32-test-auditing.enabler
+21-spec-tree.enabler/32-evidence.enabler/43-audit-verdict-schema.enabler
 21-spec-tree.enabler/43-update-spx.enabler
 21-spec-tree.enabler/54-authoring.enabler
 21-spec-tree.enabler/54-decomposing.enabler
@@ -17,3 +18,4 @@
 21-spec-tree.enabler/65-committing.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler
 21-spec-tree.enabler/76-sessions.enabler
+21-spec-tree.enabler/13-agent-environment.enabler
