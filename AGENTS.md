@@ -67,7 +67,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
 - ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
 - ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. The `semgrep` rule enforces this.
-- ⚠️ **NEVER manually delete untracked files or empty directories** - Git doesn't track empty dirs; `.DS_Store` and `__pycache__` are gitignored artifacts. Use `just run clean` to remove them
+- ⚠️ **NEVER manually delete untracked files or empty directories** - Git doesn't track empty dirs; `.DS_Store` and `__pycache__` are gitignored artifacts. Use `just clean` to remove them
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
 - ⚠️ **Python skill examples use `product.*` / `product_testing.*`** - Not `src.*` or `src_testing.*`. The `src` convention is ambiguous across Python ecosystems; `product` is unambiguous and signals "the thing we're building"
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
@@ -150,26 +150,6 @@ Meta-skills for Codex and Claude Code plugin development: creating and auditing 
 | `/auditing-commands`           | Audit slash commands for best practices                            |
 | `/auditing-subagents`          | Audit subagent configurations                                      |
 
-## Legacy Plugin
-
-Standalone commit workflow and foundational testing for projects without the spx CLI. Spec-tree users should use `spec-tree:testing` and `spec-tree:auditing-tests` instead, which are supersets.
-
-### Skills
-
-| Skill                 | Purpose                                                       |
-| --------------------- | ------------------------------------------------------------- |
-| `/committing-changes` | Comprehensive git commit message guidance                     |
-| `/testing`            | Foundational testing methodology (5 stages, 5 factors)        |
-| `/reviewing-tests`    | Foundational test review protocol (loaded by language skills) |
-
-### Commands
-
-| Command    | Purpose                                             |
-| ---------- | --------------------------------------------------- |
-| `/commit`  | Git commit with Conventional Commits (auto-context) |
-| `/handoff` | Create timestamped context handoff                  |
-| `/pickup`  | Load and continue from previous handoff             |
-
 ## HDL Plugin
 
 HDL engineering skills for VHDL and SystemVerilog code review.
@@ -187,9 +167,19 @@ Frontend design and coding skills and commands.
 
 ### Skills
 
-| Skill                | Purpose                                                  |
-| -------------------- | -------------------------------------------------------- |
-| `designing-frontend` | Create distinctive, production-grade frontend interfaces |
+| Skill                 | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| `/designing-frontend` | Create distinctive, production-grade frontend interfaces |
+
+## Visual Plugin
+
+Diagram authoring skills.
+
+### Skills
+
+| Skill            | Purpose                                                               |
+| ---------------- | --------------------------------------------------------------------- |
+| `/excalidrawing` | Author Excalidraw diagrams for workflows, architectures, and concepts |
 
 ## Prose Plugin
 
@@ -213,6 +203,7 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | ---------------------------------------- | ------------------------------------------------------------- |
 | `/standardizing-typescript-architecture` | ADR conventions shared by architect and auditor (reference)   |
 | `/standardizing-typescript`              | TypeScript code standards (reference, loaded by other skills) |
+| `/standardizing-typescript-tests`        | TypeScript test standards + ESLint rule plugin (reference)    |
 | `/testing-typescript`                    | TypeScript-specific testing patterns                          |
 | `/coding-typescript`                     | Implementation workhorse with remediation loop                |
 | `/auditing-typescript`                   | Strict code audit with zero-tolerance                         |
@@ -227,6 +218,7 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `typescript-code-auditor`         | Code audit subagent (preloads auditing skill)          |
 | `typescript-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
 | `typescript-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
+| `typescript-simplifier`           | Simplifies recently-modified code; verifies tests pass |
 
 ### Core Principles
 
@@ -244,6 +236,8 @@ Complete Python development workflow with testing, implementation, and review.
 | Skill                                | Purpose                                                     |
 | ------------------------------------ | ----------------------------------------------------------- |
 | `/standardizing-python-architecture` | ADR conventions shared by architect and auditor (reference) |
+| `/standardizing-python`              | Python code standards (reference, loaded by other skills)   |
+| `/standardizing-python-tests`        | Python test standards (reference, loaded by other skills)   |
 | `/testing-python`                    | Python-specific testing patterns                            |
 | `/coding-python`                     | Implementation workhorse with remediation loop              |
 | `/auditing-python`                   | Strict code audit with zero-tolerance                       |
@@ -290,11 +284,14 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/refactoring`                | declare | Move nodes, re-scope, extract shared enablers                           |
 | `/aligning`                   | declare | Check consistency, conformance, find gaps (audit gate)                  |
 | `/interviewing`               | declare | Domain-agnostic interview methodology (used by bootstrapping/authoring) |
+| `/refocusing`                 | declare | Redirects ad hoc work and throwaway scripts back onto a spec            |
 | `/testing`                    | spec    | Write tests driven by spec assertions                                   |
 | `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                                |
 | `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
 | `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
 | `/committing-changes`         | apply   | Conventional Commits with selective staging                             |
+| `/handing-off`                | apply   | Close a session with reflection, persistence, and a handoff file        |
+| `/picking-up`                 | apply   | Resume spec-tree work from a saved handoff session                      |
 
 ### Agents
 
@@ -306,16 +303,17 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 
 ### Commands
 
-| Command      | Purpose                                                       |
-| ------------ | ------------------------------------------------------------- |
-| `/bootstrap` | Set up a new spec tree (invokes `/bootstrapping`)             |
-| `/author`    | Author a spec tree artifact (auto-detects type)               |
-| `/commit`    | Git commit with Conventional Commits (auto-context)           |
-| `/apply`     | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
-| `/rtfm`      | Stop ad hoc work and follow the methodology                   |
-| `/clarify`   | Clarify ambiguous requirements                                |
-| `/handoff`   | Create timestamped context handoff                            |
-| `/pickup`    | Load and continue from previous handoff                       |
+| Command      | Purpose                                                                    |
+| ------------ | -------------------------------------------------------------------------- |
+| `/bootstrap` | Set up a new spec tree (invokes `/bootstrapping`)                          |
+| `/author`    | Author a spec tree artifact (auto-detects type)                            |
+| `/commit`    | Git commit with Conventional Commits (auto-context)                        |
+| `/apply`     | Run TDD flow on a subtree or discover work from `spx/EXCLUDE`              |
+| `/rtfm`      | Stop ad hoc work and follow the methodology                                |
+| `/clarify`   | Clarify ambiguous requirements                                             |
+| `/handoff`   | Create timestamped context handoff                                         |
+| `/pickup`    | Load and continue from previous handoff                                    |
+| `/release`   | Close session without creating a handoff file (archives in-scope sessions) |
 
 ## When to Dispatch Agents vs Invoke Skills
 
@@ -443,12 +441,14 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── python-architecture-auditor.md
 │   │   │   └── python-test-auditor.md
 │   │   └── skills/
-│   │       └── (7 skills)
+│   │       └── (9 skills)
 │   ├── spec-tree/                # Spec Tree — 3 phases
 │   │   ├── agents/
 │   │   │   ├── applier.md
 │   │   │   ├── test-evidence-auditor.md
 │   │   │   └── pdr-auditor.md
+│   │   ├── bin/
+│   │   │   └── session-start
 │   │   ├── commands/
 │   │   │   ├── apply.md
 │   │   │   ├── author.md
@@ -457,9 +457,12 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── commit.md
 │   │   │   ├── handoff.md
 │   │   │   ├── pickup.md
+│   │   │   ├── release.md
 │   │   │   └── rtfm.md
+│   │   ├── hooks/
+│   │   │   └── hooks.json
 │   │   └── skills/
-│   │       └── (11 skills)
+│   │       └── (16 skills)
 │   ├── typescript/
 │   │   ├── agents/
 │   │   │   ├── typescript-code-auditor.md
@@ -467,15 +470,19 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── typescript-test-auditor.md
 │   │   │   └── typescript-simplifier.md
 │   │   └── skills/
-│   │       └── (8 skills)
+│   │       └── (9 skills)
 │   └── visual/
 │       └── skills/
 │           └── excalidrawing/
 ├── pyproject.toml                 # uv project config + dev deps
 ├── spx/                           # Specs as durable map
 │   ├── CLAUDE.md                 # Specs directory guide
+│   ├── EXCLUDE                    # Nodes skipped by the quality gate
 │   ├── local/                    # Project-specific skill overlays
 │   │   └── committing-changes.md
+│   ├── 15-spec-coverage.adr.md
+│   ├── 15-test-language.adr.md
+│   ├── 15-audit-verdict-format.pdr.md
 │   ├── 15-validation.enabler/
 │   └── 21-spec-tree.enabler/
 │       ├── 15-context-loading.enabler/
@@ -484,7 +491,8 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │       │   └── 32-pdr-auditing.enabler/
 │       └── 32-evidence.enabler/
 │           ├── 21-sync-exclude.enabler/
-│           └── 32-test-auditing.enabler/
+│           ├── 32-test-auditing.enabler/
+│           └── 43-audit-verdict-schema.enabler/
 └── CLAUDE.md                      # This file
 ```
 
