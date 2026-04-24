@@ -28,6 +28,23 @@ Handoff is proper session closure, not note-taking. Reflect deeply on what was l
 
 </objective>
 
+<session_scope_invariants>
+Three rules govern a conversation's session scope:
+
+1. **Scope grows only by user confirmation.** A session enters scope via `/picking-up` at user instruction, or by the user confirming an agent-suggested pickup. Nothing else extends scope.
+
+2. **Closure has exactly one acceptable end state.** Every in-scope session becomes the agent's sole responsibility. The agent reflects, persists remaining validated relevant context, and ends with either zero or one handoff that incorporates everything from the in-scope sessions.
+
+3. **Quick-release escape hatch.** If, within a few turns of pickup, the agent realizes the pickup was wrong and the user confirms release, the session leaves scope via `/release` without counting toward the closure workload.
+
+**A handoff replaces incorporated context. It never supplements it.** A receiving agent must never need to read a prior handoff to understand the continuation.
+
+**Permission to archive comes from completing this workflow against the in-scope set named in `<SESSION_SCOPE ids="…">` — never from queue inspection.** The mere existence of another session (whether created by this agent mid-work, queued by another agent, or otherwise) never grants permission to close an in-scope session.
+
+**Mid-session created handoffs are workflow artifacts, not scope members.** If the agent ran `spx session handoff` earlier in this conversation and that file still sits in TODO, it must be reconciled at final closure so the end state has at most one handoff — either rewritten in place as the canonical continuation, or archived alongside the scope.
+
+</session_scope_invariants>
+
 <persistence_hierarchy>
 All information discovered during a session falls into one of four tiers. Persist to the HIGHEST applicable tier.
 
@@ -68,7 +85,7 @@ Check `$ARGUMENTS` for these flags before starting workflow 01.
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete.
 
 1. `workflows/01-anchor-to-nodes.md` — identify every node worked on this session
-2. `workflows/02-reflect.md` — work through five perspectives internally
+2. `workflows/02-reflect.md` — work through six perspectives internally
 3. `workflows/03-propose.md` — present persistence proposal to user for approval
 4. `workflows/04-execute.md` — write approved items, commit, create session file
 
@@ -79,13 +96,15 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 A successful handoff:
 
 - [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All five reflection perspectives worked through (workflow 02)
+- [ ] All six reflection perspectives worked through (workflow 02)
 - [ ] Existing PLAN.md and ISSUES.md checked for staleness — updated or removed if stale (workflow 02)
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
 - [ ] Session-owned spec, test, code, and escape-hatch changes committed before closure (workflow 04)
 - [ ] Committed vs uncommitted state recorded for each node (workflow 04)
-- [ ] Session file created via `spx session handoff` (workflow 04, unless `--no-session`)
-- [ ] Claimed doing session archived using the session id from the current pickup marker (workflow 04)
+- [ ] Session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)
+- [ ] Every session in `<SESSION_SCOPE>` archived after the canonical continuation is verified (workflow 04)
 - [ ] Session file is a thin coordination envelope — bulk of value persisted durably
+- [ ] End state has zero or one handoff incorporating everything — never a sidecar/supplemental/addendum
+- [ ] Closure order followed: reflect → propose → persist → commit → canonical continuation written → archive scope
 
 </success_criteria>

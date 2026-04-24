@@ -74,15 +74,29 @@ Otherwise, use `AskUserQuestion` with exactly one question and 2-4 options. The 
 
 Wait for the user's selection before continuing. The checkpoint completes only after the `AskUserQuestion` response is received.
 
-After the checkpoint completes, emit a canonical post-context marker using the claimed session id from `<PICKUP_CLAIM>`:
+After the checkpoint completes, emit a canonical post-context marker using the claimed session id from `<PICKUP_CLAIM>` and carry the full session scope from the most recent `<SESSION_SCOPE ids="...">`:
 
 ```text
-<PICKUP_CHECKPOINT id="[claimed-session-id]" target="spx/{node-path}" mode="[ask|auto-continue]">
+<PICKUP_CHECKPOINT id="[claimed-session-id]" scope="[first-pickup],...,[claimed-session-id]" target="spx/{node-path}" mode="[ask|auto-continue]">
   next_action: [selected or resumed next action]
 </PICKUP_CHECKPOINT>
 ```
 
-If the checkpoint used `AskUserQuestion`, record the selected option in `next_action`. If `--auto-continue` was used, record the resumed next action and `mode="auto-continue"`.
+If the checkpoint used `AskUserQuestion`, record the selected option in `next_action`. If `--auto-continue` was used, record the resumed next action and `mode="auto-continue"`. The `scope` attribute mirrors the latest `<SESSION_SCOPE>` so handoff workflows can read a single marker.
+
+After emitting the checkpoint marker, report the result and the current session state. Do not infer that successful verification means closure. State which sessions remain claimed in `doing`.
+
+**Valid next steps after a completed checkpoint:**
+
+- Continue work under the claimed session(s).
+- Invoke `/handing-off` if the user asks to close or hand off.
+- Invoke `/release` if the user asks to return the session to the queue.
+
+**Invalid next steps:**
+
+- `spx session archive` — pickup never archives.
+- `spx session release` run directly — use `/release` so scope accounting runs.
+- Creating a replacement handoff to justify closing the claimed session — no new session is permission to close an existing one.
 
 NEVER invoke `/applying`, author ADRs/tests/code, or edit files before this checkpoint completes.
 
@@ -101,7 +115,8 @@ This applies after the post-context checkpoint in Step 6 completes, or after the
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
-- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="...">`
+- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." scope="...">` with the full session scope
+- [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging

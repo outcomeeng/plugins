@@ -61,6 +61,11 @@ Only include information that CANNOT be derived from the spec tree or git histor
 - [Open questions or pending decisions]
 
 </coordination>
+
+<incorporated_sessions>
+- [session-id] — archived after this handoff
+- [session-id] — archived after this handoff
+</incorporated_sessions>
 ```
 
 </template>
@@ -71,5 +76,6 @@ Only include information that CANNOT be derived from the spec tree or git histor
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next agent will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<coordination>`**: Thin. Only cross-cutting context that cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
+- **`<incorporated_sessions>`**: Include ONLY when the in-scope set resolved by `<resolve_session_scope>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.
 
 </field_guidance>

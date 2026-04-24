@@ -1,5 +1,5 @@
 <objective>
-Work through all five perspectives internally before presenting anything to the user. This is the most important workflow — it produces the input for everything that follows. Do not rush. Do not skip perspectives.
+Work through all six perspectives internally before presenting anything to the user. This is the most important workflow — it produces the input for everything that follows. Do not rush. Do not skip perspectives.
 
 For each perspective, think about what was learned, what changed, and what the next agent needs. Check existing escape hatches (PLAN.md, ISSUES.md) against current reality — stale escape hatches are worse than none.
 
@@ -84,8 +84,34 @@ Where exactly should the next agent begin?
 
 </perspective_starting_point>
 
+<perspective_session_scope>
+Which sessions are in this conversation's scope, and is there a mid-session handoff artifact to reconcile?
+
+**Resolve the in-scope set:**
+
+1. Read the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup and must be reconciled at closure.
+2. If no `<SESSION_SCOPE>` exists, fall back to the most recent `<PICKUP_CHECKPOINT id="..." scope="...">` or `<PICKUP_CLAIM id="...">` — the single id becomes the scope.
+3. Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another agent may own work that looks related but is not yours to close.
+
+**Fold every still-relevant fact from the in-scope sessions into durable targets first** (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits.
+
+**Locate any mid-session handoff artifact:**
+
+Did this conversation run `spx session handoff` earlier and produce a session file that is still in TODO? That file is a **workflow artifact**, not a scope member. List it separately — workflow 04 will reconcile it so the end state has zero or one handoff.
+
+**Classification for each session observed:**
+
+- **in-scope** — named in `<SESSION_SCOPE>`. Will be archived after the canonical continuation is verified.
+- **mid-session artifact** — created by this conversation's earlier `spx session handoff` and still in TODO. Workflow 04 will either rewrite it in place as the canonical continuation or archive it.
+- **unrelated** — belongs to another agent or another conversation. Leave untouched.
+- **ambiguous** — STOP and ask the user before creating a handoff.
+
+The existence of a mid-session artifact is never, by itself, permission to archive an in-scope session. Permission flows from completing this workflow. A handoff replaces incorporated context; it never supplements it.
+
+</perspective_session_scope>
+
 <success_criteria>
 
-All five perspectives completed internally before proceeding to workflow 03.
+All six perspectives completed internally before proceeding to workflow 03.
 
 </success_criteria>

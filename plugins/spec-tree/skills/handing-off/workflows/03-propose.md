@@ -1,7 +1,21 @@
 <objective>
-Present the combined output of the five reflection perspectives as a persistence proposal. Only items that require user approval appear here. Deficiencies fixed inline during workflow 02 are done — report them as completed work, not as proposals.
+Present the combined output of the six reflection perspectives as a persistence proposal. Only items that require user approval appear here. Deficiencies fixed inline during workflow 02 are done — report them as completed work, not as proposals.
 
 </objective>
+
+<session_disposition_header>
+Before the `AskUserQuestion` block, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
+
+```text
+Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none (--no-session)>
+Sessions to archive after closure: <id-1>, <id-2>, ...
+```
+
+The list comes from `<perspective_session_scope>` in workflow 02 — every session classified as **in-scope**, plus every mid-session artifact that will be archived (rather than rewritten). If SESSION_SCOPE is empty (fresh handoff, no prior pickup) and no artifact exists, write `Sessions to archive after closure: none`.
+
+This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave an in-scope session beside the new continuation.
+
+</session_disposition_header>
 
 <process>
 Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: lessons, issues, insights, and a skip option for coordination-only items.
@@ -39,6 +53,7 @@ This lets the user verify at a glance that each lesson is going to the right pla
 
 <success_criteria>
 
+- Session-disposition header printed before the proposal, naming the canonical continuation plan and every session that will be archived.
 - User has reviewed and approved (or rejected) all proposed persistence items.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.

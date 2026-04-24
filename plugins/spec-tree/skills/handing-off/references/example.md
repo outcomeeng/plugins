@@ -5,17 +5,21 @@
 - `spx/21-test-harness.enabler/32-temp-files.enabler` — tests written and passing, implementation complete
 - `spx/21-test-harness.enabler/43-fixtures.enabler` — spec authored, tests written but failing
 
-**Workflow 02 output — five perspectives**
+**Workflow 02 output — six perspectives**
 
 - **Lessons**: User corrected import pattern twice — relative imports where absolute were required. Rule: "always use absolute imports from the package root." Also: `tempfile.NamedTemporaryFile` needs `delete=False` on Windows — a library gotcha.
 - **Issues**: No existing ISSUES.md. The `43-fixtures.enabler` spec has 5 assertions but 2 are untestable without the implementation — not an issue, just TDD sequence.
 - **Path forward**: Existing PLAN.md in `43-fixtures.enabler` is stale — steps 1-3 are complete, only steps 4-5 remain. The approach (context managers over explicit cleanup) was validated.
 - **Skills**: Used `/testing-python`, skipped `/coding-python` on first attempt which caused import violations. Next agent must invoke `/coding-python` before writing implementation.
 - **Starting point**: `43-fixtures.enabler`, TDD step 7 (implement), invoke `/coding-python`.
+- **Session scope**: `<SESSION_SCOPE ids="2026-03-29_09-05-00,2026-03-29_10-15-00">` names two user-confirmed pickups. Both will be archived after the canonical continuation is written. No mid-session artifact exists — Path C (new handoff) applies.
 
-**Workflow 03 output — approved persistence items**
+**Workflow 03 output — session-disposition header plus approved persistence items**
 
 ```text
+Canonical continuation: new handoff (Path C)
+Sessions to archive after closure: 2026-03-29_09-05-00, 2026-03-29_10-15-00
+
 ☑ [Lesson → CLAUDE.md] Always use absolute imports from package root
 ☑ [Lesson → coding-python refs] tempfile.NamedTemporaryFile needs delete=False on Windows
 ☑ [Insight] Update PLAN.md in 43-fixtures.enabler: remove completed steps 1-3, keep 4-5
@@ -28,10 +32,14 @@
 2. Updates PLAN.md in `43-fixtures.enabler` — removes steps 1-3, keeps steps 4-5.
 3. Stages and commits session-owned files via `/committing-changes`.
 4. Records state: `32-temp-files.enabler` and `43-fixtures.enabler/tests/` committed; unrelated foreign changes remain uncommitted.
-5. Finds the current pickup marker in conversation:
+5. Resolves session scope from the most recent markers in conversation. No mid-session artifact exists — Path C (new handoff):
 
 ```text
-<PICKUP_CHECKPOINT id="2026-03-29_10-15-00" target="spx/21-test-harness.enabler/43-fixtures.enabler" mode="ask">
+<SESSION_SCOPE ids="2026-03-29_09-05-00,2026-03-29_10-15-00">
+scope
+</SESSION_SCOPE>
+
+<PICKUP_CHECKPOINT id="2026-03-29_10-15-00" scope="2026-03-29_09-05-00,2026-03-29_10-15-00" target="spx/21-test-harness.enabler/43-fixtures.enabler" mode="ask">
   next_action: /coding-python
 </PICKUP_CHECKPOINT>
 ```
@@ -102,9 +110,55 @@ Cross-cutting context that doesn't belong to any single node.
 - Python 3.11+ required for ExceptionGroup support used in test assertions
 
 </coordination>
+
+<incorporated_sessions>
+- 2026-03-29_09-05-00 — archived after this handoff
+- 2026-03-29_10-15-00 — archived after this handoff
+</incorporated_sessions>
 ```
 
-8. Archives the claimed doing session from the pickup marker: `spx session archive 2026-03-29_10-15-00`
-9. Confirms: "Handoff created: `2026-03-29_14-22-00`. Session-owned work committed. Archived doing session: `2026-03-29_10-15-00`."
+8. Archives the resolved scope in order (earlier pickups first, claimed last):
+
+   ```bash
+   spx session archive 2026-03-29_09-05-00
+   spx session archive 2026-03-29_10-15-00
+   ```
+
+9. Confirms: "Canonical continuation: new handoff `2026-03-29_14-22-00` (Path C). Session-owned work committed. Archived scope: `2026-03-29_09-05-00`, `2026-03-29_10-15-00`."
 
 </example>
+
+<example_rewrite_in_place>
+
+**Path B scenario — a mid-session artifact exists**
+
+Earlier in the conversation, context pressure prompted the agent to run `spx session handoff`, creating session `2026-04-24_08-10-44` in TODO as a safety net. Work continued afterward. At final closure, session `2026-04-24_02-11-00` is in DOING (the original pickup), and `2026-04-24_08-10-44` is still in TODO.
+
+Workflow 02 classifies:
+
+- **in-scope**: `2026-04-24_02-11-00` — named in `<SESSION_SCOPE>`.
+- **mid-session artifact**: `2026-04-24_08-10-44` — created by this conversation's earlier `spx session handoff`, still in TODO.
+
+Workflow 03 prints:
+
+```text
+Canonical continuation: rewrite 2026-04-24_08-10-44 in place (Path B)
+Sessions to archive after closure: 2026-04-24_02-11-00
+```
+
+Workflow 04 under Path B:
+
+1. Resolves the artifact id as `2026-04-24_08-10-44`.
+2. Does NOT run `spx session handoff` — a second handoff would violate the one-handoff end state.
+3. Writes (overwrites) `.spx/sessions/todo/2026-04-24_08-10-44.md` with cumulative scope: the claimed session's remaining context, the ten unpushed commits, the four committed `PLAN.md` escape hatches, the live verification facts, and the remaining deploy path.
+4. Archives the in-scope set:
+
+   ```bash
+   spx session archive 2026-04-24_02-11-00
+   ```
+
+5. Confirms: "Canonical continuation: rewrote `2026-04-24_08-10-44` in place (Path B). Session-owned work committed. Archived scope: `2026-04-24_02-11-00`."
+
+End state: DOING is empty; TODO contains exactly one handoff (`2026-04-24_08-10-44`, the rewritten canonical).
+
+</example_rewrite_in_place>
