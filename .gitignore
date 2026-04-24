@@ -1,9 +1,8 @@
 # AI agent settings
-.claude/
-.cursor/
-.aider/
-.continue/
-.copilot/
+.claude/*
+!.claude/settings.json
+.codex/*
+!.codex/settings.toml
 
 # Agent memories staged for consolidation into skills (local only)
 methodology/memories/

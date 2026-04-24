@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "taches-cc-resources@taches-cc-resources": true,
+    "develop@outcomeeng": true,
+    "typescript@outcomeeng": true,
+    "prose@outcomeeng": true,
+    "python@outcomeeng": true,
+    "spec-tree@outcomeeng": true
+  }
+}

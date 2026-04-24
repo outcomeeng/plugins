@@ -42,7 +42,7 @@ claude plugin marketplace add outcomeeng/plugins
 codex plugin marketplace add outcomeeng/plugins
 ```
 
-Codex registers the marketplace source and reads the shared `.codex-plugin` bundles directly from it.
+Codex registers the marketplace source in the user's `~/.codex/config.toml` and reads the shared `.codex-plugin` bundles from it.
 
 ### 3. Install or use plugins
 
@@ -63,16 +63,38 @@ claude plugin install develop@outcomeeng
 
 #### Codex
 
-After adding the marketplace, Codex can use the shared skill plugins published from this repository:
+After adding the marketplace, enable only the plugins a project needs in that repo's committed `.codex/config.toml`:
 
-- `spec-tree`
-- `python`
-- `typescript`
-- `prose`
-- `develop`
-- `frontend`
-- `visual`
-- `hdl`
+```toml
+[plugins."spec-tree@outcomeeng"]
+enabled = true
+
+[plugins."develop@outcomeeng"]
+enabled = true
+```
+
+Add language plugins in projects that use them:
+
+```toml
+[plugins."python@outcomeeng"]
+enabled = true
+
+[plugins."typescript@outcomeeng"]
+enabled = true
+```
+
+Add domain plugins the same way:
+
+```toml
+[plugins."frontend@outcomeeng"]
+enabled = true
+
+[plugins."visual@outcomeeng"]
+enabled = true
+
+[plugins."hdl@outcomeeng"]
+enabled = true
+```
 
 ### 4. Bootstrap your spec tree
 
