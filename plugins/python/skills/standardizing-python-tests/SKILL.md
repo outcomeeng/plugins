@@ -1,5 +1,5 @@
 ---
-name: standardizing-python-testing
+name: standardizing-python-tests
 disable-model-invocation: true
 description: >-
   Python testing standards enforced across all skills. Loaded by other skills, not invoked directly.

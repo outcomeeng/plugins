@@ -34,7 +34,7 @@ Before invoking this skill:
 1. **Tests must exist** - Written by `/testing-python`
 2. **Tests must be reviewed** - Approved by `/auditing-python-tests`
 3. **Spec must be loaded** - Context from `/spec-tree:contextualizing`
-4. **Standards must be loaded** - Read `/standardizing-python` and `/standardizing-python-testing`
+4. **Standards must be loaded** - Read `/standardizing-python` and `/standardizing-python-tests`
 
 If tests don't exist or aren't approved, go back to earlier steps.
 </prerequisites>

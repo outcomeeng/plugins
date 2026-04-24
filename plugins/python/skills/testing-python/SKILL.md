@@ -32,7 +32,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Output:** Test files written to `{node}/tests/` directory
 
-**Prerequisites:** Run `/testing` first, then read `/standardizing-python` and `/standardizing-python-testing`. The foundational skill chooses evidence and level; this skill implements those decisions in Python.
+**Prerequisites:** Run `/testing` first, then read `/standardizing-python` and `/standardizing-python-tests`. The foundational skill chooses evidence and level; this skill implements those decisions in Python.
 
 **Workflow:**
 
@@ -84,7 +84,7 @@ For each assertion, apply the `/testing` methodology:
 
 ### Step 3: Write Test Files
 
-Create test files following `/standardizing-python-testing`:
+Create test files following `/standardizing-python-tests`:
 
 **Mandatory elements:**
 
@@ -134,15 +134,15 @@ Find the most recent `/auditing-python-tests` output. Look for:
 
 For each rejection reason:
 
-| Rejection Category     | Fix Action                                            |
-| ---------------------- | ----------------------------------------------------- |
-| Missing `-> None`      | Add return type to test functions                     |
-| Evidentiary gap        | Rewrite test to actually verify the assertion         |
-| Mocking detected       | Replace with dependency injection                     |
-| Missing property tests | Add `@given` tests for parsers/serializers            |
-| Silent skip            | Change `skipif` to `pytest.fail()` for required deps  |
-| Magic values           | Extract to named constants                            |
-| Wrong filename axes    | Rename to the `/standardizing-python-testing` pattern |
+| Rejection Category     | Fix Action                                           |
+| ---------------------- | ---------------------------------------------------- |
+| Missing `-> None`      | Add return type to test functions                    |
+| Evidentiary gap        | Rewrite test to actually verify the assertion        |
+| Mocking detected       | Replace with dependency injection                    |
+| Missing property tests | Add `@given` tests for parsers/serializers           |
+| Silent skip            | Change `skipif` to `pytest.fail()` for required deps |
+| Magic values           | Extract to named constants                           |
+| Wrong filename axes    | Rename to the `/standardizing-python-tests` pattern  |
 
 ### Step 3: Verify Fixes
 
@@ -194,7 +194,7 @@ Before declaring tests complete:
 
 <patterns_reference>
 
-See `/standardizing-python-testing` for:
+See `/standardizing-python-tests` for:
 
 - **Level patterns** - How to write `l1`, `l2`, and `l3` tests
 - **Exception implementations** - The 7 exception cases in Python
@@ -250,7 +250,7 @@ Task is complete when:
 
 - [ ] Test files exist in `{node}/tests/` directory
 - [ ] Each assertion from spec has corresponding test(s)
-- [ ] Tests follow `/standardizing-python-testing` standards
+- [ ] Tests follow `/standardizing-python-tests` standards
 - [ ] Tests run and fail for expected reasons
 - [ ] All reviewer feedback addressed (if FIX mode)
 

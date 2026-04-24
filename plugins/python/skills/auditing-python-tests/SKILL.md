@@ -11,7 +11,7 @@ Python-specific test audit. Extends `/auditing-tests` with Python supplements fo
 
 Read `/auditing-tests` first — it defines the 4-property evidence model and ordered workflow. This skill adds only what is Python-specific.
 
-Before running the audit, load `/standardizing-python`, then `/standardizing-python-testing`.
+Before running the audit, load `/standardizing-python`, then `/standardizing-python-tests`.
 
 </objective>
 
@@ -20,13 +20,13 @@ Before running the audit, load `/standardizing-python`, then `/standardizing-pyt
 **PREREQUISITES**:
 
 1. Read `/standardizing-python`
-2. Read `/standardizing-python-testing`
+2. Read `/standardizing-python-tests`
 3. Read `/auditing-tests` and its evidence model before auditing
 4. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
 5. At each property step, apply the Python supplement below
 6. First property failure = REJECT (skip remaining properties for that assertion)
 
-Use the filename conventions from `/standardizing-python-testing` for assertion-to-test mapping.
+Use the filename conventions from `/standardizing-python-tests` for assertion-to-test mapping.
 
 </quick_start>
 
@@ -36,7 +36,7 @@ Follow the four principles from `/auditing-tests`: **COUPLING FIRST**, **RUN COV
 
 **NO CODE QUALITY CHECKS.**
 
-Type annotations (`-> None`), magic values, test organization, naming conventions — these are linting concerns enforced by `/standardizing-python-testing`, mypy, and ruff. The auditor evaluates evidence quality only. A test with perfect Python style and zero evidentiary value must be REJECTED. A test with missing type hints but genuine evidence of spec fulfillment is not rejected by this audit.
+Type annotations (`-> None`), magic values, test organization, naming conventions — these are linting concerns enforced by `/standardizing-python-tests`, mypy, and ruff. The auditor evaluates evidence quality only. A test with perfect Python style and zero evidentiary value must be REJECTED. A test with missing type hints but genuine evidence of spec fulfillment is not rejected by this audit.
 
 </essential_principles>
 
@@ -197,7 +197,7 @@ def test_parse_doesnt_crash(text: str) -> None:
         pass  # No assertion about behavior
 ```
 
-For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-python-testing`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
+For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-python-tests`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
 
 </supplement>
 

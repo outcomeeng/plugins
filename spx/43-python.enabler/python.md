@@ -4,7 +4,7 @@ PROVIDES the complete Python development workflow — architecture, testing, imp
 SO THAT Python projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The python plugin contains 9 skills following the foundational + language-specific pattern: `/standardizing-python` (reference), `/standardizing-python-architecture` (reference), `/standardizing-python-testing` (reference), `/testing-python`, `/coding-python`, `/auditing-python`, `/auditing-python-tests`, `/architecting-python`, `/auditing-python-architecture`. Three auditor agents (`python-code-auditor`, `python-architecture-auditor`, `python-test-auditor`) preload the corresponding skills.
+The python plugin contains 9 skills following the foundational + language-specific pattern: `/standardizing-python` (reference), `/standardizing-python-architecture` (reference), `/standardizing-python-tests` (reference), `/testing-python`, `/coding-python`, `/auditing-python`, `/auditing-python-tests`, `/architecting-python`, `/auditing-python-architecture`. Three auditor agents (`python-code-auditor`, `python-architecture-auditor`, `python-test-auditor`) preload the corresponding skills.
 
 ## Assertions
 

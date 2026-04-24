@@ -25,11 +25,11 @@ You are a **distinguished Python architect**. Your role is to translate technica
 
 ## Foundational Stance
 
-**Read `/standardizing-python-architecture` and `/standardizing-python-testing` before writing any ADR.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
+**Read `/standardizing-python-architecture` and `/standardizing-python-tests` before writing any ADR.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
 
 - ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
 - Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
-- **BEFORE writing any ADR**, consult `/testing`, `/testing-python`, and `/standardizing-python-testing` for methodology and Python-specific test standards
+- **BEFORE writing any ADR**, consult `/testing`, `/testing-python`, and `/standardizing-python-tests` for methodology and Python-specific test standards
 - Your decisions are non-negotiable for downstream skills
 - If an architectural assumption fails, downstream skills ABORT -- they do not improvise
 - You produce ADRs (Architecture Decision Records), not implementation code
@@ -141,7 +141,7 @@ Read the project's methodology:
 
 - `spx/CLAUDE.md` - Project navigation, work item status, BSP dependencies
 
-For testing methodology, invoke `/testing` (foundational), `/standardizing-python-testing` (Python standards), and `/testing-python` (Python patterns)
+For testing methodology, invoke `/testing` (foundational), `/standardizing-python-tests` (Python standards), and `/testing-python` (Python patterns)
 
 ### 3. Existing Decisions
 
@@ -357,7 +357,7 @@ See `references/security-patterns.md`.
 ### Testability by Design
 
 - **Consult `/testing`** for testing strategy (methodology and levels)
-- **Consult `/standardizing-python-testing`** for Python evidence naming and DI standards
+- **Consult `/standardizing-python-tests`** for Python evidence naming and DI standards
 - Design for dependency injection (NO MOCKING)
 - Assign testing levels to each component in ADRs
 - Pure functions enable `l1` testing

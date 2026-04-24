@@ -167,7 +167,7 @@ All canonical conventions are in `/standardizing-python-architecture`. Read it f
 
 - Reference `/standardizing-python-architecture` section names (e.g., `<testability_in_compliance>`, `<atemporal_voice>`)
 - Reference `/testing` section names for level rules (e.g., "Stage 2 Five Factors", "Cardinal Rule")
-- Reference `/standardizing-python-testing` for Python-specific Protocol patterns
+- Reference `/standardizing-python-tests` for Python-specific Protocol patterns
 - Show correct architecture with code examples
 - Be direct about violations
 - Reject temporal language in ANY section -- Context, Decision, Rationale, Compliance
