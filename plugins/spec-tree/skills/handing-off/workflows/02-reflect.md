@@ -87,10 +87,15 @@ Where exactly should the next agent begin?
 <perspective_session_scope>
 Which sessions are in this conversation's scope, and is there a mid-session handoff artifact to reconcile?
 
-**Resolve the in-scope set:**
+**Resolve the in-scope set** (same algorithm workflow 04 uses — keep them in sync):
 
 1. Read the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup and must be reconciled at closure.
-2. If no `<SESSION_SCOPE>` exists, fall back to the most recent `<PICKUP_CHECKPOINT id="..." scope="...">` or `<PICKUP_CLAIM id="...">` — the single id becomes the scope.
+2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Rebuild additively:
+   - Collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker in the conversation.
+   - Deduplicate by id; the resulting set is the resolved scope.
+   - If the set has **one** id, proceed.
+   - If the set has **more than one** id, STOP and ask the user to confirm the full scope before continuing workflow 02. NEVER silently collapse to the most recent pickup — that is the exact failure mode the additive rule exists to prevent.
+   - If the set is **empty**, check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or stale references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation.
 3. Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another agent may own work that looks related but is not yours to close.
 
 **Fold every still-relevant fact from the in-scope sessions into durable targets first** (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits.

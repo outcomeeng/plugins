@@ -54,7 +54,7 @@ Determine the authoritative set of in-scope sessions plus any mid-session artifa
    - Deduplicate by id; the resulting set is the resolved scope.
    - If the set has **one** id, proceed.
    - If the set has **more than one** id, present the list to the user and ask them to confirm the full scope before continuing. NEVER silently collapse to the most recent pickup.
-   - If the set is empty, scope is empty (fresh handoff, no pickup happened).
+   - If the set is **empty**, check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation (fresh handoff).
 3. **Locate mid-session artifacts**: did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
    - **Zero artifacts in TODO** → no reconciliation needed; Path A or C will apply.
    - **Exactly one artifact in TODO** → it becomes the rewrite-in-place candidate for Path B.
