@@ -4,7 +4,8 @@ Write this content to `<SESSION_FILE>` using the Write tool:
 ```text
 ---
 priority: medium
-tags: [optional, tags]
+tags: [node-slug-1, node-slug-2, tech-stack]
+agent_session_id: [Codex UUID or blank]
 ---
 <metadata>
   timestamp: [UTC timestamp]
@@ -73,6 +74,8 @@ Only include information that CANNOT be derived from the spec tree or git histor
 <field_guidance>
 
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
+- **`tags`**: Node slugs (strip the integer prefix — `21-test-harness.enabler` → `test-harness`) plus the language or technology stack. **Never use meta-terms that apply to every session**: `plan`, `handoff`, `session`, `continuation`, `pickup`, `release`, `commit`. If a word describes the session mechanism rather than its subject, it is forbidden as a tag.
+- **`agent_session_id`**: The agent runtime's own session identifier, so the user can resume or review this exact conversation. For Codex, run `tail -1 ~/.codex/session_index.jsonl | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['id'])"` and paste the UUID — it enables `codex resume <UUID>`. Leave blank when not running under Codex.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next agent will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<coordination>`**: Thin. Only cross-cutting context that cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.

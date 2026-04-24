@@ -50,7 +50,8 @@ scope
 ```text
 ---
 priority: high
-tags: [test-harness, python]
+tags: [test-harness, fixtures, python]
+agent_session_id: 019dbf01-a6ac-75d2-87f4-444b65edbe64
 ---
 <metadata>
   timestamp: 2026-03-29T14:22:00Z
