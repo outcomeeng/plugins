@@ -5,7 +5,7 @@ Write this content to `<SESSION_FILE>` using the Write tool:
 ---
 priority: medium
 tags: [node-slug-1, node-slug-2, tech-stack]
-agent_session_id: [Codex UUID or blank]
+agent_session_id: [Codex: $CODEX_THREAD_ID | Claude Code: blank]
 ---
 <metadata>
   timestamp: [UTC timestamp]
@@ -75,7 +75,10 @@ Only include information that CANNOT be derived from the spec tree or git histor
 
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
 - **`tags`**: Node slugs (strip the integer prefix — `21-test-harness.enabler` → `test-harness`) plus the language or technology stack. **Never use meta-terms that apply to every session**: `plan`, `handoff`, `session`, `continuation`, `pickup`, `release`, `commit`. If a word describes the session mechanism rather than its subject, it is forbidden as a tag.
-- **`agent_session_id`**: The agent runtime's own session identifier, so the user can resume or review this exact conversation. For Codex, attempt `tail -1 ~/.codex/session_index.jsonl | python3 -c "import sys,json; print(json.loads(sys.stdin.read())['id'])"` — this is reliable only when one Codex session is active; with concurrent sessions, `tail -1` may return another session's UUID. If the UUID is uncertain, leave the field blank — the `timestamp`, `working_directory`, and `git_branch` in `<metadata>` are enough to identify the session in the `codex resume` picker. Leave blank when not running under Codex.
+- **`agent_session_id`**: The agent runtime's own session identifier, so the user can resume or review this exact conversation.
+  - **Codex**: run `echo $CODEX_THREAD_ID` — this env var is injected by Codex and is reliable regardless of how many sessions are running concurrently.
+  - **Claude Code**: `session_id` is available in the hook stdin JSON payload but is not injected as an env var during normal agent execution. Leave blank unless a session-tracking hook is configured that stores it somewhere readable.
+  - If blank, `timestamp` + `working_directory` + `git_branch` in `<metadata>` uniquely identify the session in the `codex resume` picker.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next agent will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<coordination>`**: Thin. Only cross-cutting context that cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.

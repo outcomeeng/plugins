@@ -51,7 +51,7 @@ scope
 ---
 priority: high
 tags: [test-harness, fixtures, python]
-agent_session_id: 019dbf01-a6ac-75d2-87f4-444b65edbe64
+agent_session_id: 019dbf37-84b9-7473-8ca2-752c96a767f1
 ---
 <metadata>
   timestamp: 2026-03-29T14:22:00Z
