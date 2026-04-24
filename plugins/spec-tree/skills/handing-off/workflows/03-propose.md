@@ -15,6 +15,8 @@ The list comes from `<perspective_session_scope>` in workflow 02 — every sessi
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave an in-scope session beside the new continuation.
 
+**STOP if the user disputes the disposition.** If the user objects to the canonical continuation plan, the archive list, or any session id in either, halt the workflow. Do not proceed to workflow 04, do not archive, do not write the canonical continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
+
 </session_disposition_header>
 
 <process>

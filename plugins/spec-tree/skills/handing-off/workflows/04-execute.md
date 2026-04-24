@@ -49,14 +49,21 @@ For each anchored node, check `git status` and record:
 Determine the authoritative set of in-scope sessions plus any mid-session artifact to reconcile.
 
 1. **Read the running scope marker**: search the conversation for the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup the agent must close.
-2. **Fall back to a single canonical marker**: if no `<SESSION_SCOPE>` exists, use the most recent `<PICKUP_CHECKPOINT id="..." scope="...">` or `<PICKUP_CLAIM id="...">`. The id becomes the one-element scope.
-3. **No markers at all**: scope is empty (fresh handoff, no pickup happened).
-4. **Locate the mid-session artifact**: did this conversation run `spx session handoff` earlier? Cross-reference its output against `spx session list --status todo`. If that id is still in TODO, it is a workflow artifact to reconcile in `<write_canonical_continuation>`.
-5. **Reconcile with workflow 02**: the scope must match `<perspective_session_scope>`. If the user named additional sessions, add them. If any session is **ambiguous**, STOP and resolve with the user before proceeding.
+2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Rebuild additively:
+   - Collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker in the conversation.
+   - Deduplicate by id; the resulting set is the resolved scope.
+   - If the set has **one** id, proceed.
+   - If the set has **more than one** id, present the list to the user and ask them to confirm the full scope before continuing. NEVER silently collapse to the most recent pickup.
+   - If the set is empty, scope is empty (fresh handoff, no pickup happened).
+3. **Locate mid-session artifacts**: did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
+   - **Zero artifacts in TODO** → no reconciliation needed; Path A or C will apply.
+   - **Exactly one artifact in TODO** → it becomes the rewrite-in-place candidate for Path B.
+   - **More than one artifact in TODO** → STOP. Present the list to the user and ask which is the canonical continuation. Archive only the artifacts this conversation created; never touch artifacts created by other conversations.
+4. **Reconcile with workflow 02**: the scope must match `<perspective_session_scope>`. If the user named additional sessions, add them. If any session is **ambiguous**, STOP and resolve with the user before proceeding.
 
-The resolved scope is the authoritative archive list for the rest of this workflow. The mid-session artifact is tracked separately — it may be rewritten in place (becoming the canonical continuation) or archived.
+The resolved scope is the authoritative archive list for the rest of this workflow. Mid-session artifacts are tracked separately — at most one is rewritten in place; the rest are archived only if this conversation created them.
 
-**The existence of the artifact is never permission to archive an in-scope session.** Archival permission flows from the completion of this workflow against the resolved scope.
+**The existence of any session is never permission to archive an in-scope session.** Archival permission flows from the completion of this workflow against the resolved scope.
 
 </resolve_session_scope>
 
@@ -94,15 +101,15 @@ Archive order:
 
 1. Earlier in-conversation pickups still in `doing/`.
 2. The most recently claimed doing session, if any.
-3. Any mid-session artifact scheduled for archival (Path A, or Path C if multiple artifacts existed).
+3. Any mid-session artifact this conversation created that is NOT the rewrite-in-place canonical (Path A archives all artifacts; Path C archives all when no rewrite happened).
 
 ```bash
 spx session archive <session-id>
 ```
 
-Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive the session that was just rewritten in place under Path B.
+Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive the session that was just rewritten in place under Path B. NEVER archive TODO sessions created by other conversations — the TODO queue is shared across agents.
 
-**A handoff is incomplete if it creates or keeps more than one handoff in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.**
+**A handoff is incomplete if this closure creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other agents are not this closure's concern and must be left untouched.
 
 **If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
 
@@ -129,11 +136,11 @@ State:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
-- Exactly zero or one handoff file exists in TODO after closure. Never two.
+- Exactly zero or one canonical continuation created or rewritten by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other agents are out of scope and untouched.
 - Canonical continuation written via Path A (release), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when the in-scope set is non-empty.
 - Every in-scope session archived — none left in `todo/` or `doing/`.
-- Any mid-session artifact that was NOT rewritten in place has been archived.
+- Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
 - Confirmation output names the continuation path and the archived ids.
 
 </success_criteria>

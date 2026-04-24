@@ -102,7 +102,7 @@ A successful handoff:
 - [ ] Session-owned spec, test, code, and escape-hatch changes committed before closure (workflow 04)
 - [ ] Committed vs uncommitted state recorded for each node (workflow 04)
 - [ ] Session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)
-- [ ] Every session in `<SESSION_SCOPE>` archived after the canonical continuation is verified (workflow 04)
+- [ ] Every session in the resolved scope archived after the canonical continuation is verified (workflow 04) — resolved from `<SESSION_SCOPE>` when present, or from the additive fallback when it is not
 - [ ] Session file is a thin coordination envelope — bulk of value persisted durably
 - [ ] End state has zero or one handoff incorporating everything — never a sidecar/supplemental/addendum
 - [ ] Closure order followed: reflect → propose → persist → commit → canonical continuation written → archive scope
