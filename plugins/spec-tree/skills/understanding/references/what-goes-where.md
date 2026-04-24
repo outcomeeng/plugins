@@ -142,18 +142,19 @@ ADR/PDR ──governs──→ Spec ──┤
 
 <common_misplacements>
 
-| Content                  | Wrong location | Correct location          |
-| ------------------------ | -------------- | ------------------------- |
-| Architecture choice      | Spec           | ADR                       |
-| Product decision         | Spec           | PDR                       |
-| Outcome hypothesis       | ADR            | Outcome spec              |
-| Test reference           | ADR/PDR        | Spec assertions           |
-| Implementation detail    | Spec           | Code (not spec)           |
-| "How to build it"        | Spec           | ADR or code               |
-| "What users can rely on" | Spec           | PDR                       |
-| Enforceable constraint   | `[review]`     | `[test]` on the lint rule |
-| Cross-cutting invariant  | Child spec     | Ancestor spec             |
-| Remaining work steps     | Session file   | PLAN.md in node           |
-| Known deferred issues    | Session file   | ISSUES.md in node         |
+| Content                  | Wrong location | Correct location                                                           |
+| ------------------------ | -------------- | -------------------------------------------------------------------------- |
+| Architecture choice      | Spec           | ADR                                                                        |
+| Product decision         | Spec           | PDR                                                                        |
+| Outcome hypothesis       | ADR            | Outcome spec                                                               |
+| Test reference           | ADR/PDR        | Spec assertions                                                            |
+| Implementation detail    | Spec           | Code (not spec)                                                            |
+| "How to build it"        | Spec           | ADR or code                                                                |
+| "What users can rely on" | Spec           | PDR                                                                        |
+| Enforceable constraint   | `[review]`     | `[test]` on the lint rule                                                  |
+| Cross-cutting invariant  | Child spec     | Ancestor spec                                                              |
+| Remaining work steps     | Session file   | PLAN.md in node                                                            |
+| Known deferred issues    | Session file   | ISSUES.md in node                                                          |
+| Child-node enumeration   | Parent spec    | Remove — `/contextualizing` surfaces children; each child describes itself |
 
 </common_misplacements>
