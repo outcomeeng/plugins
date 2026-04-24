@@ -49,12 +49,13 @@ For each anchored node, check `git status` and record:
 Determine the authoritative set of in-scope sessions plus any mid-session artifact to reconcile.
 
 1. **Read the running scope marker**: search the conversation for the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup the agent must close.
-2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Rebuild additively:
-   - Collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker in the conversation.
-   - Deduplicate by id; the resulting set is the resolved scope.
-   - If the set has **one** id, proceed.
-   - If the set has **more than one** id, present the list to the user and ask them to confirm the full scope before continuing. NEVER silently collapse to the most recent pickup.
-   - If the set is **empty**, check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation (fresh handoff).
+2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Recover in this order:
+   - **Step 2a — checkpoint scope attribute (preferred)**: if the most recent `<PICKUP_CHECKPOINT id="..." scope="a,b,c">` exists, parse its `scope` attribute. That attribute carries the full scope as of the latest post-context checkpoint — use it as the authoritative resolved scope. One surviving checkpoint can recover a multi-session scope without needing every earlier claim marker.
+   - **Step 2b — additive rebuild (no checkpoint scope available)**: if no `<PICKUP_CHECKPOINT>` carries a `scope` attribute, collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker. Deduplicate by id.
+   - **Validate the recovered set**:
+     - **One id** → proceed.
+     - **More than one id** → present the list to the user and ask them to confirm the full scope before continuing. NEVER silently collapse to the most recent pickup.
+     - **Empty** → check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation (fresh handoff).
 3. **Locate mid-session artifacts**: did this conversation run `spx session handoff` earlier? Collect every handoff id printed by `spx session handoff` during this conversation. Cross-reference against `spx session list --status todo`:
    - **Zero artifacts in TODO** → no reconciliation needed; Path A or C will apply.
    - **Exactly one artifact in TODO** → it becomes the rewrite-in-place candidate for Path B.
@@ -70,7 +71,7 @@ The resolved scope is the authoritative archive list for the rest of this workfl
 <write_canonical_continuation>
 Every closure ends with **zero or one** handoff. Pick the path once and execute it.
 
-**Path A — `--no-session` (zero handoffs, a.k.a. `/release`)**: skip to `<archive_scope>`. After archiving, confirm: "Session released. All approved items persisted and committed. No continuation handoff. Archived scope: <list>."
+**Path A — `--no-session` (zero handoffs, a.k.a. `/release`)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 

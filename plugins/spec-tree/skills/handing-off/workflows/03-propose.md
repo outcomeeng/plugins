@@ -49,7 +49,20 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 
 This lets the user verify at a glance that each lesson is going to the right place.
 
-**`AskUserQuestion` is limited to 4 options.** If there are more than 3 actionable items, batch them by perspective (one question per perspective with items as options). The "[Skip]" option always appears as the last option in the last question.
+**`AskUserQuestion` has two hard limits: 4 options per question, 4 questions per call.** Batch actionable items so no single question exceeds 4 options, and no call exceeds 4 questions.
+
+**Chunking rules:**
+
+1. **Group items by perspective first.** Each perspective produces one or more questions.
+2. **Perspective has ≤3 actionable items** → one question with those items plus `[Skip this perspective]` as the 4th option.
+3. **Perspective has >3 items** → chunk within the perspective:
+   - Question N: first 3 items + `[See more from this perspective]` as 4th option.
+   - Question N+1: next 3 items + same continuation, repeat.
+   - Final question for the perspective: remaining items + `[Skip remaining]` as the final option.
+4. **Total questions across all perspectives >4** → split into multiple `AskUserQuestion` calls. Wait for the user's answers to each call before presenting the next batch — the user may revise their approach based on what they approved, and late items may become redundant.
+5. **Global skip**: the overall `[Skip] N items → session file only` option appears as the last option in the last question of the last call — never mixed with per-perspective skip options.
+
+Don't collapse a long list into a terse summary option to fit the limit. Each actionable item must be visible and separately approvable.
 
 </process>
 

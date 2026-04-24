@@ -41,10 +41,10 @@ What is broken, missing, or wrong?
 For each issue:
 
 1. **Can you fix it right now?** Stale references, broken links, wrong paths, simple corrections — fix them immediately using Edit/Grep. Do not propose them in workflow 03. Do not ask the user. Just fix them and note what you fixed.
-2. **Is the fix too large for this session?** Write or update ISSUES.md in the node directory.
-3. **Is a spec assertion wrong?** Fix the spec directly — this is a durable fix.
+2. **Is the fix too large for this session?** **Propose** writing or updating ISSUES.md in the node directory. Do NOT write it here — ISSUES.md is a Tier 3 escape hatch that requires `AskUserQuestion` approval in workflow 03. Workflow 04 writes it after approval.
+3. **Is a spec assertion wrong?** Fix the spec directly — spec files are Tier 1 durable changes governed by the audit gate.
 
-**Critical**: Read any existing ISSUES.md for each anchored node. Check every item — are items listed as open now fixed? Are there new issues not yet listed? A stale ISSUES.md will mislead the next agent.
+**Critical**: Read any existing ISSUES.md for each anchored node. Check every item — are items listed as open now fixed? Are there new issues not yet listed? A stale ISSUES.md will mislead the next agent. If ISSUES.md needs to be updated or removed, **propose** that in workflow 03 — do not edit the file here.
 
 </perspective_issues>
 
@@ -55,14 +55,14 @@ What do you now understand about how the remaining work should proceed?
 - **Remaining steps** — what concrete steps remain, in what order
 - **Dependencies** — what must happen before what
 
-For each insight, determine persistence target:
+For each insight, **propose** the persistence target (workflow 03 asks the user; workflow 04 writes on approval):
 
-- Amend a spec (if the insight changes what the spec says)
-- Write or update PLAN.md in the node directory (if it's a concrete plan for remaining work)
-- Remove PLAN.md (if all planned steps are now complete — a done plan is a stale plan)
+- Amend a spec (if the insight changes what the spec says) — Tier 1, proposed in workflow 03 and written in workflow 04
+- Write or update PLAN.md in the node directory (if it's a concrete plan for remaining work) — Tier 3 escape hatch, requires `AskUserQuestion` approval
+- Remove PLAN.md (if all planned steps are now complete — a done plan is a stale plan) — also Tier 3, also requires approval
 - Session file only (if it's coordination context)
 
-**Critical**: Read any existing PLAN.md for each anchored node. Are steps listed as remaining now complete? Is the plan still the right approach? Update or remove — never leave a stale plan.
+**Critical**: Read any existing PLAN.md for each anchored node. Are steps listed as remaining now complete? Is the plan still the right approach? If the plan needs updating or removing, **propose** that in workflow 03 — do not edit the file here. Never leave a stale plan, but never write one without approval either.
 
 </perspective_path_forward>
 
@@ -90,12 +90,13 @@ Which sessions are in this conversation's scope, and is there a mid-session hand
 **Resolve the in-scope set** (same algorithm workflow 04 uses — keep them in sync):
 
 1. Read the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup and must be reconciled at closure.
-2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Rebuild additively:
-   - Collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker in the conversation.
-   - Deduplicate by id; the resulting set is the resolved scope.
-   - If the set has **one** id, proceed.
-   - If the set has **more than one** id, STOP and ask the user to confirm the full scope before continuing workflow 02. NEVER silently collapse to the most recent pickup — that is the exact failure mode the additive rule exists to prevent.
-   - If the set is **empty**, check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or stale references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation.
+2. **Fallback when no scope marker exists**: context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Recover in this order:
+   - **Step 2a — checkpoint scope attribute (preferred)**: if the most recent `<PICKUP_CHECKPOINT id="..." scope="a,b,c">` exists, parse its `scope` attribute. That attribute carries the full scope as of the latest post-context checkpoint — use it as the authoritative resolved scope. One surviving checkpoint can recover a multi-session scope without needing every earlier claim marker.
+   - **Step 2b — additive rebuild (no checkpoint scope available)**: if no `<PICKUP_CHECKPOINT>` carries a `scope` attribute, collect every `<PICKUP_CLAIM id="...">` and `<PICKUP_CHECKPOINT id="...">` emitted since the last closure marker. Deduplicate by id.
+   - **Validate the recovered set**:
+     - **One id** → proceed.
+     - **More than one id** → STOP and ask the user to confirm the full scope before continuing workflow 02. NEVER silently collapse to the most recent pickup — that is the exact failure mode the additive rule exists to prevent.
+     - **Empty** → check for pickup evidence: `spx session list --status doing` showing sessions this worktree may own, or stale references in the conversation to a claimed session. If any such evidence exists, STOP and ask the user to confirm scope. Only declare scope empty when there is clear evidence no pickup happened in this conversation.
 3. Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another agent may own work that looks related but is not yours to close.
 
 **Fold every still-relevant fact from the in-scope sessions into durable targets first** (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits.

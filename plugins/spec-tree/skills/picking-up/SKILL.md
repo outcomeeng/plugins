@@ -31,7 +31,11 @@ Three rules govern a conversation's session scope:
 
 2. **Closure has exactly one acceptable end state.** Every in-scope session becomes the agent's sole responsibility. The agent reflects, persists remaining validated relevant context, and ends with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
 
-3. **Quick-release escape hatch.** If, within a few turns of pickup, the agent realizes the pickup was wrong and the user confirms release, the session leaves scope via `/release` without counting toward the closure workload.
+3. **Quick-exit escape hatch.** If, within a few turns of pickup, the agent realizes the pickup was wrong, the user has two options — only the user can choose:
+   - Invoke `/release` (alias for `/handing-off --no-session`) to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
+   - Manually move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/` to return the session to the shared queue for another agent. This is a file operation outside `spx session`.
+
+   Neither action counts toward the closure workload for the in-scope set — the wrongly-claimed session leaves scope the moment the user confirms the quick exit.
 
 **Consequences of the three rules:**
 

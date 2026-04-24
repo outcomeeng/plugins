@@ -1,6 +1,6 @@
 ---
 name: handing-off
-description: ALWAYS invoke this skill when closing a spec-tree work session, writing a handoff, preparing continuation context for another agent, or releasing work into the shared session queue. NEVER create a spec-tree handoff without this skill.
+description: ALWAYS invoke this skill when closing a spec-tree work session, writing a handoff, or preparing continuation context for another agent. NEVER create a spec-tree handoff without this skill.
 ---
 
 <context>
@@ -71,9 +71,11 @@ Git commit is not a fifth tier. It is the final persistence operation after appr
 </multi_agent_awareness>
 
 <arguments>
-**`--no-session`**: Run the full reflection and persistence protocol, including the final commit, but skip session file creation in workflow 04. All approved items are persisted to their durable targets and committed. Unapproved items are dropped.
+**`--no-session`**: Run the full reflection and persistence protocol, including the final commit, but skip session file creation in workflow 04. All approved items are persisted to their durable targets and committed. Unapproved items are dropped. Every in-scope session is still archived — `--no-session` skips only the creation of a new handoff file, not the archival of incorporated work.
 
-Use `--no-session` (or the `/release` alias) when closing a session without handing off to another agent.
+Use `--no-session` when closing a session without handing off to another agent.
+
+**Note on terminology**: the `/release` command is an alias for `--no-session` — it means "close without a new handoff, archive in-scope sessions." It does NOT mean "put the session back in the todo queue for another agent to pick up." Putting a claimed session back in todo is a distinct operation (not currently supported by `spx session`) and would require a manual file move from `.spx/sessions/doing/` to `.spx/sessions/todo/`.
 
 **`--prune`**: After successfully writing the new handoff, delete old archive sessions. Does NOT touch the todo queue. Ignored when `--no-session` is set.
 

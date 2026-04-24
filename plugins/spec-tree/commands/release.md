@@ -1,13 +1,15 @@
 ---
-description: Reflect, persist, and close session without creating a handoff file
+description: Reflect, persist, and close session without creating a handoff file (archives in-scope sessions; does NOT return them to the todo queue)
 allowed-tools:
   - Skill
 ---
 
 <objective>
-Close the current work session without creating a handoff file.
+Close the current work session without creating a handoff file. All in-scope sessions are archived.
 
-This is a convenience alias for the `/handing-off` skill with `--no-session`. It runs the full reflection and persistence protocol — anchoring nodes, five perspectives, persistence decisions, and commit gating — but skips session file creation.
+This is a convenience alias for the `/handing-off` skill with `--no-session`. It runs the full reflection and persistence protocol — anchoring nodes, six perspectives, persistence decisions, and commit gating — but skips session file creation. Every in-scope session is archived.
+
+**This is not a "return to queue" operation.** `/release` does not put the claimed session back in `.spx/sessions/todo/` for another agent. If the user wants to put a wrongly-claimed session back on the shared queue, that is a separate manual operation (move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/`).
 </objective>
 
 <process>
