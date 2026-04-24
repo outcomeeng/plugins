@@ -1,8 +1,8 @@
 ---
 name: writing-prose
 description: >-
-  ALWAYS invoke this skill when generating articles, documentation, blog posts, specs, or any long-form text.
-  NEVER write long-form text without this skill.
+  ALWAYS invoke this skill when producing a file or standalone document: articles, documentation, blog posts, specs.
+  NEVER invoke for chat responses to the user, including long research summaries delivered in chat.
 ---
 
 <objective>
