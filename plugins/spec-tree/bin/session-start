@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# SessionStart hook: export CLAUDE_SESSION_ID and create the agent's session
+# directory under .spx/sessions/ for spec-tree projects.
+set -euo pipefail
+
+INPUT=$(cat)
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+CWD=$(echo "$INPUT" | jq -r '.cwd')
+
+# Persist the session ID so every subsequent Bash tool call sees it as $CLAUDE_SESSION_ID.
+# This mirrors Codex's $CODEX_THREAD_ID, enabling the skill to locate its own session
+# directory without relying on file-system heuristics.
+if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
+  echo "export CLAUDE_SESSION_ID=$SESSION_ID" >> "$CLAUDE_ENV_FILE"
+fi
+
+# Create the agent-scoped session directory. Idempotent: SessionStart fires on
+# resume and after /clear and /compact as well as on first startup.
+if [[ -d "$CWD/.spx" ]]; then
+  mkdir -p "$CWD/.spx/sessions/$SESSION_ID"
+fi
