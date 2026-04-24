@@ -39,7 +39,8 @@ Three rules govern a conversation's session scope:
 
 **Consequences of the three rules:**
 
-- Every successful `spx session pickup` adds that session id to the SESSION_SCOPE marker for this conversation. A later pickup does not replace earlier entries — scope is additive.
+- Every successful `spx session pickup` accumulates the claim in two places: a symlink `<session-id>.md` in the runtime's session directory (`.spx/sessions/$CLAUDE_SESSION_ID/` — lazy-created on first claim) and an entry in the conversation's `<SESSION_SCOPE>` marker. The filesystem survives `/clear` and `/compact`; the marker supports in-conversation reasoning. `/handing-off` reads both and flags disagreement.
+- A later pickup does not replace earlier entries — scope is additive on both surfaces.
 - The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any in-scope session.
 - Queue inspection alone is never permission. Archival comes from completing the handing-off workflow against the in-scope set named in SESSION_SCOPE.
