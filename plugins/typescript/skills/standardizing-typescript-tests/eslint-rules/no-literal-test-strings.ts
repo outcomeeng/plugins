@@ -149,12 +149,29 @@ function isDescriptiveCallsite(node: AstNode): boolean {
   const argumentIndex = getArgumentIndex(callExpression, node);
   if (argumentIndex < 0) return false;
 
-  const calleePath = getCalleePath(callExpression.callee as AstNode);
-  if (!calleePath) return false;
+  const callee = callExpression.callee as AstNode | undefined;
+  if (!callee) return false;
 
-  return TEST_STRING_POLICY.descriptiveCallsites.some((callsite) => {
-    return callsite.callee === calleePath && callsite.argumentIndex === argumentIndex;
-  });
+  const directPath = getCalleePath(callee);
+  if (directPath) {
+    return TEST_STRING_POLICY.descriptiveCallsites.some((callsite) => {
+      return callsite.callee === directPath && callsite.argumentIndex === argumentIndex;
+    });
+  }
+
+  // Curried form: `it.each(cases)(title, fn)` and variants. The outer call's
+  // callee is the `CallExpression` returned by `it.each(...)`; its inner
+  // callee path ends in `.each`. The title argument lives on the outer call.
+  if (callee.type === "CallExpression") {
+    const innerPath = getCalleePath((callee as AstNode).callee as AstNode);
+    if (innerPath && innerPath.endsWith(".each")) {
+      return TEST_STRING_POLICY.descriptiveCallsites.some((callsite) => {
+        return callsite.callee === innerPath && callsite.argumentIndex === argumentIndex;
+      });
+    }
+  }
+
+  return false;
 }
 
 function isProtocolException(node: AstNode, value: string): boolean {
