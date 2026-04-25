@@ -42,7 +42,13 @@ List Rust test files under the target node:
 rg --files <spec-node-path>/tests
 ```
 
-Fail Gate 0 for files that do not end in `.unit.rs`, `.integration.rs`, or `.e2e.rs`, unless a repo-local overlay defines a different Rust test filename convention. If project instructions or repo-local overlays disable Level 3, fail `.e2e.rs` files for that project.
+Each file must match `<subject>.<evidence>.<level>[.<runner>].rs` where:
+
+- `<evidence>` is one of: `scenario`, `mapping`, `conformance`, `property`, `compliance`
+- `<level>` is one of: `l1`, `l2`, `l3`
+- `<runner>` is optional (e.g., `tokio`, `actix`)
+
+Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Rust test filename convention. If project instructions or repo-local overlays disable Level 3, fail `.l3.rs` files for that project.
 </check>
 
 <check id="R1" name="source_file_reads">
@@ -64,13 +70,13 @@ rg -n '#\[ignore\]|return;|panic!\("skip|todo!\(|unimplemented!\(' <spec-node-pa
 
 Fail Gate 0 for bare `#[ignore]` (no reason string), skip-by-early-return, `todo!`, or `unimplemented!` in test bodies.
 
-The credentialed form `#[ignore = "..."]` is the declared Level 3 lane pattern from `/standardizing-rust-tests` and must **not** be failed in `.e2e.rs` files. Check for misuse in non-Level-3 files:
+The credentialed form `#[ignore = "..."]` is the declared Level 3 lane pattern from `/standardizing-rust-tests` and must **not** be failed in `.l3.rs` files. Check for misuse in non-Level-3 files:
 
 ```bash
-rg -n '#\[ignore = ' <spec-node-path>/tests --glob '!*.e2e.rs'
+rg -n '#\[ignore = ' <spec-node-path>/tests --glob '!*.l3.rs'
 ```
 
-Any `#[ignore = "..."]` outside `.e2e.rs` files is a misplaced credentialed annotation → fail Gate 0.
+Any `#[ignore = "..."]` outside `.l3.rs` files is a misplaced credentialed annotation → fail Gate 0.
 </check>
 
 <check id="M1" name="generated_mock_signal">
@@ -374,7 +380,7 @@ How to avoid: Gate 0 fails production source-file reads from tests.
 
 Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
 
-How to avoid: Keep Level 3 in the generic Rust standard. Apply `.e2e.rs` rejection only when project instructions or repo-local overlays disable Level 3.
+How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when project instructions or repo-local overlays disable Level 3.
 </failure_modes>
 
 <success_criteria>

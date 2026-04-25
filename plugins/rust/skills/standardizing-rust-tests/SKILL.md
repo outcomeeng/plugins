@@ -14,7 +14,7 @@ Rust test guidance follows this standard when:
 
 - `/testing` determines evidence mode, execution level, and exception path before implementation
 - `/standardizing-rust` is loaded before this reference
-- co-located spec tests use the repository's Rust filename pattern
+- co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
 - property assertions use meaningful `proptest` or `quickcheck` properties
 - compile-time claims use compile-fail evidence
@@ -32,21 +32,41 @@ When another skill loads this reference inside a repository, it must also check 
 </repo_local_overlay>
 
 <core_model>
-Every co-located Rust spec test file name encodes the execution level and the infrastructure it requires. The default pattern for this repository is:
+Every co-located Rust spec test file name encodes two orthogonal dimensions: the evidence type (what kind of claim is being tested) and the execution level (what infrastructure is required to run it). The canonical pattern is:
 
 ```text
-spx/.../tests/{slug}.unit.rs
-spx/.../tests/{slug}.integration.rs
-spx/.../tests/{slug}.e2e.rs
+spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 ```
 
-| Evidence token | Default level | Meaning                                                           |
-| -------------- | ------------- | ----------------------------------------------------------------- |
-| `unit`         | Level 1       | Pure or cheap local proof through Rust code paths                 |
-| `integration`  | Level 2       | Real local binary, runtime, adapter, service, or process boundary |
-| `e2e`          | Level 3       | Remote, deployed, browser, or externally managed workflow proof   |
+**Evidence tokens** — the assertion type from `/testing`:
 
-Repository overlays may adopt a more explicit pattern such as `<subject>.<evidence>.l1.rs`, or may restrict which levels the project supports. Follow the repo-local Rust test convention when it exists.
+| Token         | Assertion type | Meaning                                                                      |
+| ------------- | -------------- | ---------------------------------------------------------------------------- |
+| `scenario`    | Scenario       | Concrete inputs and outputs through the governed function, module, or binary |
+| `mapping`     | Mapping        | Table-driven or parameterized cases over a finite input/output mapping       |
+| `conformance` | Conformance    | Parser, schema, protocol, CLI contract, or `trybuild` compile-time check     |
+| `property`    | Property       | `proptest` or `quickcheck` invariant over a generated domain                 |
+| `compliance`  | Compliance     | Violating fixture, lint harness, or architecture review marker               |
+
+**Level tokens** — the infrastructure required to run the test:
+
+| Token | Level | Infrastructure                                                                 |
+| ----- | ----- | ------------------------------------------------------------------------------ |
+| `l1`  | 1     | Rust stdlib, `cargo test`, temp dirs, repo-required dev tools                  |
+| `l2`  | 2     | Workspace binaries, local services, Docker, databases, local browser harnesses |
+| `l3`  | 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments |
+
+**Optional runner token** — appended after the level token when the test requires a specific async executor or test harness (e.g., `tokio`, `actix`).
+
+Examples:
+
+```text
+spx/32-api.enabler/54-auth.outcome/tests/session_token.scenario.l1.rs
+spx/32-api.enabler/54-auth.outcome/tests/registry_fetch.conformance.l2.rs
+spx/32-api.enabler/54-auth.outcome/tests/login_flow.scenario.l3.rs
+```
+
+Repository overlays may restrict which levels the project supports. Follow the repo-local Rust test convention when it exists.
 </core_model>
 
 <level_tooling>
