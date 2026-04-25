@@ -14,7 +14,7 @@ TypeScript test audit. Three gates in strict sequence, fail-closed:
 2. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check.
 3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
 
-A gate failure skips every later gate. Output is a structured XML verdict validated by `spx validation audit-verdict`. The verdict template is the deliverable; `spx validation audit-verdict` exit code 0 is the sole success criterion.
+A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable; `spx audit verify` exit code 0 is the sole success criterion.
 
 </objective>
 
@@ -33,7 +33,7 @@ Gate 0 depends on two tools:
 - ESLint must be installed in the consumer repo, and the standards config at `${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/eslint-rules/eslint.audit.config.ts` must be reachable. The rules and config are owned by `/standardizing-typescript-tests` — the audit invokes them, does not define them.
 - `spx validation literal` must be available on the path (ships with the `spx` CLI; the cross-file literal-reuse detection step).
 
-The skill's success criterion depends on `spx validation audit-verdict` — this subcommand must be available before the skill can complete.
+The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete.
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
@@ -373,7 +373,7 @@ If the project has no coverage tooling: record as a coverage note, do not REJECT
 
 <verdict_template>
 
-The skill output is exactly this XML structure. `spx validation audit-verdict` parses and checks it.
+The skill output is exactly this XML structure. `spx audit verify` parses and checks it.
 
 ```xml
 <audit_verdict>
@@ -438,7 +438,7 @@ Template rules enforced by the validator:
 After emitting the verdict, invoke the template validator:
 
 ```bash
-spx validation audit-verdict <verdict-xml-path>
+spx audit verify <verdict-xml-path>
 ```
 
 Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before reporting.
@@ -481,7 +481,7 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 <success_criteria>
 
-The audit is complete when `spx validation audit-verdict` returns exit code 0 for the emitted verdict XML.
+The audit is complete when `spx audit verify` returns exit code 0 for the emitted verdict XML.
 
 The validator checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
 
