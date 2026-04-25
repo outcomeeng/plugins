@@ -5,9 +5,17 @@ description: >-
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke typescript:standardizing-typescript-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `typescript:standardizing-typescript`
+2. `typescript:standardizing-typescript-tests`
+
+</codex_fallback>
 
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
@@ -25,7 +33,7 @@ Use this path to access skill files:
 </accessing_skill_files>
 
 <reference_loading>
-Before discovery or implementation, read `/standardizing-typescript`, then `/standardizing-typescript-tests`. After that, check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
+Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root and apply each file that exists as the repo-local specialization.
 </reference_loading>
 
 <essential_principles>

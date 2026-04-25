@@ -6,7 +6,14 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `typescript:standardizing-typescript`
+
+</codex_fallback>
 
 <objective>
 
@@ -16,13 +23,13 @@ This skill is read-only. It produces verdicts, not commits or fixes.
 
 **Test evidence quality is audited by `/auditing-typescript-tests`.** This skill audits implementation code, not test code. If test files are in scope, delegate to `/auditing-typescript-tests`.
 
-**Before reviewing code, read `/standardizing-typescript`.** After that, check for `spx/local/typescript.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
+**Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists as the repo-local specialization.
 
 </objective>
 
 <quick_start>
 
-1. Read `/standardizing-typescript`, then `spx/local/typescript.md` if present, then `/testing` for methodology + `/testing-typescript` for TypeScript patterns
+1. Check for `spx/local/typescript.md` if present, then invoke `/testing` for methodology + `/testing-typescript` for TypeScript patterns
 2. Load project config: `CLAUDE.md`, `tsconfig.json`, `package.json` (Phase 0)
 3. Run automated gates -- project validation command (Phase 1, blocking)
 4. Run tests -- verify all pass (Phase 2, blocking)

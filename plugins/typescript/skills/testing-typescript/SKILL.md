@@ -5,19 +5,26 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke typescript:standardizing-typescript-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `typescript:standardizing-typescript`
+2. `typescript:standardizing-typescript-tests`
+3. `spec-tree:testing`
+
+</codex_fallback>
 
 # TypeScript Testing Patterns
 
-> **PREREQUISITE: Run through the `/testing` router first.**
->
-> This skill provides TypeScript-specific implementations for decisions made there. Do NOT skip the router—it determines WHAT to test and at WHAT level. This skill shows HOW to implement that decision in TypeScript.
+> The standards and `/testing` router are pre-loaded above. Apply the router's level and evidence decisions to the TypeScript patterns in this skill.
 >
 > Also check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root — these contain project-specific overrides.
->
-> `/standardizing-typescript-tests` is the canonical source for filename conventions, property-based requirements, dependency-injection patterns, harness ownership, and test-data policy. This skill focuses on implementing those decisions in concrete test code.
 
 **Note on Analysis sections:** When reading node specs, the Analysis section documents what the spec author examined. It provides context but is not binding — implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
 

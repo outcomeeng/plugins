@@ -6,9 +6,23 @@ description: >-
   NEVER use auditing-typescript for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke typescript:standardizing-typescript-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `typescript:standardizing-typescript`
+2. `typescript:standardizing-typescript-tests`
+3. `spec-tree:testing`
+4. `spec-tree:auditing-tests`
+
+</codex_fallback>
 
 <objective>
 
@@ -24,14 +38,10 @@ A gate failure skips every later gate. Output is a structured XML verdict valida
 
 <prerequisites>
 
-Before Gate 0, load in order:
+Skills 1–4 are pre-loaded above. Before Gate 0, also:
 
-1. `/standardizing-typescript` — TypeScript code standards
-2. `/standardizing-typescript-tests` — test standards, including the canonical filename pattern
-3. `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
-4. `/auditing-tests` — the 4-property evidence model
-5. `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root (if present)
-6. `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+1. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root (if present)
+2. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
 Gate 0 depends on two tools:
 

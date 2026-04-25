@@ -6,14 +6,19 @@ description: >-
 allowed-tools: Read, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-architecture/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-architecture/SKILL.md" || echo "standardizing-typescript-architecture not found — invoke typescript:standardizing-typescript-architecture manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `typescript:standardizing-typescript-architecture`
+
+</codex_fallback>
 
 <objective>
 Review ADRs against `/standardizing-typescript-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 
-**Read `/standardizing-typescript-architecture` before reviewing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
-
-After reading `/standardizing-typescript-architecture`, check for `spx/local/typescript-architecture.md` at the repository root. Read that file if it exists and apply it as the repo-local specialization.
+**Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists as the repo-local specialization.
 </objective>
 
 <context_loading>
