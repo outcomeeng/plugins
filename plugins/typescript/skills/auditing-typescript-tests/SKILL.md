@@ -14,7 +14,7 @@ TypeScript test audit. Three gates in strict sequence, fail-closed:
 2. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check.
 3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
 
-A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable. `spx audit verify` exit code 0 is the preferred success criterion; when that subcommand is unavailable, the skill applies the template's structural rules as an inline self-check — the result is identical in form, annotated in the verdict header.
+A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable; `spx audit verify` exit code 0 is the sole success criterion.
 
 </objective>
 
@@ -34,7 +34,9 @@ Gate 0 depends on two tools:
 - ESLint must be installed in the consumer repo, and the standards config at `${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/eslint-rules/eslint.audit.config.ts` must be reachable. The rules and config are owned by `/standardizing-typescript-tests` — the audit invokes them, does not define them.
 - `spx validation literal` must be available on the path (ships with the `spx` CLI; the cross-file literal-reuse detection step).
 
-If ESLint or `spx validation literal` is unavailable, Gate 0 records a terminal finding and the audit aborts. `spx audit verify` absence does not abort the skill — see `<verdict_template>` for the inline self-check fallback.
+The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete.
+
+If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
 </prerequisites>
 
@@ -380,7 +382,6 @@ The skill output is exactly this XML structure. `spx audit verify` parses and ch
     <spec_node>{spec-node-path}</spec_node>
     <verdict>{APPROVED|REJECT}</verdict>
     <timestamp>{iso-8601}</timestamp>
-    <validator>{spx audit verify|self-checked — spx audit verify unavailable}</validator>
   </header>
   <gates>
     <gate id="0" name="deterministic" status="{PASS|FAIL|SKIPPED}">
@@ -435,26 +436,13 @@ Template rules enforced by the validator:
 - `FAIL` requires `<findings count="N">` with at least one `<finding>` child; the `count` attribute must equal the child count.
 - `APPROVED` is valid only when all three gates are `PASS`. Any `FAIL` → `REJECT`. Terminal Gate 0 validator-unavailable → `REJECT`.
 
-After emitting the verdict, validate it.
-
-**`spx audit verify` available:**
+After emitting the verdict, invoke the template validator:
 
 ```bash
 spx audit verify <verdict-xml-path>
 ```
 
 Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before reporting.
-
-**`spx audit verify` unavailable (subcommand not implemented):**
-
-Apply the template rules inline — these are the same rules the validator enforces:
-
-1. Every `<gate status="SKIPPED">` has a non-empty `<skipped_reason>` child.
-2. Every `<gate status="FAIL">` has `<findings count="N">` where N equals the number of `<finding>` children (N ≥ 1).
-3. `<verdict>APPROVED</verdict>` is valid only when all three gates are `PASS`. Any `FAIL` gate → `REJECT`. Terminal Gate 0 tool-unavailable → `REJECT`.
-
-Self-check passes → set `<validator>self-checked — spx audit verify unavailable</validator>` in `<header>` and report the audit complete.
-Self-check fails → fix the verdict before reporting.
 
 </verdict_template>
 
@@ -494,11 +482,8 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 <success_criteria>
 
-The audit is complete when either:
+The audit is complete when `spx audit verify` returns exit code 0 for the emitted verdict XML.
 
-- `spx audit verify` returns exit code 0 for the emitted verdict XML, or
-- `spx audit verify` is unavailable and the inline self-check passes (all three template rules satisfied, `<validator>` annotated in the header).
-
-The validator — tool or inline — checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
+The validator checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
 
 </success_criteria>
