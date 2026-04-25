@@ -260,6 +260,42 @@ Complete Python development workflow with testing, implementation, and review.
 - Behavior testing, not implementation testing
 - Tests at appropriate levels (Level 1/Level 2/Level 3)
 
+## Rust Plugin
+
+Complete Rust development workflow with testing, implementation, review, and safety auditing.
+
+### Skills
+
+| Skill                              | Purpose                                                     |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `/standardizing-rust-architecture` | ADR conventions shared by architect and auditor (reference) |
+| `/standardizing-rust`              | Rust code standards (reference, loaded by other skills)     |
+| `/standardizing-rust-tests`        | Rust test standards (reference, loaded by other skills)     |
+| `/testing-rust`                    | Rust-specific testing patterns                              |
+| `/coding-rust`                     | Implementation workhorse with remediation loop              |
+| `/auditing-rust`                   | Strict code audit with zero-tolerance                       |
+| `/auditing-rust-tests`             | Rust test evidence audit (4-property model)                 |
+| `/architecting-rust`               | ADR producer with Compliance-based testability              |
+| `/auditing-rust-architecture`      | ADR audit with structured per-concern verdict               |
+
+### Agents
+
+| Agent                       | Purpose                                                |
+| --------------------------- | ------------------------------------------------------ |
+| `rust-code-auditor`         | Code audit subagent (preloads auditing skill)          |
+| `rust-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
+| `rust-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
+| `rust-simplifier`           | Simplifies recently-modified code; verifies tests pass |
+| `rust-unsafe-auditor`       | Audits unsafe blocks and FFI boundaries for soundness  |
+
+### Core Principles
+
+- No mocking - dependency injection only
+- Reality is the oracle
+- Behavior testing, not implementation testing
+- Tests at appropriate levels (Level 1/Level 2/Level 3)
+- Explicit ownership and typed errors over defensive cloning
+
 ## Spec Tree Plugin
 
 The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative methodology reference.
@@ -469,6 +505,17 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── typescript-architecture-auditor.md
 │   │   │   ├── typescript-test-auditor.md
 │   │   │   └── typescript-simplifier.md
+│   │   └── skills/
+│   │       └── (9 skills)
+│   ├── rust/
+│   │   ├── .claude-plugin/           # Claude Code manifest
+│   │   ├── .codex-plugin/            # Codex manifest
+│   │   ├── agents/
+│   │   │   ├── rust-code-auditor.md
+│   │   │   ├── rust-architecture-auditor.md
+│   │   │   ├── rust-test-auditor.md
+│   │   │   ├── rust-simplifier.md
+│   │   │   └── rust-unsafe-auditor.md
 │   │   └── skills/
 │   │       └── (9 skills)
 │   └── visual/

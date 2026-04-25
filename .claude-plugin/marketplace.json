@@ -46,6 +46,11 @@
       "name": "hdl",
       "source": "./plugins/hdl",
       "description": "HDL engineering: /reviewing-vhdl, /reviewing-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)"
+    },
+    {
+      "name": "rust",
+      "source": "./plugins/rust",
+      "description": "Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rust, /auditing-rust-architecture, rust-unsafe-auditor agent"
     }
   ]
 }

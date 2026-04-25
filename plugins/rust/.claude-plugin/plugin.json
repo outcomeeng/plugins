@@ -1,0 +1,22 @@
+{
+  "name": "rust",
+  "version": "0.1.0",
+  "description": "Rust development workflow with testing, implementation, review, and architecture skills",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/claude",
+  "license": "MIT",
+  "keywords": [
+    "rust",
+    "code",
+    "architecture",
+    "testing",
+    "review",
+    "safety",
+    "unsafe",
+    "tdd",
+    "bdd",
+    "sdd"
+  ]
+}

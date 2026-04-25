@@ -1,0 +1,12 @@
+{
+  "purpose": "Fallback gate metadata for auditing-rust when a repository does not publish its own validation command.",
+  "validationSequence": [
+    "cargo fmt --check",
+    "cargo clippy --all-targets --all-features -- -D warnings",
+    "cargo test --all-targets"
+  ],
+  "notes": [
+    "Prefer the repository's declared validation command from CLAUDE.md or README when present.",
+    "All three commands must pass before deeper manual review begins."
+  ]
+}

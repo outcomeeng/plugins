@@ -1,0 +1,12 @@
+purpose: "Fallback security review signals for auditing-rust."
+signals:
+  - pattern: "std::process::Command"
+    review: "Verify program and arguments come from typed values or hardcoded literals rather than shell strings."
+  - pattern: "unsafe"
+    review: "Require a narrow block and a precise SAFETY invariant tied to the actual memory or FFI contract."
+  - pattern: "std::fs"
+    review: "Check path provenance when writes can escape the intended workspace or tempdir."
+  - pattern: "std::env::var"
+    review: "Verify secrets stay at application boundaries and do not leak into reusable library code."
+  - pattern: "serde_json::from_str / toml::from_str / yaml parsing"
+    review: "Check that parse errors preserve source context and do not silently default."
