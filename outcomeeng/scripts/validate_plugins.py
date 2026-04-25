@@ -27,7 +27,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-
 # Paths to both marketplace catalogs, relative to the repo root.
 CATALOGS: dict[str, str] = {
     "claude": ".claude-plugin/marketplace.json",
@@ -98,9 +97,9 @@ def check_catalog_sync(root: Path) -> list[str]:
     return errors
 
 
-def run_validate(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+def run_validate(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     """Run a validation command. Thin wrapper for testability."""
-    return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def main(
