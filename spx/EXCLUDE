@@ -3,6 +3,8 @@
 # Linting (ruff) always applies.
 # Remove entries when implementation begins and tests should start running.
 
+13-test-infrastructure.enabler
+13-test-infrastructure.enabler/21-python-code-quality.enabler
 21-spec-tree.enabler/15-context-loading.enabler
 21-spec-tree.enabler/21-templates.enabler
 21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler
