@@ -46,11 +46,14 @@ plugins/{plugin-name}/.codex-plugin/plugin.json  # if it exists
 }
 ```
 
-**Claude marketplace catalog** (optional, only if description changes):
+**Marketplace catalogs** — update both when adding a plugin; update descriptions when they change:
 
-```bash
-.claude-plugin/marketplace.json
-```
+| File                               | Surface     |
+| ---------------------------------- | ----------- |
+| `.claude-plugin/marketplace.json`  | Claude Code |
+| `.agents/plugins/marketplace.json` | Codex       |
+
+`just check` runs `validate_plugins`, which exits non-zero if a plugin directory is missing from either catalog.
 
 Always validate after any changes:
 
@@ -103,8 +106,9 @@ Only create a separate version bump commit when bumping WITHOUT any code/doc cha
 3. **Update plugin.json** in the same working session:
    - `plugins/{plugin-name}/.claude-plugin/plugin.json`
    - `plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
-4. **Update marketplace description** (only if description changes):
-   - `.claude-plugin/marketplace.json`
+4. **Update marketplace catalogs**:
+   - When **adding a new plugin**: add an entry to **both** `.claude-plugin/marketplace.json` (Claude Code) and `.agents/plugins/marketplace.json` (Codex). `just check` fails if either catalog is missing the plugin.
+   - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
 5. **Document changes**: Update `CLAUDE.md` if adding new commands/skills to the plugin tables
 6. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
 7. **Stage and commit EVERYTHING together** in ONE commit:

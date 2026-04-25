@@ -220,13 +220,6 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `typescript-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
 | `typescript-simplifier`           | Simplifies recently-modified code; verifies tests pass |
 
-### Core Principles
-
-- No mocking - dependency injection only
-- Reality is the oracle
-- Behavior testing, not implementation testing
-- Tests at appropriate levels (Level 1/Level 2/Level 3)
-
 ## Python Plugin
 
 Complete Python development workflow with testing, implementation, and review.
@@ -252,13 +245,6 @@ Complete Python development workflow with testing, implementation, and review.
 | `python-code-auditor`         | Code audit subagent (preloads auditing skill)          |
 | `python-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
 | `python-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
-
-### Core Principles
-
-- No mocking - dependency injection only
-- Reality is the oracle
-- Behavior testing, not implementation testing
-- Tests at appropriate levels (Level 1/Level 2/Level 3)
 
 ## Rust Plugin
 
@@ -287,14 +273,6 @@ Complete Rust development workflow with testing, implementation, review, and saf
 | `rust-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
 | `rust-simplifier`           | Simplifies recently-modified code; verifies tests pass |
 | `rust-unsafe-auditor`       | Audits unsafe blocks and FFI boundaries for soundness  |
-
-### Core Principles
-
-- No mocking - dependency injection only
-- Reality is the oracle
-- Behavior testing, not implementation testing
-- Tests at appropriate levels (Level 1/Level 2/Level 3)
-- Explicit ownership and typed errors over defensive cloning
 
 ## Spec Tree Plugin
 
@@ -436,12 +414,24 @@ Certain skills must be invoked **automatically** when specific conditions are me
 
 Before committing, invoke `/committing-changes` — it loads marketplace-specific rules (versioning, file targets, commit workflow) from `spx/local/committing-changes.md`.
 
+**When adding a new plugin**, register it in **both** marketplace catalogs:
+
+| File                               | Surface     |
+| ---------------------------------- | ----------- |
+| `.claude-plugin/marketplace.json`  | Claude Code |
+| `.agents/plugins/marketplace.json` | Codex       |
+
+`just check` will fail if a plugin directory is missing from either catalog.
+
 ### Quick Reference: File Locations
 
 ```
 outcomeeng/plugins/                 # Marketplace: outcomeeng
 ├── .claude-plugin/
-│   └── marketplace.json          # Marketplace catalog
+│   └── marketplace.json          # Claude Code marketplace catalog
+├── .agents/
+│   └── plugins/
+│       └── marketplace.json      # Codex marketplace catalog
 ├── .spx/                          # Tool operational (gitignored)
 │   └── sessions/                  # Session handoffs
 ├── outcomeeng/                    # Python package
@@ -478,6 +468,17 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   └── python-test-auditor.md
 │   │   └── skills/
 │   │       └── (9 skills)
+│   ├── rust/
+│   │   ├── .claude-plugin/           # Claude Code manifest
+│   │   ├── .codex-plugin/            # Codex manifest
+│   │   ├── agents/
+│   │   │   ├── rust-code-auditor.md
+│   │   │   ├── rust-architecture-auditor.md
+│   │   │   ├── rust-test-auditor.md
+│   │   │   ├── rust-simplifier.md
+│   │   │   └── rust-unsafe-auditor.md
+│   │   └── skills/
+│   │       └── (9 skills)
 │   ├── spec-tree/                # Spec Tree — 3 phases
 │   │   ├── agents/
 │   │   │   ├── applier.md
@@ -507,17 +508,6 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   └── typescript-simplifier.md
 │   │   └── skills/
 │   │       └── (9 skills)
-│   ├── rust/
-│   │   ├── .claude-plugin/           # Claude Code manifest
-│   │   ├── .codex-plugin/            # Codex manifest
-│   │   ├── agents/
-│   │   │   ├── rust-code-auditor.md
-│   │   │   ├── rust-architecture-auditor.md
-│   │   │   ├── rust-test-auditor.md
-│   │   │   ├── rust-simplifier.md
-│   │   │   └── rust-unsafe-auditor.md
-│   │   └── skills/
-│   │       └── (9 skills)
 │   └── visual/
 │       └── skills/
 │           └── excalidrawing/
@@ -540,7 +530,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │           ├── 21-sync-exclude.enabler/
 │           ├── 32-test-auditing.enabler/
 │           └── 43-audit-verdict-schema.enabler/
-└── CLAUDE.md                      # This file
+└── AGENTS.md                      # This file
 ```
 
 ## How to commit

@@ -4,6 +4,11 @@ Finds the marketplace root (.claude-plugin/marketplace.json) and all plugin
 directories (plugins/*/.claude-plugin/plugin.json), then runs
 ``claude plugin validate`` on each.
 
+Also checks that every plugin directory is registered in all marketplace
+catalogs:
+  - .claude-plugin/marketplace.json  (Claude Code)
+  - .agents/plugins/marketplace.json (Codex)
+
 Usage::
 
     uv run python -m outcomeeng.scripts.validate_plugins [root_dir]
@@ -15,11 +20,19 @@ Exit codes:
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
+
+# Paths to both marketplace catalogs, relative to the repo root.
+CATALOGS: dict[str, str] = {
+    "claude": ".claude-plugin/marketplace.json",
+    "codex": ".agents/plugins/marketplace.json",
+}
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -42,6 +55,47 @@ def discover_targets(root: Path) -> list[Path]:
                 targets.append(child)
 
     return targets
+
+
+def _catalog_plugin_names(path: Path) -> set[str]:
+    """Return the set of plugin names listed in a marketplace catalog JSON."""
+    data = json.loads(path.read_text())
+    return {p["name"] for p in data.get("plugins", [])}
+
+
+def check_catalog_sync(root: Path) -> list[str]:
+    """Report plugins missing from any marketplace catalog.
+
+    Compares the set of plugin directories under ``plugins/`` against each
+    catalog listed in CATALOGS.  Returns a list of human-readable error
+    strings; empty means everything is in sync.
+    """
+    plugins_dir = root / "plugins"
+    plugin_dirs: set[str] = (
+        {
+            child.name
+            for child in plugins_dir.iterdir()
+            if child.is_dir() and (child / ".claude-plugin" / "plugin.json").is_file()
+        }
+        if plugins_dir.is_dir()
+        else set()
+    )
+
+    errors: list[str] = []
+    for surface, rel_path in CATALOGS.items():
+        catalog_path = root / rel_path
+        if not catalog_path.is_file():
+            errors.append(f"catalog missing: {rel_path}")
+            continue
+        registered = _catalog_plugin_names(catalog_path)
+        for name in sorted(plugin_dirs - registered):
+            errors.append(f"{name} not in {surface} catalog ({rel_path})")
+        for name in sorted(registered - plugin_dirs):
+            errors.append(
+                f"{name} in {surface} catalog but has no plugins/{name}/ directory"
+            )
+
+    return errors
 
 
 def run_validate(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
@@ -85,7 +139,11 @@ def main(
         if output.strip():
             print(f"  {output.strip()}", file=sys.stderr)
 
-    return 1 if failures else 0
+    sync_errors = check_catalog_sync(root)
+    for msg in sync_errors:
+        print(f"error: catalog sync: {msg}", file=sys.stderr)
+
+    return 1 if (failures or sync_errors) else 0
 
 
 if __name__ == "__main__":
