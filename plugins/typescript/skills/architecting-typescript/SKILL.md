@@ -5,6 +5,8 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-architecture/SKILL.md"`
+
 <essential_principles>
 **Read `/standardizing-typescript-architecture` before writing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
 

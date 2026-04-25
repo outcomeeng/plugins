@@ -6,6 +6,8 @@ description: >-
 allowed-tools: Read, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md"`
+
 <objective>
 Review ADRs against `/standardizing-python-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 

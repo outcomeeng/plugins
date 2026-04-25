@@ -6,6 +6,8 @@ description: >-
 argument-hint: <skill-path>
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-skills/SKILL.md"`
+
 <objective>
 Evaluate SKILL.md files against best practices for structure, conciseness, progressive disclosure, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
 </objective>

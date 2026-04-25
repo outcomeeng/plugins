@@ -1,6 +1,6 @@
 ---
 name: standardizing-agent-prompts
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Agent prompt writing conventions enforced across all creator and auditor skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read

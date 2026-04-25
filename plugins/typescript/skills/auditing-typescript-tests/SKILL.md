@@ -6,6 +6,10 @@ description: >-
   NEVER use auditing-typescript for test code.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+
 <objective>
 
 TypeScript test audit. Three gates in strict sequence, fail-closed:

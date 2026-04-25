@@ -4,6 +4,10 @@ description: ALWAYS invoke this skill when writing or fixing implementation code
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+
 <objective>
 Write or repair Rust implementation code with spec-driven behavior, repository-aware discovery, explicit seams, and full validation before completion.
 </objective>

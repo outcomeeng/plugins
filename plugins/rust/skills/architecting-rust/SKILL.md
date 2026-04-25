@@ -4,6 +4,10 @@ description: ALWAYS invoke this skill when writing ADRs for Rust.
 allowed-tools: Read, Write, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md"`
+
 <objective>
 Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as Compliance rules.
 </objective>

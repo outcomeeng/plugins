@@ -1,6 +1,6 @@
 ---
 name: standardizing-rust
-disable-model-invocation: true
+user-invocable: false
 description: Rust code standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---

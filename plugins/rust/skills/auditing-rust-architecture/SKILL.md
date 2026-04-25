@@ -4,6 +4,10 @@ description: ALWAYS invoke this skill when auditing ADRs for Rust or after writi
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md"`
+
 <objective>
 Review ADRs against `/standardizing-rust`, `/standardizing-rust-architecture`, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
 

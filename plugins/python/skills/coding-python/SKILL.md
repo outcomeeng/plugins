@@ -5,6 +5,10 @@ description: >-
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+
 <objective>
 Write or fix implementation code that makes tests pass. This skill handles both:
 1. **Writing new implementation** - Given failing tests, produce code that passes them

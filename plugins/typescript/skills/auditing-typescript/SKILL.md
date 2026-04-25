@@ -6,6 +6,8 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+
 <objective>
 
 Adversarial code review through comprehension. Find design flaws that automated tools cannot catch. Produce a structured verdict -- not code changes.

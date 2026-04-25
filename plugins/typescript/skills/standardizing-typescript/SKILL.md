@@ -1,6 +1,6 @@
 ---
 name: standardizing-typescript
-disable-model-invocation: true
+user-invocable: false
 description: >-
   TypeScript code standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read

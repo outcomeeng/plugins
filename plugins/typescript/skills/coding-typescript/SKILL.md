@@ -5,6 +5,10 @@ description: >-
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 

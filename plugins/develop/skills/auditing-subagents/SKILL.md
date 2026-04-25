@@ -6,6 +6,8 @@ description: >-
 argument-hint: <subagent-path>
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md"`
+
 <objective>
 Evaluate subagent configuration files against best practices for role definition, prompt quality, tool selection, model appropriateness, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
 

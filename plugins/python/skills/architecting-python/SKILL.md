@@ -5,6 +5,10 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 

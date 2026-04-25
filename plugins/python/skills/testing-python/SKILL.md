@@ -5,6 +5,10 @@ description: >-
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+
 <objective>
 Write or fix test files for a node specification. This skill handles both:
 1. **Writing new tests** - Given a node spec, produce test files

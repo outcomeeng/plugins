@@ -4,6 +4,10 @@ description: ALWAYS invoke this skill when auditing code for Rust or after writi
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+
 <objective>
 Review Rust implementation code after the mechanical checks pass. Find design flaws, boundary violations, and ADR or PDR drift that automated gates do not catch. This skill is read-only.
 </objective>

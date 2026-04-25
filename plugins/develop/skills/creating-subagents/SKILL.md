@@ -5,6 +5,8 @@ description: >-
   NEVER create subagents without this skill.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md"`
+
 <objective>
 Subagents are specialized Claude instances that run in isolated contexts with focused roles and limited tool access. This skill teaches you how to create effective subagents, write strong system prompts, configure tool access, and orchestrate multi-agent workflows using the Task tool.
 

@@ -5,13 +5,17 @@ description: >-
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md"`
+
 # TypeScript Testing Patterns
 
 > **PREREQUISITE: Run through the `/testing` router first.**
 >
 > This skill provides TypeScript-specific implementations for decisions made there. Do NOT skip the router—it determines WHAT to test and at WHAT level. This skill shows HOW to implement that decision in TypeScript.
 >
-> Before writing or revising tests, load `/standardizing-typescript`, then `/standardizing-typescript-tests`, then check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root in that order.
+> Also check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root — these contain project-specific overrides.
 >
 > `/standardizing-typescript-tests` is the canonical source for filename conventions, property-based requirements, dependency-injection patterns, harness ownership, and test-data policy. This skill focuses on implementing those decisions in concrete test code.
 

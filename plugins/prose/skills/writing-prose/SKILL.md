@@ -5,6 +5,8 @@ description: >-
   NEVER invoke for chat responses to the user, including long research summaries delivered in chat.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`
+
 <objective>
 
 Write prose that reads as varied, specific, and human. These are the craft principles to follow -- not a list of things to avoid, but the positive habits that produce good writing.

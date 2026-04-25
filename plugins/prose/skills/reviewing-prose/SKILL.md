@@ -5,6 +5,8 @@ description: >-
   NEVER review prose without this skill.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`
+
 <objective>
 
 Detect and fix formulaic patterns that signal machine-generated or lazy writing. Flag specific violations and suggest concrete rewrites.

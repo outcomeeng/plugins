@@ -4,6 +4,10 @@ allowed-tools: Read, Grep, Glob, Bash
 description: ALWAYS invoke this skill when auditing tests for Rust or after writing tests. NEVER use auditing-rust for test code.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+
 <objective>
 Rust test audit. Three gates run in strict sequence:
 

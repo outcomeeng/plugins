@@ -5,6 +5,10 @@ description: >-
   NEVER use auditing-python for test code.
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+
 <objective>
 
 Python-specific test audit. Extends `/auditing-tests` with Python supplements for each evidence property: coupling, falsifiability, alignment, coverage.

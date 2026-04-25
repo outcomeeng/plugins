@@ -4,6 +4,10 @@ description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEV
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+
 <objective>
 Implement Rust tests after the `/testing` router decides what to verify and at what level. This skill provides the Rust workflow and load order; reusable policy and examples live in `/standardizing-rust` and `/standardizing-rust-tests`.
 </objective>
