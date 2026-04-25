@@ -116,14 +116,14 @@ Coverage should match between legacy and SPX tests.
 
 Legacy tests:
   tests/unit/status/state.test.ts (5 tests)
-  tests/integration/status/state.integration.test.ts (19 tests)
+  tests/integration/status/state.unit.test.ts (19 tests)
   Total: 24 tests, 86.3% coverage on src/status/state.ts
 
 SPX tests:
-  spx/.../21-initial.story/tests/state.unit.test.ts (5 tests)
-  spx/.../32-transitions.story/tests/state.integration.test.ts (7 tests)
-  spx/.../43-concurrent.story/tests/state.integration.test.ts (4 tests)
-  spx/.../54-edge-cases.story/tests/state.integration.test.ts (8 tests)
+  spx/.../21-initial.story/tests/state.mapping.l1.test.ts (5 tests)
+  spx/.../32-transitions.story/tests/state.scenario.l2.test.ts (7 tests)
+  spx/.../43-concurrent.story/tests/state.scenario.l2.test.ts (4 tests)
+  spx/.../54-edge-cases.story/tests/state.scenario.l2.test.ts (8 tests)
   Total: 24 tests, 86.3% coverage on src/status/state.ts
 
 Verdict: ✓ Test counts match (24=24), coverage matches (86.3%=86.3%)</success_criteria>

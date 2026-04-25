@@ -142,19 +142,19 @@ Test level is encoded in the filename. **Delete sections below that don't apply 
 
 ### TypeScript
 
-| Level | Pattern                      | Example                   |
-| ----- | ---------------------------- | ------------------------- |
-| 1     | `{slug}.unit.test.ts`        | `parsing.unit.test.ts`    |
-| 2     | `{slug}.integration.test.ts` | `cli.integration.test.ts` |
-| 3     | `{slug}.e2e.test.ts`         | `workflow.e2e.test.ts`    |
+| Level | Pattern                           | Example                        |
+| ----- | --------------------------------- | ------------------------------ |
+| 1     | `{subject}.{evidence}.l1.test.ts` | `parsing.scenario.l1.test.ts`  |
+| 2     | `{subject}.{evidence}.l2.test.ts` | `cli.scenario.l2.test.ts`      |
+| 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.scenario.l3.test.ts` |
 
 ### Python
 
-| Level | Pattern                      | Example                   |
-| ----- | ---------------------------- | ------------------------- |
-| 1     | `test_{slug}.unit.py`        | `test_parsing.unit.py`    |
-| 2     | `test_{slug}.integration.py` | `test_cli.integration.py` |
-| 3     | `test_{slug}.e2e.py`         | `test_workflow.e2e.py`    |
+| Level | Pattern                           | Example                        |
+| ----- | --------------------------------- | ------------------------------ |
+| 1     | `test_{subject}.{evidence}.l1.py` | `test_parsing.scenario.l1.py`  |
+| 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.scenario.l2.py`      |
+| 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.scenario.l3.py` |
 
 ---
 

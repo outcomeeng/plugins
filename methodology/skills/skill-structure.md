@@ -69,7 +69,7 @@ We believe that [hypothesis].
 
 ### Assertions
 
-- Assertion text ([test](tests/file.unit.test.ts))
+- Assertion text ([test](tests/file.scenario.l1.test.ts))
 ```
 
 Every assertion must link to at least one test file.
