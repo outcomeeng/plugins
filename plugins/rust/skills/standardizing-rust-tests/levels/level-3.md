@@ -10,7 +10,7 @@ Typical Level 3 claims:
 - a deployed Rust service satisfies a public HTTP contract
 - a Rust CLI works against a real remote API sandbox
 - a browser workflow served by Rust reaches the expected state
-- a SaaS callback, webhook, or credentialed integration round-trips through the real provider
+- a SaaS callback, webhook, or credentialed round-trip through the real provider
 - a distributed workflow depends on infrastructure the local suite cannot stand up
 
 </when_to_use>
@@ -46,7 +46,7 @@ Remote API contract:
 #[ignore = "requires REGISTRY_SANDBOX_TOKEN"]
 async fn package_can_be_published_and_fetched() {
     let client = registry_client_from_env().unwrap();
-    let package_name = unique_package_name("e2e");
+    let package_name = unique_package_name("l3");
 
     client.publish_fixture(&package_name).await.unwrap();
     let fetched = client.fetch_package(&package_name).await.unwrap();

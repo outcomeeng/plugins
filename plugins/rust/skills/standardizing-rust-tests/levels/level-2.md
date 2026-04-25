@@ -83,7 +83,7 @@ async fn worker_consumes_real_queue_messages() {
 
 <anti_patterns>
 
-- marking a test as integration when a hand-written Level 1 seam would give stronger evidence
+- marking a test as L2 when a hand-written Level 1 seam would give stronger evidence
 - shelling out from the test to inspect source text
 - reaching real network services from a Level 2 test
 - missing cleanup for tempdirs, containers, or local service state

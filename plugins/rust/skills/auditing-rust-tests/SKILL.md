@@ -283,7 +283,7 @@ Example:
 ```text
 Module: src/install.rs
 Mutation: install writes block hook entries under PreToolUse instead of Stop
-Impact: install-tooling integration test comparing settings JSON fails
+Impact: install-tooling L2 scenario test comparing settings JSON fails
 ```
 
 Reject when no mutation can be named, when generated mocks replace the governed behavior, or when snapshots only capture hand-built fixtures.
@@ -368,7 +368,7 @@ Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before report
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
 
-Claude rejected a binary integration test because it imported only `assert_cmd`, `predicates`, and fixture helpers. The test spawned the project binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture helpers. The test spawned the project binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
 
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 

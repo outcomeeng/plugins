@@ -131,17 +131,17 @@ If `/testing` reaches a Stage 5 exception, the double must still preserve coupli
 <tooling>
 Use the lightest Rust-native tool that preserves evidence:
 
-| Need                         | Preferred tooling                                             |
-| ---------------------------- | ------------------------------------------------------------- |
-| pure unit tests              | `#[test]`, `assert_eq!`, `rstest` when parameterization helps |
-| temp files or dirs           | `tempfile`                                                    |
-| async tests                  | `#[tokio::test]` or runtime-specific test macro               |
-| property testing             | `proptest` or `quickcheck`                                    |
-| CLI binaries                 | `assert_cmd` and `predicates`                                 |
-| textual golden output        | `insta` when the output surface itself is the assertion       |
-| compile-fail or diagnostics  | `trybuild`                                                    |
-| local services or containers | `testcontainers` or repo-native harnesses                     |
-| coverage                     | `cargo llvm-cov` when available                               |
+| Need                          | Preferred tooling                                             |
+| ----------------------------- | ------------------------------------------------------------- |
+| L1 scenario and mapping tests | `#[test]`, `assert_eq!`, `rstest` when parameterization helps |
+| temp files or dirs            | `tempfile`                                                    |
+| async tests                   | `#[tokio::test]` or runtime-specific test macro               |
+| property testing              | `proptest` or `quickcheck`                                    |
+| CLI binaries                  | `assert_cmd` and `predicates`                                 |
+| textual golden output         | `insta` when the output surface itself is the assertion       |
+| compile-fail or diagnostics   | `trybuild`                                                    |
+| local services or containers  | `testcontainers` or repo-native harnesses                     |
+| coverage                      | `cargo llvm-cov` when available                               |
 
 Snapshot tests are valid only when the textual or structured output surface is itself the contract. They are weak evidence for business logic that has a stronger structural assertion available.
 </tooling>
@@ -291,7 +291,7 @@ fn init_command_writes_project_files() {
 }
 ```
 
-Async integration example:
+Async L2 example:
 
 ```rust
 #[tokio::test]
@@ -373,8 +373,8 @@ Reject or rewrite these patterns:
 <reference_guides>
 Use these level guides when concrete Rust-native examples beyond the inline patterns are needed:
 
-- `levels/level-1-unit.md` - pure computation, tempdir, trait seams, and property tests
-- `levels/level-2-integration.md` - CLI binaries, async adapters, local services, and containerized collaborators
-- `levels/level-3-e2e.md` - remote systems, browser flows, credentials, isolation, and cleanup
+- `levels/level-1.md` - pure computation, tempdir, trait seams, and property tests
+- `levels/level-2.md` - CLI binaries, async adapters, local services, and containerized collaborators
+- `levels/level-3.md` - remote systems, browser flows, credentials, isolation, and cleanup
 
 </reference_guides>

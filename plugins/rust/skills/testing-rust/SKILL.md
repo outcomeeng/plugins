@@ -52,9 +52,9 @@ All Rust test examples are owned by `/standardizing-rust-tests`:
 - `/standardizing-rust-tests` `<property_and_compile_time_patterns>`
 - `/standardizing-rust-tests` `<level_2_patterns>`
 - `/standardizing-rust-tests` `<level_3_patterns>`
-- `/standardizing-rust-tests` `levels/level-1-unit.md`
-- `/standardizing-rust-tests` `levels/level-2-integration.md`
-- `/standardizing-rust-tests` `levels/level-3-e2e.md`
+- `/standardizing-rust-tests` `levels/level-1.md`
+- `/standardizing-rust-tests` `levels/level-2.md`
+- `/standardizing-rust-tests` `levels/level-3.md`
 
 </reference_guides>
 

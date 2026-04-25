@@ -207,7 +207,7 @@ Prefer Rust-native tools and idioms unless a repo-local overlay says otherwise:
 - `serde` for serialization
 - `tracing` for structured observability
 - `tempfile` for tempdir-backed tests
-- `assert_cmd` for CLI integration tests
+- `assert_cmd` for CLI L2 binary tests
 - `proptest` or `quickcheck` for property testing
 - `trybuild` for compile-time contracts
 

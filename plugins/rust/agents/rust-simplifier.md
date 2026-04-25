@@ -40,7 +40,7 @@ Before modifying ANY code, validate test coverage and quality.
 # Find test modules in the source file
 grep -n "#\[cfg(test)\]\|#\[test\]" {source-file}
 
-# Find integration tests referencing the module
+# Find L2 tests referencing the module
 grep -r "use.*{module-name}" tests/ --include="*.rs"
 ```
 
@@ -136,7 +136,7 @@ If scope is unclear: ask for clarification before modifying.
 
 <workflow>
 1. **Identify scope** — determine which files/functions to refine
-2. **Find tests** — locate test modules and integration tests covering the code
+2. **Find tests** — locate test modules and L2 tests covering the code
 3. **Validate test quality** — apply `/testing-rust` principles: no generated mocks, behavior-only
 4. **Run tests (before)** — `cargo test --all-targets` must pass
 5. **Load standards** — read project CLAUDE.md if present
@@ -163,7 +163,7 @@ If uncertain whether a change affects ownership semantics or behavior: do not ma
 <output_format>
 **Test Validation (Pre-Change):**
 
-- Tests found: `path/to/module.rs` (inline) / `tests/integration_test.rs`
+- Tests found: `path/to/module.rs` (inline) / `tests/{subject}.{evidence}.l2.rs`
 - Test quality: [PASS/FAIL with details]
 - Mock frameworks detected: [none / list of violations]
 - Tests passing: [yes/no]

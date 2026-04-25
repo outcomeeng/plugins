@@ -111,7 +111,7 @@ An ADR that references current code ("The current module uses X", "The file Y do
 - ATEMPORAL: "Command orchestration accepts an injected runner seam."
 
 - TEMPORAL: "We discovered that direct process calls make testing impossible."
-- ATEMPORAL: "Direct process invocation prevents isolated testing. Injected runner seams enable unit verification."
+- ATEMPORAL: "Direct process invocation prevents isolated testing. Injected runner seams enable L1 verification."
 
 - TEMPORAL: "The existing async handler holds a mutex across await."
 - ATEMPORAL: "Async request paths release locks before await points."
