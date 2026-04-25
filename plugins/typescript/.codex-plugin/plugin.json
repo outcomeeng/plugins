@@ -6,8 +6,8 @@
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
   },
-  "homepage": "https://github.com/outcomeeng/claude",
-  "repository": "https://github.com/outcomeeng/claude",
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
   "keywords": [
     "typescript",

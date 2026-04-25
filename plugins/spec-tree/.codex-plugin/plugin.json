@@ -6,8 +6,8 @@
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
   },
-  "homepage": "https://github.com/outcomeeng/claude",
-  "repository": "https://github.com/outcomeeng/claude",
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
   "keywords": [
     "spec-tree",
@@ -27,10 +27,7 @@
     "longDescription": "Spec Tree methodology skills for contextualizing, authoring, decomposing, applying, and auditing durable specs.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
-    "capabilities": [
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Read", "Write"],
     "websiteURL": "https://outcome.engineering"
   }
 }

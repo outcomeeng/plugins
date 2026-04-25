@@ -9,7 +9,7 @@ This tutorial walks through the full workflow — from bootstrapping a spec tree
 npm install -g @outcomeeng/spx
 
 # Add the marketplace and install plugins
-claude plugin marketplace add outcomeeng/claude
+claude plugin marketplace add outcomeeng/plugins
 claude plugin install spec-tree@outcomeeng
 
 # Install a language plugin for your project

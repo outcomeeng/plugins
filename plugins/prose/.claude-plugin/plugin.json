@@ -5,13 +5,7 @@
   "author": {
     "name": "Simon Heimlicher"
   },
-  "repository": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
-  "keywords": [
-    "prose",
-    "writing",
-    "reviewing",
-    "editing",
-    "style"
-  ]
+  "keywords": ["prose", "writing", "reviewing", "editing", "style"]
 }

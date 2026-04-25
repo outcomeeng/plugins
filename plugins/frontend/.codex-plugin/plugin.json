@@ -6,13 +6,10 @@
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
   },
-  "homepage": "https://github.com/outcomeeng/claude",
-  "repository": "https://github.com/outcomeeng/claude",
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
-  "keywords": [
-    "design",
-    "frontend"
-  ],
+  "keywords": ["design", "frontend"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Frontend Design",
@@ -20,10 +17,7 @@
     "longDescription": "Frontend design workflows for building distinctive web UI without generic layouts.",
     "developerName": "Outcome Engineering",
     "category": "Design",
-    "capabilities": [
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Read", "Write"],
     "websiteURL": "https://outcome.engineering"
   }
 }

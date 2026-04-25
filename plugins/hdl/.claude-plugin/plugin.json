@@ -5,7 +5,15 @@
   "author": {
     "name": "Simon Heimlicher"
   },
-  "repository": "https://github.com/outcomeeng/claude",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
-  "keywords": ["vhdl", "systemverilog", "verilog", "fpga", "asic", "hdl", "synthesis"]
+  "keywords": [
+    "vhdl",
+    "systemverilog",
+    "verilog",
+    "fpga",
+    "asic",
+    "hdl",
+    "synthesis"
+  ]
 }

@@ -6,8 +6,8 @@
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
   },
-  "homepage": "https://github.com/outcomeeng/claude",
-  "repository": "https://github.com/outcomeeng/claude",
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
   "keywords": [
     "vhdl",
@@ -25,10 +25,7 @@
     "longDescription": "Hardware-description-language review workflows for idiomatic VHDL-2008 and SystemVerilog code.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
-    "capabilities": [
-      "Read",
-      "Write"
-    ],
+    "capabilities": ["Read", "Write"],
     "websiteURL": "https://outcome.engineering"
   }
 }
