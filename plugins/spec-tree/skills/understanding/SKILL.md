@@ -25,6 +25,12 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 
 </principles>
 
+<stop_triggers>
+
+About to reason about index placement, sparse integer ordering, dependency direction, same-index sibling independence, unified sibling number space, midpoint insertion, or fractional indexing without `references/ordering-rules.md` loaded -> STOP. Read it before making any placement claim.
+
+</stop_triggers>
+
 <workflow>
 
 1. Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If present, skip — already loaded.
@@ -32,9 +38,9 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
    - `references/durable-map.md` — truth hierarchy, declarative model, atemporal voice, node states
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
+   - `references/ordering-rules.md` — sparse integer ordering, dependency direction, unified sibling number space, insertion rules
 3. Note operational references (loaded on demand by other skills):
    - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
-   - `references/ordering-rules.md` — sparse integer ordering, dependency encoding (used by `/authoring`, `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
 4. Note template and example locations (read only when authoring):
@@ -48,8 +54,8 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 
 ```text
 <SPEC_TREE_FOUNDATION>
-Loaded: durable-map, node-types, assertion-types
-Operational references available: decomposition-semantics, ordering-rules, what-goes-where, excluded-nodes
+Loaded: durable-map, node-types, assertion-types, ordering-rules
+Operational references available: decomposition-semantics, what-goes-where, excluded-nodes
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
@@ -59,12 +65,13 @@ Examples available in: examples/
 
 <success_criteria>
 
-- [ ] Three core reference files read and understood
+- [ ] Four core reference files read and understood
 - [ ] Operational reference, template, and example locations known
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
 - [ ] Methodology loaded: enabler vs outcome distinction, three-part hypothesis structure
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
+- [ ] Methodology loaded: lower index constrains higher index and descendants; same index means independent siblings; fractional indexing is the escape hatch when integer gaps are exhausted
 
 </success_criteria>

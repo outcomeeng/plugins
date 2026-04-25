@@ -51,7 +51,13 @@ spx/
 
 ## Sparse Integer Ordering
 
-Numeric prefixes encode dependency order: lower index constrains higher. Same index means independent.
+Numeric prefixes encode dependency order within each directory:
+
+1. Lower index constrains higher index, plus that higher index's descendants.
+2. Same index means independent siblings. They depend on the previous lower index, but not on each other.
+3. Files and directories share one number space. The numeric prefix sorts; the type suffix identifies the artifact.
+4. Insert between existing indices with the midpoint integer. Fractional indexing is the escape hatch when the integer gap is zero; avoid it when possible. Frequent fractional indices mean the directory needs restructuring.
+5. Numbers are sibling-unique only. The same integer can be reused under a different parent.
 
 Formula for N items: `i_k = 10 + floor(k * 89 / (N + 1))`
 
