@@ -283,6 +283,7 @@ Canonical filename model:
 
 - TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
+- Rust: `<subject>.<evidence>.<level>[.<runner>].rs`
 
 Canonical evidence tokens:
 
@@ -309,3 +310,5 @@ Examples:
 - `dispatch.mapping.l1.test.ts`
 - `browser-auth.scenario.l2.playwright.test.ts`
 - `test_seeded_generators.property.l1.py`
+- `session_token.scenario.l1.rs`
+- `login_flow.scenario.l3.tokio.rs`
