@@ -25,7 +25,7 @@ If you cannot describe the harness precisely, stop and ask.
 </harness_rule>
 
 <file_placement>
-Integration evidence belongs in `spx/.../tests/{slug}.integration.rs`.
+Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 </file_placement>
 
 <cli_binary_pattern>

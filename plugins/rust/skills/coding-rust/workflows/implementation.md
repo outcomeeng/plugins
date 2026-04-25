@@ -46,8 +46,8 @@ Document for yourself before moving on:
 For behavior changes:
 
 1. Locate the right test home:
-   - `spx/.../tests/{slug}.unit.rs`
-   - `spx/.../tests/{slug}.integration.rs`
+   - `spx/.../tests/{subject}.{evidence}.l1.rs`
+   - `spx/.../tests/{subject}.{evidence}.l2.rs`
    - inline `#[cfg(test)]` if the module already owns that evidence
 2. Write or extend the tests.
 3. Run the relevant test target to confirm the new case fails for the expected reason.

@@ -11,7 +11,7 @@ Rust test audit. Three gates run in strict sequence:
 2. Gate 1 assertion audit: per-assertion challenge, scope, evidence method, controlled implementations, oracle independence, harness chain, and four-property evidence check.
 3. Gate 2 architectural DRY: repeated setup patterns that belong in shared test support.
 
-A gate failure skips every later gate. The output is a structured XML verdict. If `spx validation audit-verdict` is available, run it before reporting the audit complete.
+A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable; `spx audit verify` exit code 0 is the sole success criterion.
 </objective>
 
 <prerequisites>
@@ -23,6 +23,8 @@ Before Gate 0, load in order:
 4. `/auditing-tests`
 5. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
 6. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+
+The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete. If the tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
 Repository-specific rules:
 
@@ -302,7 +304,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </rust_supplements>
 
 <verdict_template>
-Emit this XML structure:
+The skill output is exactly this XML structure. `spx audit verify` parses and checks it.
 
 ```xml
 <audit_verdict>
@@ -354,13 +356,13 @@ Emit this XML structure:
 </audit_verdict>
 ```
 
-If `spx validation audit-verdict` exists, run:
+After emitting the verdict, invoke the template validator:
 
 ```bash
-spx validation audit-verdict <verdict-xml-path>
+spx audit verify <verdict-xml-path>
 ```
 
-Fix malformed verdict XML before reporting.
+Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before reporting.
 </verdict_template>
 
 <failure_modes>
@@ -384,13 +386,8 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 </failure_modes>
 
 <success_criteria>
-The audit is complete when:
+The audit is complete when `spx audit verify` returns exit code 0 for the emitted verdict XML.
 
-- Gate 0 deterministic checks have PASS or recorded terminal findings
-- every spec assertion has a Gate 1 PASS or REJECT verdict
-- Gate 2 runs only after all assertions pass Gate 1
-- coverage findings cite `cargo llvm-cov` output or a Gate 0 coverage-tool failure
-- the XML verdict is well-formed
-- `spx validation audit-verdict` passes when that validator is available
+The validator checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
 
 </success_criteria>
