@@ -21,10 +21,11 @@ Before running the audit, load `/standardizing-python`, then `/standardizing-pyt
 
 1. Read `/standardizing-python`
 2. Read `/standardizing-python-tests`
-3. Read `/auditing-tests` and its evidence model before auditing
-4. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
-5. At each property step, apply the Python supplement below
-6. First property failure = REJECT (skip remaining properties for that assertion)
+3. Read `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
+4. Read `/auditing-tests` and its evidence model before auditing
+5. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
+6. At each property step, apply the Python supplement below
+7. First property failure = REJECT (skip remaining properties for that assertion)
 
 Use the filename conventions from `/standardizing-python-tests` for assertion-to-test mapping.
 

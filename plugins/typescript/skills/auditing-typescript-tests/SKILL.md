@@ -24,9 +24,10 @@ Before Gate 0, load in order:
 
 1. `/standardizing-typescript` — TypeScript code standards
 2. `/standardizing-typescript-tests` — test standards, including the canonical filename pattern
-3. `/auditing-tests` — the 4-property evidence model
-4. `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root (if present)
-5. `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+3. `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
+4. `/auditing-tests` — the 4-property evidence model
+5. `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root (if present)
+6. `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
 Gate 0 depends on two tools:
 

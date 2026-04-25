@@ -19,9 +19,10 @@ Before Gate 0, load in order:
 
 1. `/standardizing-rust`
 2. `/standardizing-rust-tests`
-3. `/auditing-tests`
-4. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
-5. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+3. `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
+4. `/auditing-tests`
+5. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
+6. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
 Repository-specific rules:
 
