@@ -62,7 +62,15 @@ Scan target tests for disabled evidence:
 rg -n '#\[ignore\]|return;|panic!\("skip|todo!\(|unimplemented!\(' <spec-node-path>/tests
 ```
 
-Fail Gate 0 for `#[ignore]`, skip-by-early-return, `todo!`, or `unimplemented!` in test bodies.
+Fail Gate 0 for bare `#[ignore]` (no reason string), skip-by-early-return, `todo!`, or `unimplemented!` in test bodies.
+
+The credentialed form `#[ignore = "..."]` is the declared Level 3 lane pattern from `/standardizing-rust-tests` and must **not** be failed in `.e2e.rs` files. Check for misuse in non-Level-3 files:
+
+```bash
+rg -n '#\[ignore = ' <spec-node-path>/tests --glob '!*.e2e.rs'
+```
+
+Any `#[ignore = "..."]` outside `.e2e.rs` files is a misplaced credentialed annotation → fail Gate 0.
 </check>
 
 <check id="M1" name="generated_mock_signal">

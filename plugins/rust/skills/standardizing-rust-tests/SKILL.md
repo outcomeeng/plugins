@@ -32,7 +32,7 @@ When another skill loads this reference inside a repository, it must also check 
 </repo_local_overlay>
 
 <core_model>
-Every co-located Rust spec test file name encodes evidence and execution cost. The default pattern for this repository is:
+Every co-located Rust spec test file name encodes the execution level and the infrastructure it requires. The default pattern for this repository is:
 
 ```text
 spx/.../tests/{slug}.unit.rs
