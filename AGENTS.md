@@ -150,6 +150,14 @@ Meta-skills for Codex and Claude Code plugin development: creating and auditing 
 | `/auditing-commands`           | Audit slash commands for best practices                            |
 | `/auditing-subagents`          | Audit subagent configurations                                      |
 
+### Agents
+
+| Agent              | Purpose                                                     |
+| ------------------ | ----------------------------------------------------------- |
+| `skill-auditor`    | Skill audit subagent (preloads auditing-skills skill)       |
+| `command-auditor`  | Command audit subagent (preloads auditing-commands skill)   |
+| `subagent-auditor` | Subagent audit subagent (preloads auditing-subagents skill) |
+
 ## HDL Plugin
 
 HDL engineering skills for VHDL and SystemVerilog code review.
