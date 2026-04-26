@@ -6,6 +6,18 @@ description: >-
 argument-hint: <command-path>
 ---
 
+!`cat "${CLAUDE_SKILL_DIR}/../creating-commands/SKILL.md" || echo "creating-commands not found — invoke skill develop:creating-commands now"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md" || echo "standardizing-agent-prompts not found — invoke skill develop:standardizing-agent-prompts now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `develop:creating-commands`
+2. Skill `develop:standardizing-agent-prompts`
+
+</codex_fallback>
+
 <objective>
 Evaluate slash command .md files against best practices for structure, YAML configuration, argument usage, dynamic context, tool restrictions, and effectiveness. Then provide actionable findings with contextual judgment, not arbitrary scores.
 
@@ -49,12 +61,11 @@ During audits, prioritize evaluation of:
 <critical_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Locate the creating-commands skill and its references:
-   - Use Glob: `.claude/plugins/cache/**/creating-commands/SKILL.md`
-   - Then read the SKILL.md, and its `references/arguments.md`, `references/patterns.md`, `references/tool-restrictions.md`
-2. Locate and read the standardizing-agent-prompts skill:
-   - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
-   - Covers voice, description style, constraint language, and anti-patterns
+1. Both skills are already injected above. Read the creating-commands reference files:
+   - `${CLAUDE_SKILL_DIR}/../creating-commands/references/arguments.md`
+   - `${CLAUDE_SKILL_DIR}/../creating-commands/references/patterns.md`
+   - `${CLAUDE_SKILL_DIR}/../creating-commands/references/tool-restrictions.md`
+2. The standardizing-agent-prompts skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Handle edge cases:
    - If reference files are missing or unreadable, note in findings under "Configuration Issues" and proceed with available content
    - If YAML frontmatter is malformed, flag as critical issue

@@ -6,7 +6,17 @@ description: >-
 argument-hint: <subagent-path>
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md" || echo "standardizing-agent-prompts not found — invoke skill develop:standardizing-agent-prompts now"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../creating-subagents/SKILL.md" || echo "creating-subagents not found — invoke skill develop:creating-subagents now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `develop:standardizing-agent-prompts`
+2. Skill `develop:creating-subagents`
+
+</codex_fallback>
 
 <objective>
 Evaluate subagent configuration files against best practices for role definition, prompt quality, tool selection, model appropriateness, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
@@ -39,12 +49,10 @@ This ensures subagents follow proper structure, configuration, pure XML formatti
 <critical_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Locate the creating-subagents skill and its references:
-   - Use Glob: `.claude/plugins/cache/**/creating-subagents/SKILL.md`
-   - Then read its `references/subagents.md`, `references/writing-subagent-prompts.md`
-2. Locate and read the standardizing-agent-prompts skill:
-   - Use Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`
-   - Covers voice, description style, constraint language, and anti-patterns
+1. Both skills are already injected above. Read the creating-subagents reference files:
+   - `${CLAUDE_SKILL_DIR}/../creating-subagents/references/subagents.md`
+   - `${CLAUDE_SKILL_DIR}/../creating-subagents/references/writing-subagent-prompts.md`
+2. The standardizing-agent-prompts skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Before penalizing any missing section, search entire file for equivalent content under different tag names
 4. Read the subagent configuration file at `$ARGUMENTS`
 5. Evaluate against best practices from steps 1-3, focusing on functionality over formatting

@@ -6,7 +6,17 @@ description: >-
 argument-hint: <skill-path>
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-skills/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-skills/SKILL.md" || echo "standardizing-skills not found — invoke skill develop:standardizing-skills now"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md" || echo "standardizing-agent-prompts not found — invoke skill develop:standardizing-agent-prompts now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `develop:standardizing-skills`
+2. Skill `develop:standardizing-agent-prompts`
+
+</codex_fallback>
 
 <objective>
 Evaluate SKILL.md files against best practices for structure, conciseness, progressive disclosure, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
@@ -45,7 +55,7 @@ During audits, prioritize evaluation of:
 **MANDATORY**: Read standards FIRST, before auditing:
 
 1. Read `/standardizing-skills` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/standardizing-skills.md` at the repository root and read it if it exists.
-2. Read `/standardizing-agent-prompts` — voice, description style, constraint language, and prose anti-patterns. Locate via Glob: `.claude/plugins/cache/**/standardizing-agent-prompts/SKILL.md`.
+2. Read `/standardizing-agent-prompts` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
 4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples.
 5. Handle edge cases:
