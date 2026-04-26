@@ -52,7 +52,6 @@ check:
     step "skills"          find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
     step "fmt-check"       dprint check
     step "pytest"          uv run python -m pytest -v
-    step "vitest"          pnpm test
     total=$((SECONDS - total_start))
     echo ""
     echo "━━━ Timing Summary ━━━"

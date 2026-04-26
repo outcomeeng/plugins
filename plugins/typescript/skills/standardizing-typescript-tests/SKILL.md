@@ -12,6 +12,10 @@ Define TypeScript-specific test standards loaded by `/testing-typescript`, `/cod
 Read `/testing` first when deciding what evidence to create. Read `/standardizing-typescript` before this reference when writing or reviewing TypeScript test code. These standards apply to all TypeScript tests.
 </objective>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/typescript-tests.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization.
+</repo_local_overlay>
+
 <core_model>
 Every TypeScript test file name encodes three independent axes:
 
@@ -94,20 +98,20 @@ export default defineConfig({
 <router_mapping>
 After `/testing` chooses the evidence and level, implement it with these TypeScript patterns:
 
-| Router Decision                            | TypeScript implementation                         |
-| ------------------------------------------ | ------------------------------------------------- |
-| Stage 2 -> `l1`                            | Vitest, typed factories, temp dirs, pure helpers  |
-| Stage 2 -> `l2`                            | Vitest or Playwright with local real dependencies |
-| Stage 2 -> `l3`                            | Vitest or Playwright with credentials or network  |
-| Stage 3A: pure computation                 | Direct tests of typed pure functions              |
-| Stage 3B: extract pure part                | Pure helper at `l1`, boundary at outer level      |
-| Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors       |
-| Stage 5 exception 2: interaction protocols | Spy class with typed call recording               |
-| Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`            |
-| Stage 5 exception 4: safety                | Class that records intent without side effects    |
-| Stage 5 exception 5: combinatorial cost    | Configurable fake with real-shaped behavior       |
-| Stage 5 exception 6: observability         | Spy that captures hidden boundary details         |
-| Stage 5 exception 7: contract probes       | Stub validated against the contract schema        |
+| Router Decision                            | TypeScript implementation                                  |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| Stage 2 -> `l1`                            | Vitest, test harnesses, typed factories, temp dirs         |
+| Stage 2 -> `l2`                            | Vitest or Playwright with locally available real APIs      |
+| Stage 2 -> `l3`                            | Vitest or Playwright with credentials or remote real APIs  |
+| Stage 3A: pure computation                 | Direct tests of typed pure functions                       |
+| Stage 3B: extract pure part                | Pure helper at `l1`, boundary at outer level               |
+| Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors                |
+| Stage 5 exception 2: interaction protocols | Spy function or class with typed call recording            |
+| Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`                     |
+| Stage 5 exception 4: safety                | Function or class that records intent without side effects |
+| Stage 5 exception 5: combinatorial cost    | Configurable fake with real-shaped behavior                |
+| Stage 5 exception 6: observability         | Spy that captures hidden boundary details                  |
+| Stage 5 exception 7: contract probes       | Stub validated against the contract schema                 |
 
 </router_mapping>
 
@@ -120,7 +124,7 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/testing` Stage 5 exception.
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/testing` Stage 5 exception, see `<router_mapping>` above
 
 ```typescript
 interface PaymentGateway {
@@ -153,19 +157,163 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 </property_based_testing>
 
 <test_data_policy>
-Use source-owned values when the production system owns them.
 
-- Import routes, selectors, ids, feature flags, registry names, and public constants from the module that owns them
-- Keep descriptive test titles and assertion diagnostics inline
-- Put stable test-only strings, ids, dates, and expected-output snippets in `testing/fixtures/{domain}.ts`
-- Put shared harnesses, generated data, and Stage 5 doubles in `testing/harnesses/`
+**KEY INSIGHT:**Most code is not testable, or not testable in a maintainable way.
+
+**REMEDIATION:**
+
+Use the following decision table to determine, how to invoke the code under test. Run through this table for every assertion in the spec file separately. Every test file can only cover assertions of the same evidence type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
+
+1. **Data that the source imports or should import**
+
+ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
+
+ALWAYS verify that the code under test imports standard values like HTTP status codes from the canonical source of the runtime (Node) or framework (e.g., React or Next.js).
+
+<invalid_source_owned_constant>
+
+```typescript
+const PATH_SEPARATOR = "/";
+```
+
+</invalid_source_owned_constant>
+
+<valid_source_owned_constant>
+
+```typescript
+// Use `-` to safely encode non-alphanumeric characters across branch names,
+// Github actions and Vercel preview environment hostnames
+const ENCODED_SEPARATOR = "-";
+```
+
+</valid_source_owned_constant>
+
+2. **Data that the code under test owns or should own**
+
+Most code under test Claude encounters will hardcode the same numbers and string literals several times in the source code.
+
+This means the code is not testable in a maintainable way because any change to the source file will invalidate the test and lead to churn and extra work.
+
+ALWAYS refactor the code under test so that it defines all constants, including numbers and string literals, in a constant dict or other suitable data structure.
+
+<invalid_source_owned_constant>
+
+```typescript
+export function validateSemantics(verdict: AuditVerdict): readonly string[] {
+  const hasFail = verdict.gates.some((g) => g.status === "FAIL");
+  const hasSkipped = verdict.gates.some((g) => g.status === "SKIPPED");
+  const hasPass = verdict.gates.some((g) => g.status === "PASS");
+  // ...
+}
+```
+
+</invalid_source_owned_constant>
+
+<valid_source_owned_constant>
+
+```typescript
+export const VERDICT_STATUSES = {
+  FAIL: "fail",
+  SKIPPED: "skipped",
+  PASS: "pass",
+} as const;
+export type AuthProviderType = (typeof VERDICT_STATUSES)[keyof typeof VERDICT_STATUSES];
+export const authProviderSchema = z.enum(
+  Object.values(VERDICT_STATUSES) as [string, ...string[]],
+);
+```
+
+</valid_source_owned_constant>
+
+ALWAYS make sure that these data structures reflect semantically what they represent.
+
+<invalid_test_owned_constant>
+
+```typescript
+const VALID_VERDICTS = ["fail", "skipped", "pass"] as const;
+```
+
+</invalid_test_owned_constant>
+
+**3. Data that only the test needs and hence owns**
+
+**THERE ARE NO VALID TEST-OWNED CONSTANTS!**
+
+ALWAYS refactor the code under test so it exports the semantically structured constant the test asserts on.
+
+Then import one or very few of these constant objects into the test file. Any changes to the code under test are automatically reflected and the test requires zero maintenance.
+
+<valid_test_data_sources>
+
+<generators>
+
+- ALWAYS factor out test data like strings, ids, dates, and expected-output snippets into a test harness or test factory in `testing/generators/{domain}.ts` or `testing/generators/{domain}/{concern}.ts`
+
+<randomized_test_literals_generators>
+
+Use fast-check or faker.js.
+
+</randomized_test_literals_generators>
+
+<randomized_structured_data_generators>
+
+```typescript
+// testing/generators/{domain}.ts
+
+// Manages a temp project directory; provides writeNode, readFile, and fc.Arbitrary accessors
+export async function withTestEnv(
+  config: Config,
+  callback: (env: SpecTreeEnv) => Promise<void>,
+): Promise<void>;
+
+// Generates valid spec-tree node paths drawn from config kinds
+export function arbitraryNodePath(config: Config): fc.Arbitrary<string>;
+
+// Generates valid spec-tree decision paths drawn from config kinds
+export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
+
+// Generates arbitrary SpecTreeFixture instances (arrays of typed path entries)
+export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
+```
+
+</randomized_structured_data_generators>
+
+</generators>
+
+<harnesses>
+
+- ALWAYS factor out test data like strings, ids, dates, and expected-output snippets into a test harness or test factory in `testing/harnesses/{domain}.ts` or `testing/harnesses/{domain}/{concern}.ts`
+
+<test_harnesses>
+
+Create or reuse harnesses with automatic context management.
+
+```typescript
+export function withPlaywright(testFn: BasePlaywrightTest): PlaywrightHarnessTest {
+  return testFn.extend<PlaywrightHarnessFixtures>({
+    playwrightHarness: async ({ page }, provideFixture) => {
+      await provideFixture(createPlaywrightHarness(page));
+    },
+  });
+}
+
+export const test = withPlaywright(baseTest);
+```
+
+</test_harnesses>
+
+</harnesses>
+
+- Keep descriptive test titles and assertion diagnostics inline; they are the only valid string literals in a test file.
 - Use aliases such as `@testing/*` for shared test infrastructure
 - Use co-located `./helpers` only when the helper serves one test file
+
+</valid_test_data_sources>
 
 </test_data_policy>
 
 <script_testing>
-Checked-in `scripts/` entrypoints get thin tests:
+Committed `scripts/` entrypoints get thin tests:
 
 - Argument parsing through the repository's canonical parser
 - Dispatch into the imported orchestrator
@@ -187,35 +335,9 @@ Reject or rewrite these patterns:
 - Deep relative imports into stable shared test infrastructure
 - Manual argument parsing in script tests when the repo has a canonical parser
 
+The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model.
+
 </anti_patterns>
-
-<lint_enforcement>
-These standards are mechanically enforced by ESLint rules shipped in `${CLAUDE_SKILL_DIR}/eslint-rules/`. Coding agents MUST be able to see these rules while writing tests — this is where the standards live, not in the audit skill. The audit just invokes them.
-
-| Rule                                  | Check ID | Standard enforced                                                                                                                                                   |
-| ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `audit/no-test-filename-violations`   | F1–F5    | `<file_naming>` — canonical `<subject>.<evidence>.<level>[.<runner>].test.ts`; legacy suffixes (`.unit`, `.integration`, `.e2e`, `.spec`) rejected                  |
-| `audit/no-literal-test-strings`       | L1       | `<test_data_policy>` — source-owned values; literals only in descriptive callsites (`it`/`describe`/`test`/`expect` message) and policy-defined protocol exceptions |
-| `audit/no-literal-test-numbers`       | L2       | `<test_data_policy>` — numeric literals only in `{-1, 0, 1, 2}`; precision args to `toBeCloseTo` must be named                                                      |
-| `audit/no-ad-hoc-test-constants`      | C1       | `<test_data_policy>` — module-scope `const` backed by literal data is an ad-hoc constant regardless of naming                                                       |
-| `audit/no-bdd-try-catch-anti-pattern` | B1       | BDD assertion behaviour — `expect()` inside `try/catch` without re-throw silently swallows failures                                                                 |
-| `audit/no-mock-api` (warn)            | M1–M2    | `<dependency_injection>` — surfaces mock/stub/network-replacement call sites so they can be mapped to a `/testing` Stage 5 exception                                |
-| `no-restricted-imports`               | H2       | `<test_data_policy>` — no deep relative imports into `testing/`; use `@testing/*` alias                                                                             |
-
-The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model. The heuristics (`MIN_STRING_LENGTH`, `MIN_NUMBER_DIGITS`, and the `COMMON_LITERAL_ALLOWLIST` covering HTTP methods, JS type names, Node.js builtin module specifiers, common CSS keywords) are shared between the per-file rules and the cross-file detector via `${CLAUDE_SKILL_DIR}/eslint-rules/literal-signal.ts`.
-
-The default policy files at `${CLAUDE_SKILL_DIR}/eslint-rules/config/test-string-policy.ts` and `${CLAUDE_SKILL_DIR}/eslint-rules/config/test-number-policy.ts` permit the descriptive callsites for Vitest, Jest, and Playwright, plus ARIA-role, Playwright load-state, and DOM-attribute protocol exceptions. Consumers override by shipping an `eslint.audit.config.ts` at the repo root.
-
-To invoke locally while writing tests (equivalent to what Gate 0 runs):
-
-```bash
-pnpm eslint \
-  --config ${CLAUDE_SKILL_DIR}/eslint-rules/eslint.audit.config.ts \
-  --format stylish \
-  <your-tests>/
-```
-
-</lint_enforcement>
 
 <success_criteria>
 TypeScript test guidance follows this standard when:

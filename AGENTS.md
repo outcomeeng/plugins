@@ -203,7 +203,7 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | ---------------------------------------- | ------------------------------------------------------------- |
 | `/standardizing-typescript-architecture` | ADR conventions shared by architect and auditor (reference)   |
 | `/standardizing-typescript`              | TypeScript code standards (reference, loaded by other skills) |
-| `/standardizing-typescript-tests`        | TypeScript test standards + ESLint rule plugin (reference)    |
+| `/standardizing-typescript-tests`        | TypeScript test standards (reference, loaded by other skills) |
 | `/testing-typescript`                    | TypeScript-specific testing patterns                          |
 | `/coding-typescript`                     | Implementation workhorse with remediation loop                |
 | `/auditing-typescript`                   | Strict code audit with zero-tolerance                         |

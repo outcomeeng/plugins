@@ -26,13 +26,12 @@ If you see `cat` commands above rather than skill content, shell injection did n
 
 <objective>
 
-TypeScript test audit. Three gates in strict sequence, fail-closed:
+TypeScript test audit. Two gates in strict sequence, fail-closed:
 
-1. **Gate 0 — Deterministic**: ESLint (per-file) and `spx validation literal` (cross-file) check filenames, magic literals, harness placement, BDD anti-patterns, and mock-API presence. Claude does not judge these rules — Gate 0 output is routed into the verdict template verbatim.
-2. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check.
-3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
+1. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check. A `spx validation literal` cross-file check runs before Gate 1 as a non-blocking preliminary; findings feed into step `mocks` and step `four_properties`.
+2. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
 
-A gate failure skips every later gate.
+A gate failure skips the next gate.
 
 </objective>
 
@@ -54,84 +53,32 @@ If you see `cat` commands above, shell injection did not run (Codex or similar e
 
 3. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
-Gate 0 depends on two tools:
-
-- ESLint must be installed in the consumer repo, and the standards config at `${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/eslint-rules/eslint.audit.config.ts` must be reachable. The rules and config are owned by `/standardizing-typescript-tests` — the audit invokes them, does not define them.
-- `spx validation literal` must be available on the path (ships with the `spx` CLI; the cross-file literal-reuse detection step).
-
-If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
+Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). If unavailable, proceed without cross-file literal findings.
 
 </prerequisites>
 
-<gate_0_deterministic>
+<preliminary_check>
 
-Run two tools and merge their findings.
-
-**Per-file checks (ESLint)**
-
-```bash
-pnpm eslint \
-  --config ${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/eslint-rules/eslint.audit.config.ts \
-  --format json \
-  <spec-node-path>/tests/
-```
-
-ESLint rules applied (rule id → check):
-
-| Rule id                               | Check                                                                  | Severity |
-| ------------------------------------- | ---------------------------------------------------------------------- | -------- |
-| `audit/no-test-filename-violations`   | F1-F5: canonical `<subject>.<evidence>.<level>[.<runner>].test.ts`     | error    |
-| `audit/no-literal-test-strings`       | L1: string literals outside descriptive callsites / policy exceptions  | error    |
-| `audit/no-literal-test-numbers`       | L2: numeric literals outside `{-1, 0, 1, 2}` and named precision slots | error    |
-| `audit/no-ad-hoc-test-constants`      | module-scope const backed by literal data                              | error    |
-| `audit/no-bdd-try-catch-anti-pattern` | `expect()` inside try/catch with no re-throw                           | error    |
-| `no-restricted-imports`               | H2: deep relative imports into `testing/`                              | error    |
-| `audit/no-mock-api`                   | M1-M2: mock / stub / network-replacement call sites                    | warn     |
-
-The rules themselves are the standard — coding agents see them via `/standardizing-typescript-tests` while writing tests, so Gate 0 cannot surface any rule the author did not already have access to. Consumer override: if `eslint.audit.config.ts` exists at the repo root, the skill uses that instead of the standardizing default. Consumers extend the default config to add project-specific exceptions.
-
-**Cross-file checks (`spx validation literal`)**
+If `spx validation literal` is available, run it before Gate 1:
 
 ```bash
 spx validation literal --files <spec-node-path>/tests/**/*.test.ts --json
 ```
 
-Detects `src-reuse` (a literal in a test also appears in the production module) and `test-dupe` (a literal duplicated across test files, absent from the production module). Both indicate the literal should be imported from production or extracted to a shared fixture.
+Findings feed into Gate 1:
 
-**Exit-code composition:**
+| check_id | Source                                                                      | Hands to                               |
+| -------- | --------------------------------------------------------------------------- | -------------------------------------- |
+| L3       | `spx validation literal` — src-reuse (literal appears in production module) | Gate 1 step `mocks` / `falsifiability` |
+| L4       | `spx validation literal` — test-dupe (literal duplicated across test files) | Gate 1 step `four_properties`          |
 
-| ESLint exit | spx exit | Gate 0 status | Action                                                                                   |
-| ----------- | -------- | ------------- | ---------------------------------------------------------------------------------------- |
-| 0           | 0        | PASS          | Proceed to Gate 1. `audit/no-mock-api` warnings are handed to Gate 1 step `mocks`.       |
-| 1           | any      | FAIL          | Record ESLint errors in the verdict; include spx findings if also 1; skip Gates 1 and 2. |
-| 0           | 1        | FAIL          | Record spx findings in the verdict; skip Gates 1 and 2.                                  |
-| 2           | any      | FAIL          | Terminal "eslint unavailable". Skip Gates 1 and 2.                                       |
-| any         | 2        | FAIL          | Terminal "spx validation literal unavailable". Skip Gates 1 and 2.                       |
+If `spx validation literal` is unavailable, proceed to Gate 1 without these findings.
 
-A missing tool is equivalent to exit 2 — the audit cannot proceed without both checks.
-
-**NEVER apply the deterministic checks manually in the skill body.** Filename shape, mock-API presence, magic literals, harness placement, and cross-file literal reuse are regex-able or tool-decidable; they belong to the tools. Route the tool output into the verdict template verbatim — do not reproduce the checks manually.
-
-Verdict `check_id` mapping (for the `<finding>`-level `<check_id>` element):
-
-| check_id | Source                                               |
-| -------- | ---------------------------------------------------- |
-| F1–F5    | `audit/no-test-filename-violations`                  |
-| L1       | `audit/no-literal-test-strings`                      |
-| L2       | `audit/no-literal-test-numbers`                      |
-| L3       | `spx validation literal` — src-reuse                 |
-| L4       | `spx validation literal` — test-dupe                 |
-| M1       | `audit/no-mock-api` (vitest/jest patterns — warning) |
-| M2       | `audit/no-mock-api` (network libraries — warning)    |
-| H2       | `no-restricted-imports`                              |
-| B1       | `audit/no-bdd-try-catch-anti-pattern`                |
-| C1       | `audit/no-ad-hoc-test-constants`                     |
-
-</gate_0_deterministic>
+</preliminary_check>
 
 <gate_1_assertion>
 
-Runs only if Gate 0 is PASS. Entry point is the spec, not the test file.
+Entry point is the spec, not the test file.
 
 For each assertion in the spec's Assertions section, execute steps 1–7 in order. First step failure rejects that assertion and moves to the next.
 
@@ -180,9 +127,9 @@ Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.
 
 <step name="mocks">
 
-**Step 4 — Judge Gate 0-detected mocks against `/testing` exceptions**
+**Step 4 — Scan for mocks and judge against `/testing` exceptions**
 
-For each `M1`/`M2` finding in this test file:
+For each `vi.mock`, `vi.spyOn`, `vi.fn`, or similar mock pattern in this test file:
 
 1. Identify which `/testing` exception (1–7) applies:
 
@@ -222,7 +169,7 @@ The test proves correctness against an independent oracle, not self-consistency.
 For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `./helpers`:
 
 1. Open the harness file.
-2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any pattern Gate 0 would flag — inside the harness module body or its setup path.
+2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any mocking pattern — inside the harness module body or its setup path.
 3. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
 4. If the harness imports another harness, trace one level at a time until the chain terminates at a non-test module.
 
@@ -397,7 +344,7 @@ If the project has no coverage tooling: record as a coverage note, do not REJECT
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for TypeScript: F1–F5, L1–L4, M1–M2, H2, B1, C1 (see `<gate_0_deterministic>` for the check-to-rule mapping). Gate 2 extraction target: `testing/harnesses/{name}.ts`.
+Follow `<verdict_format>` in `/auditing-tests`. Preliminary check IDs: L3, L4 (from `spx validation literal` — see `<preliminary_check>`). Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
 </verdict_format>
 
@@ -407,7 +354,7 @@ Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for TypeScript:
 
 The standard in `/standardizing-typescript-tests` rejects `.e2e.test.ts`, `.unit.test.ts`, `.integration.test.ts`. A prior version of this skill said filename conventions were "deferred as standards issues." Both rules were visible. Claude followed the audit skill because it was the operational guide for *this task*, resolving the contradiction by authority-of-specificity. Five files with legacy suffixes shipped approved.
 
-How to avoid: Gate 0 runs the standard's rules directly. The deferral carveout no longer exists; there is no contradiction to resolve.
+How to avoid: `/standardizing-typescript-tests` defines the filename convention. Gate 1 step 1 challenges the assertion type; the deferral carveout no longer exists.
 
 **Failure 2 — Harness coupling camouflage: the mock lives in the harness**
 
@@ -439,8 +386,8 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 Audit is complete when:
 
-- [ ] Gate 0 run: ESLint and `spx validation literal` both executed
-- [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if Gate 0 PASS)
+- [ ] Preliminary check: `spx validation literal` run (or skipped if unavailable)
+- [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if preliminary check complete or skipped)
 - [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has gate, step, and specific detail
