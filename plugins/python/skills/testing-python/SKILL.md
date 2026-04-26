@@ -5,9 +5,20 @@ description: >-
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke python:standardizing-python manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `python:standardizing-python`
+2. `python:standardizing-python-tests`
+3. `spec-tree:testing`
+
+</codex_fallback>
 
 <objective>
 Write or fix test files for a node specification. This skill handles both:
@@ -36,7 +47,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Output:** Test files written to `{node}/tests/` directory
 
-**Prerequisites:** Run `/testing` first, then read `/standardizing-python` and `/standardizing-python-tests`. The foundational skill chooses evidence and level; this skill implements those decisions in Python.
+**Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in Python.
 
 **Workflow:**
 

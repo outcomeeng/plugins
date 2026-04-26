@@ -5,9 +5,23 @@ description: >-
   NEVER use auditing-python for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke python:standardizing-python manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `python:standardizing-python`
+2. `python:standardizing-python-tests`
+3. `spec-tree:testing`
+4. `spec-tree:auditing-tests`
+
+</codex_fallback>
 
 <objective>
 
@@ -21,15 +35,7 @@ Before running the audit, load `/standardizing-python`, then `/standardizing-pyt
 
 <quick_start>
 
-**PREREQUISITES**:
-
-1. Read `/standardizing-python`
-2. Read `/standardizing-python-tests`
-3. Read `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
-4. Read `/auditing-tests` and its evidence model before auditing
-5. Run the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict
-6. At each property step, apply the Python supplement below
-7. First property failure = REJECT (skip remaining properties for that assertion)
+Skills 1–4 are pre-loaded above. Apply the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict. At each property step, apply the Python supplement below. First property failure = REJECT.
 
 Use the filename conventions from `/standardizing-python-tests` for assertion-to-test mapping.
 

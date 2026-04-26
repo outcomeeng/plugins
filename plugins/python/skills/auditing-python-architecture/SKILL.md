@@ -6,12 +6,19 @@ description: >-
 allowed-tools: Read, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md" || echo "standardizing-python-architecture not found — invoke python:standardizing-python-architecture manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `python:standardizing-python-architecture`
+
+</codex_fallback>
 
 <objective>
 Review ADRs against `/standardizing-python-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 
-**Read `/standardizing-python-architecture` before reviewing any ADR.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
+**Standards are pre-loaded above.** It defines the canonical ADR sections, how testability appears in Compliance rules, and what does NOT belong in an ADR.
 </objective>
 
 <context_loading>
@@ -43,7 +50,7 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 
 <process>
 
-1. **Read `/standardizing-python-architecture`** for canonical conventions
+1. **Standards are pre-loaded above.** Read repo-local `spx/local/python-architecture.md` if present.
 2. **Read `/testing`** for methodology (5 stages, 5 factors, 7 exceptions)
 3. **Verify an ADR exists.** If the module makes architectural decisions (module layout, library choice, DI patterns) without an ADR, the absence is the violation — REJECT immediately. Do not treat missing ADRs as N/A.
 4. **Read the ADR** completely

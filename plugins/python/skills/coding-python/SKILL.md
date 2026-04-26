@@ -5,9 +5,17 @@ description: >-
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke python:standardizing-python manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `python:standardizing-python`
+2. `python:standardizing-python-tests`
+
+</codex_fallback>
 
 <objective>
 Write or fix implementation code that makes tests pass. This skill handles both:
@@ -38,7 +46,7 @@ Before invoking this skill:
 1. **Tests must exist** - Written by `/testing-python`
 2. **Tests must be reviewed** - Approved by `/auditing-python-tests`
 3. **Spec must be loaded** - Context from `/spec-tree:contextualizing`
-4. **Standards must be loaded** - Read `/standardizing-python` and `/standardizing-python-tests`
+4. **Standards are pre-loaded above**
 
 If tests don't exist or aren't approved, go back to earlier steps.
 </prerequisites>

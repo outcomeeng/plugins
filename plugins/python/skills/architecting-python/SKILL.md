@@ -5,9 +5,17 @@ description: >-
 allowed-tools: Read, Write, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-architecture/SKILL.md" || echo "standardizing-python-architecture not found — invoke python:standardizing-python-architecture manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `python:standardizing-python-architecture`
+2. `python:standardizing-python-tests`
+
+</codex_fallback>
 
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
@@ -29,7 +37,7 @@ You are a **distinguished Python architect**. Your role is to translate technica
 
 ## Foundational Stance
 
-**Read `/standardizing-python-architecture` and `/standardizing-python-tests` before writing any ADR.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
+**Standards are pre-loaded above.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
 
 - ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
 - Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
