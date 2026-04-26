@@ -4,9 +4,17 @@ description: ALWAYS invoke this skill when writing or fixing implementation code
 allowed-tools: Read, Write, Bash, Glob, Grep, Edit
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke rust:standardizing-rust-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-tests`
+
+</codex_fallback>
 
 <objective>
 Write or repair Rust implementation code with spec-driven behavior, repository-aware discovery, explicit seams, and full validation before completion.
@@ -28,7 +36,7 @@ Do not search the project directory for skill files when the loading message alr
 </accessing_skill_files>
 
 <reference_loading>
-Before discovery or implementation, read `/standardizing-rust`, then `/standardizing-rust-tests`. After that, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
+**Standards are pre-loaded above.** After loading, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
 </reference_loading>
 
 <quick_start>

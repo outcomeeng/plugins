@@ -4,16 +4,24 @@ description: ALWAYS invoke this skill when writing ADRs for Rust.
 allowed-tools: Read, Write, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md" || echo "standardizing-rust-architecture not found — invoke rust:standardizing-rust-architecture manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-architecture`
+
+</codex_fallback>
 
 <objective>
 Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as Compliance rules.
 </objective>
 
 <essential_principles>
-**Read `/standardizing-rust` before writing any ADR, then read `/standardizing-rust-architecture`.** The container defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in Compliance rules, and what does not belong in an ADR.
+**Standards are pre-loaded above.** The first skill defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in Compliance rules, and what does not belong in an ADR.
 
 After reading those standards, check for `spx/local/rust.md` and `spx/local/rust-architecture.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
 

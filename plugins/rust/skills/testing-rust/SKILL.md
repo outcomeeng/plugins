@@ -4,23 +4,32 @@ description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEV
 allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke rust:standardizing-rust-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-tests`
+3. `spec-tree:testing`
+
+</codex_fallback>
 
 <objective>
 Implement Rust tests after the `/testing` router decides what to verify and at what level. This skill provides the Rust workflow and load order; reusable policy and examples live in `/standardizing-rust` and `/standardizing-rust-tests`.
 </objective>
 
 <prerequisites>
-Run through `/testing` first. That router decides what to test, the evidence mode, and the target level.
+The `/testing` router, `/standardizing-rust`, and `/standardizing-rust-tests` are pre-loaded above.
 
-Before writing or revising tests, read:
+Before writing or revising tests, also check:
 
-1. `/standardizing-rust`
-2. `/standardizing-rust-tests`
-3. `spx/local/rust.md` at the repository root, if present
-4. `spx/local/rust-tests.md` at the repository root, if present
+1. `spx/local/rust.md` at the repository root, if present
+2. `spx/local/rust-tests.md` at the repository root, if present
 
 </prerequisites>
 

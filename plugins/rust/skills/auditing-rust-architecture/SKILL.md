@@ -4,14 +4,22 @@ description: ALWAYS invoke this skill when auditing ADRs for Rust or after writi
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-architecture/SKILL.md" || echo "standardizing-rust-architecture not found — invoke rust:standardizing-rust-architecture manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-architecture`
+
+</codex_fallback>
 
 <objective>
 Review ADRs against `/standardizing-rust`, `/standardizing-rust-architecture`, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
 
-Read `/standardizing-rust`, then `/standardizing-rust-architecture`, before reviewing any ADR.
+**Standards are pre-loaded above.**
 </objective>
 
 <context_loading>
@@ -22,16 +30,15 @@ After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/loc
 
 <process>
 
-1. Read `/standardizing-rust`, then `/standardizing-rust-architecture`
-2. Read repo-local Rust, Rust architecture, and Rust test overlays when present
-3. Verify an ADR exists for any real architectural choice
-4. Read the ADR completely
-5. Check section structure against the authoritative ADR template
-6. Check every section for temporal language
-7. Check Compliance for real testability constraints and absence of level tables
-8. Check for mocking language or invalid DI claims
-9. Check consistency with ancestor ADRs/PDRs when applicable
-10. Output APPROVED or REJECTED with a concern table
+1. Read repo-local Rust overlays when present (`spx/local/rust.md`, `spx/local/rust-architecture.md`, `spx/local/rust-tests.md`)
+2. Verify an ADR exists for any real architectural choice
+3. Read the ADR completely
+4. Check section structure against the authoritative ADR template
+5. Check every section for temporal language
+6. Check Compliance for real testability constraints and absence of level tables
+7. Check for mocking language or invalid DI claims
+8. Check consistency with ancestor ADRs/PDRs when applicable
+9. Output APPROVED or REJECTED with a concern table
 
 </process>
 

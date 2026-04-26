@@ -4,9 +4,23 @@ allowed-tools: Read, Grep, Glob, Bash
 description: ALWAYS invoke this skill when auditing tests for Rust or after writing tests. NEVER use auditing-rust for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke rust:standardizing-rust-tests manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-tests`
+3. `spec-tree:testing`
+4. `spec-tree:auditing-tests`
+
+</codex_fallback>
 
 <objective>
 Rust test audit. Three gates run in strict sequence:
@@ -19,14 +33,10 @@ A gate failure skips every later gate. Output is a structured XML verdict valida
 </objective>
 
 <prerequisites>
-Before Gate 0, load in order:
+Skills 1–4 are pre-loaded above. Before Gate 0, also:
 
-1. `/standardizing-rust`
-2. `/standardizing-rust-tests`
-3. `/testing` — the spec-tree testing skill the author was required to follow; loads the naming contract and evidence rules the audit checks compliance against
-4. `/auditing-tests`
-5. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
-6. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+1. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
+2. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
 The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete. If the tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 

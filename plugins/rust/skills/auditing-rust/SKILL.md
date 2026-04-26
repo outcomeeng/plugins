@@ -4,9 +4,17 @@ description: ALWAYS invoke this skill when auditing code for Rust or after writi
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke rust:standardizing-rust-tests manually"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. `rust:standardizing-rust`
+2. `rust:standardizing-rust-tests`
+
+</codex_fallback>
 
 <objective>
 Review Rust implementation code after the mechanical checks pass. Find design flaws, boundary violations, and ADR or PDR drift that automated gates do not catch. This skill is read-only.
@@ -14,7 +22,7 @@ Review Rust implementation code after the mechanical checks pass. Find design fl
 
 <quick_start>
 
-1. Read `/standardizing-rust`, then `spx/local/rust.md` if it exists.
+1. Standards are pre-loaded above. Also check for `spx/local/rust.md` if it exists.
 2. If test files are part of the review scope, read `/standardizing-rust-tests` and `/testing-rust` for test-shape context, then hand off evidence judgments to `/auditing-rust-tests`.
 3. Read `CLAUDE.md`, `Cargo.toml`, and `rust-toolchain.toml` when present.
 4. Run the repository's declared validation command. If none is declared, use the fallback full sequence: `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-targets`.
@@ -24,7 +32,7 @@ Review Rust implementation code after the mechanical checks pass. Find design fl
 </quick_start>
 
 <repo_local_overlays>
-When auditing inside a repository, read `/standardizing-rust` first. Then check for `spx/local/rust.md` at the repository root. Read it if it exists and enforce it as the repo-local specialization.
+Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository root. Read it if it exists and enforce it as the repo-local specialization.
 </repo_local_overlays>
 
 <essential_principles>
