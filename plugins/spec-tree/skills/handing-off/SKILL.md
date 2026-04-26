@@ -39,7 +39,7 @@ Three rules govern a conversation's session scope:
 
 **A handoff replaces incorporated context. It never supplements it.** A receiving agent must never need to read a prior handoff to understand the continuation.
 
-**Permission to archive comes from completing this workflow against the in-scope set resolved by `references/scope-resolution.md` — never from queue inspection.** The algorithm reads the filesystem accumulator (`.spx/sessions/$CLAUDE_SESSION_ID/`) as primary source of truth and cross-checks against `<SESSION_SCOPE>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers. The mere existence of another session (whether created by this agent mid-work, queued by another agent, or otherwise) never grants permission to close an in-scope session.
+**Permission to archive comes from completing this workflow against the in-scope set named in `<SESSION_SCOPE ids="…">` — never from queue inspection.** The mere existence of another session (whether created by this agent mid-work, queued by another agent, or otherwise) never grants permission to close an in-scope session.
 
 **Mid-session created handoffs are workflow artifacts, not scope members.** If the agent ran `spx session handoff` earlier in this conversation and that file still sits in TODO, it must be reconciled at final closure so the end state has at most one handoff — either rewritten in place as the canonical continuation, or archived alongside the scope.
 
