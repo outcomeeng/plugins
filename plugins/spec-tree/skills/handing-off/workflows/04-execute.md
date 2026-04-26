@@ -73,7 +73,7 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 **Path C — new handoff (one handoff, no artifact)**:
 
 1. Run `spx session handoff`. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
-2. Read `<SESSION_FILE>` to confirm it exists and is empty.
+2. Read `<SESSION_FILE>` to confirm it exists; note the prefilled `agent_session_id` and `created_at` values — preserve them when writing the full content below.
 3. Write `<SESSION_FILE>` using the template in `references/session-format.md`.
 
 **Content of the canonical continuation (B and C):**
