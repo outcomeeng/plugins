@@ -7,6 +7,21 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-start"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-resume"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/post-compact"
           }
         ]
       }

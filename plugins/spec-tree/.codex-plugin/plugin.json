@@ -1,6 +1,6 @@
 {
   "name": "spec-tree",
-  "version": "0.24.5",
+  "version": "0.25.0",
   "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, session management, and TDD flows driven by specs",
   "author": {
     "name": "Simon Heimlicher",

@@ -83,6 +83,12 @@ Check `$ARGUMENTS` for these flags before starting workflow 01.
 
 </arguments>
 
+<compact_analog>
+When the conversation compacts before explicit closure, `compactPrompt` directs Claude to produce a prospective session file without tools or questions. The PostCompact hook persists it to `.spx/compact-summary.md`; the `session-resume` SessionStart hook injects it into the next session.
+
+This replaces workflows 03–04 with a proposal the receiving agent applies through the normal `/picking-up` → `/handing-off` flow. See `references/compact-format.md` for the document structure, the `compactPrompt` value, and receiving-agent behavior.
+</compact_analog>
+
 <workflows>
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete.
 

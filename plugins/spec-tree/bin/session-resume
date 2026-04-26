@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# SessionStart hook: inject the compact summary from the last compaction into context.
+#
+# When present, .spx/compact-summary.md contains a prospective handoff produced
+# by compactPrompt and written by the post-compact hook. Outputting it here
+# injects it into Claude's context at session start so the receiving agent can
+# apply the persistence proposal through the normal /picking-up flow.
+#
+# Reads (from environment, set by session-start):
+#   CLAUDE_PROJECT_DIR  Canonical project root.
+
+set -euo pipefail
+
+warn() {
+	# Do not write to stdout from a hook except for intentional context injection.
+	printf 'session-resume: %s\n' "$*" >&2
+}
+
+main() {
+	local project_dir
+	local compact_file
+
+	project_dir="${CLAUDE_PROJECT_DIR:-}"
+	if [[ -z "$project_dir" ]]; then
+		warn "CLAUDE_PROJECT_DIR is unset; cannot locate compact summary"
+		exit 0
+	fi
+
+	compact_file="$project_dir/.spx/compact-summary.md"
+	if [[ ! -f "$compact_file" ]]; then
+		exit 0
+	fi
+
+	# Stdout from a SessionStart hook is injected into Claude's context.
+	printf '## Context from previous compaction\n\n'
+	cat "$compact_file"
+}
+
+main "$@"

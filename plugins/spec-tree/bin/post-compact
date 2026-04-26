@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# PostCompact hook: persist the compact summary so the next session can load it.
+#
+# Writes:
+#   .spx/compact-summary.md  Last compact summary, scoped to the project.
+#
+# Reads (from environment, set by session-start):
+#   CLAUDE_PROJECT_DIR  Canonical project root.
+#   CLAUDE_SESSION_ID   Session identifier (currently unused; reserved).
+
+set -euo pipefail
+
+warn() {
+	# Do not write to stdout from a hook: stdout is injected into Claude's context.
+	printf 'post-compact: %s\n' "$*" >&2
+}
+
+json_string() {
+	local filter="$1"
+	jq -er "$filter | strings | select(length > 0)"
+}
+
+main() {
+	local input
+	local summary
+	local project_dir
+	local out_file
+	local tmp_file
+
+	input="$(cat)"
+
+	summary="$(json_string '.compact_summary' <<<"$input")" || {
+		# No summary in payload — nothing to persist.
+		exit 0
+	}
+
+	# Prefer the env var exported by session-start over the payload's .cwd,
+	# which may not be the project root on all runtimes.
+	project_dir="${CLAUDE_PROJECT_DIR:-}"
+	if [[ -z "$project_dir" ]]; then
+		project_dir="$(json_string '.cwd' <<<"$input" || true)"
+		if [[ -n "$project_dir" ]]; then
+			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
+		fi
+	fi
+
+	if [[ -z "$project_dir" ]]; then
+		warn "project directory unavailable; cannot persist compact summary"
+		exit 0
+	fi
+
+	if [[ ! -d "$project_dir" ]]; then
+		warn "project directory does not exist: $project_dir"
+		exit 0
+	fi
+
+	out_file="$project_dir/.spx/compact-summary.md"
+	tmp_file="${out_file}.tmp.$$"
+
+	mkdir -p "$(dirname "$out_file")"
+	printf '%s\n' "$summary" >"$tmp_file"
+	mv "$tmp_file" "$out_file"
+}
+
+main "$@"
