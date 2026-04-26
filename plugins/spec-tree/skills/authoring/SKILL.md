@@ -183,6 +183,7 @@ Before writing files, check:
 - [ ] Assertion types match test strategy
 - [ ] ADR/PDR compliance rules use MUST/NEVER format with `([review])` tags
 - [ ] Spec compliance assertions use the correct evidence tag: `[test]` for automated verification (including tests that exercise a lint rule), `[review]` for human judgment
+- [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `*.unit.test.ts`, Python `test_*.py` with no evidence/level, Rust `*_test.rs` with no evidence/level are legacy) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
 - [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>

@@ -79,6 +79,18 @@ For each assertion:
 | **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
 | **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
 
+**Legacy filename check:** For every **Covered** link above, verify the filename encodes evidence type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
+
+| Language   | Canonical pattern                                 | Legacy (fails check)                                                    |
+| ---------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
+| TypeScript | `<subject>.<evidence>.<level>[.<runner>].test.ts` | `*.unit.test.ts`, `*.integration.test.ts`, `*.e2e.test.ts`, `*.spec.ts` |
+| Python     | `test_<subject>.<evidence>.<level>.py`            | `test_*.py` with no evidence or level segment                           |
+| Rust       | `<subject>.<evidence>.<level>[.<runner>].rs`      | `*_test.rs` or `test_*.rs` with no evidence or level segment            |
+
+evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
+
+If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via AskUserQuestion before proceeding.
+
 Report the evidence gap summary before proceeding.
 
 </step>
