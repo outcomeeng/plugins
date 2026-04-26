@@ -1,39 +1,88 @@
 #!/usr/bin/env bash
-# SessionStart hook: inject the compact summary from the last compaction into context.
+# SessionStart hook: atomically claim and inject any pending compact summary.
 #
-# When present, .spx/compact-summary.md contains a prospective handoff produced
-# by compactPrompt and written by the post-compact hook. Outputting it here
-# injects it into Claude's context at session start so the receiving agent can
-# apply the persistence proposal through the normal /picking-up flow.
+# When .spx/compact-<old_session_id>.md is present, this script:
+#   1. Claims it atomically (mv to .processing-<new_session_id>)
+#   2. Writes the claimed path to .spx/compact-active (for compact-done cleanup)
+#   3. Injects the content into Claude's context via stdout with a preamble
+#      directing the receiving agent to invoke /handing-off then compact-done.
 #
-# Reads (from environment, set by session-start):
-#   CLAUDE_PROJECT_DIR  Canonical project root.
+# Reads (from SessionStart JSON payload on stdin):
+#   .session_id   New session identifier (used in the claimed filename).
+#
+# Reads (from environment):
+#   CLAUDE_PROJECT_DIR   Canonical project root.
 
 set -euo pipefail
 
 warn() {
-	# Do not write to stdout from a hook except for intentional context injection.
+	# Intentional: do not write to stdout except for context injection below.
 	printf 'session-resume: %s\n' "$*" >&2
 }
 
+json_string() {
+	local filter="$1"
+	jq -er "$filter | strings | select(length > 0)"
+}
+
 main() {
+	local input
+	local new_session_id
 	local project_dir
-	local compact_file
+	local compact_done
+	local compact_md
+	local old_id
+	local claimed
+
+	input="$(cat)"
+
+	new_session_id="$(json_string '.session_id' <<<"$input")" || {
+		warn "missing .session_id in payload; cannot claim compact summary"
+		exit 0
+	}
 
 	project_dir="${CLAUDE_PROJECT_DIR:-}"
 	if [[ -z "$project_dir" ]]; then
-		warn "CLAUDE_PROJECT_DIR is unset; cannot locate compact summary"
+		warn "CLAUDE_PROJECT_DIR is unset; cannot locate compact summaries"
 		exit 0
 	fi
 
-	compact_file="$project_dir/.spx/compact-summary.md"
-	if [[ ! -f "$compact_file" ]]; then
-		exit 0
-	fi
+	# Derive compact-done path from this script's resolved location.
+	compact_done="$(cd "$(dirname "$0")" && pwd)/compact-done"
 
-	# Stdout from a SessionStart hook is injected into Claude's context.
-	printf '## Context from previous compaction\n\n'
-	cat "$compact_file"
+	# Scan for unclaimed compact summaries. The glob compact-*.md naturally excludes
+	# claimed files — they have no .md extension after the atomic rename.
+	for compact_md in "$project_dir"/.spx/compact-*.md; do
+		[[ -f "$compact_md" ]] || continue
+
+		old_id="$(basename "$compact_md" .md)"
+		old_id="${old_id#compact-}"
+		claimed="$project_dir/.spx/compact-${old_id}.processing-${new_session_id}"
+
+		# Atomic claim: mv is a single directory-entry rename on the same filesystem.
+		# If two sessions start simultaneously, only one mv wins; the other skips.
+		mv "$compact_md" "$claimed" 2>/dev/null || continue
+
+		# Write pointer so compact-done knows which file to remove.
+		printf '%s\n' "$claimed" >"$project_dir/.spx/compact-active"
+
+		# Stdout from a SessionStart hook is injected into Claude's context.
+		printf '## Context from previous compaction\n\n'
+		printf 'The previous session compacted before explicit closure. The summary\n'
+		printf 'below contains the built-in 9-section compaction output; if spec-tree\n'
+		printf 'work occurred, sections ### Nodes, ### Lessons, ### Skills,\n'
+		printf '### Starting Point, ### Persistence Proposal, and ### Session Scope\n'
+		printf 'follow the standard sections.\n\n'
+		printf 'Invoke /handing-off to present the Persistence Proposal to the user,\n'
+		printf 'write approved items, and create a session file via `spx session handoff`.\n'
+		printf 'When the session file is created, run:\n'
+		printf '  %s\n\n' "$compact_done"
+		printf -- '---\n\n'
+		cat "$claimed"
+
+		# Only claim and inject one file per session start.
+		break
+	done
 }
 
 main "$@"

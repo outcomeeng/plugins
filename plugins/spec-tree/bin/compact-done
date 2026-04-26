@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Remove the compact summary claimed by session-resume.
+# Run after `spx session handoff` has written the session file.
+
+set -euo pipefail
+
+warn() {
+	printf 'compact-done: %s\n' "$*" >&2
+}
+
+main() {
+	local project_dir
+	local active_file
+	local compact_path
+
+	project_dir="${CLAUDE_PROJECT_DIR:-${PWD}}"
+	active_file="$project_dir/.spx/compact-active"
+
+	if [[ ! -f "$active_file" ]]; then
+		# Nothing to clean up — idempotent.
+		exit 0
+	fi
+
+	compact_path="$(cat "$active_file")"
+	[[ -f "$compact_path" ]] && rm "$compact_path"
+	rm "$active_file"
+}
+
+main "$@"

@@ -1,18 +1,18 @@
 # Compact Handoff Format
 
-When a conversation compacts before explicit closure, `compactPrompt` (in `~/.claude/settings.json`) **appends** supplemental instructions to Claude Code's built-in compaction prompt — it does not replace it. The built-in prompt produces a 9-section summary (Primary Request, Key Technical Concepts, Files, Errors, Problem Solving, User Messages, Pending Tasks, Current Work, Next Step); the `compactPrompt` value adds spec-tree-specific sections after that. The PostCompact hook persists the full output to `.spx/compact-summary.md`; the `session-resume` SessionStart hook injects it into the next session's context via stdout.
+When a conversation compacts before explicit closure, `compactPrompt` (in `~/.claude/settings.json`) **appends** supplemental instructions to Claude Code's built-in compaction prompt — it does not replace it. The built-in prompt produces a 9-section summary (Primary Request, Key Technical Concepts, Files, Errors, Problem Solving, User Messages, Pending Tasks, Current Work, Next Step); the `compactPrompt` value adds spec-tree-specific sections after that. The PostCompact hook persists the full output to `.spx/compact-<session_id>.md`; the `session-resume` SessionStart hook atomically claims the file (renaming it to `.processing-<new_session_id>`) and injects its content into the next session's context via stdout.
 
-This is a **prospective session file**: it captures everything the handing-off workflow would have written, but without user approval and without tool execution. The receiving agent treats it as a starting point and applies the persistence proposal through the normal `/picking-up` → `/handing-off` flow.
+The receiving session executes the handing-off persist and commit phase (workflows 03–04): it presents the Persistence Proposal to the user, writes approved items, creates a session file via `spx session handoff`, and runs `compact-done` to remove the claimed compact file. Subsequent sessions resume from that session file via `/picking-up`.
 
 ## Relationship to session-format.md
 
-| Aspect            | Session file (session-format.md)         | Compact summary (this file)                  |
-| ----------------- | ---------------------------------------- | -------------------------------------------- |
-| Produced by       | Workflow 04 (with tools, after approval) | Built-in prompt + `compactPrompt` supplement |
-| Stored in         | `.spx/sessions/todo/`                    | `.spx/compact-summary.md`                    |
-| Consumed by       | `/picking-up`                            | `session-resume` hook (context injection)    |
-| Approved by user  | Yes (workflow 03)                        | No — prospective only                        |
-| Persistence items | Already written                          | Proposed — must be approved in next session  |
+| Aspect            | Session file (session-format.md)         | Compact summary (this file)                             |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------- |
+| Produced by       | Workflow 04 (with tools, after approval) | Built-in prompt + `compactPrompt` supplement            |
+| Stored in         | `.spx/sessions/todo/`                    | `.spx/compact-<session_id>.md`                          |
+| Consumed by       | `/picking-up`                            | `session-resume` → receiving agent creates session file |
+| Approved by user  | Yes (workflow 03)                        | No — prospective only                                   |
+| Persistence items | Already written                          | Proposed — must be approved in next session             |
 
 ## Document structure
 
@@ -39,11 +39,13 @@ jq --rawfile prompt plugins/spec-tree/skills/handing-off/references/compaction-p
 
 ## Receiving agent behavior
 
-When `session-resume` injects this document at SessionStart, the receiving agent:
+When `session-resume` injects the compact content at SessionStart, the receiving agent:
 
-1. Reads the **Nodes** section and treats each path as a node to `/contextualizing` before any work.
-2. Reads the **Starting Point** section and uses it as the first action.
-3. Reads the **Persistence Proposal** and presents it to the user via `AskUserQuestion` (workflow 03 format) before writing anything.
-4. Does NOT treat this as a committed session file — no `spx session pickup` needed; this is context injection, not queue management.
+1. Reads ### Nodes and treats each path as a node to `/contextualizing` before any work.
+2. Reads ### Starting Point as the first action.
+3. Reads ### Persistence Proposal and presents it to the user via `AskUserQuestion` before writing anything.
+4. Writes approved items and commits them.
+5. Runs `spx session handoff` to create a session file in `.spx/sessions/todo/`.
+6. Runs `compact-done` (path provided in the `session-resume` preamble) to remove the claimed compact file and `.spx/compact-active`.
 
-Approved items from the persistence proposal are written and committed as if they had come from a normal handing-off workflow 04.
+No `spx session pickup` is needed — the compact context arrives via injection, not the queue. Subsequent sessions find the session file created in step 5 and resume via `/picking-up`.

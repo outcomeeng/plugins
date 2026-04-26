@@ -2,11 +2,15 @@
 # PostCompact hook: persist the compact summary so the next session can load it.
 #
 # Writes:
-#   .spx/compact-summary.md  Last compact summary, scoped to the project.
+#   .spx/compact-<session_id>.md  Session-scoped compact summary.
 #
-# Reads (from environment, set by session-start):
+# Reads (from PostCompact JSON payload on stdin):
+#   .compact_summary  The full compaction output.
+#   .session_id       Session identifier (used in the output filename).
+#   .cwd              Fallback project root when CLAUDE_PROJECT_DIR is unset.
+#
+# Reads (from environment):
 #   CLAUDE_PROJECT_DIR  Canonical project root.
-#   CLAUDE_SESSION_ID   Session identifier (currently unused; reserved).
 
 set -euo pipefail
 
@@ -23,6 +27,7 @@ json_string() {
 main() {
 	local input
 	local summary
+	local session_id
 	local project_dir
 	local out_file
 	local tmp_file
@@ -31,6 +36,11 @@ main() {
 
 	summary="$(json_string '.compact_summary' <<<"$input")" || {
 		# No summary in payload — nothing to persist.
+		exit 0
+	}
+
+	session_id="$(json_string '.session_id' <<<"$input")" || {
+		warn "missing .session_id in payload; cannot write session-scoped compact file"
 		exit 0
 	}
 
@@ -54,7 +64,7 @@ main() {
 		exit 0
 	fi
 
-	out_file="$project_dir/.spx/compact-summary.md"
+	out_file="$project_dir/.spx/compact-${session_id}.md"
 	tmp_file="${out_file}.tmp.$$"
 
 	mkdir -p "$(dirname "$out_file")"
