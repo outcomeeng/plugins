@@ -4,21 +4,21 @@ allowed-tools: Read, Grep, Glob, Bash
 description: ALWAYS invoke this skill when auditing tests for Rust or after writing tests. NEVER use auditing-rust for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke rust:standardizing-rust manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke skill rust:standardizing-rust now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke rust:standardizing-rust-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust-tests/SKILL.md" || echo "standardizing-rust-tests not found — invoke skill rust:standardizing-rust-tests now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke skill spec-tree:testing now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke skill spec-tree:auditing-tests now"`
 
 <codex_fallback>
 If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
 
-1. `rust:standardizing-rust`
-2. `rust:standardizing-rust-tests`
-3. `spec-tree:testing`
-4. `spec-tree:auditing-tests`
+1. Skill `rust:standardizing-rust`
+2. Skill `rust:standardizing-rust-tests`
+3. Skill `spec-tree:testing`
+4. Skill `spec-tree:auditing-tests`
 
 </codex_fallback>
 
@@ -29,20 +29,37 @@ Rust test audit. Three gates run in strict sequence:
 2. Gate 1 assertion audit: per-assertion challenge, scope, evidence method, controlled implementations, oracle independence, harness chain, and four-property evidence check.
 3. Gate 2 architectural DRY: repeated setup patterns that belong in shared test support.
 
-A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable; `spx audit verify` exit code 0 is the sole success criterion.
+A gate failure skips every later gate.
 </objective>
 
 <prerequisites>
-Skills 1–4 are pre-loaded above. Before Gate 0, also:
 
-1. `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root, if present
-2. `/contextualizing` on the spec node under audit; `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+1. Invoking 4 skills: Already done above.
+2. Read local overlay files, they supersede any skills and are loaded below:
 
-The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete. If the tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
+!`cat "spx/local/rust.md" || echo "spx/local/rust.md not found; apply skills only."`
+!`cat "spx/local/rust-tests.md" || echo "spx/local/rust-tests.md not found; apply skills only."`
+
+<codex_fallback>
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+
+1. Read `spx/local/rust.md` if it exists. It supersedes any skills.
+2. Read `spx/local/rust-tests.md` if it exists. It supersedes any skills.
+
+</codex_fallback>
+
+3. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+
+Gate 0 tool dependencies:
+
+- `cargo fmt --check` and `cargo clippy` must be runnable (V1)
+- `cargo llvm-cov` or the project's declared coverage tool (C1)
+- `spx validation literal` available on the path (L3/L4 — if applicable)
+
+If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
 Repository-specific rules:
 
-- Apply project instructions and repo-local overlays before Gate 0.
 - Coverage audits use the repository's declared Rust coverage tool; do not infer coverage from imports or test names.
 - When `spx` test files are included through `#[path = "..."]` modules in source files, coverage commands target Cargo test filters and source-file deltas.
 
@@ -317,67 +334,11 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 </rust_supplements>
 
-<verdict_template>
-The skill output is exactly this XML structure. `spx audit verify` parses and checks it.
+<verdict_format>
 
-```xml
-<audit_verdict>
-  <header>
-    <spec_node>{spec-node-path}</spec_node>
-    <verdict>{APPROVED|REJECT}</verdict>
-  </header>
-  <gates>
-    <gate id="0" name="deterministic" status="{PASS|FAIL|SKIPPED}">
-      <findings count="{n}">
-        <finding>
-          <file>{path}</file>
-          <line>{n}</line>
-          <check_id>{F1|R1|S1|M1|V1|C1}</check_id>
-          <message>{specific finding}</message>
-        </finding>
-      </findings>
-    </gate>
-    <gate id="1" name="assertion" status="{PASS|FAIL|SKIPPED}">
-      <assertions>
-        <assertion index="{n}">
-          <spec_file>{path}</spec_file>
-          <assertion_text>{exact assertion text}</assertion_text>
-          <assertion_type>{Scenario|Mapping|Conformance|Property|Compliance}</assertion_type>
-          <test_file>{path}</test_file>
-          <verdict>{PASS|REJECT}</verdict>
-          <findings>
-            <finding>
-              <step>{challenge|scope|evidence|controlled_implementations|oracle|harness_chain|coupling|falsifiability|alignment|coverage}</step>
-              <detail>{specific failure}</detail>
-            </finding>
-          </findings>
-        </assertion>
-      </assertions>
-    </gate>
-    <gate id="2" name="architectural" status="{PASS|FAIL|SKIPPED}">
-      <findings>
-        <finding>
-          <pattern>{repeated setup pattern}</pattern>
-          <occurrences>
-            <occurrence><file>{path}</file><line>{n}</line></occurrence>
-            <occurrence><file>{path}</file><line>{n}</line></occurrence>
-          </occurrences>
-          <extraction_target>{nearest common test-support location}</extraction_target>
-        </finding>
-      </findings>
-    </gate>
-  </gates>
-</audit_verdict>
-```
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Rust: F1, R1, S1, M1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: nearest common test-support location under `tests/support/` or `crate::test_support`.
 
-After emitting the verdict, invoke the template validator:
-
-```bash
-spx audit verify <verdict-xml-path>
-```
-
-Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before reporting.
-</verdict_template>
+</verdict_format>
 
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
@@ -400,8 +361,14 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 </failure_modes>
 
 <success_criteria>
-The audit is complete when `spx audit verify` returns exit code 0 for the emitted verdict XML.
 
-The validator checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
+Audit is complete when:
+
+- [ ] Gate 0 run: filename policy, source-file reads, skipped tests, mock signals, Rust validation, coverage tool
+- [ ] Gate 1 complete: every assertion evaluated through all 8 steps (if Gate 0 PASS)
+- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
+- [ ] Verdict issued: APPROVED or REJECT
+- [ ] For REJECT: each finding has gate, step, and specific detail
+- [ ] For REJECT: "how tests could pass while assertions fail" explained
 
 </success_criteria>

@@ -6,21 +6,21 @@ description: >-
   NEVER use auditing-typescript for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke skill typescript:standardizing-typescript now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke typescript:standardizing-typescript-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke skill typescript:standardizing-typescript-tests now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke skill spec-tree:testing now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke skill spec-tree:auditing-tests now"`
 
 <codex_fallback>
 If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
 
-1. `typescript:standardizing-typescript`
-2. `typescript:standardizing-typescript-tests`
-3. `spec-tree:testing`
-4. `spec-tree:auditing-tests`
+1. Skill `typescript:standardizing-typescript`
+2. Skill `typescript:standardizing-typescript-tests`
+3. Skill `spec-tree:testing`
+4. Skill `spec-tree:auditing-tests`
 
 </codex_fallback>
 
@@ -32,23 +32,32 @@ TypeScript test audit. Three gates in strict sequence, fail-closed:
 2. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check.
 3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
 
-A gate failure skips every later gate. Output is a structured XML verdict validated by `spx audit verify`. The verdict template is the deliverable; `spx audit verify` exit code 0 is the sole success criterion.
+A gate failure skips every later gate.
 
 </objective>
 
 <prerequisites>
 
-Skills 1–4 are pre-loaded above. Before Gate 0, also:
+1. Invoking 4 skills: Already done above.
+2. Read local overlay files, they supersede any skills and are loaded below:
 
-1. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root (if present)
-2. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+!`cat "spx/local/typescript.md" || echo "spx/local/typescript.md not found; apply skills only."`
+!`cat "spx/local/typescript-tests.md" || echo "spx/local/typescript-tests.md not found; apply skills only."`
+
+<codex_fallback>
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+
+1. Read `spx/local/typescript.md` if it exists. It supersedes any skills.
+2. Read `spx/local/typescript-tests.md` if it exists. It supersedes any skills.
+
+</codex_fallback>
+
+3. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
 Gate 0 depends on two tools:
 
 - ESLint must be installed in the consumer repo, and the standards config at `${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/eslint-rules/eslint.audit.config.ts` must be reachable. The rules and config are owned by `/standardizing-typescript-tests` — the audit invokes them, does not define them.
 - `spx validation literal` must be available on the path (ships with the `spx` CLI; the cross-file literal-reuse detection step).
-
-The skill's success criterion depends on `spx audit verify` — this subcommand must be available before the skill can complete.
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
@@ -386,79 +395,11 @@ If the project has no coverage tooling: record as a coverage note, do not REJECT
 
 </typescript_supplements>
 
-<verdict_template>
+<verdict_format>
 
-The skill output is exactly this XML structure. `spx audit verify` parses and checks it.
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for TypeScript: F1–F5, L1–L4, M1–M2, H2, B1, C1 (see `<gate_0_deterministic>` for the check-to-rule mapping). Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
-```xml
-<audit_verdict>
-  <header>
-    <spec_node>{spec-node-path}</spec_node>
-    <verdict>{APPROVED|REJECT}</verdict>
-    <timestamp>{iso-8601}</timestamp>
-  </header>
-  <gates>
-    <gate id="0" name="deterministic" status="{PASS|FAIL|SKIPPED}">
-      <skipped_reason>{if SKIPPED}</skipped_reason>
-      <findings count="{n}">
-        <finding>
-          <file>{path}</file>
-          <line>{n}</line>
-          <check_id>{F1-F5|L1-L4|M1-M2|H2|B1|C1}</check_id>
-          <message>{validator message}</message>
-        </finding>
-      </findings>
-    </gate>
-    <gate id="1" name="assertion" status="{PASS|FAIL|SKIPPED}">
-      <skipped_reason>{if SKIPPED}</skipped_reason>
-      <assertions>
-        <assertion index="{n}">
-          <spec_file>{path}</spec_file>
-          <assertion_text>{exact quote from spec}</assertion_text>
-          <assertion_type>{Scenario|Mapping|Conformance|Property|Compliance}</assertion_type>
-          <test_file>{path}</test_file>
-          <verdict>{PASS|REJECT}</verdict>
-          <findings>
-            <finding>
-              <step>{challenge|scope|evidence|mocks|oracle|harness_chain|coupling|falsifiability|alignment|coverage}</step>
-              <detail>{specific failure}</detail>
-            </finding>
-          </findings>
-        </assertion>
-      </assertions>
-    </gate>
-    <gate id="2" name="architectural" status="{PASS|FAIL|SKIPPED}">
-      <skipped_reason>{if SKIPPED}</skipped_reason>
-      <findings>
-        <finding>
-          <pattern>{e.g., vi.useFakeTimers with initial date 2025-01-01}</pattern>
-          <occurrences>
-            <occurrence><file>{path}</file><line>{n}</line></occurrence>
-            <occurrence><file>{path}</file><line>{n}</line></occurrence>
-          </occurrences>
-          <extraction_target>testing/harnesses/{name}.ts</extraction_target>
-        </finding>
-      </findings>
-    </gate>
-  </gates>
-</audit_verdict>
-```
-
-Template rules enforced by the validator:
-
-- `SKIPPED` requires a non-empty `<skipped_reason>` (for example, "Gate 0 failed", "Gate 1 failed").
-- `FAIL` requires `<findings count="N">` with at least one `<finding>` child; the `count` attribute must equal the child count.
-- `APPROVED` is valid only when all three gates are `PASS`. Any `FAIL` → `REJECT`. Terminal Gate 0 validator-unavailable → `REJECT`.
-
-After emitting the verdict, invoke the template validator:
-
-```bash
-spx audit verify <verdict-xml-path>
-```
-
-Exit 0 → audit is complete. Exit 1 → verdict is malformed; fix before reporting.
-
-</verdict_template>
+</verdict_format>
 
 <failure_modes>
 
@@ -496,8 +437,13 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 <success_criteria>
 
-The audit is complete when `spx audit verify` returns exit code 0 for the emitted verdict XML.
+Audit is complete when:
 
-The validator checks structure completeness, status validity, findings consistency, and verdict coherence. No other checklist applies.
+- [ ] Gate 0 run: ESLint and `spx validation literal` both executed
+- [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if Gate 0 PASS)
+- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
+- [ ] Verdict issued: APPROVED or REJECT
+- [ ] For REJECT: each finding has gate, step, and specific detail
+- [ ] For REJECT: "how tests could pass while assertions fail" explained
 
 </success_criteria>

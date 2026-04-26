@@ -195,7 +195,82 @@ Scan all findings across all assertions. If any assertion has a property failure
 
 <verdict_format>
 
-**Approved:**
+Language-specific skills wrap the assertion table in a gate summary. Skills with no Gate 0 or Gate 2 omit the gate summary table.
+
+**Approved (3-gate):**
+
+```text
+Audit: {spec-node-path}
+Verdict: APPROVED
+
+| Gate | Status |
+|------|--------|
+| 0 — deterministic | PASS |
+| 1 — assertion     | PASS |
+| 2 — architectural | PASS |
+
+| # | Assertion | Coupling | Falsifiability | Alignment | Coverage | Verdict |
+|---|-----------|----------|----------------|-----------|----------|---------|
+| 1 | {text}    | Direct   | {mutation}     | ✓         | +{n}%    | PASS    |
+```
+
+**Rejected — Gate 0 failure:**
+
+```text
+Audit: {spec-node-path}
+Verdict: REJECT
+
+| Gate | Status |
+|------|--------|
+| 0 — deterministic | FAIL |
+| 1 — assertion     | SKIPPED — Gate 0 failed |
+| 2 — architectural | SKIPPED — Gate 0 failed |
+
+Gate 0 findings:
+| File | Line | Check | Message |
+|------|------|-------|---------|
+| {path} | {n} | {check-id} | {message} |
+```
+
+**Rejected — Gate 1 failure:**
+
+```text
+Audit: {spec-node-path}
+Verdict: REJECT
+
+| Gate | Status |
+|------|--------|
+| 0 — deterministic | PASS |
+| 1 — assertion     | FAIL |
+| 2 — architectural | SKIPPED — Gate 1 failed |
+
+| # | Assertion | Property Failed | Finding | Detail |
+|---|-----------|-----------------|---------|--------|
+| 1 | {text}    | Coupling        | no coupling | {detail} |
+
+How tests could pass while assertions fail:
+{Explain the evidentiary gap for each rejected assertion}
+```
+
+**Rejected — Gate 2 failure:**
+
+```text
+Audit: {spec-node-path}
+Verdict: REJECT
+
+| Gate | Status |
+|------|--------|
+| 0 — deterministic | PASS |
+| 1 — assertion     | PASS |
+| 2 — architectural | FAIL |
+
+Gate 2 findings:
+| Pattern | Occurrences | Extraction target |
+|---------|-------------|-------------------|
+| {pattern} | {file:line}, {file:line} | {nearest common test-support location} |
+```
+
+**No-gate variant (base `/auditing-tests` used directly):**
 
 ```text
 Audit: {spec-node-path}
@@ -205,8 +280,6 @@ Verdict: APPROVED
 |---|-----------|----------|----------------|-----------|----------|---------|
 | 1 | {text}    | Direct   | {mutation}     | ✓         | +{n}%    | PASS    |
 ```
-
-**Rejected:**
 
 ```text
 Audit: {spec-node-path}
@@ -219,6 +292,12 @@ Verdict: REJECT
 How tests could pass while assertions fail:
 {Explain the evidentiary gap for each rejected assertion}
 ```
+
+**Verdict rules:**
+
+- APPROVED requires all active gates PASS.
+- Any gate FAIL → REJECT.
+- A skipped gate is recorded with its reason (e.g., "Gate 0 failed").
 
 </verdict_format>
 

@@ -5,39 +5,39 @@ description: >-
   NEVER use auditing-python for test code.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke python:standardizing-python manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke skill python:standardizing-python now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke skill python:standardizing-python-tests now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke skill spec-tree:testing now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke skill spec-tree:auditing-tests now"`
 
 <codex_fallback>
 If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
 
-1. `python:standardizing-python`
-2. `python:standardizing-python-tests`
-3. `spec-tree:testing`
-4. `spec-tree:auditing-tests`
+1. Skill `python:standardizing-python`
+2. Skill `python:standardizing-python-tests`
+3. Skill `spec-tree:testing`
+4. Skill `spec-tree:auditing-tests`
 
 </codex_fallback>
 
 <objective>
 
-Python-specific test audit. Extends `/auditing-tests` with Python supplements for each evidence property: coupling, falsifiability, alignment, coverage.
+Python test audit. Three gates in strict sequence, fail-closed:
 
-Read `/auditing-tests` first — it defines the 4-property evidence model and ordered workflow. This skill adds only what is Python-specific.
+1. **Gate 0 — Deterministic**: ruff, mypy, pytest collection, and `spx validation literal` check filenames, linting, types, and cross-file literal reuse. Claude does not judge these rules — Gate 0 output is routed into the verdict verbatim.
+2. **Gate 1 — Assertion audit**: per-assertion LLM audit using the `/auditing-tests` workflow — coupling, falsifiability, alignment, coverage — with Python supplements applied at each property step.
+3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns that belong in shared fixtures or harnesses.
 
-Before running the audit, load `/standardizing-python`, then `/standardizing-python-tests`.
+A gate failure skips every later gate.
 
 </objective>
 
 <quick_start>
 
-Skills 1–4 are pre-loaded above. Apply the `/auditing-tests` workflow: load context → map assertions → audit coupling → falsifiability → alignment → coverage → verdict. At each property step, apply the Python supplement below. First property failure = REJECT.
-
-Use the filename conventions from `/standardizing-python-tests` for assertion-to-test mapping.
+Run Gate 0 tools, then apply the `/auditing-tests` Gate 1 workflow with Python supplements at each property step. First property failure = REJECT for that assertion.
 
 </quick_start>
 
@@ -50,6 +50,110 @@ Follow the four principles from `/auditing-tests`: **COUPLING FIRST**, **RUN COV
 Type annotations (`-> None`), magic values, test organization, naming conventions — these are linting concerns enforced by `/standardizing-python-tests`, mypy, and ruff. The auditor evaluates evidence quality only. A test with perfect Python style and zero evidentiary value must be REJECTED. A test with missing type hints but genuine evidence of spec fulfillment is not rejected by this audit.
 
 </essential_principles>
+
+<prerequisites>
+
+1. Invoking 4 skills: Already done above.
+2. Read local overlay files, they supersede any skills and are loaded below:
+
+!`cat "spx/local/python.md" || echo "spx/local/python.md not found; apply skills only."`
+!`cat "spx/local/python-tests.md" || echo "spx/local/python-tests.md not found; apply skills only."`
+
+<codex_fallback>
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+
+1. Read `spx/local/python.md` if it exists. It supersedes any skills.
+2. Read `spx/local/python-tests.md` if it exists. It supersedes any skills.
+
+</codex_fallback>
+
+3. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
+
+Gate 0 tool dependencies:
+
+- `ruff` installed in the consumer project (F1, V1)
+- `mypy` installed in the consumer project (V1)
+- `pytest` installed in the consumer project (V1, C1)
+- `spx validation literal` available on the path (L3/L4)
+
+If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
+
+</prerequisites>
+
+<gate_0_deterministic>
+
+Run four tools and merge their findings.
+
+<check id="F1" name="filename_policy">
+List Python test files under the target node:
+
+```bash
+rg --files <spec-node-path>/tests/ --glob '*.py'
+```
+
+Each file must match `<subject>.<evidence>.<level>[.<variant>].py` where:
+
+- `<evidence>` is one of: `scenario`, `mapping`, `conformance`, `property`, `compliance`
+- `<level>` is one of: `l1`, `l2`, `l3`
+- `<variant>` is optional (e.g., `async`, `hypothesis`)
+
+Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Python test filename convention.
+</check>
+
+<check id="V1" name="python_validation">
+Run the validation sequence:
+
+```bash
+ruff check <spec-node-path>/tests/
+mypy <spec-node-path>/tests/
+pytest --collect-only -q <spec-node-path>/tests/
+```
+
+Fail Gate 0 if any command fails. A non-compiling or uncollectable test file has no auditable evidence surface.
+</check>
+
+<check id="L3" name="literal_src_reuse">
+Detect literals shared between test and production code:
+
+```bash
+spx validation literal --files '<spec-node-path>/tests/**/*.py' --json
+```
+
+`src-reuse` findings (a literal in a test also appears in the production module) indicate the literal should be imported from production. `test-dupe` findings (a literal duplicated across test files) indicate extraction to a shared fixture.
+</check>
+
+<check id="C1" name="coverage_tool">
+Verify coverage tooling is available:
+
+```bash
+pytest --co -q --collect-only --tb=no <spec-node-path>/tests/ | head -1
+python -m pytest --co -q 2>/dev/null | grep -c 'test session starts' || true
+coverage --version 2>/dev/null || python -m pytest --co -q --no-header 2>&1 | head -1
+```
+
+Fail Gate 0 when project instructions require measured coverage and neither `coverage` nor `pytest-cov` is available.
+</check>
+
+Gate 0 status:
+
+| Condition      | Status | Action                                                        |
+| -------------- | ------ | ------------------------------------------------------------- |
+| F1 or V1 fails | FAIL   | Record findings, skip Gates 1 and 2                           |
+| L3 only        | PASS   | Carry findings into Gate 1 step `falsifiability`              |
+| C1 only        | PASS   | Record coverage note; continue with other evidence properties |
+| all pass       | PASS   | Proceed to Gate 1                                             |
+
+Gate 0 check IDs:
+
+| check_id | Source                               |
+| -------- | ------------------------------------ |
+| F1       | Filename policy                      |
+| V1       | ruff / mypy / pytest collection      |
+| L3       | `spx validation literal` — src-reuse |
+| L4       | `spx validation literal` — test-dupe |
+| C1       | Coverage tool availability           |
+
+</gate_0_deterministic>
 
 <python_supplements>
 
@@ -242,6 +346,34 @@ Delta: +24.6% — new coverage ✓
 
 </python_supplements>
 
+<gate_2_architectural>
+
+Runs only if Gate 1 is PASS. Scan in-scope test files for repeated setup patterns that belong in shared fixtures or harnesses.
+
+Trigger: two or more in-scope tests sharing any of these patterns:
+
+- identical `@pytest.fixture` body (same dependencies, same setup logic)
+- repeated `httpx.AsyncClient(app=...)` or `aiohttp.ClientSession` configuration
+- repeated database seeding or transaction setup
+- repeated `tempfile.TemporaryDirectory()` or `tmp_path` scaffolding with identical structure
+- repeated mock patches (`@patch("same.module.path")`) across multiple test files
+- repeated `conftest.py`-style setup appearing inline in multiple files instead of being shared
+
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or an addition to `tests/conftest.py`.
+
+Gate 2 status:
+
+- PASS if no repeated setup pattern appears in two or more in-scope tests.
+- FAIL if any repeated setup pattern appears in two or more in-scope tests.
+
+</gate_2_architectural>
+
+<verdict_format>
+
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, L3, L4, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `tests/conftest.py`.
+
+</verdict_format>
+
 <concrete_examples>
 
 **Example 1: APPROVED**
@@ -426,14 +558,11 @@ How to avoid: Essential principles — no code quality checks. Check the four ev
 
 Audit is complete when:
 
-- [ ] `/auditing-tests` workflow executed (load context → map assertions → 4 properties → verdict)
-- [ ] Python supplements applied at each property step
-- [ ] Coupling: imports classified (including `TYPE_CHECKING`, relative imports, `__init__.py` re-exports)
-- [ ] Falsifiability: `@patch`/`Mock()`/`MagicMock` patterns checked, exceptions identified
-- [ ] Alignment: property-based testing verified for parsers/serializers/math/algorithms
-- [ ] Coverage: actual deltas from pytest-cov command
+- [ ] Gate 0 run: ruff, mypy, pytest collection, and `spx validation literal` all executed
+- [ ] Gate 1 complete: every assertion evaluated — coupling (with Python supplements), falsifiability, alignment, coverage (if Gate 0 PASS)
+- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has property, finding category, detail
+- [ ] For REJECT: each finding has gate, step/property, and specific detail
 - [ ] For REJECT: "how tests could pass while assertions fail" explained
 
 </success_criteria>

@@ -21,7 +21,8 @@ Adversarial code review through comprehension. Find design flaws that automated 
 
 This skill is read-only. It produces verdicts, not commits or fixes.
 
-**Test evidence quality is audited by `/auditing-typescript-tests`.** This skill audits implementation code, not test code. If test files are in scope, delegate to `/auditing-typescript-tests`.
+**Test evidence quality is audited by skill `/auditing-typescript-tests`.** This skill audits implementation code, not test code.
+Almost every Typecsript file must be covered by tests. Invoke `/auditing-typescript-tests` separately as part of the overall auditing workflow.
 
 **Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists as the repo-local specialization.
 
