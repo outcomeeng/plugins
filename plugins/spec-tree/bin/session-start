@@ -15,70 +15,70 @@
 set -euo pipefail
 
 warn() {
-  # Do not write to stdout from a SessionStart hook: stdout is injected into
-  # Claude's context. Use stderr for diagnostics.
-  printf 'session-start: %s\n' "$*" >&2
+	# Do not write to stdout from a SessionStart hook: stdout is injected into
+	# Claude's context. Use stderr for diagnostics.
+	printf 'session-start: %s\n' "$*" >&2
 }
 
 json_string() {
-  local filter="$1"
-  # No 2>/dev/null: jq parse errors belong on stderr for diagnostics.
-  jq -er "$filter | strings | select(length > 0)"
+	local filter="$1"
+	# No 2>/dev/null: jq parse errors belong on stderr for diagnostics.
+	jq -er "$filter | strings | select(length > 0)"
 }
 
 append_export() {
-  local name="$1"
-  local value="$2"
+	local name="$1"
+	local value="$2"
 
-  if [[ ! "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-    warn "refusing invalid environment variable name: $name"
-    return 1
-  fi
+	if [[ ! "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+		warn "refusing invalid environment variable name: $name"
+		return 1
+	fi
 
-  # %q emits a shell-safe representation suitable for an env-file preamble.
-  printf 'export %s=%q\n' "$name" "$value"
+	# %q emits a shell-safe representation suitable for an env-file preamble.
+	printf 'export %s=%q\n' "$name" "$value"
 }
 
 main() {
-  local input
-  local session_id
-  local project_dir
-  local env_file
+	local input
+	local session_id
+	local project_dir
+	local env_file
 
-  input="$(cat)"
+	input="$(cat)"
 
-  session_id="$(json_string '.session_id' <<<"$input")" || {
-    warn "missing or invalid .session_id in SessionStart input; not exporting CLAUDE_SESSION_ID"
-    exit 0
-  }
+	session_id="$(json_string '.session_id' <<<"$input")" || {
+		warn "missing or invalid .session_id in SessionStart input; not exporting CLAUDE_SESSION_ID"
+		exit 0
+	}
 
-  # Prefer Claude Code's project-root variable. It is the value we actually want.
-  # Fall back to .cwd only as a defensive fallback for unusual runtimes.
-  project_dir="${CLAUDE_PROJECT_DIR:-}"
-  if [[ -z "$project_dir" ]]; then
-    project_dir="$(json_string '.cwd' <<<"$input" || true)"
-    if [[ -n "$project_dir" ]]; then
-      warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
-    fi
-  fi
+	# Prefer Claude Code's project-root variable. It is the value we actually want.
+	# Fall back to .cwd only as a defensive fallback for unusual runtimes.
+	project_dir="${CLAUDE_PROJECT_DIR:-}"
+	if [[ -z "$project_dir" ]]; then
+		project_dir="$(json_string '.cwd' <<<"$input" || true)"
+		if [[ -n "$project_dir" ]]; then
+			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
+		fi
+	fi
 
-  env_file="${CLAUDE_ENV_FILE:-}"
-  if [[ -z "$env_file" ]]; then
-    # Expected when the script is run manually; avoid noisy failures.
-    exit 0
-  fi
+	env_file="${CLAUDE_ENV_FILE:-}"
+	if [[ -z "$env_file" ]]; then
+		# Expected when the script is run manually; avoid noisy failures.
+		exit 0
+	fi
 
-  {
-    printf '\n# Managed by plugins/spec-tree/bin/session-start\n'
-    append_export "CLAUDE_SESSION_ID" "$session_id"
+	{
+		printf '\n# Managed by plugins/spec-tree/bin/session-start\n'
+		append_export "CLAUDE_SESSION_ID" "$session_id"
 
-    if [[ -n "$project_dir" ]]; then
-      append_export "CLAUDE_PROJECT_DIR" "$project_dir"
-      append_export "PROJECT_DIR" "$project_dir"
-    else
-      warn "project directory unavailable; not exporting CLAUDE_PROJECT_DIR or PROJECT_DIR"
-    fi
-  } >> "$env_file"
+		if [[ -n "$project_dir" ]]; then
+			append_export "CLAUDE_PROJECT_DIR" "$project_dir"
+			append_export "PROJECT_DIR" "$project_dir"
+		else
+			warn "project directory unavailable; not exporting CLAUDE_PROJECT_DIR or PROJECT_DIR"
+		fi
+	} >>"$env_file"
 }
 
 main "$@"
