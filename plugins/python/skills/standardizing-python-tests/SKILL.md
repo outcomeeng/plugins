@@ -182,12 +182,74 @@ def test_config_roundtrips(value: ConfigValue) -> None:
 </property_based_testing>
 
 <test_data_policy>
-Use source-owned values when the production system owns them.
 
-- Import routes, selectors, ids, feature flags, registry names, and public constants from the module that owns them
-- Keep descriptive test names and assertion diagnostics near the assertion
-- Put stable test-only strings, ids, dates, and expected-output snippets in `product_testing.fixtures`
-- Put shared harnesses, generated data, and Stage 5 doubles in `product_testing.harnesses`
+**Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
+
+| Origin             | What it means                                                 | Where it lives               |
+| ------------------ | ------------------------------------------------------------- | ---------------------------- |
+| Source-owned       | The production module defines and exports the value           | Import from that module      |
+| Generator-produced | Pure code emits varied values each run                        | `product_testing.generators` |
+| Harness-managed    | Infrastructure mediates interaction with an external resource | `product_testing.harnesses`  |
+| Descriptive inline | Human-readable text in the test title or assertion message    | Inline in the test file      |
+
+**THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
+
+**1. Source-owned values**
+
+ALWAYS import routes, ids, status codes, feature flags, registry names, and public constants from the module that owns them. If the module does not export them yet, refactor it to export them before writing the test.
+
+```python
+# ❌ REJECTED: duplicates a value the production module should own
+VERDICT_STATUSES = ("fail", "skipped", "pass")
+
+# ✅ REQUIRED: import from the production module
+from product.audit import VERDICT_STATUSES
+```
+
+**2. Generator-produced values**
+
+Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects.
+
+- Use Hypothesis strategies (`@given(...)`) for randomized inputs
+- Use faker or custom strategy factories for domain-shaped strings and dates
+
+```python
+# product_testing/generators/audit.py
+
+from hypothesis import strategies as st
+
+
+def valid_gate_statuses() -> st.SearchStrategy[str]:
+    return st.sampled_from(["PASS", "FAIL", "SKIPPED"])
+```
+
+**3. Harness-managed**
+
+Use harnesses for tests that interact with external systems — filesystems, APIs, Docker, Playwright. A harness manages setup and teardown; it is not self-contained.
+
+```python
+# product_testing/harnesses/spec_tree.py
+
+from contextlib import contextmanager
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Generator
+
+
+@contextmanager
+def with_test_env(config: Config) -> Generator[SpecTreeEnv, None, None]:
+    with TemporaryDirectory() as tmp:
+        env = SpecTreeEnv(root=Path(tmp), config=config)
+        env.initialize()
+        yield env
+```
+
+**4. Fixture files**
+
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in `tests/fixtures/` alongside the test that uses them.
+
+Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
+
 - Use co-located `helpers.py` only when the helper serves one test directory
 
 </test_data_policy>
@@ -229,9 +291,12 @@ Reject or rewrite these patterns:
 - Framework mocks replacing the dependency under test
 - Property claims implemented only with examples
 - Source-owned values copied into local constants
+- Test-file-local constants for values the production module should own — refactor the module to export them
 - Production modules created only to aggregate values for tests
 - Deep relative imports into stable shared test infrastructure
 - Silent skips for required credentialed evidence
+
+The cross-file literal-reuse check (check IDs `L3`/`L4`: a literal in a test also appears in `product/`, or the same literal appears in multiple test files) is not a ruff rule — it runs as `spx validation literal` because cross-file analysis does not fit ruff's per-file execution model.
 
 </anti_patterns>
 
