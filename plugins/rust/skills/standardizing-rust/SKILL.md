@@ -73,6 +73,69 @@ pub type JobStatus = String;
 
 </type_system>
 
+<constant_patterns>
+
+Choose the right Rust construct for grouped constant values:
+
+| Pattern                                                              | When to use                                                                      |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `const NAME: Type = value`                                           | Simple scalar compile-time constant                                              |
+| `enum` with `as_str()` or `Display`                                  | Closed set of string values with type safety — prefer over bare string constants |
+| `OnceLock<HashMap<K, V>>` (std) or `Lazy<HashMap<K, V>>` (once_cell) | Map-like constants with complex initialization                                   |
+
+```rust
+// ✅ preferred: enum for a closed set of string-valued states
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GateStatus {
+    Pass,
+    Fail,
+    Skipped,
+}
+
+impl GateStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            GateStatus::Pass => "pass",
+            GateStatus::Fail => "fail",
+            GateStatus::Skipped => "skipped",
+        }
+    }
+}
+
+// ✅ preferred: OnceLock for a constant map
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
+static HEADERS: OnceLock<HashMap<&str, &str>> = OnceLock::new();
+
+fn default_headers() -> &'static HashMap<&'static str, &'static str> {
+    HEADERS.get_or_init(|| {
+        let mut m = HashMap::new();
+        m.insert("Content-Type", "application/json");
+        m.insert("Accept", "application/json");
+        m
+    })
+}
+
+// ❌ rejected: scattered bare string constants without semantic structure
+pub const STATUS_PASS: &str = "pass";
+pub const STATUS_FAIL: &str = "fail";
+pub const STATUS_SKIPPED: &str = "skipped";
+```
+
+**No re-export of library constants.** When production code and tests both need an HTTP status code, both import from the same canonical source (`http::StatusCode`, framework constants, etc.). Never create project-local aliases.
+
+```rust
+// ❌ rejected: project-local re-export
+pub const HTTP_OK: u16 = 200;
+
+// ✅ preferred: both production and test code import from the canonical source
+use http::StatusCode;
+let code = StatusCode::OK;
+```
+
+</constant_patterns>
+
 <ownership_and_borrowing>
 
 Ownership is a design tool, not a compiler obstacle.

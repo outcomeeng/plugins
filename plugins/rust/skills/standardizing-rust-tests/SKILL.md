@@ -147,12 +147,74 @@ Snapshot tests are valid only when the textual or structured output surface is i
 </tooling>
 
 <test_data_policy>
-Use source-owned values when the production system owns them.
 
-- Import command names, rule names, matcher tokens, public constants, and domain identifiers from the owning production module
-- Keep descriptive test titles and assertion diagnostics inline
-- Put stable test-only strings, ids, dates, and expected-output snippets in test fixture support
-- Put shared harnesses, generated data, and Stage 5 doubles in test-owned support modules
+**Every value in a test has exactly one valid origin.** Run through this table for each test value before writing it.
+
+| Origin             | What it means                                                 | Where it lives              |
+| ------------------ | ------------------------------------------------------------- | --------------------------- |
+| Source-owned       | The production module defines and exports the value           | Import from that module     |
+| Generator-produced | Pure code emits varied values each run                        | test-owned generator module |
+| Harness-managed    | Infrastructure mediates interaction with an external resource | test-owned harness module   |
+| Descriptive inline | Human-readable text in the test name or assertion message     | Inline in the test file     |
+
+**THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
+
+**1. Source-owned values**
+
+ALWAYS import command names, rule names, matcher tokens, status values, domain identifiers, and public constants from the owning production module. If the module does not export them yet, refactor it to export them before writing the test.
+
+```rust
+// ❌ rejected: duplicates a value the production module should own
+const PASS_STATUS: &str = "pass";
+
+// ✅ preferred: import from the production module
+use product::audit::GateStatus;
+let status = GateStatus::Pass;
+```
+
+**2. Generator-produced values**
+
+Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects.
+
+- Use `proptest` or `quickcheck` strategies for randomized inputs
+- Write strategy factories for domain-shaped values
+
+```rust
+// tests/generators/audit.rs
+
+fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
+    prop_oneof![
+        Just(GateStatus::Pass),
+        Just(GateStatus::Fail),
+        Just(GateStatus::Skipped),
+    ]
+}
+```
+
+**3. Harness-managed**
+
+Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
+
+```rust
+// tests/support/spec_tree.rs
+
+pub struct TestEnv {
+    pub root: tempfile::TempDir,
+}
+
+impl TestEnv {
+    pub fn new() -> Self {
+        TestEnv { root: tempfile::tempdir().expect("temp dir") }
+    }
+}
+```
+
+**4. Fixture files**
+
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in `tests/fixtures/` alongside the test that uses them.
+
+Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
+
 - Use co-located helper modules only when the helper serves one test file
 - Do not read production source files as test input to prove behavior
 
@@ -357,16 +419,19 @@ Coverage is evidence only when measured against the exercised module:
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                           | Why it fails                                                 |
-| -------------------------------------- | ------------------------------------------------------------ |
-| generated mocks for the main seam      | severs evidence from the real interface                      |
-| snapshots of hand-written values       | proves serialization of the fixture more than governed logic |
-| example-only tests for property claims | misses the universal claim stated by the spec                |
-| async tests holding locks across await | creates deadlocks and hides the real concurrency design      |
-| browser tooling for non-browser code   | adds cost without stronger evidence                          |
-| compile-time claims tested at runtime  | misses the actual contract                                   |
-| source text read from tests            | proves implementation text rather than behavior              |
-| missing harness cleanup                | leaves shared state that changes later test outcomes         |
+| Anti-pattern                                      | Why it fails                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------ |
+| generated mocks for the main seam                 | severs evidence from the real interface                      |
+| snapshots of hand-written values                  | proves serialization of the fixture more than governed logic |
+| example-only tests for property claims            | misses the universal claim stated by the spec                |
+| async tests holding locks across await            | creates deadlocks and hides the real concurrency design      |
+| browser tooling for non-browser code              | adds cost without stronger evidence                          |
+| compile-time claims tested at runtime             | misses the actual contract                                   |
+| source text read from tests                       | proves implementation text rather than behavior              |
+| missing harness cleanup                           | leaves shared state that changes later test outcomes         |
+| test-file-local constants for source-owned values | production module should export the value; refactor it       |
+
+The cross-file literal-reuse check (check IDs `L3`/`L4`: a literal in a test also appears in `src/`, or the same literal appears in multiple test files) is not a clippy lint — it runs as `spx validation literal` because cross-file analysis does not fit per-file linting.
 
 </anti_patterns>
 
