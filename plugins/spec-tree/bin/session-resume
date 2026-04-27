@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SessionStart hook: atomically claim and inject any pending compact summary.
 #
-# When .spx/compact-<old_session_id>.md is present, this script:
+# When .spx/sessions/tmp/compact-<old_session_id>.md is present, this script:
 #   1. Claims it atomically (mv to .processing-<new_session_id>)
-#   2. Writes the claimed path to .spx/compact-active (for compact-done cleanup)
+#   2. Writes the claimed path to .spx/sessions/tmp/compact-active (for compact-done cleanup)
 #   3. Injects the content into Claude's context via stdout with a preamble
 #      directing the receiving agent to invoke /handing-off then compact-done.
 #
@@ -52,19 +52,19 @@ main() {
 
 	# Scan for unclaimed compact summaries. The glob compact-*.md naturally excludes
 	# claimed files — they have no .md extension after the atomic rename.
-	for compact_md in "$project_dir"/.spx/compact-*.md; do
+	for compact_md in "$project_dir"/.spx/sessions/tmp/compact-*.md; do
 		[[ -f "$compact_md" ]] || continue
 
 		old_id="$(basename "$compact_md" .md)"
 		old_id="${old_id#compact-}"
-		claimed="$project_dir/.spx/compact-${old_id}.processing-${new_session_id}"
+		claimed="$project_dir/.spx/sessions/tmp/compact-${old_id}.processing-${new_session_id}"
 
 		# Atomic claim: mv is a single directory-entry rename on the same filesystem.
 		# If two sessions start simultaneously, only one mv wins; the other skips.
 		mv "$compact_md" "$claimed" 2>/dev/null || continue
 
 		# Write pointer so compact-done knows which file to remove.
-		printf '%s\n' "$claimed" >"$project_dir/.spx/compact-active"
+		printf '%s\n' "$claimed" >"$project_dir/.spx/sessions/tmp/compact-active"
 
 		# Stdout from a SessionStart hook is injected into Claude's context.
 		printf '## Context from previous compaction\n\n'

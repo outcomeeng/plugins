@@ -14,7 +14,7 @@ main() {
 	local compact_path
 
 	project_dir="${CLAUDE_PROJECT_DIR:-${PWD}}"
-	active_file="$project_dir/.spx/compact-active"
+	active_file="$project_dir/.spx/sessions/tmp/compact-active"
 
 	if [[ ! -f "$active_file" ]]; then
 		# Nothing to clean up — idempotent.

@@ -2,7 +2,7 @@
 # PostCompact hook: persist the compact summary so the next session can load it.
 #
 # Writes:
-#   .spx/compact-<session_id>.md  Session-scoped compact summary.
+#   .spx/sessions/tmp/compact-<session_id>.md  Session-scoped compact summary.
 #
 # Reads (from PostCompact JSON payload on stdin):
 #   .compact_summary  The full compaction output.
@@ -64,7 +64,7 @@ main() {
 		exit 0
 	fi
 
-	out_file="$project_dir/.spx/compact-${session_id}.md"
+	out_file="$project_dir/.spx/sessions/tmp/compact-${session_id}.md"
 	tmp_file="${out_file}.tmp.$$"
 
 	mkdir -p "$(dirname "$out_file")"
