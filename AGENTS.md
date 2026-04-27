@@ -79,6 +79,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ✅ **ALWAYS USE the runtime's structured-question tool for questions with predefined options.** Claude Code uses `AskUserQuestion`; Codex uses `request_user_input`. Do NOT use structured questions for open-ended questions where the user needs to provide free-form context — ask in plain text instead.
 - ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
+- ⚠️ **YAML `description:` fields must not contain word-then-colon mid-sentence** - A pattern like `description: ALWAYS invoke when: (1) ...` causes a YAML parse error: the parser reads `when:` as a nested key, silently drops all frontmatter, and the skill loads with empty metadata. Rephrase to avoid `when:`, `note:`, `if:`, and similar colon-containing words inside unquoted description values. Run `just check` after editing any SKILL.md to catch this before committing.
 
 ## Read Tool Output
 
