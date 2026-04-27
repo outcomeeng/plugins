@@ -23,7 +23,7 @@ A successful commit has:
 
 </success_criteria>
 
-<exclusions>
+<context>
 
 This skill does NOT:
 
@@ -32,7 +32,7 @@ This skill does NOT:
 - Modify git configuration
 - Bypass pre-commit hooks
 
-</exclusions>
+</context>
 
 <project_specialization>
 After loading this skill, check for `spx/local/committing-changes.md` at the repository root. If it exists, read it and apply its rules as project-specific additions to the commit workflow (e.g., plugin versioning requirements, additional staging targets, project-specific validation steps).
@@ -62,7 +62,7 @@ This skill may be referenced during the commit phase of a code review. In that c
 2. **Scope to work item** — Stage only files from the approved work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
-3. **Include work item reference** — Add `Refs: {capability}/{feature}/{story}` in footer
+3. **Include work item reference** — Add a `Refs:` footer using the node path format from the reviewing skill's context (e.g. `Refs: spx/21-foo.enabler/32-bar.outcome`)
 4. **Verify tests pass** — All tests must pass before committing
 
 The reviewing skill provides the specific file list and work item context.
@@ -278,14 +278,108 @@ Mark breaking changes with:
 
 </scope_guidelines>
 
-<reference_guides>
+<description_principles>
 
-When crafting the commit message description, read `${CLAUDE_SKILL_DIR}/references/message-crafting.md` for:
+**Write for the reader, not the writer.** Someone scanning `git log --oneline` needs to understand what changed without opening the commit.
 
-- Three description principles (no state words, content over container, don't repeat the prefix)
-- Good and bad commit message examples with explanations
+**Principle 1: No State Words**
 
-</reference_guides>
+Describe the action, not the prior problem:
+
+```text
+# ❌ Describes prior state
+fix: handle missing config file
+spec(auth): add missing validation rules
+
+# ✅ Describes the action
+fix: return defaults when config absent
+spec(auth): specify validation rules
+```
+
+Avoid: "missing", "broken", "wrong", "bad", "incorrect"
+
+**Principle 2: Content Over Container**
+
+Describe WHAT changed, not WHICH files:
+
+```text
+# ❌ Describes the container
+spec(session): add stories for timeout feature
+docs: update README file
+
+# ✅ Describes the content
+spec(session): specify timeout and cleanup behaviors
+docs: add installation prerequisites
+```
+
+**Principle 3: Don't Repeat the Prefix**
+
+The type already tells you what kind of change:
+
+```text
+# ❌ Redundant - prefix already says it's a spec
+spec(session): add session management spec
+spec(auth): define auth feature stories
+
+# ✅ Just describe the content
+spec(session): specify timeout and cleanup behaviors
+spec(auth): specify OAuth2 token lifecycle
+```
+
+**Good Examples**
+
+```text
+feat(parser): add support for nested expressions
+
+Enables users to write complex queries with unlimited nesting depth.
+Previously limited to 3 levels.
+
+Refs: #234
+```
+
+```text
+fix: prevent crash on empty config file
+
+Return sensible defaults when config is missing or empty
+instead of throwing unhandled exception.
+```
+
+```text
+refactor: extract validation logic into separate module
+
+Prepares codebase for unit testing by isolating validation
+from business logic.
+```
+
+**Bad Examples**
+
+```text
+# Too vague
+fix: bug fixes
+
+# Multiple unrelated changes
+feat: add parser and fix tests and update docs
+
+# Contains attribution (NEVER do this)
+feat: add export feature (by John)
+
+# Not atomic
+refactor: various improvements
+
+# Describes prior state instead of action
+fix: handle missing config
+spec(auth): add missing validation
+
+# Describes container instead of content
+spec(session): add stories for advanced operations
+docs: update README file
+
+# Repeats the prefix
+spec(session): add session spec
+test(auth): add auth tests
+```
+
+</description_principles>
 
 <critical_rules>
 
