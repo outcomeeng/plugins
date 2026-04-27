@@ -39,13 +39,13 @@ jq --rawfile prompt plugins/spec-tree/skills/handing-off/references/compaction-p
 
 ## Receiving agent behavior
 
-When `session-resume` injects the compact content at SessionStart, the receiving agent:
+When `session-resume` injects the compact content at SessionStart, the receiving agent **must execute these steps as the first action, before responding to any user message**:
 
 1. Reads ### Nodes and treats each path as a node to `/contextualizing` before any work.
 2. Reads ### Starting Point as the first action.
 3. Reads ### Persistence Proposal and presents it to the user via `AskUserQuestion` before writing anything.
 4. Writes approved items and commits them.
-5. Runs `spx session handoff` to create a session file in `.spx/sessions/todo/`.
+5. Runs `spx session handoff` to create a session file in `.spx/sessions/todo/`. **Always create the session file, even when the Persistence Proposal is empty** — the session file is the canonical continuation required by subsequent agents.
 6. Runs `compact-done` (path provided in the `session-resume` preamble) to remove the claimed compact file and `.spx/sessions/tmp/compact-active`.
 
 No `spx session pickup` is needed — the compact context arrives via injection, not the queue. Subsequent sessions find the session file created in step 5 and resume via `/picking-up`.

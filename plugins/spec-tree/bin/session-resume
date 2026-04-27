@@ -43,6 +43,13 @@ main() {
 
 	project_dir="${CLAUDE_PROJECT_DIR:-}"
 	if [[ -z "$project_dir" ]]; then
+		project_dir="$(json_string '.cwd' <<<"$input" || true)"
+		if [[ -n "$project_dir" ]]; then
+			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
+		fi
+	fi
+
+	if [[ -z "$project_dir" ]]; then
 		warn "CLAUDE_PROJECT_DIR is unset; cannot locate compact summaries"
 		exit 0
 	fi
@@ -73,9 +80,9 @@ main() {
 		printf 'work occurred, sections ### Nodes, ### Lessons, ### Skills,\n'
 		printf '### Starting Point, ### Persistence Proposal, and ### Session Scope\n'
 		printf 'follow the standard sections.\n\n'
-		printf 'Invoke /handing-off to present the Persistence Proposal to the user,\n'
-		printf 'write approved items, and create a session file via `spx session handoff`.\n'
-		printf 'When the session file is created, run:\n'
+		printf '**Before responding to any user message, invoke `/spec-tree:handing-off` now.**\n'
+		printf 'Complete workflows 03–04: present the Persistence Proposal to the user, write\n'
+		printf 'approved items, and create a session file via `spx session handoff`. Then run:\n'
 		printf '  %s\n\n' "$compact_done"
 		printf -- '---\n\n'
 		cat "$claimed"

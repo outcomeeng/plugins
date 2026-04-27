@@ -1,6 +1,6 @@
 ---
 name: handing-off
-description: ALWAYS invoke this skill when closing a spec-tree work session, writing a handoff, or preparing continuation context for another agent. NEVER create a spec-tree handoff without this skill.
+description: ALWAYS invoke when closing a spec-tree work session, writing a handoff, or preparing continuation context. Also invoke when session context opens with a compact summary (## Context from previous compaction) — invoke BEFORE responding to any user message. NEVER create a spec-tree handoff without this skill.
 ---
 
 <context>
