@@ -247,24 +247,10 @@ Then import one or very few of these constant objects into the test file. Any ch
 
 <generators>
 
-- ALWAYS factor out test data like strings, ids, dates, and expected-output snippets into a test harness or test factory in `testing/generators/{domain}.ts` or `testing/generators/{domain}/{concern}.ts`
-
-<randomized_test_literals_generators>
-
-Use fast-check or faker.js.
-
-</randomized_test_literals_generators>
-
-<randomized_structured_data_generators>
+Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects. Use fast-check or faker.js for randomized scalars; use `fc.Arbitrary` for structured domain values.
 
 ```typescript
 // testing/generators/{domain}.ts
-
-// Manages a temp project directory; provides writeNode, readFile, and fc.Arbitrary accessors
-export async function withTestEnv(
-  config: Config,
-  callback: (env: SpecTreeEnv) => Promise<void>,
-): Promise<void>;
 
 // Generates valid spec-tree node paths drawn from config kinds
 export function arbitraryNodePath(config: Config): fc.Arbitrary<string>;
@@ -276,19 +262,22 @@ export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
 ```
 
-</randomized_structured_data_generators>
-
 </generators>
 
 <harnesses>
 
-- ALWAYS factor out test data like strings, ids, dates, and expected-output snippets into a test harness or test factory in `testing/harnesses/{domain}.ts` or `testing/harnesses/{domain}/{concern}.ts`
-
-<test_harnesses>
-
-Create or reuse harnesses with automatic context management.
+Use harnesses for tests that interact with external systems — filesystems, browsers, APIs, Docker. A harness manages setup and teardown of the external resource; it is not self-contained.
 
 ```typescript
+// testing/harnesses/{domain}.ts
+
+// Filesystem harness: manages a temp project directory for spec-tree operations
+export async function withTestEnv(
+  config: Config,
+  callback: (env: SpecTreeEnv) => Promise<void>,
+): Promise<void>;
+
+// Browser harness: wraps Playwright with page lifecycle management
 export function withPlaywright(testFn: BasePlaywrightTest): PlaywrightHarnessTest {
   return testFn.extend<PlaywrightHarnessFixtures>({
     playwrightHarness: async ({ page }, provideFixture) => {
@@ -300,9 +289,15 @@ export function withPlaywright(testFn: BasePlaywrightTest): PlaywrightHarnessTes
 export const test = withPlaywright(baseTest);
 ```
 
-</test_harnesses>
-
 </harnesses>
+
+<fixtures>
+
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle. Fixture files live in `tests/fixtures/` alongside the test that uses them.
+
+Strings and numbers are never valid fixtures. A string literal that represents a domain value belongs in the production module or a generator, not a static file or a test-file constant.
+
+</fixtures>
 
 - Keep descriptive test titles and assertion diagnostics inline; they are the only valid string literals in a test file.
 - Use aliases such as `@testing/*` for shared test infrastructure
