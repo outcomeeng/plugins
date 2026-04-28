@@ -1,4 +1,4 @@
-"""Unit tests for plugin manifest validation.
+"""Level 1 scenario tests for plugin manifest validation.
 
 Tests the validate-plugins.py script against the assertions
 in [plugin-manifest.md](../plugin-manifest.md).

@@ -1,4 +1,4 @@
-"""Unit tests for SKILL.md frontmatter validation.
+"""Level 1 scenario tests for SKILL.md frontmatter validation.
 
 Tests the validate_skill_frontmatter.py wrapper and the vendored
 quick_validate.py against the assertions in
