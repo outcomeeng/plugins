@@ -1,6 +1,6 @@
 ---
 name: standardizing-typescript-tests
-user-invocable: false
+disable-model-invocation: true
 description: >-
   TypeScript testing standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
@@ -116,397 +116,17 @@ After `/testing` chooses the evidence and level, implement it with these TypeScr
 </router_mapping>
 
 <l1_patterns>
-Pure computation and filesystem tests at `l1` use direct function calls, typed factories, and Node.js temp dirs.
-
-### Pure function
-
-```typescript
-import { describe, expect, it } from "vitest";
-
-describe("buildCommand", () => {
-  it("includes checksum flag when enabled", () => {
-    const cmd = buildCommand({ checksum: true });
-
-    expect(cmd).toContain("--checksum");
-  });
-
-  it("preserves unicode paths", () => {
-    const cmd = buildCommand({
-      source: "/tank/photos",
-      dest: "remote:backup",
-    });
-
-    expect(cmd).toContain("/tank/photos");
-  });
-});
-```
-
-### Typed data factory
-
-Generate test data with full type inference. Never use arbitrary literals.
-
-```typescript
-type AuditResult = {
-  id: string;
-  url: string;
-  scores: { performance: number; accessibility: number };
-};
-
-let idCounter = 0;
-
-function createAuditResult(overrides: Partial<AuditResult> = {}): AuditResult {
-  return {
-    id: `audit-${++idCounter}`,
-    url: `https://example.com/page-${idCounter}`,
-    scores: { performance: 90, accessibility: 100 },
-    ...overrides,
-  };
-}
-
-describe("analyzeResults", () => {
-  it("fails on low performance", () => {
-    const result = createAuditResult({
-      scores: { performance: 45, accessibility: 100 },
-    });
-
-    const analysis = analyzeResults([result], { minPerformance: 90 });
-
-    expect(analysis.passed).toBe(false);
-  });
-});
-```
-
-### Temporary directories
-
-Temp dirs are not external dependencies -- use them freely at `l1`.
-
-```typescript
-import { mkdtemp, rm, writeFile } from "fs/promises";
-import { tmpdir } from "os";
-import { join } from "path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-describe("loadConfig", () => {
-  let tempDir: string;
-
-  beforeEach(async () => {
-    tempDir = await mkdtemp(join(tmpdir(), "config-test-"));
-  });
-
-  afterEach(async () => {
-    await rm(tempDir, { recursive: true });
-  });
-
-  it("loads YAML config file", async () => {
-    const configPath = join(tempDir, "config.yaml");
-    await writeFile(
-      configPath,
-      "site_dir: ./site\nbase_url: http://localhost:1313\n",
-    );
-
-    const config = await loadConfig(configPath);
-
-    expect(config.site_dir).toBe("./site");
-    expect(config.base_url).toBe("http://localhost:1313");
-  });
-});
-```
-
+Pure computation and filesystem tests at `l1` use direct function calls, typed factories, and Node.js temp dirs. Read `${CLAUDE_SKILL_DIR}/references/l1-patterns.md` for full examples of each pattern.
 </l1_patterns>
 
 <exception_implementations>
-When `/testing` routes to Stage 5, implement the exception in TypeScript as follows.
+When `/testing` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
 
-### Exception 1: Failure modes
-
-Retry logic, circuit breakers, error handling.
-
-```typescript
-type HttpClient = {
-  fetch(url: string): Promise<{ status: number; body: unknown }>;
-};
-
-describe("fetchWithRetry", () => {
-  it("retries on timeout", async () => {
-    let attempts = 0;
-
-    const client: HttpClient = {
-      async fetch() {
-        attempts++;
-        if (attempts < 3) throw new TimeoutError("timed out");
-        return { status: 200, body: "ok" };
-      },
-    };
-
-    const result = await fetchWithRetry("https://api.example.com", client);
-
-    expect(attempts).toBe(3);
-    expect(result.status).toBe(200);
-  });
-
-  it("stops retrying after max attempts", async () => {
-    const client: HttpClient = {
-      async fetch() {
-        throw new TimeoutError("always fails");
-      },
-    };
-
-    await expect(
-      fetchWithRetry("https://api.example.com", client, { maxRetries: 3 }),
-    ).rejects.toThrow(TimeoutError);
-  });
-});
-```
-
-### Exception 2: Interaction protocols
-
-Call sequences, ordering, "no extra calls."
-
-```typescript
-describe("Saga", () => {
-  it("compensates in reverse order on failure", async () => {
-    const calls: string[] = [];
-
-    const steps = [
-      {
-        execute: async () => calls.push("step1-execute"),
-        compensate: async () => calls.push("step1-compensate"),
-      },
-      {
-        execute: async () => {
-          calls.push("step2-execute");
-          throw new Error("Step 2 failed");
-        },
-        compensate: async () => calls.push("step2-compensate"),
-      },
-    ];
-
-    await expect(new Saga(steps).run()).rejects.toThrow();
-
-    expect(calls).toEqual([
-      "step1-execute",
-      "step2-execute",
-      "step2-compensate",
-      "step1-compensate",
-    ]);
-  });
-});
-
-describe("CachingWrapper", () => {
-  it("does not refetch cached values", async () => {
-    let fetchCount = 0;
-
-    const client = {
-      async getUser(id: string) {
-        fetchCount++;
-        return { id, name: "Test" };
-      },
-    };
-
-    const cache = new CachingWrapper(client);
-
-    await cache.getUser("123");
-    await cache.getUser("123");
-    await cache.getUser("123");
-
-    expect(fetchCount).toBe(1);
-  });
-});
-```
-
-### Exception 3: Time and concurrency
-
-Use `vi.useFakeTimers()` or an injected clock.
-
-```typescript
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-describe("Lease", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it("renews before expiry", async () => {
-    let renewCount = 0;
-
-    const lease = new Lease({
-      ttl: 30_000,
-      renewAt: 25_000,
-      onRenew: () => renewCount++,
-    });
-
-    await vi.advanceTimersByTimeAsync(24_000);
-    expect(renewCount).toBe(0);
-
-    await vi.advanceTimersByTimeAsync(2_000);
-    expect(renewCount).toBe(1);
-  });
-});
-
-type Clock = { now(): number };
-
-describe("TokenRefresher", () => {
-  it("refreshes before expiry with injected clock", async () => {
-    let currentTime = 1000;
-    const clock: Clock = { now: () => currentTime };
-    let refreshed = false;
-
-    const refresher = new TokenRefresher({
-      expiresAt: 2000,
-      refreshBuffer: 100,
-      clock,
-      onRefresh: () => {
-        refreshed = true;
-      },
-    });
-
-    currentTime = 1899;
-    refresher.tick();
-    expect(refreshed).toBe(false);
-
-    currentTime = 1901;
-    refresher.tick();
-    expect(refreshed).toBe(true);
-  });
-});
-```
-
-### Exception 4: Safety
-
-Record intent without executing the dangerous operation.
-
-```typescript
-type PaymentProvider = {
-  charge(amount: number, token: string): Promise<{ chargeId: string }>;
-  refund(chargeId: string, amount: number): Promise<{ refundId: string }>;
-};
-
-describe("OrderProcessor", () => {
-  it("issues refund for cancelled order", async () => {
-    const refunds: Array<{ chargeId: string; amount: number }> = [];
-
-    const payment: PaymentProvider = {
-      async charge() {
-        return { chargeId: "ch_123" };
-      },
-      async refund(chargeId, amount) {
-        refunds.push({ chargeId, amount });
-        return { refundId: "re_123" };
-      },
-    };
-
-    await new OrderProcessor({ payment }).cancelOrder(orderWithCharge);
-
-    expect(refunds).toEqual([{ chargeId: "ch_123", amount: 99.99 }]);
-  });
-});
-```
-
-### Exception 6: Observability
-
-Capture request details the real system cannot expose.
-
-```typescript
-type HttpClient = {
-  post(
-    url: string,
-    options: { headers: Record<string, string>; body: unknown },
-  ): Promise<unknown>;
-};
-
-describe("PaymentClient", () => {
-  it("includes idempotency key in every request", async () => {
-    const requests: Array<{ headers: Record<string, string> }> = [];
-
-    const http: HttpClient = {
-      async post(url, options) {
-        requests.push({ headers: options.headers });
-        return { id: "charge_123" };
-      },
-    };
-
-    await new PaymentClient({ http }).charge(100, "tok_123");
-
-    expect(requests).toHaveLength(1);
-    expect(requests[0].headers["Idempotency-Key"]).toBeDefined();
-  });
-});
-```
-
+Exception 5 (combinatorial cost: configurable fake with real-shaped behavior) is listed in `<router_mapping>` but does not yet have a TypeScript example.
 </exception_implementations>
 
 <l2_patterns>
-Use typed harness factories when tests require real infrastructure (Docker, browsers, project binaries).
-
-Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing.
-
-```typescript
-import { execa } from "execa";
-import { existsSync } from "fs";
-import { cp, mkdtemp, rm } from "fs/promises";
-import { tmpdir } from "os";
-import { join } from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-type HugoHarness = {
-  siteDir: string;
-  build(args?: string[]): Promise<{ exitCode: number; stdout: string }>;
-  cleanup(): Promise<void>;
-};
-
-async function createHugoHarness(fixturePath?: string): Promise<HugoHarness> {
-  try {
-    await execa("hugo", ["version"]);
-  } catch {
-    throw new Error("Hugo not installed. Run: brew install hugo");
-  }
-
-  const siteDir = await mkdtemp(join(tmpdir(), "hugo-test-"));
-
-  if (fixturePath) {
-    await cp(fixturePath, siteDir, { recursive: true });
-  } else {
-    await createMinimalSite(siteDir);
-  }
-
-  return {
-    siteDir,
-    async build(args = []) {
-      const result = await execa("hugo", ["--source", siteDir, ...args], {
-        reject: false,
-      });
-      return { exitCode: result.exitCode, stdout: result.stdout };
-    },
-    async cleanup() {
-      await rm(siteDir, { recursive: true, force: true });
-    },
-  };
-}
-
-describe("Hugo build", () => {
-  let harness: HugoHarness;
-
-  beforeAll(async () => {
-    harness = await createHugoHarness();
-  });
-
-  afterAll(async () => {
-    await harness.cleanup();
-  });
-
-  it("builds site without error", async () => {
-    const result = await harness.build();
-
-    expect(result.exitCode).toBe(0);
-  });
-
-  it("creates index.html in output", async () => {
-    await harness.build();
-
-    expect(existsSync(join(harness.siteDir, "public/index.html"))).toBe(true);
-  });
-});
-```
-
+Use typed harness factories when tests require real infrastructure (Docker, browsers, project binaries). Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing. Read `${CLAUDE_SKILL_DIR}/references/l2-patterns.md` for the full harness factory pattern.
 </l2_patterns>
 
 <l3_patterns>
@@ -686,7 +306,7 @@ const VALID_VERDICTS = ["fail", "skipped", "pass"] as const;
 
 </invalid_test_owned_constant>
 
-**3. Data that only the test needs and hence owns**
+3. **Data that only the test needs and hence owns**
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS!**
 
@@ -809,7 +429,7 @@ Reject or rewrite these patterns:
 
 The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model.
 
-### Playwright `{ request }` fixture does not share browser-context cookies
+<playwright_request_context>
 
 Playwright's `{ request }` fixture uses its own `APIRequestContext` that does NOT share cookies with the `BrowserContext`. Cookies set via `context.addCookies(...)` do not reach `{ request }`.
 
@@ -829,7 +449,19 @@ test("API returns flag-gated payload", async ({ context }) => {
 
 `page.request` also shares cookies with the browser context and works when a test already uses a page.
 
+</playwright_request_context>
+
 </anti_patterns>
+
+<reference_guides>
+
+| File                                                          | When to read                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| `${CLAUDE_SKILL_DIR}/references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
+| `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/testing`              |
+| `${CLAUDE_SKILL_DIR}/references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
+
+</reference_guides>
 
 <success_criteria>
 TypeScript test guidance follows this standard when:
