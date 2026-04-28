@@ -46,8 +46,6 @@ def needs_blank_line_before_tag(output_lines: list[str]) -> bool:
     prev = output_lines[-1]
     if not LIST_ITEM_RE.match(prev.rstrip("\n")):
         return False
-    if prev.strip() == "":
-        return False
 
     # Check if there's already a blank line
     has_blank = len(output_lines) >= 2 and output_lines[-1].strip() == ""
