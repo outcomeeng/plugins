@@ -114,9 +114,10 @@ Before applying changes, determine what will be affected:
 1. Create the node directory at the new location with an appropriate index.
 2. Move the spec file, renaming if the slug stays the same.
 3. Move the `tests/` directory and all test files.
-4. Move any child nodes recursively.
-5. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
-6. Remove the old directory.
+4. If PLAN.md or ISSUES.md exist in the source directory, move them to the new location — they are node-local escape hatches.
+5. Move any child nodes recursively.
+6. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
+7. Remove the old directory.
 
 **Index assignment**: Use ordering rules from `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md`. If inserting between existing siblings, use the midpoint.
 
@@ -175,6 +176,7 @@ After applying any operation:
 
 - [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
+- [ ] Escape hatch files (PLAN.md, ISSUES.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
 - [ ] Index ordering preserved — enablers at lower indices than dependents
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
@@ -259,6 +261,8 @@ How to avoid: When rewriting specs after structural changes, treat the rewrite a
 **Extracting enablers for single dependents.** An enabler with only one dependent is not an enabler — it's an internal concern of that dependent. Extract only when 2+ siblings share the need.
 
 **Leaving empty nodes after re-scope.** If you move all assertions out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
+
+**Treating `spx/local/` as a node directory.** `spx/local/` holds skill overlays, not spec nodes. It has no enabler or outcome suffix and its files have no spec structure. Do not move, archive, or validate it as part of tree surgery.
 
 </anti_patterns>
 

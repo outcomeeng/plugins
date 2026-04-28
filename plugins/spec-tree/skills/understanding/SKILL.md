@@ -22,6 +22,8 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 6. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertions derive from PDRs/ADRs, not from code or tests.
 7. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
 8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
+9. **ESCAPE HATCHES ARE EPHEMERAL** — PLAN.md and ISSUES.md are non-durable files placed in node directories by `/handing-off`. They record deferred plans and known issues. They are coordination artifacts, not spec truth — discoverable via `/contextualizing` but excluded from conformance checks.
+10. **LOCAL OVERLAYS** — `spx/local/` holds project-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
 
 </principles>
 
@@ -43,6 +45,8 @@ About to reason about index placement, sparse integer ordering, dependency direc
    - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
+   - PLAN.md / ISSUES.md inside node directories — non-durable escape hatches; ephemeral coordination artifacts (used by `/contextualizing`, `/handing-off`)
+   - `spx/local/*.md` — project-specific overlays for `/coding-*`, `/architecting-*`, and `/testing-*` skills (enumerated by `/contextualizing`)
 4. Note template and example locations (read only when authoring):
    - `templates/product/product-name.product.md`
    - `templates/decisions/decision-name.adr.md`
@@ -73,5 +77,7 @@ Examples available in: examples/
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
 - [ ] Methodology loaded: lower index constrains higher index and descendants; same index means independent siblings; fractional indexing is the escape hatch when integer gaps are exhausted
+- [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are ephemeral coordination artifacts, not durable spec truth
+- [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per project without modifying the shared marketplace
 
 </success_criteria>

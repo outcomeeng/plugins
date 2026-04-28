@@ -80,11 +80,16 @@ Read: spx/CLAUDE.md  (if exists)
 # Read ALL product-level ADRs and PDRs
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"
+
+# Enumerate local skill overlays (list only — consumed by coding/architecting/testing skills)
+Glob: "spx/local/*.md"
 ```
 
-**Read EVERY file returned by the globs.** Do not filter by title. Decision records contain cross-cutting constraints that may not be obvious from the title.
+**Read EVERY file returned by the ADR/PDR globs.** Do not filter by title. Decision records contain cross-cutting constraints that may not be obvious from the title.
 
 **Verification**: Count files returned by globs. Count files actually read. These must match.
+
+**Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Do not read them here — they are consumed by the relevant language skill, not by the context loader.
 
 </step>
 
@@ -112,7 +117,16 @@ Glob: "spx/{path-to-dir}/*-*.pdr.md"
 
 **Read EVERY file returned.** Verification: glob count must equal read count.
 
-**2c. Read all lower-index siblings' specs**
+**2c. Check for escape hatches in this directory**
+
+```bash
+Glob: "spx/{path-to-dir}/PLAN.md"
+Glob: "spx/{path-to-dir}/ISSUES.md"
+```
+
+**If PLAN.md or ISSUES.md exist, read them.** These are non-durable escape hatches left by previous agents via `/handing-off`. Deferred plans or known issues in an ancestor node may constrain what can or should be done at the target.
+
+**2d. Read all lower-index siblings' specs**
 
 The target node has an index (e.g., `43` in `43-feature.outcome`). All sibling nodes with a lower index constrain the target and must be read.
 
@@ -126,7 +140,7 @@ Read: spx/{parent-path}/{sibling-dir}/{sibling-slug}.md
 
 Lower-index siblings' ADRs/PDRs are NOT read — only the sibling's spec itself. The dependency encoding means the sibling's existence constrains the target, but the sibling's internal decisions are its own concern.
 
-**2d. Note same-index siblings (independent)**
+**2e. Note same-index siblings (independent)**
 
 Siblings with the same index as the target are independent — they neither constrain nor are constrained by the target. List them but do not read.
 
@@ -186,7 +200,8 @@ Hierarchy:
 
 Children: {count} ({list if any})
 Tests: {exists|missing}
-Escape hatches: {PLAN.md | ISSUES.md | none}
+Escape hatches: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
+Local skill overlays: {comma-separated list from spx/local/} | none
 Lower-index siblings read: {list}
 Same-index siblings (independent): {list}
 Higher-index siblings (depend on target): {list}
@@ -245,7 +260,8 @@ Context loading is complete when:
 - [ ] Target ADRs/PDRs read
 - [ ] Children enumerated
 - [ ] Test directory status checked
-- [ ] Escape hatches (PLAN.md, ISSUES.md) checked and read if present
+- [ ] Escape hatches (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
+- [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
 

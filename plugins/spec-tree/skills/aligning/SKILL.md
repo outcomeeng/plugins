@@ -70,6 +70,8 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 - `CLAUDE.md` files (project configuration, not specs)
 - Files inside `tests/` directories (test code, not specs)
+- `PLAN.md` and `ISSUES.md` files (non-durable escape hatches, not spec artifacts)
+- Files inside `spx/local/` directory (skill overlays, not spec artifacts)
 
 </file_classification>
 
