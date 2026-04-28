@@ -555,6 +555,8 @@ just push-marketplace
 just push-marketplace origin main
 ```
 
+⚠️ **NEVER use `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` directly.** These are the primitives that `just push-marketplace` already orchestrates in the correct order. Running them manually risks touching the wrong project scope, running steps out of order, or skipping the post-install validation. Always use `just push-marketplace`. Read the Justfile before any marketplace operation.
+
 ## Missing plugins or skills
 
 ### Claude Code
