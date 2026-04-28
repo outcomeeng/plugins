@@ -1,4 +1,4 @@
-"""Tests for scripts/fix-xml-spacing.py."""
+"""Level 1 scenario tests for scripts/fix-xml-spacing.py."""
 
 from __future__ import annotations
 
@@ -70,11 +70,8 @@ class TestNeedsBlankLineBeforeTag:
         assert result is True
 
     def test_blank_line_already_present_returns_false(self) -> None:
-        # When the last line is blank, we don't need another
+        # A blank last line is not a list item, so no additional blank line is needed.
         result = fix_xml_spacing.needs_blank_line_before_tag(["- list item\n", "\n"])
-        # The function checks if output_lines[-1].strip() == "" which would be True
-        # But it also checks if LIST_ITEM_RE matches prev.rstrip("\n")
-        # prev = "\n", prev.rstrip("\n") = "", LIST_ITEM_RE won't match ""
         assert result is False
 
 
