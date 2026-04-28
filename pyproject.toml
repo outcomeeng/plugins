@@ -7,9 +7,11 @@ requires-python = ">=3.14"
 [dependency-groups]
 dev = [
   "hypothesis>=6.0",
+  "mypy>=1.20",
   "pytest>=8.0",
   "pytest-cov>=5.0",
   "pyyaml>=6.0",
+  "ruff>=0.15",
 ]
 
 [build-system]
