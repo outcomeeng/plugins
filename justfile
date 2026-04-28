@@ -81,7 +81,7 @@ push-marketplace *push_args:
     done
     git push {{push_args}}
     claude plugin marketplace update outcomeeng
-    codex plugin marketplace upgrade outcomeeng
+    uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
 
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:

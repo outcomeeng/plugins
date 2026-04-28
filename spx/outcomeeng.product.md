@@ -30,6 +30,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Language-specific plugins (Python, TypeScript) for architecture, testing, coding, review
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
+- Local plugin installation and update support for developer machines
 
 ### What's excluded
 

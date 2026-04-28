@@ -130,6 +130,10 @@ claude plugin marketplace update outcomeeng
 codex plugin marketplace upgrade outcomeeng
 ```
 
+From this checkout, `just push-marketplace` wraps the Codex upgrade with cache
+path preservation so active sessions with stale skill paths keep resolving for
+seven days.
+
 ## Plugins
 
 Unless marked otherwise, the skills described below are available in both Claude Code and Codex. Commands and agents are Claude Code-only.
