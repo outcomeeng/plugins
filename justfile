@@ -69,6 +69,20 @@ hooks-install:
 hooks-run:
     lefthook run pre-commit
 
+# Validate SKILL.md frontmatter in installed Claude and Codex marketplace caches
+check-installed marketplace="outcomeeng":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    claude_files=$(find ~/.claude/plugins/cache/{{marketplace}} -name "SKILL.md")
+    codex_files=$(find ~/.codex/.tmp/marketplaces/{{marketplace}} -name "SKILL.md")
+    claude_count=$(echo "$claude_files" | grep -c . || true)
+    codex_count=$(echo "$codex_files" | grep -c . || true)
+    echo "━━━ Claude Code install ($claude_count files) ━━━"
+    echo "$claude_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
+    echo "━━━ Codex install ($codex_count files) ━━━"
+    echo "$codex_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
+    echo "✔ installed skills valid"
+
 # Push the current branch, then refresh local Claude and Codex marketplace installs
 push-marketplace *push_args:
     #!/usr/bin/env bash
@@ -82,6 +96,8 @@ push-marketplace *push_args:
     git push {{push_args}}
     claude plugin marketplace update outcomeeng
     uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
+    uv run python -m outcomeeng.scripts.validate_install
+    just check-installed
 
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:
