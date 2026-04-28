@@ -1,8 +1,8 @@
 ---
 name: writing-prose
 description: >-
-  ALWAYS invoke this skill when producing a file or standalone document: articles, documentation, blog posts, specs.
-  NEVER invoke for chat responses to the user, including long research summaries delivered in chat.
+  ALWAYS invoke this skill when creating or editing prose for human-facing documents, web pages and messages for humans other than for the user.
+  NEVER invoke for responses to the user, including long research summaries delivered in chat, or prose for agents such as in agent prompts, SKILL.md and AGENTS.md files.
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`

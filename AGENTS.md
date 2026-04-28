@@ -196,11 +196,11 @@ Prose craft skills for writing and reviewing.
 
 ### Skills
 
-| Skill                  | Purpose                                                    |
-| ---------------------- | ---------------------------------------------------------- |
-| `/standardizing-prose` | Prose anti-patterns enforced across all skills (reference) |
-| `/writing-prose`       | Write varied, specific, human prose (always active)        |
-| `/reviewing-prose`     | Review and edit prose for formulaic patterns (on request)  |
+| Skill                  | Purpose                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `/standardizing-prose` | Prose anti-patterns enforced across all skills (reference)  |
+| `/writing-prose`       | Write varied, specific, human prose (always active)         |
+| `/auditing-prose`      | Audit and rewrite prose for formulaic patterns (on request) |
 
 ## TypeScript Plugin
 
@@ -469,7 +469,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   └── skills/
 │   │       ├── standardizing-prose/
 │   │       ├── writing-prose/
-│   │       └── reviewing-prose/
+│   │       └── auditing-prose/
 │   ├── python/
 │   │   ├── agents/
 │   │   │   ├── python-code-auditor.md

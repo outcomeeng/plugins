@@ -1,8 +1,9 @@
 ---
-name: reviewing-prose
+name: auditing-prose
 description: >-
-  ALWAYS invoke this skill when reviewing, editing, or improving prose for quality.
-  NEVER review prose without this skill.
+  ALWAYS invoke this skill when auditing prose in human-facing documents, web pages and messages for humans other than for the user.
+  NEVER invoke for responses to the user, including long research summaries delivered in chat, or prose for agents such as in agent prompts, SKILL.md and AGENTS.md files.
+allowed-tools: Read, Glob, Grep, Bash
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`
@@ -12,14 +13,6 @@ description: >-
 Detect and fix formulaic patterns that signal machine-generated or lazy writing. Flag specific violations and suggest concrete rewrites.
 
 </objective>
-
-<quick_start>
-
-**Core rule**: Zero tolerance. Every pattern in the reference catalog is a violation. Do not excuse any instance as "single use" or "it lands here." If a sentence triggers a pattern, flag it. If a sentence triggers two patterns simultaneously, it is the highest priority flag.
-
-**Before reviewing**, read `/standardizing-prose` for the complete catalog of 30+ anti-patterns across 6 categories.
-
-</quick_start>
 
 <essential_principles>
 
@@ -63,8 +56,8 @@ Review is complete when:
 
 <reference_index>
 
-| Skill                  | When to Read               |
-| ---------------------- | -------------------------- |
-| `/standardizing-prose` | Always -- before reviewing |
+| Skill                  | When to Read              |
+| ---------------------- | ------------------------- |
+| `/standardizing-prose` | Always -- before auditing |
 
 </reference_index>

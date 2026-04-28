@@ -30,7 +30,7 @@
     {
       "name": "prose",
       "source": "./plugins/prose",
-      "description": "Prose craft: /writing-prose (always active), /reviewing-prose (on request)"
+      "description": "Prose craft: /writing-prose (always active), /auditing-prose (on request)"
     },
     {
       "name": "spec-tree",
