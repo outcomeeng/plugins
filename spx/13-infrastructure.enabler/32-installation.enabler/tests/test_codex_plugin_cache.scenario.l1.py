@@ -12,8 +12,10 @@ MARKETPLACE_NAME = "outcomeeng"
 PLUGIN_NAME = "spec-tree"
 OLD_VERSION = "0.26.5"
 NEW_VERSION = "0.26.6"
+LATEST_VERSION = "0.26.7"
 OLD_SKILL_TEXT = "old skill"
 NEW_SKILL_TEXT = "new skill"
+LATEST_SKILL_TEXT = "latest skill"
 STALE_AGE_DAYS = 8
 MAX_AGE_DAYS = 7
 SECONDS_PER_DAY = 24 * 60 * 60
@@ -65,6 +67,73 @@ def test_upgrade_restores_removed_version_path_as_symlink(
     assert old_version_dir.resolve() == new_version_dir
     assert _skill_file(cache_root, OLD_VERSION).read_text() == NEW_SKILL_TEXT
     assert result.linked_versions == (old_version_dir,)
+
+
+def test_upgrade_preserves_existing_compatibility_link(
+    tmp_path: Path,
+) -> None:
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
+    old_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / OLD_VERSION
+    new_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / NEW_VERSION
+    latest_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / LATEST_VERSION
+    old_version_dir.symlink_to(NEW_VERSION, target_is_directory=True)
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        old_version_dir.unlink()
+        new_version_dir.rename(tmp_path / "removed-new-version")
+        _write_skill(cache_root, LATEST_VERSION, LATEST_SKILL_TEXT)
+        return subprocess.CompletedProcess(command, COMMAND_OK)
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        MARKETPLACE_NAME,
+        cache_root=cache_root,
+        max_age_days=MAX_AGE_DAYS,
+        runner=runner,
+    )
+
+    assert old_version_dir.is_symlink()
+    assert old_version_dir.resolve() == latest_version_dir
+    assert new_version_dir.is_symlink()
+    assert new_version_dir.resolve() == latest_version_dir
+    assert _skill_file(cache_root, OLD_VERSION).read_text() == LATEST_SKILL_TEXT
+    assert _skill_file(cache_root, NEW_VERSION).read_text() == LATEST_SKILL_TEXT
+    assert result.linked_versions == (old_version_dir, new_version_dir)
+
+
+def test_upgrade_keeps_removed_stale_compatibility_link_pruned(
+    tmp_path: Path,
+) -> None:
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
+    old_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / OLD_VERSION
+    new_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / NEW_VERSION
+    latest_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / LATEST_VERSION
+    old_version_dir.symlink_to(NEW_VERSION, target_is_directory=True)
+    stale_mtime = preserve_codex_plugin_cache.current_time() - (
+        STALE_AGE_DAYS * SECONDS_PER_DAY
+    )
+    os.utime(old_version_dir, (stale_mtime, stale_mtime), follow_symlinks=False)
+
+    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        old_version_dir.unlink()
+        new_version_dir.rename(tmp_path / "removed-new-version")
+        _write_skill(cache_root, LATEST_VERSION, LATEST_SKILL_TEXT)
+        return subprocess.CompletedProcess(command, COMMAND_OK)
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        MARKETPLACE_NAME,
+        cache_root=cache_root,
+        max_age_days=MAX_AGE_DAYS,
+        runner=runner,
+    )
+
+    assert not os.path.lexists(old_version_dir)
+    assert new_version_dir.is_symlink()
+    assert new_version_dir.resolve() == latest_version_dir
+    assert _skill_file(cache_root, NEW_VERSION).read_text() == LATEST_SKILL_TEXT
+    assert result.linked_versions == (new_version_dir,)
+    assert result.pruned_links == ()
 
 
 def test_upgrade_prunes_stale_version_symlinks(tmp_path: Path) -> None:

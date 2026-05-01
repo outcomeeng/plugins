@@ -39,6 +39,7 @@ class CachedVersion:
     path: Path
     files: tuple[Path, ...]
     is_symlink: bool
+    modified_at: float
 
 
 @dataclass(frozen=True)
@@ -61,13 +62,15 @@ class CacheSnapshot:
             for version_dir in sorted(plugin_dir.iterdir()):
                 if not version_dir.is_dir():
                     continue
+                is_symlink = version_dir.is_symlink()
                 versions.append(
                     CachedVersion(
                         plugin=plugin_dir.name,
                         version=version_dir.name,
                         path=version_dir,
                         files=_snapshot_files(version_dir),
-                        is_symlink=version_dir.is_symlink(),
+                        is_symlink=is_symlink,
+                        modified_at=_modified_at(version_dir, is_symlink),
                     )
                 )
 
@@ -79,7 +82,7 @@ class CacheSnapshot:
             if not version.is_symlink:
                 grouped[version.plugin].append(version)
         return {
-            plugin: tuple(sorted(versions, key=lambda item: item.path.stat().st_mtime))
+            plugin: tuple(sorted(versions, key=lambda item: item.modified_at))
             for plugin, versions in grouped.items()
         }
 
@@ -119,6 +122,7 @@ def preserve_during_upgrade(
     before = CacheSnapshot.capture(resolved_cache_root, marketplace)
     command = [*CODEX_UPGRADE_COMMAND, marketplace]
 
+    upgrade_result: subprocess.CompletedProcess[str]
     if dry_run:
         upgrade_result = subprocess.CompletedProcess(command, 0)
     else:
@@ -133,14 +137,18 @@ def preserve_during_upgrade(
         )
 
     after = CacheSnapshot.capture(resolved_cache_root, marketplace)
+    now = current_time()
     linked_versions, skipped_plugins = restore_missing_version_links(
         before,
         after,
+        max_age_days=max_age_days,
+        now=now,
         dry_run=dry_run,
     )
     pruned_links = prune_old_version_symlinks(
         after.marketplace_dir,
         max_age_days=max_age_days,
+        now=now,
         dry_run=dry_run,
     )
 
@@ -156,15 +164,22 @@ def restore_missing_version_links(
     before: CacheSnapshot,
     after: CacheSnapshot,
     *,
+    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
+    now: float | None = None,
     dry_run: bool = False,
 ) -> tuple[tuple[Path, ...], tuple[str, ...]]:
-    """Link removed old version directories to the newest current version."""
+    """Link removed old version paths to the newest current version."""
     current_versions = after.real_versions_by_plugin()
+    cutoff = (now if now is not None else current_time()) - (
+        max_age_days * SECONDS_PER_DAY
+    )
     linked: list[Path] = []
     skipped: set[str] = set()
 
     for cached_version in before.versions:
-        if cached_version.is_symlink or _path_exists(cached_version.path):
+        if _path_exists(cached_version.path):
+            continue
+        if cached_version.is_symlink and cached_version.modified_at < cutoff:
             continue
 
         target = _newest_version_for_plugin(current_versions, cached_version.plugin)
@@ -218,6 +233,12 @@ def _snapshot_files(version_dir: Path) -> tuple[Path, ...]:
             continue
         files.append(path.relative_to(version_dir))
     return tuple(files)
+
+
+def _modified_at(version_dir: Path, is_symlink: bool) -> float:
+    if is_symlink:
+        return version_dir.lstat().st_mtime
+    return version_dir.stat().st_mtime
 
 
 def _path_exists(path: Path) -> bool:
