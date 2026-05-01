@@ -431,7 +431,7 @@ Reject or rewrite these patterns:
 | missing harness cleanup                           | leaves shared state that changes later test outcomes         |
 | test-file-local constants for source-owned values | production module should export the value; refactor it       |
 
-The cross-file literal-reuse check (check IDs `L3`/`L4`: a literal in a test also appears in `src/`, or the same literal appears in multiple test files) is not a clippy lint — it runs as `spx validation literal` because cross-file analysis does not fit per-file linting.
+Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 
 </anti_patterns>
 

@@ -1,6 +1,6 @@
 {
   "name": "rust",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Rust development workflow with testing, implementation, review, and architecture skills",
   "author": {
     "name": "Simon Heimlicher"

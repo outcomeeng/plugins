@@ -54,7 +54,6 @@ Gate 0 tool dependencies:
 
 - `cargo fmt --check` and `cargo clippy` must be runnable (V1)
 - `cargo llvm-cov` or the project's declared coverage tool (C1)
-- `spx validation literal` available on the path (L3/L4 — if applicable)
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 

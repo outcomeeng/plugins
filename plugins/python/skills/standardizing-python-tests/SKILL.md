@@ -296,7 +296,7 @@ Reject or rewrite these patterns:
 - Deep relative imports into stable shared test infrastructure
 - Silent skips for required credentialed evidence
 
-The cross-file literal-reuse check (check IDs `L3`/`L4`: a literal in a test also appears in `product/`, or the same literal appears in multiple test files) is not a ruff rule — it runs as `spx validation literal` because cross-file analysis does not fit ruff's per-file execution model.
+Do not require `spx validation literal` for Python tests. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in project)` in Python projects. Enforce source-owned values through review and Python test standards instead.
 
 </anti_patterns>
 

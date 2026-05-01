@@ -27,7 +27,7 @@ If you see `cat` commands above rather than skill content, shell injection did n
 
 Python test audit. Three gates in strict sequence, fail-closed:
 
-1. **Gate 0 — Deterministic**: ruff, mypy, pytest collection, and `spx validation literal` check filenames, linting, types, and cross-file literal reuse. Claude does not judge these rules — Gate 0 output is routed into the verdict verbatim.
+1. **Gate 0 — Deterministic**: filename policy, ruff, mypy, pytest collection, and coverage-tool availability check filenames, linting, types, collection, and coverage setup. Claude does not judge these rules — Gate 0 output is routed into the verdict verbatim.
 2. **Gate 1 — Assertion audit**: per-assertion LLM audit using the `/auditing-tests` workflow — coupling, falsifiability, alignment, coverage — with Python supplements applied at each property step.
 3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns that belong in shared fixtures or harnesses.
 
@@ -74,15 +74,16 @@ Gate 0 tool dependencies:
 - `ruff` installed in the consumer project (F1, V1)
 - `mypy` installed in the consumer project (V1)
 - `pytest` installed in the consumer project (V1, C1)
-- `spx validation literal` available on the path (L3/L4)
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
+
+Do not run `spx validation literal` for Python audits. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in project)` in Python projects.
 
 </prerequisites>
 
 <gate_0_deterministic>
 
-Run four tools and merge their findings.
+Run the checks below and merge their findings.
 
 <check id="F1" name="filename_policy">
 List Python test files under the target node:
@@ -112,16 +113,6 @@ pytest --collect-only -q <spec-node-path>/tests/
 Fail Gate 0 if any command fails. A non-compiling or uncollectable test file has no auditable evidence surface.
 </check>
 
-<check id="L3" name="literal_src_reuse">
-Detect literals shared between test and production code:
-
-```bash
-spx validation literal --files '<spec-node-path>/tests/**/*.py' --json
-```
-
-`src-reuse` findings (a literal in a test also appears in the production module) indicate the literal should be imported from production. `test-dupe` findings (a literal duplicated across test files) indicate extraction to a shared fixture.
-</check>
-
 <check id="C1" name="coverage_tool">
 Verify coverage tooling is available:
 
@@ -139,19 +130,16 @@ Gate 0 status:
 | Condition      | Status | Action                                                        |
 | -------------- | ------ | ------------------------------------------------------------- |
 | F1 or V1 fails | FAIL   | Record findings, skip Gates 1 and 2                           |
-| L3 only        | PASS   | Carry findings into Gate 1 step `falsifiability`              |
 | C1 only        | PASS   | Record coverage note; continue with other evidence properties |
 | all pass       | PASS   | Proceed to Gate 1                                             |
 
 Gate 0 check IDs:
 
-| check_id | Source                               |
-| -------- | ------------------------------------ |
-| F1       | Filename policy                      |
-| V1       | ruff / mypy / pytest collection      |
-| L3       | `spx validation literal` — src-reuse |
-| L4       | `spx validation literal` — test-dupe |
-| C1       | Coverage tool availability           |
+| check_id | Source                          |
+| -------- | ------------------------------- |
+| F1       | Filename policy                 |
+| V1       | ruff / mypy / pytest collection |
+| C1       | Coverage tool availability      |
 
 </gate_0_deterministic>
 
@@ -370,142 +358,13 @@ Gate 2 status:
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, L3, L4, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `tests/conftest.py`.
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `tests/conftest.py`.
 
 </verdict_format>
 
-<concrete_examples>
-
-**Example 1: APPROVED**
-
-Auditing `spx/21-uart.enabler/43-transmitter.outcome/`
-
-Assertion mapping:
-
-```text
-Assertion: MUST: Given a UartTx configured for 8N1 at 115200 baud,
-           when byte 0x55 is written, then TX line outputs start bit,
-           8 data bits (LSB first), and stop bit
-Type: Scenario
-Test: tests/test_uart_tx.scenario.l1.py ✓ exists
-```
-
-Coupling:
-
-```text
-Import: from product.uart_tx import UartTx
-Classification: Direct — codebase import of module under test
-```
-
-Falsifiability:
-
-```text
-Module: product/uart_tx.py
-Mutation: UartTx.write() outputs bits in MSB order instead of LSB
-Impact: assert bits == [0, 1, 0, 1, ...] fails — genuine falsifiability
-No @patch or Mock() found.
-```
-
-Alignment:
-
-```text
-Assertion says: "8N1 at 115200 → start bit, 8 data bits LSB first, stop bit"
-Test does: UartTx(config="8N1", baud=115200).write(0x55) → asserts exact bit sequence
-Match: exact behavior tested ✓
-Assertion type: Scenario → example-based test strategy ✓
-```
-
-Coverage:
-
-```text
-Baseline: product/uart_tx.py — 31.0%
-With test: product/uart_tx.py — 72.4%
-Delta: +41.4% ✓
-```
-
-```text
-Audit: spx/21-uart.enabler/43-transmitter.outcome/
-Verdict: APPROVED
-
-| # | Assertion       | Coupling | Falsifiability          | Alignment | Coverage | Verdict |
-|---|-----------------|----------|-------------------------|-----------|----------|---------|
-| 1 | 8N1 TX bit seq  | Direct   | MSB/LSB swap breaks test | ✓        | +41.4%   | PASS    |
-```
-
----
-
-**Example 2: REJECT — coupling severed by @patch**
-
-Auditing `spx/32-api.enabler/54-auth.outcome/`
-
-```text
-Assertion: MUST: Given valid credentials, when authenticating,
-           then a session token is returned from the database
-Test: tests/test_auth.scenario.l2.py ✓ exists
-```
-
-Coupling:
-
-```text
-Import: from product.database import query
-Classification: Direct — but...
-Line 8: @patch("product.database.query")
-→ Coupling severed. Real database.query never runs.
-```
-
-```text
-Audit: spx/32-api.enabler/54-auth.outcome/
-Verdict: REJECT
-
-| # | Assertion     | Property Failed | Finding          | Detail                            |
-|---|---------------|-----------------|------------------|-----------------------------------|
-| 1 | Session token | Falsifiability  | coupling severed | @patch replaces database.query    |
-
-How tests could pass while assertions fail:
-Database query is entirely replaced with a Mock returning hardcoded results.
-Any schema change, connection failure, or constraint violation in the real
-database is invisible. The test verifies behavior against a fake that always
-returns [{"id": 1}].
-```
-
----
-
-**Example 3: REJECT — TYPE_CHECKING import disguised as coupling**
-
-Auditing `spx/15-theme.enabler/22-contrast.outcome/`
-
-```text
-Assertion: MUST: All theme colors meet WCAG AA contrast ratio (4.5:1)
-Test: tests/test_contrast.compliance.l1.py ✓ exists
-```
-
-Coupling:
-
-```text
-Imports:
-  import pytest                                → Framework
-  from typing import TYPE_CHECKING             → Stdlib
-  if TYPE_CHECKING:
-      from product.theme import ThemeColor         → Type-only (erased at runtime)
-
-Zero runtime codebase imports → no coupling (tautology).
-```
-
-```text
-Audit: spx/15-theme.enabler/22-contrast.outcome/
-Verdict: REJECT
-
-| # | Assertion        | Property Failed | Finding     | Detail                                            |
-|---|------------------|-----------------|-------------|---------------------------------------------------|
-| 1 | WCAG AA contrast | Coupling        | no coupling | Only pytest + TYPE_CHECKING import (erased at runtime) |
-
-How tests could pass while assertions fail:
-Test declares its own color tuples and checks contrast math against them.
-The actual theme colors in product/theme.py are never imported at runtime. If
-all theme colors are changed to pure white, this test still passes.
-```
-
-</concrete_examples>
+<reference_guides>
+Use `references/python-test-audit-examples.md` when concrete approved and rejected Python audit examples are needed.
+</reference_guides>
 
 <failure_modes>
 
@@ -558,7 +417,7 @@ How to avoid: Essential principles — no code quality checks. Check the four ev
 
 Audit is complete when:
 
-- [ ] Gate 0 run: ruff, mypy, pytest collection, and `spx validation literal` all executed
+- [ ] Gate 0 run: ruff, mypy, and pytest collection all executed
 - [ ] Gate 1 complete: every assertion evaluated — coupling (with Python supplements), falsifiability, alignment, coverage (if Gate 0 PASS)
 - [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT

@@ -1,8 +1,8 @@
 ---
 name: writing-prose
 description: >-
-  ALWAYS invoke this skill when creating or editing prose for human-facing documents, web pages and messages for humans other than for the user.
-  NEVER invoke for responses to the user, including long research summaries delivered in chat, or prose for agents such as in agent prompts, SKILL.md and AGENTS.md files.
+  ALWAYS invoke this skill when writing or editing durable reader-facing prose such as docs, READMEs, web copy, release notes, emails, or PR descriptions.
+  NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions.
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`

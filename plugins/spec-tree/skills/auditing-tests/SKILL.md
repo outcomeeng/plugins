@@ -40,6 +40,8 @@ Read the project's CLAUDE.md for the test and coverage command. Run coverage wit
 
 Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals.
 
+Cross-file literal validation is TypeScript-only. The base audit and non-TypeScript wrappers must not require `spx validation literal`; TypeScript wrappers may run it as an optional preliminary check.
+
 **BINARY VERDICT.**
 
 APPROVED or REJECT. No middle ground. If any property is missing for any assertion, REJECT.
