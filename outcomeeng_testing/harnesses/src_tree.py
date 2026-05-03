@@ -67,6 +67,11 @@ class SrcTreeBuilder:
     def src_root(self) -> Path:
         return self.root / SRC_DIR_NAME
 
+    @property
+    def shared_root(self) -> Path:
+        """Path passed to expand_include / render_text as the shared_root argument."""
+        return self.src_root / SHARED_DIR_NAME
+
     def add_plugin(
         self,
         name: str,
