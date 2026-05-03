@@ -22,3 +22,6 @@
 21-spec-tree.enabler/76-sessions.enabler
 21-spec-tree.enabler/13-agent-environment.enabler
 18-plugin-build.enabler
+18-plugin-build.enabler/21-source-and-templating.enabler
+18-plugin-build.enabler/43-target-emission.enabler
+18-plugin-build.enabler/65-build-orchestration.enabler

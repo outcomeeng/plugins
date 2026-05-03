@@ -8,10 +8,7 @@ CAN maintain skills, commands, and agents as one canonical source while deliveri
 
 ### Compliance
 
-- ALWAYS: every src plugin source file produces exactly one corresponding output in `dist/claude/` and one in `dist/codex/` — a coverage gap means a plugin is missing from a runtime ([test](tests/test_plugin_build.compliance.l1.py))
-- NEVER: a built output contains runtime-injection syntax that inlines sister-skill content — fan-out at build time replaces injection ([test](tests/test_plugin_build.compliance.l1.py))
-- NEVER: a `dist/codex/` output references `${CLAUDE_SKILL_DIR}` or other Claude Code-specific environment variables — Codex provides no equivalent and references must be rewritten ([test](tests/test_plugin_build.compliance.l1.py))
-- NEVER: a `dist/` file lacks a corresponding `src/` ancestor traceable through the build — every committed runtime artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))
+- ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed runtime artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))
 
 ### Properties
 
