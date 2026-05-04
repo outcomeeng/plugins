@@ -167,6 +167,8 @@ Flag these issues:
 - **no_verification_gates**: Complex multi-step skill without explicit stop-and-check points
 - **no_failure_modes**: Skill lacks documentation of what went wrong in practice
 - **abstract_examples**: Examples that show patterns but not concrete values/outputs
+- **orphaned_references**: Files in `references/` not cited from SKILL.md or any workflow file. Verify with `grep -rn "<filename>" <skill-dir>/`. Orphans inflate token cost via speculative reads (Claude tends to open siblings of cited references) and indicate either dead content or a missing cross-reference. Flag as critical: either delete the file or add an explicit `<required_reading>` reference from the workflow that needs it.
+- **heavy_context_block**: `<context>` bash commands that produce verbose or growing output (session lists, full file contents, cache enumerations) without filtering. The `<context>` block fires on every skill load — including false-positive activations from directive descriptions — so heavy commands compound. Flag as recommendation: filter the command (e.g., `--status doing,todo`, `head -N`) or move it to the workflow file that consumes the data.
 
 </area>
 </evaluation_areas>

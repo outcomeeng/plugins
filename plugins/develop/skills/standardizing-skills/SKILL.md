@@ -227,6 +227,14 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Close every tag.** Unclosed tags break parsing.
 
+**`<context>` bash blocks fire on every skill load.** Every `!`command`` line inside `<context>` runs unconditionally each time the skill is invoked — including false-positive activations triggered by directive descriptions matching adjacent terms. Heavy commands (session lists, full file contents, cache enumerations) compound the per-load tax.
+
+Constraints:
+
+- Filter expensive commands (`spx session list --status doing,todo`, `git log -10`, `head -N`) so output stays bounded.
+- Move data into the workflow file that actually consumes it when the skill loader doesn't need it for trigger evaluation. The `<context>` block is for trigger-time orientation, not workflow inputs.
+- Avoid commands whose output grows monotonically (archives, full caches, full file trees).
+
 **Semantic names:** `<workflow>` not `<steps>`, `<success_criteria>` not `<done>`, `<anti_patterns>` not `<dont_do>`.
 
 **Reference tags in prose by name:** "Using the schema in `<schema>` tags…", "Follow the workflow in `<workflow>`…". Makes structure self-documenting.
@@ -269,6 +277,8 @@ SKILL.md → references/advanced.md → references/details.md → actual info
 ```
 
 **Name reference files descriptively** — `xml-structure-examples.md`, not `examples.md`. The filename is also a table-of-contents entry in `<reference_index>`.
+
+**Every reference file must be cited.** A file in `references/` that is not mentioned by SKILL.md or any workflow file is orphaned — it costs ~1,800+ tokens per speculative read (Claude tends to open siblings of cited references) and signals either dead content or a missing cross-reference. Either delete the file or add an explicit `<required_reading>` from the workflow that needs it. Verify before committing: `grep -rn "<filename>" <skill-dir>/`.
 
 </progressive_disclosure>
 
