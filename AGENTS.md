@@ -73,6 +73,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 - ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
+- ⚠️ **NEVER push from main with bare `git push`** - Use `just push-marketplace` so cache preservation, marketplace refresh, and post-push validation run in the correct order. Bare `git push` skips all of that and leaves the local marketplace stale.
 
 - ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
@@ -556,16 +557,18 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 
 Always invoke the skill `/committing-changes` and adhere to its git commit message guidance.
 
-## After pushing marketplace changes
+## Pushing from this repo
 
-When publishing marketplace changes from this repo, prefer the `just` helper so push and local marketplace refresh happen in one step:
+`just push-marketplace` is the canonical push. It runs `git push`, then refreshes the local Claude marketplace cache, preserves Codex cache compatibility links, and validates the post-push state:
 
 ```bash
-just push-marketplace
-just push-marketplace origin main
+just push-marketplace               # push current branch with default args
+just push-marketplace origin main   # explicit remote/branch
 ```
 
-⚠️ **NEVER use `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` directly.** These are the primitives that `just push-marketplace` already orchestrates in the correct order. Running them manually risks touching the wrong project scope, running steps out of order, or skipping the post-install validation. Always use `just push-marketplace`. Read the Justfile before any marketplace operation.
+⚠️ **NEVER push from main with bare `git push`.** Bare `git push origin main` skips cache preservation and validation; the local marketplace stays stale, old-version symlinks in the Codex cache are not created, and `validate_install` never runs. The recipe is mandatory for every push from this repo, including doc-only and spec-only commits.
+
+⚠️ **NEVER use `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` directly.** These are the primitives that `just push-marketplace` already orchestrates in the correct order. Running them manually risks touching the wrong project scope, running steps out of order, or skipping the post-install validation. Read the Justfile before any marketplace operation.
 
 ## Missing plugins or skills
 
