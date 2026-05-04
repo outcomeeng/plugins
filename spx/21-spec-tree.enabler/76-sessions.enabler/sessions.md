@@ -11,12 +11,11 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - Given active work on a spec node, when `/handoff` runs, then a session document is created in `.spx/sessions/todo/` with the current tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
 - Given a session document in `.spx/sessions/todo/`, when `/pickup` runs, then the session is moved to `.spx/sessions/doing/` and its content is emitted to stdout for context loading ([test](tests/test_sessions.scenario.l1.py))
 - Given escape hatch content is included in the session payload, when the session document is created, then that content appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
-- Given `/compact` runs mid-session, when the PostCompact hook fires, then the compact summary is persisted atomically to `.spx/sessions/tmp/compact-<session_id>.md` ([test](tests/test_sessions.scenario.l1.py))
+- Given `/compact` runs mid-session, when the PostCompact hook fires, then the hook parses the compact summary from its JSON payload, emits `<SPEC-TREE_RESUMED active-node="spx/..."/>` (or `<SPEC-TREE_RESUMED/>` when no node was active), and emits `/spec-tree:understanding` and `/spec-tree:contextualizing` on the active node when the foundation marker was active pre-compact ([test](tests/test_sessions.scenario.l1.py))
 
 ### Conformance
 
 - The `compactPrompt` in `.claude/settings.json` contains all six state-schema section headers (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([test](tests/test_sessions.conformance.l1.py))
-- Given a compact summary exists at `.spx/sessions/tmp/compact-<old_id>.md`, when a new session starts, then the SessionStart hook claims it, extracts the active node from the `### Active spec-tree node` section, emits `<SPEC-TREE_RESUMED active-node="spx/..."/>` (or `<SPEC-TREE_RESUMED/>` when no spec-tree node was active), and emits `/spec-tree:understanding` and `/spec-tree:contextualizing` on the active node when the foundation marker was active pre-compact ([test](tests/test_sessions.scenario.l1.py))
 
 ### Compliance
 
@@ -25,5 +24,5 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - NEVER: include session state in committed files — sessions are ephemeral conversation artifacts ([review])
 - ALWAYS: configure the `compactPrompt` field to append state-schema sections (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) to Claude Code's base summarization prompt — base-prompt-forced sections (Pending Tasks, Current Work, Optional Next Step) are accepted as residual; the schema sections are spec-tree's contribution ([review])
 - NEVER: add imperative sections via the `compactPrompt` configuration ("next step", "persistence proposal", "starting point") — those compound residual imperatives in base-prompt-forced sections that the marketplace cannot remove ([review])
-- NEVER: name specific skill invocations inside the `compactPrompt` configuration — skill choice belongs to the SessionStart hook directive, not to summary text the agent reads as self-direction ([review])
+- NEVER: name specific skill invocations inside the `compactPrompt` configuration — skill choice belongs to the PostCompact hook directive, not to summary text the agent reads as self-direction ([review])
 - NEVER: create a session file for a compaction event within an ongoing session — the compact summary carries the state; session files are only for cross-session handoffs ([review])

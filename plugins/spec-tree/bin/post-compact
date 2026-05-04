@@ -1,75 +1,69 @@
 #!/usr/bin/env bash
-# PostCompact hook: persist the compact summary so the next session can load it.
+# PostCompact hook: emit spec-tree re-anchoring directives after compaction.
 #
-# Writes:
-#   .spx/sessions/tmp/compact-<session_id>.md  Session-scoped compact summary.
+# The harness injects the compact summary into the ongoing session's context.
+# This hook runs in that same session immediately after compaction and emits
+# skill invocation directives via stdout, which the harness also injects into
+# the session. No file is written — everything stays in-session.
+#
+# Emits to stdout (injected into Claude's context by the harness):
+#   <SPEC-TREE_RESUMED active-node="spx/..."/>  when a node is recorded
+#   <SPEC-TREE_RESUMED/>                        when no spec-tree node was active
+#   /spec-tree:understanding                    when <SPEC_TREE_FOUNDATION> was active
+#   /spec-tree:contextualizing spx/...          when foundation active and node known
 #
 # Reads (from PostCompact JSON payload on stdin):
-#   .compact_summary  The full compaction output.
-#   .session_id       Session identifier (used in the output filename).
-#   .cwd              Fallback project root when CLAUDE_PROJECT_DIR is unset.
-#
-# Reads (from environment):
-#   CLAUDE_PROJECT_DIR  Canonical project root.
+#   .compact_summary  The full compaction output produced by the harness.
 
 set -euo pipefail
-
-warn() {
-	# Do not write to stdout from a hook: stdout is injected into Claude's context.
-	printf 'post-compact: %s\n' "$*" >&2
-}
 
 json_string() {
 	local filter="$1"
 	jq -er "$filter | strings | select(length > 0)"
 }
 
+extract_active_node() {
+	# Return the first line starting with "spx/" that follows the
+	# "### Active spec-tree node" header. Returns empty string when absent.
+	awk '
+		/^### Active spec-tree node/ { found=1; next }
+		found && /^spx\// { print; exit }
+		found && /^### / { exit }
+	'
+}
+
 main() {
 	local input
 	local summary
-	local session_id
-	local project_dir
-	local out_file
-	local tmp_file
+	local has_foundation=false
+	local active_node
 
 	input="$(cat)"
 
 	summary="$(json_string '.compact_summary' <<<"$input")" || {
-		# No summary in payload — nothing to persist.
+		# No summary in payload — nothing to emit.
 		exit 0
 	}
 
-	session_id="$(json_string '.session_id' <<<"$input")" || {
-		warn "missing .session_id in payload; cannot write session-scoped compact file"
-		exit 0
-	}
+	# Anchor to start of line to avoid false positives from code blocks.
+	if printf '%s\n' "$summary" | grep -qE '^<SPEC_TREE_FOUNDATION>'; then
+		has_foundation=true
+	fi
 
-	# Prefer the env var exported by session-start over the payload's .cwd,
-	# which may not be the project root on all runtimes.
-	project_dir="${CLAUDE_PROJECT_DIR:-}"
-	if [[ -z "$project_dir" ]]; then
-		project_dir="$(json_string '.cwd' <<<"$input" || true)"
-		if [[ -n "$project_dir" ]]; then
-			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
+	active_node="$(printf '%s\n' "$summary" | extract_active_node)"
+
+	if [[ -n "$active_node" ]]; then
+		printf '<SPEC-TREE_RESUMED active-node="%s"/>\n' "$active_node"
+	else
+		printf '<SPEC-TREE_RESUMED/>\n'
+	fi
+
+	if [[ "$has_foundation" == true ]]; then
+		printf '/spec-tree:understanding\n'
+		if [[ -n "$active_node" ]]; then
+			printf '/spec-tree:contextualizing %s\n' "$active_node"
 		fi
 	fi
-
-	if [[ -z "$project_dir" ]]; then
-		warn "project directory unavailable; cannot persist compact summary"
-		exit 0
-	fi
-
-	if [[ ! -d "$project_dir" ]]; then
-		warn "project directory does not exist: $project_dir"
-		exit 0
-	fi
-
-	out_file="$project_dir/.spx/sessions/tmp/compact-${session_id}.md"
-	tmp_file="${out_file}.tmp.$$"
-
-	mkdir -p "$(dirname "$out_file")"
-	printf '%s\n' "$summary" >"$tmp_file"
-	mv "$tmp_file" "$out_file"
 }
 
 main "$@"

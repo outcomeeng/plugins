@@ -1,5 +1,5 @@
 """
-Scenario tests for 76-sessions.enabler (sessions.md assertions 1–5).
+Scenario tests for 76-sessions.enabler (sessions.md assertions 1–4).
 
 All tests run at L1 using real subprocesses, real filesystem I/O in pytest
 tmp_path directories, and no test doubles.
@@ -10,12 +10,10 @@ Assertions covered:
   2. spx session pickup moves that file from todo/ to doing/.
   3. Escape hatch content (PLAN.md / ISSUES.md excerpts) in the handoff
      payload survives into the session file unchanged.
-  4. post-compact writes the compact summary atomically to
-     .spx/sessions/tmp/compact-<session_id>.md.
-  5. session-resume claims that file, emits <SPEC-TREE_RESUMED> with the
-     active node (when present), emits /spec-tree:understanding and
-     /spec-tree:contextualizing (conditional on <SPEC_TREE_FOUNDATION>),
-     and removes the claimed file afterward.
+  4. post-compact parses the compact summary from its JSON payload and emits
+     <SPEC-TREE_RESUMED> with the active node (when present), plus
+     /spec-tree:understanding and /spec-tree:contextualizing (conditional on
+     <SPEC_TREE_FOUNDATION> at the start of a line in the pre-compact markers).
 """
 
 import json
@@ -70,31 +68,10 @@ def _post_compact(
     )
 
 
-def _session_resume(
-    project_dir: Path, new_session_id: str
-) -> subprocess.CompletedProcess:
-    payload = json.dumps({"session_id": new_session_id, "cwd": str(project_dir)})
-    return subprocess.run(
-        ["bash", str(SESSION_RESUME)],
-        input=payload,
-        capture_output=True,
-        text=True,
-        env={**os.environ, "CLAUDE_PROJECT_DIR": str(project_dir)},
-    )
-
-
 def _parse_handoff_id(stdout: str) -> str:
     m = re.search(r"<HANDOFF_ID>(.+?)</HANDOFF_ID>", stdout)
     assert m, f"no <HANDOFF_ID> in: {stdout}"
     return m.group(1)
-
-
-def _write_compact_file(project_dir: Path, session_id: str, content: str) -> Path:
-    tmp_dir = project_dir / ".spx" / "sessions" / "tmp"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    f = tmp_dir / f"compact-{session_id}.md"
-    f.write_text(content)
-    return f
 
 
 # ---------------------------------------------------------------------------
@@ -222,47 +199,11 @@ class TestEscapeHatchContentInSession:
 
 
 # ---------------------------------------------------------------------------
-# Assertion 4 — post-compact persists compact summary atomically
-# ---------------------------------------------------------------------------
-
-
-class TestPostCompactPersistsSummary:
-    def test_compact_file_created_in_tmp(self, tmp_path):
-        summary = "1. Primary Request: Testing post-compact behavior."
-        result = _post_compact(tmp_path, "sess-aaa", summary)
-        assert result.returncode == 0, result.stderr
-        out = tmp_path / ".spx" / "sessions" / "tmp" / "compact-sess-aaa.md"
-        assert out.exists()
-        assert summary in out.read_text()
-
-    def test_write_is_atomic_no_tmp_remnants(self, tmp_path):
-        summary = "Atomic write test."
-        _post_compact(tmp_path, "sess-bbb", summary)
-        tmp_remnants = list(
-            (tmp_path / ".spx" / "sessions" / "tmp").glob("compact-sess-bbb.md.tmp.*")
-        )
-        assert not tmp_remnants
-
-    def test_missing_compact_summary_exits_cleanly(self, tmp_path):
-        payload = json.dumps({"session_id": "no-summary", "cwd": str(tmp_path)})
-        result = subprocess.run(
-            ["bash", str(POST_COMPACT)],
-            input=payload,
-            capture_output=True,
-            text=True,
-            env={**os.environ, "CLAUDE_PROJECT_DIR": str(tmp_path)},
-        )
-        assert result.returncode == 0
-        out = tmp_path / ".spx" / "sessions" / "tmp" / "compact-no-summary.md"
-        assert not out.exists()
-
-
-# ---------------------------------------------------------------------------
-# Assertion 5 — session-resume conditional re-anchoring and cleanup
+# Assertion 4 — post-compact emits re-anchoring directives from payload
 # ---------------------------------------------------------------------------
 
 _COMPACT_WITH_FOUNDATION = textwrap.dedent("""\
-    1. Primary Request: Testing session-resume conditional behavior.
+    1. Primary Request: Testing post-compact directive emission.
 
     ### Pre-compact markers
 
@@ -288,44 +229,76 @@ _COMPACT_WITHOUT_FOUNDATION = textwrap.dedent("""\
 """)
 
 
-class TestSessionResumeConditionalReanchoring:
-    def test_foundation_present_emits_reanchoring_directive(self, tmp_path):
-        _write_compact_file(tmp_path, "old-111", _COMPACT_WITH_FOUNDATION)
-        result = _session_resume(tmp_path, "new-222")
-        assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" in result.stdout
-        assert "/spec-tree:contextualizing" in result.stdout
-
-    def test_foundation_absent_omits_reanchoring_directive(self, tmp_path):
-        _write_compact_file(tmp_path, "old-333", _COMPACT_WITHOUT_FOUNDATION)
-        result = _session_resume(tmp_path, "new-444")
-        assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" not in result.stdout
-        assert "/spec-tree:contextualizing" not in result.stdout
-
+class TestPostCompactEmitsReanchoringDirective:
     def test_resumed_marker_always_emitted(self, tmp_path):
-        _write_compact_file(tmp_path, "old-555", _COMPACT_WITHOUT_FOUNDATION)
-        result = _session_resume(tmp_path, "new-666")
+        result = _post_compact(tmp_path, "sess-x", _COMPACT_WITHOUT_FOUNDATION)
+        assert result.returncode == 0, result.stderr
         assert "<SPEC-TREE_RESUMED" in result.stdout
 
-    def test_active_node_attribute_present_when_foundation(self, tmp_path):
-        _write_compact_file(tmp_path, "old-556", _COMPACT_WITH_FOUNDATION)
-        result = _session_resume(tmp_path, "new-667")
+    def test_active_node_attribute_present_when_node_known(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-y", _COMPACT_WITH_FOUNDATION)
+        assert result.returncode == 0, result.stderr
         assert (
             'active-node="spx/21-spec-tree.enabler/76-sessions.enabler/"'
             in result.stdout
         )
 
-    def test_compact_file_removed_after_claim(self, tmp_path):
-        _write_compact_file(tmp_path, "old-777", _COMPACT_WITH_FOUNDATION)
-        _session_resume(tmp_path, "new-888")
-        remaining = list(
-            (tmp_path / ".spx" / "sessions" / "tmp").glob("compact-old-777*")
-        )
-        assert not remaining, f"unexpected files after claim: {remaining}"
+    def test_no_active_node_attribute_when_node_absent(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-z", _COMPACT_WITHOUT_FOUNDATION)
+        assert result.returncode == 0, result.stderr
+        assert "active-node=" not in result.stdout
 
-    def test_no_compact_file_produces_empty_output(self, tmp_path):
-        (tmp_path / ".spx" / "sessions" / "tmp").mkdir(parents=True, exist_ok=True)
-        result = _session_resume(tmp_path, "new-aaa")
+    def test_foundation_present_emits_reanchoring_skills(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-a", _COMPACT_WITH_FOUNDATION)
+        assert result.returncode == 0, result.stderr
+        assert "/spec-tree:understanding" in result.stdout
+        assert "/spec-tree:contextualizing" in result.stdout
+
+    def test_foundation_absent_omits_reanchoring_skills(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-b", _COMPACT_WITHOUT_FOUNDATION)
+        assert result.returncode == 0, result.stderr
+        assert "/spec-tree:understanding" not in result.stdout
+        assert "/spec-tree:contextualizing" not in result.stdout
+
+    def test_no_compact_summary_produces_no_output(self, tmp_path):
+        payload = json.dumps({"session_id": "sess-c", "cwd": str(tmp_path)})
+        result = subprocess.run(
+            ["bash", str(POST_COMPACT)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "CLAUDE_PROJECT_DIR": str(tmp_path)},
+        )
         assert result.returncode == 0
         assert result.stdout == ""
+
+    def test_no_file_written_to_disk(self, tmp_path):
+        _post_compact(tmp_path, "sess-d", _COMPACT_WITH_FOUNDATION)
+        written = list(tmp_path.rglob("*")) if tmp_path.exists() else []
+        assert not written, f"unexpected files written: {written}"
+
+    def test_foundation_in_code_block_not_treated_as_marker(self, tmp_path):
+        # <SPEC_TREE_FOUNDATION> indented inside a code block must not trigger
+        # re-anchoring — only a line-start occurrence in ### Pre-compact markers counts.
+        summary_with_indented_marker = textwrap.dedent("""\
+            ### Pre-compact markers
+
+            none
+
+            ### Active spec-tree node
+
+            none
+
+            ### In-flight observations
+
+            Discussed `<SPEC_TREE_FOUNDATION>` marker behavior in code review.
+                <SPEC_TREE_FOUNDATION>
+        """)
+        result = _post_compact(tmp_path, "sess-e", summary_with_indented_marker)
+        assert result.returncode == 0, result.stderr
+        assert "/spec-tree:understanding" not in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# session-resume is retired — no tests needed
+# ---------------------------------------------------------------------------

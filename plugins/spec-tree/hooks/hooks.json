@@ -7,10 +7,6 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-start"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-resume"
           }
         ]
       }
