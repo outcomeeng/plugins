@@ -68,13 +68,23 @@ main() {
 		# If two sessions start simultaneously, only one mv wins; the other skips.
 		mv "$compact_md" "$claimed" 2>/dev/null || continue
 
+		# Check whether the foundation marker was active before compaction.
+		# /understanding and /contextualizing are only re-anchored when the foundation
+		# was active — if it wasn't, the compact summary records a non-spec-tree session.
+		local has_foundation=false
+		if grep -qF '<SPEC_TREE_FOUNDATION>' "$claimed" 2>/dev/null; then
+			has_foundation=true
+		fi
+
 		# Stdout from a SessionStart hook is injected into Claude's context.
 		printf '## Context from previous compaction\n\n'
 		printf 'The previous session compacted before explicit closure. The summary below\n'
 		printf 'records what was true at compact time. Read it for orientation.\n\n'
-		printf '**Re-anchor context now:** invoke `/spec-tree:understanding` (the foundation\n'
-		printf 'marker expired during compaction), then `/spec-tree:contextualizing` on the\n'
-		printf 'active node identified in the summary below. Then continue with your work.\n\n'
+		if [[ "$has_foundation" == true ]]; then
+			printf '**Re-anchor context now:** invoke `/spec-tree:understanding` (the foundation\n'
+			printf 'marker expired during compaction), then `/spec-tree:contextualizing` on the\n'
+			printf 'active node identified in the summary below. Then continue with your work.\n\n'
+		fi
 		printf '<COMPACT_RESUMED at="%s"/>\n\n' "$old_id"
 		printf -- '---\n\n'
 		cat "$claimed"
