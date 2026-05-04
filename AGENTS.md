@@ -570,6 +570,26 @@ just push-marketplace origin main   # explicit remote/branch
 
 ⚠️ **NEVER use `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` directly.** These are the primitives that `just push-marketplace` already orchestrates in the correct order. Running them manually risks touching the wrong project scope, running steps out of order, or skipping the post-install validation. Read the Justfile before any marketplace operation.
 
+### How the marketplace cache resolves to skill content
+
+`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. The runtime resolves skill content from the **working tree at that path**, not from the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`.
+
+The versioned cache directories are historical snapshots that exist so projects pinning a specific version can still resolve it after the marketplace HEAD has moved on. Unpinned installs (the default) follow the working tree.
+
+**Operational consequences:**
+
+- After `just push-marketplace`, the on-disk versioned caches may show a "lag" (HEAD version not yet snapshotted into a cache directory). This is by design.
+- The Skill tool loads a skill's content into per-session memory when the skill is first invoked. Edits to working-tree files do **not** propagate into a running Claude Code session until `/reload-plugins` runs.
+- After `/reload-plugins`, the next skill invocation re-reads from the working tree.
+
+**Smoke-testing skill changes in a running session:**
+
+1. Edit working-tree skill files
+2. Run `/reload-plugins`
+3. Re-invoke the skill — new content loads
+
+No `claude plugin install` or `just push-marketplace` is required for the smoke test itself. Commit and push only when ready to publish to other developers. If a smoke test of a freshly pushed change is needed, `just push-marketplace` then `/reload-plugins` ensures every part of the chain (working tree, marketplace catalog, per-session memory) is current.
+
 ## Missing plugins or skills
 
 ### Claude Code
