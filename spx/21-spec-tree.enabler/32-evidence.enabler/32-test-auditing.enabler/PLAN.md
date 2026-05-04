@@ -35,10 +35,10 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 
 ## Done when
 
-- `test-auditing.md` declares assertions for the literal rule, the positive pattern, the testability gate, and the extended coupling taxonomy.
-- `tests/test_test_auditing.unit.py` exercises at least one scenario per new assertion (laundered-indirect rejection, testability failure against source, library-origin positive case).
-- `/auditing-tests/SKILL.md` workflow restates the literal rule at each of: quick_start, coupling step, falsifiability step, rejection criteria.
-- Audit dry-run against a handful of existing test files in this repo produces the expected verdicts.
+- [x] `test-auditing.md` declares assertions for the literal rule, the positive pattern, the testability gate, and the extended coupling taxonomy.
+- [ ] `tests/test_test_auditing.scenario.l1.py`, `tests/test_test_auditing.property.l1.py`, and `tests/test_test_auditing.conformance.l1.py` exercise at least one scenario per new assertion (laundered-indirect rejection, testability failure against source, library-origin positive case).
+- [ ] `/auditing-tests/SKILL.md` workflow restates the literal rule at each of: quick_start, coupling step, falsifiability step, rejection criteria.
+- [ ] Audit dry-run against a handful of existing test files in this repo produces the expected verdicts.
 
 ## Origin
 
