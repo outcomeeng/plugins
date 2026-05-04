@@ -18,6 +18,7 @@ import pytest
 
 from outcomeeng.scripts.validate_plugins import (
     check_catalog_sync,
+    check_manifest_parity,
     discover_targets,
     main,
 )
@@ -62,6 +63,33 @@ def _make_plugin(tmp_path: Path, name: str) -> Path:
         f'{{"name": "{name}", "version": "0.1.0"}}'
     )
     return plugin_dir
+
+
+def _add_codex_manifest(plugin_dir: Path, version: str | None) -> Path:
+    """Add a .codex-plugin/plugin.json to an existing plugin dir.
+
+    When ``version`` is None, the file is written without a version field
+    so the parity check can exercise the missing-field branch.
+    """
+    codex_dir = plugin_dir / ".codex-plugin"
+    codex_dir.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, str] = {"name": plugin_dir.name}
+    if version is not None:
+        payload["version"] = version
+    (codex_dir / "plugin.json").write_text(json.dumps(payload))
+    return codex_dir / "plugin.json"
+
+
+def _set_claude_version(plugin_dir: Path, version: str | None) -> None:
+    """Rewrite an existing .claude-plugin/plugin.json with a chosen version.
+
+    When ``version`` is None, the file is written without a version field
+    so the parity check can exercise the missing-field branch.
+    """
+    payload: dict[str, str] = {"name": plugin_dir.name}
+    if version is not None:
+        payload["version"] = version
+    (plugin_dir / ".claude-plugin" / "plugin.json").write_text(json.dumps(payload))
 
 
 # ---------------------------------------------------------------------------
@@ -195,3 +223,131 @@ def test_sync_main_exits_nonzero_on_catalog_mismatch(
     assert exit_code != 0
     captured = capsys.readouterr()
     assert "unregistered" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# Scenario: manifest parity — versions match across both manifests
+# ---------------------------------------------------------------------------
+
+
+def test_parity_passes_when_both_manifests_agree(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.3")
+    _add_codex_manifest(plugin, "0.27.3")
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Scenario: manifest parity — version mismatch reported with both versions
+# ---------------------------------------------------------------------------
+
+
+def test_parity_reports_version_drift_with_both_versions(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.3")
+    _add_codex_manifest(plugin, "0.27.0")
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert len(errors) == 1
+    error = errors[0]
+    assert "alpha" in error
+    assert "0.27.3" in error
+    assert "0.27.0" in error
+    assert "drift" in error.lower()
+
+
+# ---------------------------------------------------------------------------
+# Scenario: manifest parity — Codex manifest absent, parity check skipped
+# ---------------------------------------------------------------------------
+
+
+def test_parity_skipped_when_codex_manifest_absent(tmp_path: Path) -> None:
+    _make_plugin(tmp_path, "alpha")  # only .claude-plugin/plugin.json
+    # No _add_codex_manifest call — Codex coverage is optional.
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Scenario: manifest parity — missing version field reported
+# ---------------------------------------------------------------------------
+
+
+def test_parity_reports_missing_claude_version(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, None)
+    _add_codex_manifest(plugin, "0.27.0")
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert any("alpha" in e and "claude-plugin" in e and "missing" in e for e in errors)
+
+
+def test_parity_reports_missing_codex_version(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.3")
+    _add_codex_manifest(plugin, None)
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert any("alpha" in e and "codex-plugin" in e and "missing" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Property: parity is symmetric — drift in either direction is reported
+# ---------------------------------------------------------------------------
+
+
+def test_parity_drift_reported_when_codex_advanced_past_claude(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.0")
+    _add_codex_manifest(plugin, "0.27.3")
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert len(errors) == 1
+    assert "alpha" in errors[0]
+
+
+def test_parity_drift_reported_when_claude_advanced_past_codex(tmp_path: Path) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.3")
+    _add_codex_manifest(plugin, "0.27.0")
+
+    errors = check_manifest_parity(tmp_path)
+
+    assert len(errors) == 1
+    assert "alpha" in errors[0]
+
+
+# ---------------------------------------------------------------------------
+# Compliance: main() exits non-zero when parity drift exists
+# ---------------------------------------------------------------------------
+
+
+def test_main_exits_nonzero_on_parity_drift(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    plugin = _make_plugin(tmp_path, "alpha")
+    _set_claude_version(plugin, "0.27.3")
+    _add_codex_manifest(plugin, "0.27.0")
+    _make_claude_catalog(tmp_path, registered=["alpha"])
+    _make_codex_catalog(tmp_path, registered=["alpha"])
+
+    def fake_runner(
+        cmd: list[str], **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(cmd, returncode=0, stdout="ok", stderr="")
+
+    exit_code = main([str(tmp_path)], runner=fake_runner)
+
+    assert exit_code != 0
+    captured = capsys.readouterr()
+    assert "alpha" in captured.err
+    assert "manifest parity" in captured.err

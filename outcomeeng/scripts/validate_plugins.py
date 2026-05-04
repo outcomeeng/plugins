@@ -4,10 +4,14 @@ Finds the marketplace root (.claude-plugin/marketplace.json) and all plugin
 directories (plugins/*/.claude-plugin/plugin.json), then runs
 ``claude plugin validate`` on each.
 
-Also checks that every plugin directory is registered in all marketplace
-catalogs:
-  - .claude-plugin/marketplace.json  (Claude Code)
-  - .agents/plugins/marketplace.json (Codex)
+Also checks:
+  - Every plugin directory is registered in all marketplace catalogs:
+      - .claude-plugin/marketplace.json  (Claude Code)
+      - .agents/plugins/marketplace.json (Codex)
+  - For plugins with both .claude-plugin/plugin.json and
+    .codex-plugin/plugin.json, the ``version`` field matches across both
+    manifests. Drift breaks Codex marketplace upgrades and validate_install
+    because each runtime reads its own manifest.
 
 Usage::
 
@@ -97,6 +101,55 @@ def check_catalog_sync(root: Path) -> list[str]:
     return errors
 
 
+def check_manifest_parity(root: Path) -> list[str]:
+    """Report plugin directories whose Claude and Codex manifests disagree on version.
+
+    For each plugin under ``plugins/`` that ships both
+    ``.claude-plugin/plugin.json`` and ``.codex-plugin/plugin.json``, asserts
+    that the ``version`` field matches across the two manifests. Plugins that
+    ship only the Claude manifest are skipped — Codex coverage is optional.
+
+    Returns a list of human-readable error strings; empty means parity holds.
+    """
+    plugins_dir = root / "plugins"
+    if not plugins_dir.is_dir():
+        return []
+
+    errors: list[str] = []
+    for child in sorted(plugins_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        claude_manifest = child / ".claude-plugin" / "plugin.json"
+        codex_manifest = child / ".codex-plugin" / "plugin.json"
+        if not claude_manifest.is_file() or not codex_manifest.is_file():
+            continue
+
+        claude_data = json.loads(claude_manifest.read_text())
+        codex_data = json.loads(codex_manifest.read_text())
+        claude_version = claude_data.get("version")
+        codex_version = codex_data.get("version")
+
+        if claude_version is None:
+            errors.append(
+                f"{child.name}: .claude-plugin/plugin.json missing version field"
+            )
+        if codex_version is None:
+            errors.append(
+                f"{child.name}: .codex-plugin/plugin.json missing version field"
+            )
+        if claude_version is None or codex_version is None:
+            continue
+
+        if claude_version != codex_version:
+            errors.append(
+                f"{child.name}: version drift — "
+                f".claude-plugin/plugin.json={claude_version}, "
+                f".codex-plugin/plugin.json={codex_version}"
+            )
+
+    return errors
+
+
 def run_validate(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     """Run a validation command. Thin wrapper for testability."""
     return subprocess.run(cmd, capture_output=True, text=True)
@@ -142,7 +195,11 @@ def main(
     for msg in sync_errors:
         print(f"error: catalog sync: {msg}", file=sys.stderr)
 
-    return 1 if (failures or sync_errors) else 0
+    parity_errors = check_manifest_parity(root)
+    for msg in parity_errors:
+        print(f"error: manifest parity: {msg}", file=sys.stderr)
+
+    return 1 if (failures or sync_errors or parity_errors) else 0
 
 
 if __name__ == "__main__":
