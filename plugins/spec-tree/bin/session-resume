@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# SessionStart hook: claim and inject any pending compact summary, then emit
-# a re-anchoring directive that routes through `/spec-tree:understanding` and
-# `/spec-tree:contextualizing`.
+# SessionStart hook: claim any pending compact summary and emit spec-tree
+# re-anchoring directives. The harness already injects the compact summary
+# into the new session's context; this hook's only job is to emit the skill
+# invocations the harness cannot produce.
 #
 # When .spx/sessions/tmp/compact-<old_session_id>.md is present, this script:
 #   1. Claims it atomically (mv to .processing-<new_session_id>)
-#   2. Injects the content into Claude's context via stdout with a re-anchoring preamble
-#   3. Appends a <COMPACT_RESUMED at="..."/> marker
-#   4. Removes the claimed file after successful injection
+#   2. Extracts the active node from the ### Active spec-tree node section
+#   3. Emits <SPEC-TREE_RESUMED active-node="..."/> (or without attribute)
+#   4. Emits /spec-tree:understanding and /spec-tree:contextualizing when
+#      <SPEC_TREE_FOUNDATION> was active pre-compact and a node is recorded
+#   5. Removes the claimed file
 #
 # Reads (from SessionStart JSON payload on stdin):
 #   .session_id   New session identifier (used in the claimed filename).
@@ -18,13 +21,24 @@
 set -euo pipefail
 
 warn() {
-	# Intentional: do not write to stdout except for context injection below.
+	# Intentional: do not write to stdout except for directives below.
 	printf 'session-resume: %s\n' "$*" >&2
 }
 
 json_string() {
 	local filter="$1"
 	jq -er "$filter | strings | select(length > 0)"
+}
+
+extract_active_node() {
+	# Return the first line starting with "spx/" that follows the
+	# "### Active spec-tree node" header. Returns empty string when absent.
+	local file="$1"
+	awk '
+		/^### Active spec-tree node/ { found=1; next }
+		found && /^spx\// { print; exit }
+		found && /^### / { exit }
+	' "$file"
 }
 
 main() {
@@ -68,33 +82,34 @@ main() {
 		# If two sessions start simultaneously, only one mv wins; the other skips.
 		mv "$compact_md" "$claimed" 2>/dev/null || continue
 
-		# Check whether the foundation marker was active before compaction.
-		# /understanding and /contextualizing are only re-anchored when the foundation
-		# was active — if it wasn't, the compact summary records a non-spec-tree session.
 		local has_foundation=false
 		if grep -qF '<SPEC_TREE_FOUNDATION>' "$claimed" 2>/dev/null; then
 			has_foundation=true
 		fi
 
-		# Stdout from a SessionStart hook is injected into Claude's context.
-		printf '## Context from previous compaction\n\n'
-		printf 'The previous session compacted before explicit closure. The summary below\n'
-		printf 'records what was true at compact time. Read it for orientation.\n\n'
-		if [[ "$has_foundation" == true ]]; then
-			printf '**Re-anchor context now:** invoke `/spec-tree:understanding` (the foundation\n'
-			printf 'marker expired during compaction), then `/spec-tree:contextualizing` on the\n'
-			printf 'active node identified in the summary below. Then continue with your work.\n\n'
-		fi
-		printf '<COMPACT_RESUMED at="%s"/>\n\n' "$old_id"
-		printf -- '---\n\n'
-		cat "$claimed"
+		local active_node
+		active_node="$(extract_active_node "$claimed")"
 
-		# Remove the claimed file: the context has been written to stdout and is now
-		# in Claude's conversation. Leaving it would cause repeated processing on
-		# subsequent SessionStarts.
+		# Emit the namespaced resumed marker. The harness has already injected the
+		# compact summary prose; this marker signals that spec-tree processed it.
+		if [[ -n "$active_node" ]]; then
+			printf '<SPEC-TREE_RESUMED active-node="%s"/>\n' "$active_node"
+		else
+			printf '<SPEC-TREE_RESUMED/>\n'
+		fi
+
+		# Emit skill invocations when the foundation was active pre-compact.
+		# /understanding reloads the methodology; /contextualizing reloads the node.
+		if [[ "$has_foundation" == true ]]; then
+			printf '/spec-tree:understanding\n'
+			if [[ -n "$active_node" ]]; then
+				printf '/spec-tree:contextualizing %s\n' "$active_node"
+			fi
+		fi
+
 		rm "$claimed"
 
-		# Only claim and inject one file per session start.
+		# Only claim and process one file per session start.
 		break
 	done
 }

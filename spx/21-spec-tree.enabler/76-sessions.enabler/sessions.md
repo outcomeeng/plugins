@@ -16,7 +16,7 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 ### Conformance
 
 - The `compactPrompt` in `.claude/settings.json` contains all six state-schema section headers (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([test](tests/test_sessions.conformance.l1.py))
-- Given a compact summary exists at `.spx/sessions/tmp/compact-<old_id>.md`, when a new session starts, then the SessionStart hook claims it, injects it as context, emits a re-anchoring directive that invokes `/spec-tree:understanding` (when the foundation marker was active pre-compact) and `/spec-tree:contextualizing` on the recorded active node, and appends a `<COMPACT_RESUMED at="..."/>` marker ([test](tests/test_sessions.scenario.l1.py))
+- Given a compact summary exists at `.spx/sessions/tmp/compact-<old_id>.md`, when a new session starts, then the SessionStart hook claims it, extracts the active node from the `### Active spec-tree node` section, emits `<SPEC-TREE_RESUMED active-node="spx/..."/>` (or `<SPEC-TREE_RESUMED/>` when no spec-tree node was active), and emits `/spec-tree:understanding` and `/spec-tree:contextualizing` on the active node when the foundation marker was active pre-compact ([test](tests/test_sessions.scenario.l1.py))
 
 ### Compliance
 

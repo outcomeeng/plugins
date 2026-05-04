@@ -12,10 +12,10 @@ Assertions covered:
      payload survives into the session file unchanged.
   4. post-compact writes the compact summary atomically to
      .spx/sessions/tmp/compact-<session_id>.md.
-  5. session-resume claims that file, injects the summary with a re-anchoring
-     directive (conditional on <SPEC_TREE_FOUNDATION> in the pre-compact
-     markers), appends <COMPACT_RESUMED at="..."/>, and removes the claimed
-     file afterward.
+  5. session-resume claims that file, emits <SPEC-TREE_RESUMED> with the
+     active node (when present), emits /spec-tree:understanding and
+     /spec-tree:contextualizing (conditional on <SPEC_TREE_FOUNDATION>),
+     and removes the claimed file afterward.
 """
 
 import json
@@ -303,23 +303,26 @@ class TestSessionResumeConditionalReanchoring:
         assert "/spec-tree:understanding" not in result.stdout
         assert "/spec-tree:contextualizing" not in result.stdout
 
-    def test_compact_resumed_marker_always_appended(self, tmp_path):
+    def test_resumed_marker_always_emitted(self, tmp_path):
         _write_compact_file(tmp_path, "old-555", _COMPACT_WITHOUT_FOUNDATION)
         result = _session_resume(tmp_path, "new-666")
-        assert re.search(r'<COMPACT_RESUMED at="[^"]+"/>', result.stdout)
+        assert "<SPEC-TREE_RESUMED" in result.stdout
 
-    def test_compact_file_removed_after_injection(self, tmp_path):
+    def test_active_node_attribute_present_when_foundation(self, tmp_path):
+        _write_compact_file(tmp_path, "old-556", _COMPACT_WITH_FOUNDATION)
+        result = _session_resume(tmp_path, "new-667")
+        assert (
+            'active-node="spx/21-spec-tree.enabler/76-sessions.enabler/"'
+            in result.stdout
+        )
+
+    def test_compact_file_removed_after_claim(self, tmp_path):
         _write_compact_file(tmp_path, "old-777", _COMPACT_WITH_FOUNDATION)
         _session_resume(tmp_path, "new-888")
         remaining = list(
             (tmp_path / ".spx" / "sessions" / "tmp").glob("compact-old-777*")
         )
-        assert not remaining, f"unexpected files after injection: {remaining}"
-
-    def test_compact_summary_content_appears_in_output(self, tmp_path):
-        _write_compact_file(tmp_path, "old-999", _COMPACT_WITH_FOUNDATION)
-        result = _session_resume(tmp_path, "new-000")
-        assert "Primary Request" in result.stdout
+        assert not remaining, f"unexpected files after claim: {remaining}"
 
     def test_no_compact_file_produces_empty_output(self, tmp_path):
         (tmp_path / ".spx" / "sessions" / "tmp").mkdir(parents=True, exist_ok=True)
