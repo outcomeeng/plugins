@@ -338,6 +338,16 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/pickup`    | Load and continue from previous handoff                                    |
 | `/release`   | Close session without creating a handoff file (archives in-scope sessions) |
 
+### Archiving a stale session without `/release`
+
+`/release` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, escape hatches, or methodology changes, run `spx session archive <session-id>` directly:
+
+```bash
+spx session archive 2026-04-01_10-44-24
+```
+
+The shortcut is valid only when the agent has already inspected the session content and confirmed that reflection would surface nothing. For any session where the agent did meaningful work this conversation, run `/release` so reflection actually happens.
+
 ## When to Dispatch Agents vs Invoke Skills
 
 Auditor skills can be invoked directly in the main conversation or dispatched as subagents. Each auditor agent preloads the corresponding skill via the `skills:` frontmatter field.
