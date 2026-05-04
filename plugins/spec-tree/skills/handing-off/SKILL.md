@@ -21,7 +21,7 @@ description: ALWAYS invoke when closing a spec-tree work session, writing a hand
 <objective>
 Close a spec-tree work session: persist what was learned to the right durable target, commit session-owned work, and either rewrite a mid-session handoff artifact in place or write a new one. The session file is a thin coordination envelope — the last resort for information that cannot live anywhere else.
 
-The four-workflow sequence enforces persist-then-commit-then-handoff discipline. Lean on the running imperfection ledger (if `~/Code/.claude/CLAUDE.md` defines one) for what was learned and what is broken. Session scope, persistence tier, the Path A/B/C decision, and multi-agent queue safety are spec-tree-specific concerns the ledger does not cover — they drive the workflows below.
+The four-workflow sequence enforces persist-then-commit-then-handoff discipline. Lean on the imperfection ledger defined in `/understanding` (`references/imperfection-protocol.md`) for what was learned and what is broken — `/understanding` is loaded before any spec-tree work, so the ledger is always available here. Session scope, persistence tier, the Path A/B/C decision, and multi-agent queue safety are spec-tree-specific concerns the ledger does not cover — they drive the workflows below.
 
 </objective>
 

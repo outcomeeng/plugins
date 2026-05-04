@@ -1,12 +1,12 @@
 <objective>
 Work through four perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
 
-Lean on the running imperfection ledger (the closing protocol Claude maintains across the session) for what was learned and what is broken. Reflection here classifies those items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-agent context, session scope.
+Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-agent context, session scope.
 
 </objective>
 
 <perspective_imperfections>
-Review remaining imperfections from this session — items observed but not yet resolved. These typically come from the running imperfection ledger if one is maintained; otherwise reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
+Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained per `/understanding`'s `references/imperfection-protocol.md`. If for any reason the ledger has been pruned (e.g., context compaction), reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
 
 Classify each imperfection by nature to determine the persistence target. The destination is governed by the imperfection's nature, not its origin:
 

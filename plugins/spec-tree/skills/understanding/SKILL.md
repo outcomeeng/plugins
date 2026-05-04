@@ -24,6 +24,7 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
 9. **ESCAPE HATCHES ARE EPHEMERAL** — PLAN.md and ISSUES.md are non-durable files placed in node directories by `/handing-off`. They record deferred plans and known issues. They are coordination artifacts, not spec truth — discoverable via `/contextualizing` but excluded from conformance checks.
 10. **LOCAL OVERLAYS** — `spx/local/` holds project-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
+11. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger and ends every turn via `AskUserQuestion` with three options (fix now, track and proceed, confirm absence). Skills that close sessions (notably `/handing-off`) lean on the ledger rather than re-implementing reflection. Read `references/imperfection-protocol.md`.
 
 </principles>
 
@@ -41,6 +42,7 @@ About to reason about index placement, sparse integer ordering, dependency direc
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
    - `references/ordering-rules.md` — sparse integer ordering, dependency direction, unified sibling number space, insertion rules
+   - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, three-option closing protocol
 3. Note operational references (loaded on demand by other skills):
    - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
@@ -58,7 +60,7 @@ About to reason about index placement, sparse integer ordering, dependency direc
 
 ```text
 <SPEC_TREE_FOUNDATION>
-Loaded: durable-map, node-types, assertion-types, ordering-rules
+Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol
 Operational references available: decomposition-semantics, what-goes-where, excluded-nodes
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
@@ -69,7 +71,7 @@ Examples available in: examples/
 
 <success_criteria>
 
-- [ ] Four core reference files read and understood
+- [ ] Five core reference files read and understood
 - [ ] Operational reference, template, and example locations known
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
@@ -79,5 +81,6 @@ Examples available in: examples/
 - [ ] Methodology loaded: lower index constrains higher index and descendants; same index means independent siblings; fractional indexing is the escape hatch when integer gaps are exhausted
 - [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are ephemeral coordination artifacts, not durable spec truth
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per project without modifying the shared marketplace
+- [ ] Methodology loaded: imperfection ledger is maintained per-turn; closing protocol presents three options (fix now, track and proceed, confirm absence)
 
 </success_criteria>
