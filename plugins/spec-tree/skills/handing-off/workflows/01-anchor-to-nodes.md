@@ -4,7 +4,7 @@ Identify every spec-tree node worked on during this session. This anchors the ha
 </objective>
 
 <process>
-Scan the conversation for spec-tree nodes that were worked on. For each node, record:
+List every spec-tree node touched in this session (any path matching `spx/**/*.enabler` or `spx/**/*.outcome`). For each, record:
 
 - Full path (e.g., `spx/21-foo.enabler/32-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)

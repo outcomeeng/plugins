@@ -1,5 +1,5 @@
 <objective>
-Present the combined output of the six reflection perspectives as a persistence proposal. Only items that require user approval appear here. Deficiencies fixed inline during workflow 02 are done — report them as completed work, not as proposals.
+Present the combined output of the four reflection perspectives as a persistence proposal. Only items that require user approval appear here. Imperfections fixed inline during workflow 02 are done — report them as completed work, not as proposals.
 
 </objective>
 
@@ -11,7 +11,7 @@ Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none 
 Sessions to archive after closure: <id-1>, <id-2>, ...
 ```
 
-The list comes from `<perspective_session_scope>` in workflow 02 — every session classified as **in-scope**, plus every mid-session artifact that will be archived (rather than rewritten). If SESSION_SCOPE is empty (fresh handoff, no prior pickup) and no artifact exists, write `Sessions to archive after closure: none`.
+The list comes from the `<RESOLVED_SCOPE ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (in-scope), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave an in-scope session beside the new continuation.
 
@@ -20,7 +20,7 @@ This header is declared intent, not a vote. Default path is archive-all-listed. 
 </session_disposition_header>
 
 <process>
-Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: lessons, issues, insights, and a skip option for coordination-only items.
+Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
 
 ```json
 {
@@ -29,8 +29,7 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
     "header": "Persist",
     "multiSelect": true,
     "options": [
-      { "label": "[Lesson → destination] summary", "description": "→ target named by nature (e.g., 'coding-typescript refs', 'CLAUDE.md', 'standardizing-typescript')" },
-      { "label": "[Issue] summary", "description": "→ target: fix spec / ISSUES.md in spx/{node}" },
+      { "label": "[Imperfection → destination] summary", "description": "→ target named by nature (e.g., 'coding-typescript refs', 'CLAUDE.md', 'standardizing-typescript', 'ISSUES.md in spx/{node}')" },
       { "label": "[Insight] summary", "description": "→ target: amend spec / PLAN.md in spx/{node} / remove stale PLAN.md" },
       { "label": "[Skip] N items", "description": "→ session file only (coordination context)" }
     ]
@@ -38,16 +37,17 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 }
 ```
 
-**Lesson labels MUST include the destination type** from the `<perspective_lessons>` taxonomy in `02-reflect.md`. Examples:
+**Imperfection labels MUST include the destination** from the `<perspective_imperfections>` taxonomy in `02-reflect.md`. Examples:
 
 ```text
-☑ [Lesson → coding-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
-☑ [Lesson → standardizing-typescript-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
-☑ [Lesson → spec-tree plugin] Invoke /contextualizing before suggesting handoff
-☑ [Lesson → CLAUDE.md] Require git mv for file moves
+☑ [Imperfection → coding-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
+☑ [Imperfection → standardizing-typescript-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
+☑ [Imperfection → spec-tree plugin] Invoke /contextualizing before suggesting handoff
+☑ [Imperfection → CLAUDE.md] Require git mv for file moves
+☑ [Imperfection → ISSUES.md in spx/21-foo.enabler] Tests for assertion 3 missing
 ```
 
-This lets the user verify at a glance that each lesson is going to the right place.
+This lets the user verify at a glance that each item is going to the right place.
 
 **`AskUserQuestion` has two hard limits: 4 options per question, 4 questions per call.** Batch actionable items so no single question exceeds 4 options, and no call exceeds 4 questions.
 

@@ -46,15 +46,13 @@ For each anchored node, check `git status` and record:
 </record_state>
 
 <resolve_session_scope>
-Determine the authoritative set of in-scope sessions plus any mid-session artifact to reconcile.
+Read the `<RESOLVED_SCOPE ids="…" artifact_id="…">` marker emitted by workflow 02 (`<perspective_session_scope>`). Use it as the authoritative archive list and artifact identifier for the rest of this workflow.
 
-**Run the canonical scope-resolution algorithm.** Read `references/scope-resolution.md` and follow every step. The algorithm covers: reading `<SESSION_SCOPE>`, the fallback recovery ladder (checkpoint scope attribute → additive rebuild), the scope-growth rule, mid-session artifact location, and the four-way classification. The reference is the single source of truth — do not reproduce the steps here.
+**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the scope-resolution algorithm in `references/scope-resolution.md`, then emit a fresh `<RESOLVED_SCOPE>` marker before continuing. Do not proceed without resolved scope.
 
-**Cross-check against workflow 03 approval.** The resolved scope must match the session-disposition header the user approved. If the user named additional sessions during workflow 03, add them before archiving. If any session is classified **ambiguous**, STOP and resolve with the user before proceeding.
+**Cross-check against workflow 03 approval.** The marker must match the session-disposition header the user approved. If the user named additional sessions during workflow 03, add them before archiving. If any session is classified **ambiguous**, STOP and resolve with the user before proceeding.
 
-The resolved scope is the authoritative archive list for the rest of this workflow. Mid-session artifacts are tracked separately — at most one is rewritten in place; the rest are archived only if this conversation created them.
-
-**The existence of any session is never permission to archive an in-scope session.** Archival permission flows from the completion of this workflow against the resolved scope.
+The existence of any session is never permission to archive an in-scope session — permission flows from completion of this workflow against the resolved scope.
 
 </resolve_session_scope>
 

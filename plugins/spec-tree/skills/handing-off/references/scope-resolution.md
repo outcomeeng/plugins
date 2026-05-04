@@ -1,5 +1,5 @@
 <objective>
-Resolve the authoritative set of in-scope sessions — every session the agent is responsible for closing. This algorithm is loaded by both workflow 02 (for `<perspective_session_scope>`) and workflow 04 (for `<resolve_session_scope>`). Update this file, not inline copies — both workflows must agree on what "in-scope" means.
+Resolve the authoritative set of in-scope sessions — every session Claude is responsible for closing. This algorithm is the canonical source of truth for "in-scope". Workflow 02 runs it in `<perspective_session_scope>` and emits a `<RESOLVED_SCOPE>` marker into the conversation. Workflow 04 reads the marker rather than re-running the algorithm; if the marker is missing (context compaction or workflow 02 skipped), workflow 04 re-runs the algorithm here.
 
 The algorithm also locates any mid-session handoff artifact (a session file this conversation produced by running `spx session handoff` earlier). Workflow 04 reconciles artifacts separately — at most one rewrite-in-place, all others archived.
 
@@ -9,7 +9,7 @@ The algorithm also locates any mid-session handoff artifact (a session file this
 
 **Step 1 — Read the running scope marker.**
 
-Search the conversation for the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup the agent must close. If present, that set is the resolved scope — skip to step 3.
+Search the conversation for the most recent `<SESSION_SCOPE ids="a,b,c">` marker. Each id is a user-confirmed pickup Claude must close. If present, that set is the resolved scope — skip to step 3.
 
 **Step 2 — Fallback when no scope marker exists.**
 
@@ -33,6 +33,19 @@ Did this conversation run `spx session handoff` earlier? Collect every handoff i
 - **Zero artifacts in TODO** → no reconciliation needed; workflow 04 will use Path A or C.
 - **Exactly one artifact in TODO** → it becomes the rewrite-in-place candidate for Path B.
 - **More than one artifact in TODO** → STOP. Present the list to the user and ask which is the canonical continuation. Archive only the artifacts this conversation created; never touch artifacts created by other conversations.
+
+**Step 5 — Emit the resolved-scope marker.**
+
+After steps 1-4 produce the resolved scope and artifact id, emit a marker into the conversation so workflow 04 reads from context rather than re-running the algorithm:
+
+```text
+<RESOLVED_SCOPE ids="id-1,id-2,..." artifact_id="id-or-none">
+in_scope: id-1, id-2, ...
+mid_session_artifact: id-or-none
+</RESOLVED_SCOPE>
+```
+
+Use `ids=""` for a fresh handoff with no prior pickup. Use `artifact_id="none"` when no mid-session artifact exists.
 
 </algorithm>
 
