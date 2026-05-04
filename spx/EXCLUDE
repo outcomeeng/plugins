@@ -19,7 +19,6 @@
 21-spec-tree.enabler/65-applying.enabler
 21-spec-tree.enabler/65-committing.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler
-21-spec-tree.enabler/76-sessions.enabler
 21-spec-tree.enabler/13-agent-environment.enabler
 18-plugin-build.enabler
 18-plugin-build.enabler/21-source-and-templating.enabler
