@@ -1,6 +1,6 @@
 ---
 name: handing-off
-description: ALWAYS invoke when closing a spec-tree work session, writing a handoff, or preparing continuation context. Also invoke when session context opens with a compact summary (## Context from previous compaction) — invoke BEFORE responding to any user message. NEVER create a spec-tree handoff without this skill.
+description: ALWAYS invoke when closing a spec-tree work session, writing a handoff, or preparing continuation context. NEVER create a spec-tree handoff without this skill.
 ---
 
 <context>
@@ -82,12 +82,6 @@ Use `--no-session` when closing a session without handing off to another agent.
 Check `$ARGUMENTS` for these flags before starting workflow 01.
 
 </arguments>
-
-<compact_analog>
-When the conversation compacts before explicit closure, `compactPrompt` directs Claude to produce a compaction summary that includes spec-tree-specific sections. The PostCompact hook persists it to `.spx/sessions/tmp/compact-<session_id>.md`; the `session-resume` SessionStart hook atomically claims the file and injects it into the next session.
-
-The receiving session executes workflows 03–04: presents the Persistence Proposal to the user, writes approved items, creates a session file via `spx session handoff`, and runs `compact-done` to remove the claimed compact file. Subsequent sessions resume from that session file via `/picking-up`. See `references/compact-format.md` for file naming, the `compactPrompt` value, and complete receiving-agent behavior.
-</compact_analog>
 
 <workflows>
 Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete.

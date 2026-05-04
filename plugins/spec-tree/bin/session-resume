@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# SessionStart hook: atomically claim and inject any pending compact summary.
+# SessionStart hook: claim and inject any pending compact summary, then emit
+# a re-anchoring directive that routes through `/spec-tree:understanding` and
+# `/spec-tree:contextualizing`.
 #
 # When .spx/sessions/tmp/compact-<old_session_id>.md is present, this script:
 #   1. Claims it atomically (mv to .processing-<new_session_id>)
-#   2. Writes the claimed path to .spx/sessions/tmp/compact-active (for compact-done cleanup)
-#   3. Injects the content into Claude's context via stdout with a preamble
-#      directing the receiving agent to invoke /handing-off then compact-done.
+#   2. Injects the content into Claude's context via stdout with a re-anchoring preamble
+#   3. Appends a <COMPACT_RESUMED at="..."/> marker
+#   4. Removes the claimed file after successful injection
 #
 # Reads (from SessionStart JSON payload on stdin):
 #   .session_id   New session identifier (used in the claimed filename).
@@ -29,7 +31,6 @@ main() {
 	local input
 	local new_session_id
 	local project_dir
-	local compact_done
 	local compact_md
 	local old_id
 	local claimed
@@ -54,9 +55,6 @@ main() {
 		exit 0
 	fi
 
-	# Derive compact-done path from this script's resolved location.
-	compact_done="$(cd "$(dirname "$0")" && pwd)/compact-done"
-
 	# Scan for unclaimed compact summaries. The glob compact-*.md naturally excludes
 	# claimed files — they have no .md extension after the atomic rename.
 	for compact_md in "$project_dir"/.spx/sessions/tmp/compact-*.md; do
@@ -70,22 +68,21 @@ main() {
 		# If two sessions start simultaneously, only one mv wins; the other skips.
 		mv "$compact_md" "$claimed" 2>/dev/null || continue
 
-		# Write pointer so compact-done knows which file to remove.
-		printf '%s\n' "$claimed" >"$project_dir/.spx/sessions/tmp/compact-active"
-
 		# Stdout from a SessionStart hook is injected into Claude's context.
 		printf '## Context from previous compaction\n\n'
-		printf 'The previous session compacted before explicit closure. The summary\n'
-		printf 'below contains the built-in 9-section compaction output; if spec-tree\n'
-		printf 'work occurred, sections ### Nodes, ### Lessons, ### Skills,\n'
-		printf '### Starting Point, ### Persistence Proposal, and ### Session Scope\n'
-		printf 'follow the standard sections.\n\n'
-		printf '**Before responding to any user message, invoke `/spec-tree:handing-off` now.**\n'
-		printf 'Complete workflows 03–04: present the Persistence Proposal to the user, write\n'
-		printf 'approved items, and create a session file via `spx session handoff`. Then run:\n'
-		printf '  %s\n\n' "$compact_done"
+		printf 'The previous session compacted before explicit closure. The summary below\n'
+		printf 'records what was true at compact time. Read it for orientation.\n\n'
+		printf '**Re-anchor context now:** invoke `/spec-tree:understanding` (the foundation\n'
+		printf 'marker expired during compaction), then `/spec-tree:contextualizing` on the\n'
+		printf 'active node identified in the summary below. Then continue with your work.\n\n'
+		printf '<COMPACT_RESUMED at="%s"/>\n\n' "$old_id"
 		printf -- '---\n\n'
 		cat "$claimed"
+
+		# Remove the claimed file: the context has been written to stdout and is now
+		# in Claude's conversation. Leaving it would cause repeated processing on
+		# subsequent SessionStarts.
+		rm "$claimed"
 
 		# Only claim and inject one file per session start.
 		break

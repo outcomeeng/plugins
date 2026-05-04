@@ -6,64 +6,49 @@ date: 2026-03-26
 
 ## How to extend the compact summary
 
-The `compactPrompt` field in `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level) is appended to this base prompt. Anything written there appears under the "additional summarization instructions" clause at the bottom of the base prompt.
+The `compactPrompt` field in `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level) is **appended** to Claude Code's base summarization prompt. Anything written there appears under the "additional summarization instructions" clause at the bottom of the base prompt. The base prompt itself is read-only from the marketplace's position.
 
-### Current spec-tree compact instructions (`compactPrompt` in `~/Code/.claude/settings.json`)
+### Base-prompt constraint
+
+Claude Code's base summarization prompt forces nine numbered sections (see "Base compaction prompt" below). Sections 7 (Pending Tasks), 8 (Current Work), and 9 (Optional Next Step) include imperative framing that `compactPrompt` cannot remove or rewrite. The marketplace accepts these forced sections as residual; the SessionStart-on-compact hook directive (emitted by `plugins/spec-tree/bin/session-resume`) is the durable correction mechanism, deliberately constructed to be more specific and mechanical than the base prompt's softer "optional" framing.
+
+### Current spec-tree compact instructions (`compactPrompt` value)
+
+The text below is the canonical spec-tree compactPrompt extension. It appends six state-only sections to the base prompt and instructs the LLM to keep all content past-tense and factual. The same text lives as the `compactPrompt` value in this repository's `.claude/settings.json`.
 
 ```text
-When spec-tree work occurred this session, append the following sections after the standard summary.
+When spec-tree work occurred this session, append the following sections after the standard summary. Keep all content factual and past-tense — describe what was true at compact time, not what to do next. Do not include imperatives, recommendations, action plans, or "next step" framing in any section below.
 
-### Nodes
+### Active spec-tree node
 
-Every `spx/...` node worked on:
+The full path of the spec-tree node being worked on (e.g., `spx/21-spec-tree.enabler/76-sessions.enabler/`), or `none` if no spec-tree node was active this session.
 
-- `spx/<path>` — <what was done> — TDD step <1–8> — <declared | specified | passing | failing | unknown>
+### Pre-compact markers
 
-If no nodes: omit section.
+Foundation markers emitted in this conversation before compaction. List each marker with any attributes (e.g., `<SPEC_TREE_FOUNDATION>`, `<SPEC_TREE_CONTEXT target="spx/...">`, `<SESSION_SCOPE ids="...">`). If none, write `none`.
 
-### Lessons
+### Modified files this session
 
-For each insight captured in sections 4–5 above, route it to the right destination:
+Files Edited or Written by the agent in this conversation, one per line as a relative path. If none, write `none`.
 
-Types: Library/API → skill refs | Methodology/Skills → spec-tree skill | Project rule → CLAUDE.md | Interaction → memory/feedback | Domain → memory/project or reference
+### Open questions
 
-Format: `[<Type>] <fact> → <destination>`
+Outstanding `AskUserQuestion` calls awaiting user answers, or unresolved design questions raised but not decided. State each as a factual question; do not propose answers. If none, write `none`.
 
-Omit section if nothing to route.
+### Last user request
 
-### Skills
+The most recent user message verbatim, followed by what the agent was doing in response (past tense, factual). Do not propose what to do next.
 
-Critical — invoke before any work:
+### In-flight observations
 
-- `/understanding`
-- `/contextualizing spx/<path>` (once per node above)
-- `<any additional skills used or needed>`
-
-Missed — caused problems when skipped: `<skill> — <what went wrong>`, or omit if none.
-
-### Starting Point
-
-\`\`\`text
-Node: spx/<full-path>
-TDD step: <1–8>
-First action: /contextualizing spx/<full-path>
-\`\`\`
-
-### Persistence Proposal
-
-What the next agent must propose to the user before writing anything. Omit if nothing to propose.
-
-- `[Lesson → <destination>]` <one line>
-- `[Issue → ISSUES.md in spx/<node>]` <one line>
-- `[Insight → PLAN.md in spx/<node>]` <one line>
-
-### Session Scope
-
-\`\`\`text
-In-scope session IDs: <comma-separated IDs, or "none">
-Mid-session artifacts: <artifact-id, or "none">
-\`\`\`
+Design insights, audit findings, contradictions, or imperfections noticed during this conversation that have not yet been persisted to durable artifacts. One per line as a factual note (e.g., "noticed that file X uses legacy naming"). If none, write `none`.
 ```
+
+### Migration note
+
+Earlier versions of this `compactPrompt` added imperative sections (`Skills`, `Starting Point`, `Persistence Proposal`) directing the receiving agent to invoke specific skills and write specific files. Those sections compounded the residual imperatives in base-prompt sections 7–9 and produced summaries that competed with the SessionStart hook directive — a failure mode where the receiving agent followed self-direction over the hook's mandate.
+
+Projects using a prior version of `compactPrompt` need to replace its value with the canonical text above. The user's `~/.claude/settings.json` is one common location; project-scope `.claude/settings.json` is another.
 
 ---
 
