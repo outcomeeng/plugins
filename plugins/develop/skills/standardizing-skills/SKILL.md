@@ -372,9 +372,9 @@ allowed-tools: Read
 
 Zero tolerance for patterns in `/standardizing-prose` — never use any of them.
 
-# In reviewing-prose/SKILL.md:
+# In auditing-prose/SKILL.md:
 
-Before reviewing, read `/standardizing-prose` for the complete catalog of anti-patterns.
+Before auditing, read `/standardizing-prose` for the complete catalog of anti-patterns.
 ```
 
 **Naming convention:** `standardizing-{domain}` for standards. Examples: `standardizing-python`, `standardizing-typescript-tests`, `standardizing-prose`, `standardizing-skills`.

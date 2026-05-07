@@ -185,7 +185,7 @@ All canonical conventions are in `/standardizing-python-architecture`. Read it f
 </what_to_avoid>
 
 <example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for a complete REJECTED review showing all concern types: SaaS `l2` violation, mocking language, missing testability in Compliance, and temporal voice violations.
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing all concern types: SaaS `l2` violation, mocking language, missing testability in Compliance, and temporal voice violations.
 </example_review>
 
 <success_criteria>

@@ -7,11 +7,11 @@ allowed-tools: Read
 ---
 
 <objective>
-Catalog of 30+ prose anti-patterns across 6 categories. Defines what `/writing-prose` must avoid and `/reviewing-prose` flags as violations. Any pattern used once might be fine. The problem is when multiple appear together or when a single one repeats.
+Catalog of 30+ prose anti-patterns across 6 categories. Defines what `/writing-prose` must avoid and `/auditing-prose` flags as violations. Any pattern used once might be fine. The problem is when multiple appear together or when a single one repeats.
 </objective>
 
 <reference_note>
-This is a reference skill. Other prose skills reference these patterns. You typically don't invoke this directly -- invoke `/writing-prose` (to write) or `/reviewing-prose` (to review) instead.
+This is a reference skill. Other prose skills reference these patterns. You typically don't invoke this directly -- invoke `/writing-prose` (to write) or `/auditing-prose` (to review) instead.
 </reference_note>
 
 <word_choice>
