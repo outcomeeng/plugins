@@ -247,7 +247,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 </what_to_avoid>
 
 <example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-review.md` for complete APPROVED and REJECTED examples showing all concern types.
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for complete APPROVED and REJECTED examples showing all concern types.
 
 </example_review>
 

@@ -134,7 +134,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 <reference_guides>
 
 - `references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
-- `references/example-review.md` -- complete APPROVED and REJECTED examples
+- `references/example-audit.md` -- complete APPROVED and REJECTED examples
 - `rules/validation-sequence.json` -- fallback validation sequence metadata
 - `rules/review-prompts.js` -- fallback manual review prompts
 - `rules/security-signals.yaml` -- fallback security review signals

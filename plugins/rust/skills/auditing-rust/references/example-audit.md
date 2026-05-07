@@ -3,7 +3,7 @@ These examples show the expected review shape for an approved change, a design r
 </overview>
 
 <approved_review>
-Reviewing `src/config/` for a CLI crate after the repository validation sequence passed.
+Auditing `src/config/` for a CLI crate after the repository validation sequence passed.
 
 ```text
 CODE REVIEW
@@ -26,7 +26,7 @@ Code meets standards.
 </approved_review>
 
 <rejected_design_review>
-Reviewing `src/orders/`.
+Auditing `src/orders/`.
 
 ```text
 CODE REVIEW

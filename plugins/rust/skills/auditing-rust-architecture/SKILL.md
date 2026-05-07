@@ -123,7 +123,7 @@ References
 
 <example_reference>
 
-Read `references/example-review.md` for a complete rejected architecture review in Rust terms.
+Read `references/example-audit.md` for a complete rejected architecture review in Rust terms.
 
 </example_reference>
 

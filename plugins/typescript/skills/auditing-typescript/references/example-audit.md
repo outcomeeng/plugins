@@ -2,7 +2,7 @@
 
 <example name="approved">
 
-Reviewing `src/config/` for a CLI tool after Phase 1 and Phase 2 passed.
+Auditing `src/config/` for a CLI tool after Phase 1 and Phase 2 passed.
 
 # CODE REVIEW
 
@@ -27,7 +27,7 @@ Code meets standards.
 
 <example name="rejected-design-flaw">
 
-Reviewing `src/orders/` for an e-commerce service.
+Auditing `src/orders/` for an e-commerce service.
 
 # CODE REVIEW
 
