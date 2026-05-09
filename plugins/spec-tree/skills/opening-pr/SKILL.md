@@ -58,17 +58,23 @@ After loading this skill, check for `spx/local/opening-pr.md` at the repository 
 
 **Pre-flight checks — MUST pass before pushing or opening the PR.**
 
-| Check                                                    | Failure response                                               |
-| -------------------------------------------------------- | -------------------------------------------------------------- |
-| Current branch is not `main`, `master`, or detached HEAD | STOP. PRs are opened from feature branches.                    |
-| Working tree is clean (no uncommitted changes)           | STOP. Direct the user to `/committing-changes` or to stash.    |
-| Branch has commits ahead of base                         | STOP. Nothing to PR — verify the base branch.                  |
-| Branch is current with the base                          | Warn. Offer to rebase; proceed only if the user confirms.      |
-| No PR already exists for this branch                     | STOP. Surface the existing PR URL via `gh pr view --json url`. |
+Each row states the **condition that must hold**; the failure response applies when the condition is not met.
+
+| Condition (must hold)                                        | Failure response (when condition does not hold)                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Current branch is not `main`, `master`, or detached HEAD     | STOP. PRs are opened from feature branches.                                                |
+| Working tree is clean (no uncommitted changes)               | STOP. Direct the user to `/committing-changes` or to stash.                                |
+| Branch is at least one commit ahead of the resolved base     | STOP. Nothing to PR — verify the base branch.                                              |
+| Branch is not behind the resolved base (no upstream commits) | Warn. Offer to rebase; proceed only if the user confirms.                                  |
+| No PR already exists for this branch                         | STOP. Surface the existing PR URL via `gh pr view --json url`.                             |
+| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing — non-interactive `gh` calls fail opaquely otherwise. |
 
 **Commands:**
 
 ```bash
+# Auth status (non-interactive gh calls fail opaquely without this)
+gh auth status
+
 # Branch identity
 git branch --show-current
 
@@ -84,8 +90,10 @@ git log --oneline origin/main..HEAD
 # Diff stats against base
 git diff origin/main...HEAD --stat
 
-# Existing PR for current branch
-gh pr view --json url,state 2>/dev/null
+# Existing PR for current branch — check stdout, not exit code
+# (gh writes "no pull requests found" to stderr but exits 0 with --json)
+existing=$(gh pr view --json url,state 2>/dev/null)
+[ -n "$existing" ] && echo "PR already exists: $(echo "$existing" | jq -r .url)"
 ```
 
 </branch_hygiene>
@@ -183,7 +191,7 @@ Default template — adapt sections to the change type; drop or expand as the wo
 
 </body_template>
 
-<creating_pr>
+<workflow>
 
 **Step 1: Push the branch**
 
@@ -248,7 +256,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 gh pr ready <pr-number>
 ```
 
-</creating_pr>
+</workflow>
 
 <critical_rules>
 
@@ -265,20 +273,32 @@ gh pr ready <pr-number>
 
 ```bash
 # Pre-flight
+gh auth status
 git status --porcelain
 git branch --show-current
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 git log --oneline origin/main..HEAD
 git diff origin/main...HEAD --stat
-gh pr view --json url,state 2>/dev/null
+existing=$(gh pr view --json url,state 2>/dev/null) && [ -n "$existing" ] && echo "PR exists: $(echo "$existing" | jq -r .url)"
 
 # Push
 git push -u origin "$(git branch --show-current)"
 
-# Open draft PR with curated title and body piped via stdin
+# Open draft PR against the repo default base
 GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
   --draft \
   --title "feat(scope): summary under 70 chars" \
+  --body-file - \
+  --head "$(git branch --show-current)" <<'EOF'
+## Summary
+...
+EOF
+
+# Open draft PR against a non-default base (e.g., a release branch)
+GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
+  --draft \
+  --base release/v2 \
+  --title "fix(scope): backport summary under 70 chars" \
   --body-file - \
   --head "$(git branch --show-current)" <<'EOF'
 ## Summary
