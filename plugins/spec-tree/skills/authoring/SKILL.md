@@ -1,8 +1,6 @@
 ---
 name: authoring
-description: >-
-  ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes.
-  NEVER author spec tree artifacts without this skill.
+description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author spec tree artifacts without this skill.
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -76,20 +74,19 @@ This loads:
 
 **For product specs:** Place at `spx/{product-name}.product.md`. No index.
 
-**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign an index using the ordering rules from `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md`:
+**For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign the index from the decision's constraining scope:
 
-- The index encodes dependency: lower constrains higher
+- Lower-index decisions constrain higher-index siblings
 - An ADR/PDR at index N constrains all siblings at N+1 and above
 - Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
 - Use midpoint insertion between existing indices
 
 **For enabler/outcome nodes:** Place as a child of the parent where the concern belongs.
 
-- Determine the index relative to siblings
-- Enablers that others depend on get lower indices
-- Independent outcomes can share the same index
+- Create one node at a time only when the parent, node type, and index are already clear from loaded context
+- If sibling ordering, shared enablers, vertical slices, or index placement need analysis, invoke `/decomposing <parent-node-address>`
 - Derive the slug from the concern name (lowercase, hyphenated)
-- **When adding 2+ new sibling nodes in one pass, invoke `/decomposing` first.** Decomposing forces a pairwise-independence check across the proposed siblings before drafting any of them. Same-index assignment is only valid when each sibling at that index is independent of every other sibling at that index. The `/aligning` audit catches violations after the fact, but fixing them requires directory renames and link-reference updates that decomposing-first would have prevented.
+- **When adding or restructuring 2+ sibling nodes in one pass, stop authoring child nodes and hand off structure to `/decomposing`.** Record the user's decomposition intent, constraints, examples, known issues, and unresolved questions in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decomposing <node-address>`. Pass only the node address; proposed children, proposed indices, and dependency order belong to the decomposition workflow.
 
 Present the proposed placement to the user before creating files.
 
@@ -130,7 +127,7 @@ Before drafting, gather what's needed for the artifact type:
 
 **Outcome (gate — answer the forcing question before proceeding):**
 
-- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md`: try to write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
+- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md`: try to write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
 - Only if the forcing question confirms genuine uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
@@ -173,7 +170,7 @@ Before writing files, check:
 - [ ] Correct artifact type for the content
 - [ ] Placed in the right directory at the right index
 - [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` `<nesting_rules>` section)
-- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it should be an enabler (see `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md`)
+- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it should be an enabler (see `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
 - [ ] Atemporal voice throughout — no temporal markers
@@ -252,25 +249,25 @@ Recommend next steps based on artifact type:
 
 **Failure 1: Temporal language survived into the spec**
 
-Agent drafted an outcome spec from the user's description: "Users currently can't export data, so we need to add CSV export." The spec read: "The system currently lacks export functionality. CSV export addresses this gap." Both sentences are temporal — they narrate a problem being solved rather than stating product truth. The atemporal version: "The system exports query results as CSV files."
+Claude drafted an outcome spec from the user's description: "Users currently can't export data, so we need to add CSV export." The spec read: "The system currently lacks export functionality. CSV export addresses this gap." Both sentences are temporal — they narrate a problem being solved rather than stating product truth. The atemporal version: "The system exports query results as CSV files."
 
 How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to every sentence. If it would sound wrong after the feature ships, rewrite it.
 
 **Failure 2: Assertions placed in ADRs**
 
-Agent wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the compliance rule: "ALWAYS: Uploaded files exceeding 10MB are rejected at the gateway. ([review])"
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the compliance rule: "ALWAYS: Uploaded files exceeding 10MB are rejected at the gateway. ([review])"
 
 How to avoid: ADRs govern with MUST/NEVER compliance rules verified by review. If you're writing Given/When/Then, you're writing a spec assertion, not a decision record.
 
 **Failure 3: Wrong template used for node type**
 
-Agent created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
+Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
 How to avoid: Apply the decision table from `node-types.md` before selecting a template. If you can't write a natural hypothesis, it's probably an enabler.
 
 **Failure 4: Index collision with existing sibling**
 
-Agent created a new outcome at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
+Claude created a new outcome at index 32 without checking existing siblings. Another node already occupied index 32. The directory was created but overwrote the existing node's path.
 
 How to avoid: Always invoke `/contextualizing` for the parent directory before creating any node. The sibling enumeration in the context manifest reveals all occupied indices.
 
@@ -307,6 +304,12 @@ Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate
 
 How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
 
+**Failure 9: Authoring pre-decided decomposition structure**
+
+Claude received a broad request, drafted several child nodes with indices, and then treated `/decomposing` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and escape hatches.
+
+How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decomposing <node-address>`. The decomposition workflow owns child boundaries, node types, dependency edges, and index assignment.
+
 </failure_modes>
 
 <anti_patterns>
@@ -327,6 +330,8 @@ How to avoid: before authoring a second decision record at the same directory le
 
 **Tagging testable MUST/NEVER rules with `[review]`.** `[review]` silences CI enforcement — any rule tagged `[review]` will not fail a build when violated. If a concrete automated test can falsify the rule, the tag is `[test]` and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they are never `[review]`. Reserve `[review]` for semantic constraints no automated check can falsify.
 
+**Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's escape hatches and delegates to `/decomposing <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
+
 </anti_patterns>
 
 <success_criteria>
@@ -336,6 +341,7 @@ Authoring is complete when:
 - [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
 - [ ] Context loaded for placement (or bootstrap mode for empty tree)
 - [ ] Index and placement determined using ordering rules
+- [ ] Multi-sibling requests delegated to `/decomposing <node-address>` with intent captured in node-local escape hatches
 - [ ] Content gathered from user (genuine gaps only)
 - [ ] Template read and filled with atemporal voice
 - [ ] Validation checklist passes

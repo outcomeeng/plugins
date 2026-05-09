@@ -1,8 +1,6 @@
 ---
 name: refactoring
-description: >-
-  ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared enablers.
-  NEVER restructure the spec tree without this skill.
+description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared enablers. NEVER restructure the spec tree without this skill.
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash
 ---
 
@@ -16,12 +14,11 @@ Apply structural changes to the Spec Tree: move nodes between parents, re-scope 
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
 
-References from the understanding skill (`${CLAUDE_SKILL_DIR}/../understanding/`):
+References and workflows:
 
-- `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md` — enabler extraction, cross-cutting assertions
-- `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md` — index assignment, dependency encoding
 - `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md` — content taxonomy (what belongs where)
 - `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler vs outcome
+- `/decomposing` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
 </quick_start>
 
@@ -29,12 +26,12 @@ References from the understanding skill (`${CLAUDE_SKILL_DIR}/../understanding/`
 
 This skill handles four structural operations:
 
-| Operation           | Input                             | Output                                               |
-| ------------------- | --------------------------------- | ---------------------------------------------------- |
-| **Move**            | Node + new parent                 | Node relocated, paths updated                        |
-| **Re-scope**        | Two+ nodes + assertions to move   | Assertions redistributed, specs updated              |
-| **Extract enabler** | Two+ nodes sharing infrastructure | New enabler at lower index, dependents updated       |
-| **Consolidate**     | Two+ nodes to merge               | Single node with combined content, old nodes removed |
+| Operation           | Input                             | Output                                                                       |
+| ------------------- | --------------------------------- | ---------------------------------------------------------------------------- |
+| **Move**            | Node + new parent                 | Node relocated, paths updated                                                |
+| **Re-scope**        | Two+ nodes + assertions to move   | Assertions redistributed, specs updated                                      |
+| **Extract enabler** | Two+ nodes sharing infrastructure | `/decomposing` defines the enabler and indices, refactoring applies the move |
+| **Consolidate**     | Two+ nodes to merge               | Single node with combined content, old nodes removed                         |
 
 </operations>
 
@@ -77,7 +74,8 @@ Before applying changes, determine what will be affected:
 **For Move:**
 
 - Does the target parent exist?
-- Will the node's index conflict with existing children at the target?
+- Will the node's existing index conflict with children at the target?
+- Does the move require choosing a new sibling index? If yes, invoke `/decomposing` for the target parent before applying.
 - Do any ADRs/PDRs at the source location govern this node? Will it leave their scope?
 - Do any ancestor specs have cross-cutting assertions that reference this node?
 - Are there test links in other specs that point into this node's `tests/` directory?
@@ -92,17 +90,18 @@ Before applying changes, determine what will be affected:
 **For Extract enabler:**
 
 - What exactly is shared? (Infrastructure, utility, foundation)
-- Which siblings depend on it? (Must be 2+)
-- What index should the enabler get? (Lower than all dependents)
-- What assertions describe what the enabler provides?
-- Do dependents' specs need updating to remove the shared content?
+- Which siblings need it? (Must be 2+)
+- Has `/decomposing` defined the shared enabler, ordering evidence, and index placement?
+- Which assertions describe what the enabler provides?
+- Do dependent specs need updating to remove the shared content?
 
 **For Consolidate:**
 
 - Are the nodes truly the same concern, or just similar?
 - Which node's hypothesis/enables statement survives?
 - How do the combined assertions fit together?
-- Which node's directory survives (lower index preferred)?
+- Which node's directory survives based on durable scope identity and evidence links?
+- Does consolidation alter sibling ordering or child composition? If yes, invoke `/decomposing` before applying.
 - What happens to the removed node's test files?
 
 </step>
@@ -119,7 +118,7 @@ Before applying changes, determine what will be affected:
 6. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
 7. Remove the old directory.
 
-**Index assignment**: Use ordering rules from `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md`. If inserting between existing siblings, use the midpoint.
+**Index assignment**: Preserve the node's existing index when possible. If insertion or reindexing is needed, invoke `/decomposing` for the target parent before moving files.
 
 </step>
 
@@ -141,13 +140,11 @@ Before applying changes, determine what will be affected:
 
 **Step 4c: Apply — Extract enabler**
 
-1. Determine the enabler's index — must be lower than all dependent siblings.
-2. Create the enabler directory: `{NN}-{slug}.enabler/`
-3. Write the enabler spec using the template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`.
-4. Write assertions that specify what the enabler provides.
-5. Create the `tests/` directory.
-6. Remove the shared content from each dependent node's spec.
-7. If the shared content included test files, move them to the enabler's `tests/`.
+1. Invoke `/decomposing` on the parent containing the affected siblings, with the shared concern recorded in the parent `PLAN.md` or `ISSUES.md` if needed.
+2. Apply the resulting structure: create the enabler directory and spec from the decomposition result.
+3. Move assertions and test files for the shared concern into the enabler.
+4. Remove the shared content from each dependent node's spec.
+5. Update evidence links that moved with the assertions.
 
 </step>
 
@@ -155,7 +152,7 @@ Before applying changes, determine what will be affected:
 
 **Step 4d: Apply — Consolidate**
 
-1. Choose the surviving node (prefer lower index, or the one whose scope is broader).
+1. Choose the surviving node by durable scope identity, evidence links, and governing decisions.
 2. Merge assertions from the removed node into the surviving node:
    - Group by assertion type
    - Deduplicate identical assertions
@@ -164,7 +161,7 @@ Before applying changes, determine what will be affected:
 4. Update the surviving node's hypothesis or enables statement to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
 6. Remove the old node's directory.
-7. If the surviving node now exceeds ~7 assertions, flag for future decomposition.
+7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, invoke `/decomposing` for the surviving node.
 
 </step>
 
@@ -178,7 +175,7 @@ After applying any operation:
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
 - [ ] Escape hatch files (PLAN.md, ISSUES.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
-- [ ] Index ordering preserved — enablers at lower indices than dependents
+- [ ] Any new or changed index assignment came from `/decomposing`
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Atemporal voice maintained — no temporal language introduced
@@ -222,31 +219,31 @@ If the refactoring revealed further issues (nodes with too many assertions, orph
 
 **Failure 1: ADR scope silently lost after move**
 
-Agent moved a node from directory A to directory B. Directory A contained an ADR at index 15 that governed the moved node. After the move, the node was no longer a descendant of that ADR's scope — the architectural constraint silently disappeared. Tests continued to pass because they tested behavior, not ADR compliance.
+Claude moved a node from directory A to directory B. Directory A contained an ADR at index 15 that governed the moved node. After the move, the node was no longer a descendant of that ADR's scope — the architectural constraint silently disappeared. Tests continued to pass because they tested behavior, not ADR compliance.
 
 How to avoid: In the impact analysis step, glob for all ADRs/PDRs in the source ancestry. For each one, check whether the constraint still applies at the destination. If it does, either the ADR needs to move too or a new ADR must be created at the destination's scope.
 
 **Failure 2: Test links broken after move, not caught**
 
-Agent moved a node and its `tests/` directory but didn't update the assertion evidence links in ancestor specs that referenced `([test](old-path/tests/...))`. The assertions still claimed coverage, but the links pointed to nonexistent files.
+Claude moved a node and its `tests/` directory but didn't update the assertion evidence links in ancestor specs that referenced `([test](old-path/tests/...))`. The assertions still claimed coverage, but the links pointed to nonexistent files.
 
 How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks "every `([test](...))` resolves to an existing file" — run it.
 
 **Failure 3: Consolidated nodes with different hypotheses**
 
-Agent merged two "parsing" outcomes because they sounded similar. One parsed user input for validation; the other parsed API responses for data extraction. Different hypotheses, different users, different failure modes. The merged node's hypothesis became a vague compromise that fit neither concern well.
+Claude merged two "parsing" outcomes because they sounded similar. One parsed user input for validation; the other parsed API responses for data extraction. Different hypotheses, different users, different failure modes. The merged node's hypothesis became a vague compromise that fit neither concern well.
 
 How to avoid: Before consolidating, compare the hypotheses (for outcomes) or enables statements (for enablers). If they serve different users or have different "outcome" components in the three-part hypothesis, they are distinct nodes regardless of implementation similarity.
 
 **Failure 4: Used `mv` instead of `git mv` for tracked files**
 
-Agent used Bash `mv` to relocate a node directory. Git saw this as a deletion plus an unrelated new file. The file's history was lost, and `git blame` showed the move as the original author of all lines.
+Claude used Bash `mv` to relocate a node directory. Git saw this as a deletion plus an unrelated new file. The file's history was lost, and `git blame` showed the move as the original author of all lines.
 
 How to avoid: Always use `git mv` for files tracked by git. This preserves rename detection and history. Check `git status` first — if the file shows as tracked, use `git mv`.
 
 **Failure 5: Temporal language introduced during re-scope**
 
-Agent moved assertions between nodes and rewrote the source node's hypothesis to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
+Claude moved assertions between nodes and rewrote the source node's hypothesis to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
 
 How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The spec tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
 
@@ -258,7 +255,7 @@ How to avoid: When rewriting specs after structural changes, treat the rewrite a
 
 **Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they have different hypotheses, they're different outcomes — similarity in implementation doesn't mean similarity in purpose.
 
-**Extracting enablers for single dependents.** An enabler with only one dependent is not an enabler — it's an internal concern of that dependent. Extract only when 2+ siblings share the need.
+**Extracting enablers directly.** Refactoring applies tree surgery; `/decomposing` owns shared-enabler boundaries, ordering evidence, and indices.
 
 **Leaving empty nodes after re-scope.** If you move all assertions out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
 
@@ -272,6 +269,7 @@ Refactoring is complete when:
 
 - [ ] Operation identified and context loaded
 - [ ] Impact analyzed before applying
+- [ ] Structural composition decisions delegated to `/decomposing` when needed
 - [ ] Changes applied (move/re-scope/extract/consolidate)
 - [ ] Validation checklist passes (no broken links, no orphans, no empty nodes)
 - [ ] Summary report with all files created/modified/moved/removed

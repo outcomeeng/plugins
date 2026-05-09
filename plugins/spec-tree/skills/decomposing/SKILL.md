@@ -1,14 +1,13 @@
 ---
 name: decomposing
-description: >-
-  ALWAYS invoke this skill when breaking down, splitting, scoping, or structuring spec tree nodes.
-  NEVER decompose specs without this skill.
+description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
+argument-hint: <node-address|spx/>
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
 <objective>
 
-Decompose an existing Spec Tree node into child nodes when it contains multiple independent concerns. Determines enabler vs outcome for each child, applies sparse integer ordering, redistributes assertions, and validates decomposition quality.
+Compose Spec Tree structure from a target node address, durable spec content, and node-local escape hatches. Handles top-level product-root composition (`spx/`) and child decomposition for existing nodes. Determines whether source material is complete, identifies concern boundaries, assigns enabler/outcome types, records ordering evidence, assigns sparse indices, redistributes assertions, and validates structural quality.
 
 </objective>
 
@@ -16,13 +15,17 @@ Decompose an existing Spec Tree node into child nodes when it contains multiple 
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
 
-Read the reference material from the understanding skill (`${CLAUDE_SKILL_DIR}/../understanding/`) before decomposing:
+Accept exactly one target:
 
-- `${CLAUDE_SKILL_DIR}/../understanding/references/decomposition-semantics.md` — when to decompose, enabler vs outcome, depth, shared enabler extraction
-- `${CLAUDE_SKILL_DIR}/../understanding/references/ordering-rules.md` — sparse integer ordering, insertion, fractional indexing
-- `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler and outcome structure, directory layout
+- `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
+- `{path-to-node}` — decompose or restructure children under an existing node.
 
-Then follow the workflow below.
+Read before composing:
+
+- `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler/outcome structure and nesting rules
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
+- `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
+- `/interviewing` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
 
@@ -32,77 +35,91 @@ Then follow the workflow below.
 
 **Step 1: Load tree context**
 
-Check for `<SPEC_TREE_CONTEXT>` marker matching the target node. If absent, invoke `/contextualizing`.
+If the target is `spx/`:
 
-Read the target node's spec file. Note:
+1. Read the product spec and product-level ADRs/PDRs.
+2. Read `spx/CLAUDE.md` if present.
+3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
+4. Enumerate existing top-level children.
 
-- Current hypothesis (outcome) or enables statement (enabler)
-- All assertions, grouped by type (scenario, mapping, conformance, property, compliance)
-- Total assertion count
-- Any existing child nodes
+If the target is a node address:
+
+1. Accept only the target node address as structural input.
+2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
+3. Check for a matching `<SPEC_TREE_CONTEXT>` marker. If absent, invoke `/contextualizing`.
+4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
+
+For both target modes, note root product scope, ancestor constraints, current assertions, existing siblings/children, and any known issues before proposing structure.
 
 </step>
 
 <step name="assess_need">
 
-**Step 2: Assess whether decomposition is needed**
+**Step 2: Assess whether composition is needed**
 
-Apply the triggers from `decomposition-semantics.md`:
+For `spx/`, composition is needed when the product spec or root escape hatches name product scope that has no top-level children yet.
+
+For a node target, decompose when at least one trigger applies:
 
 | Trigger              | Threshold                                              |
 | -------------------- | ------------------------------------------------------ |
 | Assertion count      | More than ~7 across all types                          |
-| Context payload      | Exceeds an agent's reliable working set                |
+| Context payload      | Exceeds a reliable working set                         |
 | Independent concerns | Contains assertions with no relationship to each other |
 | Separate validation  | Parts could be validated independently                 |
+| Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
 
-**Do NOT decompose if:**
+Do not decompose when a single coherent hypothesis or enables statement covers all assertions, assertions are tightly coupled and meaningless in isolation, or decomposition would create children with only 1-2 trivial assertions.
 
-- A single coherent hypothesis covers all assertions
-- Assertions are tightly coupled and meaningless in isolation
-- Decomposition would create children with only 1–2 trivial assertions
+</step>
 
-If decomposition is not warranted, say so and stop. Do not force structure.
+<step name="clarity_gate">
+
+**Step 3: Verify composition input completeness**
+
+Before proposing child nodes, verify that product/root context, target spec, existing children/siblings, `PLAN.md`, and `ISSUES.md` are complete enough to build the structure model.
+
+Use this coverage map:
+
+```text
+Coverage: Scope Boundary | Delivery Substrate | Evidence Strategy | Architecture | Enabler/Outcome Type | Ordering Evidence | Index Budget | Refactor/Issue Handling
+```
+
+Each area is complete when:
+
+- **Scope Boundary** — included and excluded concerns are named, and the aggregate concern stays coherent.
+- **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
+- **Evidence Strategy** — each concern has an evidence mechanism: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
+- **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
+- **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has genuine outcome uncertainty.
+- **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
+- **Index Budget** — full-vs-partial composition horizon is known.
+- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale escape hatches, and known issues have a destination.
+
+If any area is incomplete or doubtful, invoke `/interviewing` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
 
 </step>
 
 <step name="identify_concerns">
 
-**Step 3: Identify independent concerns**
+**Step 4: Identify concerns**
 
-This is the creative step. Read through the assertions and group them by concern — a concern is a coherent set of assertions that:
+Group assertions, product scope items, and escape-hatch intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
 
-- Share a common subject (the same subsystem, behavior, or capability)
+- Shares a common subject
 - Would be validated together
-- Would be meaningless if split further
+- Would be meaningful as a stable child node
+- Would not be clearer as a single assertion inside another child
 
-For each group, draft a one-line summary of what that concern is about.
+Use these seam-finding heuristics:
 
-**Seam-finding heuristics:**
+- Different data domains, runtime surfaces, commands, or validation mechanisms can indicate separate concerns.
+- Setup, packaging, state, credentials, safety, or workflow substrate can indicate enabler concerns.
+- Behavior slices can be valid vertical slices when each slice has its own testable contract and later slices extend or depend on earlier contracts.
+- Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
+- Assertions that span multiple children stay in the parent as cross-cutting assertions.
 
-- Assertions about different data types or domains → separate concerns
-- Assertions about different user-facing behaviors → separate concerns
-- Assertions about setup/infrastructure vs behavior → enabler vs outcome
-- Assertions that could fail independently → separate concerns
-- Assertions connected by "and" in the parent hypothesis → candidate split points
-
-Present the concern groupings to the user before proceeding.
-
-</step>
-
-<step name="extract_enablers">
-
-**Step 4: Extract shared enablers**
-
-Before assigning outcome nodes, check: do any concern groups share infrastructure?
-
-Per `decomposition-semantics.md` → `shared_enabler_extraction`:
-
-- Two or more groups share a dependency → extract as enabler
-- The shared piece is infrastructure, not user-facing value
-- Removing it would break multiple siblings
-
-Enablers get **lower indices** than the outcomes that depend on them.
+Present concern groupings to the user before writing files.
 
 </step>
 
@@ -110,98 +127,129 @@ Enablers get **lower indices** than the outcomes that depend on them.
 
 **Step 5: Assign node types**
 
-For each concern group, apply the decision table from `decomposition-semantics.md`:
+Apply these rules to each concern:
 
-| Question                                                             | If yes  |
-| -------------------------------------------------------------------- | ------- |
-| Does it deliver user-facing value (directly or indirectly)?          | Outcome |
-| Does it exist only to serve other nodes?                             | Enabler |
-| Would you remove it if all its dependents were retired?              | Enabler |
-| Can you express a three-part hypothesis (output → outcome → impact)? | Outcome |
+| Condition                                                                                    | Node type |
+| -------------------------------------------------------------------------------------------- | --------- |
+| Parent is an enabler and the child is a node                                                 | Enabler   |
+| Output is fully determined by specification and assertions grow by addition                  | Enabler   |
+| Concern exists to provide runtime, data, validation, workflow, packaging, state, or safety   | Enabler   |
+| Goal is a behavior-change bet and most assertions could change while the goal remains stable | Outcome   |
+| Child carries its own genuine uncertainty about which output achieves the desired behavior   | Outcome   |
 
-When unclear, default to **outcome**.
+Use an outcome only when the forcing question fails: "Can this be written as PROVIDES X SO THAT Y CAN Z with stable assertions?" If yes, make it an enabler. When unclear after the clarity gate and interview, default to enabler.
+
+</step>
+
+<step name="extract_shared_enablers">
+
+**Step 6: Extract shared enablers**
+
+Before assigning indices, check whether two or more proposed children require the same substrate:
+
+- Runtime API, data source, generated artifact, persisted state, or packaging surface
+- Validation rule, command surface, safety boundary, credential model, or evidence harness
+- Shared policy or invariant needed by multiple children
+
+Extract the shared concern as an enabler when removing it would break multiple children. Keep single-consumer infrastructure inside the consuming child.
+
+</step>
+
+<step name="ordering_evidence">
+
+**Step 7: Build the ordering-evidence matrix**
+
+Before assigning indices, record every proposed ordering edge:
+
+| Field                     | Required content                                                                                                 |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Predecessor               | Candidate child or decision that must be earlier                                                                 |
+| Evidence type             | Provider/consumer, logical prerequisite, vertical slice, shared substrate, feature extension, ADR/PDR constraint |
+| Constraining contribution | Concrete service, contract, invariant, state, artifact, validation surface, or delivered slice                   |
+| Successor                 | Candidate child constrained by the predecessor                                                                   |
+| Required by               | Successor assertion, workflow step, evidence mechanism, architecture invariant, or extension goal                |
+| Consequence if absent     | What becomes impossible, invalid, unverifiable, or incoherent without the predecessor                            |
+| Disposition               | Ordered dependency, same-index/unordered, or open issue                                                          |
+
+Use different sibling indices only when the matrix contains concrete ordering evidence. Valid evidence includes provider/consumer service flow, logical prerequisites, vertical-slice construction dependencies, shared substrate, and feature-extension dependencies.
+
+Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
 </step>
 
 <step name="assign_indices">
 
-**Step 6: Assign sparse integer indices**
+**Step 8: Assign sparse integer indices**
 
-Apply ordering rules from `ordering-rules.md`:
+Use sparse indices to encode the ordering-evidence matrix:
 
-1. Count the total number of children (N).
-2. Apply the distribution formula: `i_k = 10 + floor(k * 89 / (N + 1))`
-3. Enablers that other nodes depend on get lower indices.
-4. Independent outcomes can share the same index.
-5. A node that depends on another gets a higher index.
+1. Choose the horizon:
+   - Full composition of all known child concerns → use the full [10, 99] range.
+   - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in `PLAN.md`.
+2. Count child nodes in the chosen horizon.
+3. Distribute ordered groups with `i_k = 10 + floor(k * 89 / (N + 1))`, adjusted to the selected horizon.
+4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor.
+5. Assign the same index, or leave siblings unordered relative to each other, when no ordering evidence exists.
 
-**Dependency encoding:**
-
-- Lower index constrains higher index (and its descendants)
-- Same index = independent of each other
-- ADRs/PDRs at lower indices constrain all higher siblings
+Files and directories share one numeric namespace within a parent. Numeric prefixes are sibling-unique only; always use full paths in references.
 
 </step>
 
 <step name="redistribute_assertions">
 
-**Step 7: Redistribute assertions**
+**Step 9: Redistribute assertions**
 
-Move assertions from the parent spec into the correct child nodes:
+For node targets, move assertions from the parent spec into children:
 
-- Each assertion goes to the child whose concern it belongs to
-- **Cross-cutting assertions stay in the parent** — these span multiple children
-- If an assertion could go in either of two children, it's probably cross-cutting
+- Each assertion goes to the child whose concern it specifies.
+- Cross-cutting assertions stay in the parent.
+- Assertions that fit two children are probably cross-cutting.
+- Test links move with their assertions and must point to the correct child `tests/` location.
 
-Per `decomposition-semantics.md` → `cross_cutting_assertions`: if the parent accumulates too many cross-cutting assertions, extract a shared enabler at a lower index.
+Count assertions before and after redistribution. The child assertions plus remaining parent assertions must equal the original assertion count.
 
-Update test links in assertions to reflect the new `tests/` location in each child.
+For `spx/`, write top-level children from product scope and root escape-hatch intent. Product-level assertions stay in the product spec unless they specify only one child concern.
 
 </step>
 
 <step name="write_specs">
 
-**Step 8: Write child specs**
+**Step 10: Write child specs**
 
 For each child node:
 
-1. Create the directory: `{index}-{slug}.{enabler|outcome}/`
-2. Create the spec file: `{slug}.md`
-3. Create the `tests/` directory
-4. Write the spec content:
+1. Create `{index}-{slug}.{enabler|outcome}/`.
+2. Create `{slug}.md`.
+3. Create `tests/`.
+4. Use the enabler or outcome template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/`.
+5. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
-**For outcomes:** Use the outcome template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`. Write the three-part hypothesis:
-
-- **Output** — what the software does (tested by assertions)
-- **Outcome** — measurable change in user behavior
-- **Impact** — business value
-
-**For enablers:** Use the enabler template from `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`. Write the enables statement.
-
-5. Add assertions redistributed from the parent.
-
-**Revise the parent spec:** The parent's hypothesis may need to become a summary of its children. Remove assertions that moved to children. Keep only cross-cutting assertions.
+Revise the parent spec so it summarizes the child structure without narrating the refactor. Remove moved assertions and keep cross-cutting assertions.
 
 </step>
 
 <step name="validate">
 
-**Step 9: Validate decomposition quality**
+**Step 11: Validate composition quality**
 
 Check each criterion:
 
-- [ ] No child has only 1–2 trivial assertions (too granular)
-- [ ] No child exceeds ~7 assertions (recursive decomposition signal)
-- [ ] Every enabler has at least two dependents (not orphaned)
-- [ ] Cross-cutting assertions in parent are minimal
-- [ ] Children collectively cover the parent's scope (nothing lost)
-- [ ] Enablers have lower indices than their dependents
-- [ ] Independent nodes share the same index or have no ordering relationship
-- [ ] Spec files use atemporal voice (no temporal language)
-- [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}` convention
-- [ ] Spec files are `{slug}.md` (no type suffix, no numeric prefix)
-
-If a child exceeds ~7 assertions, flag it for recursive decomposition — but do not decompose recursively in the same invocation without user confirmation.
+- [ ] Composition need assessed and not forced
+- [ ] Clarity gate complete, or `/interviewing` used to resolve gaps
+- [ ] Delivery substrate and evidence strategy accounted for
+- [ ] Concern groupings presented before writing files
+- [ ] No child has only 1-2 trivial assertions
+- [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
+- [ ] Shared enablers have at least two dependent children
+- [ ] Ordering-evidence matrix recorded before index assignment
+- [ ] Every different-index sibling relationship has ordering evidence
+- [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
+- [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
+- [ ] Children collectively cover the parent or product scope
+- [ ] Assertions are not lost during redistribution
+- [ ] Spec files use atemporal voice
+- [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
+- [ ] Spec files are `{slug}.md`
 
 </step>
 
@@ -211,47 +259,47 @@ If a child exceeds ~7 assertions, flag it for recursive decomposition — but do
 
 **Failure 1: Over-decomposed a coherent node**
 
-Agent decomposed an outcome with 5 tightly coupled assertions into 3 children. Each child ended up with 1–2 assertions that made no sense in isolation. The assertions were about phases of a single user workflow (initiate → process → confirm) and could only be validated together. The decomposition created structure without value.
+Claude decomposed an outcome with tightly coupled assertions into children that could not be validated independently. The child specs looked tidy but each one required the others to mean anything.
 
-How to avoid: Before decomposing, ask: "Can any of these children be validated independently?" If the answer is no — if testing one child requires setting up the others — the node is cohesive and should stay whole.
+How to avoid: Before decomposing, ask whether each child can be validated on its own contract. If every test requires all proposed children, keep the node whole.
 
-**Failure 2: Lost assertions during redistribution**
+**Failure 2: Encoded roadmap order as dependency order**
 
-Agent moved 8 assertions from a parent into 3 children but only accounted for 7. One cross-cutting assertion about error handling spanned multiple children and was dropped because it didn't cleanly fit any single child. The parent spec was rewritten without it.
+Claude converted a roadmap list into sequential sparse indices. The order felt natural to explain, but no later child depended on an earlier contract, substrate, or slice.
 
-How to avoid: Before writing child specs, count the parent's assertions. After writing all children, count the total across children plus remaining parent assertions. These counts must match. Assertions that don't fit a single child are cross-cutting — they stay in the parent.
+How to avoid: Record ordering evidence before assigning indices. If the only reason is priority, chronology, theme, or explanation order, keep the siblings same-index or unordered.
 
-**Failure 3: Created enabler with single dependent**
+**Failure 3: Missed vertical-slice construction**
 
-Agent extracted a "database schema" enabler that only one sibling depended on. This violated the 2+ dependent rule and created unnecessary indirection — an extra node, an extra spec file, an extra directory, all wrapping what should have been internal to the outcome.
+Claude flattened two slices into same-index siblings because there was no provider/consumer service. The second slice extended the first slice's command contract and test harness, so context loading later missed the prerequisite slice.
 
-How to avoid: Before extracting an enabler, enumerate which siblings depend on it. If the count is 1, the infrastructure belongs inside that outcome, not as a separate enabler.
+How to avoid: Treat vertical-slice construction and feature-extension prerequisites as ordering evidence when the successor depends on a predecessor's delivered contract.
 
-**Failure 4: Temporal language in child specs inherited from parent**
+**Failure 4: Created enabler with one dependent**
 
-Agent decomposed a parent whose hypothesis read: "We believe that improving the search experience will increase conversion." The child specs inherited temporal fragments: "Improves the search experience by adding filters" (narrates an improvement journey). The atemporal version: "Search results support filtering by date, type, and status."
+Claude extracted a helper as a shared enabler even though only one child consumed it. The new node added indirection without shared structure.
 
-How to avoid: Decomposition is an opportunity to fix temporal language, not propagate it. When redistributing content from parent to children, apply the read-aloud test to every sentence in every child spec.
+How to avoid: Extract an enabler only when two or more children depend on it. Keep single-consumer infrastructure inside the consuming child.
 
-**Failure 5: Decomposed by implementation layer**
+**Failure 5: Lost assertions during redistribution**
 
-Agent split an outcome into "frontend," "backend," and "database" children. These are implementation layers, not independent concerns. The frontend child's assertions couldn't be validated without the backend, and vice versa. Users don't care about layers — they care about behaviors.
+Claude moved parent assertions into children and dropped one cross-cutting assertion because it fit no single child.
 
-How to avoid: Name each candidate child by the user-facing behavior it delivers, not by the technical component. If you can't describe what user value a child delivers without referencing another child, the split is wrong.
+How to avoid: Count assertions before and after. Assertions that span children remain in the parent.
 
 </failure_modes>
 
 <anti_patterns>
 
-**Decomposing by implementation layer.** Don't create children like "frontend," "backend," "database." Decompose by user-facing concern or shared infrastructure.
+**Pre-shaped child lists.** User-provided child names or indices are intent, not structure. Build the model from the target spec and escape hatches.
 
-**Forcing three levels.** The old capability/feature/story hierarchy is gone. Depth emerges from actual complexity. A node with 4 clear assertions doesn't need children.
+**Implementation-layer decomposition.** Children named only "frontend," "backend," or "database" are usually layers, not independently validated concerns.
 
-**Creating enablers for everything.** Enablers exist only when two or more siblings share a dependency. A single-use piece of infrastructure is not an enabler — it belongs inside the outcome that uses it.
+**Outcome inflation.** Use outcomes only for genuine uncertainty. Stable, specified outputs are enablers even when users see them.
 
-**Losing assertions during redistribution.** Every parent assertion must end up in exactly one child or remain as a cross-cutting assertion in the parent. Diff the before/after to verify.
+**Narrative ordering.** A list that is easy to explain in order is not automatically a dependency chain.
 
-**Renumbering siblings.** When decomposing one node, do not renumber its siblings. The parent's index stays the same; only its internal structure changes.
+**Skipping product-root composition.** Bootstrapping creates the product root; `/decomposing spx/` composes top-level children.
 
 </anti_patterns>
 
@@ -259,14 +307,17 @@ How to avoid: Name each candidate child by the user-facing behavior it delivers,
 
 Decomposition is complete when:
 
-- [ ] Decomposition need assessed (not forced)
-- [ ] Concerns identified and presented to user
-- [ ] Enablers extracted where shared infrastructure exists
-- [ ] Each child has correct node type (enabler or outcome)
-- [ ] Sparse integer indices assigned following ordering rules
-- [ ] All assertions redistributed (none lost, cross-cutting in parent)
-- [ ] Child specs written using templates from `${CLAUDE_SKILL_DIR}/../understanding/templates/`
-- [ ] Parent spec revised to reflect decomposition
+- [ ] Target is either `spx/` or a valid node address
+- [ ] Context loaded from product/root, target spec if any, existing tree, and escape hatches
+- [ ] Composition need assessed
+- [ ] Clarity gate completed or `/interviewing` used
+- [ ] Concern boundaries and node types assigned
+- [ ] Shared enablers extracted only for multi-child dependencies
+- [ ] Ordering-evidence matrix recorded
+- [ ] Sparse indices assigned from ordering evidence and selected horizon
+- [ ] Assertions redistributed without loss
+- [ ] Parent or product spec revised without temporal narration
+- [ ] Child specs written from templates
 - [ ] Validation checklist passes
 
 </success_criteria>

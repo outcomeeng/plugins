@@ -1,8 +1,6 @@
 ---
 name: understanding
-description: >-
-  ALWAYS invoke this skill before any spec-tree work to load methodology.
-  NEVER create, read, or modify spec tree files without loading this foundation first.
+description: ALWAYS invoke this skill before any spec-tree work to load methodology. NEVER create, read, or modify spec tree files without loading this foundation first.
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -30,7 +28,9 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 
 <stop_triggers>
 
-About to reason about index placement, sparse integer ordering, dependency direction, same-index sibling independence, unified sibling number space, midpoint insertion, or fractional indexing without `references/ordering-rules.md` loaded -> STOP. Read it before making any placement claim.
+About to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decomposing`; this foundation only covers the context-loading meaning of existing order.
+
+About to load context for an existing target and explain why lower-index siblings are read -> read `references/ordering-rules.md`.
 
 </stop_triggers>
 
@@ -41,10 +41,9 @@ About to reason about index placement, sparse integer ordering, dependency direc
    - `references/durable-map.md` — truth hierarchy, declarative model, atemporal voice, node states
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
-   - `references/ordering-rules.md` — sparse integer ordering, dependency direction, unified sibling number space, insertion rules
+   - `references/ordering-rules.md` — context-loading meaning of existing numeric prefixes and sibling number scope
    - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, three-option closing protocol
 3. Note operational references (loaded on demand by other skills):
-   - `references/decomposition-semantics.md` — when to nest, depth heuristics (used by `/decomposing`)
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
    - PLAN.md / ISSUES.md inside node directories — non-durable escape hatches; ephemeral coordination artifacts (used by `/contextualizing`, `/handing-off`)
@@ -61,7 +60,7 @@ About to reason about index placement, sparse integer ordering, dependency direc
 ```text
 <SPEC_TREE_FOUNDATION>
 Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol
-Operational references available: decomposition-semantics, what-goes-where, excluded-nodes
+Operational references available: what-goes-where, excluded-nodes
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
@@ -78,7 +77,7 @@ Examples available in: examples/
 - [ ] Methodology loaded: enabler vs outcome distinction, three-part hypothesis structure
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
-- [ ] Methodology loaded: lower index constrains higher index and descendants; same index means independent siblings; fractional indexing is the escape hatch when integer gaps are exhausted
+- [ ] Methodology loaded: existing lower-index siblings are read as constraining context; same-index and higher-index siblings are listed but not read as target constraints
 - [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are ephemeral coordination artifacts, not durable spec truth
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per project without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; closing protocol presents three options (fix now, track and proceed, confirm absence)

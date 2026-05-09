@@ -19,7 +19,7 @@ Enablers exist to serve other nodes. They provide shared infrastructure, utiliti
 
 **When to create an enabler:**
 
-- Two or more sibling nodes share a need → factor it into an enabler at a lower index
+- Two or more sibling nodes share a need → invoke `/decomposing` to factor it into a shared enabler and assign placement
 - Infrastructure that has no direct user-facing value but enables user-facing value
 - Removing it would break its dependents
 
@@ -72,7 +72,7 @@ Decision records (ADR/PDR) are files within a node directory, not child nodes. B
 
 **Enablers CANNOT contain outcome children.** An enabler provides infrastructure — its internals decompose into more infrastructure, never into bets. If a child has genuine uncertainty about which output achieves a desired behavior change, either the parent is mis-typed (should be an outcome) or the child is mis-typed (should be an enabler).
 
-**Diagnostic:** If you're placing an outcome under an enabler, ask whether the child's output is fully determined by its specification. If yes — if the assertions are stable and grow only by addition — it is an enabler. See `decomposition-semantics.md` for the full litmus test.
+**Diagnostic:** If placing an outcome under an enabler, ask whether the child's output is fully determined by its specification. If yes — if the assertions are stable and grow only by addition — it is an enabler. Invoke `/decomposing` for full structure decisions.
 
 </nesting_rules>
 

@@ -1,14 +1,12 @@
 ---
 name: bootstrapping
-description: >-
-  ALWAYS invoke this skill when setting up a new spec tree or when /authoring detects an empty spx/ directory.
-  NEVER create a spec tree from scratch without this skill.
+description: ALWAYS invoke this skill when setting up a new spec tree or when /authoring detects an empty spx/ directory. NEVER create a spec tree from scratch without this skill.
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
 <objective>
 
-Interview the user to understand their product, then scaffold the initial `spx/` directory with a product spec, project guide, and top-level node stubs. This is the entry point for new spec-tree projects.
+Interview the user to understand the product, then scaffold the initial `spx/` root with a product spec and project guide. Record top-level structure intent for `/decomposing spx/`, which owns top-level child composition.
 
 </objective>
 
@@ -35,7 +33,7 @@ Glob: "spx/*.product.md"
 Glob: "spx/*-*.{enabler,outcome}/"
 ```
 
-If a product spec already exists, this is not a bootstrap — redirect to `/authoring`.
+If a product spec already exists, this is not a bootstrap. Redirect to `/authoring` for single artifacts or `/decomposing spx/` for top-level structure.
 
 If `spx/` doesn't exist or contains no product spec, proceed.
 
@@ -57,44 +55,35 @@ Use `AskUserQuestion` to gather product understanding. Adapt based on what's alr
 - "What change in user behavior do you expect?" (outcome)
 - "What business value does that produce?" (impact)
 
-**Round 3 — Scope:**
+**Round 3 — Top-level intent:**
 
-- "What are the 3–7 major things this product does or provides?" (candidate top-level nodes)
+- "What major areas, capabilities, or concerns should the product eventually contain?"
+- "Which areas are known now, which are deferred, and what open issues should composition account for?"
 
-For each candidate, ask whether it delivers user-facing value (outcome) or exists to serve other parts (enabler).
-
-**Decision gate:** "Ready to scaffold, or want to refine?"
-
-Skip questions where the conversation already provides the answer.
+Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping.
 
 </step>
 
 <step name="plan">
 
-**Step 3: Present the scaffold plan**
+**Step 3: Present the root scaffold plan**
 
 Before creating anything, show the user what will be created:
 
 ```text
-Proposed structure:
+Proposed root scaffold:
 
 spx/
 ├── {product-name}.product.md
 ├── CLAUDE.md
-├── {NN}-{slug}.enabler/
-│   ├── {slug}.md
-│   └── tests/
-├── {NN}-{slug}.outcome/
-│   ├── {slug}.md
-│   └── tests/
-└── ...
+└── PLAN.md        # optional top-level composition intent for /decomposing spx/
 ```
 
 Include:
 
 - Product name and hypothesis
-- Each top-level node with type (enabler/outcome), index, and one-line description
-- Index rationale (ordering formula applied)
+- Included and excluded product scope
+- Top-level composition intent that will be recorded for `/decomposing spx/`
 
 Wait for user confirmation before creating files.
 
@@ -102,7 +91,7 @@ Wait for user confirmation before creating files.
 
 <step name="scaffold">
 
-**Step 4: Create the scaffold**
+**Step 4: Create the root scaffold**
 
 1. Create `spx/` directory if it doesn't exist.
 
@@ -110,32 +99,41 @@ Wait for user confirmation before creating files.
    - Product name
    - Why this product exists
    - Three-part hypothesis (output → outcome → impact)
-   - Scope (included items = the top-level nodes)
-   - Product-level compliance rules (if any emerged from interview)
+   - Scope
+   - Product-level compliance rules, if any emerged from interview
 
 3. Write `spx/CLAUDE.md` from the template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
 
-4. For each top-level node:
-   - Create directory: `spx/{NN}-{slug}.{enabler|outcome}/`
-   - Write spec stub: `{slug}.md` with hypothesis or enables statement and a placeholder assertion
-   - Create `tests/` directory
+4. If top-level composition intent exists, write `spx/PLAN.md` with:
+   - Candidate product areas from the interview
+   - Known constraints, examples, and unresolved questions
+   - Explicit note that `/decomposing spx/` owns child boundaries, node types, ordering evidence, and indices
+
+</step>
+
+<step name="delegate">
+
+**Step 5: Delegate top-level composition**
+
+After the root scaffold exists, invoke `/decomposing spx/` to compose top-level children. Pass only `spx/`; the root product spec and `spx/PLAN.md` carry the user-provided intent.
 
 </step>
 
 <step name="deliver">
 
-**Step 5: Report and recommend**
+**Step 6: Report and recommend**
 
 Summarize what was created:
 
 - Product spec path
-- CLAUDE.md path
-- Each node with type, index, and path
+- `spx/CLAUDE.md` path
+- `spx/PLAN.md` path, if created
+- `/decomposing spx/` as the next structural step
 
 Recommend next steps:
 
-- "Fill in assertions for each node with `/authoring`"
-- "If any node has more than 7 concerns, decompose it with `/decomposing`"
+- "Compose top-level nodes with `/decomposing spx/`"
+- "Fill in assertions for created nodes with `/authoring`"
 - "When assertions are ready, write tests with `/testing`"
 
 </step>
@@ -146,21 +144,21 @@ Recommend next steps:
 
 **Failure 1: Bootstrapped over an existing tree**
 
-Agent ran bootstrapping in a project that already had `spx/` with specs. The product spec was overwritten.
+Claude ran bootstrapping in a project that already had `spx/` with specs. The product spec was overwritten.
 
-How to avoid: Step 1 checks for an existing product spec. If one exists, redirect to `/authoring` — this is not a bootstrap.
+How to avoid: Step 1 checks for an existing product spec. If one exists, redirect to `/authoring` or `/decomposing spx/`.
 
-**Failure 2: Too many top-level nodes**
+**Failure 2: Bootstrapping pre-shaped top-level children**
 
-Agent accepted the user's list of 12 candidate nodes without pushing back. The tree started with too many siblings, making context loading expensive and structure unclear.
+Claude accepted a list of candidate areas, assigned node types and indices during bootstrapping, and skipped the composition workflow. The first tree shape encoded unexamined dependencies.
 
-How to avoid: During the interview, if the user lists more than 7, ask which ones could be grouped under a parent. The ~7 children heuristic from `decomposition-semantics.md` applies at every level including the top.
+How to avoid: Bootstrapping records product intent in the product spec and root `PLAN.md`; `/decomposing spx/` owns top-level child structure.
 
-**Failure 3: All outcomes, no enablers**
+**Failure 3: Lost top-level intent**
 
-Agent created 5 outcome nodes but missed that 3 of them shared a database schema dependency. The shared concern should have been an enabler at a lower index.
+Claude created only the product spec and guide, then discarded the user's candidate product areas. The next composition step had no durable local context.
 
-How to avoid: After collecting candidate nodes, explicitly ask: "Do any of these share infrastructure or dependencies?" Extract shared concerns as enablers before assigning indices.
+How to avoid: Write candidate areas, constraints, examples, and unresolved questions to `spx/PLAN.md` before invoking `/decomposing spx/`.
 
 </failure_modes>
 
@@ -169,11 +167,12 @@ How to avoid: After collecting candidate nodes, explicitly ask: "Do any of these
 Bootstrapping is complete when:
 
 - [ ] Existing tree checked (no overwrite of existing product spec)
-- [ ] User interviewed for product identity, hypothesis, and scope
-- [ ] Scaffold plan presented and confirmed
+- [ ] User interviewed for product identity, hypothesis, scope, and top-level intent
+- [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
 - [ ] `spx/CLAUDE.md` created from template with product name
-- [ ] Top-level nodes created with correct types, indices, and spec stubs
+- [ ] `spx/PLAN.md` created when top-level intent exists
+- [ ] Top-level structure delegated to `/decomposing spx/`
 - [ ] Next steps recommended
 
 </success_criteria>

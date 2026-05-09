@@ -42,34 +42,24 @@ spx/
 2. **Two node types**: Enabler (infrastructure, output is known) and outcome (hypothesis, output is a bet). Enablers can only contain enabler children. Outcomes can contain both.
 3. **Co-location**: Tests live with their spec in `tests/`.
 4. **Atemporal voice**: Specs state product truth. Never narrate history.
-5. **Deterministic context**: The tree path defines what context an agent receives.
+5. **Deterministic context**: The tree path defines what context gets loaded for work on a target.
 6. **Decision records win by hierarchy**: If a spec contradicts an ADR or PDR in its ancestry, the spec is wrong. Rewrite the spec to align with the decision record before any implementation work.
 7. **Decision records updated in-place**: When a decision changes, update the ADR/PDR directly. No "superseded" workflow.
 8. **Escape hatches**: PLAN.md and ISSUES.md in node directories are non-durable files left by `/handoff`. They contain deferred plans or known issues. `/contextualizing` reads them automatically. Remove when resolved.
 
 ---
 
-## Sparse Integer Ordering
+## Numeric Prefixes
 
-Numeric prefixes encode dependency order within each directory:
+Numeric prefixes drive deterministic context loading within each directory:
 
-1. Lower index constrains higher index, plus that higher index's descendants.
-2. Same index means independent siblings. They depend on the previous lower index, but not on each other.
-3. Files and directories share one number space. The numeric prefix sorts; the type suffix identifies the artifact.
-4. Insert between existing indices with the midpoint integer. Fractional indexing is the escape hatch when the integer gap is zero; avoid it when possible. Frequent fractional indices mean the directory needs restructuring.
+1. Lower-index sibling specs are read as constraining context for higher-index targets.
+2. Same-index siblings are listed but not read as target constraints.
+3. Higher-index siblings are listed but not read as target constraints.
+4. Files and directories share one number space. The numeric prefix sorts; the type suffix identifies the artifact.
 5. Numbers are sibling-unique only. The same integer can be reused under a different parent.
 
-Formula for N items: `i_k = 10 + floor(k * 89 / (N + 1))`
-
-For N=7: 21, 32, 43, 54, 65, 76, 87.
-
-```text
-15-auth-strategy.adr.md              # Constrains everything at 16+
-21-test-harness.enabler/             # Depends on 15; constrains 22+
-32-auth.outcome/                     # Independent of billing
-32-billing.outcome/                  # Independent of auth
-43-integration.outcome/              # Depends on BOTH 32s
-```
+Use `/decomposing` to create or restructure child nodes. It owns concern boundaries, node types, ordering evidence, and sparse index assignment.
 
 **ALWAYS use full path when referencing nodes** — indices are sibling-unique, not globally unique:
 
@@ -98,9 +88,9 @@ Walks the tree from product root to target, reads all ancestor specs, lower-inde
 
 Create product specs, ADRs/PDRs, enabler nodes, outcome nodes.
 
-### When breaking down a node → `/decomposing`
+### When composing or breaking down nodes → `/decomposing`
 
-Decompose when a node has too many assertions (>7) or contains independent concerns.
+Compose top-level children with `/decomposing spx/`. Decompose an existing node when it has too many assertions (>7), contains independent concerns, or has `PLAN.md`/`ISSUES.md` structure intent.
 
 ### When restructuring the tree → `/refactoring`
 

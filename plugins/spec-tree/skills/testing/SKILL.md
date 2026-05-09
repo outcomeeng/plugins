@@ -1,7 +1,6 @@
 ---
 name: testing
-description: >-
-  ALWAYS invoke this skill before writing tests or when learning the testing approach.
+description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
 
@@ -158,7 +157,7 @@ When an assertion lives in an ancestor node, determine where the test evidence s
 
 - If the assertion is about behavior that a specific child node implements, the test belongs in that child's `tests/` directory.
 - If the assertion spans multiple children, the test belongs in the ancestor's `tests/` directory at a higher level.
-- If an ancestor accumulates too many cross-cutting assertions, flag it — the tree may need an extracted shared enabler at a lower index.
+- If an ancestor accumulates too many cross-cutting assertions, flag it for `/decomposing`; the decomposition workflow owns shared-enabler extraction and index placement.
 
 </cross_cutting_assertions>
 
