@@ -4,13 +4,15 @@ Usage:
     uv run python workflow_inspect.py runs [--branch BRANCH] [--limit N]
     uv run python workflow_inspect.py run <run-id>
     uv run python workflow_inspect.py jobs <run-id>
-    uv run python workflow_inspect.py log <run-id> [--failed]
+    uv run python workflow_inspect.py log <run-id> [--failed] [--max-bytes N]
     uv run python workflow_inspect.py checks <pr-number>
     uv run python workflow_inspect.py artifacts <run-id>
     uv run python workflow_inspect.py workflow-files
 
 Each subcommand returns JSON on stdout. The `log` subcommand returns the raw
-log text inside a `log` field (not JSON-structured).
+log text inside a `log` field (not JSON-structured) and preserves whitespace
+exactly as `gh` emits it; output exceeding `--max-bytes` is truncated to the
+last N bytes with `truncated: true` in the response.
 
 Subprocess invocations use `subprocess.run(..., capture_output=True, text=True)`
 with bounded lifetime — no streaming gh subcommands, no polling.
@@ -25,11 +27,18 @@ import sys
 from typing import Any
 
 SCHEMA_VERSION = 1
+DEFAULT_LOG_MAX_BYTES = 100_000
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
     proc = subprocess.run(cmd, capture_output=True, text=True)
     return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+
+
+def _run_raw(cmd: list[str]) -> tuple[int, str, str]:
+    """Like `_run` but preserves stdout whitespace verbatim (for log content)."""
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return proc.returncode, proc.stdout, proc.stderr.strip()
 
 
 def _gh_json(args: list[str]) -> tuple[int, Any, str]:
@@ -115,21 +124,34 @@ def cmd_jobs(run_id: str) -> dict[str, Any]:
     }
 
 
-def cmd_log(run_id: str, failed: bool) -> dict[str, Any]:
+def cmd_log(run_id: str, failed: bool, max_bytes: int) -> dict[str, Any]:
     args = ["gh", "run", "view", run_id]
     args.append("--log-failed" if failed else "--log")
-    code, out, err = _run(args)
+    code, out, err = _run_raw(args)
     if code != 0:
         return {
             "schema_version": SCHEMA_VERSION,
             "log": "",
             "failed_only": failed,
+            "byte_count": 0,
+            "truncated": False,
             "error": err or "gh run view --log returned non-zero",
         }
+    raw = out.encode("utf-8")
+    byte_count = len(raw)
+    truncated = byte_count > max_bytes
+    if truncated:
+        # Take the last `max_bytes` (most recent log content); decode with
+        # `errors="replace"` to absorb any partial multi-byte char at the boundary.
+        log_text = raw[-max_bytes:].decode("utf-8", errors="replace")
+    else:
+        log_text = out
     return {
         "schema_version": SCHEMA_VERSION,
-        "log": out,
+        "log": log_text,
         "failed_only": failed,
+        "byte_count": byte_count,
+        "truncated": truncated,
         "error": None,
     }
 
@@ -207,6 +229,12 @@ def main(argv: list[str]) -> int:
     p_log = sub.add_parser("log", help="fetch run logs")
     p_log.add_argument("run_id")
     p_log.add_argument("--failed", action="store_true", help="failed-step logs only")
+    p_log.add_argument(
+        "--max-bytes",
+        type=int,
+        default=DEFAULT_LOG_MAX_BYTES,
+        help=f"truncate log to the last N bytes (default {DEFAULT_LOG_MAX_BYTES})",
+    )
 
     p_checks = sub.add_parser("checks", help="fetch PR check rollup")
     p_checks.add_argument("pr_number")
@@ -225,16 +253,15 @@ def main(argv: list[str]) -> int:
     elif args.cmd == "jobs":
         result = cmd_jobs(args.run_id)
     elif args.cmd == "log":
-        result = cmd_log(args.run_id, args.failed)
+        result = cmd_log(args.run_id, args.failed, args.max_bytes)
     elif args.cmd == "checks":
         result = cmd_checks(args.pr_number)
     elif args.cmd == "artifacts":
         result = cmd_artifacts(args.run_id)
-    elif args.cmd == "workflow-files":
-        result = cmd_workflow_files()
     else:
-        parser.error(f"unknown subcommand: {args.cmd}")
-        return 2
+        # `workflow-files` is the only remaining subcommand; argparse with
+        # `required=True` rejects anything else before reaching this branch.
+        result = cmd_workflow_files()
 
     sys.stdout.write(json.dumps(result, indent=2) + "\n")
     return 0 if result.get("error") is None else 1
