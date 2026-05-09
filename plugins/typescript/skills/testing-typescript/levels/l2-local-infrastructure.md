@@ -17,6 +17,12 @@ Keep production code testable before adding infrastructure. Separate command set
 
 </test_shape>
 
+<file_naming>
+Use the canonical TypeScript test filename pattern from `/standardizing-typescript-tests`: `<subject>.<evidence>.<level>[.<runner>].test.ts`.
+
+Examples: `postgres-user-store.scenario.l2.test.ts`, `checkout.scenario.l2.playwright.test.ts`, `asset-builder.conformance.l2.test.ts`.
+</file_naming>
+
 <example>
 
 ```typescript
@@ -45,7 +51,7 @@ describe("UserStore", () => {
 });
 ```
 
-This is `l2` because the proof depends on a real local database. The harness owns setup and teardown, and missing infrastructure fails with a setup diagnostic.
+This is `l2` because the proof depends on a real local database. The harness factory returns the project-local typed harness, and `startOrThrow` is the expected setup API shape for mandatory infrastructure because it reports a clear diagnostic when the dependency is unavailable.
 
 </example>
 

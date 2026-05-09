@@ -17,6 +17,12 @@ Do not hide remote complexity inside production modules. Route credentials, base
 
 </test_shape>
 
+<file_naming>
+Use the canonical TypeScript test filename pattern from `/standardizing-typescript-tests`: `<subject>.<evidence>.<level>[.<runner>].test.ts`.
+
+Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3.playwright.test.ts`, `billing-retry.compliance.l3.test.ts`.
+</file_naming>
+
 <example>
 
 ```typescript
@@ -41,7 +47,7 @@ describe("Stripe webhook contract", () => {
     const credentials = requireStripeCredentials();
     const response = await submitSignedFixture({
       token: credentials.token,
-      fixturePath: "tests/fixtures/checkout-session-completed.json",
+      fixturePath: "testing/fixtures/checkout-session-completed.json",
     });
 
     expect(response.status).toBe(200);
@@ -49,7 +55,7 @@ describe("Stripe webhook contract", () => {
 });
 ```
 
-This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly instead of producing a passing test.
+This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly instead of producing a passing test. `submitSignedFixture` reads the fixture from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
 
 </example>
 

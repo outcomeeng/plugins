@@ -62,7 +62,7 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 If `spx validation literal` is available, run it before Gate 1:
 
 ```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts testing/generators/**/*.ts --json
+spx validation literal --files <spec-node-path>/tests/**/*.test.ts <spec-node-path>/testing/generators/**/*.ts --json
 ```
 
 Findings feed into Gate 1:

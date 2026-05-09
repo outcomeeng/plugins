@@ -265,7 +265,7 @@ Reject test-owned copies of source vocabulary.
 
 3. **Data that only the test needs**
 
-Tests may need representative input domains that production code does not own. Those domains are still not license to create shared constant bags.
+Tests may need representative input domains that production code does not own. Those domains are still not a license to create shared constant bags.
 
 ALWAYS refactor the code under test so it exports the semantically structured constant the test asserts on.
 
@@ -278,6 +278,25 @@ Then import one or very few of these constant objects into the test file. Any ch
 <source_imports>
 
 Import source-owned values and source-owned singleton constructors directly from the module that owns them. Do not wrap a source-owned singleton in `fc.constant(...)` or a generator merely to satisfy a "generator" rule.
+
+Reject test-owned protocol literals:
+
+```typescript
+// REJECTED: the test copies a source protocol shape
+const ABSENT_CONFIG_READ = { kind: "absent" } as const;
+
+expect(isAbsentConfigReadResult(ABSENT_CONFIG_READ)).toBe(true);
+```
+
+Use the source-owned constructor directly:
+
+```typescript
+import { createAbsentConfigReadResult, isAbsentConfigReadResult } from "@/config/read-result";
+
+const result = createAbsentConfigReadResult();
+
+expect(isAbsentConfigReadResult(result)).toBe(true);
+```
 
 Valid direct imports include:
 

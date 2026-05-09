@@ -33,6 +33,7 @@ Use this pattern when the domain has exactly one valid source-owned shape. The c
 <generated_domain_inputs>
 
 ```typescript
+import { normalizeSourcePath } from "@/paths";
 import { arbitrarySourceFilePath } from "@testing/generators/paths";
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -51,6 +52,8 @@ describe("normalizeSourcePath", () => {
 ```
 
 Use this pattern when inputs vary across a real domain: paths, names, identifiers, content, option sets, encodings, counts, or structured project shapes.
+
+For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings from a character or token arbitrary. `fc.stringOf(arbitrary)` is a v3 API and must not appear in new examples.
 
 </generated_domain_inputs>
 
