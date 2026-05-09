@@ -20,6 +20,13 @@
 21-spec-tree.enabler/65-committing.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler
 21-spec-tree.enabler/13-agent-environment.enabler
+21-spec-tree.enabler/13-infrastructure.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/21-platform-boundary.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/32-workflow-safety.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/43-workflow-design.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/54-workflow-review.enabler
+21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler/65-workflow-evolution.enabler
 18-plugin-build.enabler
 18-plugin-build.enabler/21-source-and-templating.enabler
 18-plugin-build.enabler/43-target-emission.enabler
