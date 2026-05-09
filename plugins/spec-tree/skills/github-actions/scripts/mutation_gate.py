@@ -1,7 +1,12 @@
 """Gate state-changing GitHub commands behind explicit user instruction.
 
 Usage:
-    uv run python mutation_gate.py check <command...> [--user-instructed]
+    uv run python mutation_gate.py check [--user-instructed] <command...>
+
+`--user-instructed` must precede the command tokens; argparse's `REMAINDER`
+captures everything after the first command token verbatim, so a flag
+appearing after the command is treated as part of the command and silently
+ignored.
 
 When the command tokens match a gated pattern (e.g., `gh auth switch`,
 `gh run rerun`), the script enforces the consent rule:

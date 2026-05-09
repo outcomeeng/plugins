@@ -38,6 +38,9 @@ import sys
 
 SCHEMA_VERSION = 1
 
+# Match remote URLs in HTTPS, SSH (git@host:owner/repo), and ssh:// forms.
+# Repo names may contain dots (e.g. `awesome.actions`); the lazy match plus
+# explicit optional `.git` suffix handles both `repo` and `repo.git` cleanly.
 _REMOTE_RE = re.compile(
     r"""
     ^
@@ -46,13 +49,17 @@ _REMOTE_RE = re.compile(
     [:/]
     (?P<owner>[^/]+)
     /
-    (?P<repo>[^/.]+)
+    (?P<repo>.+?)
     (?:\.git)?
     /?
     $
     """,
     re.VERBOSE,
 )
+
+# Match account names from `gh auth status` lines like:
+#   ✓ Logged in to github.com account simonheimlicher (keyring)
+_AUTH_ACCOUNT_RE = re.compile(r"Logged in to \S+ account (\S+)")
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -86,14 +93,10 @@ def get_available_accounts() -> list[str]:
     proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
     text = proc.stderr or proc.stdout
     accounts: list[str] = []
-    for raw in text.splitlines():
-        line = raw.strip()
-        marker = " account "
-        if "Logged in to " in line and marker in line:
-            tail = line.split(marker, 1)[1]
-            account = tail.split(" ", 1)[0].strip().rstrip(",")
-            if account and account not in accounts:
-                accounts.append(account)
+    for match in _AUTH_ACCOUNT_RE.finditer(text):
+        account = match.group(1).rstrip(",")
+        if account and account not in accounts:
+            accounts.append(account)
     return accounts
 
 
