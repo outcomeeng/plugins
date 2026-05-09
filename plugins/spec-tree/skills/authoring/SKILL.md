@@ -80,6 +80,7 @@ This loads:
 - An ADR/PDR at index N constrains all siblings at N+1 and above
 - Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
 - Use midpoint insertion between existing indices
+- Refer to ADRs/PDRs by full path from `spx/`; never write a bare decision filename such as `15-build.adr.md`
 
 **For enabler/outcome nodes:** Place as a child of the parent where the concern belongs.
 
@@ -159,6 +160,12 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templat
 
 **Enabler assertions**: Same rules apply. Enablers have assertions too — they specify what the infrastructure must do.
 
+**Reference rules**:
+
+- Every node, ADR, and PDR reference must use the full path from `spx/`.
+- Never write a bare node name, bare decision filename, or numeric prefix by itself.
+- Use `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, not `decomposing.md` or `54-decomposing.enabler`.
+
 </step>
 
 <step name="validate">
@@ -173,6 +180,7 @@ Before writing files, check:
 - [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it should be an enabler (see `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
+- [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
@@ -279,10 +287,10 @@ Common temporal patterns from user input and their atemporal rewrites:
 - ATEMPORAL: "Authentication uses OAuth 2.0. Users authenticate via SSO providers."
 
 - TEMPORAL: "The API currently returns XML but we're switching to JSON."
-- ATEMPORAL: "The API returns JSON responses conforming to the schema in ADR-15."
+- ATEMPORAL: "The API returns JSON responses conforming to the schema in `spx/15-api-contract.adr.md`."
 
 - TEMPORAL: "After investigating performance issues, we decided to add caching."
-- ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in ADR-22."
+- ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in `spx/22-cache-policy.adr.md`."
 
 **Failure 6: Junk-drawer container names**
 
@@ -300,7 +308,7 @@ How to avoid: before writing `[review]`, answer the falsification question: "Wha
 
 **Failure 8: Over-multiplying decision records in small trees**
 
-Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust project with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: 15-build.adr.md." The four ADRs collapsed into one `15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a project with no commits yet.
+Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust project with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/15-build.adr.md." The four ADRs collapsed into one `spx/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a project with no commits yet.
 
 How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
 
@@ -321,6 +329,8 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 **Creating outcomes without hypotheses.** Every outcome must express: output → outcome → impact. If you can't write the hypothesis, the scope may be wrong — it might be an enabler or need further clarification.
 
 **Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs have compliance rules (MUST/NEVER) verified by review, not by tests.
+
+**Bare node or decision references.** Never write `32-parser.enabler`, `15-build.adr.md`, or `PDR-21` as a reference. Use the full path from `spx/` so the file can be found.
 
 **Numbering from 1.** Indices start at 10+ and use the sparse distribution formula. Never use single-digit indices.
 

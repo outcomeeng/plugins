@@ -48,6 +48,8 @@ Determine which operation from the user's request:
 - "Both nodes need the same thing" / "Extract shared X" → **Extract enabler**
 - "These two nodes are really the same thing" → **Consolidate**
 
+Normalize every referenced node, ADR, and PDR to its full path from `spx/` before analyzing impact. A bare node name, decision filename, or numeric prefix is not enough to identify a file.
+
 If the request is ambiguous, ask.
 
 </step>
@@ -178,6 +180,7 @@ After applying any operation:
 - [ ] Any new or changed index assignment came from `/decomposing`
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
+- [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
 - [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
@@ -229,19 +232,25 @@ Claude moved a node and its `tests/` directory but didn't update the assertion e
 
 How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks "every `([test](...))` resolves to an existing file" — run it.
 
-**Failure 3: Consolidated nodes with different hypotheses**
+**Failure 3: Bare decision reference survived the move**
+
+Claude reported that the moved node still followed `15-build.adr.md`, but another directory also contained `15-build.adr.md`. The reference was impossible to resolve from the report.
+
+How to avoid: Use full paths from `spx/` for every node, ADR, and PDR before and after the move. A correct report says `spx/.../15-build.adr.md`, never just `15-build.adr.md`.
+
+**Failure 4: Consolidated nodes with different hypotheses**
 
 Claude merged two "parsing" outcomes because they sounded similar. One parsed user input for validation; the other parsed API responses for data extraction. Different hypotheses, different users, different failure modes. The merged node's hypothesis became a vague compromise that fit neither concern well.
 
 How to avoid: Before consolidating, compare the hypotheses (for outcomes) or enables statements (for enablers). If they serve different users or have different "outcome" components in the three-part hypothesis, they are distinct nodes regardless of implementation similarity.
 
-**Failure 4: Used `mv` instead of `git mv` for tracked files**
+**Failure 5: Used `mv` instead of `git mv` for tracked files**
 
 Claude used Bash `mv` to relocate a node directory. Git saw this as a deletion plus an unrelated new file. The file's history was lost, and `git blame` showed the move as the original author of all lines.
 
 How to avoid: Always use `git mv` for files tracked by git. This preserves rename detection and history. Check `git status` first — if the file shows as tracked, use `git mv`.
 
-**Failure 5: Temporal language introduced during re-scope**
+**Failure 6: Temporal language introduced during re-scope**
 
 Claude moved assertions between nodes and rewrote the source node's hypothesis to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
 
@@ -252,6 +261,8 @@ How to avoid: When rewriting specs after structural changes, treat the rewrite a
 <anti_patterns>
 
 **Moving without checking ADR/PDR scope.** A node governed by an ADR at index 15 in directory A is no longer governed by that ADR if moved to directory B. The constraint silently disappears.
+
+**Using bare node or decision names.** A refactor report or PLAN.md entry that names `32-parser.enabler` or `15-build.adr.md` cannot be resolved reliably. Use full paths from `spx/`.
 
 **Consolidating similar but distinct nodes.** Two nodes about "parsing" may parse different things for different reasons. If they have different hypotheses, they're different outcomes — similarity in implementation doesn't mean similarity in purpose.
 

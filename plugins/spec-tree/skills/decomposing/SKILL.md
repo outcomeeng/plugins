@@ -44,7 +44,7 @@ If the target is `spx/`:
 
 If the target is a node address:
 
-1. Accept only the target node address as structural input.
+1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
 2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
 3. Check for a matching `<SPEC_TREE_CONTEXT>` marker. If absent, invoke `/contextualizing`.
 4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
@@ -175,6 +175,8 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
+Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For new candidate children before the final index exists, include the full parent path plus candidate slug so the reference can be resolved after assignment.
+
 </step>
 
 <step name="assign_indices">
@@ -191,7 +193,7 @@ Use sparse indices to encode the ordering-evidence matrix:
 4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor.
 5. Assign the same index, or leave siblings unordered relative to each other, when no ordering evidence exists.
 
-Files and directories share one numeric namespace within a parent. Numeric prefixes are sibling-unique only; always use full paths in references.
+Files and directories share one numeric namespace within a parent. Numeric prefixes are sibling-unique only; always use full paths from `spx/` in references. Never refer to an ADR or PDR by bare filename because any directory can contain the same numeric prefix and slug.
 
 </step>
 
@@ -250,6 +252,7 @@ Check each criterion:
 - [ ] Spec files use atemporal voice
 - [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
 - [ ] Spec files are `{slug}.md`
+- [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 
 </step>
 
@@ -287,6 +290,12 @@ Claude moved parent assertions into children and dropped one cross-cutting asser
 
 How to avoid: Count assertions before and after. Assertions that span children remain in the parent.
 
+**Failure 6: Wrote bare node or decision references**
+
+Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. Another directory used the same numeric prefix, so the reference could not be resolved. Full paths from `spx/` are mandatory for every existing node, ADR, and PDR.
+
+How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
+
 </failure_modes>
 
 <anti_patterns>
@@ -300,6 +309,8 @@ How to avoid: Count assertions before and after. Assertions that span children r
 **Narrative ordering.** A list that is easy to explain in order is not automatically a dependency chain.
 
 **Skipping product-root composition.** Bootstrapping creates the product root; `/decomposing spx/` composes top-level children.
+
+**Bare references.** A node name, ADR filename, PDR filename, or numeric prefix without the full `spx/` path is not a reference. It is an ambiguous label.
 
 </anti_patterns>
 
@@ -318,6 +329,7 @@ Decomposition is complete when:
 - [ ] Assertions redistributed without loss
 - [ ] Parent or product spec revised without temporal narration
 - [ ] Child specs written from templates
+- [ ] Full `spx/` paths used for every node, ADR, and PDR reference
 - [ ] Validation checklist passes
 
 </success_criteria>

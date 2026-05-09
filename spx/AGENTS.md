@@ -49,28 +49,39 @@ spx/
 
 ---
 
-## Sparse Integer Ordering
+## Numeric Prefixes
 
-Numeric prefixes encode dependency order: lower index constrains higher. Same index means independent.
+Numeric prefixes drive deterministic context loading within each directory:
 
-Formula for N items: `i_k = 10 + floor(k * 89 / (N + 1))`
+1. Lower-index sibling specs are read as constraining context for higher-index targets.
+2. Same-index siblings are listed but not read as target constraints.
+3. Higher-index siblings are listed but not read as target constraints.
+4. Files and directories share one number space. The numeric prefix sorts; the type suffix identifies the artifact.
+5. Numbers are sibling-unique only. The same integer can be reused under a different parent.
 
-For N=7: 21, 32, 43, 54, 65, 76, 87.
+Read an existing directory like this:
 
 ```text
-15-auth-strategy.adr.md              # Constrains everything at 16+
-21-test-harness.enabler/             # Depends on 15; constrains 22+
-32-auth.outcome/                     # Independent of billing
-32-billing.outcome/                  # Independent of auth
-43-integration.outcome/              # Depends on BOTH 32s
+spx/
+  15-auth-strategy.adr.md
+  21-test-harness.enabler/
+  32-auth.outcome/
+  32-billing.outcome/
+  43-integration.outcome/
 ```
 
-**ALWAYS use full path when referencing nodes** — indices are sibling-unique, not globally unique:
+Work on `spx/43-integration.outcome/` reads `spx/15-auth-strategy.adr.md`, `spx/21-test-harness.enabler/test-harness.md`, `spx/32-auth.outcome/auth.md`, and `spx/32-billing.outcome/billing.md` as prior context. Work on `spx/32-auth.outcome/` does not read `spx/32-billing.outcome/`; same-index siblings are unordered peers.
 
-| Wrong                  | Correct                                     |
-| ---------------------- | ------------------------------------------- |
-| "32-parser.enabler"    | "21-infra.enabler/32-parser.enabler"        |
-| "implement enabler-43" | "implement 21-infra.enabler/43-api.enabler" |
+Use `/decomposing` to create or restructure child nodes. It owns concern boundaries, node types, ordering evidence, and sparse index assignment.
+
+**ALWAYS use full paths when referencing nodes, ADRs, and PDRs** — indices are sibling-unique, not globally unique, and bare decision filenames cannot be resolved:
+
+| Wrong                  | Correct                                    |
+| ---------------------- | ------------------------------------------ |
+| "32-parser.enabler"    | "spx/21-infra.enabler/32-parser.enabler"   |
+| "implement enabler-43" | "spx/21-infra.enabler/43-api.enabler"      |
+| "15-build.adr.md"      | "spx/21-spec-tree.enabler/15-build.adr.md" |
+| "21-pricing.pdr.md"    | "spx/32-billing.outcome/21-pricing.pdr.md" |
 
 ---
 
@@ -142,9 +153,9 @@ Test level is encoded in the filename.
 
 ---
 
-## Assertion-Test Contract
+## Assertion Evidence Contract
 
-Spec assertions link to their tests inline:
+Spec assertions link to their evidence inline:
 
 ```markdown
 ### Scenarios
@@ -152,7 +163,7 @@ Spec assertions link to their tests inline:
 - Given X, when Y, then Z ([test](tests/test_slug.unit.py))
 ```
 
-Every assertion must link to at least one test file.
+Use `[test](...)` for automated evidence and `[review]` for semantic constraints that cannot be checked by a finite automated test. Every assertion must carry an evidence tag.
 
 ---
 

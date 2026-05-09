@@ -21,8 +21,8 @@ This is full injection — every collected document is read into the conversatio
 - Read order: product root → ancestors → target (top-down)
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
-- Test files linked from spec assertions are read in full — they are part of the node's context, not external evidence. Imports reveal implementation existence; test cases reveal assertion coverage.
-- **Always use full path** from `spx/` to target — indices are sibling-unique, not globally unique:
+- Test files are not read by `/contextualizing`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/testing`, `/auditing-tests`, or `/applying`.
+- **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualizing 32-parser.outcome`
   - Right: `/contextualizing 21-infra.enabler/32-parser.outcome`
 
@@ -169,12 +169,7 @@ Glob: "spx/{target-path}/ISSUES.md"
 
 **If PLAN.md or ISSUES.md exist, read them.** These are non-durable escape hatches left by previous sessions via `/handoff`. They contain deferred plans or known issues that subsequent work must account for.
 
-**If test files exist, read each one in full.** The spec's inline `[test](tests/…)` links are intentional: they make each test file part of the spec's context. Reading a test file reveals two things simultaneously:
-
-1. **Implementation registry** — `import` statements identify which files exist and must exist; checking those paths determines node state: **Specified** (imports resolve to nothing) vs **Failing/Passing** (imported implementation exists).
-2. **Assertion coverage** — the test cases show which spec assertions are currently exercised and at what fidelity.
-
-Both are context, not external evidence. The distinction between "context" and "evidence" applies to the spec layer (spec declares, test verifies), not to whether test file content is relevant to loading context. It is.
+**Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/testing`, `/auditing-tests`, or `/applying`.
 
 </step>
 
@@ -204,8 +199,9 @@ Hierarchy:
           └── {target} ({enabler|outcome}) ← TARGET
 
 Children: {count} ({list if any})
-Tests: {exists|missing}
-Implementation: {found at {comma-separated paths} | absent}
+Test links: {list from target spec, full paths resolved from target} | none
+Co-located tests: {count} listed | none
+Implementation: unknown unless already established by a prior workflow
 Escape hatches: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
 Local skill overlays: {comma-separated list from spx/local/} | none
 Lower-index siblings read: {list}
@@ -251,9 +247,13 @@ Claude walked the ancestor chain but didn't read lower-index siblings' specs. A 
 
 Claude read ALL siblings including higher-index ones. Higher-index siblings may depend on the target but don't constrain it. Reading them wastes context window and may introduce irrelevant information.
 
-**Failure 4: Ignored test imports — implementation state unknown**
+**Failure 4: Inferred implementation state from tests during context loading**
 
-Claude found test files, reported "Tests: exists", but did not read the test files or extract their imports. Consequence: implementation state stayed unknown, causing a wrong next-step recommendation. The spec's `[test](tests/…)` links are the entry point — follow them, read the files, check the imports.
+Claude read test file imports during `/contextualizing` and reported implementation state from those imports. That made context loading expensive and mixed it with testing work. Context loading lists test links and co-located test files only; `/testing`, `/auditing-tests`, and `/applying` inspect test bodies.
+
+**Failure 5: Reported a bare node or decision name**
+
+Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without the full path. Those references are ambiguous because numeric prefixes are sibling-local. Always report `spx/.../15-build.adr.md` or `spx/.../32-parser.enabler` so the file can be found.
 
 </failure_modes>
 
@@ -269,10 +269,11 @@ Context loading is complete when:
 - [ ] Target spec read
 - [ ] Target ADRs/PDRs read
 - [ ] Children enumerated
-- [ ] Test directory status checked
-- [ ] If test files exist: each test file read, import paths extracted, implementation files verified (found/absent) and reported in context marker
+- [ ] Test links listed from the target spec and co-located test files listed without reading test bodies
+- [ ] Implementation state reported as unknown unless a prior workflow already established it
 - [ ] Escape hatches (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
+- [ ] All node, ADR, PDR, test, and escape-hatch references in the manifest use full paths from `spx/`
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
 

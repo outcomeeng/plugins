@@ -22,6 +22,24 @@ ADRs and PDRs share the same numeric namespace as sibling nodes. A decision reco
 
 </decision_records>
 
+<full_paths>
+
+Always refer to nodes, ADRs, and PDRs with their full path from `spx/`. Never use a bare node name, bare decision filename, or numeric prefix by itself.
+
+Bare references are ambiguous because numeric prefixes are sibling-local:
+
+```text
+Wrong: 32-parser.enabler
+Right: spx/21-infra.enabler/32-parser.enabler
+
+Wrong: 15-build.adr.md
+Right: spx/21-spec-tree.enabler/15-build.adr.md
+```
+
+This rule applies most strongly to ADRs and PDRs. A decision file cannot be found from `15-build.adr.md` alone because any directory can contain its own `15-build.adr.md`.
+
+</full_paths>
+
 <same_index>
 
 Items with the same index are unordered relative to each other for context loading. `/contextualizing` lists same-index siblings in the manifest and does not read them as constraining context.
@@ -57,6 +75,6 @@ Numeric prefixes are unique only among siblings within the same directory. Diffe
 32-feature.outcome/21-sub-setup.enabler/
 ```
 
-Always use full paths when referencing nodes. `32-parser.enabler` is ambiguous; `21-infra.enabler/32-parser.enabler` is not.
+Always use full paths when referencing nodes. `32-parser.enabler` is ambiguous; `spx/21-infra.enabler/32-parser.enabler` is not.
 
 </scope>

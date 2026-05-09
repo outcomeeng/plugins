@@ -86,8 +86,8 @@ A property assertion states something that must be true for all valid inputs, no
 A compliance assertion states a rule the node's output must always or never exhibit. Some trace back to a PDR or ADR decision; others are intrinsic to the node itself.
 
 ```markdown
-- ALWAYS: page presents the OSS tier as the full core toolchain — PDR-15 positions open-source as complete ([review](../../15-product-offering.pdr.md))
-- NEVER: reference XiperHLS — deferred per PDR-15 ([test](tests/open-source.unit.test.{ext}))
+- ALWAYS: page presents the OSS tier as the full core toolchain — `spx/15-product-offering.pdr.md` positions open-source as complete ([review])
+- NEVER: reference XiperHLS — deferred by `spx/15-product-offering.pdr.md` ([test](tests/open-source.unit.test.{ext}))
 ```
 
 **Test strategy:** Review (`[review]`) for semantic constraints requiring human or agent judgment. Test (`[test]`) when the constraint is automatable — including tests that exercise a lint rule against violating fixtures (see `<evidence_mechanisms>`).
@@ -147,5 +147,7 @@ Every assertion links to one of two evidence mechanisms:
 For structural constraints enforced by a lint rule, the `[test]` evidence is a test that exercises the rule against violating fixtures and asserts the violation is detected. The rule's presence in the validation pipeline is a separate operational concern — confirmed by the pipeline running green on the codebase — not by the spec assertion itself.
 
 **Review** is for semantic constraints that no automated check can verify — "the design follows this principle", "the API feels intuitive", "the copy matches brand voice". A review tag is valid evidence at the time of review; it does not re-verify itself as the code changes.
+
+When an assertion cites a node, ADR, or PDR as its source, cite the full path from `spx/`. Do not use bare shorthand such as `ADR-15`, `PDR-21`, or `15-build.adr.md`; those names are ambiguous because numeric prefixes repeat in different directories.
 
 </evidence_mechanisms>

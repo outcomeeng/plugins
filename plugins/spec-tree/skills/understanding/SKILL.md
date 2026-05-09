@@ -21,8 +21,9 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 7. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
 8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
 9. **ESCAPE HATCHES ARE EPHEMERAL** — PLAN.md and ISSUES.md are non-durable files placed in node directories by `/handing-off`. They record deferred plans and known issues. They are coordination artifacts, not spec truth — discoverable via `/contextualizing` but excluded from conformance checks.
-10. **LOCAL OVERLAYS** — `spx/local/` holds project-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
-11. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger and ends every turn via `AskUserQuestion` with three options (fix now, track and proceed, confirm absence). Skills that close sessions (notably `/handing-off`) lean on the ledger rather than re-implementing reflection. Read `references/imperfection-protocol.md`.
+10. **FULL PATHS ONLY** — Every node, ADR, and PDR reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
+11. **LOCAL OVERLAYS** — `spx/local/` holds project-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
+12. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger and ends every turn via `AskUserQuestion` with three options (fix now, track and proceed, confirm absence). Skills that close sessions (notably `/handing-off`) lean on the ledger rather than re-implementing reflection. Read `references/imperfection-protocol.md`.
 
 </principles>
 
@@ -78,6 +79,7 @@ Examples available in: examples/
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
 - [ ] Methodology loaded: existing lower-index siblings are read as constraining context; same-index and higher-index siblings are listed but not read as target constraints
+- [ ] Methodology loaded: all node, ADR, and PDR references use full paths from `spx/`
 - [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are ephemeral coordination artifacts, not durable spec truth
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per project without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; closing protocol presents three options (fix now, track and proceed, confirm absence)

@@ -59,14 +59,29 @@ Numeric prefixes drive deterministic context loading within each directory:
 4. Files and directories share one number space. The numeric prefix sorts; the type suffix identifies the artifact.
 5. Numbers are sibling-unique only. The same integer can be reused under a different parent.
 
+Read an existing directory like this:
+
+```text
+spx/
+  15-auth-strategy.adr.md
+  21-test-harness.enabler/
+  32-auth.outcome/
+  32-billing.outcome/
+  43-integration.outcome/
+```
+
+Work on `spx/43-integration.outcome/` reads `spx/15-auth-strategy.adr.md`, `spx/21-test-harness.enabler/test-harness.md`, `spx/32-auth.outcome/auth.md`, and `spx/32-billing.outcome/billing.md` as prior context. Work on `spx/32-auth.outcome/` does not read `spx/32-billing.outcome/`; same-index siblings are unordered peers.
+
 Use `/decomposing` to create or restructure child nodes. It owns concern boundaries, node types, ordering evidence, and sparse index assignment.
 
-**ALWAYS use full path when referencing nodes** — indices are sibling-unique, not globally unique:
+**ALWAYS use full paths when referencing nodes, ADRs, and PDRs** — indices are sibling-unique, not globally unique, and bare decision filenames cannot be resolved:
 
-| Wrong                  | Correct                                     |
-| ---------------------- | ------------------------------------------- |
-| "32-parser.enabler"    | "21-infra.enabler/32-parser.enabler"        |
-| "implement enabler-43" | "implement 21-infra.enabler/43-api.enabler" |
+| Wrong                  | Correct                                    |
+| ---------------------- | ------------------------------------------ |
+| "32-parser.enabler"    | "spx/21-infra.enabler/32-parser.enabler"   |
+| "implement enabler-43" | "spx/21-infra.enabler/43-api.enabler"      |
+| "15-build.adr.md"      | "spx/21-spec-tree.enabler/15-build.adr.md" |
+| "21-pricing.pdr.md"    | "spx/32-billing.outcome/21-pricing.pdr.md" |
 
 ---
 
@@ -148,9 +163,9 @@ Test level is encoded in the filename. **Delete sections below that don't apply 
 
 ---
 
-## Assertion-Test Contract
+## Assertion Evidence Contract
 
-Spec assertions link to their tests inline:
+Spec assertions link to their evidence inline:
 
 ```markdown
 ### Scenarios
@@ -158,7 +173,7 @@ Spec assertions link to their tests inline:
 - Given X, when Y, then Z ([test](tests/test_slug.unit.py))
 ```
 
-Every assertion must link to at least one test file.
+Use `[test](...)` for automated evidence and `[review]` for semantic constraints that cannot be checked by a finite automated test. Every assertion must carry an evidence tag.
 
 ---
 
