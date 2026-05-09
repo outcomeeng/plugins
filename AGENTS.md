@@ -314,6 +314,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
 | `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
 | `/committing-changes`         | apply   | Conventional Commits with selective staging                             |
+| `/opening-pr`                 | apply   | Push branch, open draft PR with curated title and body                  |
 | `/handing-off`                | apply   | Close a session with reflection, persistence, and a handoff file        |
 | `/picking-up`                 | apply   | Resume spec-tree work from a saved handoff session                      |
 
@@ -519,7 +520,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   ├── hooks/
 │   │   │   └── hooks.json
 │   │   └── skills/
-│   │       └── (16 skills)
+│   │       └── (17 skills)
 │   ├── typescript/
 │   │   ├── agents/
 │   │   │   ├── typescript-code-auditor.md
