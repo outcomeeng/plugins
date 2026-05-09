@@ -314,6 +314,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
 | `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
 | `/committing-changes`         | apply   | Conventional Commits with selective staging                             |
+| `/opening-pr`                 | apply   | Push branch, open draft PR with curated title and body                  |
 | `/handing-off`                | apply   | Close a session with reflection, persistence, and a handoff file        |
 | `/picking-up`                 | apply   | Resume spec-tree work from a saved handoff session                      |
 
@@ -337,6 +338,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/clarify`   | Clarify ambiguous requirements                                             |
 | `/handoff`   | Create timestamped context handoff                                         |
 | `/pickup`    | Load and continue from previous handoff                                    |
+| `/open-pr`   | Open a draft PR for the current branch with curated title and body         |
 | `/release`   | Close session without creating a handoff file (archives in-scope sessions) |
 
 ### Archiving a stale session without `/release`
@@ -513,13 +515,14 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── clarify.md
 │   │   │   ├── commit.md
 │   │   │   ├── handoff.md
+│   │   │   ├── open-pr.md
 │   │   │   ├── pickup.md
 │   │   │   ├── release.md
 │   │   │   └── rtfm.md
 │   │   ├── hooks/
 │   │   │   └── hooks.json
 │   │   └── skills/
-│   │       └── (16 skills)
+│   │       └── (17 skills)
 │   ├── typescript/
 │   │   ├── agents/
 │   │   │   ├── typescript-code-auditor.md
