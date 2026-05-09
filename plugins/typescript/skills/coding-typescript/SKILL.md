@@ -307,6 +307,7 @@ Determine your mode from the input, then follow the appropriate workflow.
 | `references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
 | `references/test-patterns.md`                | Debuggability-first test organization |
 | `references/verification-checklist.md`       | Pre-submission verification           |
+| `references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
 
 </reference_index>
 
@@ -386,16 +387,17 @@ import { helper } from "@testing/helpers/tree-builder";
 
 <tool_invocation>
 
+Resolve commands from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Use raw tool commands only when the repository has no validation wrapper.
+
 ```bash
-# Type checking
-npx tsc --noEmit
+# TypeScript validation
+<project-typecheck-command>
 
-# Linting
-npx eslint src/ test/
-npx eslint src/ test/ --fix
+# Lint validation
+<project-lint-command>
 
-# Testing
-npx vitest run --coverage
+# Tests
+<project-test-command>
 ```
 
 </tool_invocation>

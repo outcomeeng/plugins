@@ -113,9 +113,9 @@ it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
 Run ALL tools before declaring fixed:
 
 ```bash
-npx tsc --noEmit
-npx eslint src/ test/
-npx vitest run --coverage
+<project-typecheck-command>
+<project-lint-command>
+<project-test-command>
 ```
 
 **All must pass.** If any fail, go back to Phase R3.

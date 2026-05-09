@@ -62,7 +62,7 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 If `spx validation literal` is available, run it before Gate 1:
 
 ```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts --json
+spx validation literal --files <spec-node-path>/tests/**/*.test.ts testing/generators/**/*.ts --json
 ```
 
 Findings feed into Gate 1:
@@ -123,6 +123,8 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 
+If `fc.constant(...)` wraps a source-owned singleton, REJECT the generator and require a source-owned constructor or registry import instead. If the singleton has no meaningful variability, it is not a generator domain.
+
 </step>
 
 <step name="mocks">
@@ -166,14 +168,16 @@ The test proves correctness against an independent oracle, not self-consistency.
 
 **Step 6 — Harness chain tracing**
 
-For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `./helpers`:
+For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/generators/*`, or `./helpers`:
 
-1. Open the harness file.
+1. Open the imported support file.
 2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any mocking pattern — inside the harness module body or its setup path.
-3. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
-4. If the harness imports another harness, trace one level at a time until the chain terminates at a non-test module.
+3. If the import targets `@testing/fixtures/*`, REJECT with a `fixture_import` finding. Fixtures are inert files: tests may read, copy, or pass fixture paths, but executed tests must not import fixture modules or consume fixture exports.
+4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
+5. If a generator contains arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
+6. If the support file imports another support file, trace one level at a time until the chain terminates at a non-test module.
 
-The test's own imports look clean when the mock lives in a harness. Always open the harness.
+The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the support module.
 
 </step>
 
@@ -380,6 +384,18 @@ Test: `fc.assert(fc.property(fc.constant({ user: "admin", role: "root" }), (x) =
 
 How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, small `fc.oneof` over hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT the Property assertion.
 
+**Failure 6 — Literal laundering moved into generator modules**
+
+Test imported `arbitraryAbsentConfig()` from `testing/generators/config`. The test file contained no literals, so the audit passed. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding ceremony without variability, shrinking, or a stronger oracle. The source module already owned the absent-result protocol.
+
+How to avoid: Gate 1 step 6 opens generator modules. Constant-only generators for source-owned singleton shapes are REJECT. Require a source-owned constructor or registry import.
+
+**Failure 7 — Fixture imported as executable test code**
+
+Test imported `{ VALID_CASES }` from `@testing/fixtures/rule-cases.ts`. The fixture was a valid TypeScript module, so the test runner compiled it and consumed its exports. The file was no longer an inert input artifact; it became shared test-owned data hidden behind a fixture path.
+
+How to avoid: Gate 1 step 6 rejects imports from `@testing/fixtures/*`. Fixture files may be read from disk, copied into temp projects, or passed by path to the code under test. They are never imported by executed test code.
+
 </failure_modes>
 
 <success_criteria>
@@ -388,6 +404,8 @@ Audit is complete when:
 
 - [ ] Preliminary check: `spx validation literal` run (or skipped if unavailable)
 - [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if preliminary check complete or skipped)
+- [ ] Generator modules imported by tests audited for literal laundering and constant-only wrappers
+- [ ] Fixture usage audited: fixtures are inert files, not imported modules or sources of test exports
 - [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has gate, step, and specific detail

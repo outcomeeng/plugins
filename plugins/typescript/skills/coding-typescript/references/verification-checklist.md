@@ -15,23 +15,20 @@ Before declaring "done," confirm:
 
 ## Tool Commands
 
+Resolve placeholders from the repository's docs, package scripts, Makefile, Justfile, or local agent instructions. Raw `tsc`, `eslint`, or `vitest` commands are fallback commands only when the repository has no validation wrapper.
+
 ```bash
-# Type checking (must report 0 errors)
-npx tsc --noEmit
+# TypeScript validation through the repository's canonical command
+<project-typecheck-command>
 
-# Linting (must report 0 errors)
-npx eslint src/ test/
+# Lint validation through the repository's canonical command
+<project-lint-command>
 
-# Auto-fix style issues
-npx eslint src/ test/ --fix
+# Auto-fix style issues through the repository's canonical command, when available
+<project-lint-fix-command>
 
-# Run all tests with coverage
-npx vitest run --coverage
-
-# Or if npm scripts are defined
-npm run typecheck
-npm run lint
-npm test
+# Run tests through the repository's canonical command
+<project-test-command>
 ```
 
 ## Completion Criteria Table
