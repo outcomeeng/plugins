@@ -65,7 +65,7 @@ If `spx validation literal` is available, run it from the project root before Ga
 spx validation literal --files <spec-node-path>/tests/**/*.test.ts testing/generators/**/*.ts --json
 ```
 
-If a repository uses node-local generator modules in addition to project-root `testing/generators/`, add those paths explicitly to the same command. Do not substitute `<spec-node-path>/testing/generators/**/*.ts` for the project-root generator glob unless that is where the repository actually stores generators.
+The generator glob `testing/generators/**/*.ts` is resolved from the project root, not from `<spec-node-path>`. Add node-local generator paths explicitly only when the repository stores generators there.
 
 Findings feed into Gate 1:
 
@@ -179,7 +179,7 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/g
 5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
 6. If the support file imports another support file, trace one level at a time until the chain terminates at a non-test module.
 
-The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the support module.
+The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the support module. When recording audit findings, cite the stable step name `harness_chain` and finding code, not numbered checklist item positions.
 
 </step>
 

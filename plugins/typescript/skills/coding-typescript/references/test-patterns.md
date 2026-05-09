@@ -9,6 +9,8 @@ Write tests in the order that exposes the source contract first:
 4. Derive expected outputs from generated inputs or independent standards.
 
 Do not create shared test-value files or named example bags. Those collections preserve hand-picked examples and hide ownership.
+
+Property tests expose a failing value through a shrunk counterexample and seed. Named regression tests explain why a counterexample matters when it represents a source-owned behavior, so add them only for stable contracts worth documenting.
 </principle>
 
 <source_contract_first>
