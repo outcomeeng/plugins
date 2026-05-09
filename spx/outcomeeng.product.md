@@ -46,7 +46,10 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 
 - ALWAYS: derive node status from test results, never from stored labels — status reflects reality
 - ALWAYS: use atemporal voice in all specs — specs are permanent truth, not work items
+- ALWAYS: state-changing operations against external systems (credential changes, workflow runs, repository writes) occur only with an explicit user instruction in the same turn — reading, status checks, and observability calls use non-mutating APIs
+- ALWAYS: data values surfaced to the agent — identity (session id, host account, owner/repo, run id, commit SHA) and status/conclusion fields (workflow conclusion, run status, exit codes) — appear verbatim from their source — downstream skills index on the literal and users compare against the source
 - NEVER: store status in committed files — prevents drift from reality
+- NEVER: paraphrase or summarize agent-surfaced data values — identity or status/conclusion — paraphrase breaks downstream literal indexing and obscures user comparison against the source
 
 ## Open decisions
 
