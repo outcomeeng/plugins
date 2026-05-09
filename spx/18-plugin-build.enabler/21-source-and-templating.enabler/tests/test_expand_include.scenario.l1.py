@@ -23,11 +23,16 @@ from outcomeeng_testing.harnesses.scenarios import (
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
-if not IMPLEMENTED:
-    pytest.skip(
-        "outcomeeng.scripts.build_plugins is a stub — see spx/EXCLUDE",
-        allow_module_level=True,
-    )
+
+@pytest.fixture(autouse=True)
+def _require_module_implemented() -> None:
+    if not IMPLEMENTED:
+        pytest.fail(
+            "outcomeeng.scripts.build_plugins is a stub; implement it before "
+            "running this test, or filter via `spx test passing` "
+            "(node is listed in spx/EXCLUDE)"
+        )
+
 
 MISSING_FRAGMENT_PATH = "no-such-scope/no-such-topic/fragment.md"
 

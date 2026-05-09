@@ -19,11 +19,16 @@ from outcomeeng.scripts.build_plugins import (
     parse_directives,
 )
 
-if not IMPLEMENTED:
-    pytest.skip(
-        "outcomeeng.scripts.build_plugins is a stub — see spx/EXCLUDE",
-        allow_module_level=True,
-    )
+
+@pytest.fixture(autouse=True)
+def _require_module_implemented() -> None:
+    if not IMPLEMENTED:
+        pytest.fail(
+            "outcomeeng.scripts.build_plugins is a stub; implement it before "
+            "running this test, or filter via `spx test passing` "
+            "(node is listed in spx/EXCLUDE)"
+        )
+
 
 EMPTY_TEXT = ""
 PLAIN_PROSE = "# Heading\n\nJust prose, no directives."
