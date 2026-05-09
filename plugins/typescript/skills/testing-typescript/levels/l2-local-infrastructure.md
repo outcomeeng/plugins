@@ -26,17 +26,9 @@ Examples: `postgres-user-store.scenario.l2.test.ts`, `checkout.scenario.l2.playw
 <example>
 
 ```typescript
-import { createPostgresHarness } from "@testing/harnesses/postgres";
+import { createGeneratedUser } from "@testing/generators/users";
+import { createPostgresHarness, type PostgresHarness } from "@testing/harnesses/postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
-type LocalInfrastructureHarness = {
-  startOrThrow(setupMessage: string): Promise<void>;
-  stop(): Promise<void>;
-};
-
-type PostgresHarness = LocalInfrastructureHarness & {
-  readonly connectionString: string;
-};
 
 describe("UserStore", () => {
   const postgres: PostgresHarness = createPostgresHarness();
@@ -51,7 +43,7 @@ describe("UserStore", () => {
 
   it("persists and reloads users through the local database", async () => {
     const store = new UserStore(postgres.connectionString);
-    const user = createTestUser();
+    const user = createGeneratedUser();
 
     await store.save(user);
 
@@ -60,7 +52,7 @@ describe("UserStore", () => {
 });
 ```
 
-This is `l2` because the proof depends on a real local database. The harness factory returns the project-local typed harness, and `startOrThrow` is the expected setup API shape for mandatory infrastructure because it reports a clear diagnostic when the dependency is unavailable.
+This is `l2` because the proof depends on a real local database. The harness module exports both the factory and `PostgresHarness` type; the type includes `startOrThrow(setupMessage)` and `stop()` so mandatory infrastructure failures report a clear diagnostic. The generated user comes from `@testing/generators/`, not from fixture exports.
 
 </example>
 
