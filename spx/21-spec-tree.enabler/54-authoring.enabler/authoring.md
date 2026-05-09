@@ -9,7 +9,11 @@ CAN create correctly structured artifacts while preserving decomposition structu
 ### Compliance
 
 - ALWAYS: read the appropriate template before drafting — templates are the structural authority ([review])
+- ALWAYS: preserve the three-part hypothesis when authoring outcome nodes — outcome specs declare output, outcome, and impact ([review])
 - ALWAYS: invoke `/contextualizing` on the parent directory before creating any node — sibling enumeration prevents index collisions ([review])
+- ALWAYS: create single nodes or decision records only when the parent, artifact type, and collision-free index are clear from loaded context ([review])
+- ALWAYS: flag content misplacement when scenario, mapping, conformance, or property assertions appear in ADRs/PDRs or implementation details appear in specs ([review])
 - ALWAYS: when a request creates or restructures multiple sibling nodes, record the user's decomposition intent, constraints, and known issues in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decomposing` with only the target address (`spx/` for product-root children or a node address for nested children) ([review])
+- ALWAYS: reference nodes, ADRs, and PDRs by full path from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])
 - NEVER: pass proposed child nodes, proposed indices, or pre-baked dependency order to `/decomposing` — decomposition owns the structure model ([review])
 - NEVER: place implementation details in specs — "how" belongs in ADRs or code ([review])

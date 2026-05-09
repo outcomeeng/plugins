@@ -20,4 +20,7 @@ CAN operate with complete, verified context before any work begins
 ### Compliance
 
 - ALWAYS: read every ADR/PDR returned by globs — do not filter by title relevance ([review])
+- ALWAYS: list target spec test links and co-located test files without reading test file bodies — test-body inspection belongs to `/testing`, `/auditing-tests`, and `/applying` ([review])
+- ALWAYS: emit node, ADR, PDR, test, and escape-hatch references as full paths from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])
 - NEVER: proceed with partial context — abort if any required document is missing ([review])
+- NEVER: infer implementation state from test imports during context loading — implementation state is unknown unless another workflow establishes it ([review])
