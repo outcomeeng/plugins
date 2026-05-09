@@ -36,7 +36,7 @@ This skill does NOT:
 </context>
 
 <project_specialization>
-After loading this skill, check for `spx/local/opening-pr.md` at the repository root. If it exists, read it and apply its rules as project-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, draft-policy overrides).
+After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as project-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, draft-policy overrides).
 </project_specialization>
 
 <context_gathering>
@@ -81,14 +81,15 @@ git branch --show-current
 # Working tree state (empty output = clean)
 git status --porcelain
 
-# Default base branch
-gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+# Resolve the base branch first — never hardcode "main"; repos may use
+# develop, master, or another default, in which case main..HEAD is wrong.
+base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
 
-# Commits ahead of base (substitute the resolved base)
-git log --oneline origin/main..HEAD
+# Commits ahead of base
+git log --oneline "origin/${base}..HEAD"
 
 # Diff stats against base
-git diff origin/main...HEAD --stat
+git diff "origin/${base}...HEAD" --stat
 
 # Existing PR for current branch — extract .url directly via --jq
 # (gh exits non-zero when no PR exists; redirect stderr to suppress its message)
@@ -287,13 +288,13 @@ gh pr ready <pr-number>
 <commands_reference>
 
 ```bash
-# Pre-flight
+# Pre-flight (resolve base; never hardcode main)
 gh auth status
 git status --porcelain
 git branch --show-current
-gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
-git log --oneline origin/main..HEAD
-git diff origin/main...HEAD --stat
+base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+git log --oneline "origin/${base}..HEAD"
+git diff "origin/${base}...HEAD" --stat
 existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null); [ -n "$existing_url" ] && echo "PR exists: $existing_url"
 
 # Push

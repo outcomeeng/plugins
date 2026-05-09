@@ -20,11 +20,11 @@ argument-hint: [scope-hint]
 **Working tree state (empty = clean):**
 !`git status --porcelain || echo 'Not a git repo'`
 
-**Commits ahead of origin/main:**
-!`git log --oneline origin/main..HEAD 2>/dev/null | head -20 || echo '(no commits ahead, or origin/main missing)'`
+**Commits ahead of base:**
+!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null); git log --oneline "origin/${base:-main}..HEAD" 2>/dev/null | head -20 || echo '(no commits ahead, or base ref missing)'`
 
-**Diff stats vs origin/main:**
-!`git diff origin/main...HEAD --stat 2>/dev/null | tail -5 || echo '(no diff)'`
+**Diff stats vs base:**
+!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null); git diff "origin/${base:-main}...HEAD" --stat 2>/dev/null | tail -5 || echo '(no diff)'`
 
 **Existing PR for current branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(no existing PR)'`

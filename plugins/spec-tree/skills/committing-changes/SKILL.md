@@ -35,7 +35,7 @@ This skill does NOT:
 </context>
 
 <project_specialization>
-After loading this skill, check for `spx/local/committing-changes.md` at the repository root. If it exists, read it and apply its rules as project-specific additions to the commit workflow (e.g., plugin versioning requirements, additional staging targets, project-specific validation steps).
+After loading this skill, check whether `spx/local/committing-changes.md` exists (path is relative to the repository root). If it does, read it and apply its rules as project-specific additions to the commit workflow (e.g., plugin versioning requirements, additional staging targets, project-specific validation steps).
 </project_specialization>
 
 <context_gathering>
