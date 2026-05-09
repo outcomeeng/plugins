@@ -49,7 +49,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, and `<project-lint-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions before running them. Use raw `vitest`, `tsc`, or `eslint` commands only when the repository has no validation wrapper. If the wrapper does not accept a path suffix, run the closest supported focused command and record the exact command used.
+**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, and `<project-lint-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions before running them. Use raw `vitest`, `tsc`, or `eslint` commands only when the repository has no validation wrapper. Fallback examples: `npx vitest run`, `npx tsc --noEmit`, and `npx eslint src/ test/`. If the wrapper does not accept a path suffix, run the closest supported focused command and record the exact command used.
 
 **Workflow:**
 
@@ -115,6 +115,7 @@ Create test files following `/standardizing-typescript-tests`:
 ### Step 4: Verify Tests Fail (RED)
 
 ```bash
+# Resolve from repo docs or scripts; fallback: npx vitest run
 <project-test-command> {node_path}/tests/
 ```
 
@@ -231,13 +232,13 @@ For each rejection reason:
 ### Step 3: Verify Fixes
 
 ```bash
-# Run the node tests through the repository's canonical test command
+# Run the node tests through the repository's canonical test command; fallback: npx vitest run
 <project-test-command> {node_path}/tests/
 
-# Run the repository's canonical TypeScript validation
+# Run the repository's canonical TypeScript validation; fallback: npx tsc --noEmit
 <project-typecheck-command>
 
-# Run the repository's canonical lint validation for the changed files
+# Run the repository's canonical lint validation for the changed files; fallback: npx eslint src/ test/
 <project-lint-command> {node_path}/tests/
 ```
 

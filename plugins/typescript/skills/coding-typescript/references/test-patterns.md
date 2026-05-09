@@ -68,6 +68,7 @@ When a property failure needs a stable repro, use fast-check's reported seed and
 - Expected outputs copied from fixtures instead of derived from inputs
 - Fixtures that contain strings or numbers only to avoid literals in test files
 - Example tests that pass on one hand-picked value while claiming domain coverage
+- `fc.stringOf(arbitrary)` in new examples; use `fc.string({ unit: arbitrary })` for fast-check v4
 
 </anti_patterns>
 

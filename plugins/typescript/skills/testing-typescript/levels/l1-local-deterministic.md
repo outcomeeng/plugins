@@ -49,6 +49,42 @@ This remains `l1` because the test calls deterministic source logic directly and
 
 </example>
 
+<temp_dir_example>
+
+```typescript
+import { writeNormalizedSourceManifest } from "@/manifest";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+
+describe("writeNormalizedSourceManifest", () => {
+  let projectDir: string | undefined;
+
+  afterEach(async () => {
+    if (projectDir) {
+      await rm(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("writes normalized source paths in a temp project", async () => {
+    projectDir = await mkdtemp(join(tmpdir(), "manifest-"));
+    const manifestPath = join(projectDir, "manifest.json");
+
+    await writeNormalizedSourceManifest({
+      outputPath: manifestPath,
+      sourcePaths: ["./src/index.ts", "src/lib/../lib/runtime.ts"],
+    });
+
+    await expect(readFile(manifestPath, "utf8")).resolves.toContain("src/index.ts");
+  });
+});
+```
+
+This remains `l1` because the test uses only local temp-dir state and calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, project binaries, or shared services.
+
+</temp_dir_example>
+
 <reject>
 
 - Moving a filesystem test to `l2` only because it touches temp dirs

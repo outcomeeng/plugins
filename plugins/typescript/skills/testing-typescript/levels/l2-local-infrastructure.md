@@ -29,8 +29,17 @@ Examples: `postgres-user-store.scenario.l2.test.ts`, `checkout.scenario.l2.playw
 import { createPostgresHarness } from "@testing/harnesses/postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+type LocalInfrastructureHarness = {
+  startOrThrow(setupMessage: string): Promise<void>;
+  stop(): Promise<void>;
+};
+
+type PostgresHarness = LocalInfrastructureHarness & {
+  readonly connectionString: string;
+};
+
 describe("UserStore", () => {
-  const postgres = createPostgresHarness();
+  const postgres: PostgresHarness = createPostgresHarness();
 
   beforeAll(async () => {
     await postgres.startOrThrow("Install Docker before running UserStore l2 tests.");
