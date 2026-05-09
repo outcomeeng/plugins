@@ -4,7 +4,12 @@ This file is loaded by the `/committing-changes` skill when working in this repo
 
 ## Version Management
 
-All plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
+Feature branches do not bump plugin versions. Plugin manifest versions stay equal
+to the target base branch, normally `origin/main`, unless the user explicitly
+asks for a release/version change.
+
+When a dedicated release/version change is requested, plugins follow semantic
+versioning: `MAJOR.MINOR.PATCH`
 
 **MAJOR version (0.x.x → 1.x.x):**
 
@@ -30,9 +35,9 @@ All plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 - ✅ Internal implementation changes
 - 🎯 **Use liberally** — when in doubt, use PATCH
 
-## Files to Update When Bumping Version
+## Files to Update for an Explicit Release/Version Change
 
-**Plugin manifest version** (update every manifest that exists for the plugin you changed):
+**Plugin manifest version** (update every manifest that exists for the plugin being released):
 
 ```bash
 plugins/{plugin-name}/.claude-plugin/plugin.json
@@ -63,39 +68,45 @@ just check
 
 ## Version Bump Workflow
 
-**CRITICAL: Version bumps must be in the SAME commit as the changes that warrant them.**
+**CRITICAL: do not bump plugin manifest versions in ordinary feature branches.**
 
-Version decisions are made against the target base branch, normally `origin/main`.
-Only the version that differs from the base branch matters for the PR. Follow-up
-commits on the same branch must keep the already-selected PR version unless they
-add a new release-significant change that changes the PR's release category. Do
-not increment a plugin version just because an earlier commit on the same branch
-already bumped it.
+Only the version on the main branch matters. When a PR changes skills, commands,
+templates, documentation, or implementation, keep every touched plugin manifest
+at the same version as the target base branch, normally `origin/main`. Do not
+increment versions to describe feature-branch commits or review rounds.
 
-❌ **WRONG** — separate commits:
+Only bump a plugin version when the user explicitly asks for a release/version
+change or the repository is performing a dedicated release workflow. In that
+case, make the version change on the release path against main and update every
+manifest that exists for the released plugin.
+
+❌ **WRONG** — feature PR includes a version-only commit:
 
 ```bash
 git commit -m "refactor(skills): simplify descriptions"
 git commit -m "chore: bump versions"
 ```
 
-✅ **CORRECT** — single atomic commit:
+❌ **WRONG** — feature PR bundles an unnecessary version bump with docs/code:
+
+```bash
+git commit -m "refactor(skills): simplify descriptions and bump plugin version"
+```
+
+✅ **CORRECT** — feature PR leaves versions unchanged from main:
 
 ```bash
 # 1. Make your changes to skills/commands/etc
-# 2. Update version numbers in the relevant plugin.json files
-# 3. Stage everything together
-git add plugins/{plugin-name}/ plugins/*/.claude-plugin/plugin.json
-# 4. Create ONE commit with both the changes and version bumps
-git commit -m "refactor(skills): simplify descriptions
-
-- Simplified descriptions from formal jargon to natural language
-- Patch version bump"
+# 2. Confirm touched plugin.json versions still match origin/main
+# 3. Stage the actual feature changes
+git add plugins/{plugin-name}/
+git commit -m "refactor(skills): simplify descriptions"
 ```
 
-Only create a separate version bump commit when bumping WITHOUT any code/doc changes (rare).
+For an explicit release/version request, keep the version bump atomic with the
+release change and explain the requested release category in the commit message.
 
-## Version Bump Examples
+## Explicit Release/Version Examples
 
 | Change                      | Old   | New   | Reason                          |
 | --------------------------- | ----- | ----- | ------------------------------- |
@@ -109,8 +120,8 @@ Only create a separate version bump commit when bumping WITHOUT any code/doc cha
 ## After Adding/Modifying Commands or Skills
 
 1. **Make your changes** to skills, commands, templates, etc.
-2. **Determine the PR-level version bump against the target base branch**: MINOR for new items or major functional changes; PATCH for everything else; no extra bump when a follow-up commit only refines the same PR-scoped change
-3. **Update plugin.json** in the same working session:
+2. **Preserve manifest versions**: keep `plugin.json` versions equal to the target base branch unless the user explicitly requested a release/version change
+3. **When an explicit release/version change was requested, update plugin.json** in the same working session:
    - `plugins/{plugin-name}/.claude-plugin/plugin.json`
    - `plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
 4. **Update marketplace catalogs**:
@@ -118,13 +129,14 @@ Only create a separate version bump commit when bumping WITHOUT any code/doc cha
    - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
 5. **Document changes**: Update `CLAUDE.md` if adding new commands/skills to the plugin tables
 6. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
-7. **Stage and commit EVERYTHING together** in ONE commit:
+7. **Stage and commit the change set together**:
 
    ```bash
    git add plugins/{plugin-name}/ plugins/{plugin-name}/.claude-plugin/plugin.json
-   git commit -m "type(scope): your changes including version bump"
+   git commit -m "type(scope): your changes"
    ```
 
-   If `.codex-plugin/plugin.json` exists for that plugin, include it in the same commit.
+   Include plugin manifests only when they were intentionally changed by an
+   explicit release/version request.
 
 Run `just check` before committing. The pre-commit hook also validates, but catching errors earlier is faster.
