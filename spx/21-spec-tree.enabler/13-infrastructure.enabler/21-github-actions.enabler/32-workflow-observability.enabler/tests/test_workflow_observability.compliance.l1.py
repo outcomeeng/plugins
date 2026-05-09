@@ -68,7 +68,15 @@ def test_no_gh_run_watch_reference(helper: pathlib.Path) -> None:
 
 @pytest.mark.parametrize("helper", HELPERS, ids=lambda p: p.name)
 def test_no_polling_waits(helper: pathlib.Path) -> None:
-    """Helper source contains no polling-wait constructs — no `time.sleep` calls, no `import time`."""
+    """Helper source contains no `time.sleep` calls and no import of the `time` module.
+
+    This is the synchronous polling pattern. The check is intentionally narrow:
+    `asyncio.sleep`, `threading.Event.wait`, and other blocking primitives are
+    not screened here — current helpers neither use asyncio nor threads, so a
+    broader check would assert correctness against patterns that would also
+    have to clear other static checks (no third-party imports, stdlib-only)
+    before they could appear.
+    """
     source = helper.read_text(encoding="utf-8")
     assert "time.sleep" not in source, f"{helper.name}: contains time.sleep"
     tree = ast.parse(source)

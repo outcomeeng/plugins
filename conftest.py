@@ -42,7 +42,7 @@ _EXCLUDED_TEST_DIRS: Final = _excluded_test_dirs()
 def pytest_ignore_collect(collection_path: pathlib.Path, config: object) -> bool | None:
     """Skip collection of test paths under nodes listed in spx/EXCLUDE."""
     resolved = collection_path.resolve()
-    for excluded in _EXCLUDED_TEST_DIRS:
-        if resolved == excluded or resolved.is_relative_to(excluded):
-            return True
-    return None
+    return (
+        any(resolved.is_relative_to(excluded) for excluded in _EXCLUDED_TEST_DIRS)
+        or None
+    )
