@@ -211,7 +211,7 @@ If the project defines a custom push command (e.g., `just push-marketplace` for 
 Pass the curated body to `gh pr create` on stdin via `--body-file -`. A Bash heredoc preserves real newlines, avoids any temp file, and removes the cleanup step (and its permission prompt for users with strict `Bash(rm:*)` rules):
 
 ```bash
-GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
+GIT_TERMINAL_PROMPT=0 gh pr create \
   --draft \
   --title "<conventional-commits subject under 70 chars>" \
   --body-file - \
@@ -242,8 +242,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 - `--title` and `--body-file -` — explicit title plus body-from-stdin matches `/committing-changes` conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit to use the repo default; specify only when targeting a non-default base.
-- `GH_PROMPT_DISABLED=1` — disables interactive gh prompts.
-- `GIT_TERMINAL_PROMPT=0` — disables git credential prompts.
+- `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
 **Do not use `--fill` with this skill.** `--fill` is gh's autofill from commit messages. If both `--fill` and `--body-file` are passed, the explicit body wins — but `--fill` is then dead weight. Use the curated body alone.
 
@@ -301,7 +300,7 @@ existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null); [ -n "$existing_u
 git push -u origin "$(git branch --show-current)"
 
 # Open draft PR against the repo default base
-GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
+GIT_TERMINAL_PROMPT=0 gh pr create \
   --draft \
   --title "feat(scope): summary under 70 chars" \
   --body-file - \
@@ -311,7 +310,7 @@ GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 
 # Open draft PR against a non-default base (e.g., a release branch)
-GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
+GIT_TERMINAL_PROMPT=0 gh pr create \
   --draft \
   --base release/v2 \
   --title "fix(scope): backport summary under 70 chars" \
