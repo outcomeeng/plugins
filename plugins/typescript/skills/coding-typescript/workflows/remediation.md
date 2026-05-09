@@ -114,6 +114,7 @@ Run ALL tools before declaring fixed:
 
 ```bash
 <project-typecheck-command>
+<project-lint-fix-command>
 <project-lint-command>
 <project-test-command>
 ```

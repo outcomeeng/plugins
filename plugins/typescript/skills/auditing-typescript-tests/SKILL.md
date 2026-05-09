@@ -59,11 +59,13 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 
 <preliminary_check>
 
-If `spx validation literal` is available, run it before Gate 1:
+If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and project-root generated-domain modules:
 
 ```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts <spec-node-path>/testing/generators/**/*.ts --json
+spx validation literal --files <spec-node-path>/tests/**/*.test.ts testing/generators/**/*.ts --json
 ```
+
+If a repository uses node-local generator modules in addition to project-root `testing/generators/`, add those paths explicitly to the same command. Do not substitute `<spec-node-path>/testing/generators/**/*.ts` for the project-root generator glob unless that is where the repository actually stores generators.
 
 Findings feed into Gate 1:
 
@@ -386,7 +388,7 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 **Failure 6 — Literal laundering moved into generator modules**
 
-Test imported `arbitraryAbsentConfig()` from `testing/generators/config`. The test file contained no literals, so the audit passed. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding ceremony without variability, shrinking, or a stronger oracle. The source module already owned the absent-result protocol.
+Test imported `arbitraryAbsentConfig()` from `@testing/generators/config`. The test file contained no literals, so the audit passed. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding ceremony without variability, shrinking, or a stronger oracle. The source module already owned the absent-result protocol.
 
 How to avoid: Gate 1 step 6 opens generator modules. Constant-only generators for source-owned singleton shapes are REJECT. Require a source-owned constructor or registry import.
 

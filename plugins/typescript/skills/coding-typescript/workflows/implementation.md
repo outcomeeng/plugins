@@ -199,6 +199,9 @@ Before declaring completion, run ALL verification tools:
 # TypeScript validation through the repository's canonical command
 <project-typecheck-command>
 
+# Auto-fix style issues through the repository's canonical command, when available
+<project-lint-fix-command>
+
 # Lint validation through the repository's canonical command
 <project-lint-command>
 

@@ -393,6 +393,9 @@ Resolve commands from repository docs, package scripts, Makefile, Justfile, or l
 # TypeScript validation
 <project-typecheck-command>
 
+# Auto-fix style issues when the repository exposes a canonical fix command
+<project-lint-fix-command>
+
 # Lint validation
 <project-lint-command>
 
