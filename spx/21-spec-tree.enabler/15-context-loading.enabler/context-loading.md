@@ -6,19 +6,13 @@ CAN operate with complete, verified context before any work begins
 
 ## Assertions
 
-### Scenarios
-
-- Given a target node with a complete ancestor chain, when context is loaded, then all ancestor specs, lower-index sibling specs, and ADRs/PDRs are read ([test](tests/test_context_loading.unit.py))
-- Given a target node with a missing ancestor spec, when context is loaded, then the skill aborts with the missing file path and remediation guidance ([test](tests/test_context_loading.unit.py))
-- Given an empty tree with only a product spec, when context is loaded for authoring, then an empty manifest with `bootstrap=true` is returned ([test](tests/test_context_loading.unit.py))
-- Given a target node at index 43 with siblings at indices 15, 21, and 65, when context is loaded, then siblings at 15 and 21 are read and sibling at 65 is not ([test](tests/test_context_loading.unit.py))
-
-### Properties
-
-- Context loading is deterministic: the same tree structure and target always produces the same context manifest ([test](tests/test_context_loading.unit.py))
-
 ### Compliance
 
+- ALWAYS: read all ancestor specs, lower-index sibling specs, and governing ADRs/PDRs for a target with a complete ancestor chain ([review])
+- ALWAYS: abort with the missing file path and remediation guidance when a required ancestor spec is absent ([review])
+- ALWAYS: return an empty bootstrap manifest when authoring against an empty tree with only a product spec ([review])
+- ALWAYS: read lower-index sibling specs as target constraints and list same-index or higher-index siblings without reading them as constraints ([review])
+- ALWAYS: produce the same context manifest for the same tree structure and target ([review])
 - ALWAYS: read every ADR/PDR returned by globs — do not filter by title relevance ([review])
 - ALWAYS: list target spec test links and co-located test files without reading test file bodies — test-body inspection belongs to `/testing`, `/auditing-tests`, and `/applying` ([review])
 - ALWAYS: emit node, ADR, PDR, test, and escape-hatch references as full paths from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])

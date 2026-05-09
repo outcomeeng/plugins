@@ -6,11 +6,6 @@ CAN reorganize the spec tree without losing context, breaking references, or dup
 
 ## Assertions
 
-### Scenarios
-
-- Given a node being moved to a new parent, when refactoring runs, then cross-references in other specs are updated to reflect the new path ([test](tests/test_refactoring.unit.py))
-- Given two sibling nodes sharing the same infrastructure concern, when refactoring runs, then `/decomposing` defines the shared enabler structure before refactoring applies the tree changes ([test](tests/test_refactoring.unit.py))
-
 ### Compliance
 
 - ALWAYS: update all cross-references when moving a node — stale paths break deterministic context loading ([review])
