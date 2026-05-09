@@ -27,6 +27,7 @@ Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3
 
 ```typescript
 import { submitSignedFixture } from "@testing/harnesses/stripe";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 type StripeCredentials = {
@@ -48,7 +49,7 @@ describe("Stripe webhook contract", () => {
     const credentials = requireStripeCredentials();
     const response = await submitSignedFixture({
       token: credentials.token,
-      fixturePath: "testing/fixtures/checkout-session-completed.json",
+      fixturePath: resolve(process.cwd(), "testing/fixtures/checkout-session-completed.json"),
     });
 
     expect(response.status).toBe(200);

@@ -30,8 +30,14 @@ import { createGeneratedUser } from "@testing/generators/users";
 import { createPostgresHarness, type PostgresHarness } from "@testing/harnesses/postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+type RequiredPostgresHarness = PostgresHarness & {
+  readonly connectionString: string;
+  startOrThrow(setupMessage: string): Promise<void>;
+  stop(): Promise<void>;
+};
+
 describe("UserStore", () => {
-  const postgres: PostgresHarness = createPostgresHarness();
+  const postgres: RequiredPostgresHarness = createPostgresHarness();
 
   beforeAll(async () => {
     await postgres.startOrThrow("Install Docker before running UserStore l2 tests.");

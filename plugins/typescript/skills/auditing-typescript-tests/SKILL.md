@@ -406,7 +406,7 @@ Audit is complete when:
 
 - [ ] Preliminary check: `spx validation literal` run (or skipped if unavailable)
 - [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if preliminary check complete or skipped)
-- [ ] Generator modules imported by tests audited for literal laundering and constant-only wrappers
+- [ ] Generator modules audited for literal laundering: constant-only wrappers for source-owned singletons
 - [ ] Fixture usage audited: fixtures are inert files, not imported modules or sources of test exports
 - [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT

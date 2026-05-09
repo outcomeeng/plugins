@@ -102,8 +102,8 @@ git commit -m "chore: bump versions"
 ❌ **WRONG** — review feedback increments the already-selected PR version:
 
 ```bash
-git commit -m "docs(typescript): refine test guidance"      # bumps 0.18.10 → 0.18.11
-git commit -m "docs(typescript): address review feedback"   # bumps 0.18.11 → 0.18.12
+git commit -m "docs(plugin): refine skill guidance"      # bumps 0.4.2 → 0.4.3
+git commit -m "docs(plugin): address review feedback"    # bumps 0.4.3 → 0.4.4
 ```
 
 ✅ **CORRECT** — first commit bumps once; review commits keep that version:

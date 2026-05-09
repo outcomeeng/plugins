@@ -180,15 +180,15 @@ For test values, fixture placement, and inline diagnostics, follow `/standardizi
 Closed sets must have one runtime source of truth. Use `as const` registries or tuples, then derive unions and schemas from that declaration instead of duplicating string unions by hand.
 
 ```typescript
-export const AUTH_PROVIDER_TYPES = {
-  TEMPORARY: "temporary",
-  TRACKED: "tracked",
+export const VERDICT_STATUSES = {
+  APPROVED: "approved",
+  REJECTED: "rejected",
 } as const;
 
-export type AuthProviderType = (typeof AUTH_PROVIDER_TYPES)[keyof typeof AUTH_PROVIDER_TYPES];
+export type VerdictStatus = (typeof VERDICT_STATUSES)[keyof typeof VERDICT_STATUSES];
 
-export const authProviderSchema = z.enum(
-  Object.values(AUTH_PROVIDER_TYPES) as [string, ...string[]],
+export const verdictStatusSchema = z.enum(
+  Object.values(VERDICT_STATUSES) as [string, ...string[]],
 );
 ```
 
