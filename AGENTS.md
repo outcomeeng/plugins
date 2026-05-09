@@ -318,6 +318,12 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/handing-off`                | apply   | Close a session with reflection, persistence, and a handoff file        |
 | `/picking-up`                 | apply   | Resume spec-tree work from a saved handoff session                      |
 
+### Tool Skills
+
+| Skill             | Purpose                                                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `/github-actions` | GitHub Actions investigation: workflow status, run discovery, log triage, gh authentication state, mutation consent gate |
+
 ### Agents
 
 | Agent                   | Purpose                                                        |
