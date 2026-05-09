@@ -117,6 +117,12 @@ Run ALL tools before declaring fixed:
 <project-lint-fix-command>
 <project-lint-command>
 <project-test-command>
+
+# Bare-repo fallback examples only when no repository wrapper exists:
+# npx tsc --noEmit
+# npx eslint src/ test/ --fix
+# npx eslint src/ test/
+# npx vitest run
 ```
 
 **All must pass.** If any fail, go back to Phase R3.

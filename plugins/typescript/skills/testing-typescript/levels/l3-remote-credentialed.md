@@ -26,6 +26,7 @@ Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3
 <example>
 
 ```typescript
+import { submitSignedFixture } from "@testing/harnesses/stripe";
 import { describe, expect, it } from "vitest";
 
 type StripeCredentials = {
