@@ -401,6 +401,12 @@ Resolve commands from repository docs, package scripts, Makefile, Justfile, or l
 
 # Tests
 <project-test-command>
+
+# Bare-repo fallback examples only when no repository wrapper exists:
+# npx tsc --noEmit
+# npx eslint src/ test/ --fix
+# npx eslint src/ test/
+# npx vitest run
 ```
 
 </tool_invocation>
