@@ -318,7 +318,6 @@ ${UNDERSTANDING_DIR}/
 ├── SKILL.md
 ├── references/
 │   ├── durable-map.md
-│   ├── decomposition-semantics.md
 │   ├── node-types.md
 │   ├── assertion-types.md
 │   ├── ordering-rules.md
