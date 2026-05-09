@@ -110,6 +110,25 @@ def main(argv: list[str]) -> int:
         )
         return 2
 
+    # Defensive: argparse's REMAINDER captures `--user-instructed` if it follows the
+    # command, silently making args.user_instructed False. Catch that ordering and
+    # fail loudly rather than treating an instructed call as un-instructed.
+    if "--user-instructed" in tokens:
+        sys.stderr.write(
+            json.dumps(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "error": (
+                        "--user-instructed must precede the command tokens "
+                        "(argparse REMAINDER captures any flag appearing after the command)"
+                    ),
+                    "command": " ".join(tokens),
+                },
+            )
+            + "\n"
+        )
+        return 2
+
     label = match_gate(tokens)
     command_str = " ".join(tokens)
 

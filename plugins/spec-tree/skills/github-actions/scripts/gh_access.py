@@ -35,18 +35,21 @@ import json
 import re
 import subprocess
 import sys
+from typing import Any
 
 SCHEMA_VERSION = 1
 
-# Match remote URLs in HTTPS, SSH (git@host:owner/repo), and ssh:// forms.
-# Repo names may contain dots (e.g. `awesome.actions`); the lazy match plus
-# explicit optional `.git` suffix handles both `repo` and `repo.git` cleanly.
-_REMOTE_RE = re.compile(
+# Two URL forms cover every remote shape:
+#   - `git@host:owner/repo[.git][/]` — the SCP-style form, no scheme, no port
+#   - `[scheme://[user@]]host[:port]/owner/repo[.git][/]` — http/https/ssh
+# Repo names may contain dots (e.g. `awesome.actions`), so the regex uses a
+# lazy `.+?` match for repo plus an explicit optional `\.git` suffix.
+_SCP_REMOTE_RE = re.compile(
     r"""
     ^
-    (?:https?://|git@|ssh://git@)?
-    (?P<host>[^/:]+)
-    [:/]
+    git@
+    (?P<host>[^:]+)
+    :
     (?P<owner>[^/]+)
     /
     (?P<repo>.+?)
@@ -56,10 +59,22 @@ _REMOTE_RE = re.compile(
     """,
     re.VERBOSE,
 )
-
-# Match account names from `gh auth status` lines like:
-#   ✓ Logged in to github.com account simonheimlicher (keyring)
-_AUTH_ACCOUNT_RE = re.compile(r"Logged in to \S+ account (\S+)")
+_URL_REMOTE_RE = re.compile(
+    r"""
+    ^
+    (?:(?:https?|ssh)://(?:git@)?)?
+    (?P<host>[^/:]+)
+    (?::\d+)?
+    /
+    (?P<owner>[^/]+)
+    /
+    (?P<repo>.+?)
+    (?:\.git)?
+    /?
+    $
+    """,
+    re.VERBOSE,
+)
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -73,7 +88,9 @@ def detect_remote_url() -> str | None:
 
 
 def parse_remote(remote: str) -> tuple[str, str] | None:
-    match = _REMOTE_RE.match(remote.strip())
+    """Parse a remote URL into (host, "owner/repo"). SSH ports are stripped."""
+    cleaned = remote.strip()
+    match = _SCP_REMOTE_RE.match(cleaned) or _URL_REMOTE_RE.match(cleaned)
     if not match:
         return None
     return match["host"], f"{match['owner']}/{match['repo']}"
@@ -90,13 +107,27 @@ def check_repo_access(owner_repo: str) -> bool:
 
 
 def get_available_accounts() -> list[str]:
-    proc = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True)
-    text = proc.stderr or proc.stdout
+    """Return all logins authenticated with `gh`, across all hosts.
+
+    Consumes `gh auth status --json hosts` (structured output, stable since
+    gh 2.40+). Returns an empty list when gh is unauthenticated or the
+    output cannot be parsed.
+    """
+    code, out, _ = _run(["gh", "auth", "status", "--json", "hosts"])
+    if code != 0 or not out:
+        return []
+    try:
+        data: dict[str, Any] = json.loads(out)
+    except json.JSONDecodeError:
+        return []
     accounts: list[str] = []
-    for match in _AUTH_ACCOUNT_RE.finditer(text):
-        account = match.group(1).rstrip(",")
-        if account and account not in accounts:
-            accounts.append(account)
+    for host_entries in data.get("hosts", {}).values():
+        if not isinstance(host_entries, list):
+            continue
+        for entry in host_entries:
+            login = entry.get("login") if isinstance(entry, dict) else None
+            if isinstance(login, str) and login and login not in accounts:
+                accounts.append(login)
     return accounts
 
 

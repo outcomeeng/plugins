@@ -28,16 +28,33 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 DEFAULT_LOG_MAX_BYTES = 100_000
+SUBPROCESS_TIMEOUT_SECONDS = 60
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
     return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
 
 
 def _run_raw(cmd: list[str]) -> tuple[int, str, str]:
     """Like `_run` but preserves stdout whitespace verbatim (for log content)."""
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
     return proc.returncode, proc.stdout, proc.stderr.strip()
 
 
