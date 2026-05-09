@@ -2,7 +2,7 @@
 name: github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(uv:*), Read, Grep
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(uv:*), Read, Grep, AskUserQuestion, ScheduleWakeup
 model: claude-haiku-4-5-20251001
 ---
 

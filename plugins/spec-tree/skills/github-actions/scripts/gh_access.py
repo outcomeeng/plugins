@@ -134,6 +134,12 @@ def main(argv: list[str]) -> int:
             parsed = parse_remote(remote)
             if parsed is not None:
                 host = parsed[0]
+        if host is None:
+            # Explicit OWNER/REPO without a parseable remote: default to the
+            # gh CLI's default host. GitHub Enterprise users should invoke
+            # gh_access.py from inside a checkout whose remote names the
+            # enterprise host so detect_remote_url() picks it up.
+            host = "github.com"
 
     has_access = check_repo_access(owner_repo) if owner_repo else False
 
