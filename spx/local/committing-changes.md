@@ -65,6 +65,13 @@ just check
 
 **CRITICAL: Version bumps must be in the SAME commit as the changes that warrant them.**
 
+Version decisions are made against the target base branch, normally `origin/main`.
+Only the version that differs from the base branch matters for the PR. Follow-up
+commits on the same branch must keep the already-selected PR version unless they
+add a new release-significant change that changes the PR's release category. Do
+not increment a plugin version just because an earlier commit on the same branch
+already bumped it.
+
 ❌ **WRONG** — separate commits:
 
 ```bash
@@ -102,7 +109,7 @@ Only create a separate version bump commit when bumping WITHOUT any code/doc cha
 ## After Adding/Modifying Commands or Skills
 
 1. **Make your changes** to skills, commands, templates, etc.
-2. **Determine version bump type**: MINOR for new items or major functional changes; PATCH for everything else
+2. **Determine the PR-level version bump against the target base branch**: MINOR for new items or major functional changes; PATCH for everything else; no extra bump when a follow-up commit only refines the same PR-scoped change
 3. **Update plugin.json** in the same working session:
    - `plugins/{plugin-name}/.claude-plugin/plugin.json`
    - `plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
