@@ -81,7 +81,11 @@ Only the version that will land on main matters. The correct workflow is:
    first commit that changes that plugin.
 4. During review, keep that selected PR version unchanged. Follow-up commits fix
    code, docs, specs, and review feedback without incrementing the version again.
-5. When the PR merges, main receives the already-bumped version with no separate
+5. If review changes materially expand the PR from PATCH scope to MINOR scope
+   (for example, adding a new skill or command), re-select the branch version
+   once to the correct semantic target and keep that new version fixed for the
+   rest of review.
+6. When the PR merges, main receives the already-bumped version with no separate
    release commit.
 
 If the branch is rebased or retargeted after main has already advanced the same

@@ -125,7 +125,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 
-If `fc.constant(...)` wraps a source-owned singleton, REJECT the generator and require a source-owned constructor or registry import instead. If the singleton has no meaningful variability, it is not a generator domain.
+If a generator's only behavior is `fc.constant(...)` for a source-owned singleton, REJECT the generator and require a source-owned constructor or registry import instead. A constant branch inside a larger meaningful arbitrary is allowed only when it expands boundary coverage and source-owned values still come from source APIs.
 
 </step>
 
@@ -176,7 +176,7 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/g
 2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any mocking pattern — inside the harness module body or its setup path.
 3. If the import targets `@testing/fixtures/*`, REJECT with a `fixture_import` finding. Fixtures are inert files: tests may read, copy, or pass fixture paths, but executed tests must not import fixture modules or consume fixture exports.
 4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
-5. If a generator contains arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
+5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
 6. If the support file imports another support file, trace one level at a time until the chain terminates at a non-test module.
 
 The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the support module.
@@ -390,7 +390,7 @@ How to avoid: Gate 1 step 3 inspects the arbitrary's domain. `fc.constant`, smal
 
 Test imported `arbitraryAbsentConfig()` from `@testing/generators/config`. The test file contained no literals, so the audit passed. The generator returned `fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT })`, adding ceremony without variability, shrinking, or a stronger oracle. The source module already owned the absent-result protocol.
 
-How to avoid: Gate 1 step 6 opens generator modules. Constant-only generators for source-owned singleton shapes are REJECT. Require a source-owned constructor or registry import.
+How to avoid: Gate 1 step 6 opens generator modules. Generators whose only behavior is returning a source-owned singleton shape are REJECT. Require a source-owned constructor or registry import.
 
 **Failure 7 — Fixture imported as executable test code**
 

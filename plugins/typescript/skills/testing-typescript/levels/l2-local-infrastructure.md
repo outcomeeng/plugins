@@ -56,6 +56,10 @@ This is `l2` because the proof depends on a real local database. The harness mod
 
 </example>
 
+<migration_note>
+Older projects may have harnesses shaped like `new PostgresHarness()` plus `start()`. When touching those harnesses, migrate them toward a typed factory plus `startOrThrow(setupMessage)` so missing local infrastructure fails with the diagnostic at the call site. If a project already has a documented equivalent API, keep the local name while preserving the same contract: typed handle, explicit setup failure message, and cleanup method.
+</migration_note>
+
 <reject>
 
 - Replacing the local dependency with `vi.mock`, `jest.mock`, or a fake that hides the asserted behavior

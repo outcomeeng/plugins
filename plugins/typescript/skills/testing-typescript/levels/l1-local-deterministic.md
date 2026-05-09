@@ -24,7 +24,26 @@ Use the canonical TypeScript test filename pattern from `/standardizing-typescri
 Examples: `config-loader.scenario.l1.test.ts`, `route-parser.mapping.l1.test.ts`, `slug-roundtrip.property.l1.test.ts`.
 </file_naming>
 
-<example>
+<direct_function_example>
+
+```typescript
+import { buildArchiveCommand, COMMAND_FLAGS } from "@/archive-command";
+import { describe, expect, it } from "vitest";
+
+describe("buildArchiveCommand", () => {
+  it("maps the checksum option to the command flag", () => {
+    const command = buildArchiveCommand({ checksum: true });
+
+    expect(command).toContain(COMMAND_FLAGS.checksum);
+  });
+});
+```
+
+This remains `l1` because the test calls deterministic source logic directly. The expected flag comes from the source-owned command registry rather than a test-owned constant.
+
+</direct_function_example>
+
+<generated_domain_example>
 
 ```typescript
 import { normalizeSourcePath } from "@/paths";
@@ -47,7 +66,7 @@ describe("normalizeSourcePath", () => {
 
 This remains `l1` because the test calls deterministic source logic directly and the generator expands a variable input domain without remote services or heavy setup.
 
-</example>
+</generated_domain_example>
 
 <temp_dir_example>
 
