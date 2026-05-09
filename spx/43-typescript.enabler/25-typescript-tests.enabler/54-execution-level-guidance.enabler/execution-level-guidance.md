@@ -1,0 +1,18 @@
+# Execution Level Guidance
+
+PROVIDES TypeScript execution-level guidance for local deterministic, local infrastructure, and remote credentialed evidence
+SO THAT TypeScript test authors
+CAN choose `l1`, `l2`, or `l3` from evidence cost and dependency availability rather than runner names or implementation layers
+
+## Assertions
+
+### Compliance
+
+- ALWAYS: `l1` TypeScript guidance applies to deterministic local evidence, including pure functions, cheap temporary filesystem work, standard repository-required tools, and dependency-injected Stage 5 doubles — local determinism is the deciding property ([review])
+- ALWAYS: `l2` TypeScript guidance applies to real local infrastructure, including Docker containers, local databases or queues, local dev servers, browsers against local services, and project binaries installed during bootstrap — heavier local setup remains local evidence ([review])
+- ALWAYS: `l3` TypeScript guidance applies only to remote, shared, credentialed, or network-dependent systems that cannot be reproduced through local real infrastructure — remote evidence is selected by necessity ([review])
+- ALWAYS: level documentation names files by operational meaning, such as `l1-local-deterministic.md`, `l2-local-infrastructure.md`, and `l3-remote-credentialed.md` — filenames describe the level rather than repeating the level token ([review])
+- ALWAYS: Playwright or browser execution receives a runner token when it uses a non-default runner, while its level still comes from infrastructure cost and dependency availability — runner choice does not determine level ([review])
+- ALWAYS: level examples obey source-testability and test-data ownership rules — execution level does not permit copied literals, constant-only generators, or replacement mocks ([review])
+- NEVER: escalate a test to `l3` because a flow feels end-to-end when equivalent proof is available with local real infrastructure — evidence uses the lowest level that proves the assertion ([review])
+- NEVER: let missing mandatory credentials, base URLs, binaries, or local services produce a passing test — unavailable required evidence fails loudly or is skipped only when the suite marks the evidence optional ([review])
