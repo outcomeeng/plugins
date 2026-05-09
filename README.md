@@ -224,10 +224,10 @@ Codex support: the same skills are available through the `python` Codex plugin. 
 
 Prose craft skills for writing and reviewing. No spx CLI required.
 
-| Type  | Name              | Purpose                                      |
-| ----- | ----------------- | -------------------------------------------- |
-| Skill | `/writing-prose`  | Write varied, specific, human prose          |
-| Skill | `/auditing-prose` | Review and edit prose for formulaic patterns |
+| Type  | Name              | Purpose                                     |
+| ----- | ----------------- | ------------------------------------------- |
+| Skill | `/writing-prose`  | Write varied, specific, human prose         |
+| Skill | `/auditing-prose` | Audit and edit prose for formulaic patterns |
 
 ### develop
 
