@@ -90,10 +90,10 @@ git log --oneline origin/main..HEAD
 # Diff stats against base
 git diff origin/main...HEAD --stat
 
-# Existing PR for current branch — check stdout, not exit code
-# (gh writes "no pull requests found" to stderr but exits 0 with --json)
-existing=$(gh pr view --json url,state 2>/dev/null)
-[ -n "$existing" ] && echo "PR already exists: $(echo "$existing" | jq -r .url)"
+# Existing PR for current branch — extract .url directly via --jq
+# (gh exits non-zero when no PR exists; redirect stderr to suppress its message)
+existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null)
+[ -n "$existing_url" ] && echo "PR already exists: $existing_url"
 ```
 
 </branch_hygiene>
@@ -250,7 +250,21 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 `gh pr create` prints the URL on the last line of stdout. Surface it to the user verbatim.
 
-**Step 4 (optional, on user request): Mark ready for review**
+**Step 4: After follow-up pushes, check for re-reviews**
+
+Automated reviewers (and humans) often re-fire on follow-up pushes. They may post as **formal reviews** OR as **PR-level issue comments** — checking only one surface misses half the feedback. Run this once after each follow-up push, then triage:
+
+```bash
+gh pr view <pr-number> --json reviews,comments \
+  --jq '{
+    reviews: [.reviews[] | {author: .author.login, state, submittedAt}],
+    comments: [.comments[] | {author: .author.login, createdAt, excerpt: .body[0:160]}]
+  }'
+```
+
+Compare timestamps against your last push. New entries after the push are re-reviews of the latest state — read them in full before declaring the PR done. Never assume "no new review" without checking both surfaces.
+
+**Step 5 (optional, on user request): Mark ready for review**
 
 ```bash
 gh pr ready <pr-number>
@@ -266,6 +280,7 @@ gh pr ready <pr-number>
 4. **NEVER use `--fill`** with this skill — it adds nothing once `--body-file` is present.
 5. **DRAFT BY DEFAULT** — `--draft` is mandatory unless the user explicitly says "ready for review".
 6. **NEVER `gh run watch`** — for CI status, surface a single `gh pr checks` or `gh run view` and stop. Polling is forbidden.
+7. **AFTER FOLLOW-UP PUSHES, check both `reviews` AND `comments`** — bots often post re-reviews as PR-level issue comments rather than formal reviews. Checking only `reviews` will silently miss re-feedback on the latest commit.
 
 </critical_rules>
 
@@ -279,7 +294,7 @@ git branch --show-current
 gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 git log --oneline origin/main..HEAD
 git diff origin/main...HEAD --stat
-existing=$(gh pr view --json url,state 2>/dev/null) && [ -n "$existing" ] && echo "PR exists: $(echo "$existing" | jq -r .url)"
+existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null); [ -n "$existing_url" ] && echo "PR exists: $existing_url"
 
 # Push
 git push -u origin "$(git branch --show-current)"

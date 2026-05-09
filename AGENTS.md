@@ -338,6 +338,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/clarify`   | Clarify ambiguous requirements                                             |
 | `/handoff`   | Create timestamped context handoff                                         |
 | `/pickup`    | Load and continue from previous handoff                                    |
+| `/open-pr`   | Open a draft PR for the current branch with curated title and body         |
 | `/release`   | Close session without creating a handoff file (archives in-scope sessions) |
 
 ### Archiving a stale session without `/release`
@@ -514,6 +515,7 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── clarify.md
 │   │   │   ├── commit.md
 │   │   │   ├── handoff.md
+│   │   │   ├── open-pr.md
 │   │   │   ├── pickup.md
 │   │   │   ├── release.md
 │   │   │   └── rtfm.md
