@@ -279,13 +279,21 @@ Then import one or very few of these constant objects into the test file. Any ch
 
 Import source-owned values and source-owned singleton constructors directly from the module that owns them. Do not wrap a source-owned singleton in `fc.constant(...)` or a generator merely to satisfy a "generator" rule.
 
-Reject test-owned protocol literals:
+There are no valid shared test-owned constant bags for protocol values, domain values, expected outputs, or edge-case sets. A value that belongs to production is imported from production. A value that varies is generated. A real payload whose whole shape matters is read as an inert fixture. Modules that collect "typical" or "edge" examples are literal laundering.
+
+Reject test-owned protocol literals and shared constant bags:
 
 ```typescript
 // REJECTED: the test copies a source protocol shape
 const ABSENT_CONFIG_READ = { kind: "absent" } as const;
 
 expect(isAbsentConfigReadResult(ABSENT_CONFIG_READ)).toBe(true);
+```
+
+```typescript
+// REJECTED: shared example bags preserve hand-picked values
+export const EXAMPLE_SOURCE_PATHS = ["src/index.ts", "src/config.ts"];
+export const BOUNDARY_SOURCE_PATHS = ["", "../outside.ts"];
 ```
 
 Use the source-owned constructor directly:

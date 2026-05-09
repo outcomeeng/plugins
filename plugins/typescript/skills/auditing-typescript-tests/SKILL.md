@@ -59,13 +59,13 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 
 <preliminary_check>
 
-If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and project-root generated-domain modules:
+If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the repository:
 
 ```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts testing/generators/**/*.ts --json
+spx validation literal --files <spec-node-path>/tests/**/*.test.ts <project-root>/testing/generators/**/*.ts --json
 ```
 
-The generator glob `testing/generators/**/*.ts` is resolved from the project root, not from `<spec-node-path>`. Add node-local generator paths explicitly only when the repository stores generators there.
+`<project-root>/testing/generators/**/*.ts` means the repository-level generator directory. If running from the repository root, `testing/generators/**/*.ts` is equivalent. Never rewrite that glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
 
 Findings feed into Gate 1:
 

@@ -10,7 +10,7 @@ Write tests in the order that exposes the source contract first:
 
 Do not create shared test-value files or named example bags. Those collections preserve hand-picked examples and hide ownership.
 
-Property tests expose a failing value through a shrunk counterexample and seed. Named regression tests explain why a counterexample matters when it represents a source-owned behavior, so add them only for stable contracts worth documenting.
+Property failures report a seed and shrunk counterexample, but that output rarely explains which source contract the value represents. Keep named contract tests for source-owned behavior that must remain documented, then use property tests to search the variable domain around that contract.
 </principle>
 
 <source_contract_first>
@@ -60,7 +60,7 @@ For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings fr
 </generated_domain_inputs>
 
 <debugging_failures>
-When a property failure needs a stable repro, use fast-check's reported seed and counterexample. Add a named regression test only if the counterexample identifies a distinct source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay helper, not a handwritten shared constant.
+When a property failure exposes a bug, replay fast-check's reported seed and counterexample first. Add a named regression test only when the counterexample identifies a stable source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay helper, not a handwritten shared constant.
 </debugging_failures>
 
 <anti_patterns>
