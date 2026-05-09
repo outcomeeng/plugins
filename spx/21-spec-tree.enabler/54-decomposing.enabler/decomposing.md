@@ -1,17 +1,19 @@
 # Decomposing
 
-PROVIDES structured decomposition analysis for nodes with too many assertions or independent concerns
+PROVIDES structured composition analysis from a target address, durable spec content, and node-local escape hatches
 SO THAT all spec authors
-CAN split nodes into focused children with clear scope boundaries
+CAN compose top-level product children or split nodes into focused children with clear scope boundaries and explicit ordering evidence
 
 ## Assertions
-
-### Scenarios
-
-- Given a node with more than 7 assertions, when decomposition is analyzed, then the skill recommends splitting into child nodes ([test](tests/test_decomposing.unit.py))
-- Given a node with assertions covering two independent concerns, when decomposition is analyzed, then the skill recommends separate nodes for each concern ([test](tests/test_decomposing.unit.py))
 
 ### Compliance
 
 - ALWAYS: check assertion count and concern independence before recommending decomposition — decomposition is not arbitrary splitting ([review])
+- ALWAYS: accept `spx/` as the product-root target for top-level composition and normal node addresses for child decomposition ([review])
+- ALWAYS: load root product context, ancestor constraints, target spec when present, existing children and siblings, and local `PLAN.md` or `ISSUES.md` before proposing child structure ([review])
+- ALWAYS: verify completeness across scope boundary, delivery substrate, evidence strategy, architecture, enabler/outcome typing, ordering evidence, index budget, and refactor issues before proposing child nodes; use `/interviewing` with decomposition-specific coverage when any area is unclear ([review])
+- ALWAYS: assign different sibling indices only when ordering evidence proves a predecessor constrains a successor; provider/consumer service flow, logical prerequisites, vertical-slice construction dependencies, shared substrate, and feature-extension dependencies are valid evidence ([review])
+- ALWAYS: keep roadmap priority, chronology, theme grouping, and explanation order unordered or same-index unless they also provide concrete ordering evidence ([review])
+- ALWAYS: record an ordering-evidence matrix before index assignment, naming predecessor, evidence type, constraining contribution, successor, required assertion or workflow, and consequence if absent ([review])
+- ALWAYS: allocate sparse index space according to the decomposition horizon — full decomposition may use the full range; the first slice of a larger concern uses the first half or quarter and records the reserved horizon in `PLAN.md` ([review])
 - NEVER: decompose a node with fewer than 4 assertions unless the assertions cover genuinely independent concerns ([review])
