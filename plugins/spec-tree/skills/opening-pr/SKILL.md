@@ -16,7 +16,7 @@ A successful PR open has:
 
 - Branch hygiene verified (not main/master, working tree clean, branch ahead of base)
 - Title under 70 chars in Conventional Commits format (matches `/committing-changes`)
-- Body delivered via `--body-file` (real newlines, no `\n` escapes) using the project PR template
+- Body delivered to `gh` on stdin via `--body-file -` (real newlines, no `\n` escapes, no temp file)
 - Draft by default; ready-for-review only when explicitly requested
 - No self-reference in title, body, or branch name
 - PR URL printed for the user
@@ -135,7 +135,7 @@ fix(parser): handle nested expressions and empty operands
 
 <body_template>
 
-**The PR body is markdown prose written to a temp file and passed via `--body-file`.**
+**The PR body is markdown prose passed to `gh` on stdin via `--body-file -`.**
 
 Default template — adapt sections to the change type; drop or expand as the work warrants:
 
@@ -197,12 +197,16 @@ git push
 
 If the project defines a custom push command (e.g., `just push-marketplace` for the outcomeeng marketplace repo), follow the project convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
 
-**Step 2: Write the body to a temp file**
+**Step 2: Open the PR with body piped via stdin**
 
-Write the curated body to `/tmp/pr-body-<branch>.md` via a Bash heredoc so newlines land as real `\n` bytes. The file lives outside the working tree so it is never staged. Do not pass multi-line content via `--body "..."` — gh does not expand `\n` escapes.
+Pass the curated body to `gh pr create` on stdin via `--body-file -`. A Bash heredoc preserves real newlines, avoids any temp file, and removes the cleanup step (and its permission prompt for users with strict `Bash(rm:*)` rules):
 
 ```bash
-cat > "/tmp/pr-body-$(git branch --show-current).md" <<'EOF'
+GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
+  --draft \
+  --title "<conventional-commits subject under 70 chars>" \
+  --body-file - \
+  --head "$(git branch --show-current)" <<'EOF'
 ## Summary
 
 - <bullet>
@@ -221,22 +225,12 @@ cat > "/tmp/pr-body-$(git branch --show-current).md" <<'EOF'
 EOF
 ```
 
-Use the unquoted heredoc form (`<<EOF`) instead of `<<'EOF'` only when the body must expand shell variables — and prefer composing the body in the agent's context first.
-
-**Step 3: Open the PR**
-
-```bash
-GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
-  --draft \
-  --title "<conventional-commits subject under 70 chars>" \
-  --body-file /tmp/pr-body-<branch>.md \
-  --head "$(git branch --show-current)"
-```
+The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside the body — backticks, `$variables`, and `!` pass through literally. Use the unquoted form (`<<EOF`) only when the body must interpolate shell variables, and never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes.
 
 **Flag rationale:**
 
 - `--draft` — default for this skill; promote to ready-for-review only on explicit request.
-- `--title` and `--body-file` — explicit content matching `/committing-changes` conventions.
+- `--title` and `--body-file -` — explicit title plus body-from-stdin matches `/committing-changes` conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit to use the repo default; specify only when targeting a non-default base.
 - `GH_PROMPT_DISABLED=1` — disables interactive gh prompts.
@@ -244,17 +238,11 @@ GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
 
 **Do not use `--fill` with this skill.** `--fill` is gh's autofill from commit messages. If both `--fill` and `--body-file` are passed, the explicit body wins — but `--fill` is then dead weight. Use the curated body alone.
 
-**Step 4: Surface the PR URL**
+**Step 3: Surface the PR URL**
 
 `gh pr create` prints the URL on the last line of stdout. Surface it to the user verbatim.
 
-**Step 5: Clean up the temp file**
-
-```bash
-rm /tmp/pr-body-<branch>.md
-```
-
-**Step 6 (optional, on user request): Mark ready for review**
+**Step 4 (optional, on user request): Mark ready for review**
 
 ```bash
 gh pr ready <pr-number>
@@ -287,12 +275,15 @@ gh pr view --json url,state 2>/dev/null
 # Push
 git push -u origin "$(git branch --show-current)"
 
-# Open draft PR with curated title and body
+# Open draft PR with curated title and body piped via stdin
 GH_PROMPT_DISABLED=1 GIT_TERMINAL_PROMPT=0 gh pr create \
   --draft \
   --title "feat(scope): summary under 70 chars" \
-  --body-file /tmp/pr-body-<branch>.md \
-  --head "$(git branch --show-current)"
+  --body-file - \
+  --head "$(git branch --show-current)" <<'EOF'
+## Summary
+...
+EOF
 
 # View / promote / inspect
 gh pr view --web
