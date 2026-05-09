@@ -8,8 +8,8 @@ CAN read structured data with bounded subprocess lifetime rather than parsing fr
 
 ### Scenarios
 
-- Given a working directory with a GitHub remote, when `gh_access.py` runs with no arguments, then it returns JSON on stdout containing `owner_repo`, `current_account`, `has_access`, `available_accounts`, and `is_tty` fields ([test](tests/test_workflow_observability.scenario.l1.py))
-- Given a workflow run id, when `workflow_inspect.py run <id>` runs, then it returns JSON containing the run's `databaseId`, `status`, `conclusion`, `workflowName`, `headBranch`, `headSha`, `createdAt`, and a `jobs` array with per-job `databaseId`, `name`, `status`, `conclusion` ([test](tests/test_workflow_observability.scenario.l1.py))
+- Given a working directory with a GitHub remote, when `gh_access.py` runs with no arguments, then it returns JSON on stdout containing `owner_repo`, `current_account`, `has_access`, `available_accounts`, and `is_tty` fields ([test](tests/test_workflow_observability.scenario.l3.py))
+- Given a workflow run id, when `workflow_inspect.py run <id>` runs, then it returns JSON containing the run's `databaseId`, `status`, `conclusion`, `workflowName`, `headBranch`, `headSha`, `createdAt`, and a `jobs` array with per-job `databaseId`, `name`, `status`, `conclusion` ([test](tests/test_workflow_observability.scenario.l3.py))
 - Given a state-changing `gh` subcommand argument, when `mutation_gate.py check <command>` runs without `--user-instructed`, then it exits non-zero and writes a JSON error to stderr naming the missing consent flag and the gated subcommand ([test](tests/test_workflow_observability.scenario.l1.py))
 - Given a state-changing `gh` subcommand argument and the `--user-instructed` flag, when `mutation_gate.py check <command> --user-instructed` runs, then it exits zero and appends one line to `${CLAUDE_PROJECT_DIR}/.spx/mutation-audit.log` containing the timestamp, current account, and gated command ([test](tests/test_workflow_observability.scenario.l1.py))
 
