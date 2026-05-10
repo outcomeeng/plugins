@@ -142,6 +142,11 @@ def cmd_jobs(run_id: str) -> dict[str, Any]:
 
 
 def cmd_log(run_id: str, failed: bool, max_bytes: int) -> dict[str, Any]:
+    """Return the run log truncated to the last `max_bytes` bytes.
+
+    Tail-truncated rather than head-truncated: CI failures appear at the end
+    of a run, so keeping the trailing window preserves the diagnostic content.
+    """
     args = ["gh", "run", "view", run_id]
     args.append("--log-failed" if failed else "--log")
     code, out, err = _run_raw(args)
