@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import pathlib
 import subprocess
 import sys
+from types import ModuleType
 
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[6]
@@ -17,8 +19,19 @@ SCRIPTS_DIR = (
     / "scripts"
 )
 MUTATION_GATE = SCRIPTS_DIR / "mutation_gate.py"
+GH_ACCESS = SCRIPTS_DIR / "gh_access.py"
 
 EXPECTED_AUDIT_FIELD_COUNT = 4
+
+
+def _load_gh_access_module() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("gh_access_under_test", GH_ACCESS)
+    assert spec is not None and spec.loader is not None, (
+        f"could not build module spec for {GH_ACCESS}"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_mutation_gate_blocks_without_user_instructed(tmp_path: pathlib.Path) -> None:
@@ -92,3 +105,41 @@ def test_mutation_gate_passes_with_user_instructed(tmp_path: pathlib.Path) -> No
     assert label == "gh auth switch"
     assert "gh auth switch" in command
     assert timestamp.endswith("Z"), f"timestamp must be UTC ISO-8601: {timestamp!r}"
+
+
+def test_gh_access_parse_remote_returns_none_for_malformed_url() -> None:
+    """parse_remote() returns None for inputs that match neither SCP nor URL form."""
+    gh_access = _load_gh_access_module()
+    assert gh_access.parse_remote("not-a-url") is None
+    assert gh_access.parse_remote("") is None
+    assert gh_access.parse_remote("github.com") is None
+
+
+def test_gh_access_parse_remote_recognizes_scp_and_url_forms() -> None:
+    """parse_remote() returns (host, owner/repo) for both SCP and URL remotes."""
+    gh_access = _load_gh_access_module()
+    assert gh_access.parse_remote("git@github.com:foo/bar.git") == (
+        "github.com",
+        "foo/bar",
+    )
+    assert gh_access.parse_remote("https://github.com/foo/bar.git") == (
+        "github.com",
+        "foo/bar",
+    )
+
+
+def test_gh_access_emits_owner_repo_null_when_outside_git_repo(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Running gh_access.py outside a git checkout (no `origin` remote) yields owner_repo=null."""
+    proc = subprocess.run(
+        [sys.executable, str(GH_ACCESS)],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        stdin=subprocess.DEVNULL,
+    )
+    payload = json.loads(proc.stdout)
+    assert payload["owner_repo"] is None
+    assert payload["host"] is None
+    assert payload["schema_version"] == 1
