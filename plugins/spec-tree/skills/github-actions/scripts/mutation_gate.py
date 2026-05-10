@@ -32,6 +32,7 @@ import subprocess
 import sys
 
 SCHEMA_VERSION = 1
+SUBPROCESS_TIMEOUT_SECONDS = 30
 
 GATED_PATTERNS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("gh", "auth", "login"), "gh auth login"),
@@ -55,11 +56,15 @@ def match_gate(tokens: list[str]) -> str | None:
 
 
 def get_current_account() -> str:
-    proc = subprocess.run(
-        ["gh", "api", "user", "--jq", ".login"],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        proc = subprocess.run(
+            ["gh", "api", "user", "--jq", ".login"],
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return "unknown"
     out = proc.stdout.strip()
     return out if proc.returncode == 0 and out else "unknown"
 
