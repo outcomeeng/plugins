@@ -116,3 +116,33 @@ def test_mutation_gate_diagnostics_separate_stdout_stderr(
     assert proc.stderr == "", (
         f"passthrough should not write to stderr; got: {proc.stderr!r}"
     )
+
+
+def test_mutation_gate_blocked_command_writes_only_to_stderr(
+    tmp_path: pathlib.Path,
+) -> None:
+    """When a gated command is blocked, JSON error goes to stderr and stdout stays empty."""
+    mutation_gate = SCRIPTS_DIR / "mutation_gate.py"
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(tmp_path)}
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(mutation_gate),
+            "check",
+            "gh",
+            "auth",
+            "switch",
+            "-u",
+            "x",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode != 0
+    assert proc.stdout == "", (
+        f"blocked gate must keep stdout empty; got: {proc.stdout!r}"
+    )
+    payload = json.loads(proc.stderr)
+    assert payload["gated"] is True
+    assert payload["missing_flag"] == "--user-instructed"
