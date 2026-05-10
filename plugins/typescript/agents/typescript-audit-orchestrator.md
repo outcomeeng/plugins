@@ -18,7 +18,7 @@ Branch-scoped TypeScript audit orchestrator. Wrap `/orchestrating-typescript-aud
 
 - Read-only over source code — never edit production code or tests.
 - Write access is restricted to `.spx/audits/typescript/<branch-slug>.md` — never write outside this path.
-- Branch-slug rule: replace every `/` in the branch name with `__`. If the slug already exists for a different branch (collision), append `--<sha8>` where sha8 is the first 8 hex characters of `sha256(<original-branch-name>)`.
+- Branch-slug rule: replace every `/` in the branch name with `__`. If the slug already exists for a different branch (collision), append `--<sha8>` where sha8 is the first 8 hex characters of the SHA-256 hash of the original branch name. Compute the hash via the Bash tool (e.g. `printf '%s' "<branch>" | shasum -a 256 | cut -c1-8`) — never compute it in-process, since LLMs cannot reliably hash deterministically.
 - IDs are monotonic. Never reuse a resolved finding's ID for a new finding. The state file's `next_finding_id` field tracks the counter.
 - A regression — the same root cause returning at the same `file:line` — reopens the original finding by moving its row from Resolved to Open and clearing `resolved_at`. Never create a new ID for a regression.
 - NEVER widen scope beyond the branch's TypeScript diff against the base ref.
@@ -30,6 +30,8 @@ Branch-scoped TypeScript audit orchestrator. Wrap `/orchestrating-typescript-aud
 <state_file_format>
 
 State lives at `.spx/audits/typescript/<branch-slug>.md`. The directory is gitignored.
+
+Why branch-keyed and not content-keyed: the underlying `/orchestrating-typescript-audit` skill writes its own per-run verdict at `.spx/audits/typescript/<scope-hash>.md` (content-keyed, so a fresh hash invalidates the prior verdict). This wrapper persists at `<branch-slug>.md` because its job is to track finding state across the many commits of a feature branch, where the scope hash changes with every push. The two keys deliberately do not interchange — a caller invoking the skill directly does not see the wrapper's branch state, and the wrapper does not consume the skill's per-scope verdict cache.
 
 ```markdown
 ---

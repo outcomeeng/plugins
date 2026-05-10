@@ -50,7 +50,7 @@ The four mechanisms that enforce determinism — apply all four, every run:
 
 If any mechanism cannot be applied, halt and report the obstacle — do not silently substitute a looser audit.
 
-**This skill is strictly read-only.** It uses `Read`, `Bash` (for `git`, validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. The skill does not persist its verdict and does not create the `.spx/audits/typescript/` directory. Re-run determinism depends on the **caller** writing the emitted verdict to a known path; the skill only reads from such a path when one already exists. This keeps the skill compliant with the audit-skill read-only rule and safe to dispatch as a subagent (per `AGENTS.md` line 402, subagents must never create or modify files).
+**This skill is strictly read-only.** It uses `Read`, `Bash` (for `git`, validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. The skill does not persist its verdict and does not create the `.spx/audits/typescript/` directory. Re-run determinism depends on the **caller** writing the emitted verdict to a known path; the skill only reads from such a path when one already exists. This keeps the skill compliant with the audit-skill read-only rule and safe to dispatch as a subagent — the Subagent Restrictions section of `AGENTS.md` requires that subagents never create or modify files.
 
 </determinism_contract>
 
@@ -255,6 +255,8 @@ If the ADR text itself contradicts the canonical template (temporal voice, missi
 3. Print the verdict to the conversation and stop. The skill does not write any file.
 
 The calling workflow is responsible for re-run determinism. To enable re-runs that only verify resolution of prior findings, the caller writes the emitted verdict to `.spx/audits/typescript/<scope-hash>.md` (gitignored operational state). The skill's Phase 0 reads that file when present. Callers that do not need re-run determinism can ignore persistence; every run is then a fresh run.
+
+The skill is content-keyed (scope-hash) on purpose: a scope change yields a fresh hash, the prior verdict's path is no longer consulted, and the next run is from scratch. This is the right model for a stateless verification of "this exact scope, right now". Branch-scoped state across many commits is a separate concern — the `typescript-audit-orchestrator` agent wraps this skill with branch-keyed persistence at `.spx/audits/typescript/<branch-slug>.md`, where finding identity is preserved across the scope changes that come with each push.
 
 </phase>
 
