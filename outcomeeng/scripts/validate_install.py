@@ -27,7 +27,8 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_MARKETPLACE = "outcomeeng"
@@ -41,6 +42,55 @@ def claude_cache_root() -> Path:
 
 def codex_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
+
+
+def codex_marketplace_clone_root(marketplace: str) -> Path:
+    return Path.home() / ".codex" / ".tmp" / "marketplaces" / marketplace
+
+
+def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
+    """Return the version the Codex marketplace clone publishes for `plugin`.
+
+    The clone tracks the marketplace's published branch (typically `main`).
+    A working-tree manifest on a feature branch can declare a different
+    version than the clone has fetched; the divergence signals a
+    structural lag in either direction.
+
+    Returns None for any failure mode — missing file, OSError on read,
+    invalid JSON, or a manifest whose top-level shape is not a dict.
+    Callers fall back to strict validation when None is returned.
+    """
+    manifest = (
+        codex_marketplace_clone_root(marketplace)
+        / "plugins"
+        / plugin
+        / ".claude-plugin"
+        / "plugin.json"
+    )
+    try:
+        data = json.loads(manifest.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    version = data.get("version")
+    return version if isinstance(version, str) else None
+
+
+def is_strictly_ahead(working_tree: str, published: str) -> bool:
+    """Return True when `working_tree` is a numerically higher semver than `published`.
+
+    Compares dotted integer components (e.g. "0.29.0" > "0.28.0"). Any non-numeric
+    component (pre-release suffix, build metadata, malformed input) makes the
+    comparison undefined and returns False — the caller falls back to strict
+    validation, which is the safe default.
+    """
+    try:
+        wt = tuple(int(part) for part in working_tree.split("."))
+        pub = tuple(int(part) for part in published.split("."))
+    except ValueError:
+        return False
+    return wt > pub
 
 
 def current_versions(repo_root: Path) -> dict[str, str]:
@@ -163,22 +213,43 @@ def check_no_stale_symlinks(
             )
 
 
+@dataclass
+class ValidationResult:
+    """Outcome of a validate_install run.
+
+    Errors fail the build; warnings inform the caller without changing exit code.
+    Constructed once inside `validate()`; the caller only reads it.
+    """
+
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
 def validate(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     repo_root: Path | None = None,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     now: float | None = None,
-) -> list[str]:
+    claude_cache_override: Path | None = None,
+    codex_cache_override: Path | None = None,
+    codex_marketplace_version: Callable[[str], str | None] | None = None,
+) -> ValidationResult:
     resolved_root = repo_root if repo_root is not None else Path.cwd()
     resolved_now = now if now is not None else time.time()
     versions = current_versions(resolved_root)
     if not versions:
-        return [f"No plugins found under {resolved_root / 'plugins'}"]
+        return ValidationResult(
+            errors=[f"No plugins found under {resolved_root / 'plugins'}"]
+        )
 
     errors: list[str] = []
-    claude = claude_cache_root()
-    codex = codex_cache_root()
+    warnings: list[str] = []
+    claude = claude_cache_override or claude_cache_root()
+    codex = codex_cache_override or codex_cache_root()
+    published_for = codex_marketplace_version or (
+        lambda plugin: read_codex_marketplace_version(marketplace, plugin)
+    )
 
     for plugin, version in sorted(versions.items()):
         # Claude: refreshes catalog only, does not auto-upgrade cached files.
@@ -190,15 +261,27 @@ def validate(
                 claude, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-        # Codex: auto-upgrades on marketplace upgrade. Current source version
-        # must be present as a real directory.
+        # Codex: auto-upgrades on marketplace upgrade. The working-tree manifest
+        # version must be present as a real directory — UNLESS the working tree
+        # is strictly ahead of the version the Codex marketplace clone publishes
+        # (typical on a feature branch that bumped a manifest before merge). In
+        # that case the absent newer version is structural lag, not a fault, and
+        # the published version is what actually has to be in the cache.
         if (codex / marketplace / plugin).exists():
-            check_version_present(codex, marketplace, plugin, version, errors)
+            published = published_for(plugin)
+            if published is not None and is_strictly_ahead(version, published):
+                warnings.append(
+                    f"{plugin}  working-tree {version} ahead of marketplace "
+                    f"clone {published}; verifying clone version in cache"
+                )
+                check_version_present(codex, marketplace, plugin, published, errors)
+            else:
+                check_version_present(codex, marketplace, plugin, version, errors)
             check_no_stale_symlinks(
                 codex, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-    return errors
+    return ValidationResult(errors=errors, warnings=warnings)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -215,16 +298,25 @@ def main(argv: list[str] | None = None) -> int:
     print_cache(claude_cache_root(), "Claude Code", args.marketplace, versions)
     print_cache(codex_cache_root(), "Codex", args.marketplace, versions)
 
-    errors = validate(
+    result = validate(
         args.marketplace, repo_root=repo_root, max_age_days=args.max_age_days
     )
 
-    if errors:
-        for error in errors:
+    for warning in result.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+
+    if result.errors:
+        for error in result.errors:
             print(f"error: {error}", file=sys.stderr)
         return 1
 
-    print(f"✔ {len(versions)} plugin(s) — all checks passed")
+    if result.warnings:
+        print(
+            f"✔ {len(versions)} plugin(s) — checks passed "
+            f"with {len(result.warnings)} warning(s)"
+        )
+    else:
+        print(f"✔ {len(versions)} plugin(s) — all checks passed")
     return 0
 
 
