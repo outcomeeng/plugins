@@ -69,12 +69,13 @@ Cell escaping when writing values into a row: replace `|` with `\|` and `\n` wit
 
 <phase number="0" name="prepare">
 
-1. Detect base ref. Default to `main`; if `git symbolic-ref refs/remotes/origin/HEAD` resolves, use that.
+1. Detect base ref. Default to `main`; if `git symbolic-ref refs/remotes/origin/HEAD` resolves, **strip the `refs/remotes/origin/` prefix** so `<base>` is a bare branch name (e.g. `main`). Use `git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`. Without this normalization, step 5 composes `origin/refs/remotes/origin/main..HEAD`, which is not a valid ref and halts the orchestrator before any audit runs.
 2. Detect current branch: `git rev-parse --abbrev-ref HEAD`. Halt if `HEAD` (detached state).
 3. Compute branch slug: replace `/` → `__`. Check `.spx/audits/typescript/<slug>.md` for collision (file exists but its frontmatter `branch` differs from the current branch); append `--<sha8>` if collision.
-4. Look up state file at `.spx/audits/typescript/<slug>.md`.
-5. Compute branch scope: `git diff --name-only origin/<base>..HEAD -- '*.ts' '*.tsx'`. Halt with "no TypeScript scope on branch <name>" if empty.
-6. Branch to first-run flow if no state file; otherwise re-run flow.
+4. **Acquire run lock.** Write `.spx/audits/typescript/<slug>.md.lock`. If the lock already exists and is younger than 10 minutes, halt with "another run is in progress — lock at `<path>` (age: `<N>s`)". If older than 10 minutes, overwrite it (stale from a crashed run). The lock is removed on every exit path including failure — see `<failure_modes>` "Race against parallel runs".
+5. Look up state file at `.spx/audits/typescript/<slug>.md`.
+6. Compute branch scope: `git diff --name-only origin/<base>..HEAD -- '*.ts' '*.tsx'`. Halt with "no TypeScript scope on branch <name>" if empty.
+7. Branch to first-run flow if no state file; otherwise re-run flow.
 
 </phase>
 
@@ -91,18 +92,19 @@ Cell escaping when writing values into a row: replace `|` with `\|` and `\n` wit
 <phase number="R" name="rerun">
 
 1. Read the state file. Parse frontmatter and both tables. Halt with parse error and exact line number if malformed.
-2. **Re-check open findings.** For each row in `## Open findings`:
+2. **Run automated gates and tests on the full branch scope.** Invoke the preloaded `/orchestrating-typescript-audit` skill's Phase 1 (automated gates) and Phase 2 (test execution) across the scope captured in Phase 0. Any non-zero gate exit or test failure becomes a REJECTED concern row in the wrapper verdict (rows 1 and 2). The wrapper verdict's six-concern contract requires these to run on every invocation — without this, a commit that breaks lint, type-check, or tests can return APPROVED purely because no new comprehension/ADR/test-evidence finding surfaced.
+3. **Re-check open findings.** For each row in `## Open findings`:
    - Read the file at `line ± 5`. Apply the predict/verify protocol from the orchestrator skill at that location.
    - If the root cause is gone → move the row to `## Resolved findings`, set `resolved_at` to current SHA.
    - Otherwise leave the row in place.
-3. **Re-check resolved findings.** For each row in `## Resolved findings`:
+4. **Re-check resolved findings.** For each row in `## Resolved findings`:
    - Read the file at `line ± 5`. Apply the predict/verify protocol.
    - If the same root cause has returned at the same `file:line` → move the row back to `## Open findings`, clear `resolved_at`. This is a regression.
    - Otherwise leave the row in place.
-4. **Scan modified files for new findings.** Compute `git diff --name-only <last_run_sha>..HEAD -- '*.ts' '*.tsx'` intersected with the branch scope. For each file in that intersection, run the orchestrator skill's Phase 3–5 protocols (comprehension, test evidence, ADR compliance) limited to that file. New findings receive IDs from `next_finding_id` onward; increment the counter accordingly. Append to `## Open findings`.
-5. Update frontmatter: `last_run_sha`, `last_run_at`, `last_verdict`, `run_count` (increment), `next_finding_id`.
-6. Write the state file.
-7. Emit the wrapper verdict.
+5. **Scan modified files for new findings.** Compute `git diff --name-only <last_run_sha>..HEAD -- '*.ts' '*.tsx'` intersected with the branch scope. For each file in that intersection, run the orchestrator skill's Phase 3–5 protocols (comprehension, test evidence, ADR compliance) limited to that file. New findings receive IDs from `next_finding_id` onward; increment the counter accordingly. Append to `## Open findings`.
+6. Update frontmatter: `last_run_sha`, `last_run_at`, `last_verdict`, `run_count` (increment), `next_finding_id`.
+7. Write the state file.
+8. Emit the wrapper verdict.
 
 </phase>
 
@@ -156,7 +158,7 @@ Sections with zero rows are still emitted with the count `(0)` and an empty tabl
 
 **Slug collision between two branches.** `feature/foo` slugs to `feature__foo`; a literal branch named `feature__foo` slugs to the same. Phase 0 step 3 detects the collision by reading the existing file's frontmatter `branch` field and appending `--<sha8>` when the names differ. Without this, Claude would silently overwrite the wrong branch's state.
 
-**State written, audit incomplete.** If Claude fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. The Phase R ordering is therefore: construct the wrapper verdict in memory during steps R1–R4; write the state file at step R6; emit the verdict at step R7. "LAST" here means LAST among side-effecting writes, not last in the protocol — the verdict emission still follows. The verdict is the durable artifact; state is the optimization.
+**State written, audit incomplete.** If Claude fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. The Phase R ordering is therefore: construct the wrapper verdict in memory during steps R1–R5; write the state file at step R7; emit the verdict at step R8. "LAST" here means LAST among side-effecting writes, not last in the protocol — the verdict emission still follows. The verdict is the durable artifact; state is the optimization.
 
 **Scope drift mid-run.** Files added or removed during a long audit yield inconsistent reads across phases. Capture the file list at phase 0 and treat it as frozen for the duration of the run, mirroring the orchestrator skill's frozen-scope contract.
 
