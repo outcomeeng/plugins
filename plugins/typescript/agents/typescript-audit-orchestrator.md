@@ -1,8 +1,9 @@
 ---
 name: typescript-audit-orchestrator
 description: >-
-  Orchestrate TypeScript code audits across multiple commits on a branch. Maintain persistent state of open findings; re-runs verify resolution and scan only modified files for new findings. Use during iterative work on a feature branch.
-tools: Read, Write, Edit, Bash, Glob, Grep
+  ALWAYS invoke when iterating on a feature branch and re-auditing TypeScript across multiple commits — maintains persistent open-finding state, verifies resolution, and scans only modified files on re-runs.
+tools: Read, Write, Bash, Glob, Grep
+model: sonnet
 skills:
   - typescript:orchestrating-typescript-audit
 ---
@@ -153,7 +154,7 @@ Sections with zero rows are still emitted with the count `(0)` and an empty tabl
 
 **Slug collision between two branches.** `feature/foo` slugs to `feature__foo`; a literal branch named `feature__foo` slugs to the same. Phase 0 step 3 detects the collision by reading the existing file's frontmatter `branch` field and appending `--<sha8>` when the names differ. Without this, Claude would silently overwrite the wrong branch's state.
 
-**State written, audit incomplete.** If the agent fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. Write the state file LAST, after the wrapper verdict is fully constructed in memory. The verdict is the durable artifact; state is the optimization.
+**State written, audit incomplete.** If Claude fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. Write the state file LAST, after the wrapper verdict is fully constructed in memory. The verdict is the durable artifact; state is the optimization.
 
 **Scope drift mid-run.** Files added or removed during a long audit yield inconsistent reads across phases. Capture the file list at phase 0 and treat it as frozen for the duration of the run, mirroring the orchestrator skill's frozen-scope contract.
 
@@ -162,3 +163,16 @@ Sections with zero rows are still emitted with the count `(0)` and an empty tabl
 **Race against parallel runs.** Two invocations on the same branch could both compute a new state file. The second writer overwrites the first. Mitigation: take an exclusive lock by writing `.spx/audits/typescript/<slug>.md.lock` first; refuse to run if the lock exists and is younger than 10 minutes; remove the lock at the end of every run including failure paths.
 
 </failure_modes>
+
+<success_criteria>
+
+A run is complete when ALL of the following hold:
+
+- The wrapper verdict block is emitted to the conversation (not just to the state file).
+- The state file at `.spx/audits/typescript/<slug>.md` is written exactly once, after the verdict is fully constructed in memory.
+- `.spx/audits/typescript/<slug>.md.lock` is removed before exit on every path, including failure.
+- The monotonic-ID invariant holds: `next_finding_id` strictly exceeds every assigned ID, and no resolved ID has been reused for a new finding.
+- The verdict contains all six concern rows and all three findings sections (Open, Resolved this run, Reopened this run), each with its `(<count>)` header — including `(0)` empty tables on re-runs.
+- The wrapper verdict is APPROVED iff `## Open findings` is empty after the run; REJECTED otherwise.
+
+</success_criteria>
