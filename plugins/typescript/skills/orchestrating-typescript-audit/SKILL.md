@@ -48,21 +48,23 @@ The four mechanisms that enforce determinism — apply all four, every run:
 
 3. **Frozen finding catalog.** Findings are only created from violations of the rules pre-loaded above (`/standardizing-typescript`, `/standardizing-typescript-tests`, `/standardizing-typescript-architecture`) and the predict/verify protocol applied to functions in scope. Style preferences, taste-based critiques, and "could be cleaner" observations are NEVER findings.
 
-4. **Re-run rule.** When a prior verdict file exists for this scope (see `<re_run_protocol>`), the audit verifies whether each prior finding is resolved, and only adds new findings that originate from code added or modified since the prior verdict. Untouched code is not re-comprehended for novel issues.
+4. **Re-run rule.** When a prior verdict for this scope is available (see `<re_run_protocol>`), the audit verifies whether each prior finding is resolved, and only adds new findings that originate from code added or modified since the prior verdict. Untouched code is not re-comprehended for novel issues.
 
 If any mechanism cannot be applied, halt and report the obstacle — do not silently substitute a looser audit.
+
+**This skill is strictly read-only.** It uses `Read`, `Bash` (for `git`, validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. The skill does not persist its verdict and does not create the `.spx/audits/typescript/` directory. Re-run determinism depends on the **caller** writing the emitted verdict to a known path; the skill only reads from such a path when one already exists. This keeps the skill compliant with the audit-skill read-only rule and safe to dispatch as a subagent (per `AGENTS.md` line 402, subagents must never create or modify files).
 
 </determinism_contract>
 
 <quick_start>
 
-1. Phase 0: freeze scope, hash it, load any prior verdict
+1. Phase 0: freeze scope, hash it, read any prior verdict the caller has staged
 2. Phase 1: run automated gates — non-zero exit is REJECTED, halt
 3. Phase 2: run the test suite — any failure is REJECTED, halt
 4. Phase 3: comprehend every function in scope using predict/verify
 5. Phase 4: audit test evidence for assertions traceable to scope
 6. Phase 5: verify ADR/PDR compliance for the scope (or mark N/A)
-7. Phase 6: emit the verdict in the canonical format and persist it
+7. Phase 6: emit the verdict in the canonical format (the caller persists it)
 
 </quick_start>
 
@@ -98,10 +100,10 @@ Execute phases in order. Do not skip. Do not reorder.
 3. **Compute scope hash.** `sha256` over the concatenation of file path + null byte + file content for every file in the frozen scope. Use the first 12 hex characters as the **scope hash**. Implementation:
 
    ```bash
-   { for f in <files-in-sort-order>; do printf '%s\0' "$f"; cat "$f"; done; } | sha256sum | cut -c1-12
+   { for f in <files-in-sort-order>; do printf '%s\0' "$f"; cat "$f"; done; } | (sha256sum 2>/dev/null || shasum -a 256) | cut -c1-12
    ```
 
-4. **Load prior verdict.** Look for `.spx/audits/typescript/<scope-hash>.md`. If found, read it — see `<re_run_protocol>` for how to use it. If absent, this is a fresh run.
+4. **Read prior verdict if staged.** Look for `.spx/audits/typescript/<scope-hash>.md`. If found, read it — see `<re_run_protocol>` for how to use it. If absent, this is a fresh run. The skill never creates this file; it only reads one the calling workflow has placed there from a previous run.
 
 5. **Read project config.** `CLAUDE.md`, `AGENTS.md`, `tsconfig.json`, `package.json`. Identify the canonical validation command (often `pnpm validate`, `npm run validate`, or `just check`) and the canonical test command. If these are not discoverable from project files, halt — do not guess.
 
@@ -240,17 +242,17 @@ If the ADR text itself contradicts the canonical template (temporal voice, missi
 
 </phase>
 
-<phase number="6" name="verdict_and_persist">
+<phase number="6" name="verdict">
 
-**Goal:** Emit the canonical verdict and persist it for re-run determinism.
+**Goal:** Emit the canonical verdict.
 
 1. Construct the verdict using `<output_format>` exactly. Do not add sections. Do not add prose narrative.
 
 2. The decision is APPROVED if and only if every concern row is PASS or N/A. Any REJECT is REJECTED.
 
-3. Persist the verdict to `.spx/audits/typescript/<scope-hash>.md`. Create directories as needed. The persisted file is the verdict body unchanged. Persisting does not modify code — `.spx/` is gitignored operational state.
+3. Print the verdict to the conversation and stop. The skill does not write any file.
 
-4. Print the verdict to the conversation. Stop.
+The calling workflow is responsible for re-run determinism. To enable re-runs that only verify resolution of prior findings, the caller writes the emitted verdict to `.spx/audits/typescript/<scope-hash>.md` (gitignored operational state). The skill's Phase 0 reads that file when present. Callers that do not need re-run determinism can ignore persistence; every run is then a fresh run.
 
 </phase>
 
@@ -272,7 +274,7 @@ The re-run **never** introduces a finding that:
 - Has the same root cause as a prior finding but a different surface phrasing.
 - Targets a function or file that was unchanged since the prior verdict and was not flagged before.
 
-When the scope hash differs (the caller scoped a larger or different set of files), this is a new run, not a re-run. Run the full audit and persist a new verdict under the new hash. Prior verdicts at other hashes remain on disk for audit history.
+When the scope hash differs (the caller scoped a larger or different set of files), this is a new run, not a re-run. Run the full audit and emit a fresh verdict. The caller writes that verdict under the new hash; prior verdicts at other hashes are unaffected.
 
 </re_run_protocol>
 
@@ -427,8 +429,7 @@ Concrete failures from past audits. Read them and avoid repeating them.
 - Do NOT emit findings for style preferences or "could be cleaner" observations.
 - Do NOT approve with caveats. The verdict is binary.
 - Do NOT propose refactors beyond the per-finding corrected snippet.
-- Do NOT modify any file in the working tree, including the persisted verdict file in `.spx/audits/`.
-- Do NOT skip persisting the verdict — re-run determinism depends on it.
+- Do NOT modify, create, or delete any file. Persistence of the verdict is the caller's job.
 - Do NOT generate new findings on re-run from unchanged code.
 
 </what_to_avoid>
@@ -447,7 +448,7 @@ Audit is complete when:
 - [ ] Prior verdict consulted if the hash matched
 - [ ] Phases 1–5 executed in order, with each blocking phase honored
 - [ ] Verdict produced in canonical format with no banned phrases
-- [ ] Verdict persisted to `.spx/audits/typescript/<scope-hash>.md`
+- [ ] No file written, edited, or deleted by the skill itself
 - [ ] Decision is APPROVED or REJECTED — never anything else
 - [ ] On re-run, no finding originates from unchanged unflagged code
 
