@@ -88,3 +88,30 @@ def test_codex_cache_missing_published_version_is_an_error(tmp_path: Path) -> No
     assert result.warnings == [], f"unexpected warnings: {result.warnings}"
     assert len(result.errors) == 1
     assert PUBLISHED_VERSION in result.errors[0]
+
+
+def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
+    tmp_path: Path,
+) -> None:
+    """When the Codex marketplace clone has no manifest for the plugin (the lookup
+    returns None), validate_install applies strict validation against the working-tree
+    version — no warning, and a missing directory is an error."""
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    def no_published_version(plugin: str) -> str | None:
+        return None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=no_published_version,
+    )
+
+    assert result.warnings == [], f"unexpected warnings: {result.warnings}"
+    assert len(result.errors) == 1
+    assert WORKING_TREE_VERSION in result.errors[0]
