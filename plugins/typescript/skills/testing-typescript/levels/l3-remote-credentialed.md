@@ -49,7 +49,7 @@ describe("Stripe webhook contract", () => {
     const credentials = requireStripeCredentials();
     const response = await submitSignedFixture({
       token: credentials.token,
-      fixturePath: resolve(process.cwd(), "testing/fixtures/checkout-session-completed.json"),
+      fixturePath: resolve(process.cwd(), "testing/fixtures/stripe-event.json"),
     });
 
     expect(response.status).toBe(200);
@@ -57,7 +57,7 @@ describe("Stripe webhook contract", () => {
 });
 ```
 
-This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly instead of producing a passing test. `submitSignedFixture` reads the fixture from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
+This is `l3` because the assertion depends on a remote credentialed contract. Missing credentials fail loudly instead of producing a passing test. `submitSignedFixture` reads the illustrative fixture path from disk, signs its contents locally, and submits the payload; the remote endpoint never receives a filesystem path.
 
 </example>
 

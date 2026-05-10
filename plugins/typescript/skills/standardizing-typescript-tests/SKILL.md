@@ -231,7 +231,7 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 
 <existing_code_stance>
 
-When writing tests for existing code, assume the code under test usually needs to change before the test can meet this standard. The common path to maintainable evidence is to improve the architecture first: extract pure functions, inject side-effect dependencies, expose source-owned registries, split command boundaries from domain logic, or add typed constructors that make the behavior observable without copying internals.
+When writing tests for existing code, evaluate whether the source contract needs to change before writing around it. Maintainable evidence may require architecture improvements first: extract pure functions, inject side-effect dependencies, expose source-owned registries, split command boundaries from domain logic, or add typed constructors that make the behavior observable without copying internals.
 
 If a test can only be written by copying source literals, pinning arbitrary example objects, mocking the behavior under test, or storing inert fixture strings, stop and improve the source contract first.
 
@@ -340,6 +340,19 @@ Use the source-owned constructor directly instead:
 
 ```typescript
 import { createAbsentConfigReadResult } from "@/config/read-result";
+```
+
+A constant branch inside a larger arbitrary is valid only when it expands boundary coverage and source-owned values still come from source APIs:
+
+```typescript
+import { createEndOfInputToken, createIdentifierToken, type Token } from "@/lexer/tokens";
+
+export function arbitraryToken(): fc.Arbitrary<Token> {
+  return fc.oneof(
+    fc.string({ minLength: 1 }).map(createIdentifierToken),
+    fc.constant(createEndOfInputToken()),
+  );
+}
 ```
 
 </generators>
