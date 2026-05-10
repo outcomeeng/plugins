@@ -86,3 +86,35 @@ discussion for the deployment-shipping invariant.
 
 The shell forms in the skill and agent are explicitly marked interim —
 both files cite this issue as the migration destination.
+
+**Also fold these deferred review items into the Python migration** (raised
+during PR #9 round 3, surface-scoped to the agent prompt — they will dissolve
+when the prompt is rewritten to call into the Python module rather than
+embed protocol details inline):
+
+- **Validation command discovery has no precedence.** SKILL.md Phase 0
+  step 5 reads `CLAUDE.md`, `AGENTS.md`, `tsconfig.json`, `package.json`
+  for the canonical validation command with no tie-breaker. Two consecutive
+  runs on the same repo could discover commands in different orders and
+  resolve different commands. Establish a priority order in the Python
+  module (e.g. CLAUDE.md/AGENTS.md > justfile/Makefile > package.json
+  scripts; closer to repo root wins).
+- **Phase F "write LAST" ambiguity.** The agent's failure_modes "State
+  written, audit incomplete" gloss spells out the Phase R ordering but
+  not the Phase F ordering. An implementor reading Phase F's bare
+  "Write the state file. Emit the wrapper verdict." steps could emit at
+  step 4 and write at step 5, opening the partial-write window. The
+  Python module should make the ordering structural rather than rely on
+  prose discipline.
+- **APPROVED first-run parsing.** Phase F step 2 assumes a Findings table
+  to parse for `next_finding_id` derivation. APPROVED first runs from the
+  underlying skill have no Findings section. The Python module's state
+  initializer should handle the no-findings case explicitly (start
+  `next_finding_id` at 1).
+- **Concern 6 "Determinism contract" is always PASS.** A verdict row
+  that cannot REJECT is decorative. Either remove it from the verdict
+  table and surface scope-hash and frozen-scope-size as metadata on the
+  verdict header, or give it a real REJECT condition such as "REJECT if
+  the file list read during Phase 3 differs from the one captured at
+  Phase 0" (scope drift detection). The Python module should pick one
+  and commit.
