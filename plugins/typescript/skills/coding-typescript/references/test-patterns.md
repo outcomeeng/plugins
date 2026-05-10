@@ -61,6 +61,25 @@ For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings fr
 
 <debugging_failures>
 When a property failure exposes a bug, replay fast-check's reported seed and counterexample first. Add a named regression test only when the counterexample identifies a stable source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay helper, not a handwritten shared constant.
+
+```typescript
+import { normalizeSourcePath } from "@/paths";
+import { createSourcePath } from "@/paths/source-path";
+import { describe, expect, it } from "vitest";
+
+describe("normalizeSourcePath", () => {
+  it("preserves the normalized form for the seed 87231 Windows path regression", () => {
+    const path = createSourcePath({
+      drive: "C",
+      segments: ["workspace", "src", "index.ts"],
+    });
+
+    expect(normalizeSourcePath(path)).toBe("C:/workspace/src/index.ts");
+  });
+});
+```
+
+The test name records the replayed seed or counterexample source, while the input still comes from source-owned construction. Do not paste a shrunk object literal into a shared constant bag.
 </debugging_failures>
 
 <anti_patterns>

@@ -59,20 +59,22 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 
 <preliminary_check>
 
-If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the repository:
+If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the project:
 
 ```bash
 spx validation literal --files <spec-node-path>/tests/**/*.test.ts <project-root>/testing/generators/**/*.ts --json
 ```
 
-`<project-root>/testing/generators/**/*.ts` means the repository-level generator directory. If running from the repository root, `testing/generators/**/*.ts` is equivalent. Never rewrite that glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
+`<project-root>/testing/generators/**/*.ts` means the package or repository root that owns the test command. Resolve it before running; for a repo-root package, `$(git rev-parse --show-toplevel)/testing/generators/**/*.ts` is the same directory. In a monorepo package, use that package root instead. Never rewrite the glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
 
 Findings feed into Gate 1:
 
-| check_id | Source                                                                      | Hands to                               |
-| -------- | --------------------------------------------------------------------------- | -------------------------------------- |
-| L3       | `spx validation literal` — src-reuse (literal appears in production module) | Gate 1 step `mocks` / `falsifiability` |
-| L4       | `spx validation literal` — test-dupe (literal duplicated across test files) | Gate 1 step `four_properties`          |
+| check_id             | Source                                                                      | Hands to                               |
+| -------------------- | --------------------------------------------------------------------------- | -------------------------------------- |
+| L3                   | `spx validation literal` — src-reuse (literal appears in production module) | Gate 1 step `mocks` / `falsifiability` |
+| L4                   | `spx validation literal` — test-dupe (literal duplicated across test files) | Gate 1 step `four_properties`          |
+| fixture_import       | Gate 1 step `harness_chain` — fixture imported as a module                  | Gate 1 step `harness_chain`            |
+| generator_laundering | Gate 1 step `harness_chain` — generator wraps source-owned singleton values | Gate 1 step `harness_chain`            |
 
 If `spx validation literal` is unavailable, proceed to Gate 1 without these findings.
 

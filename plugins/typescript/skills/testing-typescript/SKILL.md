@@ -119,6 +119,8 @@ Create test files following `/standardizing-typescript-tests`:
 <project-test-command> {node_path}/tests/
 ```
 
+If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full project test command when no focused form exists.
+
 Tests should FAIL with import errors or assertion errors (implementation does not exist yet).
 
 ### Step 5: Handle Specified Nodes
