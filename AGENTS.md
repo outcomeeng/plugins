@@ -224,12 +224,13 @@ Complete TypeScript development workflow with testing, implementation, and revie
 
 ### Agents
 
-| Agent                             | Purpose                                                |
-| --------------------------------- | ------------------------------------------------------ |
-| `typescript-code-auditor`         | Code audit subagent (preloads auditing skill)          |
-| `typescript-architecture-auditor` | ADR audit subagent (preloads auditing skill)           |
-| `typescript-test-auditor`         | Test evidence audit subagent (preloads auditing skill) |
-| `typescript-simplifier`           | Simplifies recently-modified code; verifies tests pass |
+| Agent                             | Purpose                                                          |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `typescript-code-auditor`         | Code audit subagent (preloads auditing skill)                    |
+| `typescript-architecture-auditor` | ADR audit subagent (preloads auditing skill)                     |
+| `typescript-test-auditor`         | Test evidence audit subagent (preloads auditing skill)           |
+| `typescript-simplifier`           | Simplifies recently-modified code; verifies tests pass           |
+| `typescript-audit-orchestrator`   | Branch-scoped audit with persistent finding state across commits |
 
 ## Python Plugin
 
@@ -535,9 +536,10 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   │   │   ├── typescript-code-auditor.md
 │   │   │   ├── typescript-architecture-auditor.md
 │   │   │   ├── typescript-test-auditor.md
-│   │   │   └── typescript-simplifier.md
+│   │   │   ├── typescript-simplifier.md
+│   │   │   └── typescript-audit-orchestrator.md
 │   │   └── skills/
-│   │       └── (9 skills)
+│   │       └── (10 skills)
 │   └── visual/
 │       └── skills/
 │           └── excalidrawing/
