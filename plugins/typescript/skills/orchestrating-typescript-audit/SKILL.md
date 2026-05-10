@@ -95,11 +95,13 @@ Execute phases in order. Do not skip. Do not reorder.
 
 2. **Materialize the file list.** Filter to existing files matching `*.ts` or `*.tsx`. Sort lexicographically. This sorted list is the **frozen scope** for this run.
 
-3. **Compute scope hash.** `sha256` over the concatenation of file path + null byte + file content for every file in the frozen scope. Use the first 12 hex characters as the **scope hash**. Implementation:
+3. **Compute scope hash.** `sha256` over the length-prefixed concatenation of file path + file content for every file in the frozen scope. Use the first 12 hex characters as the **scope hash**. The byte count between path and content is what makes the hash collision-free: without it, `("a.ts", "b") + ("b", "c")` and `("a.ts", "bb") + ("c", "")` produce identical streams. Implementation:
 
    ```bash
-   { for f in <files-in-sort-order>; do printf '%s\0' "$f"; cat "$f"; done; } | (sha256sum 2>/dev/null || shasum -a 256) | cut -c1-12
+   { for f in <files-in-sort-order>; do printf '%s\0' "$f"; wc -c < "$f" | tr -d ' '; printf '\0'; cat "$f"; done; } | (sha256sum 2>/dev/null || shasum -a 256) | cut -c1-12
    ```
+
+   The shell form is interim. The follow-up Python module under `plugins/spec-tree/scripts/` will own this computation deterministically and ship with the spec-tree plugin so downstream installations get it without `outcomeeng/scripts/` access.
 
 4. **Read prior verdict if staged.** Look for `.spx/audits/typescript/<scope-hash>.md`. If found, read it — see `<re_run_protocol>` for how to use it. If absent, this is a fresh run. The skill never creates this file; it only reads one the calling workflow has placed there from a previous run.
 
