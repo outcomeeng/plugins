@@ -17,7 +17,7 @@ Branch-scoped TypeScript audit orchestrator. Wrap `/orchestrating-typescript-aud
 <constraints>
 
 - Read-only over source code — never edit production code or tests.
-- Write access is restricted to `.spx/audits/typescript/<branch-slug>.md` — never write outside this path.
+- Write access is restricted to two paths: `.spx/audits/typescript/<branch-slug>.md` (the state file) and `.spx/audits/typescript/<branch-slug>.md.lock` (the run lock). Never write outside these paths. The lock is removed on every exit path, including failure.
 - Branch-slug rule: replace every `/` in the branch name with `__`. If the slug already exists for a different branch (collision), append `--<sha8>` where sha8 is the first 8 hex characters of the SHA-256 hash of the original branch name. Compute the hash via the Bash tool (e.g. `printf '%s' "<branch>" | shasum -a 256 | cut -c1-8`) — never compute it in-process, since LLMs cannot reliably hash deterministically.
 - IDs are monotonic. Never reuse a resolved finding's ID for a new finding. The state file's `next_finding_id` field tracks the counter.
 - A regression — the same root cause returning at the same `file:line` — reopens the original finding by moving its row from Resolved to Open and clearing `resolved_at`. Never create a new ID for a regression.
@@ -156,13 +156,15 @@ Sections with zero rows are still emitted with the count `(0)` and an empty tabl
 
 **Slug collision between two branches.** `feature/foo` slugs to `feature__foo`; a literal branch named `feature__foo` slugs to the same. Phase 0 step 3 detects the collision by reading the existing file's frontmatter `branch` field and appending `--<sha8>` when the names differ. Without this, Claude would silently overwrite the wrong branch's state.
 
-**State written, audit incomplete.** If Claude fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. Write the state file LAST, after the wrapper verdict is fully constructed in memory. The verdict is the durable artifact; state is the optimization.
+**State written, audit incomplete.** If Claude fails mid-run after persisting state but before emitting the verdict, the next run reads the new state but the user never saw the verdict. The Phase R ordering is therefore: construct the wrapper verdict in memory during steps R1–R4; write the state file at step R6; emit the verdict at step R7. "LAST" here means LAST among side-effecting writes, not last in the protocol — the verdict emission still follows. The verdict is the durable artifact; state is the optimization.
 
 **Scope drift mid-run.** Files added or removed during a long audit yield inconsistent reads across phases. Capture the file list at phase 0 and treat it as frozen for the duration of the run, mirroring the orchestrator skill's frozen-scope contract.
 
 **Last_run_sha unreachable.** The diff `<last_run_sha>..HEAD` fails when the prior SHA was force-pushed away or the local clone is shallow. Detect the failure (`git rev-parse <last_run_sha>` returns non-zero), log "previous SHA unreachable; treating all in-scope files as modified", and re-scan the entire branch scope for new findings. State recovers on this run.
 
 **Race against parallel runs.** Two invocations on the same branch could both compute a new state file. The second writer overwrites the first. Mitigation: take an exclusive lock by writing `.spx/audits/typescript/<slug>.md.lock` first; refuse to run if the lock exists and is younger than 10 minutes; remove the lock at the end of every run including failure paths.
+
+**Line drift evades regression detection.** Phase R step 3 reopens a resolved finding only when the same root cause returns at the same `file:line` (read window: line ± 5). A function that moves more than 5 lines — refactor, upstream insertion, formatting reflow — silently escapes regression detection: the prior finding stays in `## Resolved findings` and the same defect appears as a fresh ID under `## Open findings`. This is a known gap. The follow-up Python module under `plugins/spec-tree/scripts/` will replace line-locality with content-based finding identity (a hash of the surrounding function body), making regression detection robust to drift.
 
 </failure_modes>
 
