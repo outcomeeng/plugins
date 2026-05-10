@@ -196,13 +196,16 @@ def cmd_checks(pr_number: str) -> dict[str, Any]:
 
 
 def cmd_artifacts(run_id: str) -> dict[str, Any]:
+    # archive_download_url is a presigned URL with embedded credentials; never
+    # surface it through the agent. Callers that need to download an artifact
+    # invoke `gh run download <run-id>` directly.
     code, data, err = _gh_json(
         [
             "gh",
             "api",
             f"repos/:owner/:repo/actions/runs/{run_id}/artifacts",
             "--jq",
-            "{artifacts: [.artifacts[] | {id, name, size_in_bytes, archive_download_url, expired}]}",
+            "{artifacts: [.artifacts[] | {id, name, size_in_bytes, expired}]}",
         ]
     )
     if code != 0 or not isinstance(data, dict):
