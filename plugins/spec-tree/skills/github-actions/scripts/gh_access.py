@@ -38,6 +38,7 @@ import sys
 from typing import Any
 
 SCHEMA_VERSION = 1
+SUBPROCESS_TIMEOUT_SECONDS = 30
 
 # Two URL forms cover every remote shape:
 #   - `git@host:owner/repo[.git][/]` — the SCP-style form, no scheme, no port
@@ -78,7 +79,15 @@ _URL_REMOTE_RE = re.compile(
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
     return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
 
 
