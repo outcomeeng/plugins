@@ -1,22 +1,20 @@
 ---
 name: orchestrating-typescript-audit
 description: >-
-  ALWAYS invoke this skill to review or audit TypeScript code in a single deterministic pass. Produces one binary verdict — APPROVED or REJECTED — covering implementation, test evidence, and architectural compliance. NEVER use this skill to write code.
+  ALWAYS invoke this skill when reviewing or auditing TypeScript code in a single deterministic pass. Produces one binary verdict — APPROVED or REJECTED — covering implementation, test evidence, and architectural compliance. NEVER use this skill to write code.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
+<context>
+
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke typescript:standardizing-typescript manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md" || echo "standardizing-typescript-tests not found — invoke typescript:standardizing-typescript-tests manually"`
+</context>
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript-architecture/SKILL.md" || echo "standardizing-typescript-architecture not found — invoke typescript:standardizing-typescript-architecture manually"`
+The two heavier reference standards — `standardizing-typescript-tests` and `standardizing-typescript-architecture` — are read just-in-time at the start of Phase 4 and Phase 5. Audits that halt at Phase 1 or Phase 2 never load them, keeping early-halt runs cheap.
 
 <codex_fallback>
-If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
-
-1. `typescript:standardizing-typescript`
-2. `typescript:standardizing-typescript-tests`
-3. `typescript:standardizing-typescript-architecture`
+When `cat` commands appear above rather than skill content, shell injection did not run (Codex or similar environment). Invoke `typescript:standardizing-typescript` now before proceeding. Phase 4 and Phase 5 read their additional standards directly via the runtime's read tool.
 
 </codex_fallback>
 
@@ -56,7 +54,7 @@ If any mechanism cannot be applied, halt and report the obstacle — do not sile
 
 </determinism_contract>
 
-<quick_start>
+<phase_index>
 
 1. Phase 0: freeze scope, hash it, read any prior verdict the caller has staged
 2. Phase 1: run automated gates — non-zero exit is REJECTED, halt
@@ -66,7 +64,7 @@ If any mechanism cannot be applied, halt and report the obstacle — do not sile
 6. Phase 5: verify ADR/PDR compliance for the scope (or mark N/A)
 7. Phase 6: emit the verdict in the canonical format (the caller persists it)
 
-</quick_start>
+</phase_index>
 
 <essential_principles>
 
@@ -197,6 +195,8 @@ Findings in this phase always include `file:line`. Findings without a precise lo
 
 **Goal:** Confirm that tests covering the frozen scope provide genuine evidence.
 
+Before evaluating tests, read `${CLAUDE_SKILL_DIR}/../standardizing-typescript-tests/SKILL.md` for the test-standard rules used in this phase. The repo-local overlay (`spx/local/typescript-tests.md`) was already loaded in Phase 0 if present.
+
 For every test file that imports any module in the frozen scope, evaluate the test against the assertion-by-assertion gate from `auditing-typescript-tests`. Tests that do not import in-scope modules are out of scope for this run.
 
 For every assertion in the test:
@@ -220,6 +220,8 @@ This phase reports a verdict for **concern 4** even when no in-scope tests exist
 <phase number="5" name="adr_pdr_compliance">
 
 **Goal:** Verify each MUST/NEVER rule in the applicable decision set is honored by the in-scope code.
+
+Before evaluating decisions, read `${CLAUDE_SKILL_DIR}/../standardizing-typescript-architecture/SKILL.md` for the ADR-standard rules used in this phase. The repo-local overlay (`spx/local/typescript-architecture.md`) was already loaded in Phase 0 if present.
 
 If the applicable decision set from Phase 0 is empty, concern 5 is N/A.
 
@@ -422,7 +424,7 @@ Concrete failures from past audits. Read them and avoid repeating them.
 
 </failure_modes>
 
-<what_to_avoid>
+<anti_patterns>
 
 - Do NOT widen scope mid-audit. The frozen scope from Phase 0 governs every subsequent phase.
 - Do NOT re-check linter concerns in Phase 3. Phase 1 owns those.
@@ -432,7 +434,7 @@ Concrete failures from past audits. Read them and avoid repeating them.
 - Do NOT modify, create, or delete any file. Persistence of the verdict is the caller's job.
 - Do NOT generate new findings on re-run from unchanged code.
 
-</what_to_avoid>
+</anti_patterns>
 
 <examples>
 
