@@ -27,7 +27,8 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_MARKETPLACE = "outcomeeng"
@@ -41,6 +42,34 @@ def claude_cache_root() -> Path:
 
 def codex_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
+
+
+def codex_marketplace_clone_root(marketplace: str) -> Path:
+    return Path.home() / ".codex" / ".tmp" / "marketplaces" / marketplace
+
+
+def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
+    """Return the version the Codex marketplace clone publishes for `plugin`.
+
+    The clone tracks the marketplace's published branch (typically `main`).
+    A working-tree manifest on a feature branch can declare a newer version
+    than the clone has fetched; the difference signals a structural lag.
+    """
+    manifest = (
+        codex_marketplace_clone_root(marketplace)
+        / "plugins"
+        / plugin
+        / ".claude-plugin"
+        / "plugin.json"
+    )
+    if not manifest.is_file():
+        return None
+    try:
+        data = json.loads(manifest.read_text())
+    except json.JSONDecodeError:
+        return None
+    version = data.get("version")
+    return version if isinstance(version, str) else None
 
 
 def current_versions(repo_root: Path) -> dict[str, str]:
@@ -163,22 +192,42 @@ def check_no_stale_symlinks(
             )
 
 
+@dataclass(frozen=True)
+class ValidationResult:
+    """Outcome of a validate_install run.
+
+    Errors fail the build; warnings inform the caller without changing exit code.
+    """
+
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+
+
 def validate(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     repo_root: Path | None = None,
     max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     now: float | None = None,
-) -> list[str]:
+    claude_cache_override: Path | None = None,
+    codex_cache_override: Path | None = None,
+    codex_marketplace_version: Callable[[str], str | None] | None = None,
+) -> ValidationResult:
     resolved_root = repo_root if repo_root is not None else Path.cwd()
     resolved_now = now if now is not None else time.time()
     versions = current_versions(resolved_root)
     if not versions:
-        return [f"No plugins found under {resolved_root / 'plugins'}"]
+        return ValidationResult(
+            errors=[f"No plugins found under {resolved_root / 'plugins'}"]
+        )
 
     errors: list[str] = []
-    claude = claude_cache_root()
-    codex = codex_cache_root()
+    warnings: list[str] = []
+    claude = claude_cache_override or claude_cache_root()
+    codex = codex_cache_override or codex_cache_root()
+    published_for = codex_marketplace_version or (
+        lambda plugin: read_codex_marketplace_version(marketplace, plugin)
+    )
 
     for plugin, version in sorted(versions.items()):
         # Claude: refreshes catalog only, does not auto-upgrade cached files.
@@ -190,15 +239,26 @@ def validate(
                 claude, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-        # Codex: auto-upgrades on marketplace upgrade. Current source version
-        # must be present as a real directory.
+        # Codex: auto-upgrades on marketplace upgrade. The working-tree manifest
+        # version must be present as a real directory — UNLESS the Codex
+        # marketplace clone publishes an older version, in which case the
+        # working tree is ahead of the marketplace's tracked branch and the
+        # missing newer version is structural lag, not a fault.
         if (codex / marketplace / plugin).exists():
-            check_version_present(codex, marketplace, plugin, version, errors)
+            published = published_for(plugin)
+            if published is not None and published != version:
+                warnings.append(
+                    f"LAG  {plugin}  working-tree {version} not yet in Codex cache "
+                    f"(marketplace clone publishes {published})"
+                )
+                check_version_present(codex, marketplace, plugin, published, errors)
+            else:
+                check_version_present(codex, marketplace, plugin, version, errors)
             check_no_stale_symlinks(
                 codex, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-    return errors
+    return ValidationResult(errors=errors, warnings=warnings)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -215,16 +275,20 @@ def main(argv: list[str] | None = None) -> int:
     print_cache(claude_cache_root(), "Claude Code", args.marketplace, versions)
     print_cache(codex_cache_root(), "Codex", args.marketplace, versions)
 
-    errors = validate(
+    result = validate(
         args.marketplace, repo_root=repo_root, max_age_days=args.max_age_days
     )
 
-    if errors:
-        for error in errors:
+    for warning in result.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+
+    if result.errors:
+        for error in result.errors:
             print(f"error: {error}", file=sys.stderr)
         return 1
 
-    print(f"✔ {len(versions)} plugin(s) — all checks passed")
+    suffix = f", {len(result.warnings)} warning(s)" if result.warnings else ""
+    print(f"✔ {len(versions)} plugin(s) — all checks passed{suffix}")
     return 0
 
 
