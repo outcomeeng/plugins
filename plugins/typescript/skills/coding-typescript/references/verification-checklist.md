@@ -16,6 +16,7 @@ Before declaring "done," confirm:
 ## Tool Commands
 
 Resolve placeholders from the repository's docs, package scripts, Makefile, Justfile, or local agent instructions. Raw `tsc`, `eslint`, or `vitest` commands are fallback commands only when the repository has no validation wrapper.
+When sources conflict, resolve in this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback.
 
 ```bash
 # TypeScript validation through the repository's canonical command

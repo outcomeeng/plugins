@@ -10,7 +10,7 @@ Write tests in the order that exposes the source contract first:
 
 Do not create shared test-value files or named example bags. Those collections preserve hand-picked examples and hide ownership.
 
-Property failures report a seed and shrunk counterexample, but that output rarely explains which source contract the value represents. Keep named contract tests for source-owned behavior that must remain documented, then use property tests to search the variable domain around that contract.
+Property failures report a seed and shrunk counterexample, but that output rarely explains which source contract the value represents. Without named contract cases, the first failure often has no stable regression anchor for debugging. Keep named contract tests for source-owned behavior that must remain documented, then use property tests to search the variable domain around that contract.
 </principle>
 
 <source_contract_first>

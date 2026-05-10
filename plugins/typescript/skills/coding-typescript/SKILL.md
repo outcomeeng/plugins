@@ -388,6 +388,7 @@ import { helper } from "@testing/helpers/tree-builder";
 <tool_invocation>
 
 Resolve commands from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Use raw tool commands only when the repository has no validation wrapper.
+When sources conflict, resolve in this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback.
 
 ```bash
 # TypeScript validation

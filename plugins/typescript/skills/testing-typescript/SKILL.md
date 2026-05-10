@@ -49,7 +49,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, `<project-lint-command>`, and optional `<project-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
+**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, `<project-lint-command>`, and optional `<project-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
 
 **Workflow:**
 
