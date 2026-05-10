@@ -52,8 +52,13 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
     """Return the version the Codex marketplace clone publishes for `plugin`.
 
     The clone tracks the marketplace's published branch (typically `main`).
-    A working-tree manifest on a feature branch can declare a newer version
-    than the clone has fetched; the difference signals a structural lag.
+    A working-tree manifest on a feature branch can declare a different
+    version than the clone has fetched; the divergence signals a
+    structural lag in either direction.
+
+    Returns None for any failure mode — missing file, OSError on read,
+    invalid JSON, or a manifest whose top-level shape is not a dict.
+    Callers fall back to strict validation when None is returned.
     """
     manifest = (
         codex_marketplace_clone_root(marketplace)
@@ -62,11 +67,11 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
         / ".claude-plugin"
         / "plugin.json"
     )
-    if not manifest.is_file():
-        return None
     try:
         data = json.loads(manifest.read_text())
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict):
         return None
     version = data.get("version")
     return version if isinstance(version, str) else None
@@ -192,11 +197,13 @@ def check_no_stale_symlinks(
             )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ValidationResult:
     """Outcome of a validate_install run.
 
     Errors fail the build; warnings inform the caller without changing exit code.
+    The dataclass is constructed once inside `validate()` and never mutated by
+    callers — `frozen=True` would mislead because the list fields stay mutable.
     """
 
     errors: list[str] = field(default_factory=list)
@@ -241,15 +248,16 @@ def validate(
 
         # Codex: auto-upgrades on marketplace upgrade. The working-tree manifest
         # version must be present as a real directory — UNLESS the Codex
-        # marketplace clone publishes an older version, in which case the
-        # working tree is ahead of the marketplace's tracked branch and the
-        # missing newer version is structural lag, not a fault.
+        # marketplace clone publishes a different version. That divergence
+        # means the marketplace's tracked branch and the working tree are out
+        # of sync, which is structural (e.g., feature-branch development), not
+        # a fault. Verify the published version is present instead.
         if (codex / marketplace / plugin).exists():
             published = published_for(plugin)
             if published is not None and published != version:
                 warnings.append(
-                    f"LAG  {plugin}  working-tree {version} not yet in Codex cache "
-                    f"(marketplace clone publishes {published})"
+                    f"MISMATCH  {plugin}  working-tree {version} vs marketplace "
+                    f"clone {published} — verifying clone version in cache"
                 )
                 check_version_present(codex, marketplace, plugin, published, errors)
             else:
@@ -287,8 +295,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {error}", file=sys.stderr)
         return 1
 
-    suffix = f", {len(result.warnings)} warning(s)" if result.warnings else ""
-    print(f"✔ {len(versions)} plugin(s) — all checks passed{suffix}")
+    if result.warnings:
+        suffix = (
+            f" with {len(result.warnings)} warning(s)"
+            if len(result.warnings) > 1
+            else " with 1 warning"
+        )
+        print(f"✔ {len(versions)} plugin(s) — checks passed{suffix}")
+    else:
+        print(f"✔ {len(versions)} plugin(s) — all checks passed")
     return 0
 
 

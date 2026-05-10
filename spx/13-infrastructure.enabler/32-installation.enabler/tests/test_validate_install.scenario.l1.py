@@ -65,9 +65,10 @@ def test_lagging_codex_marketplace_version_emits_warning_not_error(
 
 
 def test_codex_cache_missing_published_version_is_an_error(tmp_path: Path) -> None:
-    """When the working-tree manifest matches the marketplace-published version yet the
-    Codex cache lacks that version, the missing directory is an error, not a warning —
-    the lag-tolerance only applies to ahead-of-published versions."""
+    """When the working-tree and marketplace-published versions agree yet the
+    Codex cache lacks that version, the missing directory is an error — the
+    mismatch tolerance applies only to divergent versions, not to a stale or
+    incomplete cache for an in-sync version."""
     repo_root = tmp_path / "repo"
     codex_cache = tmp_path / "codex_cache"
     _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
