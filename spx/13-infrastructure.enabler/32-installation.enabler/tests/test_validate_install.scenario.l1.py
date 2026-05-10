@@ -188,3 +188,32 @@ def test_codex_cache_missing_when_working_tree_older_is_an_error(
     assert result.warnings == [], f"unexpected warnings: {result.warnings}"
     assert len(result.errors) == 1
     assert older_version in result.errors[0]
+
+
+@pytest.mark.parametrize(
+    ("working_tree", "published", "expected"),
+    [
+        ("0.2.0", "0.1.0", True),
+        ("0.1.0", "0.1.0", False),
+        ("0.0.1", "0.1.0", False),
+        ("1.0.0", "0.99.99", True),
+        # Tuple-prefix semantics: shorter tuples compare component-by-component,
+        # so ("1", "0") is strictly greater than ("0", "9", "0").
+        ("1.0", "0.9.0", True),
+        # ("0", "9") and ("0", "9", "0") compare as () == () then 0==0 then
+        # 9==9 then StopIteration on the shorter — Python returns False.
+        ("0.9", "0.9.0", False),
+        # Non-numeric component (pre-release, build metadata) is undefined ordering;
+        # falls back to False so the caller applies strict validation.
+        ("0.2.0-alpha", "0.1.0", False),
+        ("0.2.0", "abc", False),
+        ("", "0.1.0", False),
+    ],
+)
+def test_is_strictly_ahead_compares_dotted_integer_versions(
+    working_tree: str, published: str, expected: bool
+) -> None:
+    """is_strictly_ahead returns True only when working_tree's dotted-integer tuple
+    compares strictly greater than published's. Non-numeric components yield False
+    (callers fall back to strict validation)."""
+    assert validate_install.is_strictly_ahead(working_tree, published) is expected
