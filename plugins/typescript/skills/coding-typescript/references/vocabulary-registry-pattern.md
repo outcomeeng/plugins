@@ -24,15 +24,15 @@ export const KIND_REGISTRY = {
 
 // Types are inferred — no separate union declaration
 export type Kind = keyof typeof KIND_REGISTRY;
-export type KindDefinition<K extends Kind> = typeof KIND_REGISTRY[K];
+export type KindDefinition<K extends Kind> = (typeof KIND_REGISTRY)[K];
 
 // Category-filtered subtypes via mapped-type filtering
 export type NodeKind = {
-  [K in Kind]: KIND_REGISTRY[K]["category"] extends "node" ? K : never;
+  [K in Kind]: (typeof KIND_REGISTRY)[K]["category"] extends "node" ? K : never;
 }[Kind];
 
 export type DecisionKind = {
-  [K in Kind]: KIND_REGISTRY[K]["category"] extends "decision" ? K : never;
+  [K in Kind]: (typeof KIND_REGISTRY)[K]["category"] extends "decision" ? K : never;
 }[Kind];
 
 // Runtime sub-registries are computed at module scope from the single source

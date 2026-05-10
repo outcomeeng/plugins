@@ -1,177 +1,96 @@
-# Debuggability-First Test Organization
+<debuggable_test_organization>
 
-**The Problem**: When property-based tests fail with random values, you have no context and cannot debug.
+<principle>
+Write tests in the order that exposes the source contract first:
 
-**The Solution**: Progress from debuggable named cases to comprehensive property tests.
+1. Improve the code under test until behavior can be observed without copying internals.
+2. Import source-owned registries, constructors, and protocol values directly.
+3. Generate variable input domains with meaningful `fc.Arbitrary` values.
+4. Derive expected outputs from generated inputs or independent standards.
 
-## Part 0: Shared Test Values
+Do not create shared test-value files or named example bags. Those collections preserve hand-picked examples and hide ownership.
 
-`test/fixtures/values.ts`:
+Property failures report a seed and shrunk counterexample, but that output rarely explains which source contract the value represents. Without named contract cases, the first failure often has no stable regression anchor for debugging. Keep named contract tests for source-owned behavior that must remain documented, then use property tests to search the variable domain around that contract.
+</principle>
 
-```typescript
-export interface TestCase<I, E> {
-  readonly input: I;
-  readonly expected: E;
-}
-
-export const TYPICAL = {
-  BASIC: { input: "simple", expected: 42 },
-  COMPLEX: { input: "with-flags", expected: 100 },
-} as const satisfies Record<string, TestCase<string, number>>;
-
-export const EDGES = {
-  EMPTY: { input: "", expected: 0 },
-  MAX_LENGTH: { input: "x".repeat(1000), expected: -1 }, // Error case
-} as const satisfies Record<string, TestCase<string, number>>;
-```
-
-## Part 1: Named Typical Cases
-
-One test per category:
+<source_contract_first>
 
 ```typescript
-import { TYPICAL } from "../fixtures/values";
+import { createAbsentConfigReadResult, isAbsentConfigReadResult } from "@/config/read-result";
+import { describe, expect, it } from "vitest";
 
-describe("GIVEN typical inputs", () => {
-  it("WHEN processing BASIC input THEN returns expected", () => {
-    const testCase = TYPICAL.BASIC;
+describe("isAbsentConfigReadResult", () => {
+  it("accepts the source-owned absent result", () => {
+    const result = createAbsentConfigReadResult();
 
-    const result = process(testCase.input);
-
-    expect(result).toBe(testCase.expected); // ← Set breakpoint, inspect testCase
-  });
-
-  it("WHEN processing COMPLEX input THEN returns expected", () => {
-    const testCase = TYPICAL.COMPLEX;
-
-    const result = process(testCase.input);
-
-    expect(result).toBe(testCase.expected);
+    expect(isAbsentConfigReadResult(result)).toBe(true);
   });
 });
 ```
 
-**Why**: When test fails, you know WHICH category. Set breakpoint, inspect the named case.
+Use this pattern when the domain has exactly one valid source-owned shape. The constructor belongs in source because production code and tests both rely on the same protocol.
 
-## Part 2: Named Edge Cases
+</source_contract_first>
 
-One test per boundary:
-
-```typescript
-import { EDGES } from "../fixtures/values";
-
-describe("GIVEN boundary conditions", () => {
-  it("WHEN processing EMPTY input THEN handles correctly", () => {
-    const testCase = EDGES.EMPTY;
-
-    const result = process(testCase.input);
-
-    expect(result).toBe(testCase.expected);
-  });
-
-  it("WHEN processing MAX_LENGTH input THEN returns error", () => {
-    const testCase = EDGES.MAX_LENGTH;
-
-    const result = process(testCase.input);
-
-    expect(result).toBe(testCase.expected);
-  });
-});
-```
-
-**Why**: Each boundary is independently debuggable.
-
-## Part 3: Systematic Coverage
-
-Parametrized test finds gaps:
+<generated_domain_inputs>
 
 ```typescript
-import { EDGES, TYPICAL } from "../fixtures/values";
-
-describe("GIVEN all known cases", () => {
-  const allCases = { ...TYPICAL, ...EDGES };
-
-  it.each(Object.entries(allCases))(
-    "WHEN testing %s THEN passes",
-    (name, testCase) => {
-      const result = process(testCase.input);
-
-      expect(result).toBe(testCase.expected); // ← Breakpoint: inspect name, testCase
-    },
-  );
-});
-```
-
-**Why**: Should ONLY fail if Parts 1-2 missed a category.
-
-## Part 4: Property-Based Testing
-
-fast-check for comprehensive coverage:
-
-```typescript
+import { normalizeSourcePath } from "@/paths";
+import { arbitrarySourceFilePath } from "@testing/generators/paths";
 import * as fc from "fast-check";
+import { describe, expect, it } from "vitest";
 
-describe("GIVEN generated inputs", () => {
-  it("WHEN processing any string THEN never throws unexpected exception", () => {
+describe("normalizeSourcePath", () => {
+  it("normalizes every generated source path idempotently", () => {
     fc.assert(
-      fc.property(fc.string({ minLength: 0, maxLength: 100 }), (input) => {
-        try {
-          const result = process(input);
-          return typeof result === "number";
-        } catch (e) {
-          return e instanceof ValidationError; // Expected for invalid inputs
-        }
+      fc.property(arbitrarySourceFilePath(), (path) => {
+        const normalized = normalizeSourcePath(path);
+
+        expect(normalizeSourcePath(normalized)).toBe(normalized);
       }),
     );
   });
 });
 ```
 
-**Why**: Comprehensive coverage after debuggable cases are established.
+Use this pattern when inputs vary across a real domain: paths, names, identifiers, content, option sets, encodings, counts, or structured project shapes.
 
-## Test Ordering Strategy
+For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings from a character or token arbitrary. `fc.stringOf(arbitrary)` is a v3 API and must not appear in new examples.
 
-Order tests from trivial to complex for fast failure:
+</generated_domain_inputs>
+
+<debugging_failures>
+When a property failure exposes a bug, replay fast-check's reported seed and counterexample first. Add a named regression test only when the counterexample identifies a stable source-owned behavior that should remain documented. The regression input must come from a source constructor or a generator replay helper, not a handwritten shared constant.
 
 ```typescript
-describe("TestModuleAvailability", () => {
-  // Part 0: Environment checks (run first)
-  it("module imports successfully", async () => {
-    const { process } = await import("@/module");
-    expect(process).toBeDefined();
-  });
-});
+import { normalizeSourcePath } from "@/paths";
+import { createSourcePath } from "@/paths/source-path";
+import { describe, expect, it } from "vitest";
 
-describe("TestBasicFunctionality", () => {
-  // Part 1: Basic operations (run second)
-  it("simple case works", () => {
-    expect(process("hello")).toBe(5);
-  });
-});
+describe("normalizeSourcePath", () => {
+  it("preserves the normalized form for the seed 87231 Windows path regression", () => {
+    const path = createSourcePath({
+      drive: "C",
+      segments: ["workspace", "src", "index.ts"],
+    });
 
-describe("TestComplexBehavior", () => {
-  // Part 2+: Complex operations (run last)
-  // ...
+    expect(normalizeSourcePath(path)).toBe("C:/workspace/src/index.ts");
+  });
 });
 ```
 
-## Critical Rules
+The test name records the replayed seed or counterexample source, while the input still comes from source-owned construction. Do not paste a shrunk object literal into a shared constant bag.
+</debugging_failures>
 
-1. **Separate file for test values** - DRY, reusable, type-safe with satisfies
-2. **Named categories** - `TYPICAL.BASIC` not anonymous objects
-3. **One test per category in Parts 1-2** - Immediately debuggable
-4. **Part 3 discovers gaps** - Parametrized test failure reveals missing category
-5. **Part 4 uses fast-check** - For comprehensive property testing
+<anti_patterns>
 
-## fast-check Version Gotchas
+- Shared hardcoded test-value modules
+- Constant-only generators for source-owned singleton shapes
+- Expected outputs copied from fixtures instead of derived from inputs
+- Fixtures that contain strings or numbers only to avoid literals in test files
+- Example tests that pass on one hand-picked value while claiming domain coverage
+- `fc.stringOf(arbitrary)` in new examples; use `fc.string({ unit: arbitrary })` for fast-check v4
 
-- `fc.stringOf(arbitrary)` was **removed in fast-check v4**. Use `fc.string({ unit: arbitrary })` instead.
-- The Part 4 examples above use the v4 API. If you see `fc.stringOf` in existing code, it needs migration.
+</anti_patterns>
 
-## Anti-Patterns
-
-- ❌ Starting with property tests - No context when it fails
-- ❌ Inline test data - Not reusable, no names
-- ❌ Testing subset of cases - Part 3 must test ALL
-- ❌ Random without seed - Use fast-check's `seed` option for reproducibility
-- ❌ Using `fc.stringOf()` - Removed in v4; use `fc.string({ unit: ... })`
+</debuggable_test_organization>

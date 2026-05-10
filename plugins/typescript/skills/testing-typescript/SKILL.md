@@ -49,6 +49,8 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
+**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, `<project-lint-command>`, and optional `<project-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
+
 **Workflow:**
 
 ```
@@ -113,8 +115,11 @@ Create test files following `/standardizing-typescript-tests`:
 ### Step 4: Verify Tests Fail (RED)
 
 ```bash
-npx vitest run {node_path}/tests/
+# Resolve from repo docs or scripts; fallback: npx vitest run
+<project-test-command> {node_path}/tests/
 ```
+
+If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full project test command when no focused form exists.
 
 Tests should FAIL with import errors or assertion errors (implementation does not exist yet).
 
@@ -156,9 +161,11 @@ This is literal laundering. The test now uses a named constant, but it still ass
 
 Shared test-owned constants that group hardcoded values (`TEST_FIXTURES`, `SAMPLE_PATHS`, etc.) are the same antipattern at scale.
 
-### The RIGHT fix: generators
+### The RIGHT fix: source contracts and domain generators
 
-Every string or number in a test represents a domain. Identify the domain, then use or create an `fc.Arbitrary` for it:
+Every string or number in a test represents either source-owned protocol data or an input domain. Identify the owner first.
+
+When the value is source-owned, improve the code under test so the owner exports a registry, typed constructor, or source-owned constant, then import that source API directly. When the value is test input with a real domain, use or create an `fc.Arbitrary` for it:
 
 ```typescript
 // ✅ REQUIRED: let fast-check explore the domain
@@ -177,13 +184,16 @@ fc.assert(
 | Finding                                                | What the value represents                                | Fix                                                                   |
 | ------------------------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | Value also appears in `src/`                           | Source-owned constant (command name, status token, etc.) | Import the constant from the production module                        |
-| Value is input data (path, name, ID, content)          | Domain value                                             | Use or create an `fc.Arbitrary` in `testing/generators/`              |
+| Value is a source-owned singleton shape                | Source contract                                          | Export a typed constructor or registry from source, then import it    |
+| Value is variable input data (path, name, ID, content) | Domain value                                             | Use or create an `fc.Arbitrary` in `testing/generators/`              |
 | Value is an expected output                            | Derived from input                                       | Compute it from the input inside the property test                    |
 | Value is a specific error message that IS the contract | Exact error text                                         | Allowed only in compliance tests that assert the exact message format |
 
 ### When no generator exists for the domain
 
-Create one. The generator lives in `testing/generators/{domain}.ts` and is imported via `@testing/generators/{domain}`. Creating a generator is the minimum viable fix — never create a shared constant as a substitute.
+Create one only when the domain has meaningful variability or composition. The generator lives in `testing/generators/{domain}.ts` and is imported via `@testing/generators/{domain}`.
+
+Do not create a generator that only returns `fc.constant(...)` for a singleton object. Improve the source module so it owns that constructor, then import it directly.
 
 ### The only valid hardcoded strings in test files
 
@@ -191,7 +201,7 @@ Create one. The generator lives in `testing/generators/{domain}.ts` and is impor
 - Exact error message text in compliance tests where the format IS the contract (not a guess)
 - Import paths
 
-Everything else is either a source-owned constant (import it) or input data (generate it).
+Everything else is source-owned data (import it), source-owned construction (export and import it), or variable input data (generate it).
 
 </literal_reuse_remediation>
 
@@ -224,14 +234,14 @@ For each rejection reason:
 ### Step 3: Verify Fixes
 
 ```bash
-# Run tests
-npx vitest run {node_path}/tests/
+# Run the node tests through the repository's canonical test command; fallback: npx vitest run
+<project-test-command> {node_path}/tests/
 
-# Check types
-npx tsc --noEmit
+# Run the repository's canonical TypeScript validation; fallback: npx tsc --noEmit
+<project-typecheck-command>
 
-# Check linting
-npx eslint {node_path}/tests/
+# Run the repository's canonical lint validation for the changed files; fallback: npx eslint src/ test/
+<project-lint-command> {node_path}/tests/
 ```
 
 ### Step 4: Report What Was Fixed
@@ -264,7 +274,8 @@ Before declaring tests complete:
 - [ ] Doubles are typed interfaces passed through DI
 - [ ] Property assertions use meaningful `fast-check` properties
 - [ ] Source-owned values imported from production modules
-- [ ] Input data comes from generators (`fc.Arbitrary`), not hardcoded constants
+- [ ] Source-owned singleton shapes come from production constructors, not test constants or constant-only generators
+- [ ] Variable input data comes from generators (`fc.Arbitrary`), not hardcoded constants
 - [ ] No test-owned constant groups like `TEST_FIXTURES`, `SAMPLE_PATHS`, etc.
 - [ ] Tests run and fail for expected reasons (RED phase)
 
@@ -285,6 +296,12 @@ See `/standardizing-typescript-tests` for:
 - **Property-based testing** - `fast-check` patterns
 - **Test data policy** - Source-owned constants, generators, harnesses, fixtures
 - **Anti-patterns** - What to reject or rewrite
+
+Read the matching level guide after choosing a level:
+
+- `levels/l1-local-deterministic.md` - pure functions, temp dirs, standard local tools, Stage 5 doubles
+- `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and project binaries
+- `levels/l3-remote-credentialed.md` - remote services, shared environments, and credentials
 
 Also check for `spx/local/typescript-tests.md` at the repository root -- project-specific overrides apply after this reference.
 

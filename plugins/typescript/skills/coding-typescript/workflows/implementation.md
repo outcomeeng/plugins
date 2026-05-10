@@ -78,11 +78,12 @@ src/
 └── types.ts             # Type definitions
 
 testing/
-├── fixtures/
-│   ├── values.ts        # Shared test values
-│   └── factories.ts     # Test data factories
-└── harnesses/
-    └── index.ts         # Test harnesses
+├── generators/
+│   └── paths.ts         # Variable input domains
+├── harnesses/
+│   └── index.ts         # External resource setup
+└── fixtures/
+    └── sample-rule.ts   # Inert source file read by tool tests
 
 spx/{node-path}/tests/   # Co-located tests (Outcome Engineering framework)
 ├── core.mapping.l1.test.ts
@@ -195,15 +196,23 @@ for (let attempt = 0; attempt < 3; attempt++) {
 Before declaring completion, run ALL verification tools:
 
 ```bash
-# Type checking
-npx tsc --noEmit
+# TypeScript validation through the repository's canonical command
+<project-typecheck-command>
 
-# Linting
-npx eslint src/ test/
-npx eslint src/ test/ --fix
+# Auto-fix style issues through the repository's canonical command, when available
+<project-lint-fix-command>
 
-# Tests
-npx vitest run --coverage
+# Lint validation through the repository's canonical command
+<project-lint-command>
+
+# Tests through the repository's canonical command
+<project-test-command>
+
+# Bare-repo fallback examples only when no repository wrapper exists:
+# npx tsc --noEmit
+# npx eslint src/ test/ --fix
+# npx eslint src/ test/
+# npx vitest run
 ```
 
 **Expected**:

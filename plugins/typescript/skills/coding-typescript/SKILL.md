@@ -307,6 +307,7 @@ Determine your mode from the input, then follow the appropriate workflow.
 | `references/outcome-engineering-patterns.md` | Subprocess, resource cleanup, config  |
 | `references/test-patterns.md`                | Debuggability-first test organization |
 | `references/verification-checklist.md`       | Pre-submission verification           |
+| `references/vocabulary-registry-pattern.md`  | Closed vocabulary source-of-truth     |
 
 </reference_index>
 
@@ -386,16 +387,31 @@ import { helper } from "@testing/helpers/tree-builder";
 
 <tool_invocation>
 
+<command_resolution>
+Resolve commands from repository docs, package scripts, Makefile, Justfile, or local agent instructions. Use raw tool commands only when the repository has no validation wrapper.
+When sources conflict, resolve in this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback.
+</command_resolution>
+
 ```bash
-# Type checking
-npx tsc --noEmit
+# Resolve placeholders using <command_resolution> before running these commands.
+#
+# TypeScript validation
+<project-typecheck-command>
 
-# Linting
-npx eslint src/ test/
-npx eslint src/ test/ --fix
+# Auto-fix style issues when the repository exposes a canonical fix command
+<project-lint-fix-command>
 
-# Testing
-npx vitest run --coverage
+# Lint validation
+<project-lint-command>
+
+# Tests
+<project-test-command>
+
+# Bare-repo fallback examples only when no repository wrapper exists:
+# npx tsc --noEmit
+# npx eslint src/ test/ --fix
+# npx eslint src/ test/
+# npx vitest run
 ```
 
 </tool_invocation>

@@ -229,11 +229,17 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 
 <test_data_policy>
 
-**KEY INSIGHT:**Most code is not testable, or not testable in a maintainable way.
+<existing_code_stance>
 
-**REMEDIATION:**
+When writing tests for existing code, evaluate whether the source contract needs to change before writing around it. Maintainable evidence may require architecture improvements first: extract pure functions, inject side-effect dependencies, expose source-owned registries, split command boundaries from domain logic, or add typed constructors that make the behavior observable without copying internals.
 
-Use the following decision table to determine, how to invoke the code under test. Run through this table for every assertion in the spec file separately. Every test file can only cover assertions of the same evidence type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
+If a test can only be written by copying source literals, pinning arbitrary example objects, mocking the behavior under test, or storing inert fixture strings, stop and improve the source contract first.
+
+</existing_code_stance>
+
+<data_ownership_decision>
+
+Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same evidence type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
 1. **Data that the source imports or should import**
 
@@ -241,23 +247,7 @@ ALWAYS verify that the code under test imports routes, selectors, ids, feature f
 
 ALWAYS verify that the code under test imports standard values like HTTP status codes from the canonical source of the runtime (Node) or framework (e.g., React or Next.js).
 
-<invalid_source_owned_constant>
-
-```typescript
-const PATH_SEPARATOR = "/";
-```
-
-</invalid_source_owned_constant>
-
-<valid_source_owned_constant>
-
-```typescript
-// Use `-` to safely encode non-alphanumeric characters across branch names,
-// Github actions and Vercel preview environment hostnames
-const ENCODED_SEPARATOR = "-";
-```
-
-</valid_source_owned_constant>
+Reject local constants that rename runtime-owned values. Accept domain constants that add source-owned meaning.
 
 2. **Data that the code under test owns or should own**
 
@@ -267,70 +257,102 @@ This means the code is not testable in a maintainable way because any change to 
 
 ALWAYS refactor the code under test so that it defines all constants, including numbers and string literals, in a constant dict or other suitable data structure.
 
-<invalid_source_owned_constant>
-
-```typescript
-export function validateSemantics(verdict: AuditVerdict): readonly string[] {
-  const hasFail = verdict.gates.some((g) => g.status === "FAIL");
-  const hasSkipped = verdict.gates.some((g) => g.status === "SKIPPED");
-  const hasPass = verdict.gates.some((g) => g.status === "PASS");
-  // ...
-}
-```
-
-</invalid_source_owned_constant>
-
-<valid_source_owned_constant>
-
-```typescript
-export const VERDICT_STATUSES = {
-  FAIL: "fail",
-  SKIPPED: "skipped",
-  PASS: "pass",
-} as const;
-export type AuthProviderType = (typeof VERDICT_STATUSES)[keyof typeof VERDICT_STATUSES];
-export const authProviderSchema = z.enum(
-  Object.values(VERDICT_STATUSES) as [string, ...string[]],
-);
-```
-
-</valid_source_owned_constant>
+Use a source-owned registry or tuple for status tokens, command names, rule ids, message ids, option labels, and other closed vocabulary. Derive unions, schemas, and arrays from that one declaration.
 
 ALWAYS make sure that these data structures reflect semantically what they represent.
 
-<invalid_test_owned_constant>
+Reject test-owned copies of source vocabulary.
 
-```typescript
-const VALID_VERDICTS = ["fail", "skipped", "pass"] as const;
-```
+3. **Data that only the test needs**
 
-</invalid_test_owned_constant>
-
-3. **Data that only the test needs and hence owns**
-
-**THERE ARE NO VALID TEST-OWNED CONSTANTS!**
+Tests may need representative input domains that production code does not own. Those domains are still not a license to create shared constant bags.
 
 ALWAYS refactor the code under test so it exports the semantically structured constant the test asserts on.
 
 Then import one or very few of these constant objects into the test file. Any changes to the code under test are automatically reflected and the test requires zero maintenance.
 
+</data_ownership_decision>
+
 <valid_test_data_sources>
+
+<source_imports>
+
+Import source-owned values and source-owned singleton constructors directly from the module that owns them. Do not wrap a source-owned singleton in `fc.constant(...)` or a generator merely to satisfy a "generator" rule.
+
+There are no valid shared test-owned constant bags for protocol values, domain values, expected outputs, or edge-case sets. A value that belongs to production is imported from production. A value that varies is generated. A real payload whose whole shape matters is read as an inert fixture. Modules that collect "typical" or "edge" examples are literal laundering.
+
+Reject test-owned protocol literals and shared constant bags:
+
+```typescript
+// REJECTED: the test copies a source protocol shape
+const ABSENT_CONFIG_READ = { kind: "absent" } as const;
+
+expect(isAbsentConfigReadResult(ABSENT_CONFIG_READ)).toBe(true);
+```
+
+```typescript
+// REJECTED: shared example bags preserve hand-picked values
+export const EXAMPLE_SOURCE_PATHS = ["src/index.ts", "src/config.ts"];
+export const BOUNDARY_SOURCE_PATHS = ["", "../outside.ts"];
+```
+
+Use the source-owned constructor directly:
+
+```typescript
+import { createAbsentConfigReadResult, isAbsentConfigReadResult } from "@/config/read-result";
+
+const result = createAbsentConfigReadResult();
+
+expect(isAbsentConfigReadResult(result)).toBe(true);
+```
+
+Valid direct imports include:
+
+- Public registries, command tokens, status values, rule names, and message ids
+- Typed constructors or factory functions that production code owns
+- External standard values from the runtime, framework, or protocol package
+
+</source_imports>
 
 <generators>
 
-Use generators for inputs that vary per run. A generator is a pure function — it emits values, holds no state, and has no side effects. Use fast-check or faker.js for randomized scalars; use `fc.Arbitrary` for structured domain values.
+Use generators for input domains that vary, compose, shrink, or explore more than one meaningful value. A generator is a pure function - it emits values, holds no state, and has no side effects. Use fast-check or faker.js for randomized scalars; use `fc.Arbitrary` for structured domain values.
 
 ```typescript
 // testing/generators/{domain}.ts
-
-// Generates valid spec-tree node paths drawn from config kinds
 export function arbitraryNodePath(config: Config): fc.Arbitrary<string>;
-
-// Generates valid spec-tree decision paths drawn from config kinds
 export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
-
-// Generates arbitrary SpecTreeFixture instances (arrays of typed path entries)
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
+```
+
+Use `arbitrary*()` helpers for tests that should search a domain with `fc.assert`. Use `createGenerated*()` helpers only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
+
+Reject generators that only rename constants:
+
+```typescript
+// REJECTED: this hides a singleton behind fast-check
+export function arbitraryAbsentConfig(): fc.Arbitrary<ConfigReadResult> {
+  return fc.constant({ kind: CONFIG_FILE_READ_KIND.ABSENT });
+}
+```
+
+Use the source-owned constructor directly instead:
+
+```typescript
+import { createAbsentConfigReadResult } from "@/config/read-result";
+```
+
+A constant branch inside a larger arbitrary is valid only when it expands boundary coverage and source-owned values still come from source APIs:
+
+```typescript
+import { createEndOfInputToken, createIdentifierToken, type Token } from "@/lexer/tokens";
+
+export function arbitraryToken(): fc.Arbitrary<Token> {
+  return fc.oneof(
+    fc.string({ minLength: 1 }).map(createIdentifierToken),
+    fc.constant(createEndOfInputToken()),
+  );
+}
 ```
 
 </generators>
@@ -364,9 +386,11 @@ export const test = withPlaywright(baseTest);
 
 <fixtures>
 
-Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle. Fixture files live in `tests/fixtures/` alongside the test that uses them.
+Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a project tree copied into a temp directory.
 
-Strings and numbers are never valid fixtures. A string literal that represents a domain value belongs in the production module or a generator, not a static file or a test-file constant.
+Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or tool under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
+
+Strings and numbers are never valid fixtures by themselves. A string literal that represents a domain value belongs in the production module or a generator, not a static file or a test-file constant.
 
 </fixtures>
 
@@ -388,8 +412,10 @@ testing/
 |   +-- hugo.ts          # Hugo build harness
 |   +-- postgres.ts      # PostgreSQL harness
 |   +-- factories.ts     # Typed domain factories
++-- generators/
+|   +-- paths.ts         # Variable input domains
 +-- fixtures/
-    +-- values.ts        # TYPICAL, EDGES collections
+    +-- sample-rule.ts   # Inert source file read by linter tests
 ```
 
 Configure the `@testing` alias in `tsconfig.json` and `vitest.config.ts`:
@@ -424,6 +450,7 @@ Reject or rewrite these patterns:
 - Source-owned values copied into local constants
 - Production modules created only to aggregate values for tests
 - Deep relative imports into stable shared test infrastructure
+- Importing fixture files into executed tests instead of reading or copying inert files
 - Manual argument parsing in script tests when the repo has a canonical parser
 - `it.skip`, `it.skipIf`, and `test.skip` on credentialed evidence -- use `requireCredentials()` that throws instead
 
