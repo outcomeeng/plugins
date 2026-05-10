@@ -9,6 +9,9 @@ import sys
 
 import pytest
 
+# parents[6] = repo root (this file lives 6 levels deep: spx/21-spec-tree/
+# 13-infrastructure/21-github-actions/32-workflow-observability/tests/<file>).
+# Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[6]
     / "plugins"

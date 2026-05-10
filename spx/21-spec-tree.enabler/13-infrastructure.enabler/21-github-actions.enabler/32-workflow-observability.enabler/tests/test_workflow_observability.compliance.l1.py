@@ -7,6 +7,9 @@ import pathlib
 
 import pytest
 
+# parents[6] = repo root (this file lives 6 levels deep: spx/21-spec-tree/
+# 13-infrastructure/21-github-actions/32-workflow-observability/tests/<file>).
+# Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[6]
     / "plugins"
@@ -70,12 +73,11 @@ def test_no_gh_run_watch_reference(helper: pathlib.Path) -> None:
 def test_no_polling_waits(helper: pathlib.Path) -> None:
     """Helper source contains no `time.sleep` calls and no import of the `time` module.
 
-    This is the synchronous polling pattern. The check is intentionally narrow:
-    `asyncio.sleep`, `threading.Event.wait`, and other blocking primitives are
-    not screened here — current helpers neither use asyncio nor threads, so a
-    broader check would assert correctness against patterns that would also
-    have to clear other static checks (no third-party imports, stdlib-only)
-    before they could appear.
+    Screens for the synchronous polling pattern only — `time.sleep` plus an
+    `import time` line. Async (`asyncio.sleep`) and threading
+    (`threading.Event.wait`) primitives are out of scope because the
+    stdlib-only check on this same source would already block the imports
+    they need before they could appear.
     """
     source = helper.read_text(encoding="utf-8")
     assert "time.sleep" not in source, f"{helper.name}: contains time.sleep"

@@ -16,6 +16,8 @@ from __future__ import annotations
 import pathlib
 from typing import Final
 
+import pytest
+
 _REPO_ROOT: Final = pathlib.Path(__file__).resolve().parent
 _EXCLUDE_FILE: Final = _REPO_ROOT / "spx" / "EXCLUDE"
 _SPX_ROOT: Final = _REPO_ROOT / "spx"
@@ -39,7 +41,10 @@ def _excluded_test_dirs() -> frozenset[pathlib.Path]:
 _EXCLUDED_TEST_DIRS: Final = _excluded_test_dirs()
 
 
-def pytest_ignore_collect(collection_path: pathlib.Path, config: object) -> bool | None:
+def pytest_ignore_collect(
+    collection_path: pathlib.Path,
+    config: pytest.Config,
+) -> bool | None:
     """Skip collection of test paths under nodes listed in spx/EXCLUDE."""
     resolved = collection_path.resolve()
     return (
