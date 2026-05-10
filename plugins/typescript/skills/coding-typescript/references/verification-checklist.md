@@ -22,11 +22,11 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 # TypeScript validation through the repository's canonical command
 <project-typecheck-command>
 
-# Lint validation through the repository's canonical command
-<project-lint-command>
-
 # Auto-fix style issues through the repository's canonical command, when available
 <project-lint-fix-command>
+
+# Lint validation through the repository's canonical command
+<project-lint-command>
 
 # Run tests through the repository's canonical command
 <project-test-command>
