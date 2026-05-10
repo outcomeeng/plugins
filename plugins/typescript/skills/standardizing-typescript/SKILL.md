@@ -192,6 +192,8 @@ export const verdictStatusSchema = z.enum(
 );
 ```
 
+The tuple cast is only for `z.enum`'s non-empty tuple signature. Keep the runtime registry as the source of truth; do not add a separate string union to satisfy the schema API.
+
 Hand-maintained unions that can drift from the runtime registry are rejected.
 
 </source_of_truth_registries>

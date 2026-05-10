@@ -325,6 +325,8 @@ export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
 ```
 
+Use `arbitrary*()` helpers for tests that should search a domain with `fc.assert`. Use `createGenerated*()` helpers only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
+
 Reject generators that only rename constants:
 
 ```typescript
