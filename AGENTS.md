@@ -220,6 +220,7 @@ Complete TypeScript development workflow with testing, implementation, and revie
 | `/auditing-typescript-tests`             | TypeScript test evidence audit (4-property model)             |
 | `/architecting-typescript`               | ADR producer with Compliance-based testability                |
 | `/auditing-typescript-architecture`      | ADR audit with structured per-concern verdict                 |
+| `/orchestrating-typescript-audit`        | Single deterministic pass over impl + tests + ADRs            |
 
 ### Agents
 
