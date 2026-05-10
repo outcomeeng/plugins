@@ -77,6 +77,22 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
     return version if isinstance(version, str) else None
 
 
+def is_strictly_ahead(working_tree: str, published: str) -> bool:
+    """Return True when `working_tree` is a numerically higher semver than `published`.
+
+    Compares dotted integer components (e.g. "0.29.0" > "0.28.0"). Any non-numeric
+    component (pre-release suffix, build metadata, malformed input) makes the
+    comparison undefined and returns False — the caller falls back to strict
+    validation, which is the safe default.
+    """
+    try:
+        wt = tuple(int(part) for part in working_tree.split("."))
+        pub = tuple(int(part) for part in published.split("."))
+    except ValueError:
+        return False
+    return wt > pub
+
+
 def current_versions(repo_root: Path) -> dict[str, str]:
     """Map plugin name → version from each plugins/*/.claude-plugin/plugin.json."""
     versions: dict[str, str] = {}
@@ -202,8 +218,7 @@ class ValidationResult:
     """Outcome of a validate_install run.
 
     Errors fail the build; warnings inform the caller without changing exit code.
-    The dataclass is constructed once inside `validate()` and never mutated by
-    callers — `frozen=True` would mislead because the list fields stay mutable.
+    Constructed once inside `validate()`; the caller only reads it.
     """
 
     errors: list[str] = field(default_factory=list)
@@ -247,17 +262,17 @@ def validate(
             )
 
         # Codex: auto-upgrades on marketplace upgrade. The working-tree manifest
-        # version must be present as a real directory — UNLESS the Codex
-        # marketplace clone publishes a different version. That divergence
-        # means the marketplace's tracked branch and the working tree are out
-        # of sync, which is structural (e.g., feature-branch development), not
-        # a fault. Verify the published version is present instead.
+        # version must be present as a real directory — UNLESS the working tree
+        # is strictly ahead of the version the Codex marketplace clone publishes
+        # (typical on a feature branch that bumped a manifest before merge). In
+        # that case the absent newer version is structural lag, not a fault, and
+        # the published version is what actually has to be in the cache.
         if (codex / marketplace / plugin).exists():
             published = published_for(plugin)
-            if published is not None and published != version:
+            if published is not None and is_strictly_ahead(version, published):
                 warnings.append(
-                    f"MISMATCH  {plugin}  working-tree {version} vs marketplace "
-                    f"clone {published} — verifying clone version in cache"
+                    f"{plugin}  working-tree {version} ahead of marketplace "
+                    f"clone {published}; verifying clone version in cache"
                 )
                 check_version_present(codex, marketplace, plugin, published, errors)
             else:
@@ -296,12 +311,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if result.warnings:
-        suffix = (
-            f" with {len(result.warnings)} warning(s)"
-            if len(result.warnings) > 1
-            else " with 1 warning"
+        print(
+            f"✔ {len(versions)} plugin(s) — checks passed "
+            f"with {len(result.warnings)} warning(s)"
         )
-        print(f"✔ {len(versions)} plugin(s) — checks passed{suffix}")
     else:
         print(f"✔ {len(versions)} plugin(s) — all checks passed")
     return 0
