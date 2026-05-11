@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""Capture pre-computed tool output into a results directory.
+
+The orchestrator runs tools (linters, type-checkers, test runners, the
+project's ``spx validation``) once, captures each tool's verbatim output,
+and writes it into a results directory using this script. The dispatched
+audit skills receive the directory path and read the files instead of
+re-running the tools.
+
+Two subcommands:
+
+- ``mkdir``       — create a fresh results directory. Prints its path on
+                    stdout. Uses ``tempfile.mkdtemp`` with prefix
+                    ``audit-results-`` so the directory is unique per
+                    invocation and survives until the caller removes it.
+- ``add``         — write verbatim content to a file inside an existing
+                    results directory, named after the command that
+                    produced it. Reads content from stdin (default) or
+                    ``--file``. Prints the resulting file path on stdout.
+
+Filename derivation (``add``): spaces in the command are replaced with
+underscores; everything else is preserved verbatim. On collision (same
+sanitized name already present in the directory), a numeric suffix
+``.1``, ``.2``, … is appended.
+
+Portability: stdlib only.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+import tempfile
+from pathlib import Path
+
+EXIT_OK = 0
+EXIT_IO_ERROR = 2
+EXIT_USAGE = 64
+
+RESULTS_DIR_PREFIX = "audit-results-"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if args.subcommand == "mkdir":
+        return _cmd_mkdir(args)
+    if args.subcommand == "add":
+        return _cmd_add(args)
+    parser.print_help(sys.stderr)
+    return EXIT_USAGE
+
+
+def _cmd_mkdir(args: argparse.Namespace) -> int:
+    parent = Path(args.parent) if args.parent else None
+    try:
+        path = mkdir(parent=parent)
+    except OSError as exc:
+        print(f"pass_results: cannot create directory: {exc}", file=sys.stderr)
+        return EXIT_IO_ERROR
+    sys.stdout.write(str(path) + "\n")
+    return EXIT_OK
+
+
+def _cmd_add(args: argparse.Namespace) -> int:
+    directory = Path(args.directory)
+    if not directory.is_dir():
+        print(
+            f"pass_results: results directory {args.directory!r} does not exist",
+            file=sys.stderr,
+        )
+        return EXIT_IO_ERROR
+    try:
+        content = _read_content(args.file)
+    except OSError as exc:
+        print(f"pass_results: cannot read input: {exc}", file=sys.stderr)
+        return EXIT_IO_ERROR
+    try:
+        path = add(directory=directory, command=args.command, content=content)
+    except OSError as exc:
+        print(f"pass_results: cannot write file: {exc}", file=sys.stderr)
+        return EXIT_IO_ERROR
+    sys.stdout.write(str(path) + "\n")
+    return EXIT_OK
+
+
+def mkdir(*, parent: Path | None = None) -> Path:
+    """Create a fresh results directory and return its path.
+
+    Uses ``tempfile.mkdtemp`` with prefix ``audit-results-``. If
+    ``parent`` is provided, the directory is created inside ``parent``;
+    otherwise the system temp root is used.
+    """
+    return Path(tempfile.mkdtemp(prefix=RESULTS_DIR_PREFIX, dir=parent))
+
+
+def add(*, directory: Path, command: str, content: str) -> Path:
+    """Write ``content`` to a uniquely named file in ``directory``.
+
+    The filename is the sanitized ``command`` (see ``sanitize_command``).
+    On collision, appends ``.1``, ``.2``, … until a free name is found.
+    Returns the path of the written file.
+    """
+    base_name = sanitize_command(command)
+    target = directory / base_name
+    suffix = 1
+    while target.exists():
+        target = directory / f"{base_name}.{suffix}"
+        suffix += 1
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def sanitize_command(command: str) -> str:
+    """Derive a filename from a command line.
+
+    Replaces spaces with underscores; preserves everything else (flags,
+    ``=``, ``-``, ``/``, etc.) verbatim. The result is the canonical
+    filename for capturing the command's output.
+    """
+    return command.replace(" ", "_")
+
+
+def _read_content(path: str | None) -> str:
+    if path is None or path == "-":
+        return sys.stdin.read()
+    return Path(path).read_text(encoding="utf-8")
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="pass_results",
+        description=(
+            "Capture pre-computed tool output into a results directory. The "
+            "orchestrator runs tools once and writes their output here; "
+            "dispatched skills read the files instead of re-running the tools."
+        ),
+    )
+    subparsers = parser.add_subparsers(dest="subcommand", required=True)
+
+    mkdir_parser = subparsers.add_parser(
+        "mkdir",
+        help="Create a fresh results directory and print its path.",
+    )
+    mkdir_parser.add_argument(
+        "--parent",
+        default=None,
+        help="Parent directory for the new results directory. Defaults to the system temp root.",
+    )
+
+    add_parser = subparsers.add_parser(
+        "add",
+        help="Write verbatim content to a command-named file inside a results directory.",
+    )
+    add_parser.add_argument(
+        "directory",
+        help="Path to an existing results directory.",
+    )
+    add_parser.add_argument(
+        "command",
+        help="The command line whose output is being captured. Used to derive the filename.",
+    )
+    add_parser.add_argument(
+        "--file",
+        default=None,
+        help="File to read content from. Use '-' or omit to read from stdin.",
+    )
+
+    return parser
+
+
+if __name__ == "__main__":
+    sys.exit(main())

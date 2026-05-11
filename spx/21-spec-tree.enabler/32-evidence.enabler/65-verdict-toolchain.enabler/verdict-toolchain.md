@@ -1,0 +1,27 @@
+# Verdict Toolchain
+
+PROVIDES a stdlib-only Python toolchain — the `verdict.py` module and the `emit_verdict.py`, `read_verdict.py`, `aggregate_verdicts.py`, and `pass_results.py` CLIs — that defines the canonical audit-verdict schema, renders it in three surface forms, parses any surface form back to JSON, aggregates child verdicts under the rollup rule, and captures pre-computed tool output into a results directory
+SO THAT every audit skill in the marketplace can emit one structured payload through one canonical toolchain — never hand-format markdown — and the orchestrator and dispatched skills share one verdict shape and one rollup rule
+CAN ship inside `plugins/spec-tree/skills/auditing/scripts/`, run from any consumer project against `python3` only, and stand alone as the deterministic core that the `/auditing` skill, the `auditor` agent, and every dispatched `auditing-{lang}*` skill route their verdict emission and parsing through
+
+## Assertions
+
+### Compliance
+
+- ALWAYS: `verdict.py` defines exactly one canonical schema for audit verdicts — `Status` ∈ {APPROVED, REJECTED, PASS, FAIL, UNKNOWN}, `Severity` ∈ {reject, warning, info}, frozen `Finding`/`Row`/`Verdict` dataclasses, and a `SCHEMA_VERSION` constant ([test](tests/test_verdict.scenario.l1.py))
+- ALWAYS: `verdict.parse_json` validates JSON input against the schema and raises `VerdictValidationError` on missing keys, unknown status values, unknown severity values, or schema-version mismatch ([test](tests/test_verdict.scenario.l1.py))
+- ALWAYS: `verdict.to_json_dict` and `verdict.from_json_dict` round-trip a `Verdict` instance through JSON without loss — the serialized-then-parsed verdict equals the original ([test](tests/test_verdict.scenario.l1.py))
+- ALWAYS: `verdict.roll_up` returns REJECTED if any child is FAIL or REJECTED, UNKNOWN if any child is UNKNOWN and none are FAIL/REJECTED, APPROVED if every child is PASS or APPROVED, and UNKNOWN when the input is empty ([test](tests/test_verdict.scenario.l1.py))
+- ALWAYS: `emit_verdict.py` accepts a JSON verdict on stdin or `--file` and emits one of three formats selected by `--format` — `markdown` (table only), `markdown+json` (table plus HTML-comment-delimited JSON block), `json-only` (raw JSON) ([test](tests/test_emit_verdict.scenario.l1.py))
+- ALWAYS: the `markdown+json` form wraps the JSON payload between `<!-- AUDIT_VERDICT_JSON_BEGIN -->` and `<!-- AUDIT_VERDICT_JSON_END -->` delimiter comments — the carrier+payload split for PR-comment delivery ([test](tests/test_emit_verdict.scenario.l1.py))
+- ALWAYS: `emit_verdict.py`'s markdown rendering escapes `|`, `\`, and newline characters in row-name and finding cells so a verdict with arbitrary text content produces a well-formed markdown table ([test](tests/test_emit_verdict.scenario.l1.py))
+- ALWAYS: `read_verdict.py` extracts the JSON payload from any surface form — a json-only document parses as itself; a markdown+json document yields the text between the begin/end delimiters; a markdown-only document is rejected with a non-zero exit code ([test](tests/test_read_verdict.scenario.l1.py))
+- ALWAYS: a verdict emitted by `emit_verdict.py` in `markdown+json` form is parsed back to the same JSON by `read_verdict.py` — surface forms preserve the schema content losslessly ([test](tests/test_read_verdict.scenario.l1.py))
+- ALWAYS: `aggregate_verdicts.py` reads N child verdict JSON files (positional paths or via `--directory`), validates each, and emits one wrapper verdict whose `children` array holds the parsed children and whose `overall` is derived via `verdict.roll_up` over child overalls ([test](tests/test_aggregate_verdicts.scenario.l1.py))
+- ALWAYS: `aggregate_verdicts.py` accepts repeatable `--metadata key=value` flags and `--skill`/`--target` flags to set the wrapper's metadata, skill name, and target — the wrapper carries orchestrator-level identification, not derived from children ([test](tests/test_aggregate_verdicts.scenario.l1.py))
+- ALWAYS: `pass_results.py mkdir` creates a fresh `audit-results-*` directory via `tempfile.mkdtemp`, prints its path on stdout, and leaves cleanup to the caller — survives across orchestrator/dispatched-skill invocations ([test](tests/test_pass_results.scenario.l1.py))
+- ALWAYS: `pass_results.py add <dir> <command>` writes verbatim content from stdin (or `--file`) to `<dir>/<sanitized-command>`, replacing spaces with underscores and preserving every other character — the command line is the filename, no JSON wrapping, no truncation ([test](tests/test_pass_results.scenario.l1.py))
+- ALWAYS: `pass_results.py add` resolves filename collisions by appending `.1`, `.2`, … until a free name is found — multiple invocations of the same command append, not overwrite ([test](tests/test_pass_results.scenario.l1.py))
+- NEVER: any script in this toolchain imports a third-party package, requires `uv`, or reads files outside `plugins/spec-tree/skills/auditing/scripts/` — stdlib only, plugin-internal only, per the Plugin Portability Constraints in `AGENTS.md` ([review])
+- NEVER: an audit skill hand-formats a markdown verdict — every audit skill produces JSON and pipes it through `emit_verdict.py` with the requested `--format` ([review])
+- NEVER: a script in this toolchain references `outcomeeng_*` packages — those packages exist for marketplace build/test tooling and are not available in consumer projects that install spec-tree plugins ([review])
