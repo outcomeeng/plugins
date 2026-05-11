@@ -3,6 +3,10 @@ name = "outcomeeng-plugins"
 version = "0.1.0"
 description = "Outcome Engineering plugin marketplace for Codex and Claude Code"
 requires-python = ">=3.14"
+dependencies = ["click>=8.0"]
+
+[project.scripts]
+outcomeeng-evals = "outcomeeng_evals.cli:main"
 
 [dependency-groups]
 dev = [
@@ -19,7 +23,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["outcomeeng", "outcomeeng_testing"]
+packages = ["outcomeeng", "outcomeeng_testing", "outcomeeng_evals"]
 
 [tool.uv]
 python-preference = "only-managed"
@@ -32,5 +36,10 @@ addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
 
 [tool.mypy]
+exclude = ["outcomeeng/vendor/"]
+
+[[tool.mypy.overrides]]
+module = "outcomeeng.vendor.*"
+ignore_errors = true
 
 [tool.pyright]

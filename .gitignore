@@ -10,6 +10,9 @@ methodology/memories/
 # SPX tool operational files
 .spx/
 
+# Per-eval run transcripts (ephemeral; history.jsonl is the committed trend record)
+**/evals/*/runs/
+
 # Editor and IDE
 .vscode/
 .idea/
