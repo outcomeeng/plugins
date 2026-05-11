@@ -26,9 +26,14 @@ class StubModelRunner:
         return RunResult(text=text, metadata=self.metadata)
 
 
-@dataclass(frozen=True)
+@dataclass
 class RecordingRunner:
-    """Wrap another runner and record every prompt and response."""
+    """Wrap another runner and record every prompt and response.
+
+    Not ``frozen=True`` — the runner is inherently stateful: ``run`` appends
+    each (prompt, result) pair to ``transcripts``. The dataclass is mutable
+    so the list can grow across invocations.
+    """
 
     inner: ModelRunner
     transcripts: list[tuple[str, RunResult]] = field(default_factory=list)

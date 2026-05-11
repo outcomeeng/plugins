@@ -19,7 +19,7 @@ from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import SuiteResult, TrialResult
 
 
-JSON_SCHEMA_VERSION = "1"
+JSON_SCHEMA_VERSION = "1.0"
 
 
 def serialize_result(result: SuiteResult, title: str) -> dict[str, Any]:
@@ -383,9 +383,7 @@ _VIEWER_JS = r"""
   }
 
   function describe(e) {
-    const attrs = Object.entries(e.attributes || {});
-    if (!attrs.length) return "<" + e.element + ">";
-    return "<" + e.element + " " + attrs.map(([k, v]) => k + '="' + v + '"').join(" ") + ">";
+    return JSON.stringify(e);
   }
 
   function renderTrial(trial) {

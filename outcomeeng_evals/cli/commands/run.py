@@ -86,6 +86,7 @@ def run_command(
 
     click.echo(format_report(result))
     click.echo(f"HTML: {html_path}")
+    click.echo(f"JSON: {html_path.with_suffix('.json')}")
     sys.exit(0 if result.passed else 1)
 
 
