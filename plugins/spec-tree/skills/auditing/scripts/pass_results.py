@@ -97,11 +97,11 @@ def mkdir(*, parent: Path | None = None) -> Path:
 def add(*, directory: Path, command: str, content: str) -> Path:
     """Write ``content`` to a uniquely named file in ``directory``.
 
-    The filename is the sanitized ``command`` (see ``sanitize_command``).
+    The filename is the sanitized ``command`` (see ``filename_for_command``).
     On collision, appends ``.1``, ``.2``, … until a free name is found.
     Returns the path of the written file.
     """
-    base_name = sanitize_command(command)
+    base_name = filename_for_command(command)
     target = directory / base_name
     suffix = 1
     while target.exists():
@@ -111,14 +111,24 @@ def add(*, directory: Path, command: str, content: str) -> Path:
     return target
 
 
-def sanitize_command(command: str) -> str:
-    """Derive a filename from a command line.
+def filename_for_command(command: str) -> str:
+    """Derive a single filename component from a command line.
 
-    Replaces spaces with underscores; preserves everything else (flags,
-    ``=``, ``-``, ``/``, etc.) verbatim. The result is the canonical
-    filename for capturing the command's output.
+    Replaces every character that participates in path resolution —
+    ASCII space, POSIX path separator ``/``, Windows path separator
+    ``\\``, and the ``:`` byte (NTFS alternate-data-stream separator,
+    macOS HFS path separator) — with underscores. Preserves everything
+    else (flags, ``=``, ``-``, dots, etc.) verbatim.
+
+    The result is a single filename component, never a path. The
+    contract is deliberately narrow so callers can ``directory / name``
+    without surprise: a command containing ``/path/to/check.py`` does
+    not produce a nested subdirectory or escape the results directory.
     """
-    return command.replace(" ", "_")
+    out = command
+    for character in (" ", "/", "\\", ":"):
+        out = out.replace(character, "_")
+    return out
 
 
 def _read_content(path: str | None) -> str:

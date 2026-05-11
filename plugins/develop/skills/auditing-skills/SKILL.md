@@ -305,7 +305,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
 }
 ```
 
-Note: While this subagent uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
+Note: While this skill uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
 </output_format>
 
 <success_criteria>

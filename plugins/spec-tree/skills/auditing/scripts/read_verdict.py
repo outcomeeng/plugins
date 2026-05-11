@@ -21,6 +21,9 @@ import argparse
 import sys
 from pathlib import Path
 
+# Bare ``import verdict`` resolves because this file is invoked as a script
+# (Python prepends the script's directory to ``sys.path``). Tests exercise
+# this script through ``subprocess`` calls, not via ``importlib`` loading.
 import verdict
 from verdict import VerdictValidationError
 

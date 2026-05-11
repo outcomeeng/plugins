@@ -23,6 +23,11 @@ import json
 import sys
 from pathlib import Path
 
+# Bare ``import verdict`` resolves because this file is invoked as a script
+# (Python prepends the script's directory to ``sys.path``). Tests exercise
+# this script through ``subprocess`` calls, not via ``importlib`` loading;
+# the audit_orchestrator.py loader pattern is only needed for modules that
+# tests import directly.
 import verdict
 from verdict import Finding, Row, Status, Verdict, VerdictValidationError
 

@@ -159,9 +159,11 @@ if prior is not None:
 m.save_state(state, state_path)"
 ```
 
-The verbose `python -c` form is interim. A CLI dispatcher on the helper
-module will replace the stateless heredocs; the design is captured in
-[`spx/21-spec-tree.enabler/65-auditing.enabler/PLAN.md`](../../../spx/21-spec-tree.enabler/65-auditing.enabler/PLAN.md).
+The verbose `python3 -c` form is interim. A CLI dispatcher on the helper
+module would replace the eight stateless heredocs with one-liner
+subcommands; the stateful state-file path stays in the multi-line
+Python block. This is planned future work, not yet captured in a
+durable artifact in this PR.
 
 </helper_invocation>
 
