@@ -197,109 +197,65 @@ Scan all findings across all assertions. If any assertion has a property failure
 
 <verdict_format>
 
-Language-specific skills wrap the assertion table in a gate summary. Skills with no Gate 0 or Gate 2 omit the gate summary table.
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery). Skills never hand-format markdown verdicts — deterministic rendering lives in the verdict toolchain.
 
-**Approved (3-gate):**
+The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `reject` for blocking findings (these are what flip a row to `FAIL`), `warning` or `info` for non-blocking observations.
 
-```text
-Audit: {spec-node-path}
-Verdict: APPROVED
-
-| Gate | Status |
-|------|--------|
-| 0 — deterministic | PASS |
-| 1 — assertion     | PASS |
-| 2 — architectural | PASS |
-
-| # | Assertion | Coupling | Falsifiability | Alignment | Coverage | Verdict |
-|---|-----------|----------|----------------|-----------|----------|---------|
-| 1 | {text}    | Direct   | {mutation}     | ✓         | +{n}%    | PASS    |
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-tests",
+  "target": "<spec-node-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    {
+      "name": "gate-0-deterministic",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "<path>",
+          "line": null,
+          "rule": "<check-id>",
+          "severity": "reject",
+          "message": "<one-line>"
+        }
+      ]
+    },
+    {
+      "name": "gate-1-assertion",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-002",
+          "file": "<test-file>",
+          "line": null,
+          "rule": "<assertion-id-or-property-name>",
+          "severity": "reject",
+          "message": "<one-line evidentiary gap>"
+        }
+      ]
+    },
+    {
+      "name": "gate-2-architectural",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-003",
+          "file": "<test-file>",
+          "line": null,
+          "rule": "<duplication-pattern>",
+          "severity": "reject",
+          "message": "<extraction target>: <nearest common test-support location>"
+        }
+      ]
+    }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
-**Rejected — Gate 0 failure:**
-
-```text
-Audit: {spec-node-path}
-Verdict: REJECT
-
-| Gate | Status |
-|------|--------|
-| 0 — deterministic | FAIL |
-| 1 — assertion     | SKIPPED — Gate 0 failed |
-| 2 — architectural | SKIPPED — Gate 0 failed |
-
-Gate 0 findings:
-| File | Line | Check | Message |
-|------|------|-------|---------|
-| {path} | {n} | {check-id} | {message} |
-```
-
-**Rejected — Gate 1 failure:**
-
-```text
-Audit: {spec-node-path}
-Verdict: REJECT
-
-| Gate | Status |
-|------|--------|
-| 0 — deterministic | PASS |
-| 1 — assertion     | FAIL |
-| 2 — architectural | SKIPPED — Gate 1 failed |
-
-| # | Assertion | Property Failed | Finding | Detail |
-|---|-----------|-----------------|---------|--------|
-| 1 | {text}    | Coupling        | no coupling | {detail} |
-
-How tests could pass while assertions fail:
-{Explain the evidentiary gap for each rejected assertion}
-```
-
-**Rejected — Gate 2 failure:**
-
-```text
-Audit: {spec-node-path}
-Verdict: REJECT
-
-| Gate | Status |
-|------|--------|
-| 0 — deterministic | PASS |
-| 1 — assertion     | PASS |
-| 2 — architectural | FAIL |
-
-Gate 2 findings:
-| Pattern | Occurrences | Extraction target |
-|---------|-------------|-------------------|
-| {pattern} | {file:line}, {file:line} | {nearest common test-support location} |
-```
-
-**No-gate variant (base `/auditing-tests` used directly):**
-
-```text
-Audit: {spec-node-path}
-Verdict: APPROVED
-
-| # | Assertion | Coupling | Falsifiability | Alignment | Coverage | Verdict |
-|---|-----------|----------|----------------|-----------|----------|---------|
-| 1 | {text}    | Direct   | {mutation}     | ✓         | +{n}%    | PASS    |
-```
-
-```text
-Audit: {spec-node-path}
-Verdict: REJECT
-
-| # | Assertion | Property Failed | Finding | Detail |
-|---|-----------|-----------------|---------|--------|
-| 1 | {text}    | Coupling        | no coupling | Imports only vitest |
-
-How tests could pass while assertions fail:
-{Explain the evidentiary gap for each rejected assertion}
-```
-
-**Verdict rules:**
-
-- APPROVED requires all active gates PASS.
-- Any gate FAIL → REJECT.
-- A skipped gate is recorded with its reason (e.g., "Gate 0 failed").
+Gate-skipped rows use `status: "UNKNOWN"`. Skills with no Gate 0 or Gate 2 omit those rows from the verdict. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 

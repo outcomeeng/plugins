@@ -201,36 +201,29 @@ Scan all findings. If any property fails: REJECT.
 
 <verdict_format>
 
-**Approved:**
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-```text
-Audit: {pdr-path}
-Verdict: APPROVED
+The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any property is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings within each row carry severity `reject` for blocking violations and `warning`/`info` for non-blocking observations.
 
-| # | Property | Status | Detail |
-|---|----------|--------|--------|
-| 1 | Content classification | PASS | All statements are product behavior |
-| 2 | Invariant quality | PASS | N invariants, all user-observable |
-| 3 | Compliance quality | PASS | N rules, all verifiable with tags |
-| 4 | Atemporal voice | PASS | No temporal language |
-| 5 | Consistency | PASS | Consistent with product spec and ancestors |
-| 6 | Downstream flow | PASS | All N rules referenced in subtree |
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-product-decisions",
+  "target": "<pdr-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "invariant-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "compliance-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "downstream-flow", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
-**Rejected:**
-
-```text
-Audit: {pdr-path}
-Verdict: REJECT
-
-| # | Property Failed | Finding | Detail |
-|---|-----------------|---------|--------|
-| 1 | Content classification | architecture content | "Use JWT tokens" is a technology choice |
-| 2 | Downstream flow | unenforced rule | "NEVER: expose internal IDs" has no downstream assertion |
-
-Unenforced declarations:
-{List each compliance rule with no downstream spec assertion}
-```
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `unenforced-rule`, `temporal-language`); the `message` field carries the one-line detail. Unenforced declarations enumerate each compliance rule that has no downstream spec assertion as one finding under `downstream-flow`.
 
 </verdict_format>
 
