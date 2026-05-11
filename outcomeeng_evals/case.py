@@ -10,21 +10,18 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class ExpectedElement:
-    """A structural expectation against the audit verdict XML."""
-
-    element: str
-    attributes: dict[str, str]
-
-
-@dataclass(frozen=True)
 class Case:
-    """One eval case: input payload plus expected verdict fields."""
+    """One eval case: input payload plus expected verdict structure.
+
+    ``must_contain`` and ``must_not_contain`` carry JSON sub-structures
+    that the grader checks against the verdict document via recursive
+    structural-subset matching (see ``outcomeeng_evals.grader.is_subset``).
+    """
 
     id: str
     input: dict[str, Any]
-    must_contain: tuple[ExpectedElement, ...]
-    must_not_contain: tuple[ExpectedElement, ...]
+    must_contain: tuple[dict[str, Any], ...]
+    must_not_contain: tuple[dict[str, Any], ...]
 
 
 def load_cases(path: Path) -> list[Case]:
@@ -50,20 +47,11 @@ def _iter_records(path: Path) -> Iterator[tuple[int, dict[str, Any]]]:
 
 def _record_to_case(record: dict[str, Any]) -> Case:
     expected = record.get("expected_verdict", {})
-    must_contain = tuple(_to_element(e) for e in expected.get("must_contain", []))
-    must_not_contain = tuple(
-        _to_element(e) for e in expected.get("must_not_contain", [])
-    )
+    must_contain = tuple(expected.get("must_contain", []))
+    must_not_contain = tuple(expected.get("must_not_contain", []))
     return Case(
         id=record["id"],
         input=record["input"],
         must_contain=must_contain,
         must_not_contain=must_not_contain,
-    )
-
-
-def _to_element(record: dict[str, Any]) -> ExpectedElement:
-    return ExpectedElement(
-        element=record["element"],
-        attributes=dict(record.get("attributes", {})),
     )
