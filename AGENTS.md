@@ -121,6 +121,21 @@ Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one
 - Don't spawn subagents you don't need — each is its own process tree.
 - Redirect a long-running command's output to a file (`> /tmp/check.log 2>&1`) and read it in a separate call, rather than piping through `grep`/`tail`/`head` — the pipeline holds extra processes and file descriptors open for the command's lifetime.
 
+## Plugin Portability Constraints
+
+Plugins from this marketplace are installed into consumer projects that share none of this repository's tooling. When a skill or agent invokes a script that ships inside a plugin, the script runs against the consumer's environment — not against this repo's `uv`, `pyproject.toml`, or `outcomeeng_*` packages.
+
+Authors of skills, agents, and the scripts they invoke must assume:
+
+- ⚠️ **Only `plugins/` is guaranteed present.** Consumer checkouts do not contain `outcomeeng/`, `outcomeeng_evals/`, `outcomeeng_testing/`, `spx/`, or any other top-level directory from this repo. Anything a plugin script needs at runtime must live under that plugin's own directory tree.
+- ⚠️ **`python3` only — no `uv`.** Scripts invoked by skills run via `python3 "${CLAUDE_PLUGIN_ROOT}/path/to/script.py"`. The consumer's `python3` is whatever the OS provides (typically 3.11+, but no project-level pin). No `uv run`, no `pip install`, no project-scoped virtualenv.
+- ⚠️ **Stdlib only.** No `click`, no `pydantic`, no third-party JSON Schema, no `tomllib`-via-package. `argparse`, `json`, `dataclasses`, `enum`, `pathlib`, `subprocess`, `sys`, `typing` — that's the toolbox. Anything richer must be vendored or replaced.
+- ⚠️ **No on-the-fly dependency installation.** Skills must not run `pip install`, `uv pip install`, `npm install`, or any other package fetch as part of their normal flow. Consumers approve plugin installation once; runtime side effects must not include further installations.
+
+The `outcomeeng_*` Python packages in this repo are part of the marketplace's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside `plugins/` is not portable.
+
+When a skill genuinely needs richer Python machinery, the right answer is usually to write the logic in stdlib-only form, ship it inside the plugin, and document the `python3 "${CLAUDE_PLUGIN_ROOT}/..."` invocation in the skill body.
+
 ## Read Tool Output
 
 The `</output>` tag at the end of Read tool results is the tool's output delimiter — it is NOT part of the file content. Never treat it as a "stray closing tag" or attempt to remove it from files.
