@@ -4,9 +4,17 @@ description: >-
   ALWAYS invoke this skill when creating, editing, or improving SKILL.md files.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-skills/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-skills/SKILL.md" || echo "standardizing-skills not found — invoke skill develop:standardizing-skills now"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-agent-prompts/SKILL.md" || echo "standardizing-agent-prompts not found — invoke skill develop:standardizing-agent-prompts now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `develop:standardizing-skills`
+2. Skill `develop:standardizing-agent-prompts`
+
+</codex_fallback>
 
 <objective>
 Route skill-creation, editing, and improvement work through typed workflows. Standards and anti-patterns live in `/standardizing-skills` and `/standardizing-agent-prompts`; this skill loads them, asks the user which workflow to run, and points at the right scaffold.
