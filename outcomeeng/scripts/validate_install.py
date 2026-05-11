@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_MARKETPLACE = "outcomeeng"
-DEFAULT_MAX_AGE_DAYS = 7
+DEFAULT_MAX_AGE_DAYS = 30
 SECONDS_PER_DAY = 24 * 60 * 60
 
 
