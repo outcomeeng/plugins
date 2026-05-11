@@ -172,3 +172,182 @@ After the dispatcher lands and `auditor.md` is updated to use the
 one-liners, this file should be deleted. Per spec-tree convention,
 PLAN.md is non-durable coordination — it exists only while the work
 is deferred.
+
+---
+
+## PLAN: verdict-format carrier alignment and orchestrator/dispatched coherence
+
+Captured for the next session. Discovered during PR #10 review of the
+audit skill stack against the JSON-flipped `spx/15-audit-verdict-format.pdr.md`
+(commit `dd03033`).
+
+### Why this exists
+
+The PDR mandates JSON verdicts. Every audit skill on the branch still emits
+markdown verdict blocks. Per the truth hierarchy, the PDR governs; the
+skills must change. **However**, the JSON flip overreached in one specific
+way: the audit-skill case delivers its verdict into a PR comment (the only
+durable cross-CI-run surface), and pure JSON in a PR comment is less
+scannable for humans than a markdown summary. The right resolution is not
+to revert the JSON contract — it is to refine the PDR so the JSON structural
+contract holds inside a markdown carrier delimited by HTML comments, then
+update every audit skill to emit that carrier+payload shape.
+
+### What the PDR overreached on
+
+Two clauses I added during the flip are wrong for the audit-skill case
+(they were drafted as if every verdict has no carrier — true for the
+eval-harness slice, false for audit skills posting to PR comments):
+
+- **MUST: "Emit the verdict as the entire assistant response — no prose
+  wrapping, no fenced code blocks"** — wrong for audit-skill-to-PR mode.
+- **NEVER: "Wrap the verdict in markdown fences or in any other container"**
+  — wrong for the same reason.
+
+These need to be walked back to allow markdown carriers with delimited
+JSON blocks while still preserving the JSON structural contract.
+
+### The carrier+payload model
+
+Audit-skill verdicts are delivered as markdown that contains a JSON block
+wrapped by HTML comment delimiters:
+
+````markdown
+## Verdict: REJECT
+
+<short prose summary for humans>
+
+<!-- AUDIT_VERDICT_JSON_BEGIN -->
+
+```json
+{
+  "status": "rejected",
+  "findings": [
+    { "id": 7, "rule": "...", "present": true, "location": "..." }
+  ]
+}
+```
+
+<!-- AUDIT_VERDICT_JSON_END -->
+
+<optional markdown-rendered findings table for human review>
+````
+
+The HTML comments survive markdown rendering (GitHub does not strip them),
+giving the validator an unambiguous extraction target. The validator
+parses the JSON between the delimiters; reviewers read the surrounding
+markdown; the next CI run's agent extracts the JSON by the delimiters and
+reads prior findings as structured data.
+
+The eval-harness slice keeps pure-JSON output because it has no carrier —
+the harness reads the assistant's message directly with no PR comment in
+the loop.
+
+### Scope (next-session work)
+
+#### 1. PDR refinement — `spx/15-audit-verdict-format.pdr.md`
+
+Three small edits:
+
+- Drop the MUST clause "Emit the verdict as the entire assistant response —
+  no prose wrapping, no fenced code blocks".
+- Drop the NEVER clause "Wrap the verdict in markdown fences or in any
+  other container".
+- Add a new Compliance section (`### Embedded delivery`) describing the
+  carrier+payload model: when the verdict is delivered into a markdown
+  surface (PR comment, state file, etc.), it is wrapped by
+  `<!-- AUDIT_VERDICT_JSON_BEGIN -->` and `<!-- AUDIT_VERDICT_JSON_END -->`
+  delimiters around a `` ```json `` fenced block; the validator extracts the
+  JSON between the delimiters.
+
+#### 2. Audit-skill verdict-emit alignment
+
+Every audit skill's verdict-emit section in its `SKILL.md` adds the
+delimited JSON block to the existing markdown verdict. The markdown
+summary stays for human readability; the JSON block is added alongside it
+inside the delimiters. Affected skills:
+
+- `plugins/spec-tree/skills/auditing/SKILL.md` (lines 117-150)
+- `plugins/spec-tree/agents/auditor.md` (lines 222-264)
+- `plugins/spec-tree/skills/auditing-tests/SKILL.md`
+- `plugins/spec-tree/skills/auditing-product-decisions/SKILL.md`
+- `plugins/typescript/skills/auditing-typescript/SKILL.md` (lines 187-237)
+- `plugins/typescript/skills/auditing-typescript-architecture/SKILL.md` (lines 101-159)
+- `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` (defers to `/auditing-tests`; aligns when that skill aligns)
+- `plugins/python/skills/auditing-python/SKILL.md`
+- `plugins/python/skills/auditing-python-architecture/SKILL.md`
+- `plugins/python/skills/auditing-python-tests/SKILL.md`
+- `plugins/develop/skills/auditing-skills/SKILL.md`
+- `plugins/develop/skills/auditing-commands/SKILL.md`
+- `plugins/develop/skills/auditing-subagents/SKILL.md`
+- `plugins/hdl/skills/reviewing-vhdl/SKILL.md`, `reviewing-systemverilog/SKILL.md` (if they emit a verdict)
+- `plugins/prose/skills/auditing-prose/SKILL.md` (if it emits a verdict)
+
+The shape is additive — the markdown verdict stays; the JSON block is
+inserted inside the existing verdict section between the new HTML-comment
+delimiters.
+
+#### 3. Orchestrator/dispatched-skill alignment
+
+Structural mismatches between `/auditing` and the dispatched language audit
+skills, found during the same review:
+
+- **Concern-row mismatch.** `/auditing` declares 6 frozen rows
+  (Automated gates, Test execution, Implementation, Test evidence,
+  ADR/PDR compliance, Determinism contract). `auditing-typescript`
+  emits its own 6 rows with different names (Function comprehension,
+  Design coherence, Import structure). `auditing-typescript-architecture`
+  emits 7 rows. The orchestrator's frozen contract must align with the
+  dispatched skills' tables, or the orchestrator's aggregation breaks.
+  Decision needed: do orchestrator rows compose with dispatched-skill
+  rows (one orchestrator row per dispatched-skill concern), or do
+  dispatched-skill rows compose into orchestrator's frozen taxonomy
+  (each dispatched row maps to one orchestrator row)? Either model is
+  defensible; the SKILL.md files must agree on which.
+
+- **Phase 1/2 ownership ambiguity.** The orchestrator's Phase 1
+  (Automated gates) and Phase 2 (Test execution) run the project's
+  validation/test commands. `auditing-typescript`'s Phase 1 and Phase 2
+  do the same. If both run, commands execute twice; if only one runs,
+  the prose in both files reads as the canonical owner. Decision:
+  orchestrator runs gates and tests once; dispatched skills consume
+  the result. Update the dispatched-skill prose to say "the
+  orchestrator has already produced the gate report — read it from
+  the state file rather than re-running commands."
+
+- **"Phase 3" namespace collision.** Orchestrator Phase 3 = "dispatch
+  to auditing-{lang}". Dispatched-skill Phase 3 = internal "Code
+  Comprehension" with 3.1/3.2/3.3 subsections. Cross-references like
+  "see Phase 3" become ambiguous. Decision: rename the dispatched
+  skill's internal phases to "Step 3.1 / 3.2 / 3.3" or similar so
+  "Phase N" without further qualification always means the orchestrator's
+  phase.
+
+#### 4. Spot defects in `plugins/typescript/skills/auditing-typescript/SKILL.md`
+
+Captured in `spx/43-typescript.enabler/ISSUES.md`:
+
+- Typo "Typecsript" → "TypeScript" at line 25.
+- Broken `${CLAUDE_SKILL_DIR}/rules/` reference at line 77 — the
+  directory does not exist; the skill ships `references/` only.
+- `quick_start` invokes `/testing` and `/testing-typescript` (test
+  evidence skills) at line 33; the skill itself explicitly delegates
+  test concerns to `auditing-typescript-tests` elsewhere. Remove the
+  test-skill invocations from `quick_start`.
+
+These can land independently of the carrier+payload work.
+
+### What this plan is not
+
+- Not a revert of the JSON flip. The PDR's structural contract stays JSON.
+- Not a rewrite of every audit skill's verdict shape. The markdown summary
+  stays; the JSON block is added alongside it.
+- Not a redesign of the orchestrator's protocol — only the surface points
+  where it overlaps with dispatched skills get aligned.
+
+### When to remove this section
+
+After the PDR refinement lands and every audit skill emits the carrier+payload
+shape (or at least every audit skill that runs in CI to a PR comment),
+this section should be deleted. The orchestrator/dispatched-skill
+alignment can land separately; remove its bullets when each lands.
