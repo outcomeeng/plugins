@@ -16,12 +16,15 @@ The file under audit (JSON-encoded payload follows):
 {input_json}
 ```
 
-Decide whether the file violates the rule. After any narrative analysis, emit exactly one final XML block in this shape — and nothing after it:
+Decide whether the file violates the rule. Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
 
 ```
-<verdict status="approved|rejected">
-  <finding rule="shared-test-owned-constant-bag" present="true|false"/>
-</verdict>
+{
+  "status": "approved" | "rejected",
+  "findings": [
+    { "rule": "shared-test-owned-constant-bag", "present": true | false }
+  ]
+}
 ```
 
-Set `status="rejected"` and `present="true"` when the file declares a shared test-owned constant bag for the rule above. Set `status="approved"` and `present="false"` when no such bag is declared. Do not emit other `<finding>` elements for this eval — limit the verdict to the single rule under audit.
+Set `"status": "rejected"` and `"present": true` when the file declares a shared test-owned constant bag for the rule above. Set `"status": "approved"` and `"present": false` when no such bag is declared. Emit exactly one finding object for this eval — do not include findings for other rules. The response must be parseable JSON; the harness parses your entire response with `json.loads`.
