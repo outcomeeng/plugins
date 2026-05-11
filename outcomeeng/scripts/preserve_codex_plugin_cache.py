@@ -1,9 +1,18 @@
-"""Upgrade a Codex marketplace while preserving stale plugin cache paths.
+"""Upgrade a Codex marketplace and reconcile the plugin cache against history.
 
-Codex replaces marketplace cache versions during upgrade. Skills listed in an
-active conversation can still point at the removed version directory, so this
-wrapper restores those old version directories as short-lived symlinks to the
-newly installed version of the same plugin.
+After the upgrade, the cache for each plugin in the working tree is reconciled
+against the set of versions published to the plugin's manifest within the
+configured window (default thirty days). Versions inside the window become
+either the real current directory or a symlink pointing at it; versions outside
+the window are removed; plugins absent from the working tree have their cache
+directory pruned in full.
+
+Per
+``spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md``:
+the preservation set is derived from git history, not from the pre-upgrade
+cache snapshot. A single bypassed recipe invocation has no permanent effect --
+the next invocation reconstructs the symlink set from the same authoritative
+source.
 
 Usage::
 
@@ -13,78 +22,117 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import shutil
 import subprocess
 import sys
-import time
-from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 DEFAULT_MARKETPLACE = "outcomeeng"
-DEFAULT_MAX_AGE_DAYS = 7
-SECONDS_PER_DAY = 24 * 60 * 60
+DEFAULT_WINDOW_DAYS = 30
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
 
+class PluginHistory(Protocol):
+    """Source-of-truth for which versions to preserve.
+
+    Production implementations walk git history of each plugin's manifest within
+    the configured window, per
+    ``spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md``.
+    """
+
+    def working_tree_plugins(self) -> frozenset[str]: ...
+
+    def published_versions(self, plugin: str) -> frozenset[str]: ...
+
+
 @dataclass(frozen=True)
-class CachedVersion:
-    """One plugin version directory found in the marketplace cache."""
+class GitPluginHistory:
+    """Default PluginHistory: walks ``git log`` of each plugin's manifest."""
 
-    plugin: str
-    version: str
-    path: Path
-    files: tuple[Path, ...]
-    is_symlink: bool
-    modified_at: float
+    repo_root: Path
+    window_days: int = DEFAULT_WINDOW_DAYS
 
-
-@dataclass(frozen=True)
-class CacheSnapshot:
-    """A point-in-time snapshot of marketplace plugin versions and files."""
-
-    marketplace_dir: Path
-    versions: tuple[CachedVersion, ...]
-
-    @classmethod
-    def capture(cls, cache_root: Path, marketplace: str) -> CacheSnapshot:
-        marketplace_dir = cache_root / marketplace
-        versions: list[CachedVersion] = []
-        if not marketplace_dir.is_dir():
-            return cls(marketplace_dir=marketplace_dir, versions=())
-
-        for plugin_dir in sorted(marketplace_dir.iterdir()):
-            if not plugin_dir.is_dir():
+    def working_tree_plugins(self) -> frozenset[str]:
+        plugins_dir = self.repo_root / "plugins"
+        if not plugins_dir.is_dir():
+            return frozenset()
+        names: set[str] = set()
+        for child in plugins_dir.iterdir():
+            if not child.is_dir():
                 continue
-            for version_dir in sorted(plugin_dir.iterdir()):
-                if not version_dir.is_dir():
-                    continue
-                is_symlink = version_dir.is_symlink()
-                versions.append(
-                    CachedVersion(
-                        plugin=plugin_dir.name,
-                        version=version_dir.name,
-                        path=version_dir,
-                        files=_snapshot_files(version_dir),
-                        is_symlink=is_symlink,
-                        modified_at=_modified_at(version_dir, is_symlink),
-                    )
-                )
+            manifest = child / ".claude-plugin" / "plugin.json"
+            if manifest.is_file():
+                names.add(child.name)
+        return frozenset(names)
 
-        return cls(marketplace_dir=marketplace_dir, versions=tuple(versions))
+    def published_versions(self, plugin: str) -> frozenset[str]:
+        manifest_rel = f"plugins/{plugin}/.claude-plugin/plugin.json"
+        log_result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"--since={self.window_days} days ago",
+                "--format=%H",
+                "--follow",
+                "--",
+                manifest_rel,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=self.repo_root,
+            check=False,
+        )
+        versions: set[str] = set()
+        if log_result.returncode == 0:
+            for sha in log_result.stdout.split():
+                version = self._read_manifest_version_at(sha, manifest_rel)
+                if version is not None:
+                    versions.add(version)
+        # Always include the current working-tree version, even if its commit
+        # falls outside the window. The current version is the published target,
+        # not a historical compatibility entry.
+        current = self._read_working_tree_version(manifest_rel)
+        if current is not None:
+            versions.add(current)
+        return frozenset(versions)
 
-    def real_versions_by_plugin(self) -> dict[str, tuple[CachedVersion, ...]]:
-        grouped: dict[str, list[CachedVersion]] = defaultdict(list)
-        for version in self.versions:
-            if not version.is_symlink:
-                grouped[version.plugin].append(version)
-        return {
-            plugin: tuple(sorted(versions, key=lambda item: item.modified_at))
-            for plugin, versions in grouped.items()
-        }
+    def _read_manifest_version_at(self, sha: str, manifest_rel: str) -> str | None:
+        result = subprocess.run(
+            ["git", "show", f"{sha}:{manifest_rel}"],
+            capture_output=True,
+            text=True,
+            cwd=self.repo_root,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return _parse_manifest_version(result.stdout)
+
+    def _read_working_tree_version(self, manifest_rel: str) -> str | None:
+        manifest_path = self.repo_root / manifest_rel
+        try:
+            text = manifest_path.read_text()
+        except OSError:
+            return None
+        return _parse_manifest_version(text)
+
+
+def _parse_manifest_version(text: str) -> str | None:
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    version = data.get("version")
+    return version if isinstance(version, str) else None
 
 
 @dataclass(frozen=True)
@@ -93,16 +141,13 @@ class CachePreservationResult:
 
     linked_versions: tuple[Path, ...]
     pruned_links: tuple[Path, ...]
+    pruned_plugins: tuple[str, ...]
     skipped_plugins: tuple[str, ...]
     upgrade_returncode: int
 
 
 def default_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
-
-
-def current_time() -> float:
-    return time.time()
 
 
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -113,13 +158,15 @@ def preserve_during_upgrade(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     cache_root: Path | None = None,
-    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
     runner: CommandRunner = run_command,
     dry_run: bool = False,
+    history: PluginHistory | None = None,
 ) -> CachePreservationResult:
-    """Run the marketplace upgrade and preserve cache paths removed by it."""
+    """Run the marketplace upgrade and reconcile the cache against history."""
     resolved_cache_root = cache_root if cache_root is not None else default_cache_root()
-    before = CacheSnapshot.capture(resolved_cache_root, marketplace)
+    resolved_history = (
+        history if history is not None else GitPluginHistory(repo_root=Path.cwd())
+    )
     command = [*CODEX_UPGRADE_COMMAND, marketplace]
 
     upgrade_result: subprocess.CompletedProcess[str]
@@ -132,132 +179,142 @@ def preserve_during_upgrade(
         return CachePreservationResult(
             linked_versions=(),
             pruned_links=(),
+            pruned_plugins=(),
             skipped_plugins=(),
             upgrade_returncode=upgrade_result.returncode,
         )
 
-    after = CacheSnapshot.capture(resolved_cache_root, marketplace)
-    now = current_time()
-    linked_versions, skipped_plugins = restore_missing_version_links(
-        before,
-        after,
-        max_age_days=max_age_days,
-        now=now,
-        dry_run=dry_run,
-    )
-    pruned_links = prune_old_version_symlinks(
-        after.marketplace_dir,
-        max_age_days=max_age_days,
-        now=now,
-        dry_run=dry_run,
+    marketplace_dir = resolved_cache_root / marketplace
+    working_tree_plugins = resolved_history.working_tree_plugins()
+
+    pruned_plugins = _prune_orphan_plugins(
+        marketplace_dir, working_tree_plugins, dry_run=dry_run
     )
 
+    linked_versions: list[Path] = []
+    pruned_links: list[Path] = []
+    skipped_plugins: list[str] = []
+
+    for plugin in sorted(working_tree_plugins):
+        plugin_dir = marketplace_dir / plugin
+        in_window = resolved_history.published_versions(plugin)
+        current_real = _newest_real_version_dir(plugin_dir)
+        if current_real is None:
+            skipped_plugins.append(plugin)
+            continue
+
+        keep_versions = in_window | {current_real.name}
+        pruned_links.extend(
+            _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
+        )
+        linked_versions.extend(
+            _ensure_in_window_symlinks(
+                plugin_dir, current_real, in_window, dry_run=dry_run
+            )
+        )
+
     return CachePreservationResult(
-        linked_versions=linked_versions,
-        pruned_links=pruned_links,
-        skipped_plugins=skipped_plugins,
+        linked_versions=tuple(linked_versions),
+        pruned_links=tuple(pruned_links),
+        pruned_plugins=tuple(pruned_plugins),
+        skipped_plugins=tuple(skipped_plugins),
         upgrade_returncode=upgrade_result.returncode,
     )
 
 
-def restore_missing_version_links(
-    before: CacheSnapshot,
-    after: CacheSnapshot,
-    *,
-    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
-    now: float | None = None,
-    dry_run: bool = False,
-) -> tuple[tuple[Path, ...], tuple[str, ...]]:
-    """Link removed old version paths to the newest current version."""
-    current_versions = after.real_versions_by_plugin()
-    cutoff = (now if now is not None else current_time()) - (
-        max_age_days * SECONDS_PER_DAY
-    )
-    linked: list[Path] = []
-    skipped: set[str] = set()
-
-    for cached_version in before.versions:
-        if _path_exists(cached_version.path):
-            continue
-        if cached_version.is_symlink and cached_version.modified_at < cutoff:
-            continue
-
-        target = _newest_version_for_plugin(current_versions, cached_version.plugin)
-        if target is None:
-            skipped.add(cached_version.plugin)
-            continue
-
-        if not dry_run:
-            cached_version.path.parent.mkdir(parents=True, exist_ok=True)
-            cached_version.path.symlink_to(target.path.name, target_is_directory=True)
-        linked.append(cached_version.path)
-
-    return tuple(linked), tuple(sorted(skipped))
-
-
-def prune_old_version_symlinks(
+def _prune_orphan_plugins(
     marketplace_dir: Path,
+    working_tree_plugins: frozenset[str],
     *,
-    max_age_days: int = DEFAULT_MAX_AGE_DAYS,
-    now: float | None = None,
-    dry_run: bool = False,
-) -> tuple[Path, ...]:
-    """Remove version-directory compatibility symlinks older than max_age_days."""
+    dry_run: bool,
+) -> list[str]:
     if not marketplace_dir.is_dir():
-        return ()
-
-    cutoff = (now if now is not None else current_time()) - (
-        max_age_days * SECONDS_PER_DAY
-    )
-    pruned: list[Path] = []
-
+        return []
+    pruned: list[str] = []
     for plugin_dir in sorted(marketplace_dir.iterdir()):
         if not plugin_dir.is_dir():
             continue
-        for version_dir in sorted(plugin_dir.iterdir()):
-            if not version_dir.is_symlink():
-                continue
-            if version_dir.lstat().st_mtime >= cutoff:
+        if plugin_dir.name in working_tree_plugins:
+            continue
+        if not dry_run:
+            shutil.rmtree(plugin_dir)
+        pruned.append(plugin_dir.name)
+    return pruned
+
+
+def _newest_real_version_dir(plugin_dir: Path) -> Path | None:
+    if not plugin_dir.is_dir():
+        return None
+    real_versions = [
+        entry
+        for entry in plugin_dir.iterdir()
+        if entry.is_dir() and not entry.is_symlink()
+    ]
+    if not real_versions:
+        return None
+    return max(real_versions, key=lambda p: p.stat().st_mtime)
+
+
+def _prune_out_of_window_paths(
+    plugin_dir: Path,
+    keep_versions: frozenset[str],
+    *,
+    dry_run: bool,
+) -> list[Path]:
+    pruned: list[Path] = []
+    for entry in sorted(plugin_dir.iterdir()):
+        if entry.name in keep_versions:
+            continue
+        if not entry.is_symlink():
+            # Real version directory outside the keep set is left alone -- only
+            # Codex itself creates these, and removing them risks data loss.
+            continue
+        if not dry_run:
+            entry.unlink()
+        pruned.append(entry)
+    return pruned
+
+
+def _ensure_in_window_symlinks(
+    plugin_dir: Path,
+    current_real: Path,
+    in_window: frozenset[str],
+    *,
+    dry_run: bool,
+) -> list[Path]:
+    linked: list[Path] = []
+    for version in sorted(in_window):
+        if version == current_real.name:
+            continue
+        target_path = plugin_dir / version
+        if _is_symlink_to(target_path, current_real):
+            continue
+        if os.path.lexists(target_path):
+            if not target_path.is_symlink():
+                # A real directory at an in-window version is left alone --
+                # the same data-loss concern as out-of-window real directories.
                 continue
             if not dry_run:
-                version_dir.unlink()
-            pruned.append(version_dir)
-
-    return tuple(pruned)
-
-
-def _snapshot_files(version_dir: Path) -> tuple[Path, ...]:
-    files: list[Path] = []
-    for path in sorted(version_dir.rglob("*")):
-        if path.is_dir() and not path.is_symlink():
-            continue
-        files.append(path.relative_to(version_dir))
-    return tuple(files)
+                target_path.unlink()
+        if not dry_run:
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            target_path.symlink_to(current_real.name, target_is_directory=True)
+        linked.append(target_path)
+    return linked
 
 
-def _modified_at(version_dir: Path, is_symlink: bool) -> float:
-    if is_symlink:
-        return version_dir.lstat().st_mtime
-    return version_dir.stat().st_mtime
-
-
-def _path_exists(path: Path) -> bool:
-    return os.path.lexists(path)
-
-
-def _newest_version_for_plugin(
-    versions_by_plugin: dict[str, tuple[CachedVersion, ...]],
-    plugin: str,
-) -> CachedVersion | None:
-    versions = versions_by_plugin.get(plugin)
-    if not versions:
-        return None
-    return versions[-1]
+def _is_symlink_to(path: Path, target: Path) -> bool:
+    if not path.is_symlink():
+        return False
+    try:
+        return path.resolve() == target.resolve()
+    except OSError:
+        return False
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Upgrade a Codex marketplace while preserving stale cache paths"
+        description="Upgrade a Codex marketplace and reconcile the plugin cache"
     )
     parser.add_argument(
         "marketplace",
@@ -272,23 +329,30 @@ def main(argv: list[str] | None = None) -> int:
         help="Codex plugin cache root",
     )
     parser.add_argument(
-        "--max-age-days",
+        "--window-days",
         type=int,
-        default=DEFAULT_MAX_AGE_DAYS,
-        help="Prune compatibility symlinks older than this many days",
+        default=DEFAULT_WINDOW_DAYS,
+        help="Preserve plugin versions published within this many days",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=Path.cwd(),
+        help="Git working tree root for the marketplace repository",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Snapshot and report without running upgrade or changing symlinks",
+        help="Report planned changes without running upgrade or mutating cache",
     )
     args = parser.parse_args(argv)
 
+    history = GitPluginHistory(repo_root=args.repo_root, window_days=args.window_days)
     result = preserve_during_upgrade(
         args.marketplace,
         cache_root=args.cache_root,
-        max_age_days=args.max_age_days,
         dry_run=args.dry_run,
+        history=history,
     )
 
     if result.upgrade_returncode != 0:
@@ -301,10 +365,11 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "Codex cache preservation: "
         f"{len(result.linked_versions)} compatibility link(s), "
-        f"{len(result.pruned_links)} pruned link(s)"
+        f"{len(result.pruned_links)} pruned link(s), "
+        f"{len(result.pruned_plugins)} pruned plugin(s)"
     )
     for plugin in result.skipped_plugins:
-        print(f"warning: no compatible current cache version found for {plugin}")
+        print(f"warning: no current cache version found for {plugin}")
     return 0
 
 

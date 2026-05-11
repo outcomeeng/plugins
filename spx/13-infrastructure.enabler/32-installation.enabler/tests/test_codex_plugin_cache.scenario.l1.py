@@ -1,32 +1,55 @@
-"""Level 1 installation scenarios for preserving stale Codex plugin cache paths."""
+"""Level 1 installation scenarios for chain-recovery cache preservation.
+
+Each scenario corresponds to one assertion in
+``spx/13-infrastructure.enabler/32-installation.enabler/installation.md``.
+
+The preservation step takes a ``PluginHistory`` provider that names the working-tree
+plugin set and per-plugin published versions in the window. Tests inject a
+``StaticHistory`` implementation (Stage 5 exception 2 -- interaction protocol DI)
+in place of the production git-history walker mandated by
+``21-codex-cache-preservation.adr.md``.
+"""
 
 from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from outcomeeng.scripts import preserve_codex_plugin_cache
+from outcomeeng.scripts.preserve_codex_plugin_cache import DEFAULT_MARKETPLACE
 
-MARKETPLACE_NAME = "outcomeeng"
 PLUGIN_NAME = "spec-tree"
-OLD_VERSION = "0.26.5"
-NEW_VERSION = "0.26.6"
-LATEST_VERSION = "0.26.7"
-OLD_SKILL_TEXT = "old skill"
-NEW_SKILL_TEXT = "new skill"
-LATEST_SKILL_TEXT = "latest skill"
-STALE_AGE_DAYS = 8
-MAX_AGE_DAYS = 7
-SECONDS_PER_DAY = 24 * 60 * 60
-COMMAND_OK = 0
+ORPHAN_PLUGIN_NAME = "removed-plugin"
+OLDER_VERSION = "0.26.5"
+CURRENT_VERSION = "0.26.6"
 
 
-def _skill_file(cache_root: Path, version: str) -> Path:
+@dataclass(frozen=True)
+class StaticHistory:
+    """Explicit interaction-protocol stub for the published-versions provider.
+
+    Maps to Stage 5 exception 2 in ``/testing``: tests cannot drive a real git
+    walker against a synthetic working tree at l1, so the dependency is injected
+    as a typed Protocol with deterministic return values.
+    """
+
+    plugins: frozenset[str]
+    versions_by_plugin: dict[str, frozenset[str]]
+
+    def working_tree_plugins(self) -> frozenset[str]:
+        return self.plugins
+
+    def published_versions(self, plugin: str) -> frozenset[str]:
+        return self.versions_by_plugin.get(plugin, frozenset())
+
+
+def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
     return (
         cache_root
-        / MARKETPLACE_NAME
-        / PLUGIN_NAME
+        / DEFAULT_MARKETPLACE
+        / plugin
         / version
         / "skills"
         / "contextualizing"
@@ -34,128 +57,109 @@ def _skill_file(cache_root: Path, version: str) -> Path:
     )
 
 
-def _write_skill(cache_root: Path, version: str, text: str) -> None:
-    skill_file = _skill_file(cache_root, version)
+def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None:
+    skill_file = _skill_file(cache_root, plugin, version)
     skill_file.parent.mkdir(parents=True)
     skill_file.write_text(text)
 
 
-def test_upgrade_restores_removed_version_path_as_symlink(
+def _quiet_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(command, 0)
+
+
+def test_chain_recovery_restores_in_window_published_version_as_symlink(
     tmp_path: Path,
 ) -> None:
+    """Two published versions in the window, cache contains only the latest version
+    directory. After preservation, the older published version path is a symlink
+    pointing at the current version directory.
+    """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, OLD_VERSION, OLD_SKILL_TEXT)
-    old_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / OLD_VERSION
-    new_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / NEW_VERSION
-    commands: list[list[str]] = []
-
-    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
-        commands.append(command)
-        old_version_dir.rename(tmp_path / "removed-old-version")
-        _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
-        return subprocess.CompletedProcess(command, COMMAND_OK)
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    older_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
+    current_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION]),
+        },
+    )
 
     result = preserve_codex_plugin_cache.preserve_during_upgrade(
-        MARKETPLACE_NAME,
+        DEFAULT_MARKETPLACE,
         cache_root=cache_root,
-        max_age_days=MAX_AGE_DAYS,
-        runner=runner,
+        history=history,
+        runner=_quiet_runner,
     )
 
-    assert commands == [["codex", "plugin", "marketplace", "upgrade", MARKETPLACE_NAME]]
-    assert old_version_dir.is_symlink()
-    assert old_version_dir.resolve() == new_version_dir
-    assert _skill_file(cache_root, OLD_VERSION).read_text() == NEW_SKILL_TEXT
-    assert result.linked_versions == (old_version_dir,)
+    assert older_dir.is_symlink(), (
+        f"expected {older_dir} to be a symlink after chain recovery"
+    )
+    assert older_dir.resolve() == current_dir, (
+        f"expected {older_dir} to resolve to {current_dir}, got {older_dir.resolve()}"
+    )
+    assert older_dir in result.linked_versions, (
+        f"expected {older_dir} in result.linked_versions={result.linked_versions}"
+    )
 
 
-def test_upgrade_preserves_existing_compatibility_link(
-    tmp_path: Path,
-) -> None:
+def test_out_of_window_compatibility_symlink_is_removed(tmp_path: Path) -> None:
+    """A compatibility symlink for a version absent from the published window is
+    removed during preservation; the current version directory remains real.
+    """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
-    old_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / OLD_VERSION
-    new_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / NEW_VERSION
-    latest_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / LATEST_VERSION
-    old_version_dir.symlink_to(NEW_VERSION, target_is_directory=True)
-
-    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
-        old_version_dir.unlink()
-        new_version_dir.rename(tmp_path / "removed-new-version")
-        _write_skill(cache_root, LATEST_VERSION, LATEST_SKILL_TEXT)
-        return subprocess.CompletedProcess(command, COMMAND_OK)
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_link = plugin_dir / OLDER_VERSION
+    current_dir = plugin_dir / CURRENT_VERSION
+    older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+        },
+    )
 
     result = preserve_codex_plugin_cache.preserve_during_upgrade(
-        MARKETPLACE_NAME,
+        DEFAULT_MARKETPLACE,
         cache_root=cache_root,
-        max_age_days=MAX_AGE_DAYS,
-        runner=runner,
+        history=history,
+        runner=_quiet_runner,
     )
 
-    assert old_version_dir.is_symlink()
-    assert old_version_dir.resolve() == latest_version_dir
-    assert new_version_dir.is_symlink()
-    assert new_version_dir.resolve() == latest_version_dir
-    assert _skill_file(cache_root, OLD_VERSION).read_text() == LATEST_SKILL_TEXT
-    assert _skill_file(cache_root, NEW_VERSION).read_text() == LATEST_SKILL_TEXT
-    assert result.linked_versions == (old_version_dir, new_version_dir)
+    assert not os.path.lexists(older_link), (
+        f"expected {older_link} to be removed (version outside window)"
+    )
+    assert current_dir.is_dir() and not current_dir.is_symlink(), (
+        f"expected {current_dir} to remain a real directory"
+    )
+    assert older_link in result.pruned_links, (
+        f"expected {older_link} in result.pruned_links={result.pruned_links}"
+    )
 
 
-def test_upgrade_keeps_removed_stale_compatibility_link_pruned(
-    tmp_path: Path,
-) -> None:
+def test_orphan_plugin_cache_directory_is_pruned(tmp_path: Path) -> None:
+    """A plugin directory present in the cache but absent from the working tree has
+    its entire cache directory removed during preservation.
+    """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
-    old_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / OLD_VERSION
-    new_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / NEW_VERSION
-    latest_version_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME / LATEST_VERSION
-    old_version_dir.symlink_to(NEW_VERSION, target_is_directory=True)
-    stale_mtime = preserve_codex_plugin_cache.current_time() - (
-        STALE_AGE_DAYS * SECONDS_PER_DAY
+    _write_skill(cache_root, ORPHAN_PLUGIN_NAME, OLDER_VERSION, "orphan content")
+    orphan_dir = cache_root / DEFAULT_MARKETPLACE / ORPHAN_PLUGIN_NAME
+    history = StaticHistory(
+        plugins=frozenset(),
+        versions_by_plugin={},
     )
-    os.utime(old_version_dir, (stale_mtime, stale_mtime), follow_symlinks=False)
-
-    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
-        old_version_dir.unlink()
-        new_version_dir.rename(tmp_path / "removed-new-version")
-        _write_skill(cache_root, LATEST_VERSION, LATEST_SKILL_TEXT)
-        return subprocess.CompletedProcess(command, COMMAND_OK)
 
     result = preserve_codex_plugin_cache.preserve_during_upgrade(
-        MARKETPLACE_NAME,
+        DEFAULT_MARKETPLACE,
         cache_root=cache_root,
-        max_age_days=MAX_AGE_DAYS,
-        runner=runner,
+        history=history,
+        runner=_quiet_runner,
     )
 
-    assert not os.path.lexists(old_version_dir)
-    assert new_version_dir.is_symlink()
-    assert new_version_dir.resolve() == latest_version_dir
-    assert _skill_file(cache_root, NEW_VERSION).read_text() == LATEST_SKILL_TEXT
-    assert result.linked_versions == (new_version_dir,)
-    assert result.pruned_links == ()
-
-
-def test_upgrade_prunes_stale_version_symlinks(tmp_path: Path) -> None:
-    cache_root = tmp_path / "cache"
-    _write_skill(cache_root, NEW_VERSION, NEW_SKILL_TEXT)
-    plugin_dir = cache_root / MARKETPLACE_NAME / PLUGIN_NAME
-    stale_link = plugin_dir / OLD_VERSION
-    stale_link.symlink_to(NEW_VERSION, target_is_directory=True)
-    stale_mtime = preserve_codex_plugin_cache.current_time() - (
-        STALE_AGE_DAYS * SECONDS_PER_DAY
+    assert not orphan_dir.exists(), (
+        f"expected {orphan_dir} to be removed (plugin absent from working tree)"
     )
-    os.utime(stale_link, (stale_mtime, stale_mtime), follow_symlinks=False)
-
-    def runner(command: list[str]) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(command, COMMAND_OK)
-
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
-        MARKETPLACE_NAME,
-        cache_root=cache_root,
-        max_age_days=MAX_AGE_DAYS,
-        runner=runner,
+    assert ORPHAN_PLUGIN_NAME in result.pruned_plugins, (
+        f"expected {ORPHAN_PLUGIN_NAME} in result.pruned_plugins={result.pruned_plugins}"
     )
-
-    assert not stale_link.exists()
-    assert result.pruned_links == (stale_link,)
