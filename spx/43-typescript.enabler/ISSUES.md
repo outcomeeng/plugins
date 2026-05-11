@@ -26,21 +26,10 @@ The TypeScript specs under `spx/43-typescript.enabler/25-typescript-standards.en
 
 Resolution path: factor the Spec Tree fundamentals into a marketplace-wide PDR (or extend an existing one) so the standardizing-language skills can reference it instead of restating it. Until then, evaluations of these skills must check both layers.
 
-## Verdict-Format Drift Between PDR and Auditing Skills
+## `auditing-typescript` Spot Defects
 
-`spx/15-audit-verdict-format.pdr.md` flipped to JSON in commit `dd03033`. The current auditing skills (`/auditing-tests`, `/auditing-typescript-tests`, `/auditing-typescript`, `/auditing-typescript-architecture`, etc.) still emit markdown verdict tables. The PDR also overreached during the flip by prohibiting markdown fences and mandating that the assistant response IS the verdict — wrong for the audit-skill case, where the verdict is delivered into a PR comment and the markdown carrier is the only durable cross-CI-run surface.
-
-Resolution lives in [`spx/21-spec-tree.enabler/65-auditing.enabler/PLAN.md`](../21-spec-tree.enabler/65-auditing.enabler/PLAN.md) under `## PLAN: verdict-format carrier alignment and orchestrator/dispatched coherence`:
-
-1. Refine the PDR — drop the two overreaching clauses, add an embedded-delivery Compliance section describing the carrier+payload model.
-2. Update every audit skill's verdict-emit section to wrap a delimited JSON block (`<!-- AUDIT_VERDICT_JSON_BEGIN -->` / `<!-- AUDIT_VERDICT_JSON_END -->`) inside the existing markdown verdict surface.
-
-## `auditing-typescript` Spot Defects (PR #10 Follow-up)
-
-Three small fixes against `plugins/typescript/skills/auditing-typescript/SKILL.md`, deferred from PR #10 because they belong with the broader audit-skill alignment work rather than with the eval-harness branch.
+Three small fixes against `plugins/typescript/skills/auditing-typescript/SKILL.md`, to land with the audit-skill alignment work rather than with the eval-harness slice.
 
 - Line 25: typo "Typecsript" → "TypeScript".
 - Line 77: broken reference `${CLAUDE_SKILL_DIR}/rules/` — the directory does not exist; the skill ships `references/` only. Either correct the path to `references/` or create `rules/` if a separate location is intended.
 - Line 33: `quick_start` invokes `/testing` and `/testing-typescript`; these are test-evidence skills, but `auditing-typescript` explicitly delegates test concerns to `auditing-typescript-tests` elsewhere. Remove the test-skill invocations from `quick_start`.
-
-These three edits land in one focused commit alongside (or just after) the audit-skill carrier+payload alignment work in the follow-up PR.
