@@ -18,6 +18,7 @@ from outcomeeng.scripts import validate_install
 
 MARKETPLACE_NAME = "outcomeeng"
 PLUGIN_NAME = "demo-plugin"
+ORPHAN_PLUGIN_NAME = "removed-plugin"
 WORKING_TREE_VERSION = "0.2.0"
 PUBLISHED_VERSION = "0.1.0"
 
@@ -188,6 +189,35 @@ def test_codex_cache_missing_when_working_tree_older_is_an_error(
     assert result.warnings == [], f"unexpected warnings: {result.warnings}"
     assert len(result.errors) == 1
     assert older_version in result.errors[0]
+
+
+def test_orphan_plugin_in_cache_emits_warning(tmp_path: Path) -> None:
+    """When the cache contains a plugin directory absent from the working tree,
+    the orphan is reported as a warning that names the plugin; errors are unchanged.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, ORPHAN_PLUGIN_NAME, PUBLISHED_VERSION)
+
+    def published_version(plugin: str) -> str | None:
+        return PUBLISHED_VERSION if plugin == PLUGIN_NAME else None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=published_version,
+    )
+
+    assert result.errors == [], f"unexpected errors: {result.errors}"
+    orphan_warnings = [w for w in result.warnings if ORPHAN_PLUGIN_NAME in w]
+    assert len(orphan_warnings) == 1, (
+        f"expected one orphan warning naming {ORPHAN_PLUGIN_NAME}, "
+        f"got: {result.warnings}"
+    )
 
 
 @pytest.mark.parametrize(

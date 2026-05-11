@@ -213,6 +213,26 @@ def check_no_stale_symlinks(
             )
 
 
+def collect_orphan_plugins(
+    cache_root: Path,
+    marketplace: str,
+    working_tree_plugins: set[str],
+    warnings: list[str],
+) -> None:
+    """Warn for each plugin directory in the cache absent from the working tree."""
+    marketplace_dir = cache_root / marketplace
+    if not marketplace_dir.is_dir():
+        return
+    for plugin_dir in sorted(marketplace_dir.iterdir()):
+        if not plugin_dir.is_dir():
+            continue
+        if plugin_dir.name in working_tree_plugins:
+            continue
+        warnings.append(
+            f"{plugin_dir.name}  orphan: present in {marketplace_dir} but no manifest in working tree"
+        )
+
+
 @dataclass
 class ValidationResult:
     """Outcome of a validate_install run.
@@ -250,6 +270,10 @@ def validate(
     published_for = codex_marketplace_version or (
         lambda plugin: read_codex_marketplace_version(marketplace, plugin)
     )
+    working_tree_plugins = set(versions)
+
+    collect_orphan_plugins(claude, marketplace, working_tree_plugins, warnings)
+    collect_orphan_plugins(codex, marketplace, working_tree_plugins, warnings)
 
     for plugin, version in sorted(versions.items()):
         # Claude: refreshes catalog only, does not auto-upgrade cached files.
