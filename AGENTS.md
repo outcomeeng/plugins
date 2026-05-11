@@ -193,15 +193,18 @@ Diagram authoring skills.
 
 ## Prose Plugin
 
-Prose craft skills for writing and reviewing.
+Prose craft skills for two distinct contexts: external-facing prose (READMEs, blog posts, web copy) and internal team docs (Notion pages, runbooks, scorecards, decision records).
 
 ### Skills
 
-| Skill                  | Purpose                                                     |
-| ---------------------- | ----------------------------------------------------------- |
-| `/standardizing-prose` | Prose anti-patterns enforced across all skills (reference)  |
-| `/writing-prose`       | Write varied, specific, human prose (always active)         |
-| `/auditing-prose`      | Audit and rewrite prose for formulaic patterns (on request) |
+| Skill                          | Purpose                                                                    |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `/standardizing-prose`         | Prose anti-patterns enforced across all skills (reference)                 |
+| `/writing-prose`               | Write varied, specific, human prose for external readers                   |
+| `/auditing-prose`              | Audit and rewrite external prose for formulaic patterns                    |
+| `/standardizing-internal-docs` | Internal-doc conventions: inherited prose rules plus overrides (reference) |
+| `/writing-internal-docs`       | Write scannable, decisive internal team docs for colleagues with context   |
+| `/auditing-internal-docs`      | Audit internal team docs against the internal-docs catalog                 |
 
 ## TypeScript Plugin
 
