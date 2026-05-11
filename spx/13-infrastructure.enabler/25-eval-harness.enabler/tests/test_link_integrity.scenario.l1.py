@@ -12,9 +12,13 @@ from pathlib import Path
 
 from outcomeeng_testing.evals.link_integrity import (
     BrokenEvalLink,
+    BrokenTestLink,
     EvalLink,
+    TestLink,
     find_eval_links,
+    find_test_links,
     validate_eval_links,
+    validate_test_links,
 )
 
 
@@ -180,5 +184,118 @@ def test_validate_eval_links_resolves_paths_relative_to_source_file(
     )
 
     broken = validate_eval_links(tmp_path)
+
+    assert broken == []
+
+
+def _write_test_file(directory: Path, name: str) -> Path:
+    tests_dir = directory / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    test_path = tests_dir / name
+    test_path.write_text("def test_placeholder() -> None: pass\n", encoding="utf-8")
+    return test_path
+
+
+def test_find_test_links_finds_resolvable_link(tmp_path: Path) -> None:
+    _write_test_file(tmp_path, "test_thing.scenario.l1.py")
+    (tmp_path / "spec.md").write_text(
+        "Assertion ([test](tests/test_thing.scenario.l1.py))\n",
+        encoding="utf-8",
+    )
+
+    links = find_test_links(tmp_path)
+
+    assert len(links) == 1
+    assert isinstance(links[0], TestLink)
+    assert links[0].target.name == "test_thing.scenario.l1.py"
+
+
+def test_find_test_links_ignores_inline_code_spans(tmp_path: Path) -> None:
+    (tmp_path / "doc.md").write_text(
+        "The link form `[test](path/to/test.py)` is required.\n",
+        encoding="utf-8",
+    )
+
+    links = find_test_links(tmp_path)
+
+    assert links == []
+
+
+def test_find_test_links_ignores_fenced_code_blocks(tmp_path: Path) -> None:
+    (tmp_path / "doc.md").write_text(
+        "```\nAssertion ([test](tests/test_x.py))\n```\n",
+        encoding="utf-8",
+    )
+
+    links = find_test_links(tmp_path)
+
+    assert links == []
+
+
+def test_validate_test_links_returns_empty_when_all_resolve(tmp_path: Path) -> None:
+    _write_test_file(tmp_path, "test_x.scenario.l1.py")
+    (tmp_path / "spec.md").write_text(
+        "([test](tests/test_x.scenario.l1.py))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
+
+    assert broken == []
+
+
+def test_validate_test_links_reports_missing_target(tmp_path: Path) -> None:
+    (tmp_path / "spec.md").write_text(
+        "([test](tests/missing.py))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
+
+    assert len(broken) == 1
+    assert isinstance(broken[0], BrokenTestLink)
+    assert "does not exist" in broken[0].reason
+
+
+def test_validate_test_links_rejects_non_test_filename(tmp_path: Path) -> None:
+    helper = tmp_path / "tests" / "helper.py"
+    helper.parent.mkdir(parents=True)
+    helper.write_text("# helper\n", encoding="utf-8")
+    (tmp_path / "spec.md").write_text(
+        "([test](tests/helper.py))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
+
+    assert len(broken) == 1
+    assert "pytest collectable" in broken[0].reason
+
+
+def test_validate_test_links_rejects_non_python_target(tmp_path: Path) -> None:
+    txt_file = tmp_path / "tests" / "test_thing.txt"
+    txt_file.parent.mkdir(parents=True)
+    txt_file.write_text("not python\n", encoding="utf-8")
+    (tmp_path / "spec.md").write_text(
+        "([test](tests/test_thing.txt))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
+
+    assert len(broken) == 1
+    assert "pytest collectable" in broken[0].reason
+
+
+def test_validate_test_links_resolves_paths_relative_to_source(tmp_path: Path) -> None:
+    deep_node = tmp_path / "spx" / "a" / "b"
+    deep_node.mkdir(parents=True)
+    _write_test_file(deep_node, "test_deep.scenario.l1.py")
+    (deep_node / "spec.md").write_text(
+        "([test](tests/test_deep.scenario.l1.py))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
 
     assert broken == []
