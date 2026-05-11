@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from outcomeeng_evals.case import Case, ExpectedElement
+from outcomeeng_evals.case import Case
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.report import (
     JSON_SCHEMA_VERSION,
@@ -24,19 +25,24 @@ from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 
 
+_RULE = "r-1"
+_VERDICT = {"status": "rejected", "findings": [{"rule": _RULE, "present": True}]}
+_RESPONSE = json.dumps(_VERDICT)
+
+
 def _suite_result(*, passed: bool, reason: str | None = None) -> SuiteResult:
     case = Case(
         id="c-1",
         input={"path": "foo.ts", "content": "stub"},
-        must_contain=(ExpectedElement(element="finding", attributes={"rule": "r-1"}),),
+        must_contain=({"findings": [{"rule": _RULE}]},),
         must_not_contain=(),
     )
     trial = TrialResult(
         case_id=case.id,
         trial_index=0,
         prompt="prompt body",
-        response='<verdict><finding rule="r-1"/></verdict>',
-        verdict_xml='<verdict><finding rule="r-1"/></verdict>',
+        response=_RESPONSE,
+        verdict=_VERDICT,
         grade=GradeResult(passed=passed, reasons=(reason,) if reason else ()),
         metadata=RunMetadata(
             duration_ms=2608.0,
@@ -77,9 +83,7 @@ def test_serialize_result_preserves_case_expectations() -> None:
     payload = serialize_result(_suite_result(passed=True), title="t")
     outcome = payload["outcomes"][0]
     assert outcome["case"]["id"] == "c-1"
-    assert outcome["case"]["must_contain"] == [
-        {"element": "finding", "attributes": {"rule": "r-1"}}
-    ]
+    assert outcome["case"]["must_contain"] == [{"findings": [{"rule": _RULE}]}]
     assert outcome["case"]["must_not_contain"] == []
 
 
@@ -89,8 +93,8 @@ def test_serialize_result_includes_trial_transcripts() -> None:
     )
     trial = payload["outcomes"][0]["trials"][0]
     assert trial["prompt"] == "prompt body"
-    assert trial["response"].startswith("<verdict>")
-    assert trial["verdict_xml"] is not None
+    assert json.loads(trial["response"]) == _VERDICT
+    assert trial["verdict"] == _VERDICT
     assert trial["grade"] == {"passed": False, "reasons": ["missing rule"]}
 
 
@@ -120,15 +124,10 @@ def test_serialize_result_carries_per_trial_metadata() -> None:
 
 
 def test_cost_summary_skips_trials_without_metadata() -> None:
-    from outcomeeng_evals.case import Case, ExpectedElement
-    from outcomeeng_evals.grader import GradeResult
-    from outcomeeng_evals.runner import RunMetadata
-    from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
-
     case = Case(
         id="c",
         input={},
-        must_contain=(ExpectedElement(element="x", attributes={}),),
+        must_contain=({"status": "rejected"},),
         must_not_contain=(),
     )
     bare_trial = TrialResult(
@@ -136,7 +135,7 @@ def test_cost_summary_skips_trials_without_metadata() -> None:
         trial_index=0,
         prompt="p",
         response="r",
-        verdict_xml=None,
+        verdict=None,
         grade=GradeResult(passed=True, reasons=()),
         metadata=RunMetadata(),
     )
@@ -181,8 +180,6 @@ def test_write_html_report_embeds_json_payload_in_script_tag(tmp_path: Path) -> 
     assert marker in html, "HTML must embed the JSON payload in a script tag"
     start = html.index(marker) + len(marker)
     end = html.index("</script>", start)
-    # Encoded JSON escapes closing tags as "<\/" so json.loads cannot parse the
-    # embedded body directly; reverse that and validate the result.
     embedded = html[start:end].replace("<\\/", "</")
     parsed = json.loads(embedded)
     assert parsed["title"] == "embedded-test"
@@ -204,20 +201,15 @@ def test_write_html_report_renders_no_closing_script_in_body(tmp_path: Path) -> 
     )
 
 
-def _stability_outcomes(*pass_patterns: tuple[bool, ...]) -> tuple:
+def _stability_outcomes(*pass_patterns: tuple[bool, ...]) -> tuple[CaseOutcome, ...]:
     """Build a tuple of CaseOutcomes from per-case pass/fail patterns."""
-    from outcomeeng_evals.case import Case, ExpectedElement
-    from outcomeeng_evals.grader import GradeResult
-    from outcomeeng_evals.runner import RunMetadata
-    from outcomeeng_evals.suite import CaseOutcome, TrialResult
-
     case = Case(
         id="c",
         input={},
-        must_contain=(ExpectedElement(element="x", attributes={}),),
+        must_contain=({"status": "rejected"},),
         must_not_contain=(),
     )
-    outcomes = []
+    outcomes: list[CaseOutcome] = []
     for case_index, pattern in enumerate(pass_patterns):
         trials = tuple(
             TrialResult(
@@ -225,7 +217,7 @@ def _stability_outcomes(*pass_patterns: tuple[bool, ...]) -> tuple:
                 trial_index=i,
                 prompt="p",
                 response="r",
-                verdict_xml=None,
+                verdict=None,
                 grade=GradeResult(passed=p, reasons=()),
                 metadata=RunMetadata(),
             )
@@ -238,8 +230,6 @@ def _stability_outcomes(*pass_patterns: tuple[bool, ...]) -> tuple:
 
 
 def test_trial_stability_for_k1_reports_zero_or_one_pass_rate_per_case() -> None:
-    from outcomeeng_evals.suite import SuiteResult
-
     outcomes = _stability_outcomes((True,), (True,), (False,))
     result = SuiteResult(
         outcomes=outcomes, pass_rate=2 / 3, threshold=0.85, passed=False
@@ -254,8 +244,6 @@ def test_trial_stability_for_k1_reports_zero_or_one_pass_rate_per_case() -> None
 
 
 def test_trial_stability_for_k_greater_than_1_computes_mean() -> None:
-    from outcomeeng_evals.suite import SuiteResult
-
     # Case A: 4/4 = 1.0; Case B: 2/4 = 0.5; mean = 0.75.
     outcomes = _stability_outcomes(
         (True, True, True, True),
@@ -271,8 +259,6 @@ def test_trial_stability_for_k_greater_than_1_computes_mean() -> None:
 
 
 def test_trial_stability_stddev_is_none_with_single_case() -> None:
-    from outcomeeng_evals.suite import SuiteResult
-
     outcomes = _stability_outcomes((True,))
     result = SuiteResult(outcomes=outcomes, pass_rate=1.0, threshold=0.85, passed=True)
     stability = serialize_result(result, title="t")["trial_stability"]
@@ -280,8 +266,6 @@ def test_trial_stability_stddev_is_none_with_single_case() -> None:
 
 
 def test_outcome_carries_trial_pass_count_and_rate_in_json() -> None:
-    from outcomeeng_evals.suite import SuiteResult
-
     outcomes = _stability_outcomes((True, True, False, False))
     result = SuiteResult(outcomes=outcomes, pass_rate=0.0, threshold=0.85, passed=False)
     payload = serialize_result(result, title="t")
@@ -289,3 +273,7 @@ def test_outcome_carries_trial_pass_count_and_rate_in_json() -> None:
     assert outcome_json["trial_count"] == 4
     assert outcome_json["trial_pass_count"] == 2
     assert outcome_json["trial_pass_rate"] == pytest.approx(0.5)
+
+
+# Unused imports kept off for ruff cleanliness; Any is referenced for clarity.
+_ = Any

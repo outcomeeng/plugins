@@ -7,10 +7,11 @@ eval directory tree with one call.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
-from outcomeeng_evals.case import Case, ExpectedElement
+from outcomeeng_evals.case import Case
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
@@ -19,7 +20,11 @@ from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
 _DEFAULT_CASE_ID = "test-case"
 _DEFAULT_INPUT: dict[str, Any] = {}
 _DEFAULT_PROMPT = "prompt"
-_DEFAULT_RESPONSE = '<verdict><finding rule="x"/></verdict>'
+_DEFAULT_VERDICT: dict[str, Any] = {
+    "status": "rejected",
+    "findings": [{"rule": "x", "present": True}],
+}
+_DEFAULT_RESPONSE = json.dumps(_DEFAULT_VERDICT)
 _DEFAULT_THRESHOLD = 0.85
 _DEFAULT_EVAL_TITLE = "test-eval"
 _DEFAULT_CASES_FILENAME = "cases.jsonl"
@@ -27,16 +32,12 @@ _DEFAULT_PROMPT_FILENAME = "prompt.md"
 _DEFAULT_EVAL_FILENAME = "eval.toml"
 
 
-def make_expected(element: str, **attributes: str) -> ExpectedElement:
-    return ExpectedElement(element=element, attributes=dict(attributes))
-
-
 def make_case(
     *,
     case_id: str = _DEFAULT_CASE_ID,
     case_input: dict[str, Any] | None = None,
-    must_contain: tuple[ExpectedElement, ...] = (),
-    must_not_contain: tuple[ExpectedElement, ...] = (),
+    must_contain: tuple[dict[str, Any], ...] = (),
+    must_not_contain: tuple[dict[str, Any], ...] = (),
 ) -> Case:
     return Case(
         id=case_id,
@@ -52,7 +53,7 @@ def make_trial_result(
     trial_index: int = 0,
     prompt: str = _DEFAULT_PROMPT,
     response: str = _DEFAULT_RESPONSE,
-    verdict_xml: str | None = _DEFAULT_RESPONSE,
+    verdict: Any | None = None,
     passed: bool = True,
     reasons: tuple[str, ...] = (),
     metadata: RunMetadata | None = None,
@@ -62,7 +63,7 @@ def make_trial_result(
         trial_index=trial_index,
         prompt=prompt,
         response=response,
-        verdict_xml=verdict_xml,
+        verdict=verdict if verdict is not None else dict(_DEFAULT_VERDICT),
         grade=GradeResult(passed=passed, reasons=reasons),
         metadata=metadata if metadata is not None else RunMetadata(),
     )

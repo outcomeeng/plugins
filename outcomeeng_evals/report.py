@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import statistics
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -132,8 +131,8 @@ def _case_to_dict(case: Case) -> dict[str, Any]:
     return {
         "id": case.id,
         "input": case.input,
-        "must_contain": [asdict(e) for e in case.must_contain],
-        "must_not_contain": [asdict(e) for e in case.must_not_contain],
+        "must_contain": [dict(e) for e in case.must_contain],
+        "must_not_contain": [dict(e) for e in case.must_not_contain],
     }
 
 
@@ -142,7 +141,7 @@ def _trial_to_dict(trial: TrialResult) -> dict[str, Any]:
         "trial_index": trial.trial_index,
         "prompt": trial.prompt,
         "response": trial.response,
-        "verdict_xml": trial.verdict_xml,
+        "verdict": trial.verdict,
         "grade": {
             "passed": trial.grade.passed,
             "reasons": list(trial.grade.reasons),
@@ -399,8 +398,8 @@ _VIEWER_JS = r"""
     const meta = renderTrialMetadata(trial.metadata);
     if (meta) block.appendChild(meta);
     (trial.grade.reasons || []).forEach((reason) => block.appendChild(el("div", { class: "reason" }, reason)));
-    if (trial.verdict_xml) {
-      block.appendChild(disclosure("Extracted XML verdict", el("pre", {}, trial.verdict_xml), true));
+    if (trial.verdict != null) {
+      block.appendChild(disclosure("Parsed JSON verdict", el("pre", {}, JSON.stringify(trial.verdict, null, 2)), true));
     }
     block.appendChild(disclosure("Raw assistant response", el("pre", {}, trial.response)));
     block.appendChild(disclosure("Prompt sent", el("pre", {}, trial.prompt)));

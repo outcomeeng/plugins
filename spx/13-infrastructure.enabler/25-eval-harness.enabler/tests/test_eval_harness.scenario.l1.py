@@ -4,16 +4,25 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from outcomeeng_evals.case import Case, load_cases
-from outcomeeng_evals.grader import extract_verdict, grade
-from outcomeeng_evals.testing.fakes import StubModelRunner as StubRunner
+from outcomeeng_evals.grader import grade, is_subset, parse_verdict
 from outcomeeng_evals.suite import run_suite
+from outcomeeng_evals.testing.fakes import StubModelRunner as StubRunner
 
 
-def _write_case(tmp_path: Path, record: dict) -> Path:
+_RULE = "shared-test-owned-constant-bag"
+_PASS_VERDICT = json.dumps(
+    {"status": "rejected", "findings": [{"rule": _RULE, "present": True}]}
+)
+_FAIL_VERDICT = json.dumps({"status": "approved", "findings": []})
+_INVALID_JSON = "the model returned prose only"
+
+
+def _write_case(tmp_path: Path, record: dict[str, Any]) -> Path:
     path = tmp_path / "cases.jsonl"
     path.write_text(json.dumps(record) + "\n", encoding="utf-8")
     return path
@@ -24,7 +33,7 @@ def test_load_cases_parses_jsonl_record_with_must_contain(tmp_path: Path) -> Non
         "id": "positive-1",
         "input": {"snippet": "x"},
         "expected_verdict": {
-            "must_contain": [{"element": "finding", "attributes": {"rule": "r-1"}}],
+            "must_contain": [{"findings": [{"rule": "r-1"}]}],
             "must_not_contain": [],
         },
     }
@@ -33,57 +42,82 @@ def test_load_cases_parses_jsonl_record_with_must_contain(tmp_path: Path) -> Non
     case = cases[0]
     assert case.id == "positive-1"
     assert case.input == {"snippet": "x"}
-    assert case.must_contain[0].element == "finding"
-    assert case.must_contain[0].attributes == {"rule": "r-1"}
+    assert case.must_contain[0] == {"findings": [{"rule": "r-1"}]}
 
 
 def test_load_cases_rejects_record_missing_id(tmp_path: Path) -> None:
-    bad = {"input": {}, "expected_verdict": {}}
+    bad: dict[str, Any] = {"input": {}, "expected_verdict": {}}
     with pytest.raises(ValueError, match="missing required field 'id'"):
         load_cases(_write_case(tmp_path, bad))
 
 
-def test_extract_verdict_finds_xml_block_in_prose() -> None:
-    msg = 'Some prose first.\n<verdict status="rejected"><finding rule="x"/></verdict>\nMore prose.'
-    assert (
-        extract_verdict(msg)
-        == '<verdict status="rejected"><finding rule="x"/></verdict>'
+def test_parse_verdict_returns_parsed_json_document() -> None:
+    msg = '{"status":"rejected","findings":[{"rule":"x","present":true}]}'
+    assert parse_verdict(msg) == {
+        "status": "rejected",
+        "findings": [{"rule": "x", "present": True}],
+    }
+
+
+def test_parse_verdict_tolerates_surrounding_whitespace() -> None:
+    msg = '  \n{"status":"approved"}\n  '
+    assert parse_verdict(msg) == {"status": "approved"}
+
+
+def test_parse_verdict_returns_none_when_response_is_not_json() -> None:
+    assert parse_verdict(_INVALID_JSON) is None
+
+
+def test_is_subset_matches_dict_keys_recursively() -> None:
+    assert is_subset({"status": "rejected"}, {"status": "rejected", "findings": []})
+
+
+def test_is_subset_rejects_when_dict_key_missing() -> None:
+    assert not is_subset({"status": "rejected"}, {"findings": []})
+
+
+def test_is_subset_matches_list_element_via_any_match() -> None:
+    expected = {"findings": [{"rule": "x"}]}
+    actual = {"findings": [{"rule": "other"}, {"rule": "x", "present": True}]}
+    assert is_subset(expected, actual)
+
+
+def test_is_subset_rejects_when_no_list_element_matches() -> None:
+    expected = {"findings": [{"rule": "x"}]}
+    actual = {"findings": [{"rule": "other"}]}
+    assert not is_subset(expected, actual)
+
+
+def test_grade_passes_when_must_contain_subset_matches() -> None:
+    case = _case(
+        must_contain=[
+            {"status": "rejected", "findings": [{"rule": _RULE, "present": True}]}
+        ]
     )
-
-
-def test_extract_verdict_returns_none_when_absent() -> None:
-    assert extract_verdict("no verdict in here") is None
-
-
-def test_grade_passes_when_must_contain_element_present() -> None:
-    case = _case(must_contain=[("finding", {"rule": "shared-test-owned-constant-bag"})])
-    message = '<verdict><finding rule="shared-test-owned-constant-bag"/></verdict>'
-    result = grade(case, message)
+    result = grade(case, _PASS_VERDICT)
     assert result.passed
     assert result.reasons == ()
 
 
-def test_grade_fails_when_required_element_missing() -> None:
-    case = _case(must_contain=[("finding", {"rule": "x"})])
-    message = '<verdict><finding rule="other"/></verdict>'
-    result = grade(case, message)
+def test_grade_fails_when_required_structure_missing() -> None:
+    case = _case(must_contain=[{"findings": [{"rule": "x"}]}])
+    result = grade(case, _FAIL_VERDICT)
     assert not result.passed
-    assert any("missing required element" in r for r in result.reasons)
+    assert any("missing required structure" in r for r in result.reasons)
 
 
-def test_grade_fails_when_forbidden_element_present() -> None:
-    case = _case(must_not_contain=[("finding", {"rule": "y"})])
-    message = '<verdict><finding rule="y"/></verdict>'
-    result = grade(case, message)
+def test_grade_fails_when_forbidden_structure_present() -> None:
+    case = _case(must_not_contain=[{"status": "approved"}])
+    result = grade(case, _FAIL_VERDICT)
     assert not result.passed
-    assert any("forbidden element present" in r for r in result.reasons)
+    assert any("forbidden structure present" in r for r in result.reasons)
 
 
-def test_grade_fails_when_no_verdict_block_in_response() -> None:
-    case = _case(must_contain=[("finding", {"rule": "x"})])
-    result = grade(case, "the model returned prose only")
+def test_grade_fails_when_response_is_not_parseable_json() -> None:
+    case = _case(must_contain=[{"status": "rejected"}])
+    result = grade(case, _INVALID_JSON)
     assert not result.passed
-    assert any("no <verdict> block" in r for r in result.reasons)
+    assert any("not a parseable JSON document" in r for r in result.reasons)
 
 
 def test_run_suite_passes_when_canned_verdict_matches(tmp_path: Path) -> None:
@@ -91,11 +125,13 @@ def test_run_suite_passes_when_canned_verdict_matches(tmp_path: Path) -> None:
         "id": "positive-1",
         "input": {"snippet": "x"},
         "expected_verdict": {
-            "must_contain": [{"element": "finding", "attributes": {"rule": "x"}}]
+            "must_contain": [{"findings": [{"rule": "x", "present": True}]}]
         },
     }
     cases_path = _write_case(tmp_path, record)
-    canned = '<verdict><finding rule="x"/></verdict>'
+    canned = json.dumps(
+        {"status": "rejected", "findings": [{"rule": "x", "present": True}]}
+    )
     result = run_suite(
         cases_path=cases_path,
         runner=StubRunner(response=canned),
@@ -111,7 +147,7 @@ def test_run_suite_fails_when_threshold_not_met(tmp_path: Path) -> None:
             "id": f"c-{i}",
             "input": {},
             "expected_verdict": {
-                "must_contain": [{"element": "finding", "attributes": {"rule": "x"}}]
+                "must_contain": [{"findings": [{"rule": "x", "present": True}]}]
             },
         }
         for i in range(4)
@@ -119,11 +155,13 @@ def test_run_suite_fails_when_threshold_not_met(tmp_path: Path) -> None:
     cases_path = tmp_path / "cases.jsonl"
     cases_path.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
 
+    matching = json.dumps(
+        {"status": "rejected", "findings": [{"rule": "x", "present": True}]}
+    )
+    nonmatching = json.dumps({"status": "approved", "findings": []})
+
     def responder(prompt: str) -> str:
-        # Only the prompt that mentions "c-0" gets the matching verdict; rest fail.
-        if "c-0" in prompt:
-            return '<verdict><finding rule="x"/></verdict>'
-        return '<verdict><finding rule="other"/></verdict>'
+        return matching if "c-0" in prompt else nonmatching
 
     result = run_suite(
         cases_path=cases_path,
@@ -142,17 +180,14 @@ def test_run_suite_case_passes_under_majority_when_one_trial_fails(
         "id": "c",
         "input": {},
         "expected_verdict": {
-            "must_contain": [{"element": "finding", "attributes": {"rule": "x"}}]
+            "must_contain": [{"findings": [{"rule": "x", "present": True}]}]
         },
     }
     cases_path = _write_case(tmp_path, record)
-    responses = iter(
-        [
-            '<verdict><finding rule="x"/></verdict>',
-            '<verdict><finding rule="x"/></verdict>',
-            "no verdict here",
-        ]
+    matching = json.dumps(
+        {"status": "rejected", "findings": [{"rule": "x", "present": True}]}
     )
+    responses = iter([matching, matching, "no verdict here"])
     runner = StubRunner(responder=lambda _prompt: next(responses))
     result = run_suite(
         cases_path=cases_path,
@@ -171,18 +206,14 @@ def test_case_outcome_trial_pass_rate_reflects_per_trial_results(
         "id": "c",
         "input": {},
         "expected_verdict": {
-            "must_contain": [{"element": "finding", "attributes": {"rule": "x"}}]
+            "must_contain": [{"findings": [{"rule": "x", "present": True}]}]
         },
     }
     cases_path = _write_case(tmp_path, record)
-    responses = iter(
-        [
-            '<verdict><finding rule="x"/></verdict>',
-            "fail",
-            '<verdict><finding rule="x"/></verdict>',
-            "fail",
-        ]
+    matching = json.dumps(
+        {"status": "rejected", "findings": [{"rule": "x", "present": True}]}
     )
+    responses = iter([matching, "fail", matching, "fail"])
     runner = StubRunner(responder=lambda _prompt: next(responses))
     result = run_suite(
         cases_path=cases_path,
@@ -206,7 +237,7 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
             "id": f"c-{i}",
             "input": {"index": i},
             "expected_verdict": {
-                "must_contain": [{"element": "finding", "attributes": {"rule": "x"}}]
+                "must_contain": [{"findings": [{"rule": "x", "present": True}]}]
             },
         }
         for i in range(6)
@@ -216,15 +247,17 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
 
     finish_order: list[str] = []
     lock = threading.Lock()
+    matching = json.dumps(
+        {"status": "rejected", "findings": [{"rule": "x", "present": True}]}
+    )
 
     def responder(prompt: str) -> str:
         case_id = prompt.split("=", 1)[1]
-        # Lower-numbered cases sleep longer so threads finish in reverse order.
         index = int(case_id.split("-", 1)[1])
         time.sleep(0.005 * (6 - index))
         with lock:
             finish_order.append(case_id)
-        return '<verdict><finding rule="x"/></verdict>'
+        return matching
 
     result = run_suite(
         cases_path=cases_path,
@@ -236,7 +269,6 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
     assert case_ids == [f"c-{i}" for i in range(6)], (
         f"outcomes must follow case-file order; finish_order={finish_order}"
     )
-    # Sanity: actual execution order differed from case-file order.
     assert finish_order != case_ids, (
         "test premise: threads should not finish in case order"
     )
@@ -244,21 +276,12 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
 
 def _case(
     *,
-    must_contain: list[tuple[str, dict[str, str]]] | None = None,
-    must_not_contain: list[tuple[str, dict[str, str]]] | None = None,
+    must_contain: list[dict[str, Any]] | None = None,
+    must_not_contain: list[dict[str, Any]] | None = None,
 ) -> Case:
-    from outcomeeng_evals.case import ExpectedElement
-
-    def _to(elements: list[tuple[str, dict[str, str]]] | None):
-        if not elements:
-            return ()
-        return tuple(
-            ExpectedElement(element=name, attributes=attrs) for name, attrs in elements
-        )
-
     return Case(
         id="t",
         input={},
-        must_contain=_to(must_contain),
-        must_not_contain=_to(must_not_contain),
+        must_contain=tuple(must_contain or ()),
+        must_not_contain=tuple(must_not_contain or ()),
     )

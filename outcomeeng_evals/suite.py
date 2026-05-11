@@ -8,8 +8,10 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from typing import Any
+
 from outcomeeng_evals.case import Case, load_cases
-from outcomeeng_evals.grader import GradeResult, extract_verdict, grade
+from outcomeeng_evals.grader import GradeResult, grade, parse_verdict
 from outcomeeng_evals.runner import ModelRunner, RunMetadata
 
 
@@ -24,7 +26,7 @@ class TrialResult:
     trial_index: int
     prompt: str
     response: str
-    verdict_xml: str | None
+    verdict: Any | None
     grade: GradeResult
     metadata: RunMetadata
 
@@ -150,7 +152,7 @@ def _run_case(
                 trial_index=index,
                 prompt=prompt,
                 response=response_text,
-                verdict_xml=extract_verdict(response_text),
+                verdict=parse_verdict(response_text),
                 grade=grade(case, response_text),
                 metadata=run_result.metadata,
             )
