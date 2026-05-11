@@ -1,7 +1,5 @@
 # PLAN — schema support for testability step and source-file findings
 
-> **Format note (post-flip context):** `spx/15-audit-verdict-format.pdr.md` flipped from XML to JSON in commit `dd03033`. The schema's document type changes accordingly — from XSD 1.1 (`audit-verdict.xsd`) to JSON Schema (`audit-verdict.schema.json` or equivalent). The planned extensions below — adding a `testability` Gate 1 step value, and allowing source-targeted findings via a `<source_file>` / `source_file` field — carry over to the JSON Schema form; only the file extension and the validator (jsonschema/Pydantic/ajv instead of xmllint/lxml) change. The carrier+payload work in [`spx/21-spec-tree.enabler/65-auditing.enabler/PLAN.md`](../../65-auditing.enabler/PLAN.md) lands the JSON Schema artifact; that work and this plan converge.
-
 ## Why
 
 Test audit is gaining a new Gate 1 step (`testability`) that can emit findings against source files rather than test files. Current `audit-verdict.xsd` enumerates Gate 1 step values and assumes per-assertion findings target test files via `<test_file>`. Both need to change.
