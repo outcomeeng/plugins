@@ -1,11 +1,18 @@
 ---
 name: writing-prose
 description: >-
-  ALWAYS invoke this skill when writing or editing durable reader-facing prose such as docs, READMEs, web copy, release notes, emails, or PR descriptions.
-  NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions.
+  ALWAYS invoke this skill when writing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers.
+  NEVER invoke for chat responses to the user (no matter how long), operational prose like code comments, commit messages, or agent-facing instructions like AGENTS.md and SKILL.md.
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md" || echo "standardizing-prose not found — invoke skill prose:standardizing-prose now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `prose:standardizing-prose`
+
+</codex_fallback>
 
 <objective>
 

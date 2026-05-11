@@ -1,6 +1,6 @@
 {
   "name": "prose",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Prose craft for external prose (/writing-prose, /auditing-prose) and internal team docs (/writing-internal-docs, /auditing-internal-docs)",
   "author": {
     "name": "Simon Heimlicher"

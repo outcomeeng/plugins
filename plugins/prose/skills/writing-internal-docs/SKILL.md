@@ -5,7 +5,7 @@ description: >-
 allowed-tools: Read, Edit, Write, Glob, Grep
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-internal-docs/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-internal-docs/SKILL.md" || echo "standardizing-internal-docs not found — invoke skill prose:standardizing-internal-docs now"`
 
 <codex_fallback>
 If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke this skill now before proceeding:

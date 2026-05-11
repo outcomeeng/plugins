@@ -1,12 +1,19 @@
 ---
 name: auditing-prose
 description: >-
-  ALWAYS invoke this skill when auditing prose in human-facing documents, web pages and messages for humans other than for the user.
-  NEVER invoke for responses to the user, including long research summaries delivered in chat, or prose for agents such as in agent prompts, SKILL.md and AGENTS.md files.
+  ALWAYS invoke this skill when auditing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers.
+  NEVER invoke for chat responses to the user (no matter how long), operational prose like code comments, commit messages, or agent-facing instructions like AGENTS.md and SKILL.md.
 allowed-tools: Read, Glob, Grep, Bash
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-prose/SKILL.md" || echo "standardizing-prose not found — invoke skill prose:standardizing-prose now"`
+
+<codex_fallback>
+If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+
+1. Skill `prose:standardizing-prose`
+
+</codex_fallback>
 
 <objective>
 
