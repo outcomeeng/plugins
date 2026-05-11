@@ -8,7 +8,7 @@ This decision governs which evidence mechanism applies to which kind of assertio
 
 **Business impact:** The marketplace spans plugins whose deliverable is executable code (Python tooling, validators, harnesses), plugins whose deliverable is LLM-driven behavior (auditing skills, classifiers, content producers), and plugins whose value lies in design or semantic principle (style guides, reference standards). A single evidence mechanism cannot honestly cover all three — `[test]` is brittle for LLM behavior, `[review]` is unfalsifiable for executable code, and `[eval]` is overhead for deterministic logic.
 
-**Technical constraints:** Executable code is observed by a test runner. LLM-driven behavior is observed by replaying curated cases through the producing skill and parsing its structured verdict per `spx/15-audit-verdict-format.pdr.md`. Design or intent has no structural signal a runner can compare against. Each evidence mechanism corresponds to one of these observation channels; mismatched pairings either degrade falsifiability or impose disproportionate cost.
+**Technical constraints:** Executable code is observed by a test runner. LLM-driven behavior is observed by replaying curated cases through the producing skill and parsing its structured verdict against per-eval expected fields. Design or intent has no structural signal a runner can compare against. Each evidence mechanism corresponds to one of these observation channels; mismatched pairings either degrade falsifiability or impose disproportionate cost.
 
 ## Decision
 
@@ -19,12 +19,12 @@ All plugins get at least one enabler node in the spec tree. Plugins with impleme
 The spec tree's value derives from the truth hierarchy: specs declare, evidence verifies, code complies. Three evidence mechanisms cover the three subject categories:
 
 - `[test]` for deterministic code paths verified by a test runner.
-- `[eval]` for LLM-driven behavior that emits a structurally validatable verdict per `spx/15-audit-verdict-format.pdr.md`. The eval harness replays curated cases, parses verdicts, and scores against expected fields; non-determinism is bounded by pass@k and threshold gating. Falsifiability comes from the verdict schema, not from interpreting prose.
+- `[eval]` for LLM-driven behavior that emits a structurally validatable verdict whose shape each eval declares. The eval harness replays curated cases, parses verdicts, and scores against expected fields; non-determinism is bounded by pass@k and threshold gating. Falsifiability comes from the per-eval verdict schema, not from interpreting prose.
 - `[review]` for semantic constraints about design or intent that no structural grader can falsify.
 
 Tautological tests over markdown structure are excluded by the NEVER clause — parsing a skill file to check for the presence of a heading proves formatting, not behavior. Eval evidence avoids this failure mode because the case set drives the skill end-to-end and the grader inspects the verdict the skill produces.
 
-The alternative — excluding LLM-driven plugins from `[test]`-class evidence entirely — was rejected because it conflated two failure modes: prose-interpreting tests (genuinely brittle) and structural-verdict evals over curated cases (deterministic at the grader, bounded at the runner). The verdict-format PDR provides the structural contract that makes the second category falsifiable.
+The alternative — excluding LLM-driven plugins from `[test]`-class evidence entirely — was rejected because it conflated two failure modes: prose-interpreting tests (genuinely brittle) and structural-verdict evals over curated cases (deterministic at the grader, bounded at the runner). The per-eval verdict schema — declared in each case's expected fields and the eval's prompt template — provides the structural contract that makes the second category falsifiable.
 
 ## Trade-offs accepted
 
@@ -44,10 +44,10 @@ Implementation plugins carry `[test]` assertions on assertions about executable 
 
 - Create at least one enabler node for every checked-in marketplace plugin — the tree is the complete product map ([review])
 - Use `[test]` evidence for assertions about executable code — review is not a substitute for automated verification ([review])
-- Use `[eval]` evidence for assertions about LLM-driven skill behavior where the producing skill emits a structured verdict per `spx/15-audit-verdict-format.pdr.md` — the verdict schema makes the grader deterministic and the case set bounds the claim ([review])
+- Use `[eval]` evidence for assertions about LLM-driven skill behavior where the producing skill emits a structured verdict whose shape the eval declares — the per-eval verdict schema makes the grader deterministic and the case set bounds the claim ([review])
 - Use `[review]` evidence for assertions about skill design or intent that no structural verdict can falsify ([review])
 
 ### NEVER
 
 - Create automated tests for pure-skill plugins that parse markdown structure — formatting-shaped evidence proves nothing about behavior ([review])
-- Grade eval cases by interpreting free-form LLM prose — the grader reads structural verdict fields per `spx/15-audit-verdict-format.pdr.md`; prose summaries are auxiliary, not authoritative ([review])
+- Grade eval cases by interpreting free-form LLM prose — the grader reads structural verdict fields against per-eval expected structures; prose summaries are auxiliary, not authoritative ([review])

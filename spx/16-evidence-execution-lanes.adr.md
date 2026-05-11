@@ -20,7 +20,7 @@ Governs how the marketplace separates evidence by execution surface. Spec assert
 The marketplace separates evidence by execution lane. Three lanes are declared:
 
 1. **`[test]` lane** — pytest, governed by `spx/15-test-language.adr.md`. Deterministic Python: pure logic, parser-backed structural checks, command-builder verification, file-output assertions, link-integrity checks.
-2. **`[eval]` lane** — the `outcomeeng_evals` CLI, governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Graded LLM behavior over curated cases, with structured-verdict graders per `spx/15-audit-verdict-format.pdr.md`.
+2. **`[eval]` lane** — the `outcomeeng_evals` CLI, governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Graded LLM behavior over curated cases, with structured-verdict graders matching per-eval expected fields.
 3. **`[review]` lane** — audit skills, no automated runner. Human or agent judgment captured during a review pass.
 
 Every spec assertion's evidence mechanism maps to exactly one lane. Each lane has its own runner, cadence, and CI integration. Lanes do not absorb each other; a new lane is added by amending this ADR alongside the ADR that governs the new lane.
