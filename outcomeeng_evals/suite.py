@@ -7,7 +7,6 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-
 from typing import Any
 
 from outcomeeng_evals.case import Case, load_cases
@@ -64,7 +63,6 @@ def run_suite(
     build_prompt: PromptBuilder,
     *,
     trials_per_case: int = 1,
-    case_pass_majority: bool = True,
     suite_threshold: float = 0.85,
     workers: int = 1,
 ) -> SuiteResult:
@@ -74,6 +72,8 @@ def run_suite(
     case still runs its ``trials_per_case`` trials sequentially; the pool
     bounds concurrent ``claude`` subprocesses. Output ordering matches the
     case-file order regardless of execution interleaving.
+
+    Per-case pass policy is majority-of-trials (``ceil(trials_per_case / 2)``).
     """
     cases = load_cases(cases_path)
     if workers <= 1:
@@ -83,7 +83,6 @@ def run_suite(
                 runner=runner,
                 build_prompt=build_prompt,
                 trials=trials_per_case,
-                case_pass_majority=case_pass_majority,
             )
             for case in cases
         ]
@@ -94,7 +93,6 @@ def run_suite(
             runner=runner,
             build_prompt=build_prompt,
             trials=trials_per_case,
-            case_pass_majority=case_pass_majority,
         )
     pass_rate = _pass_rate(outcomes)
     return SuiteResult(
@@ -112,7 +110,6 @@ def _run_cases_parallel(
     runner: ModelRunner,
     build_prompt: PromptBuilder,
     trials: int,
-    case_pass_majority: bool,
 ) -> list[CaseOutcome]:
     """Run cases concurrently while preserving case-file ordering in outcomes."""
     results: list[CaseOutcome | None] = [None] * len(cases)
@@ -124,13 +121,37 @@ def _run_cases_parallel(
                 runner=runner,
                 build_prompt=build_prompt,
                 trials=trials,
-                case_pass_majority=case_pass_majority,
             ): index
             for index, case in enumerate(cases)
         }
         for future in futures:
-            results[futures[future]] = future.result()
+            index = futures[future]
+            try:
+                results[index] = future.result()
+            except Exception as exc:  # noqa: BLE001 — convert any worker failure into a failing outcome
+                results[index] = _error_outcome(case=cases[index], error=exc)
     return [outcome for outcome in results if outcome is not None]
+
+
+def _error_outcome(*, case: Case, error: BaseException) -> CaseOutcome:
+    """Convert a worker exception into a single failing trial result.
+
+    Preserves the case in outcome order so the parallel scheduler does not
+    unwind the entire suite when one case's runner raises. The error message
+    appears in the trial's response field and as the grade reason; downstream
+    consumers (JSON report, HTML viewer, history row) see one FAIL trial.
+    """
+    error_text = f"{type(error).__name__}: {error}"
+    failing_trial = TrialResult(
+        case_id=case.id,
+        trial_index=0,
+        prompt="",
+        response=error_text,
+        verdict=None,
+        grade=GradeResult(passed=False, reasons=(error_text,)),
+        metadata=RunMetadata(),
+    )
+    return CaseOutcome(case=case, trials=(failing_trial,), passed=False)
 
 
 def _run_case(
@@ -139,7 +160,6 @@ def _run_case(
     runner: ModelRunner,
     build_prompt: PromptBuilder,
     trials: int,
-    case_pass_majority: bool,
 ) -> CaseOutcome:
     trial_results: list[TrialResult] = []
     prompt = build_prompt(case)
@@ -158,7 +178,7 @@ def _run_case(
             )
         )
     passes = sum(1 for t in trial_results if t.grade.passed)
-    threshold = math.ceil(trials / 2) if case_pass_majority else trials
+    threshold = math.ceil(trials / 2)
     return CaseOutcome(
         case=case,
         trials=tuple(trial_results),
@@ -168,7 +188,9 @@ def _run_case(
 
 def _pass_rate(outcomes: list[CaseOutcome]) -> float:
     if not outcomes:
-        return 1.0
+        raise ValueError(
+            "no outcomes produced; cases.jsonl may be empty or misconfigured"
+        )
     passed = sum(1 for o in outcomes if o.passed)
     return passed / len(outcomes)
 

@@ -31,7 +31,11 @@ def history_command(history_path: Path, limit: int) -> None:
         passed = bool(row.get("passed"))
         verdict = "PASS" if passed else "FAIL"
         pass_rate = row.get("pass_rate")
-        pct = f"{float(pass_rate):.1%}" if isinstance(pass_rate, (int, float)) else "?"
+        pct = (
+            f"{float(pass_rate):.1%}"
+            if not isinstance(pass_rate, bool) and isinstance(pass_rate, (int, float))
+            else "?"
+        )
         click.echo(
             f"{row.get('timestamp', '?')}  {verdict}  pass_rate={pct}  "
             f"cases={row.get('cases_passed', '?')}/{row.get('cases_total', '?')}  "
