@@ -19,8 +19,9 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, cast
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 MONOREPO_ROOT = Path(__file__).resolve().parents[2]
 DISTRIBUTION_CONFIG = MONOREPO_ROOT / "scripts" / "distribution.yml"
@@ -32,9 +33,9 @@ MARKETPLACE_REPO = "plugins"
 SKIP_DIRS = {"commands", "agents", ".claude-plugin"}
 
 
-def load_config() -> dict:
+def load_config() -> dict[str, Any]:
     with open(DISTRIBUTION_CONFIG) as f:
-        return yaml.safe_load(f)
+        return cast("dict[str, Any]", yaml.safe_load(f))
 
 
 def parse_skill_frontmatter(skill_md: Path) -> dict[str, str]:
@@ -50,7 +51,7 @@ def parse_skill_frontmatter(skill_md: Path) -> dict[str, str]:
     }
 
 
-def collect_skills(plugins: list[str]) -> list[dict]:
+def collect_skills(plugins: list[str]) -> list[dict[str, Any]]:
     """Collect all skill directories from the given plugins."""
     skills = []
     for plugin_name in plugins:
@@ -100,8 +101,8 @@ def clean_description(desc: str) -> str:
 
 def generate_readme(
     repo_name: str,
-    repo_config: dict,
-    skills: list[dict],
+    repo_config: dict[str, Any],
+    skills: list[dict[str, Any]],
     github_org: str,
 ) -> str:
     """Generate README.md content for a downstream repo."""
@@ -248,7 +249,7 @@ def _ignore_broken_symlinks(directory: str, contents: list[str]) -> set[str]:
     return ignored
 
 
-def copy_skill(skill: dict, dest_dir: Path) -> None:
+def copy_skill(skill: dict[str, Any], dest_dir: Path) -> None:
     """Copy a skill directory to the destination, skipping broken symlinks."""
     source = skill["source"]
     target = dest_dir / skill["dir_name"]
@@ -296,7 +297,7 @@ def commit_and_push(repo_path: Path, message: str) -> None:
 
 def distribute_repo(
     repo_name: str,
-    repo_config: dict,
+    repo_config: dict[str, Any],
     github_org: str,
     checkout_dir: Path,
     dry_run: bool,
