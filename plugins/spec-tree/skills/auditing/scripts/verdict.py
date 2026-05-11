@@ -223,8 +223,14 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
             f"invalid overall {overall_raw!r}; expected one of "
             f"{sorted(ROOT_STATUSES | SKILL_STATUSES)}"
         )
-    rows = tuple(_parse_row(r) for r in data.get("rows", ()))
-    children = tuple(from_json_dict(c) for c in data.get("children", ()))
+    rows_raw = data.get("rows", [])
+    if not isinstance(rows_raw, list):
+        raise VerdictValidationError("rows must be an array")
+    rows = tuple(_parse_row(r) for r in rows_raw)
+    children_raw = data.get("children", [])
+    if not isinstance(children_raw, list):
+        raise VerdictValidationError("children must be an array")
+    children = tuple(from_json_dict(c) for c in children_raw)
     metadata_raw = data.get("metadata", {})
     if not isinstance(metadata_raw, dict):
         raise VerdictValidationError("metadata must be an object")
@@ -270,7 +276,10 @@ def _parse_row(data: Any) -> Row:
         raise VerdictValidationError(
             f"invalid row status {status_raw!r}; expected one of {sorted(SKILL_STATUSES)}"
         )
-    findings = tuple(_parse_finding(f) for f in data.get("findings", ()))
+    findings_raw = data.get("findings", [])
+    if not isinstance(findings_raw, list):
+        raise VerdictValidationError("findings must be an array")
+    findings = tuple(_parse_finding(f) for f in findings_raw)
     return Row(
         name=_require_str(data, "name"),
         status=Status(status_raw),

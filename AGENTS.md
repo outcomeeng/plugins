@@ -128,7 +128,7 @@ Plugins from this marketplace are installed into consumer projects that share no
 Authors of skills, agents, and the scripts they invoke must assume:
 
 - ⚠️ **Only `plugins/` is guaranteed present.** Consumer checkouts do not contain `outcomeeng/`, `outcomeeng_evals/`, `outcomeeng_testing/`, `spx/`, or any other top-level directory from this repo. Anything a plugin script needs at runtime must live under that plugin's own directory tree.
-- ⚠️ **`python3` only — no `uv`.** Scripts invoked by skills run via `python3 "${CLAUDE_PLUGIN_ROOT}/path/to/script.py"`. The consumer's `python3` is whatever the OS provides (typically 3.11+, but no project-level pin). No `uv run`, no `pip install`, no project-scoped virtualenv.
+- ⚠️ **`python3` only — no `uv`.** Scripts invoked by skills run via `python3 "${CLAUDE_PLUGIN_ROOT}/path/to/script.py"`. **Python 3.11 is the minimum version.** Scripts may use `StrEnum`, `tomllib`, exception groups, and other 3.11 features without conditional fallbacks; consumers on older Python must upgrade. No `uv run`, no `pip install`, no project-scoped virtualenv.
 - ⚠️ **Stdlib only.** No `click`, no `pydantic`, no third-party JSON Schema, no `tomllib`-via-package. `argparse`, `json`, `dataclasses`, `enum`, `pathlib`, `subprocess`, `sys`, `typing` — that's the toolbox. Anything richer must be vendored or replaced.
 - ⚠️ **No on-the-fly dependency installation.** Skills must not run `pip install`, `uv pip install`, `npm install`, or any other package fetch as part of their normal flow. Consumers approve plugin installation once; runtime side effects must not include further installations.
 

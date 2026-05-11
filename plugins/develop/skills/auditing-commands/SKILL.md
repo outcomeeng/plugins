@@ -171,7 +171,7 @@ Always explain WHY something matters for this specific command, not just that it
 <output_format>
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `reject`; `FAIL` if any critical finding is `reject`. Recommendations land as `warning` findings under `recommendations`; strengths land as `info` findings under `strengths`; quick fixes land as `info` findings under `quick-fixes`.
+The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `reject`; `FAIL` if any critical finding is `reject`; `UNKNOWN` if the command file cannot be read or the audit cannot complete. Recommendations land as `warning` findings under `recommendations`; strengths land as `info` findings under `strengths`; quick fixes land as `info` findings under `quick-fixes`.
 
 ```json
 {
