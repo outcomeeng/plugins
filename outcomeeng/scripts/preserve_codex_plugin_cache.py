@@ -2,7 +2,7 @@
 
 After the upgrade, the cache for each plugin in the working tree is reconciled
 against the set of versions published to the plugin's manifest within the
-configured window (default thirty days). Versions inside the window become
+configured window (default ten days). Versions inside the window become
 either the real current directory or a symlink pointing at it; versions outside
 the window are removed; plugins absent from the working tree have their cache
 directory pruned in full.
@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Protocol
 
 DEFAULT_MARKETPLACE = "outcomeeng"
-DEFAULT_WINDOW_DAYS = 30
+DEFAULT_WINDOW_DAYS = 10
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]

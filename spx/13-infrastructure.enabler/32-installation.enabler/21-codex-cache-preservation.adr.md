@@ -12,7 +12,7 @@ This decision governs the source of truth for which plugin-version paths the mar
 
 ## Decision
 
-The preservation set is the union of plugin-version pairs that have appeared in `plugins/<plugin>/.claude-plugin/plugin.json` on the published branch within the last thirty days, derived from `git log` of that manifest.
+The preservation set is the union of plugin-version pairs that have appeared in `plugins/<plugin>/.claude-plugin/plugin.json` on the published branch within the last ten days, derived from `git log` of that manifest.
 
 ## Rationale
 
@@ -22,24 +22,24 @@ A preservation set computed from the pre-upgrade cache snapshot satisfies the fi
 
 A preservation set derived from git history of the manifest satisfies both requirements. Every recipe invocation recomputes the set from the same source of truth: the published commits within the window. Cache state is consequential output, not input. A bypassed push has no permanent effect: the next recipe invocation restores the dropped paths. The decision flow is idempotent.
 
-The thirty-day window is wider than typical developer session lifetimes and accommodates plugin release cadences slower than the seven-day window the existing pruner uses, while remaining narrow enough that the symlink set stays bounded for plugins under active development. Versions outside the window are pruned because they fall outside any reasonable in-flight conversation scope.
+The ten-day window covers typical developer session lifetimes — a working week plus weekend margin — while remaining narrow enough that the symlink set stays bounded for plugins under active development. Versions outside the window are pruned because they fall outside any reasonable in-flight conversation scope.
 
 Two alternatives were rejected. The first — pin Codex resolution to the working tree, mirroring the Claude Code resolver — diverges from the Codex version-pathed lookup contract; the resolver is part of Codex's interface, not a marketplace concern. The second — maintain an external sidecar file recording preserved versions — introduces a second source of truth that drifts under exactly the bypass scenarios this decision exists to address; git history already carries the authoritative record.
 
 ## Trade-offs accepted
 
-| Trade-off                                                                                                       | Mitigation / reasoning                                                                                                                                                                                            |
-| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The recipe runs `git log` per plugin manifest on every invocation                                               | Git invocations remain bounded by the plugin count; the recipe already shells out to `git`, `claude`, and `codex` per push, so the added cost is small and identical across pushes                                |
-| Conversations older than thirty days that reference an older plugin version break                               | Thirty days exceeds typical developer session lifetimes by an order of magnitude; conversations that survive a month belong to the runtime's session lifecycle, not the marketplace's preservation contract       |
-| Git history must be available on the local working tree when the recipe runs                                    | The recipe is documented as running inside the marketplace repository's working tree; CI configurations and developer machines satisfy this constraint by construction                                            |
-| Renames to manifest files (e.g., relocating `plugins/<plugin>/`) lose their history without `git log --follow`  | The git walker uses `--follow` and treats discontinuities as boundaries that limit but do not corrupt the preservation set; structural renames are rare and explicit                                              |
-| A plugin removed from the marketplace continues to receive symlinks for thirty days under its last known target | The pruner discards the directory entirely once no version remains in the window; thirty-day persistence after removal is consistent with the in-flight-conversation rationale that motivates preservation at all |
+| Trade-off                                                                                                      | Mitigation / reasoning                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The recipe runs `git log` per plugin manifest on every invocation                                              | Git invocations remain bounded by the plugin count; the recipe already shells out to `git`, `claude`, and `codex` per push, so the added cost is small and identical across pushes                             |
+| Conversations older than ten days that reference an older plugin version break                                 | Ten days covers a working week plus weekend margin; conversations that survive longer belong to the runtime's session lifecycle, not the marketplace's preservation contract                                   |
+| Git history must be available on the local working tree when the recipe runs                                   | The recipe is documented as running inside the marketplace repository's working tree; CI configurations and developer machines satisfy this constraint by construction                                         |
+| Renames to manifest files (e.g., relocating `plugins/<plugin>/`) lose their history without `git log --follow` | The git walker uses `--follow` and treats discontinuities as boundaries that limit but do not corrupt the preservation set; structural renames are rare and explicit                                           |
+| A plugin removed from the marketplace continues to receive symlinks for ten days under its last known target   | The pruner discards the directory entirely once no version remains in the window; ten-day persistence after removal is consistent with the in-flight-conversation rationale that motivates preservation at all |
 
 ## Invariants
 
-- For any plugin `P` with manifest version `V` published to the marketplace branch within the last thirty days, `~/.codex/plugins/cache/<marketplace>/P/V/` resolves to either the real current version directory or a symlink to it, immediately after `just push-marketplace` completes.
-- For any version `V` that is neither current nor present in the last thirty days of `P`'s manifest history, `~/.codex/plugins/cache/<marketplace>/P/V/` does not exist after `just push-marketplace` completes.
+- For any plugin `P` with manifest version `V` published to the marketplace branch within the last ten days, `~/.codex/plugins/cache/<marketplace>/P/V/` resolves to either the real current version directory or a symlink to it, immediately after `just push-marketplace` completes.
+- For any version `V` that is neither current nor present in the last ten days of `P`'s manifest history, `~/.codex/plugins/cache/<marketplace>/P/V/` does not exist after `just push-marketplace` completes.
 - The post-recipe cache state is a pure function of the published git history and the working-tree manifests, independent of the cache state observed before the recipe ran.
 
 ## Compliance
@@ -52,7 +52,7 @@ The marketplace recipe `just push-marketplace` invokes the cache-preservation sc
 
 - The preservation script derives the preservation set per plugin from a published-versions callable parameterized by a time window — git history is the authoritative source, snapshot deltas are not ([review])
 - The published-versions callable is injected as a Protocol parameter — enables `l1` testing of preservation logic against controlled version sets without invoking real git ([review])
-- The default published-versions callable invokes `git log` against the working tree's manifest file for the configured plugin, limited to a thirty-day window — git is `l1` infrastructure per `spx/15-test-language.adr.md` ([review])
+- The default published-versions callable invokes `git log` against the working tree's manifest file for the configured plugin, limited to a ten-day window — git is `l1` infrastructure per `spx/15-test-language.adr.md` ([review])
 - Compatibility symlinks for plugin versions outside the window are pruned during the same recipe invocation that creates current-window symlinks — bounded preservation set ([review])
 - Plugins absent from the working tree but present in cache have their entire cache directory pruned — orphaned plugins do not retain compatibility paths ([review])
 
