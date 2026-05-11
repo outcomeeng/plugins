@@ -354,6 +354,7 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 | `/testing`                    | spec    | Write tests driven by spec assertions                                   |
 | `/auditing-tests`             | spec    | Audit test evidence quality (audit gate)                                |
 | `/auditing-product-decisions` | spec    | Audit PDR evidence quality (audit gate)                                 |
+| `/auditing`                   | *all*   | Generic audit orchestrator — dispatches to `auditing-{lang}*` per scope |
 | `/applying`                   | *all*   | Orchestrator: runs declare + spec + apply in sequence with audit gates  |
 | `/committing-changes`         | apply   | Conventional Commits with selective staging                             |
 | `/opening-pr`                 | apply   | Push branch, open draft PR with curated title and body                  |
@@ -368,11 +369,12 @@ Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a dur
 
 ### Agents
 
-| Agent                   | Purpose                                                        |
-| ----------------------- | -------------------------------------------------------------- |
-| `applier`               | Autonomous TDD agent — runs the full 8-step flow as a subagent |
-| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)   |
-| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill) |
+| Agent                   | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `applier`               | Autonomous TDD agent — runs the full 8-step flow as a subagent                |
+| `auditor`               | Branch-scoped audit orchestrator wrapping `/auditing` with per-language state |
+| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)                  |
+| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill)                |
 
 ### Commands
 
