@@ -1,10 +1,9 @@
-"""Grade an audit verdict against expected structural fields.
+"""Grade an evaluated response against expected structural fields.
 
-The grader parses the assistant message as a single JSON document (the
-verdict) and checks each expectation by recursive structural-subset
-matching. Free-form prose has no role in the pass/fail decision; the
-producing skill emits the verdict as its entire response per
-``spx/15-audit-verdict-format.pdr.md``.
+The grader parses the assistant message as a single JSON document and
+checks each expectation by recursive structural-subset matching. Free-form
+prose has no role in the pass/fail decision; the response format for a
+given eval is declared by that eval's prompt.
 """
 
 from __future__ import annotations

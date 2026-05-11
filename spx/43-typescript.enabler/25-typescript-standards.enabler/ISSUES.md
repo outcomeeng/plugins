@@ -14,7 +14,7 @@ The three top-level specs in this subtree (`typescript-architecture.md`, `typesc
 
 ## [eval] Coverage Beyond the Slice
 
-The shared-test-owned-constant-bag rule under `32-test-data-ownership.enabler/` is the only assertion currently carrying `[eval]` evidence. Every other compliance assertion across this subtree remains `[review]`. As the auditing-typescript-tests skill is rebuilt to emit XML verdicts per `spx/15-audit-verdict-format.pdr.md`, additional rules become candidates for `[eval]` migration — particularly assertions whose violation pattern is unambiguous in a single test file (e.g., fixture imports, generator-only `fc.constant` wrappers).
+The shared-test-owned-constant-bag rule under `32-test-data-ownership.enabler/` is the only assertion currently carrying `[eval]` evidence. Every other compliance assertion across this subtree remains `[review]`. As the auditing-typescript-tests skill gains structural-verdict output the eval grader can match against, additional rules become candidates for `[eval]` migration — particularly assertions whose violation pattern is unambiguous in a single test file (e.g., fixture imports, generator-only `fc.constant` wrappers).
 
 ## Eval Runner CI Gate
 
