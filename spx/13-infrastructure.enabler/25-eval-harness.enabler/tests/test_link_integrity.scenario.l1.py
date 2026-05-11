@@ -70,6 +70,38 @@ def test_find_eval_links_ignores_non_eval_markdown_links(tmp_path: Path) -> None
     assert links == []
 
 
+def test_find_eval_links_ignores_inline_code_spans(tmp_path: Path) -> None:
+    node_dir = tmp_path / "spx" / "node"
+    node_dir.mkdir(parents=True)
+    spec = node_dir / "spec.md"
+    spec.write_text(
+        "Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. "
+        "The runner consumes it.\n",
+        encoding="utf-8",
+    )
+
+    links = find_eval_links(tmp_path)
+
+    assert links == []
+
+
+def test_find_eval_links_ignores_fenced_code_blocks(tmp_path: Path) -> None:
+    node_dir = tmp_path / "spx" / "node"
+    node_dir.mkdir(parents=True)
+    spec = node_dir / "spec.md"
+    spec.write_text(
+        "Example assertion:\n\n"
+        "```markdown\n"
+        "- ALWAYS: foo ([eval](evals/example/eval.toml))\n"
+        "```\n",
+        encoding="utf-8",
+    )
+
+    links = find_eval_links(tmp_path)
+
+    assert links == []
+
+
 def test_find_eval_links_returns_all_links_across_files(tmp_path: Path) -> None:
     node_a = tmp_path / "spx" / "a"
     node_b = tmp_path / "spx" / "b"
