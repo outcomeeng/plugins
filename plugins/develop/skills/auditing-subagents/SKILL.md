@@ -228,62 +228,41 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 </anti_patterns>
 
 <output_format>
-Audit reports use severity-based findings, not scores. Generate output using this markdown template:
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-```markdown
-## Audit Results: [subagent-name]
+The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `reject`; `FAIL` if any critical finding is `reject`. Recommendations land as `warning` findings; strengths and quick fixes land as `info` findings.
 
-### Assessment
-
-[1-2 sentence overall assessment: Is this subagent fit for purpose? What's the main takeaway?]
-
-### Critical Issues
-
-Issues that hurt effectiveness or violate required patterns:
-
-1. **[Issue category]** (file:line)
-   - Current: [What exists now]
-   - Should be: [What it should be]
-   - Why it matters: [Specific impact on this subagent's effectiveness]
-   - Fix: [Specific action to take]
-
-2. ...
-
-(If none: "No critical issues found.")
-
-### Recommendations
-
-Improvements that would make this subagent better:
-
-1. **[Issue category]** (file:line)
-   - Current: [What exists now]
-   - Recommendation: [What to change]
-   - Benefit: [How this improves the subagent]
-
-2. ...
-
-(If none: "No recommendations - subagent follows best practices well.")
-
-### Strengths
-
-What's working well (keep these):
-
-- [Specific strength with location]
-- ...
-
-### Quick Fixes
-
-Minor issues easily resolved:
-
-1. [Issue] at file:line → [One-line fix]
-2. ...
-
-### Context
-
-- Subagent type: [simple/complex/delegation/etc.]
-- Tool access: [appropriate/over-permissioned/under-specified]
-- Model selection: [appropriate/reconsider - with reason if latter]
-- Estimated effort to address issues: [low/medium/high]
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-subagents",
+  "target": "<subagent-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    {
+      "name": "critical-issues",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "<subagent-file>",
+          "line": null,
+          "rule": "<issue-category>",
+          "severity": "reject",
+          "message": "Current: <…>. Should be: <…>. Why it matters: <…>. Fix: <…>."
+        }
+      ]
+    },
+    { "name": "recommendations", "status": "PASS", "findings": [] },
+    { "name": "strengths", "status": "PASS", "findings": [] },
+    { "name": "quick-fixes", "status": "PASS", "findings": [] }
+  ],
+  "metadata": {
+    "subagent_type": "simple | complex | delegation",
+    "tool_access": "appropriate | over-permissioned | under-specified",
+    "model_selection": "appropriate | reconsider"
+  }
+}
 ```
 
 </output_format>

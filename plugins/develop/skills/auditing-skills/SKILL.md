@@ -247,54 +247,65 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 </operational_effectiveness_examples>
 
 <output_format>
-Audit reports use severity-based findings, not scores. Generate output using this markdown template:
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-```markdown
-## Audit: [skill-name]
+The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `reject`. Worth-improving and Keep-these-aspects observations land as `warning` and `info` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
 
-**Verdict**: [1-2 sentences. Is this skill fit for purpose? State the main finding concretely — e.g., "Structurally sound but 30% over size limit with no failure modes." Not "This skill has some issues."]
-
-**Context**: Skill type: [simple/complex/delegation/etc.] · Line count: [number] · Effort to address: [low/medium/high]
-
----
-
-### Keep these aspects
-
-What's working well and why removing it would hurt — each entry names the concrete consequence of losing it:
-
-- **[Strength]** (`file:line`) — [what it does] → removing this would [specific consequence: e.g., "cause Claude to flag missing <quick_start> in validator skills where omission is correct"]
-- ...
-
-(If none: "No clear strengths — skill needs significant work.")
-
----
-
-### Worth improving
-
-Changes that yield concrete, named gains:
-
-1. **[Issue]** (`file:line`)
-   - Current: [what exists]
-   - Change to: [what it should be]
-   - Benefit: [specific gain — name the exact failure mode it prevents or the exact workflow step it improves. Not "improves clarity."]
-
-(If none: "No improvements needed beyond must-fix items.")
-
----
-
-### Must fix
-
-Issues that break effectiveness or violate required patterns — each entry names what specifically fails if left unfixed:
-
-1. **[Issue]** (`file:line`)
-   - Current: [what exists]
-   - Fix: [specific action]
-   - Impact if unfixed: [what breaks — name the failure mode, not "reduces effectiveness"]
-
-(If none: "No critical issues.")
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-skills",
+  "target": "<skill-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    {
+      "name": "keep-these-aspects",
+      "status": "PASS",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "<skill-file>",
+          "line": null,
+          "rule": "<strength-name>",
+          "severity": "info",
+          "message": "<what it does> — removing this would <specific consequence>"
+        }
+      ]
+    },
+    {
+      "name": "worth-improving",
+      "status": "PASS",
+      "findings": [
+        {
+          "id": "f-002",
+          "file": "<skill-file>",
+          "line": null,
+          "rule": "<issue-name>",
+          "severity": "warning",
+          "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
+        }
+      ]
+    },
+    {
+      "name": "must-fix",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-003",
+          "file": "<skill-file>",
+          "line": null,
+          "rule": "<issue-name>",
+          "severity": "reject",
+          "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."
+        }
+      ]
+    }
+  ],
+  "metadata": { "skill_type": "simple | complex | delegation | etc.", "line_count": "<n>" }
+}
 ```
 
-Note: While this subagent uses pure XML structure, it generates markdown output for human readability.
+Note: While this subagent uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
 </output_format>
 
 <success_criteria>

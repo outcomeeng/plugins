@@ -66,58 +66,30 @@ After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/loc
 
 <output_format>
 
-````markdown
-ARCHITECTURE REVIEW
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-**Decision:** [APPROVED | REJECTED]
+The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `reject` for blocking violations.
 
-Verdict
-
-| # | Concern               | Status            | Detail            |
-| - | --------------------- | ----------------- | ----------------- |
-| 1 | Section structure     | {PASS/REJECT}     | {one-line detail} |
-| 2 | Testability in Compl. | {PASS/REJECT}     | {one-line detail} |
-| 3 | Atemporal voice       | {PASS/REJECT}     | {one-line detail} |
-| 4 | Mocking prohibition   | {PASS/REJECT}     | {one-line detail} |
-| 5 | Level accuracy        | {PASS/REJECT}     | {one-line detail} |
-| 6 | Anti-patterns         | {PASS/REJECT}     | {one-line detail} |
-| 7 | Ancestor consistency  | {PASS/REJECT/N/A} | {one-line detail} |
-
----
-
-Violations
-
-Violation: {Violation name}
-
-**Where:** {section or quoted text}
-**Concern:** {concern name}
-**Why this fails:** {direct explanation}
-
-**Correct approach:**
-
-```rust
-{show the architectural shape or ADR wording that would conform}
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-rust-architecture",
+  "target": "<adr-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "testability-in-compliance", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
----
-
-Required Changes
-
-{concise list}
-
----
-
-References
-
-- /standardizing-rust-architecture: {section name}
-- /standardizing-rust: {section name if applicable}
-- /testing: {section name if applicable}
-
----
-
-{If REJECTED: "Revise and resubmit."}
-{If APPROVED: "Architecture meets standards."}
-````
+Each finding's `rule` carries the violation pattern (e.g., `phantom-section`, `temporal-voice`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach Rust sample and required-changes summary in supplementary markdown appended after the carrier when format is `markdown` or `markdown+json`.
 
 </output_format>
 

@@ -186,53 +186,29 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 <output_format>
 
-````markdown
-# CODE REVIEW
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-**Decision:** [APPROVED | REJECTED]
+The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `reject` for blocking violations.
 
-## Verdict
-
-| # | Concern                | Status            | Detail            |
-| - | ---------------------- | ----------------- | ----------------- |
-| 1 | Automated gates        | {PASS/REJECT}     | {one-line detail} |
-| 2 | Test execution         | {PASS/REJECT}     | {one-line detail} |
-| 3 | Function comprehension | {PASS/REJECT}     | {one-line detail} |
-| 4 | Design coherence       | {PASS/REJECT}     | {one-line detail} |
-| 5 | Import structure       | {PASS/REJECT/N/A} | {one-line detail} |
-| 6 | ADR/PDR compliance     | {PASS/REJECT/N/A} | {one-line detail} |
-
----
-
-## Findings (REJECTED only)
-
-### {Finding name}
-
-**Where:** {file:line or section}
-**Concern:** {which concern from verdict table}
-**Why this fails:** {direct explanation}
-
-**Correct approach:**
-
-```typescript
-{What the code should look like}
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-typescript",
+  "target": "<scope-target>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    { "name": "automated-gates", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "test-execution", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "function-comprehension", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "design-coherence", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "import-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "adr-pdr-compliance", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
----
-
-{Repeat for each finding}
-
----
-
-## Required Changes (REJECTED only)
-
-{Concise list of what must change}
-
----
-
-{If REJECTED: "Fix issues and resubmit for review."}
-{If APPROVED: "Code meets standards."}
-````
+Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "reject"`, and `message` (the one-line "why this fails"). For correct-approach code samples and required changes, include them in the finding's `message` field or supplement with a markdown section appended after the carrier when the format is `markdown` or `markdown+json`.
 
 </output_format>
 

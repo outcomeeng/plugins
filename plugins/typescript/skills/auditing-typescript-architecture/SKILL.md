@@ -100,61 +100,30 @@ All canonical conventions are in `/standardizing-typescript-architecture`. Read 
 
 <output_format>
 
-````markdown
-# ARCHITECTURE REVIEW
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-**Decision:** [APPROVED | REJECTED]
+The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `reject` for blocking violations.
 
-## Verdict
-
-| # | Concern               | Status            | Detail            |
-| - | --------------------- | ----------------- | ----------------- |
-| 1 | Section structure     | {PASS/REJECT}     | {one-line detail} |
-| 2 | Testability in Compl. | {PASS/REJECT}     | {one-line detail} |
-| 3 | Atemporal voice       | {PASS/REJECT}     | {one-line detail} |
-| 4 | Mocking prohibition   | {PASS/REJECT}     | {one-line detail} |
-| 5 | Level accuracy        | {PASS/REJECT}     | {one-line detail} |
-| 6 | Anti-patterns         | {PASS/REJECT}     | {one-line detail} |
-| 7 | Ancestor consistency  | {PASS/REJECT/N/A} | {one-line detail} |
-
----
-
-## Violations
-
-### {Violation name}
-
-**Where:** {Section name or quoted text identifying the location}
-**Concern:** {Which concern from the verdict table}
-**Why this fails:** {Direct explanation}
-
-**Correct approach:**
-
-```typescript
-{Show what the architecture should be}
+```json
+{
+  "schema_version": 1,
+  "skill": "auditing-typescript-architecture",
+  "target": "<adr-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "testability-in-compliance", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
----
-
-{Repeat for each violation}
-
----
-
-## Required Changes
-
-{Concise list of what must change}
-
----
-
-## References
-
-- /standardizing-typescript-architecture: {section name}
-- /testing: {section name if applicable}
-
----
-
-{If REJECTED: "Revise and resubmit."}
-{If APPROVED: "Architecture meets standards."}
-````
+Each finding's `rule` field carries the violation pattern (e.g., `phantom-section`, `temporal-voice`, `mocking-language`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach code sample and required-changes summary in supplementary markdown appended after the carrier when format is `markdown` or `markdown+json`.
 
 </output_format>
 
