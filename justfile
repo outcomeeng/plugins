@@ -83,21 +83,31 @@ check-installed marketplace="outcomeeng":
     echo "$codex_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
     echo "✔ installed skills valid"
 
-# Push the current branch, then refresh local Claude and Codex marketplace installs
-push-marketplace *push_args:
+# Refresh local Claude and Codex marketplace installs from the current main (run after a PR merges)
+sync-marketplace:
     #!/usr/bin/env bash
     set -euo pipefail
-    for tool in git claude codex; do
+    for tool in claude codex; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             echo "Missing required tool: $tool" >&2
             exit 1
         fi
     done
-    git push {{push_args}}
     claude plugin marketplace update outcomeeng
     uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
     uv run python -m outcomeeng.scripts.validate_install
     just check-installed
+
+# Push directly to main (rare — PRs are the norm), then sync the local marketplace installs
+push-marketplace *push_args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v git >/dev/null 2>&1; then
+        echo "Missing required tool: git" >&2
+        exit 1
+    fi
+    git push {{push_args}}
+    just sync-marketplace
 
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:
