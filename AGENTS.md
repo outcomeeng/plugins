@@ -597,7 +597,7 @@ Bare `git push origin main` skips the sync: the local marketplace stays stale, t
 
 ### How the marketplace cache resolves to skill content
 
-`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. For unpinned installs (the default), the runtime resolves skill content from the **working tree at that path** — not from the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, which are historical snapshots kept so version-pinned installs still resolve after the marketplace HEAD moves on. The on-disk caches lagging the merged HEAD version is by design.
+`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. For unpinned installs (the default), the runtime resolves skill content from the **working tree at that path** — not from the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, which are historical snapshots kept so version-pinned installs still resolve after the marketplace HEAD moves on. Those caches lag the merged HEAD version by design.
 
 The Skill tool loads a skill's content into per-session memory the first time it is invoked. Working-tree edits do **not** reach a running Claude Code session until `/reload-plugins` runs; the next invocation then re-reads from the working tree.
 
