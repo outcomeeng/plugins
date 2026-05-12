@@ -132,6 +132,11 @@ def filename_for_command(command: str) -> str:
     contract is deliberately narrow so callers can ``directory / name``
     without surprise: a command containing ``/path/to/check.py`` does
     not produce a nested subdirectory or escape the results directory.
+
+    Windows-specific reserved characters (``*``, ``?``, ``"``, ``<``,
+    ``>``, ``|``) are left through verbatim. The marketplace targets
+    macOS and Linux; extend the replacement set if Windows support is
+    ever in scope.
     """
     out = command
     for character in (" ", "/", "\\", ":"):

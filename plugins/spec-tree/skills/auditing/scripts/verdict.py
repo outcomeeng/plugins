@@ -219,6 +219,14 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
 
     Tolerates absent ``rows``, ``children``, and ``metadata`` (defaulted
     to empty).
+
+    Does not validate the convention that leaf verdicts (with ``rows``
+    and no ``children``) use ``SKILL_STATUSES`` while wrapper verdicts
+    (with ``children``) use ``ROOT_STATUSES`` — a dispatched skill that
+    accidentally emits ``APPROVED`` instead of ``PASS`` passes parsing
+    and only surfaces in the rollup arithmetic (which handles both
+    vocabularies gracefully). The convention is documented on
+    ``Verdict``; enforcement is left to producer-side review.
     """
     _require_keys(data, ("schema_version", "skill", "target", "overall"))
     schema_version = _require_int(data, "schema_version")
@@ -272,7 +280,14 @@ def parse_json(text: str) -> Verdict:
 
 
 def dump_json(verdict: Verdict, *, indent: int | None = 2) -> str:
-    """Serialize a ``Verdict`` to a JSON string with stable key order."""
+    """Serialize a ``Verdict`` to a JSON string with stable key order.
+
+    ``sort_keys=False`` preserves the natural schema key order from
+    ``to_json_dict`` (schema_version → skill → target → overall → rows →
+    children → metadata) rather than reordering alphabetically; downstream
+    readers expecting that order — including the canonical example JSON
+    in skill prose — stay aligned.
+    """
     return json.dumps(to_json_dict(verdict), indent=indent, sort_keys=False)
 
 

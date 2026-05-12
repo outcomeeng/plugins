@@ -83,7 +83,11 @@ def extract_json(text: str) -> str:
 
     The function does not validate the schema — it only locates the JSON
     document. Schema validation is the caller's responsibility (via
-    ``verdict.parse_json``).
+    ``verdict.parse_json``). A malformed JSON document that begins with
+    ``{`` therefore surfaces downstream as ``"invalid verdict: invalid
+    JSON: …"`` rather than as ``ExtractError("no JSON payload found")``;
+    the heuristic cannot distinguish "starts with brace but is broken"
+    from "is a valid JSON-only verdict" without parsing.
     """
     begin = text.find(JSON_BLOCK_BEGIN)
     end = text.find(JSON_BLOCK_END)

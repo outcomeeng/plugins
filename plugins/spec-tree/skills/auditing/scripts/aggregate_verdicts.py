@@ -20,6 +20,9 @@ import argparse
 import sys
 from pathlib import Path
 
+# Bare ``import verdict`` resolves because this file is invoked as a script
+# (Python prepends the script's directory to ``sys.path``). Tests exercise
+# this script through ``subprocess`` calls, not via ``importlib`` loading.
 import verdict
 from verdict import Verdict, VerdictValidationError
 
@@ -107,11 +110,15 @@ def _resolve_paths(positional: list[str], directory: str | None) -> list[Path]:
     # Deduplicate by resolved path so a file passed both positionally and
     # discovered via --directory contributes one child to the wrapper,
     # not two. Without this, a duplicated FAIL child would count twice in
-    # the rollup.
-    seen: dict[Path, None] = {}
+    # the rollup. Map resolved -> original so error reporting preserves
+    # the caller-supplied (possibly relative) path. Hard-linked files
+    # remain undetected: ``Path.resolve`` follows symlinks but does not
+    # canonicalize to an inode; callers passing two hard-link aliases to
+    # the same file will see both as distinct children.
+    seen: dict[Path, Path] = {}
     for path in paths:
-        seen.setdefault(path.resolve(), None)
-    return list(seen)
+        seen.setdefault(path.resolve(), path)
+    return list(seen.values())
 
 
 def _load_verdict(path: Path) -> Verdict:
