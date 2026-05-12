@@ -176,8 +176,8 @@ def _escape_cell(text: str) -> str:
     """Escape a string for safe inclusion in a markdown table cell.
 
     Order: backslash first (otherwise it corrupts the subsequent escape
-    sequences), then pipe, then newline. Inverse of the orchestrator's
-    historical cell-escape policy.
+    sequences), then pipe, then newline. Same escaping policy as the
+    historical orchestrator's inline cell escape.
     """
     out = text.replace(*CELL_BACKSLASH)
     out = out.replace(*CELL_PIPE)
