@@ -74,7 +74,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 - ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
 - ⚠️ **Changes land on `main` via pull request** - Feature branch → `/committing-changes` → `/open-pr` → review → merge. Never push commits straight to `main`; the only exception is a trivial fix, and even then use `just push-marketplace` (never bare `git push`) so cache preservation, marketplace refresh, and validation run in order. After a PR merges, sync your local install with `just sync-marketplace`. Full procedure in "Git workflow" below.
-- 🛑 **STOP TRIGGER — NEVER call `sleep` to wait or pace work** - No `sleep 30`, no `sleep 210; echo wake`, no `sleep` inside a backgrounded command, no `sleep` in a `while`/`until` loop. Every shell `sleep` spawns a subprocess (and file descriptors) the harness does not reliably reap; across turns and concurrent agents they accumulate until the host is exhausted and the agent is killed — this has happened in this repo. Wait via the runtime's timer mechanism instead — see "Waiting without polling" below. If an earlier turn left a `sleep` running, identify it and terminate it by PID before doing anything else.
+- 🛑 **STOP TRIGGER — NEVER call `sleep` to wait or pace work** - No `sleep 30`, no `sleep 210; echo wake`, no `sleep` inside a backgrounded command, no `sleep` in a `while`/`until` loop. Every shell `sleep` spawns a subprocess (and file descriptors) the harness does not reliably reap; across turns and concurrent agents they accumulate until the host is exhausted and the agent is killed — this has happened in this repo. Wait via the runtime's timer mechanism instead — see "Process hygiene" below. If an earlier turn left a `sleep` running, identify it and terminate it by PID before doing anything else.
 
 - ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
@@ -83,30 +83,43 @@ Historical plugin implementations are pruned from this repository. The history t
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
 - ⚠️ **YAML `description:` fields must not contain word-then-colon mid-sentence** - A pattern like `description: ALWAYS invoke when: (1) ...` causes a YAML parse error: the parser reads `when:` as a nested key, silently drops all frontmatter, and the skill loads with empty metadata. Rephrase to avoid `when:`, `note:`, `if:`, and similar colon-containing words inside unquoted description values. Run `just check` after editing any SKILL.md to catch this before committing.
 
-## Waiting without polling
+## Process hygiene
 
-When a turn needs to wait — for a CI run, a build, a PR review, anything that resolves on its own — never block with a shell `sleep` and never spin a `while`/`until` poll loop (see the stop trigger in Critical Rules). Hand the wait to the runtime's timer mechanism and let it re-invoke you when it fires.
+This harness spawns helper processes — a periodic `pgrep` to monitor background tasks, plus a shell and its children for every Bash call — and does not reliably reap them. A construct that creates many short-lived children (a poll loop), a long-lived child the monitor keeps polling (`gh run watch`, a backgrounded `sleep`, an idle keep-alive command), or several heavy process trees running at once will exhaust the per-user process limit: `posix_spawn` then returns `EAGAIN`, the monitor's `pgrep` keeps failing, and the agent is force-killed. The leak is not fixable here, so the rules below keep agents from triggering it. They apply with the tool names of the current runtime — Codex's `exec_command` is the equivalent of Bash, and so on.
 
-**Claude Code:**
+### Waiting and re-checking never use a shell construct
 
-- `/loop` — recurring work on an interval (for example, re-checking PR status every few minutes).
-- `ScheduleWakeup` — a single re-check after a delay; pass the continuation prompt so the next firing resumes the task.
+No `while`/`until` poll loop. No `gh run watch`, in any form. No `sleep` to wait or pace work — foreground *or* backgrounded, on its own or in a loop. To wait for a build, CI run, process, or PR review to resolve, or to re-check on an interval, hand the wait to the runtime timer and let it re-invoke you:
 
-**Codex:**
+- **Claude Code:** `/loop` for recurring work; `ScheduleWakeup` for a single delayed re-check (pass the continuation prompt so the next firing resumes the task).
+- **Codex:** for waits where no process needs to stay open, such as GitHub PR reviews or CI runs, create a thread heartbeat with `codex_app.automation_update` — `mode: "create"`, `kind: "heartbeat"`, `destination: "thread"`, and an RRULE such as `FREQ=MINUTELY;INTERVAL=5`. When it fires, continue the same thread and inspect the external state then. Prefer this over keeping `exec_command` sessions open.
 
-For waits where no process needs to stay open, such as GitHub PR reviews or CI runs, create a thread heartbeat with `codex_app.automation_update`: `mode: "create"`, `kind: "heartbeat"`, `destination: "thread"`, and an RRULE such as `FREQ=MINUTELY;INTERVAL=5`. When the heartbeat fires, continue the same thread and inspect the external state then. Prefer this over keeping `exec_command` sessions open.
+  ```json
+  {
+    "mode": "create",
+    "kind": "heartbeat",
+    "destination": "thread",
+    "name": "Check PR status",
+    "prompt": "Check the PR checks and review state, then continue with the next repository-governed action.",
+    "rrule": "FREQ=MINUTELY;INTERVAL=5",
+    "status": "ACTIVE"
+  }
+  ```
 
-```json
-{
-  "mode": "create",
-  "kind": "heartbeat",
-  "destination": "thread",
-  "name": "Check PR status",
-  "prompt": "Check the PR checks and review state, then continue with the next repository-governed action.",
-  "rrule": "FREQ=MINUTELY;INTERVAL=5",
-  "status": "ACTIVE"
-}
-```
+If an earlier turn left a `sleep` or a poll loop running, identify it and terminate it by PID before doing anything else.
+
+### Background commands: one at a time, short-lived, never a keep-alive
+
+Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one at a time, only when the work genuinely must continue across a wait, and only when it will exit on its own. Never start a background command whose job is to "stay alive" — a pile of monitored processes (or one that never exits) is the `pgrep` storm itself.
+
+### Heavy subprocess trees: sparingly, serially, load-aware
+
+`just check`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime`: if sustained loadavg exceeds the host's core count the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run `just check` once before committing, not repeatedly "to be sure".
+
+### Other forks add up
+
+- Don't spawn subagents you don't need — each is its own process tree.
+- Redirect a long-running command's output to a file (`> /tmp/check.log 2>&1`) and read it in a separate call, rather than piping through `grep`/`tail`/`head` — the pipeline holds extra processes and file descriptors open for the command's lifetime.
 
 ## Read Tool Output
 
