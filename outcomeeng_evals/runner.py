@@ -100,7 +100,16 @@ class ClaudeCliRunner:
 
 
 def _subprocess_env() -> dict[str, str]:
-    """Return a copy of the parent env with the Claude Code nesting guard removed."""
+    """Return a copy of the parent env with the Claude Code nesting guard removed.
+
+    The full parent environment is passed through deliberately: ``claude``
+    resolves the user's OAuth subscription (and any other auth it needs)
+    from inherited variables, so narrowing the env to an allow-list would
+    break authentication. The only key dropped is ``CLAUDECODE`` — leaving
+    it set would make the nested call take the interactive-guard path
+    instead of the print-mode subprocess contract. Do not narrow this in a
+    future refactor.
+    """
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)
     return env
