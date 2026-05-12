@@ -17,6 +17,8 @@ SCHEMA_VERSION = "1"
 GIT_SHA = "9999af8"
 TIMESTAMP = "2026-05-11T15:48:00Z"
 TRANSCRIPT_REL = "runs/2026-05-11T15-48-00Z.json"
+FAILING_TIMESTAMP = "2026-05-12T09:00:00Z"
+FAILING_TRANSCRIPT_REL = "runs/2026-05-12T09-00-00Z.json"
 
 
 def _passing_row() -> HistoryRow:
@@ -35,13 +37,20 @@ def _passing_row() -> HistoryRow:
 
 
 def _failing_row() -> HistoryRow:
-    row = _passing_row()
-    row["passed"] = False
-    row["pass_rate"] = 0.75
-    row["cases_passed"] = 3
-    row["timestamp"] = "2026-05-12T09:00:00Z"
-    row["transcript"] = "runs/2026-05-12T09-00-00Z.json"
-    return row
+    # Built from scratch (not a mutated copy of _passing_row) so the two
+    # rows are obviously distinct values.
+    return {
+        "timestamp": FAILING_TIMESTAMP,
+        "schema_version": SCHEMA_VERSION,
+        "git_sha": GIT_SHA,
+        "passed": False,
+        "pass_rate": 0.75,
+        "cases_total": 4,
+        "cases_passed": 3,
+        "total_cost_usd": 1.04,
+        "total_duration_ms": 18960.0,
+        "transcript": FAILING_TRANSCRIPT_REL,
+    }
 
 
 def _read_history(path: Path) -> list[dict[str, object]]:
@@ -97,7 +106,7 @@ def test_row_is_valid_json_per_line(tmp_path: Path) -> None:
     append_history_row(history_path, _failing_row())
 
     lines = history_path.read_text(encoding="utf-8").splitlines()
-    assert all(json.loads(line) for line in lines if line)
+    assert all(isinstance(json.loads(line), dict) for line in lines if line)
 
 
 def test_each_row_lands_on_its_own_line(tmp_path: Path) -> None:

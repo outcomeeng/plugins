@@ -20,6 +20,8 @@ A scheduled CI workflow that runs `outcomeeng-evals run --all` and posts results
 
 Until CI owns the canonical appends, every developer-machine run appends a row to `history.jsonl`, which shows up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
+`append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). Acceptable for now; if CI ever runs the same eval concurrently, give `append_history_row` a file lock (`fcntl.flock` or a lockfile).
+
 ## Independent uv project for `outcomeeng_evals`
 
 `outcomeeng_evals` builds from the single repo `pyproject.toml`. Split into an independent uv project only when it is published to PyPI or its dependency surfaces diverge from the marketplace's.
@@ -28,9 +30,17 @@ Until CI owns the canonical appends, every developer-machine run appends a row t
 
 The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether that subpackage is a stable, versioned surface or an internal helper with no compatibility guarantees is not yet declared. Decide when the first external consumer appears.
 
-## Prompt-template placeholder validation
+## Prompt-template placeholder validation (stricter form)
 
-`_render_prompt` (in `outcomeeng_evals/cli/commands/run.py`) substitutes `{case_id}` and `{input_json}` and passes any other `{…}` run through verbatim. A typo like `{casse_id}` reaches the model as literal text with no warning. Validating placeholders — at `load_definition` time or at render time — would surface authoring errors before a paid run. The constraint: prompt templates legitimately contain literal `{` (JSON examples, code), so a validator must warn only on `{<identifier-shaped token>}` that is not one of the known keys, not on every brace. Defer until prompt-authoring mistakes actually bite.
+`_render_prompt` (in `outcomeeng_evals/cli/commands/run.py`) emits a stderr warning when it meets an identifier-shaped `{token}` that isn't a known placeholder (catching `{casse_id}` and similar typos at render time). A stricter form — validating `prompt.md` against the known keys at `load_definition` time and *raising* rather than warning — would catch the typo before any model call. Deferred: the render-time warning covers the common case, and raising would need care so a template that legitimately contains a `{identifier}` literal (rare, but possible) is not rejected. Revisit if prompt authoring becomes a frequent operation.
+
+## Version-keyed `claude` envelope extraction
+
+`_assistant_text` (in `outcomeeng_evals/runner.py`) probes the parsed `claude --output-format json` envelope for `result`, then `response`, then `content`. If a future CLI release renames the key or adds one that collides with an unrelated field, the probe could succeed and return the wrong text rather than failing loudly. If `claude --output-format json` emits a version field (`cli_version`, `schema_version`, or similar), use it to select the extraction path instead of probing by key order. Deferred until the envelope shape actually shifts.
+
+## Tilde-fenced code blocks in the link walker
+
+`_strip_code_regions` (in `outcomeeng_testing/evals/link_integrity.py`) blanks backtick fences (`` ``` ``) but not tilde fences (`~~~`), which CommonMark also allows. A `~~~`-fenced block containing a `[test](...)` or `[eval](...)` example would be treated as a real evidence reference and flagged broken. No marketplace spec markdown uses tilde fences today; if one does, add tilde-fence matching to `_strip_code_regions`.
 
 ## Partial-trial evidence in parallel-path errors
 
