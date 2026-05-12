@@ -648,7 +648,7 @@ While the change is still on your feature branch:
 2. Run `/reload-plugins`.
 3. Re-invoke the skill — the new content loads.
 
-No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. Commit, open the PR, and merge it only when the change is ready for collaborators to pick up. After the PR merges, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
+No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. Commit, open the PR, and merge the PR only when the change is ready for collaborators to pick up. After the PR merges, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
 
 ## Missing plugins or skills
 
