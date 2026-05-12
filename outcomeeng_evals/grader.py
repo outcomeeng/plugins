@@ -65,7 +65,11 @@ def is_subset(expected: Any, actual: Any) -> bool:
       cardinality-aware. ``[X, X]`` does not satisfy ``[X]`` — two expected
       Xs require two actual Xs. Greedy first-match consumption ordered by
       the expected list.
-    - Scalars: equality (``expected == actual``).
+    - Scalars: equality (``expected == actual``). Python's ``bool ==
+      int`` semantics carry through — ``is_subset(True, 1)`` returns
+      True because ``True == 1``. This matches the JSON structural
+      intent: JSON ``true``/``false`` and JSON numbers share the
+      integer comparison that ``==`` performs.
     """
     if isinstance(expected, dict):
         if not isinstance(actual, dict):

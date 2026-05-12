@@ -12,12 +12,9 @@ import click
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
-from outcomeeng_evals.history import append_history_row
+from outcomeeng_evals.history import HISTORY_FILENAME, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_html_report
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
-
-
-HISTORY_FILENAME = "history.jsonl"
 
 
 @click.command(name="run")
@@ -33,10 +30,13 @@ HISTORY_FILENAME = "history.jsonl"
 )
 @click.option(
     "--workers",
-    type=click.IntRange(min=1),
+    type=click.IntRange(min=1, max=16),
     default=1,
     show_default=True,
-    help="Parallel case workers (case-file order is preserved in outcomes).",
+    help=(
+        "Parallel case workers (case-file order is preserved in outcomes). "
+        "Capped at 16 to prevent fork bursts against the Claude API."
+    ),
 )
 @click.option(
     "--max-budget-usd",
@@ -45,17 +45,26 @@ HISTORY_FILENAME = "history.jsonl"
     show_default=True,
     help="Per-invocation budget passed through to the Claude CLI.",
 )
+@click.option(
+    "--timeout-seconds",
+    type=click.IntRange(min=1),
+    default=120,
+    show_default=True,
+    help="Per-invocation timeout for the Claude subprocess.",
+)
 def run_command(
     eval_toml: Path,
     plugin_dir: Path,
     workers: int,
     max_budget_usd: float,
+    timeout_seconds: int,
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
     runner = build_claude_runner(
         plugin_dir=plugin_dir,
         max_budget_usd=max_budget_usd,
+        timeout_seconds=timeout_seconds,
     )
     template = definition.prompt_template_path.read_text(encoding="utf-8")
     result = run_suite(

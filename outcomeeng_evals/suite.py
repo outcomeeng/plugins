@@ -45,7 +45,13 @@ class CaseOutcome:
 
     @property
     def trial_pass_rate(self) -> float:
-        return self.trial_pass_count / len(self.trials) if self.trials else 1.0
+        # Mirror ``_pass_rate``: an empty trial set is a misconfiguration,
+        # not a passing case. Return 0.0 so an empty CaseOutcome cannot
+        # silently report 100%. (The previous 1.0 fallback was optimistic
+        # and asymmetric with ``_pass_rate`` raising ValueError.)
+        if not self.trials:
+            return 0.0
+        return self.trial_pass_count / len(self.trials)
 
 
 @dataclass(frozen=True)
