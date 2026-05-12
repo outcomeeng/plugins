@@ -49,6 +49,18 @@ spx/
 
 ---
 
+## Process Hygiene
+
+The agent runtime spawns helper processes — a periodic `pgrep` to monitor backgrounded commands, plus a shell and its children for every command call — and does not reliably reap them. A construct that creates many short-lived children (a poll loop), a long-lived child the monitor keeps polling (`gh run watch`, a backgrounded `sleep`, an idle keep-alive command), or several heavy process trees at once will exhaust the per-user process limit: `posix_spawn` then returns `EAGAIN`, the monitor's `pgrep` crash-loops, and the agent is force-killed. The leak is not yours to fix; these rules keep it from being triggered. Apply them with the tool names of the runtime you are in.
+
+- **Never wait or pace work with a shell construct.** No `while`/`until` poll loop. No `gh run watch`. No `sleep` to wait — foreground or backgrounded, alone or in a loop. To wait for a build, test run, process, or review to resolve, or to re-check on an interval, use the runtime's timer: in Claude Code, `/loop` for recurring work or `ScheduleWakeup` for a single delayed re-check; in Codex, a `codex_app.automation_update` thread heartbeat. The timer re-invokes you — the wait happens between turns, not inside a shell.
+- **Background commands: one at a time, short-lived, never a keep-alive.** Every backgrounded command is a process the monitor `pgrep`s on a timer; a pile of them — or one that never exits — is the `pgrep` storm itself.
+- **Heavy subprocess trees run sparingly, serially, load-aware.** A full test run, a build, and similar each fork dozens of children. Before launching one, read `uptime` and compare the sustained loadavg (the 5- and 15-minute figures) to the host's core count (`nproc`, or `sysctl -n hw.ncpu` on macOS); if loadavg exceeds it, defer rather than pile on. Never run two heavy commands concurrently. Run the test suite once before committing, not repeatedly "to be sure".
+- **Other forks add up.** Don't spawn subagents you don't need — each is its own process tree. Redirect a long-running command's output to a file and read it in a separate call, rather than piping through `grep`/`tail`/`head`.
+- **If a previous turn left something running** — a `sleep`, a poll loop, a `gh run watch`, an orphaned test runner — identify it and terminate it by PID before doing anything else.
+
+---
+
 ## Numeric Prefixes
 
 Numeric prefixes drive deterministic context loading within each directory:
