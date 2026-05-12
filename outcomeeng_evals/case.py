@@ -25,7 +25,12 @@ class Case:
 
 
 def load_cases(path: Path) -> list[Case]:
-    """Read a JSONL case file and parse each record into a Case."""
+    """Read a JSONL case file and parse each record into a Case.
+
+    Blank lines and lines starting with ``#`` are skipped silently — eval
+    authors can annotate ``cases.jsonl`` with shell-style comments
+    without breaking the parser.
+    """
     cases: list[Case] = []
     for line_no, record in _iter_records(path):
         try:

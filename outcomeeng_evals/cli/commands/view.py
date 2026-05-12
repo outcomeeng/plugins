@@ -28,8 +28,21 @@ def view_command(target: Path | None, latest: Path | None) -> None:
     if target is None and latest is None:
         msg = "either TARGET or --latest is required"
         raise click.UsageError(msg)
-    html_path = target if target is not None else _latest_html(latest)
-    if html_path is None or not html_path.is_file():
+    if target is not None:
+        if not target.is_file():
+            msg = f"no HTML viewer found at {target}"
+            raise click.UsageError(msg)
+        _open_in_browser(target)
+        return
+    assert latest is not None
+    html_path = _latest_html(latest)
+    if html_path is None:
+        msg = (
+            f"no runs found under {latest / RUNS_DIRNAME}; "
+            f"run `outcomeeng-evals run` against the eval first"
+        )
+        raise click.UsageError(msg)
+    if not html_path.is_file():
         msg = f"no HTML viewer found at {html_path}"
         raise click.UsageError(msg)
     _open_in_browser(html_path)

@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 
 
+HISTORY_FILENAME = "history.jsonl"
+
 HISTORY_ROW_FIELDS: tuple[str, ...] = (
     "timestamp",
     "schema_version",
