@@ -9,6 +9,15 @@ from pathlib import Path
 from typing import Any
 
 
+# Upper bound on the length of any list inside a case expectation.
+# ``grader.is_subset`` matches an expected list against an actual list in
+# O(len(expected) x len(actual)) time, so an oversized expectation
+# silently degrades grading at eval runtime. The loader rejects it instead
+# — a clear error beats a slow run. Real expectations are a handful of
+# fields; 50 is far past anything legitimate.
+MAX_EXPECTED_LIST_LENGTH = 50
+
+
 @dataclass(frozen=True)
 class Case:
     """One eval case: input payload plus expected verdict structure.
@@ -38,6 +47,9 @@ def load_cases(path: Path) -> list[Case]:
         except KeyError as exc:
             msg = f"{path}:{line_no} missing required field {exc.args[0]!r}"
             raise ValueError(msg) from exc
+        except ValueError as exc:
+            msg = f"{path}:{line_no} {exc}"
+            raise ValueError(msg) from exc
     return cases
 
 
@@ -54,9 +66,31 @@ def _record_to_case(record: dict[str, Any]) -> Case:
     expected = record.get("expected_verdict", {})
     must_contain = tuple(expected.get("must_contain", []))
     must_not_contain = tuple(expected.get("must_not_contain", []))
+    case_id = record["id"]
+    for entry in must_contain:
+        _reject_oversized_lists(entry, field="must_contain", case_id=case_id)
+    for entry in must_not_contain:
+        _reject_oversized_lists(entry, field="must_not_contain", case_id=case_id)
     return Case(
-        id=record["id"],
+        id=case_id,
         input=record["input"],
         must_contain=must_contain,
         must_not_contain=must_not_contain,
     )
+
+
+def _reject_oversized_lists(value: Any, *, field: str, case_id: str) -> None:
+    """Raise ``ValueError`` if any list inside ``value`` exceeds the cap."""
+    if isinstance(value, list):
+        if len(value) > MAX_EXPECTED_LIST_LENGTH:
+            msg = (
+                f"case {case_id!r}: {field} contains a list of {len(value)} elements; "
+                f"is_subset matches expected lists in O(expected x actual) time — "
+                f"keep expectation lists under {MAX_EXPECTED_LIST_LENGTH}"
+            )
+            raise ValueError(msg)
+        for item in value:
+            _reject_oversized_lists(item, field=field, case_id=case_id)
+    elif isinstance(value, dict):
+        for sub_value in value.values():
+            _reject_oversized_lists(sub_value, field=field, case_id=case_id)

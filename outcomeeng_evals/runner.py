@@ -109,6 +109,14 @@ def _subprocess_env() -> dict[str, str]:
     it set would make the nested call take the interactive-guard path
     instead of the print-mode subprocess contract. Do not narrow this in a
     future refactor.
+
+    In CI, this means job-level secrets injected as environment variables
+    (deployment tokens, cloud credentials, an unrelated ``ANTHROPIC_API_KEY``)
+    are also forwarded to the ``claude`` subprocess. That is acceptable —
+    ``claude`` consumes only what it needs — but it is the reason a filter
+    must not be added: a future maintainer cannot know which inherited
+    variable ``claude`` depends on for auth, so dropping any of them risks
+    breaking it.
     """
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)
