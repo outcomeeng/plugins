@@ -88,6 +88,19 @@ def test_is_subset_rejects_when_no_list_element_matches() -> None:
     assert not is_subset(expected, actual)
 
 
+def test_is_subset_list_matching_is_cardinality_aware() -> None:
+    # Multiset semantics: two expected occurrences need two distinct
+    # actual matches. A single actual element cannot satisfy two
+    # expected entries via any-match.
+    expected = {"findings": [{"rule": "x"}, {"rule": "x"}]}
+    actual_one = {"findings": [{"rule": "x", "present": True}]}
+    actual_two = {
+        "findings": [{"rule": "x", "present": True}, {"rule": "x", "present": False}]
+    }
+    assert not is_subset(expected, actual_one)
+    assert is_subset(expected, actual_two)
+
+
 def test_grade_passes_when_must_contain_subset_matches() -> None:
     case = _case(
         must_contain=[

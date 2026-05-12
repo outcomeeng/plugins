@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import subprocess
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -125,7 +125,11 @@ def _run_cases_parallel(
             ): index
             for index, case in enumerate(cases)
         }
-        for future in futures:
+        # Drain completions as they arrive so a slow case at submission-
+        # order index 0 does not block reads from faster cases that
+        # finished behind it. Outcome order is still preserved by writing
+        # to ``results[index]`` rather than appending.
+        for future in as_completed(futures):
             index = futures[future]
             try:
                 results[index] = future.result()

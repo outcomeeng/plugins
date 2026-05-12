@@ -8,8 +8,7 @@ from pathlib import Path
 
 import click
 
-
-RUNS_DIRNAME = "runs"
+from outcomeeng_evals.definition import RUNS_DIRNAME
 
 
 @click.command(name="view")
