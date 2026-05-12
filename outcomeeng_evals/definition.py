@@ -16,6 +16,11 @@ from typing import Any
 
 DEFAULT_SUITE_THRESHOLD = 0.85
 DEFAULT_TRIALS_PER_CASE = 1
+# Upper bound on ``trials`` from an ``eval.toml``: a misconfigured value
+# like ``trials = 10000`` would otherwise fire that many subprocesses.
+# Mirrors the ``--workers`` CLI cap (16); 100 leaves ample headroom for
+# pass@k stability work without being a runaway risk.
+MAX_TRIALS_PER_CASE = 100
 
 EVAL_TOML_FILENAME = "eval.toml"
 RUNS_DIRNAME = "runs"
@@ -68,7 +73,12 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         min_value=0.0,
         max_value=1.0,
     )
-    trials = _optional_int(raw, _OPTIONAL_TRIALS, DEFAULT_TRIALS_PER_CASE)
+    trials = _optional_int(
+        raw,
+        _OPTIONAL_TRIALS,
+        DEFAULT_TRIALS_PER_CASE,
+        max_value=MAX_TRIALS_PER_CASE,
+    )
 
     return EvalDefinition(
         title=title,
@@ -124,7 +134,13 @@ def _optional_float(
     return result
 
 
-def _optional_int(data: dict[str, Any], key: str, default: int) -> int:
+def _optional_int(
+    data: dict[str, Any],
+    key: str,
+    default: int,
+    *,
+    max_value: int | None = None,
+) -> int:
     if key not in data:
         return default
     value = data[key]
@@ -133,5 +149,8 @@ def _optional_int(data: dict[str, Any], key: str, default: int) -> int:
         raise ValueError(msg)
     if value < 1:
         msg = f"field {key!r} must be >= 1, got {value}"
+        raise ValueError(msg)
+    if max_value is not None and value > max_value:
+        msg = f"field {key!r} must be <= {max_value}, got {value}"
         raise ValueError(msg)
     return int(value)

@@ -14,6 +14,7 @@ import pytest
 from outcomeeng_evals.definition import (
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
+    MAX_TRIALS_PER_CASE,
     EvalDefinition,
     load_definition,
 )
@@ -150,6 +151,37 @@ def test_uses_explicit_trials_when_set(tmp_path: Path) -> None:
     definition = load_definition(toml_path)
 
     assert definition.trials == CUSTOM_TRIALS
+
+
+def test_accepts_trials_at_cap(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            f"trials = {MAX_TRIALS_PER_CASE}\n"
+        ),
+    )
+
+    definition = load_definition(toml_path)
+
+    assert definition.trials == MAX_TRIALS_PER_CASE
+
+
+def test_rejects_trials_above_cap(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            f"trials = {MAX_TRIALS_PER_CASE + 1}\n"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="trials"):
+        load_definition(toml_path)
 
 
 def test_rejects_missing_title(tmp_path: Path) -> None:
