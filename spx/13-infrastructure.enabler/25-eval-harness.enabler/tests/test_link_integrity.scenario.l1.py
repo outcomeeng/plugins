@@ -1,9 +1,11 @@
-"""Scenario tests for the [eval] link-integrity walker.
+"""Scenario tests for the evidence-link-integrity walker.
 
-The walker scans markdown files for ``[eval](path)`` references and
-asserts each target resolves to an existing ``eval.toml``. The
-marketplace script under ``outcomeeng/scripts/`` invokes the walker;
-``just check`` consumes the walker's exit code.
+The walker scans markdown files for ``[eval](path)`` and ``[test](path)``
+references and asserts each target resolves to an existing, correctly
+placed and named file (an ``eval.toml`` under ``evals/{rule}/``, or a
+pytest collectable under ``tests/``). The marketplace script under
+``outcomeeng/scripts/`` invokes the walker; ``just check`` consumes its
+exit code.
 """
 
 from __future__ import annotations
@@ -188,6 +190,26 @@ def test_validate_eval_links_resolves_paths_relative_to_source_file(
     assert broken == []
 
 
+def test_validate_eval_links_rejects_target_outside_evals_dir(tmp_path: Path) -> None:
+    node_dir = tmp_path / "spx" / "node"
+    node_dir.mkdir(parents=True)
+    loose_dir = node_dir / "evals"
+    loose_dir.mkdir()
+    (loose_dir / EVAL_TOML_FILENAME).write_text(
+        'title = "x"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
+        encoding="utf-8",
+    )
+    (node_dir / "spec.md").write_text(
+        "([eval](evals/eval.toml))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_eval_links(tmp_path)
+
+    assert len(broken) == 1
+    assert "evals/" in broken[0].reason
+
+
 def _write_test_file(directory: Path, name: str) -> Path:
     tests_dir = directory / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)
@@ -299,3 +321,20 @@ def test_validate_test_links_resolves_paths_relative_to_source(tmp_path: Path) -
     broken = validate_test_links(tmp_path)
 
     assert broken == []
+
+
+def test_validate_test_links_rejects_target_outside_tests_dir(tmp_path: Path) -> None:
+    node_dir = tmp_path / "spx" / "node"
+    node_dir.mkdir(parents=True)
+    loose_test = node_dir / "test_loose.scenario.l1.py"
+    loose_test.write_text("def test_placeholder() -> None: pass\n", encoding="utf-8")
+    (node_dir / "spec.md").write_text(
+        "([test](test_loose.scenario.l1.py))\n",
+        encoding="utf-8",
+    )
+
+    broken = validate_test_links(tmp_path)
+
+    assert len(broken) == 1
+    assert isinstance(broken[0], BrokenTestLink)
+    assert "tests/" in broken[0].reason

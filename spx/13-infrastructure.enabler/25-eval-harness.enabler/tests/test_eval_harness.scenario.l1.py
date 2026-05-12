@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -11,10 +12,15 @@ import pytest
 from outcomeeng_evals.case import Case, load_cases
 from outcomeeng_evals.grader import grade, is_subset, parse_verdict
 from outcomeeng_evals.suite import run_suite
+from outcomeeng_evals.testing.fakes import RaisingModelRunner
 from outcomeeng_evals.testing.fakes import StubModelRunner as StubRunner
 
 
 _RULE = "shared-test-owned-constant-bag"
+# Stand-ins for the two exceptions ClaudeCliRunner.run can surface — a
+# non-zero ``claude`` exit (RuntimeError) and a per-invocation timeout.
+_RUNNER_NONZERO_EXIT = RuntimeError("claude exited 2: boom")
+_RUNNER_TIMEOUT = subprocess.TimeoutExpired(cmd="claude", timeout=120.0)
 _PASS_VERDICT = json.dumps(
     {"status": "rejected", "findings": [{"rule": _RULE, "present": True}]}
 )
@@ -285,6 +291,66 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
     assert finish_order != case_ids, (
         "test premise: threads should not finish in case order"
     )
+
+
+def _trivial_record(case_id: str) -> dict[str, Any]:
+    return {
+        "id": case_id,
+        "input": {},
+        "expected_verdict": {"must_contain": [{"status": "rejected"}]},
+    }
+
+
+def test_run_suite_serial_isolates_runner_failure_as_fail_outcome(
+    tmp_path: Path,
+) -> None:
+    cases_path = _write_case(tmp_path, _trivial_record("c-1"))
+
+    result = run_suite(
+        cases_path=cases_path,
+        runner=RaisingModelRunner(error=_RUNNER_NONZERO_EXIT),
+        build_prompt=lambda case: f"case={case.id}",
+    )
+
+    assert len(result.outcomes) == 1
+    outcome = result.outcomes[0]
+    assert outcome.passed is False
+    assert result.passed is False
+    reasons = outcome.trials[0].grade.reasons
+    assert any(str(_RUNNER_NONZERO_EXIT) in reason for reason in reasons), reasons
+
+
+def test_run_suite_serial_isolates_runner_timeout_as_fail_outcome(
+    tmp_path: Path,
+) -> None:
+    cases_path = _write_case(tmp_path, _trivial_record("c-1"))
+
+    result = run_suite(
+        cases_path=cases_path,
+        runner=RaisingModelRunner(error=_RUNNER_TIMEOUT),
+        build_prompt=lambda case: f"case={case.id}",
+    )
+
+    assert len(result.outcomes) == 1
+    assert result.outcomes[0].passed is False
+    assert result.passed is False
+
+
+def test_run_suite_parallel_isolates_runner_failure_per_case(tmp_path: Path) -> None:
+    records = [_trivial_record("c-1"), _trivial_record("c-2")]
+    cases_path = tmp_path / "cases.jsonl"
+    cases_path.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+
+    result = run_suite(
+        cases_path=cases_path,
+        runner=RaisingModelRunner(error=_RUNNER_NONZERO_EXIT),
+        build_prompt=lambda case: f"case={case.id}",
+        workers=2,
+    )
+
+    assert [o.case.id for o in result.outcomes] == ["c-1", "c-2"]
+    assert all(o.passed is False for o in result.outcomes)
+    assert result.passed is False
 
 
 def _case(

@@ -26,6 +26,22 @@ class StubModelRunner:
         return RunResult(text=text, metadata=self.metadata)
 
 
+@dataclass(frozen=True)
+class RaisingModelRunner:
+    """A ``ModelRunner`` whose ``run`` always raises ``error``.
+
+    For meta-tests of suite-level fault isolation: a real ``claude``
+    non-zero exit or timeout surfaces as an exception out of ``run`` (a
+    ``RuntimeError`` or ``subprocess.TimeoutExpired``), and ``run_suite``
+    must convert it to a failing outcome rather than crash the whole run.
+    """
+
+    error: BaseException
+
+    def run(self, prompt: str) -> RunResult:  # noqa: ARG002 — prompt is unused; this runner always raises before reading it
+        raise self.error
+
+
 @dataclass
 class RecordingRunner:
     """Wrap another runner and record every prompt and response.

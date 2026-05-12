@@ -66,7 +66,10 @@ def _open_in_browser(html_path: Path) -> None:
     elif sys.platform.startswith("linux"):
         _launch_opener(["xdg-open", str(html_path)], html_path)
     else:
-        click.echo(str(html_path))
+        # No portable opener wired for this platform (Windows, BSD, …):
+        # print the path so the caller knows nothing launched and can open
+        # it manually.
+        click.echo(f"open the report manually: {html_path}")
 
 
 def _launch_opener(argv: list[str], html_path: Path) -> None:

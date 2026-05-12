@@ -89,7 +89,7 @@ def run_suite(
     cases = load_cases(cases_path)
     if workers <= 1:
         outcomes = [
-            _run_case(
+            _safe_run_case(
                 case=case,
                 runner=runner,
                 build_prompt=build_prompt,
@@ -114,6 +114,31 @@ def run_suite(
     )
 
 
+def _safe_run_case(
+    *,
+    case: Case,
+    runner: ModelRunner,
+    build_prompt: PromptBuilder,
+    trials: int,
+) -> CaseOutcome:
+    """Run one case, converting any runner failure into a failing outcome.
+
+    Both the serial and the parallel execution path route through here, so
+    a ``claude`` non-zero exit or a ``subprocess.TimeoutExpired`` produces
+    one FAIL trial and the suite continues — the same fault-isolation
+    guarantee regardless of ``workers``. Without this, a single runner
+    exception on ``workers <= 1`` aborts the whole run and writes nothing
+    to ``history.jsonl``, while the same exception on ``workers >= 2`` is
+    already caught here.
+    """
+    try:
+        return _run_case(
+            case=case, runner=runner, build_prompt=build_prompt, trials=trials
+        )
+    except Exception as exc:  # noqa: BLE001 — convert any runner failure into a failing outcome
+        return _error_outcome(case=case, error=exc)
+
+
 def _run_cases_parallel(
     *,
     cases: list[Case],
@@ -127,7 +152,7 @@ def _run_cases_parallel(
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {
             pool.submit(
-                _run_case,
+                _safe_run_case,
                 case=case,
                 runner=runner,
                 build_prompt=build_prompt,
@@ -143,7 +168,7 @@ def _run_cases_parallel(
             index = futures[future]
             try:
                 results[index] = future.result()
-            except Exception as exc:  # noqa: BLE001 — convert any worker failure into a failing outcome
+            except Exception as exc:  # noqa: BLE001 — runner failures are already converted by _safe_run_case; this catches an executor-level failure (e.g. a broken thread pool)
                 results[index] = _error_outcome(case=cases[index], error=exc)
     # Every future writes its slot (via ``future.result()`` or
     # ``_error_outcome``), so an unfilled slot is unreachable. Fail loudly
@@ -160,10 +185,10 @@ def _run_cases_parallel(
 
 
 def _error_outcome(*, case: Case, error: BaseException) -> CaseOutcome:
-    """Convert a worker exception into a single failing trial result.
+    """Convert a runner exception into a single failing trial result.
 
-    Preserves the case in outcome order so the parallel scheduler does not
-    unwind the entire suite when one case's runner raises. The error message
+    Preserves the case in outcome order so neither execution path unwinds
+    the entire suite when one case's runner raises. The error message
     appears in the trial's response field and as the grade reason; downstream
     consumers (JSON report, HTML viewer, history row) see one FAIL trial.
 
@@ -193,6 +218,11 @@ def _run_case(
     trials: int,
 ) -> CaseOutcome:
     trial_results: list[TrialResult] = []
+    # One rendered prompt for the whole case: every trial of a case sends
+    # the same prompt. ("One prompt per trial" would also be defensible —
+    # e.g. for templates injecting a timestamp — but the eval contract is a
+    # deterministic prompt per case, so pass@k measures model variance, not
+    # prompt variance.)
     prompt = build_prompt(case)
     for index in range(trials):
         run_result = runner.run(prompt)

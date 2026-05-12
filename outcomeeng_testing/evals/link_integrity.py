@@ -25,6 +25,11 @@ from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
 MARKDOWN_GLOB = "**/*.md"
 TEST_FILE_PREFIX = "test_"
+# Co-location convention (per the eval-harness spec): a [test] link
+# resolves to a file directly inside a ``tests/`` directory; an [eval]
+# link resolves to ``eval.toml`` inside an ``evals/{rule}/`` directory.
+TESTS_DIRNAME = "tests"
+EVALS_DIRNAME = "evals"
 
 _EVAL_LINK_PATTERN = re.compile(r"\[eval\]\(([^)]+)\)")
 _TEST_LINK_PATTERN = re.compile(r"\[test\]\(([^)]+)\)")
@@ -120,7 +125,12 @@ def _strip_code_regions(text: str) -> str:
 
 
 def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
-    """Return broken eval links: target missing, not a file, or not an eval.toml."""
+    """Return broken eval links.
+
+    A link is broken when its resolved target is missing, is not a file,
+    does not sit inside an ``evals/{rule}/`` directory, or is not named
+    ``eval.toml``.
+    """
     broken: list[BrokenEvalLink] = []
     for link in find_eval_links(root):
         if not link.target.exists():
@@ -141,6 +151,17 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
                 )
             )
             continue
+        if link.target.parent.parent.name != EVALS_DIRNAME:
+            broken.append(
+                BrokenEvalLink(
+                    source=link.source,
+                    target=link.target,
+                    reason=(
+                        f"target must live in an {EVALS_DIRNAME}/{{rule}}/ directory"
+                    ),
+                )
+            )
+            continue
         if link.target.name != EVAL_TOML_FILENAME:
             broken.append(
                 BrokenEvalLink(
@@ -153,11 +174,12 @@ def validate_eval_links(root: Path) -> list[BrokenEvalLink]:
 
 
 def validate_test_links(root: Path) -> list[BrokenTestLink]:
-    """Return broken test links: target missing, not a file, or not a pytest collectable.
+    """Return broken test links.
 
-    A pytest collectable lives under a ``tests/`` directory, has a
-    ``.py`` suffix, and its filename begins with ``test_``. Tightened
-    targets (e.g., language-specific test files) keep these
+    A link is broken when its resolved target is missing, is not a file,
+    does not sit directly inside a ``tests/`` directory, or is not a pytest
+    collectable (filename begins with ``test_`` and ends in ``.py``).
+    Tightened targets (e.g., language-specific test files) keep these
     naming-convention checks.
     """
     broken: list[BrokenTestLink] = []
@@ -177,6 +199,15 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
                     source=link.source,
                     target=link.target,
                     reason="target is not a file",
+                )
+            )
+            continue
+        if link.target.parent.name != TESTS_DIRNAME:
+            broken.append(
+                BrokenTestLink(
+                    source=link.source,
+                    target=link.target,
+                    reason=f"target must live directly in a {TESTS_DIRNAME}/ directory",
                 )
             )
             continue
