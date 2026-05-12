@@ -34,7 +34,9 @@ def view_command(target: Path | None, latest: Path | None) -> None:
             raise click.UsageError(msg)
         _open_in_browser(target)
         return
-    assert latest is not None
+    if latest is None:  # unreachable: the UsageError above proves one of the two is set
+        msg = "internal error: neither TARGET nor --latest resolved after the guard"
+        raise AssertionError(msg)
     html_path = _latest_html(latest)
     if html_path is None:
         msg = (
@@ -60,8 +62,25 @@ def _latest_html(eval_dir: Path | None) -> Path | None:
 
 def _open_in_browser(html_path: Path) -> None:
     if sys.platform == "darwin":
-        subprocess.run(["open", str(html_path)], check=False)
+        _launch_opener(["open", str(html_path)], html_path)
     elif sys.platform.startswith("linux"):
-        subprocess.run(["xdg-open", str(html_path)], check=False)
+        _launch_opener(["xdg-open", str(html_path)], html_path)
     else:
         click.echo(str(html_path))
+
+
+def _launch_opener(argv: list[str], html_path: Path) -> None:
+    """Run the OS file-opener; warn on stderr if it fails (e.g. headless CI).
+
+    A non-zero exit from ``open``/``xdg-open`` (no ``$DISPLAY``, no
+    associated handler) would otherwise be invisible — the developer sees
+    nothing happen and no error. Print the path so they can open it
+    manually.
+    """
+    completed = subprocess.run(argv, check=False)
+    if completed.returncode != 0:
+        click.echo(
+            f"warning: `{argv[0]}` exited {completed.returncode}; "
+            f"open the report manually: {html_path}",
+            err=True,
+        )

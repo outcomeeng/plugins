@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from outcomeeng_evals.history import HISTORY_ROW_FIELDS, append_history_row
+from outcomeeng_evals.history import HISTORY_ROW_FIELDS, HistoryRow, append_history_row
 
 
 SCHEMA_VERSION = "1"
@@ -19,7 +19,7 @@ TIMESTAMP = "2026-05-11T15:48:00Z"
 TRANSCRIPT_REL = "runs/2026-05-11T15-48-00Z.json"
 
 
-def _passing_row() -> dict[str, object]:
+def _passing_row() -> HistoryRow:
     return {
         "timestamp": TIMESTAMP,
         "schema_version": SCHEMA_VERSION,
@@ -34,7 +34,7 @@ def _passing_row() -> dict[str, object]:
     }
 
 
-def _failing_row() -> dict[str, object]:
+def _failing_row() -> HistoryRow:
     row = _passing_row()
     row["passed"] = False
     row["pass_rate"] = 0.75

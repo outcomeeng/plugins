@@ -9,42 +9,45 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 
 HISTORY_FILENAME = "history.jsonl"
 
-HISTORY_ROW_FIELDS: tuple[str, ...] = (
-    "timestamp",
-    "schema_version",
-    "git_sha",
-    "passed",
-    "pass_rate",
-    "cases_total",
-    "cases_passed",
-    "total_cost_usd",
-    "total_duration_ms",
-    "transcript",
-)
+
+class HistoryRow(TypedDict):
+    """One summary row appended to ``history.jsonl`` per suite run.
+
+    This field set is the integration contract between the runner and any
+    trend-reading tooling. It is a ``TypedDict`` so mypy flags field-name
+    drift at the construction site (``_history_row`` in the ``run``
+    command) — the previous runtime field-set guard caught drift only when
+    a row was actually written, after the typo had already shipped.
+    """
+
+    timestamp: str
+    schema_version: str
+    git_sha: str
+    passed: bool
+    pass_rate: float
+    cases_total: int
+    cases_passed: int
+    total_cost_usd: float | None
+    total_duration_ms: float | None
+    transcript: str
 
 
-def append_history_row(history_path: Path, row: dict[str, Any]) -> None:
-    """Append a JSONL row to ``history_path``.
+# Field list with ``HistoryRow`` as the single source of truth — consumed
+# by tests that introspect which keys a row must carry.
+HISTORY_ROW_FIELDS: tuple[str, ...] = tuple(HistoryRow.__annotations__)
+
+
+def append_history_row(history_path: Path, row: HistoryRow) -> None:
+    """Append one JSONL row to ``history_path``.
 
     Creates the file (and parent directories) if missing. Existing content
-    is preserved; the writer opens in append mode and emits one line.
-
-    Raises ``ValueError`` if ``row`` is missing any field declared in
-    ``HISTORY_ROW_FIELDS`` — the contract is enforced here, not just
-    documented, so a caller that drifts on field set fails loudly rather
-    than silently producing inconsistent rows.
+    is preserved; the writer opens in append mode and emits a single line.
     """
-    missing = [field for field in HISTORY_ROW_FIELDS if field not in row]
-    if missing:
-        raise ValueError(
-            f"history row missing required fields: {missing}; "
-            f"required {list(HISTORY_ROW_FIELDS)}"
-        )
     history_path.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(row, separators=(",", ":"), sort_keys=False)
     with history_path.open("a", encoding="utf-8") as fh:

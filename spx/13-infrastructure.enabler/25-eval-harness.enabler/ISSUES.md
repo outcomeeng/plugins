@@ -25,3 +25,11 @@ A scheduled CI workflow that runs `outcomeeng-evals run --all` and posts results
 ## `outcomeeng_evals.testing` public-API contract
 
 The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether that subpackage is a stable, versioned surface or an internal helper with no compatibility guarantees is not yet declared. Decide when the first external consumer appears.
+
+## Prompt-template placeholder validation
+
+`_render_prompt` (in `outcomeeng_evals/cli/commands/run.py`) substitutes `{case_id}` and `{input_json}` and passes any other `{…}` run through verbatim. A typo like `{casse_id}` reaches the model as literal text with no warning. Validating placeholders — at `load_definition` time or at render time — would surface authoring errors before a paid run. The constraint: prompt templates legitimately contain literal `{` (JSON examples, code), so a validator must warn only on `{<identifier-shaped token>}` that is not one of the known keys, not on every brace. Defer until prompt-authoring mistakes actually bite.
+
+## Partial-trial evidence in parallel-path errors
+
+`_error_outcome` (in `outcomeeng_evals/suite.py`) replaces all of a case's trials with one synthetic `trial_index=0` failing trial when the worker raises. If trial 1 passed and trial 2 raised, the successful trial's evidence is lost from the report. A richer error outcome — successful trials kept, the error appended as the final trial — would preserve that evidence. Defer; today's runs use `trials_per_case = 1`, so the loss is moot until multi-trial parallel runs are common.

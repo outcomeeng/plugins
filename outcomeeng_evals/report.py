@@ -131,11 +131,16 @@ def _add_int(accum: int | None, value: int | None) -> int | None:
 
 
 def _case_to_dict(case: Case) -> dict[str, Any]:
+    # ``must_contain`` / ``must_not_contain`` entries are returned by
+    # reference (just unwrapped from their tuples into lists for JSON).
+    # ``serialize_result`` hands the result straight to ``json.dumps`` and
+    # never mutates it; the previous ``dict(e)`` was only a shallow copy,
+    # so it isolated nothing the nested values would care about anyway.
     return {
         "id": case.id,
         "input": case.input,
-        "must_contain": [dict(e) for e in case.must_contain],
-        "must_not_contain": [dict(e) for e in case.must_not_contain],
+        "must_contain": list(case.must_contain),
+        "must_not_contain": list(case.must_not_contain),
     }
 
 
@@ -191,6 +196,15 @@ def write_html_report(result: SuiteResult, output_path: Path, title: str) -> Pat
 
 
 def _render_html_shell(payload: dict[str, Any]) -> str:
+    # Escape ``</`` → ``<\/`` inside the JSON so an embedded ``</script>``
+    # (or any ``</…``) in a string value cannot terminate the surrounding
+    # ``<script type="application/json">`` block. That block's content model
+    # is raw text terminated only by ``</script>``, so escaping ``</`` is
+    # the necessary and sufficient hardening here. Do NOT also HTML-entity-
+    # escape ``<``/``>``/``&`` in the payload: inside a ``<script>`` element
+    # the bytes are not HTML-parsed, so ``&lt;`` would reach ``JSON.parse``
+    # verbatim and corrupt the data. (HTML-entity escaping is correct for
+    # the page ``<title>`` — see ``_escape`` — because that is HTML text.)
     embedded = json.dumps(payload).replace("</", "<\\/")
     title = payload.get("title", "Eval report")
     safe_title = _escape(str(title))

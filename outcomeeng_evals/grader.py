@@ -64,7 +64,10 @@ def is_subset(expected: Any, actual: Any) -> bool:
       actual element under ``is_subset``; position-independent but
       cardinality-aware. ``[X, X]`` does not satisfy ``[X]`` — two expected
       Xs require two actual Xs. Greedy first-match consumption ordered by
-      the expected list.
+      the expected list. The list path is O(len(expected) × len(actual))
+      because each expected element rescans the unconsumed actual elements;
+      that is fine for eval case files, so do not author large
+      expected-list assertions.
     - Scalars: equality (``expected == actual``). Python's ``bool ==
       int`` semantics carry through — ``is_subset(True, 1)`` returns
       True because ``True == 1``. This matches the JSON structural

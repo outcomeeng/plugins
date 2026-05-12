@@ -12,7 +12,7 @@ import click
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
-from outcomeeng_evals.history import HISTORY_FILENAME, append_history_row
+from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_html_report
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
@@ -145,7 +145,7 @@ def _history_row(
     timestamp: str,
     result: SuiteResult,
     transcript_relative: str,
-) -> dict[str, object]:
+) -> HistoryRow:
     return {
         "timestamp": timestamp,
         "schema_version": JSON_SCHEMA_VERSION,

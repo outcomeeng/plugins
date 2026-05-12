@@ -80,6 +80,10 @@ def run_suite(
     bounds concurrent ``claude`` subprocesses. Output ordering matches the
     case-file order regardless of execution interleaving.
 
+    ``workers`` is not capped here — the ``run`` CLI clamps it to 16 to
+    prevent fork bursts against the Claude API; direct callers are
+    responsible for keeping it within sane bounds.
+
     Per-case pass policy is majority-of-trials (``ceil(trials_per_case / 2)``).
     """
     cases = load_cases(cases_path)
@@ -141,6 +145,17 @@ def _run_cases_parallel(
                 results[index] = future.result()
             except Exception as exc:  # noqa: BLE001 — convert any worker failure into a failing outcome
                 results[index] = _error_outcome(case=cases[index], error=exc)
+    # Every future writes its slot (via ``future.result()`` or
+    # ``_error_outcome``), so an unfilled slot is unreachable. Fail loudly
+    # rather than silently returning fewer outcomes than cases — a dropped
+    # ``None`` would look like a missing case with no traceable cause.
+    unfilled = [index for index, outcome in enumerate(results) if outcome is None]
+    if unfilled:
+        msg = (
+            f"parallel runner left case indices {unfilled} unfilled — unreachable: "
+            "every future writes its slot via future.result() or _error_outcome()"
+        )
+        raise AssertionError(msg)
     return [outcome for outcome in results if outcome is not None]
 
 
