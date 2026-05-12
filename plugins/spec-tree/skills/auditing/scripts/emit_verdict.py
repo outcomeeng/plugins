@@ -189,10 +189,12 @@ def _escape_inline(text: str) -> str:
     """Escape a string for inline markdown context (outside a table cell).
 
     Replaces newlines with spaces so a multi-line value still renders on
-    one row. Backslashes and pipes are left alone — they have no special
-    inline meaning.
+    one row. Escapes backticks so values rendered inside inline code
+    spans (`` `{_escape_inline(value)}` ``) don't close their span
+    prematurely when the value itself contains a backtick. Backslashes
+    and pipes are left alone — they have no special inline meaning.
     """
-    return text.replace("\n", " ")
+    return text.replace("\n", " ").replace("`", r"\`")
 
 
 def _read_input(path: str | None) -> str:

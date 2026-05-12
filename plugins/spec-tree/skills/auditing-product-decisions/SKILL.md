@@ -201,7 +201,7 @@ Scan all findings. If any property fails: REJECT.
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any property is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings within each row carry severity `reject` for blocking violations and `warning`/`info` for non-blocking observations.
 
