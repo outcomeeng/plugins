@@ -58,7 +58,13 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         msg = f"{toml_path}: prompt file not found: {prompt_path}"
         raise FileNotFoundError(msg)
 
-    threshold = _optional_float(raw, _OPTIONAL_THRESHOLD, DEFAULT_SUITE_THRESHOLD)
+    threshold = _optional_float(
+        raw,
+        _OPTIONAL_THRESHOLD,
+        DEFAULT_SUITE_THRESHOLD,
+        min_value=0.0,
+        max_value=1.0,
+    )
     trials = _optional_int(raw, _OPTIONAL_TRIALS, DEFAULT_TRIALS_PER_CASE)
 
     return EvalDefinition(
@@ -89,14 +95,28 @@ def _required_str(data: dict[str, Any], key: str) -> str:
     return value
 
 
-def _optional_float(data: dict[str, Any], key: str, default: float) -> float:
+def _optional_float(
+    data: dict[str, Any],
+    key: str,
+    default: float,
+    *,
+    min_value: float | None = None,
+    max_value: float | None = None,
+) -> float:
     if key not in data:
         return default
     value = data[key]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         msg = f"field {key!r} must be a number, got {type(value).__name__}"
         raise ValueError(msg)
-    return float(value)
+    result = float(value)
+    if min_value is not None and result < min_value:
+        msg = f"field {key!r} must be >= {min_value}, got {result}"
+        raise ValueError(msg)
+    if max_value is not None and result > max_value:
+        msg = f"field {key!r} must be <= {max_value}, got {result}"
+        raise ValueError(msg)
+    return result
 
 
 def _optional_int(data: dict[str, Any], key: str, default: int) -> int:
