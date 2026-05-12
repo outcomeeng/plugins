@@ -49,6 +49,12 @@ class RecordingRunner:
     Not ``frozen=True`` — the runner is inherently stateful: ``run`` appends
     each (prompt, result) pair to ``transcripts``. The dataclass is mutable
     so the list can grow across invocations.
+
+    Not safe for parallel use: ``transcripts.append`` is GIL-atomic in
+    CPython but offers no ordering or isolation guarantee across threads or
+    processes. Recording under ``run_suite(workers > 1)`` (or a
+    ``ProcessPoolExecutor``) needs an external lock; the meta-tests that
+    use this runner are single-threaded.
     """
 
     inner: ModelRunner

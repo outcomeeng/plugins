@@ -184,6 +184,21 @@ def test_rejects_trials_above_cap(tmp_path: Path) -> None:
         load_definition(toml_path)
 
 
+def test_rejects_trials_below_one(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            "trials = 0\n"
+        ),
+    )
+
+    with pytest.raises(ValueError, match="trials"):
+        load_definition(toml_path)
+
+
 def test_rejects_missing_title(tmp_path: Path) -> None:
     toml_path = _write_eval_dir(
         tmp_path,

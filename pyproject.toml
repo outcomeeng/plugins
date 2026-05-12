@@ -36,6 +36,10 @@ addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
 
 [tool.mypy]
+# outcomeeng/vendor/ holds vendored third-party code (e.g. Anthropic's
+# skill validator under outcomeeng/vendor/anthropics_skills/) that is not
+# written to this repo's strict typing standards — exclude it from the
+# type check and ignore type errors for the package.
 exclude = ["outcomeeng/vendor/"]
 
 [[tool.mypy.overrides]]

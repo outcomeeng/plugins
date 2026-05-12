@@ -1,0 +1,6 @@
+# Eval history files are append-only trend records (one row per suite run).
+# The built-in "union" merge driver keeps both sides' appended lines instead
+# of producing a conflict, so concurrent appends from different branches
+# merge cleanly. See spx/13-infrastructure.enabler/25-eval-harness.enabler/
+# ISSUES.md ("CI integration") for the staging-hygiene side of this.
+**/evals/**/history.jsonl merge=union
