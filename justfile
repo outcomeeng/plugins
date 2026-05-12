@@ -102,10 +102,12 @@ sync-marketplace:
 push-marketplace *push_args:
     #!/usr/bin/env bash
     set -euo pipefail
-    if ! command -v git >/dev/null 2>&1; then
-        echo "Missing required tool: git" >&2
-        exit 1
-    fi
+    for tool in git claude codex; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            echo "Missing required tool: $tool" >&2
+            exit 1
+        fi
+    done
     git push {{push_args}}
     just sync-marketplace
 
