@@ -52,7 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     except VerdictValidationError as exc:
         print(f"aggregate_verdicts: invalid child verdict: {exc}", file=sys.stderr)
         return EXIT_VALIDATION_ERROR
-    metadata = _parse_metadata(args.metadata)
+    try:
+        metadata = _parse_metadata(args.metadata)
+    except ValueError as exc:
+        print(f"aggregate_verdicts: {exc}", file=sys.stderr)
+        return EXIT_IO_ERROR
     wrapper = aggregate(
         children=tuple(children),
         skill=args.skill,
@@ -100,7 +104,14 @@ def _resolve_paths(positional: list[str], directory: str | None) -> list[Path]:
         if not dir_path.is_dir():
             raise OSError(f"--directory {directory} is not a directory")
         paths.extend(sorted(dir_path.glob("*.json")))
-    return paths
+    # Deduplicate by resolved path so a file passed both positionally and
+    # discovered via --directory contributes one child to the wrapper,
+    # not two. Without this, a duplicated FAIL child would count twice in
+    # the rollup.
+    seen: dict[Path, None] = {}
+    for path in paths:
+        seen.setdefault(path.resolve(), None)
+    return list(seen)
 
 
 def _load_verdict(path: Path) -> Verdict:
@@ -118,11 +129,9 @@ def _parse_metadata(items: list[str]) -> dict[str, str]:
     metadata: dict[str, str] = {}
     for item in items:
         if "=" not in item:
-            print(
-                f"aggregate_verdicts: malformed --metadata entry {item!r} (expected key=value)",
-                file=sys.stderr,
+            raise ValueError(
+                f"malformed --metadata entry {item!r} (expected key=value)"
             )
-            sys.exit(EXIT_IO_ERROR)
         key, value = item.split("=", 1)
         metadata[key] = value
     return metadata

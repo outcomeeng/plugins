@@ -38,6 +38,7 @@ EXIT_IO_ERROR = 2
 EXIT_USAGE = 64
 
 RESULTS_DIR_PREFIX = "audit-results-"
+MAX_COLLISION_SUFFIX = 999
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -98,17 +99,24 @@ def add(*, directory: Path, command: str, content: str) -> Path:
     """Write ``content`` to a uniquely named file in ``directory``.
 
     The filename is the sanitized ``command`` (see ``filename_for_command``).
-    On collision, appends ``.1``, ``.2``, … until a free name is found.
+    On collision, appends ``.1``, ``.2``, … up to ``MAX_COLLISION_SUFFIX``
+    until a free name is found. Beyond that, raises ``OSError`` — the
+    bounded retry keeps the contract explicit and prevents a runaway
+    loop in pathological cases (e.g., a results directory shared across
+    many parallel callers).
     Returns the path of the written file.
     """
     base_name = filename_for_command(command)
     target = directory / base_name
-    suffix = 1
-    while target.exists():
+    for suffix in range(1, MAX_COLLISION_SUFFIX + 1):
+        if not target.exists():
+            target.write_text(content, encoding="utf-8")
+            return target
         target = directory / f"{base_name}.{suffix}"
-        suffix += 1
-    target.write_text(content, encoding="utf-8")
-    return target
+    raise OSError(
+        f"too many collisions for {base_name!r} in {directory} "
+        f"(exceeded MAX_COLLISION_SUFFIX={MAX_COLLISION_SUFFIX})"
+    )
 
 
 def filename_for_command(command: str) -> str:
