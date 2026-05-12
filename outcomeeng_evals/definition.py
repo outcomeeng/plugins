@@ -89,8 +89,10 @@ def _load_toml(toml_path: Path) -> dict[str, Any]:
 
 def _required_str(data: dict[str, Any], key: str) -> str:
     if key not in data:
-        msg = f"missing required field {key!r}"
-        raise KeyError(key, msg)
+        # Single-arg KeyError matching Python's dict contract; the
+        # diagnostic context is the key name itself. The two-arg form
+        # (KeyError(key, msg)) produces a confusing tuple-repr.
+        raise KeyError(key)
     value = data[key]
     if not isinstance(value, str) or not value:
         msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"

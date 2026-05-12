@@ -103,28 +103,36 @@ def _render_prompt(template: str, case: Case) -> str:
     # exactly the two recognized placeholders. Chained ``str.replace`` would
     # let a case id containing ``{input_json}`` collide with the second
     # substitution and inject the case's JSON payload into a position the
-    # template author did not intend.
-    parts: list[str] = []
+    # template author did not intend. Between placeholders, slice the
+    # literal run up to the next ``{`` in one append rather than copying a
+    # character at a time.
     substitutions = {
         "{case_id}": case.id,
         "{input_json}": json.dumps(case.input, indent=2),
     }
+    parts: list[str] = []
     index = 0
-    while index < len(template):
+    length = len(template)
+    while index < length:
+        next_brace = template.find("{", index)
+        if next_brace == -1:
+            parts.append(template[index:])
+            break
+        parts.append(template[index:next_brace])
         match = next(
             (
                 placeholder
                 for placeholder in substitutions
-                if template.startswith(placeholder, index)
+                if template.startswith(placeholder, next_brace)
             ),
             None,
         )
         if match is None:
-            parts.append(template[index])
-            index += 1
+            parts.append("{")
+            index = next_brace + 1
             continue
         parts.append(substitutions[match])
-        index += len(match)
+        index = next_brace + len(match)
     return "".join(parts)
 
 

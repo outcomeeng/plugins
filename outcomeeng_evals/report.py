@@ -19,7 +19,10 @@ from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import SuiteResult, TrialResult
 
 
-JSON_SCHEMA_VERSION = "1.0"
+# Integer-as-string schema version for the JSON results document and the
+# history.jsonl rows. Bumped on incompatible changes; the committed
+# baseline history rows carry the same value.
+JSON_SCHEMA_VERSION = "1"
 
 
 def serialize_result(result: SuiteResult, title: str) -> dict[str, Any]:
