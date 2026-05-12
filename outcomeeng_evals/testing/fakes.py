@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from outcomeeng_evals.runner import ModelRunner, RunMetadata, RunResult
@@ -64,6 +64,3 @@ class RecordingRunner:
         result = self.inner.run(prompt)
         self.transcripts.append((prompt, result))
         return result
-
-    def as_mapping(self) -> Mapping[str, RunResult]:
-        return dict(self.transcripts)

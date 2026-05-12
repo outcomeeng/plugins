@@ -31,6 +31,10 @@ def history_command(history_path: Path, limit: int) -> None:
         passed = bool(row.get("passed"))
         verdict = "PASS" if passed else "FAIL"
         pass_rate = row.get("pass_rate")
+        # ``bool`` is an ``int`` subclass, so the ``bool`` rejection must
+        # come before the ``(int, float)`` check — otherwise a stray
+        # ``true``/``false`` in the JSON row would be formatted as 100%/0%
+        # instead of falling through to ``"?"``.
         pct = (
             f"{float(pass_rate):.1%}"
             if not isinstance(pass_rate, bool) and isinstance(pass_rate, (int, float))

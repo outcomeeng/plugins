@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from outcomeeng_evals.case import Case, load_cases
+from outcomeeng_evals.case import MAX_EXPECTED_LIST_LENGTH, Case, load_cases
 from outcomeeng_evals.grader import grade, is_subset, parse_verdict
 from outcomeeng_evals.suite import run_suite
 from outcomeeng_evals.testing.fakes import RaisingModelRunner
@@ -55,6 +55,42 @@ def test_load_cases_rejects_record_missing_id(tmp_path: Path) -> None:
     bad: dict[str, Any] = {"input": {}, "expected_verdict": {}}
     with pytest.raises(ValueError, match="missing required field 'id'"):
         load_cases(_write_case(tmp_path, bad))
+
+
+def test_load_cases_accepts_expected_list_at_cap(tmp_path: Path) -> None:
+    record = {
+        "id": "at-cap",
+        "input": {},
+        "expected_verdict": {
+            "must_contain": [
+                {
+                    "findings": [
+                        {"rule": f"r-{i}"} for i in range(MAX_EXPECTED_LIST_LENGTH)
+                    ]
+                }
+            ]
+        },
+    }
+    cases = load_cases(_write_case(tmp_path, record))
+    assert len(cases[0].must_contain[0]["findings"]) == MAX_EXPECTED_LIST_LENGTH
+
+
+def test_load_cases_rejects_oversized_expected_list(tmp_path: Path) -> None:
+    record = {
+        "id": "over-cap",
+        "input": {},
+        "expected_verdict": {
+            "must_contain": [
+                {
+                    "findings": [
+                        {"rule": f"r-{i}"} for i in range(MAX_EXPECTED_LIST_LENGTH + 1)
+                    ]
+                }
+            ]
+        },
+    }
+    with pytest.raises(ValueError, match="must_contain"):
+        load_cases(_write_case(tmp_path, record))
 
 
 def test_parse_verdict_returns_parsed_json_document() -> None:
