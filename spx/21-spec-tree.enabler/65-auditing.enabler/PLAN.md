@@ -1,67 +1,43 @@
-# PLAN — PR #10 / PR #11 bot-review continuation
+# PLAN — auditing toolchain: three-step rollout
 
-Coordination notes for finishing the multi-round bot-review loop on the two open draft PRs. Both PRs are `MERGEABLE` with green CI; the loop continues until each round returns only minor nits.
+The audit capability lands in three steps. The `auditing` skill owns the audit policy: the six-phase run, language-partition dispatch, aggregation, and JSON-verdict emission through the toolchain in `scripts/`. Agents wrap the skill — they never invoke `scripts/` through a path the skill does not already resolve.
 
-## Two PRs, two branches
+Naming: agents that run only the audit are `audit*` (`auditor`, `audit-orchestrator`); agents that bundle the existing PR-review prompt with the audit are `*review*` (`pr-reviewer`, `pr-review-orchestrator`) — review is the umbrella, the audit is one part of it. Bare name = one-off, no persisted state; `-orchestrator` suffix = stateful, tracks finding resolution across runs. A workflow mirrors the agent it runs: `claude-` prefix, agent name without the `pr-` prefix.
 
-| PR                                                   | Branch                         | Scope                                                                                  | Last commit at handoff                                                                  |
-| ---------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| [#10](https://github.com/outcomeeng/plugins/pull/10) | `work/add-typescript-spec`     | `[eval]` evidence mechanism + `outcomeeng_evals` runner + slice migration              | `92f3e14` (round 6 pushed) — **awaiting r6 bot review**                                 |
-| [#11](https://github.com/outcomeeng/plugins/pull/11) | `work/audit-verdict-toolchain` | verdict toolchain + audit-orchestration restoration + marketplace-wide skill alignment | `c686730` (round 4 pushed) — **r4 bot review read, round 5 in progress, NOT committed** |
+| Agent                    | Step                              | Runs in                               | Job                                                                                                          | State surface                               |
+| ------------------------ | --------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `auditor`                | 1 (this branch)                   | local                                 | one-off: invoke `auditing` on a scope, render per `--json` / `--markdown` / `--markdown+json`                | none                                        |
+| `pr-reviewer`            | 1 (this branch)                   | CI (`claude-reviewer.yml`)            | one-off: invoke the review-prompt skill + `auditing`, post one combined review+audit PR comment              | none                                        |
+| `audit-orchestrator`     | 2 (`work/audit-orchestrator`)     | local                                 | stateful: maintain `.spx/audits/<lang>/<branch-slug>.md` across commits; observable precursor to CI          | `.spx/audits/` (gitignored, worktree-local) |
+| `pr-review-orchestrator` | 3 (`work/pr-review-orchestrator`) | CI (`claude-review-orchestrator.yml`) | stateful: ingest existing PR review comments → feed `auditing` → update the PR via a `markdown+json` comment | PR comment thread                           |
 
-Both branches are rebased onto `origin/main` (picked up the develop/prose version bumps that were causing the Codex-cache symlink validation failures). After any rebase, force-push with `--force-with-lease` and re-run `just push-marketplace` to confirm the Codex cache validates (exit 0, 1 informational warning is expected).
+## Step 1 — this branch (`work/audit-verdict-toolchain`, PR #11)
 
-## Review-loop method
+Scope: the verdict toolchain plus the one-off agents plus the `claude-reviewer` workflow. No persisted state anywhere.
 
-For each new bot review comment on a PR:
+Already landed: `verdict.py` (canonical schema + `roll_up`), `emit_verdict.py` / `read_verdict.py` / `aggregate_verdicts.py` / `pass_results.py`, the `spx/15-audit-verdict-format.pdr.md` flip to JSON + carrier+payload + format axis, the `65-verdict-toolchain.enabler` spec node + its five scenario test files, the eleven-skill marketplace alignment.
 
-1. `gh pr view <N> --json comments --jq '.comments[-1].body'` to read the latest review.
-2. Categorize findings: substantive (bugs, correctness, methodology violations) vs minor (style, doc notes).
-3. Fix substantive items; address minor items where cheap. Skip cosmetic-only items and note them.
-4. `just check` must pass. Commit with a focused `fix(...)` message listing each finding addressed. Push via `just push-marketplace`.
-5. The `claude-review` CI job re-fires on each push (~3–8 min). Use `ScheduleWakeup` (~540s) to come back and check, then loop. Never poll with `gh run watch`.
-6. Stop when a round returns only minor nits with no substantive items.
+Remaining:
 
-`ISSUES.md` and `PLAN.md` in node directories are committed escape hatches per `spx/CLAUDE.md` — legitimate, but the bot keeps flagging them against the root `AGENTS.md` "planning is ephemeral" line. There is a genuine doc inconsistency between `AGENTS.md` and `spx/CLAUDE.md` here; a methodology pass should reconcile them. For now: PLAN.md files that are pure finished-decision dumps get removed (the eval-harness PLAN.md was), PLAN.md files that are active coordination (like this one) stay, and ISSUES.md files that mix deferred-spec-work with methodology-layer issues should split the latter into a PDR or fix the specs.
+1. **Slim `agents/auditor.md`** to a one-off wrapper. Remove `<state_file_format>`, `<helper_invocation>` (the eight `${CLAUDE_PLUGIN_ROOT}` heredocs — broken: `${CLAUDE_PLUGIN_ROOT}` is not substituted in agent prompts and is not a shell env var), and the Phase 0/F/R `<protocol>` state machinery. Keep: accept a scope plus `--json | --markdown | --markdown+json`; invoke `spec-tree:auditing` (already declared via the `skills:` frontmatter field); forward the format to `emit_verdict.py`; emit the rendered result. The agent invokes nothing the `auditing` skill does not already resolve.
+2. **Trim `scripts/audit_orchestrator.py`** to the git/scope helpers the `auditing` skill uses in Phase 0 — `detect_base_ref`, `branch_scope` / `expand_diff_range`, `compute_scope_hash`. Move the `.spx/`-state machinery — `AuditState`, `load_state` / `save_state`, `assign_finding_id`, `find_resolved_by_identity`, `reopen_finding`, `RunLock` — to `work/audit-orchestrator` (step 2). Drop the corresponding scenarios from `tests/test_auditing.scenario.l1.py`; keep the scope-hash property test.
+3. **New review-prompt skill.** Duplicate the existing PR-review prompt from `outcomeeng/gh-actions` into this repo as a skill. The `gh-actions` source is upstreamed once this is stable.
+4. **New `agents/pr-reviewer.md`** — CI one-off agent: invoke the review-prompt skill + `spec-tree:auditing`, post one combined review+audit PR comment.
+5. **Revise `skills/auditing/SKILL.md`** as needed for the one-off flow; add a `<codex_fallback>` block for the `scripts/` paths — Codex does not substitute `${CLAUDE_SKILL_DIR}`, so the fallback says to locate `scripts/` as a sibling of this SKILL.md.
+6. **New `.github/workflows/claude-reviewer.yml`**, modeled on `claude-code-review.yml`, running the `pr-reviewer` agent and posting the combined comment. The reusable-workflow logic is duplicated into this repo from `gh-actions` for now; upstreamed once stable. `claude-code-review.yml` stays in place transitionally — it posts a redundant review-only comment alongside the combined one and is removed once `claude-reviewer.yml` is solid.
+7. **Rewrite `spx/21-spec-tree.enabler/65-auditing.enabler/auditing.md`** around the step-1 scope: the `auditing` skill runs the six-phase audit on a frozen scope and emits a JSON verdict conforming to `verdict.py`; the `auditor` agent invokes the skill and renders per the format flag; the scope-hash determinism property; the orchestrator rollup contract. The `.spx/`-state assertions move to step 2.
+8. **Amend `spx/21-spec-tree.enabler/17-auditing.adr.md`**: the `auditing` skill owns the audit policy; the `auditor` agent is a one-off renderer; stateful local orchestration (`audit-orchestrator`) and PR-review re-auditing (`pr-review-orchestrator`) are separate agents. Remove the `.spx/audits/<lang>/<branch-slug>.md` compliance rule — that text belongs to step 2.
 
-## PR #11 — round 5 work (IN PROGRESS, not yet committed)
+Audit gates: `/auditing-subagents` on `auditor.md` and `pr-reviewer.md`; `/auditing-skills` on the new review-prompt skill and the revised `auditing/SKILL.md`; `/auditing-python` plus `/auditing-python-tests` on the trimmed `audit_orchestrator.py` and its tests; `/aligning` on `auditing.md` and `17-auditing.adr.md`. Then `just check`, commit, push via `just push-marketplace`, and let `claude-code-review` re-review the new shape.
 
-From the r4 bot review on PR #11. Pick up here on `work/audit-verdict-toolchain`.
+## Step 2 — `work/audit-orchestrator`
 
-### 1. `aggregate_verdicts.py` needs a `--row name=STATUS` repeatable flag (substantive)
+The `audit-orchestrator` agent: a stateful auditing workflow that maintains worktree-local `.spx/audits/<lang>/<branch-slug>.md` so local agents iterate quickly and observably — a precursor to running the same policy on GitHub's opaque PR infrastructure.
 
-`aggregate()` always produces `rows=()`, but `auditing/SKILL.md` `<verdict_format>` and `auditor.md` `<output_format>` both show the wrapper with three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`). A skill following the Phase 6 example produces `"rows": []`, contradicting its own schema example.
+This branch carries the `.spx/`-state machinery removed from step 1 (`AuditState`, `load_state` / `save_state`, `assign_finding_id`, `find_resolved_by_identity`, `reopen_finding`, `RunLock` in `audit_orchestrator.py`, plus the scenario tests). The agent reaches `scripts/` only through the `auditing` skill (which resolves it via `${CLAUDE_SKILL_DIR}`) or through a CLI added to `audit_orchestrator.py` — `base-ref`, `current-branch`, `branch-slug`, `scope-hash`, `branch-scope`, `modified-since`, `sha-reachable`, `acquire-lock`, `release-lock`, `state-transition` — that the skill invokes; never via `${CLAUDE_PLUGIN_ROOT}` in the agent body. Adds a `.spx/audits/` spec sub-node under `65-auditing.enabler` and the matching `17-auditing.adr.md` compliance text. Rebase onto current main once step 1 merges.
 
-Fix: add `--row name=STATUS` (repeatable) to `_parse_args`; parse each into a `Row(name=name, status=Status(STATUS), findings=())` with `STATUS` validated against `SKILL_STATUSES`; thread the parsed rows into `aggregate(rows=...)`; in `aggregate()`, set `rows=rows` and change the rollup to `verdict.roll_up([r.status for r in rows] + [c.overall for c in children])` so wrapper-row FAILs propagate. Import `Row, Status` from `verdict`. Add scenario tests in `spx/21-spec-tree.enabler/32-evidence.enabler/65-verdict-toolchain.enabler/tests/test_aggregate_verdicts.scenario.l1.py` (rows present in wrapper; a FAIL wrapper row → REJECTED overall even when all children PASS). Then the `<verdict_format>` examples in `auditing/SKILL.md` and `auditor.md` are achievable as written — add a one-liner to the Phase 6 example showing `--row automated-gates=PASS --row test-execution=PASS --row determinism-contract=PASS`.
+## Step 3 — `work/pr-review-orchestrator`
 
-### 2. Language test-audit skills not aligned to JSON (check whether real)
+The `pr-review-orchestrator` agent: run in CI. Reads existing PR review comments (including the prior `markdown+json` audit comment via `read_verdict.py`), feeds them into the `auditing` skill, diffs new findings against the prior verdict to derive resolved/reopened, and updates the PR with a fresh `markdown+json` comment. State lives in the PR comment thread — the durable cross-CI-run surface named in `spx/15-audit-verdict-format.pdr.md` — not in `.spx/`.
 
-The r4 bot claims `auditing-python-tests`, `auditing-typescript-tests`, `auditing-rust-tests` still emit markdown. They each have a `<verdict_format>` that says "Follow `<verdict_format>` in `/auditing-tests`" plus language-specific lines ("Gate 2 extraction target: `testing/harnesses/{name}.ts`", "Gate 0 check IDs for Python: F1, V1, C1", etc.). Since `/auditing-tests` was converted to the JSON shape in PR #11 round 2, the delegation carries through — but the language-specific lines still reference markdown-table concepts (gate columns, extraction targets as table cells). Verify each of the three files and, if the language-specific lines presume the old markdown table, rewrite them to express the same information in JSON-shape terms (check IDs as `rule` values; extraction targets as `message` content).
-
-### 3. Track the `python3 -c` CLI-dispatcher follow-up in a durable artifact
-
-`auditor.md`'s `<helper_invocation>` ships eight inline `python3 -c` heredocs (now using `${CLAUDE_PLUGIN_ROOT}` after round 4). The PR acknowledges these as interim. The r4 bot wants the planned CLI dispatcher captured before the 0.30.0 tag. This PLAN.md is that artifact — see "CLI dispatcher for `audit_orchestrator.py`" below. Update `auditor.md`'s `<helper_invocation>` closing note to reference `spx/21-spec-tree.enabler/65-auditing.enabler/PLAN.md` again (the round-3 edit removed the broken reference; now the file exists).
-
-### 4. Minor PR #11 fixes
-
-- `audit_orchestrator.py` `compute_scope_hash`: type hint is `list[tuple[str, str]]` but the docstring and `auditing/SKILL.md` say `list[tuple[path, content]]`. `Path` objects break on `.encode("utf-8")`. Make the docstring/SKILL.md explicit that paths must be `str`, or accept `os.PathLike` and `os.fspath()` it.
-- `expand_diff_range`: `range_spec` is caller-controlled and passed straight to `git diff`. A malformed value could confuse git into treating path components as flags. Add a `re.match(r'^[A-Za-z0-9._/~^@{}-]+(\.\.\.?[A-Za-z0-9._/~^@{}-]+)?$', range_spec)` guard before the subprocess call; raise `ValueError` on no match.
-- `audit_orchestrator.py` `STATE_OPEN_TABLE_SEPARATOR` / `STATE_RESOLVED_TABLE_SEPARATOR` are identical strings (both 6-column `| --- | ... |`). Add a one-line comment explaining the identity is structural (same column count) even though the headers differ, so a future reader doesn't think it's a copy-paste bug.
-- `Status` dual-vocabulary note in `from_json_dict` (already added in round 3) — the r4 bot still flags the lack of a hard guard. Leave the docstring note; a real guard needs a skill registry. No code change.
-- `RunLock` half-way context-manager use (`__enter__` via `python3 -c`, `__exit__` via shell `rm -f`) — folded into the CLI-dispatcher plan below (`acquire-lock` / `release-lock` subcommands make the pair symmetric).
-
-### CLI dispatcher for `audit_orchestrator.py` (deferred — durable record for the r4 finding)
-
-Replace the eight stateless `python3 -c` heredocs in `auditor.md` with one-liner subcommands on a CLI added to `audit_orchestrator.py` (stdlib `argparse`, no `uv`, per the Plugin Portability Constraints). Subcommands: `base-ref`, `current-branch`, `branch-slug <branch> <state-dir>`, `scope-hash <files-json-on-stdin>`, `branch-scope <base-ref> -- <patterns>`, `modified-since <prior-sha> -- <patterns>`, `sha-reachable <sha>`, `acquire-lock <path>`, `release-lock <path>`. The stateful state-file mutation path (`load_state` → `assign_finding_id`/`reopen_finding`/`resolve_finding` → `save_state`) stays as the one multi-line Python block in `auditor.md` — it needs to hold the `AuditState` object across several calls. Invoked as `python3 "${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py" <subcommand> ...`. Add scenario tests for the CLI surface (exit codes, stdout shape) alongside the existing helper tests.
-
-## PR #10 — status at handoff
-
-Round 6 (`92f3e14`) is pushed; the r6 `claude-review` job is running. When it lands, read it (`gh pr view 10 --json comments --jq '.comments[-1].body'`) and run the review-loop method above on `work/add-typescript-spec`.
-
-Rounds 1–6 already addressed: PLAN.md flip post-strip; `[eval]` mechanism; eval-harness spec/tests; `describe()` HTML bug; `_pass_rate`/`trial_pass_rate` empty handling; parallel `_error_outcome` + `as_completed`; `--workers` IntRange(min=1, max=16); `--timeout-seconds`; `is_subset` multiset semantics + cardinality test; `HISTORY_ROW_FIELDS` enforced; `EVAL_TOML_FILENAME`/`RUNS_DIRNAME`/`HISTORY_FILENAME` extracted to `definition.py`/`history.py`; `[test]` link validation added to the link-integrity walker; `spx/` docstring refs removed from `outcomeeng_evals`; `sys.exit` → `ctx.exit`; `_render_prompt` single-pass injection-safe substitution + forward-scan; `_required_str` single-arg `KeyError`; `JSON_SCHEMA_VERSION` reverted to `"1"` to match baseline rows; eval-harness `PLAN.md` removed, open items → `ISSUES.md`; `view` command no-runs-yet error message; `cases.jsonl` comment-line + `is_subset` bool/int docstring notes; `RecordingRunner` `frozen=True` dropped.
-
-Recurring bot complaints that are convention-correct (do not "fix" them): `ISSUES.md`/`PLAN.md` committed under `spx/` (escape-hatch convention); `is_subset(True, 1) == True` (JSON structural semantics); `auditing-tests` manual `sys.argv` parsing (script is trivial). The one that may need a methodology pass: the `AGENTS.md` "planning is ephemeral" line vs `spx/CLAUDE.md` "PLAN.md/ISSUES.md are committed escape hatches" — reconcile in a separate change, not in either PR.
-
-## Done when
-
-Both PRs: latest bot review round returns only minor nits, no substantive findings. Then they are ready for the user to mark ready-for-review and merge.
+New `.github/workflows/claude-review-orchestrator.yml`, modeled on step 1's `claude-reviewer.yml`. Builds on the `auditing` skill and the review-prompt skill from step 1. Adds the PR-comment ingest/persist contract to `17-auditing.adr.md`. Rebase onto current main once steps 1 and 2 merge.
