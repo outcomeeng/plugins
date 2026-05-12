@@ -69,31 +69,34 @@ def main(argv: list[str] | None = None) -> int:
 def extract_json(text: str) -> str:
     """Return the JSON payload string extracted from any surface form.
 
-    Detection rules, evaluated in order:
+    Detection rules, evaluated in order. Delimiters take precedence over
+    the ``startswith({)`` heuristic so a markdown+json document whose
+    prose section happens to start with an open brace still routes to
+    the delimited block.
 
-    1. If the stripped input begins with ``{``, treat the whole input as
-       a JSON-only verdict and return the stripped text.
-    2. Else, if the input contains both ``JSON_BLOCK_BEGIN`` and
+    1. If the input contains both ``JSON_BLOCK_BEGIN`` and
        ``JSON_BLOCK_END`` delimiters (in that order), return the text
        between them, trimmed.
+    2. Else, if the stripped input begins with ``{``, treat the whole
+       input as a JSON-only verdict and return the stripped text.
     3. Else, raise ``ExtractError``.
 
     The function does not validate the schema — it only locates the JSON
     document. Schema validation is the caller's responsibility (via
     ``verdict.parse_json``).
     """
+    begin = text.find(JSON_BLOCK_BEGIN)
+    end = text.find(JSON_BLOCK_END)
+    if begin != -1 and end != -1 and begin < end:
+        payload = text[begin + len(JSON_BLOCK_BEGIN) : end]
+        return payload.strip()
     stripped = text.strip()
     if stripped.startswith("{"):
         return stripped
-    begin = text.find(JSON_BLOCK_BEGIN)
-    end = text.find(JSON_BLOCK_END)
-    if begin == -1 or end == -1 or end < begin:
-        raise ExtractError(
-            "no JSON payload found; expected json-only input or "
-            f"an HTML-comment-delimited block ({JSON_BLOCK_BEGIN} ... {JSON_BLOCK_END})"
-        )
-    payload = text[begin + len(JSON_BLOCK_BEGIN) : end]
-    return payload.strip()
+    raise ExtractError(
+        "no JSON payload found; expected json-only input or "
+        f"an HTML-comment-delimited block ({JSON_BLOCK_BEGIN} ... {JSON_BLOCK_END})"
+    )
 
 
 def _read_input(path: str | None) -> str:

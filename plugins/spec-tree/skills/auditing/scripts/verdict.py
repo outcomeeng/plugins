@@ -111,6 +111,13 @@ class Verdict:
 
     Mixed wrappers (with both rows and children) are permitted; the
     orchestrator-level rollup still applies.
+
+    Not hashable. ``frozen=True`` prevents reassignment of fields, but the
+    ``metadata`` dict field is mutable in place. The auto-generated
+    ``__hash__`` would also fail on the dict at hash time. Explicit
+    ``__hash__ = None`` marks the class unhashable up front so attempts
+    to put a Verdict in a set or use it as a dict key fail with a clear
+    TypeError("unhashable type: 'Verdict'") instead of a deeper failure.
     """
 
     schema_version: int
@@ -120,6 +127,8 @@ class Verdict:
     rows: tuple[Row, ...] = ()
     children: tuple["Verdict", ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
+
+    __hash__ = None  # type: ignore[assignment]
 
 
 def roll_up(child_overalls: list[Status]) -> Status:
