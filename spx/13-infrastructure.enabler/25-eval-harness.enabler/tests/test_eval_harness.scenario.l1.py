@@ -353,6 +353,18 @@ def test_run_suite_parallel_isolates_runner_failure_per_case(tmp_path: Path) -> 
     assert result.passed is False
 
 
+def test_run_suite_rejects_empty_cases_file(tmp_path: Path) -> None:
+    cases_path = tmp_path / "cases.jsonl"
+    cases_path.write_text("", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="cases"):
+        run_suite(
+            cases_path=cases_path,
+            runner=StubRunner(response=_PASS_VERDICT),
+            build_prompt=lambda case: f"case={case.id}",
+        )
+
+
 def _case(
     *,
     must_contain: list[dict[str, Any]] | None = None,

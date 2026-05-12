@@ -17,6 +17,13 @@ from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_html_report
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
+# Upper bound on parallel case workers — caps concurrent `claude`
+# subprocesses so a misconfigured worker count cannot fork-burst the
+# Claude API (the no-fork-bomb stance the eval-harness spec inherits from
+# the plugin runtime conventions).
+MAX_WORKERS = 16
+
+
 @click.command(name="run")
 @click.argument(
     "eval_toml",
@@ -30,12 +37,12 @@ from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 )
 @click.option(
     "--workers",
-    type=click.IntRange(min=1, max=16),
+    type=click.IntRange(min=1, max=MAX_WORKERS),
     default=1,
     show_default=True,
     help=(
         "Parallel case workers (case-file order is preserved in outcomes). "
-        "Capped at 16 to prevent fork bursts against the Claude API."
+        f"Capped at {MAX_WORKERS} to prevent fork bursts against the Claude API."
     ),
 )
 @click.option(

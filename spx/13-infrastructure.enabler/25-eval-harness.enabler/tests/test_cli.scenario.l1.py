@@ -12,6 +12,7 @@ from pathlib import Path
 from click.testing import CliRunner
 
 from outcomeeng_evals.cli import main
+from outcomeeng_evals.cli.commands.run import MAX_WORKERS
 
 
 EXIT_SUCCESS = 0
@@ -44,6 +45,29 @@ def test_run_subcommand_rejects_missing_eval_toml(tmp_path: Path) -> None:
     result = runner.invoke(main, ["run", str(missing_path)])
 
     assert result.exit_code != EXIT_SUCCESS
+
+
+def test_run_subcommand_rejects_workers_above_cap(tmp_path: Path) -> None:
+    runner = CliRunner()
+    eval_toml = tmp_path / "eval.toml"
+    eval_toml.write_text("", encoding="utf-8")
+    plugin_dir = tmp_path / "plugin"
+    plugin_dir.mkdir()
+
+    result = runner.invoke(
+        main,
+        [
+            "run",
+            str(eval_toml),
+            "--plugin-dir",
+            str(plugin_dir),
+            "--workers",
+            str(MAX_WORKERS + 1),
+        ],
+    )
+
+    assert result.exit_code == EXIT_INVOCATION_ERROR
+    assert "workers" in result.output.lower()
 
 
 def test_discover_subcommand_lists_eval_toml_files(tmp_path: Path) -> None:

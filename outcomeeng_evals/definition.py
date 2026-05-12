@@ -77,6 +77,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         raw,
         _OPTIONAL_TRIALS,
         DEFAULT_TRIALS_PER_CASE,
+        min_value=1,
         max_value=MAX_TRIALS_PER_CASE,
     )
 
@@ -139,6 +140,7 @@ def _optional_int(
     key: str,
     default: int,
     *,
+    min_value: int | None = None,
     max_value: int | None = None,
 ) -> int:
     if key not in data:
@@ -147,8 +149,8 @@ def _optional_int(
     if isinstance(value, bool) or not isinstance(value, int):
         msg = f"field {key!r} must be an integer, got {type(value).__name__}"
         raise ValueError(msg)
-    if value < 1:
-        msg = f"field {key!r} must be >= 1, got {value}"
+    if min_value is not None and value < min_value:
+        msg = f"field {key!r} must be >= {min_value}, got {value}"
         raise ValueError(msg)
     if max_value is not None and value > max_value:
         msg = f"field {key!r} must be <= {max_value}, got {value}"

@@ -85,8 +85,16 @@ def run_suite(
     responsible for keeping it within sane bounds.
 
     Per-case pass policy is majority-of-trials (``ceil(trials_per_case / 2)``).
+
+    Raises ``ValueError`` when the case file has no records — an empty
+    ``cases.jsonl`` is a misconfiguration, not a vacuously-passing suite.
+    The guard fires before any runner work so the failure surfaces at the
+    entry point rather than downstream in ``_pass_rate``.
     """
     cases = load_cases(cases_path)
+    if not cases:
+        msg = f"no cases in {cases_path}; cases.jsonl is empty or misconfigured"
+        raise ValueError(msg)
     if workers <= 1:
         outcomes = [
             _safe_run_case(
