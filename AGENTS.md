@@ -73,7 +73,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 - ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
-- ⚠️ **NEVER push from main with bare `git push`** - Use `just push-marketplace` so cache preservation, marketplace refresh, and post-push validation run in the correct order. Bare `git push` skips all of that and leaves the local marketplace stale.
+- ⚠️ **Changes land on `main` via pull request** - Feature branch → `/committing-changes` → `/open-pr` → review → merge. Never push commits straight to `main`; the only exception is a trivial fix, and even then use `just push-marketplace` (never bare `git push`) so cache preservation, marketplace refresh, and validation run in order. After a PR merges, sync your local install with `just sync-marketplace`. Full procedure in "Git workflow" below.
 
 - ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
@@ -443,7 +443,7 @@ Certain skills must be invoked **automatically** when specific conditions are me
 
 ### After Adding/Modifying Commands or Skills
 
-Before committing, invoke `/committing-changes` — it loads marketplace-specific rules (versioning, file targets, commit workflow) from `spx/local/committing-changes.md`.
+Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/committing-changes` then `/open-pr`.
 
 **When adding a new plugin**, register it in **both** marketplace catalogs:
 
@@ -565,42 +565,51 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 └── AGENTS.md                      # This file
 ```
 
-## How to commit
+## Git workflow
 
-Always invoke the skill `/committing-changes` and adhere to its git commit message guidance.
+Changes reach `main` through pull requests. The path:
 
-## Pushing from this repo
+1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`. Never commit on `main`.
+2. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
+3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch (`git push -u origin <branch>`), and opens a draft PR with a curated title and body; it loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections. Do **not** push feature branches with `just push-marketplace` — that recipe is for `main`.
+4. **Review and merge.** You review and merge the PR on GitHub (a merge commit, matching existing history). An agent runs `gh pr merge` only when you explicitly tell it to.
+5. **Sync.** Once the PR merges, refresh your local marketplace install:
 
-`just push-marketplace` is the canonical push. It runs `git push`, then refreshes the local Claude marketplace cache, preserves Codex cache compatibility links, and validates the post-push state:
+   ```bash
+   git switch main && git pull
+   just sync-marketplace
+   ```
+
+   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, and runs `validate_install` and `check-installed`. It does not push or pull — do the `git pull` yourself first.
+
+### Pushing directly to `main` (rare)
+
+A trivial fix — a typo, a one-line doc tweak — may go straight to `main`. When it does, use `just push-marketplace`, never bare `git push`:
 
 ```bash
-just push-marketplace               # push current branch with default args
+just push-marketplace               # git push (current branch) + just sync-marketplace
 just push-marketplace origin main   # explicit remote/branch
 ```
 
-⚠️ **NEVER push from main with bare `git push`.** Bare `git push origin main` skips cache preservation and validation; the local marketplace stays stale, old-version symlinks in the Codex cache are not created, and `validate_install` never runs. The recipe is mandatory for every push from this repo, including doc-only and spec-only commits.
+Bare `git push origin main` skips the sync: the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
 
-⚠️ **NEVER use `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` directly.** These are the primitives that `just push-marketplace` already orchestrates in the correct order. Running them manually risks touching the wrong project scope, running steps out of order, or skipping the post-install validation. Read the Justfile before any marketplace operation.
+⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong project scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
 
 ### How the marketplace cache resolves to skill content
 
-`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. The runtime resolves skill content from the **working tree at that path**, not from the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`.
+`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. For unpinned installs (the default), the runtime resolves skill content from the **working tree at that path** — not from the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, which are historical snapshots kept so version-pinned installs still resolve after the marketplace HEAD moves on. The on-disk caches lagging the merged HEAD version is by design.
 
-The versioned cache directories are historical snapshots that exist so projects pinning a specific version can still resolve it after the marketplace HEAD has moved on. Unpinned installs (the default) follow the working tree.
+The Skill tool loads a skill's content into per-session memory the first time it is invoked. Working-tree edits do **not** reach a running Claude Code session until `/reload-plugins` runs; the next invocation then re-reads from the working tree.
 
-**Operational consequences:**
+### Smoke-testing skill changes
 
-- After `just push-marketplace`, the on-disk versioned caches may show a "lag" (HEAD version not yet snapshotted into a cache directory). This is by design.
-- The Skill tool loads a skill's content into per-session memory when the skill is first invoked. Edits to working-tree files do **not** propagate into a running Claude Code session until `/reload-plugins` runs.
-- After `/reload-plugins`, the next skill invocation re-reads from the working tree.
+While the change is still on your feature branch:
 
-**Smoke-testing skill changes in a running session:**
+1. Edit the working-tree skill files.
+2. Run `/reload-plugins`.
+3. Re-invoke the skill — the new content loads.
 
-1. Edit working-tree skill files
-2. Run `/reload-plugins`
-3. Re-invoke the skill — new content loads
-
-No `claude plugin install` or `just push-marketplace` is required for the smoke test itself. Commit and push only when ready to publish to other developers. If a smoke test of a freshly pushed change is needed, `just push-marketplace` then `/reload-plugins` ensures every part of the chain (working tree, marketplace catalog, per-session memory) is current.
+No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test. After the PR merges, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
 
 ## Missing plugins or skills
 

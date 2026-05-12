@@ -33,7 +33,10 @@ Drop the **Versioning** section only when no `plugin.json` files changed.
 
 ## Push command
 
-Feature-branch PRs use bare `git push -u origin <branch>`. The marketplace-specific `just push-marketplace` recipe is for post-merge pushes to `main`, not for opening a PR from a feature branch.
+Feature-branch PRs push with bare `git push -u origin <branch>`. The marketplace-specific recipes are not for opening a PR:
+
+- `just sync-marketplace` — run after the PR merges to refresh the local Claude and Codex marketplace installs.
+- `just push-marketplace` — `git push` plus `just sync-marketplace`; reserved for the rare trivial fix pushed straight to `main`.
 
 ## Self-reference
 
