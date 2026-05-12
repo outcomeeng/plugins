@@ -336,7 +336,7 @@ The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering)
 | **Spec**    | Write tests (make verifiable) | Specified        |
 | **Apply**   | Write implementation code     | Passing          |
 
-Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`. Not a durable artifact.
+Planning artifacts are ephemeral — `PLAN.md` and `ISSUES.md` are committed escape hatches that `/handoff` leaves in node directories. They carry deferred plans and known issues, not spec truth; `/contextualizing` reads them, conformance checks skip them, and they are removed once resolved.
 
 ### Skills
 
