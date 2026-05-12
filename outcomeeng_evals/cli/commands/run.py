@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -87,7 +86,8 @@ def run_command(
     click.echo(format_report(result))
     click.echo(f"HTML: {html_path}")
     click.echo(f"JSON: {html_path.with_suffix('.json')}")
-    sys.exit(0 if result.passed else 1)
+    ctx = click.get_current_context()
+    ctx.exit(0 if result.passed else 1)
 
 
 def _render_prompt(template: str, case: Case) -> str:

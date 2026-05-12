@@ -6,8 +6,7 @@ from pathlib import Path
 
 import click
 
-
-EVAL_TOML_FILENAME = "eval.toml"
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
 
 @click.command(name="discover")

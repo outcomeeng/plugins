@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import subprocess
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -140,8 +141,13 @@ def _error_outcome(*, case: Case, error: BaseException) -> CaseOutcome:
     unwind the entire suite when one case's runner raises. The error message
     appears in the trial's response field and as the grade reason; downstream
     consumers (JSON report, HTML viewer, history row) see one FAIL trial.
+
+    Tags timeout errors with a ``[timeout]`` prefix so the report can
+    distinguish a slow-runner failure from a substantive grading failure
+    at a glance — same trial schema, recognizable reason prefix.
     """
-    error_text = f"{type(error).__name__}: {error}"
+    tag = "[timeout] " if isinstance(error, subprocess.TimeoutExpired) else ""
+    error_text = f"{tag}{type(error).__name__}: {error}"
     failing_trial = TrialResult(
         case_id=case.id,
         trial_index=0,
