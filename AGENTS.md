@@ -114,7 +114,7 @@ Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one
 
 ### Heavy subprocess trees: sparingly, serially, load-aware
 
-`just check`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime`: if sustained loadavg exceeds the host's core count the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run `just check` once before committing, not repeatedly "to be sure".
+`just check`, a full `pytest` run, `uv run …`, and similar each fork dozens of children. Before launching one, read `uptime` and compare the sustained loadavg (the 5- and 15-minute figures) to the host's core count (`nproc`, or `sysctl -n hw.ncpu` on macOS): if loadavg exceeds it the machine is overcommitted — defer rather than pile on. Never run two heavy commands concurrently. Run `just check` once before committing, not repeatedly "to be sure".
 
 ### Other forks add up
 
