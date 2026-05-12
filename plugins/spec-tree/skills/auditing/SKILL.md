@@ -1,13 +1,21 @@
 ---
 name: auditing
 description: >-
-  ALWAYS invoke this skill when running an audit pass over a code scope. Produces one structured wrapper verdict whose children carry per-language dispatched verdicts, by dispatching to language-specific auditing-{lang}* skills. NEVER use this skill to write code.
+  ALWAYS invoke this skill when running an audit pass over a code scope. Produces one structured wrapper verdict whose children carry per-language dispatched verdicts, by dispatching to language-specific auditing-{lang}* skills. NEVER use this skill to implement fixes — it dispatches to auditing-{lang}* skills for the per-language evaluation and emits one wrapper verdict.
 allowed-tools: Read, Bash, Glob, Grep
 ---
+
+<codex_fallback>
+
+This skill references its bundled scripts as `${CLAUDE_SKILL_DIR}/scripts/<name>.py`. If `${CLAUDE_SKILL_DIR}` is not substituted to an absolute path (Codex or any runtime that does not expand it), resolve `scripts/` as a sibling directory of this `SKILL.md` file — `<directory containing this SKILL.md>/scripts/audit_orchestrator.py`, `.../scripts/verdict.py`, `.../scripts/aggregate_verdicts.py`, `.../scripts/emit_verdict.py`. Invoke them with `python3` (no `uv`); they are stdlib-only.
+
+</codex_fallback>
 
 <objective>
 
 Run a deterministic audit over a code scope: prepare (Phase 0), automated gates (Phase 1), tests (Phase 2), implementation review (Phase 3), test evidence (Phase 4), ADR/PDR compliance (Phase 5), and emit (Phase 6). Partition the scope by language, dispatch to the corresponding `auditing-{lang}*` skills, aggregate each partition's verdict via `aggregate_verdicts.py`, and emit one wrapper verdict whose `children` array carries the per-language dispatched verdicts. The orchestrator itself embeds zero language-specific knowledge beyond the dispatch template — language audits live in their own skills, this one composes them.
+
+This skill runs a single, stateless audit pass. It reads no prior verdict and persists nothing to the project tree; the caller renders and delivers the emitted verdict (a CI workflow posts the `markdown+json` carrier to the PR comment thread; a local agent relays the rendered output).
 
 Read-only. Produces verdicts, not code changes.
 
@@ -15,13 +23,13 @@ Read-only. Produces verdicts, not code changes.
 
 <determinism_contract>
 
-1. **Frozen scope.** The file list captured in Phase 0 is the scope for the rest of the run; later phases never expand it. The scope hash from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py::compute_scope_hash` identifies this exact scope.
+1. **Frozen scope.** The file list captured in Phase 0 is the scope for the rest of the run; later phases never expand it. The scope hash from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py::compute_scope_hash` identifies this exact scope and travels in the wrapper verdict's metadata.
 2. **Canonical verdict shape.** Every verdict conforms to the schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. The orchestrator's wrapper has three rows (`automated-gates`, `test-execution`, `determinism-contract`); per-language children have their own rows owned by the dispatched skill. Row names are never invented inline.
 3. **Frozen finding catalog.** Findings are only created from violations of the rules the dispatched `auditing-{lang}*` skills already enforce. Style preferences, taste-based critiques, and "could be cleaner" observations are NEVER findings.
 
 If any mechanism cannot be applied, halt and report the obstacle — do not silently substitute a looser audit.
 
-This skill is strictly read-only. It uses `Read`, `Bash` (for git, project validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. The skill does not persist its verdict and does not create the `.spx/audits/` directory. Re-run determinism depends on the **caller** writing the emitted verdict to a known path; the skill only reads from such a path when one already exists. The Subagent Restrictions section of `AGENTS.md` requires subagents never to create or modify files.
+This skill is strictly read-only over the project. It uses `Read`, `Bash` (for git, project validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. It does not write its verdict to a project path or any persisted location; the caller delivers it. The `/tmp` files Phase 6 uses to stage per-partition JSON for aggregation are ephemeral scratch space, not artifacts. The Subagent Restrictions section of `AGENTS.md` requires subagents never to create or modify files.
 
 </determinism_contract>
 
@@ -29,7 +37,7 @@ This skill is strictly read-only. It uses `Read`, `Bash` (for git, project valid
 
 Partition the in-scope file list by file extension. The mapping from extension to language identifier is training-time knowledge for any LLM that can run this skill; no explicit table belongs in the orchestrator. For mixed-language scopes, run the protocol once per partition, collect each partition's verdict, and aggregate them via `aggregate_verdicts.py` into one wrapper verdict whose `children` array carries the per-language verdicts. Each partition's language identifier is the `<lang>` value substituted into the `auditing-{lang}*` dispatch template.
 
-The orchestrator never embeds language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language path-segment placeholder `<lang>` in state-file paths. See `spx/21-spec-tree.enabler/17-auditing.adr.md` for the factoring rule.
+The orchestrator never embeds language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language placeholder `<lang>`. See `spx/21-spec-tree.enabler/17-auditing.adr.md` for the factoring rule.
 
 </language_detection>
 
@@ -45,7 +53,7 @@ For each language partition, each phase invokes one of two sources — a project
 | 4     | Test evidence      | Dispatch: `auditing-{lang}-tests`                    |
 | 5     | ADR/PDR compliance | Dispatch: `auditing-{lang}-architecture`             |
 
-Phases 1 and 2 run the project's own commands as discovered in Phase 0 step 6; the orchestrator does not dispatch to a skill for those rows. Phases 3, 4, and 5 dispatch to the language-specific trio.
+Phases 1 and 2 run the project's own commands as discovered in Phase 0 step 5; the orchestrator does not dispatch to a skill for those rows. Phases 3, 4, and 5 dispatch to the language-specific trio.
 
 If any of the three dispatched skills is missing for the target language, halt before any phase runs with `missing required skill: auditing-{lang}-{kind}`. The marketplace validation pipeline enforces that every language plugin ships the trio; runtime absence indicates an installation or build issue, not a methodology decision.
 
@@ -62,15 +70,13 @@ If any of the three dispatched skills is missing for the target language, halt b
 
 2. **Materialize the file list.** Filter to existing files. Sort lexicographically. This sorted list is the **frozen scope** for this run.
 
-3. **Partition by language.** Group files by extension into per-language partitions. The remainder of the protocol runs once per partition; per-partition verdicts are aggregated in Phase 6 into one wrapper verdict whose `children` array carries them.
+3. **Partition by language.** Group files by extension into per-language partitions. The remainder of the protocol runs once per partition; per-partition verdicts are aggregated in Phase 6 into one wrapper verdict whose `children` array carries them. If any partition's `auditing-{lang}*` trio is missing, halt now with `missing required skill: auditing-{lang}-{kind}` before any phase runs.
 
-4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and is used to look up any prior verdict in step 5.
+4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scope_hash`.
 
-5. **Read prior verdict if staged.** Look for the verdict file at the path the caller indicates (typically `.spx/audits/<lang>/<scope-hash>.md` for direct invocation, or `.spx/audits/<lang>/<branch-slug>.md` when invoked by the `auditor` agent). If found, read it — see `<re_run_protocol>`. If absent, this is a fresh run. The skill never creates this file; it only reads one the caller has placed there from a previous run.
+5. **Read project config.** `CLAUDE.md`, `AGENTS.md`, and any language-native configuration the dispatched `auditing-{lang}` skill expects. Identify the canonical validation command and the canonical test command for the project (the precedence convention in marketplace projects: `CLAUDE.md`/`AGENTS.md` → `justfile`/`Makefile` → language-native config; closer to repo root wins). If neither is discoverable from project files, halt — do not guess.
 
-6. **Read project config.** `CLAUDE.md`, `AGENTS.md`, and any language-native configuration the dispatched `auditing-{lang}` skill expects. Identify the canonical validation command and the canonical test command for the project (the precedence convention in marketplace projects: `CLAUDE.md`/`AGENTS.md` → `justfile`/`Makefile` → language-native config; closer to repo root wins). If neither is discoverable from project files, halt — do not guess.
-
-7. **Read repo-local overlays.** `spx/local/auditing.md` and `spx/local/auditing-{lang}*.md` for each language in scope — read each that exists. Local overlays supersede the pre-loaded standards from the dispatched skill.
+6. **Read repo-local overlays.** `spx/local/auditing.md` and `spx/local/auditing-{lang}*.md` for each language in scope — read each that exists. Local overlays supersede the pre-loaded standards from the dispatched skill.
 
 Do not read source files for comprehension during Phase 0. Phase 0 only inventories.
 
@@ -78,7 +84,7 @@ Do not read source files for comprehension during Phase 0. Phase 0 only inventor
 
 <phase number="1" name="automated-gates">
 
-Run the project's canonical validation command (discovered in Phase 0 step 6). Any non-zero exit code is REJECT for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
+Run the project's canonical validation command (discovered in Phase 0 step 5). Any non-zero exit code is REJECT for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
 
 </phase>
 
@@ -121,7 +127,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   > /tmp/audit-wrapper.json
 ```
 
-Render the wrapper to the requested surface form via `emit_verdict.py`. The caller forwards a `--format` argument (`markdown`, `markdown+json`, or `json-only`); default to `markdown+json` for PR-comment delivery:
+Render the wrapper to the requested surface form via `emit_verdict.py`. The caller forwards a `--format` value (`markdown`, `markdown+json`, or `json-only`); default to `markdown+json` for PR-comment delivery:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
@@ -129,7 +135,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
   --format "${AUDIT_FORMAT:-markdown+json}"
 ```
 
-The orchestrator does not write the verdict to disk — the caller persists it if re-run determinism is required. The orchestrator never hand-formats markdown; deterministic rendering lives in `emit_verdict.py`.
+The orchestrator does not write the verdict to disk — the caller delivers it. The orchestrator never hand-formats markdown; deterministic rendering lives in `emit_verdict.py`.
 
 </phase>
 
@@ -163,28 +169,13 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 
 </verdict_format>
 
-<re_run_protocol>
-
-When the caller stages a prior verdict at a path keyed by the scope hash, Phase 0 reads it. If the prior verdict was APPROVED and the scope hash matches the new run, return the same APPROVED verdict without re-running phases 1–5 — the audit is stable by definition.
-
-If the prior verdict was REJECTED, run the full audit. For every prior finding:
-
-- If the issue is now absent from the code, mark the finding **RESOLVED** in the new verdict's "Resolved from prior run" section.
-- If the issue persists, carry the finding forward with the same ID.
-
-New findings introduced this run receive fresh IDs. Finding IDs are monotonic: a resolved finding's ID is never reused for a new finding.
-
-The `auditor` agent wraps this skill with branch-keyed persistence (state file at `.spx/audits/<lang>/<branch-slug>.md`) so finding identity is preserved across the scope changes that come with each push. Direct callers of this skill use the content-keyed `<scope-hash>.md` path instead.
-
-</re_run_protocol>
-
 <failure_modes>
 
-**Improvised scope hashing.** Claude computes the scope hash in-prose (e.g., concatenating paths and contents in some ad hoc framing) instead of calling `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Distinct file lists then collide on the same hash because the framing is ambiguous, breaking re-run determinism silently. The helper module is the boundary; never reproduce its logic inline.
+**Improvised scope hashing.** Claude computes the scope hash in-prose (e.g., concatenating paths and contents in some ad hoc framing) instead of calling `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Distinct file lists then collide on the same hash because the framing is ambiguous. The helper module is the boundary; never reproduce its logic inline.
 
 **Scope drift mid-run.** Files added or removed between Phase 0 and Phase 5 yield inconsistent reads — one phase sees a file the next phase doesn't. The "frozen scope" invariant exists to prevent this: Phase 0 captures the file list once; later phases never re-enumerate. If a phase needs a file not in the frozen scope, halt and report; do not silently expand scope.
 
-**Mid-phase halt without trio verification.** Claude reaches Phase 3, finds `auditing-{lang}` missing, and halts there — but Phase 1 (automated gates) and Phase 2 (tests) already ran and produced output that suggested the audit was in progress. The trio check belongs in Phase 0 step 3 (partition-by-language), before any phase runs. Halt with `missing required skill: auditing-{lang}-{kind}` before Phase 1 dispatches.
+**Mid-phase halt without trio verification.** Claude reaches Phase 3, finds `auditing-{lang}` missing, and halts there — but Phase 1 (automated gates) and Phase 2 (tests) already ran. The trio check belongs in Phase 0 step 3 (partition-by-language), before any phase runs. Halt with `missing required skill: auditing-{lang}-{kind}` before Phase 1 dispatches.
 
 **Dropped partition in mixed-language scope.** Claude treats a mixed-language scope as one audit, dispatches to whichever language has a plurality of files, and silently skips the others. The contract is one dispatched verdict per partition aggregated into one wrapper; never drop a partition. If a partition's `auditing-{lang}*` skills do not exist, halt with the missing-skill error before any phase runs.
 
@@ -200,7 +191,8 @@ The `auditor` agent wraps this skill with branch-keyed persistence (state file a
 - The wrapper has three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one child per partition.
 - The wrapper's `overall` is APPROVED, REJECTED, or UNKNOWN per `verdict.roll_up` applied to wrapper rows plus children overalls.
 - The verdict is emitted via `emit_verdict.py` with the format axis forwarded from the caller.
-- The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language path-segment placeholder `<lang>`.
+- The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language placeholder `<lang>`.
 - The scope hash is reproducible: re-running the skill on the same frozen scope produces the same hash.
+- If the run halts (missing `auditing-{lang}*` trio, empty scope, or a non-zero exit from the canonical validation or test command), the halt reason is reported on the relevant row and no subsequent phase runs.
 
 </success_criteria>
