@@ -94,6 +94,25 @@ def extract_json(text: str) -> str:
     if begin != -1 and end != -1 and begin < end:
         payload = text[begin + len(JSON_BLOCK_BEGIN) : end]
         return payload.strip()
+    # Partial-delimiter cases: surface a specific error rather than
+    # silently falling through to the startswith heuristic, which would
+    # otherwise return a misleading slice of post-delimiter prose if it
+    # happened to start with ``{``.
+    if begin != -1 and end == -1:
+        raise ExtractError(
+            f"verdict block opens with {JSON_BLOCK_BEGIN} but has no closing "
+            f"{JSON_BLOCK_END} delimiter"
+        )
+    if begin == -1 and end != -1:
+        raise ExtractError(
+            f"verdict block has {JSON_BLOCK_END} but no opening "
+            f"{JSON_BLOCK_BEGIN} delimiter"
+        )
+    if begin != -1 and end != -1 and end < begin:
+        raise ExtractError(
+            f"verdict block delimiters out of order: {JSON_BLOCK_END} "
+            f"appears before {JSON_BLOCK_BEGIN}"
+        )
     stripped = text.strip()
     if stripped.startswith("{"):
         return stripped

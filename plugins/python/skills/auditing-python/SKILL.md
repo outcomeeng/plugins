@@ -185,7 +185,7 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 <output_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. Write the JSON to stdout; the calling workflow pipes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `reject` for blocking violations.
 
@@ -207,7 +207,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 }
 ```
 
-Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "reject"`, and `message` (the one-line "why this fails"). Include correct-approach code samples and required changes in supplementary markdown appended after the carrier when format is `markdown` or `markdown+json`.
+Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "reject"`, and `message` (the one-line "why this fails"). Include correct-approach code samples and required changes directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
 </output_format>
 

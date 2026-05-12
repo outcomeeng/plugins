@@ -18,7 +18,7 @@ Branch-scoped audit orchestrator. Wrap the `/auditing` skill with persistent sta
 
 - Read-only over source code — never edit production code or tests.
 - Write access is restricted to two paths per language under audit: `.spx/audits/<lang>/<branch-slug>.md` (the state file) and `.spx/audits/<lang>/<branch-slug>.md.lock` (the run lock). Never write outside these paths. The lock is removed on every exit path, including failure.
-- Deterministic computations — scope hashing, branch slug, base-ref detection, current-branch detection, lock acquisition — invoke the helper module at `plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py` via the Bash tool. Never reimplement these in shell pipelines or attempt them in-process; the helper module is the boundary that makes them correct and testable (see `spx/21-spec-tree.enabler/17-auditing.adr.md`).
+- Deterministic computations — scope hashing, branch slug, base-ref detection, current-branch detection, lock acquisition — invoke the helper module at `${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py` via the Bash tool. Never reimplement these in shell pipelines or attempt them in-process; the helper module is the boundary that makes them correct and testable (see `spx/21-spec-tree.enabler/17-auditing.adr.md`).
 - IDs are monotonic per language. Never reuse a resolved finding's ID for a new finding. The state file's `next_finding_id` frontmatter field tracks the counter.
 - A regression — the same root cause returning at the same `file:line` — reopens the original finding by moving its row from Resolved to Open and clearing `resolved_at`. Never create a new ID for a regression.
 - NEVER widen scope beyond the branch's diff against the base ref for the audited language.
@@ -65,31 +65,31 @@ Cell escaping when writing values into a row: replace `|` with `\|` and `\n` wit
 
 <helper_invocation>
 
-Each deterministic computation is invoked through the helper module. Use the following one-liners (the `${HELPER}` shorthand is `plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py`):
+Each deterministic computation is invoked through the helper module at `${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py`. `${CLAUDE_PLUGIN_ROOT}` resolves to the installed plugin's root regardless of the consumer's working directory; never hard-code a relative path. Use the following one-liners:
 
 ```bash
 # Base ref (e.g. "main"):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m); print(m.detect_base_ref(p.Path('.')))"
 
 # Current branch (raises on detached HEAD — non-zero exit):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m); print(m.detect_current_branch(p.Path('.')))"
 
 # Branch slug with collision suffix (state-dir is per-language):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m); print(m.branch_slug('<branch>', p.Path('.spx/audits/<lang>')))"
 
 # Acquire the run lock (raises RunLockError when fresh lock present):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m)
 lock = m.RunLock(p.Path('.spx/audits/<lang>/<slug>.md.lock'))
 lock.__enter__()"
@@ -100,27 +100,27 @@ rm -f .spx/audits/<lang>/<slug>.md.lock
 # Branch scope (three-dot range against origin/<base>; per-language patterns):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m)
 print('\n'.join(m.branch_scope('<base>', patterns=['<glob>'], repo=p.Path('.'))))"
 
 # Modified-since for re-run scope (two-dot range; tolerates rebase/merge):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m)
 print('\n'.join(m.modified_since('<prior_sha>', patterns=['<glob>'], repo=p.Path('.'))))"
 
 # Reachability guard for last_run_sha (False means full-scope re-scan):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m); print(m.is_sha_reachable('<prior_sha>', repo=p.Path('.')))"
 
 # Load state (prints None / repr of AuditState / raises StateFileCorruptError):
 python3 -c "
 import importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m); print(m.load_state(p.Path('.spx/audits/<lang>/<slug>.md')))"
 ```
 
@@ -133,7 +133,7 @@ instance so the counter advances and finding lists stay coherent. Sketch:
 ```bash
 python3 -c "
 import datetime as d, importlib.util as u, pathlib as p
-m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py')))
+m = u.module_from_spec(s := u.spec_from_file_location('h', p.Path('${CLAUDE_PLUGIN_ROOT}/skills/auditing/scripts/audit_orchestrator.py')))
 s.loader.exec_module(m)
 state_path = p.Path('.spx/audits/<lang>/<slug>.md')
 state = m.load_state(state_path)  # None / AuditState / raises StateFileCorruptError

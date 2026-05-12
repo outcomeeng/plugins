@@ -321,7 +321,9 @@ def _parse_finding(data: Any) -> Finding:
             f"invalid severity {severity_raw!r}; expected one of {sorted(SEVERITIES)}"
         )
     line_raw = data.get("line")
-    if line_raw is not None and not isinstance(line_raw, int):
+    if line_raw is not None and (
+        isinstance(line_raw, bool) or not isinstance(line_raw, int)
+    ):
         raise VerdictValidationError("finding.line must be an integer or null")
     return Finding(
         id=_require_str(data, "id"),

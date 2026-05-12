@@ -29,6 +29,7 @@ from verdict import Verdict, VerdictValidationError
 EXIT_OK = 0
 EXIT_VALIDATION_ERROR = 1
 EXIT_IO_ERROR = 2
+EXIT_USAGE = 64
 
 DEFAULT_SKILL = "auditing"
 DEFAULT_TARGET = ""
@@ -46,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
             "aggregate_verdicts: no input verdicts (use positional paths or --directory)",
             file=sys.stderr,
         )
-        return EXIT_IO_ERROR
+        return EXIT_USAGE
     try:
         children = [_load_verdict(p) for p in paths]
     except OSError as exc:
@@ -59,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         metadata = _parse_metadata(args.metadata)
     except ValueError as exc:
         print(f"aggregate_verdicts: {exc}", file=sys.stderr)
-        return EXIT_IO_ERROR
+        return EXIT_USAGE
     wrapper = aggregate(
         children=tuple(children),
         skill=args.skill,
