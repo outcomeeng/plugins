@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import assert_never
 
 import click
 
@@ -34,9 +35,13 @@ def view_command(target: Path | None, latest: Path | None) -> None:
             raise click.UsageError(msg)
         _open_in_browser(target)
         return
-    if latest is None:  # unreachable: the UsageError above proves one of the two is set
-        msg = "internal error: neither TARGET nor --latest resolved after the guard"
-        raise AssertionError(msg)
+    if latest is None:
+        # Unreachable: the line-28 guard rejects "both None", and the
+        # branch above returned for "target set" — so ``latest`` is set
+        # here. ``assert_never`` makes mypy verify this; if a future
+        # refactor reopens the branch, the type check fails rather than
+        # leaving a runtime-only guard.
+        assert_never(latest)
     html_path = _latest_html(latest)
     if html_path is None:
         msg = (

@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from outcomeeng_evals.case import MAX_EXPECTED_LIST_LENGTH, Case, load_cases
+from outcomeeng_evals.cli.commands.run import _render_prompt
 from outcomeeng_evals.grader import grade, is_subset, parse_verdict
 from outcomeeng_evals.suite import run_suite
 from outcomeeng_evals.testing.fakes import RaisingModelRunner
@@ -327,6 +328,28 @@ def test_run_suite_with_workers_preserves_case_order_when_threads_finish_out_of_
     assert finish_order != case_ids, (
         "test premise: threads should not finish in case order"
     )
+
+
+def test_render_prompt_warns_on_unrecognized_placeholder(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rendered = _render_prompt("before {input_jsn} after", _case())
+
+    assert "{input_jsn}" in rendered  # passed through as literal text
+    err = capsys.readouterr().err
+    assert "input_jsn" in err
+    assert "unrecognized placeholder" in err
+
+
+def test_render_prompt_does_not_warn_on_known_placeholder_or_json(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rendered = _render_prompt(
+        'case={case_id} payload={input_json} sample={"k": 1}', _case()
+    )
+
+    assert "case=t" in rendered
+    assert capsys.readouterr().err == ""
 
 
 def _trivial_record(case_id: str) -> dict[str, Any]:

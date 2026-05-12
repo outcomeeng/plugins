@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -105,6 +106,13 @@ def run_command(
     ctx.exit(0 if result.passed else 1)
 
 
+# An identifier-shaped ``{token}`` — what a placeholder typo looks like
+# (``{input_jsn}``). A ``{`` that opens a JSON object or arbitrary prose
+# does not match this, so the warning below fires only on plausible typos,
+# not on every literal brace in a template.
+_PLACEHOLDER_LIKE_RE = re.compile(r"\{[a-z_][a-z0-9_]*\}")
+
+
 def _render_prompt(template: str, case: Case) -> str:
     # Single-pass placeholder substitution: walk the template and replace
     # exactly the two recognized placeholders. Chained ``str.replace`` would
@@ -135,6 +143,15 @@ def _render_prompt(template: str, case: Case) -> str:
             None,
         )
         if match is None:
+            typo = _PLACEHOLDER_LIKE_RE.match(template, next_brace)
+            if typo is not None:
+                click.echo(
+                    f"warning: prompt template references unrecognized placeholder "
+                    f"{typo.group(0)} — known placeholders are "
+                    f"{', '.join(sorted(substitutions))}; passing it through as "
+                    f"literal text (a typo here surfaces only as a grading failure)",
+                    err=True,
+                )
             parts.append("{")
             index = next_brace + 1
             continue

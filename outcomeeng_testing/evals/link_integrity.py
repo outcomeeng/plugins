@@ -177,10 +177,12 @@ def validate_test_links(root: Path) -> list[BrokenTestLink]:
     """Return broken test links.
 
     A link is broken when its resolved target is missing, is not a file,
-    does not sit directly inside a ``tests/`` directory, or is not a pytest
-    collectable (filename begins with ``test_`` and ends in ``.py``).
-    Tightened targets (e.g., language-specific test files) keep these
-    naming-convention checks.
+    does not sit directly inside a ``tests/`` directory, or does not follow
+    pytest's default naming convention (filename begins with ``test_`` and
+    ends in ``.py``). This checks the convention, not actual collection —
+    custom ``python_files`` settings or ``conftest`` exclusions could still
+    affect whether pytest collects the file. Tightened targets (e.g.,
+    language-specific test files) keep these naming checks.
     """
     broken: list[BrokenTestLink] = []
     for link in find_test_links(root):
