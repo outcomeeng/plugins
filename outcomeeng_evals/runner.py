@@ -107,7 +107,14 @@ def _subprocess_env() -> dict[str, str]:
 
 
 def _assistant_text(envelope: object) -> str:
-    """Extract the assistant text from a ``claude --output-format json`` envelope."""
+    """Extract the assistant text from a ``claude --output-format json`` envelope.
+
+    Tries ``result`` first (the active key in claude CLI ~1.x), then
+    ``response`` and ``content`` as backwards-compat aliases for older CLI
+    builds. If the active key changes in a future release, update this
+    fallback order rather than letting the runtime ``ValueError`` surface
+    after a silent envelope shift.
+    """
     if not isinstance(envelope, dict):
         raise ValueError(
             f"expected JSON object envelope, got {type(envelope).__name__}"

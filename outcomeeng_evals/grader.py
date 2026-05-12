@@ -71,5 +71,7 @@ def is_subset(expected: Any, actual: Any) -> bool:
     if isinstance(expected, list):
         if not isinstance(actual, list):
             return False
+        # Subset-match: each expected element must appear somewhere in actual.
+        # Order- and position-independent; do not "fix" to a positional zip.
         return all(any(is_subset(e, a) for a in actual) for e in expected)
     return bool(expected == actual)

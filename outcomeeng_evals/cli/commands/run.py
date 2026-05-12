@@ -35,7 +35,7 @@ HISTORY_FILENAME = "history.jsonl"
 )
 @click.option(
     "--workers",
-    type=int,
+    type=click.IntRange(min=1),
     default=1,
     show_default=True,
     help="Parallel case workers (case-file order is preserved in outcomes).",
