@@ -87,7 +87,7 @@ check-installed marketplace="outcomeeng":
 sync-marketplace:
     #!/usr/bin/env bash
     set -euo pipefail
-    for tool in claude codex; do
+    for tool in claude codex uv; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             echo "Missing required tool: $tool" >&2
             exit 1
@@ -102,7 +102,7 @@ sync-marketplace:
 push-marketplace *push_args:
     #!/usr/bin/env bash
     set -euo pipefail
-    for tool in git claude codex; do
+    for tool in git claude codex uv; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             echo "Missing required tool: $tool" >&2
             exit 1
