@@ -17,6 +17,8 @@ from typing import Any
 DEFAULT_SUITE_THRESHOLD = 0.85
 DEFAULT_TRIALS_PER_CASE = 1
 
+EVAL_TOML_FILENAME = "eval.toml"
+
 _REQUIRED_TITLE = "title"
 _REQUIRED_CASES = "cases"
 _REQUIRED_PROMPT = "prompt"

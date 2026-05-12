@@ -20,8 +20,9 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from outcomeeng_evals.definition import EVAL_TOML_FILENAME
 
-EVAL_TOML_FILENAME = "eval.toml"
+
 MARKDOWN_GLOB = "**/*.md"
 TEST_FILE_PREFIX = "test_"
 

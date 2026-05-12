@@ -60,8 +60,11 @@ def is_subset(expected: Any, actual: Any) -> bool:
 
     - Dicts: every key in ``expected`` must exist in ``actual`` with a value
       that is itself a structural subset.
-    - Lists: every element in ``expected`` must find at least one element in
-      ``actual`` that is its structural subset (any-match, not positional).
+    - Lists: multiset-match. Each expected element must match a distinct
+      actual element under ``is_subset``; position-independent but
+      cardinality-aware. ``[X, X]`` does not satisfy ``[X]`` — two expected
+      Xs require two actual Xs. Greedy first-match consumption ordered by
+      the expected list.
     - Scalars: equality (``expected == actual``).
     """
     if isinstance(expected, dict):
@@ -71,7 +74,16 @@ def is_subset(expected: Any, actual: Any) -> bool:
     if isinstance(expected, list):
         if not isinstance(actual, list):
             return False
-        # Subset-match: each expected element must appear somewhere in actual.
-        # Order- and position-independent; do not "fix" to a positional zip.
-        return all(any(is_subset(e, a) for a in actual) for e in expected)
+        # Multiset-match: greedy first-fit consumption. Each expected element
+        # claims one distinct actual element; do not "fix" to any-match
+        # (which would let two expected Xs both satisfy a single actual X).
+        remaining = list(range(len(actual)))
+        for element in expected:
+            for index, actual_index in enumerate(remaining):
+                if is_subset(element, actual[actual_index]):
+                    remaining.pop(index)
+                    break
+            else:
+                return False
+        return True
     return bool(expected == actual)
