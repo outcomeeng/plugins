@@ -11,13 +11,12 @@ import click
 
 from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
-from outcomeeng_evals.definition import load_definition
+from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
 from outcomeeng_evals.history import append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_html_report
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
-RUNS_DIRNAME = "runs"
 HISTORY_FILENAME = "history.jsonl"
 
 
@@ -91,9 +90,33 @@ def run_command(
 
 
 def _render_prompt(template: str, case: Case) -> str:
-    return template.replace("{case_id}", case.id).replace(
-        "{input_json}", json.dumps(case.input, indent=2)
-    )
+    # Single-pass placeholder substitution: walk the template and replace
+    # exactly the two recognized placeholders. Chained ``str.replace`` would
+    # let a case id containing ``{input_json}`` collide with the second
+    # substitution and inject the case's JSON payload into a position the
+    # template author did not intend.
+    parts: list[str] = []
+    substitutions = {
+        "{case_id}": case.id,
+        "{input_json}": json.dumps(case.input, indent=2),
+    }
+    index = 0
+    while index < len(template):
+        match = next(
+            (
+                placeholder
+                for placeholder in substitutions
+                if template.startswith(placeholder, index)
+            ),
+            None,
+        )
+        if match is None:
+            parts.append(template[index])
+            index += 1
+            continue
+        parts.append(substitutions[match])
+        index += len(match)
+    return "".join(parts)
 
 
 def _timestamp_label() -> str:
