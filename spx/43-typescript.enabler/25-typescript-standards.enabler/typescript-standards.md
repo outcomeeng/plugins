@@ -4,7 +4,7 @@ PROVIDES TypeScript-specific architecture, test, and code standards grouped unde
 SO THAT downstream TypeScript skills, auditors, and consumers
 CAN read one cohesive standards subtree rather than three independent enabler branches
 
-The three children of this enabler — `21-typescript-architecture.enabler` (ADR conventions and DI patterns), `25-typescript-tests.enabler` (test data ownership, source testability, support-module auditing, execution-level guidance), `29-typescript-code.enabler` (code-style standards) — partition the TypeScript-standards concern by axis.
+The three children of this enabler — `21-typescript-architecture.enabler` (ADR conventions and DI patterns), `25-typescript-tests.enabler` (test data ownership, source testability, test-infrastructure auditing, execution-level guidance), `29-typescript-code.enabler` (code-style standards) — partition the TypeScript-standards concern by axis.
 
 ## Assertions
 
