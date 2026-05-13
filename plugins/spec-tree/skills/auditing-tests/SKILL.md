@@ -199,7 +199,7 @@ Scan all findings across all assertions. If any assertion has a property failure
 
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery). Skills never hand-format markdown verdicts — deterministic rendering lives in the verdict toolchain.
 
-The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `reject` for blocking findings (these are what flip a row to `FAIL`), `warning` or `info` for non-blocking observations.
+The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
 
 ```json
 {
@@ -217,7 +217,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
           "file": "<path>",
           "line": null,
           "rule": "<check-id>",
-          "severity": "reject",
+          "severity": "REJECT",
           "message": "<one-line>"
         }
       ]
@@ -231,7 +231,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
           "file": "<test-file>",
           "line": null,
           "rule": "<assertion-id-or-property-name>",
-          "severity": "reject",
+          "severity": "REJECT",
           "message": "<one-line evidentiary gap>"
         }
       ]
@@ -245,7 +245,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
           "file": "<test-file>",
           "line": null,
           "rule": "<duplication-pattern>",
-          "severity": "reject",
+          "severity": "REJECT",
           "message": "<extraction target>: <nearest common test-support location>"
         }
       ]

@@ -67,7 +67,7 @@ VALID_VERDICT_DICT = {
                     "file": "src/foo.ts",
                     "line": 42,
                     "rule": "no-shared-bag",
-                    "severity": "reject",
+                    "severity": "REJECT",
                     "message": "Shared constant bag declared.",
                 }
             ],
@@ -90,9 +90,9 @@ class TestStatusAndSeverityEnums:
 
     def test_severity_has_three_members(self) -> None:
         assert {s.value for s in verdict_mod.Severity} == {
-            "reject",
-            "warning",
-            "info",
+            "REJECT",
+            "WARNING",
+            "INFO",
         }
 
     def test_root_statuses_constant_matches_subset(self) -> None:

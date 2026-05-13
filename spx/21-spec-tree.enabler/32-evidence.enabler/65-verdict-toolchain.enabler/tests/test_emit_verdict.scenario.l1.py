@@ -43,7 +43,7 @@ VALID_VERDICT_DICT: dict[str, object] = {
                     "file": "src/foo.ts",
                     "line": 42,
                     "rule": "no-shared-bag",
-                    "severity": "reject",
+                    "severity": "REJECT",
                     "message": "Shared constant bag declared.",
                 }
             ],
