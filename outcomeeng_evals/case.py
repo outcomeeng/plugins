@@ -67,6 +67,9 @@ def _record_to_case(record: dict[str, Any]) -> Case:
     must_contain = tuple(expected.get("must_contain", []))
     must_not_contain = tuple(expected.get("must_not_contain", []))
     case_id = record["id"]
+    if not isinstance(case_id, str) or not case_id:
+        msg = f"case 'id' must be a non-empty string, got {case_id!r}"
+        raise ValueError(msg)
     for entry in must_contain:
         _reject_oversized_lists(entry, field="must_contain", case_id=case_id)
     for entry in must_not_contain:
