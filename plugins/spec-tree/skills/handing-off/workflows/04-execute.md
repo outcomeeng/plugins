@@ -1,5 +1,5 @@
 <objective>
-Execute all approved persistence decisions, commit session-owned work, and either write or omit the canonical continuation. This workflow closes the session -- work not committed here is not persisted.
+Execute all approved persistence decisions, commit session-owned work, and either write or omit the canonical continuation. This workflow closes the session — work not committed here is not persisted.
 
 </objective>
 

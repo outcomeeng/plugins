@@ -19,9 +19,9 @@ description: ALWAYS invoke when closing an in-scope spec-tree session, deciding 
 </context>
 
 <objective>
-Close or transfer a spec-tree work session: persist what was learned to the right durable target, commit session-owned work, and decide whether a continuation artifact has a reader. The session file is a thin coordination envelope -- the last resort for information that cannot live anywhere else.
+Close or transfer a spec-tree work session: persist what was learned to the right durable target, commit session-owned work, and decide whether a continuation artifact has a reader. The session file is a thin coordination envelope — the last resort for information that cannot live anywhere else.
 
-The four-workflow sequence enforces persist-then-commit-then-continuation discipline. Lean on the imperfection ledger defined in `/understanding` (`references/imperfection-protocol.md`) for what was learned and what is broken -- `/understanding` is loaded before any spec-tree work, so the ledger is always available here. Session scope, persistence tier, the Path A/B/C decision, and multi-agent queue safety are spec-tree-specific concerns the ledger does not cover -- they drive the workflows below.
+The four-workflow sequence enforces persist-then-commit-then-continuation discipline. Lean on the imperfection ledger defined in `/understanding` (`references/imperfection-protocol.md`) for what was learned and what is broken — `/understanding` is loaded before any spec-tree work, so the ledger is always available here. Session scope, persistence tier, the Path A/B/C decision, and multi-agent queue safety are spec-tree-specific concerns the ledger does not cover — they drive the workflows below.
 
 </objective>
 
@@ -77,7 +77,7 @@ Check `$ARGUMENTS` for these flags before starting workflow 01.
 </arguments>
 
 <workflows>
-Execute all four workflows in sequence. Each workflow has its own success criteria -- do not proceed to the next until the current one is complete. Workflow 04 writes a session file only when the approved proposal identifies continuation work that needs a reader.
+Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 writes a session file only when the approved proposal identifies continuation work that needs a reader.
 
 1. `workflows/01-anchor-to-nodes.md` — identify every node worked on this session
 2. `workflows/02-reflect.md` — review imperfections, scope, and starting point
