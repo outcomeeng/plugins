@@ -58,6 +58,12 @@ def test_load_cases_rejects_record_missing_id(tmp_path: Path) -> None:
         load_cases(_write_case(tmp_path, bad))
 
 
+def test_load_cases_rejects_blank_id(tmp_path: Path) -> None:
+    bad: dict[str, Any] = {"id": "", "input": {}, "expected_verdict": {}}
+    with pytest.raises(ValueError, match="'id'"):
+        load_cases(_write_case(tmp_path, bad))
+
+
 def test_load_cases_accepts_expected_list_at_cap(tmp_path: Path) -> None:
     record = {
         "id": "at-cap",

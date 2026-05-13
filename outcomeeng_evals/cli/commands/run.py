@@ -14,7 +14,7 @@ from outcomeeng_evals.case import Case
 from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
-from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_html_report
+from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
@@ -88,7 +88,7 @@ def run_command(
     timestamp_label = _timestamp_label()
     runs_dir = eval_dir / RUNS_DIRNAME
     html_path = runs_dir / f"{timestamp_label}.html"
-    write_html_report(result, html_path, title=definition.title)
+    write_run_reports(result, html_path, title=definition.title)
 
     append_history_row(
         eval_dir / HISTORY_FILENAME,

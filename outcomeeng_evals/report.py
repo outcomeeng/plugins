@@ -171,28 +171,32 @@ def _metadata_to_dict(metadata: RunMetadata) -> dict[str, Any]:
     }
 
 
+def _dump_json(payload: dict[str, Any], path: Path) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
 def write_json_report(result: SuiteResult, output_path: Path, title: str) -> Path:
-    """Write the JSON results document to ``output_path``."""
+    """Write only the JSON results document to ``output_path``."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = serialize_result(result, title)
-    output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    _dump_json(serialize_result(result, title), output_path)
     return output_path
 
 
-def write_html_report(result: SuiteResult, output_path: Path, title: str) -> Path:
-    """Write the HTML viewer to ``output_path``.
+def write_run_reports(result: SuiteResult, html_path: Path, title: str) -> Path:
+    """Write a run's reports: the JSON results document and the HTML viewer.
 
-    The viewer embeds the JSON payload in a ``<script type="application/json">``
-    tag so the page renders under ``file://`` without a CORS-restricted fetch.
-    A sibling ``.json`` file with the same name is also written, so external
-    tooling can consume the data directly without parsing HTML.
+    Writes ``{html_path.stem}.json`` — the authoritative artifact for
+    downstream tooling — alongside the HTML viewer at ``html_path``. The
+    HTML embeds the same JSON payload in a ``<script type="application/json">``
+    tag so the page renders under ``file://`` without a CORS-restricted
+    fetch, and adds no fields beyond what the JSON carries. Returns the HTML
+    path.
     """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    html_path.parent.mkdir(parents=True, exist_ok=True)
     payload = serialize_result(result, title)
-    sidecar = output_path.with_suffix(".json")
-    sidecar.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    output_path.write_text(_render_html_shell(payload), encoding="utf-8")
-    return output_path
+    _dump_json(payload, html_path.with_suffix(".json"))
+    html_path.write_text(_render_html_shell(payload), encoding="utf-8")
+    return html_path
 
 
 def _render_html_shell(payload: dict[str, Any]) -> str:

@@ -22,6 +22,8 @@ Until CI owns the canonical appends, every developer-machine run appends a row t
 
 `append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). Acceptable for now; if CI ever runs the same eval concurrently, give `append_history_row` a file lock (`fcntl.flock` or a lockfile).
 
+When the eval CI workflow is wired, scope it to trusted triggers only — `push` to `main` or a `workflow_dispatch`/`schedule`, not an unrestricted `pull_request` from forks. `_subprocess_env` forwards the full job environment (including any job-level secrets) to the `claude` subprocess; an eval crafted in a fork PR could exfiltrate those secrets if the workflow ran with them in scope. Auth resolution requires the inherited env, so the mitigation is trigger scoping, not env filtering.
+
 ## Independent uv project for `outcomeeng_evals`
 
 `outcomeeng_evals` builds from the single repo `pyproject.toml`. Split into an independent uv project only when it is published to PyPI or its dependency surfaces diverge from the marketplace's.

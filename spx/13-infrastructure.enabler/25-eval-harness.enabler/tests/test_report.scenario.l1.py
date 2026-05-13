@@ -1,7 +1,7 @@
 """Scenario tests for the JSON-first eval report.
 
 Data and presentation are separated: ``serialize_result`` and
-``write_json_report`` produce the authoritative artifact; ``write_html_report``
+``write_json_report`` produce the authoritative artifact; ``write_run_reports``
 adds a thin viewer that reads the same JSON.
 """
 
@@ -18,7 +18,7 @@ from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.report import (
     JSON_SCHEMA_VERSION,
     serialize_result,
-    write_html_report,
+    write_run_reports,
     write_json_report,
 )
 from outcomeeng_evals.runner import RunMetadata
@@ -162,18 +162,20 @@ def test_write_json_report_writes_file_and_returns_path(tmp_path: Path) -> None:
     assert parsed["suite"]["passed"] is True
 
 
-def test_write_html_report_emits_html_and_sidecar_json(tmp_path: Path) -> None:
+def test_write_run_reports_emits_html_and_sidecar_json(tmp_path: Path) -> None:
     target = tmp_path / "report.html"
-    write_html_report(_suite_result(passed=True), target, title="my-title")
+    returned = write_run_reports(_suite_result(passed=True), target, title="my-title")
 
+    assert returned == target
+    assert target.exists(), "the HTML viewer must be written at the given path"
     sidecar = target.with_suffix(".json")
     assert sidecar.exists(), "sidecar JSON must be written alongside the HTML"
     assert json.loads(sidecar.read_text(encoding="utf-8"))["title"] == "my-title"
 
 
-def test_write_html_report_embeds_json_payload_in_script_tag(tmp_path: Path) -> None:
+def test_write_run_reports_embeds_json_payload_in_script_tag(tmp_path: Path) -> None:
     target = tmp_path / "report.html"
-    write_html_report(_suite_result(passed=True), target, title="embedded-test")
+    write_run_reports(_suite_result(passed=True), target, title="embedded-test")
     html = target.read_text(encoding="utf-8")
 
     marker = '<script id="eval-results" type="application/json">'
@@ -185,11 +187,11 @@ def test_write_html_report_embeds_json_payload_in_script_tag(tmp_path: Path) -> 
     assert parsed["title"] == "embedded-test"
 
 
-def test_write_html_report_renders_no_closing_script_in_body(tmp_path: Path) -> None:
+def test_write_run_reports_renders_no_closing_script_in_body(tmp_path: Path) -> None:
     """The embedded JSON must never contain a bare </script> sequence."""
     result = _suite_result(passed=False, reason="says </script> in the reason text")
     target = tmp_path / "report.html"
-    write_html_report(result, target, title="t")
+    write_run_reports(result, target, title="t")
     html = target.read_text(encoding="utf-8")
 
     head_end = html.index('<script id="eval-results"')
