@@ -61,7 +61,20 @@ class Status(StrEnum):
 
 
 class Severity(StrEnum):
-    """Finding severity. Only ``REJECT`` findings cause a row to ``FAIL``."""
+    """Finding severity. Only ``REJECT`` findings cause a row to ``FAIL``.
+
+    Note the case convention: member names are uppercase (``REJECT``,
+    ``WARNING``, ``INFO``) but the JSON wire values are lowercase
+    (``"reject"``, ``"warning"``, ``"info"``). This differs from
+    :class:`Status`, whose member names and wire values are both
+    uppercase. Schema convention treats severity as a free-text tag in
+    the wire format. ``from_json_dict`` validates against
+    ``SEVERITIES`` so a malformed wire value raises rather than coercing
+    silently; a caller writing ``finding.severity == "REJECT"`` (by
+    analogy with ``Status``) compares against the wrong string and
+    silently misses the finding — use ``Severity.REJECT`` or
+    ``"reject"`` for equality checks.
+    """
 
     REJECT = "reject"
     WARNING = "warning"
@@ -234,6 +247,15 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
     and only surfaces in the rollup arithmetic (which handles both
     vocabularies gracefully). The convention is documented on
     ``Verdict``; enforcement is left to producer-side review.
+
+    Coerces non-string metadata values to ``str`` rather than raising:
+    ``{"line_count": 42}`` parses as ``{"line_count": "42"}``,
+    ``{"flag": None}`` parses as ``{"flag": "None"}``. The
+    ``Verdict.metadata`` field is typed ``dict[str, str]``, so the
+    coercion preserves that contract for downstream readers; callers
+    that care about distinguishing "absent" from the string ``"None"``
+    should omit the metadata key rather than rely on the coerced
+    string.
     """
     _require_keys(data, ("schema_version", "skill", "target", "overall"))
     schema_version = _require_int(data, "schema_version")

@@ -110,7 +110,12 @@ def _render_markdown(v: Verdict, *, depth: int) -> str:
     nested child verdicts produce a coherent outline.
     """
     parts: list[str] = []
-    hash_prefix = "#" * depth
+    # Markdown caps headings at level 6 (`######`); deeper nesting
+    # would render as plain text preceded by `#######` in many
+    # renderers. Today's hierarchy is at most two levels deep
+    # (orchestrator wrapper + dispatched-skill children), but the
+    # clamp keeps the output valid if a future composition adds depth.
+    hash_prefix = "#" * min(depth, 6)
     parts.append(f"{hash_prefix} Audit verdict — {_escape_inline(v.skill)}")
     parts.append("")
     parts.append(f"- **Overall:** {v.overall.value}")
