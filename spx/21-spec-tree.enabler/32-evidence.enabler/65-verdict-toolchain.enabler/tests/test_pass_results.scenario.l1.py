@@ -80,6 +80,69 @@ class TestAddSanitization:
         written = (results / "tool_one").read_text()
         assert written == content
 
+    def test_replaces_posix_path_separator(self, tmp_path: pathlib.Path) -> None:
+        """A command containing ``/`` must not produce a nested subdirectory.
+
+        ``filename_for_command``'s narrow contract — return a single filename
+        component — is the safety property that prevents ``directory / name``
+        from creating a path that escapes the results directory. Without the
+        ``/`` replacement, ``python3 /path/to/check.py`` would write to
+        ``<results>/python3 /path/to/check.py`` (or fail with ENOENT), not to
+        a single file under the results directory.
+        """
+        results = pathlib.Path(_run("mkdir", "--parent", str(tmp_path)).stdout.strip())
+        result = _run(
+            "add",
+            str(results),
+            "python3 /path/to/check.py",
+            stdin="output",
+        )
+        assert result.returncode == 0
+        # All four path-resolving characters (space, /, \, :) become _.
+        target = results / "python3__path_to_check.py"
+        assert target.is_file()
+        # The written path is one filename component directly under the
+        # results directory — no nested subdirectories were created.
+        assert target.parent == results
+
+    def test_replaces_windows_path_separator(self, tmp_path: pathlib.Path) -> None:
+        """The Windows ``\\`` separator is replaced even on POSIX runtimes.
+
+        ``filename_for_command`` is portable: the same input produces the
+        same filename component regardless of the host. A command pulled
+        verbatim from a Windows tool wrapper (e.g., a PowerShell script
+        path) does not accidentally become a path with backslashes that
+        some POSIX filesystems would still interpret as a literal
+        component.
+        """
+        results = pathlib.Path(_run("mkdir", "--parent", str(tmp_path)).stdout.strip())
+        result = _run(
+            "add",
+            str(results),
+            "wrapper.cmd C:\\Tools\\check.exe",
+            stdin="output",
+        )
+        assert result.returncode == 0
+        assert (results / "wrapper.cmd_C__Tools_check.exe").is_file()
+
+    def test_replaces_colon(self, tmp_path: pathlib.Path) -> None:
+        """The ``:`` byte is replaced (NTFS ADS / macOS HFS separator).
+
+        Commands like ``rg --type=py 'pattern:with_colon'`` or NTFS
+        alternate-data-stream paths (``file.txt:stream``) would otherwise
+        produce filenames that Windows or older macOS filesystems treat
+        as path metadata rather than file content.
+        """
+        results = pathlib.Path(_run("mkdir", "--parent", str(tmp_path)).stdout.strip())
+        result = _run(
+            "add",
+            str(results),
+            "rg --type=py pattern:with_colon",
+            stdin="output",
+        )
+        assert result.returncode == 0
+        assert (results / "rg_--type=py_pattern_with_colon").is_file()
+
 
 class TestAddCollision:
     def test_second_invocation_appends_suffix(self, tmp_path: pathlib.Path) -> None:
