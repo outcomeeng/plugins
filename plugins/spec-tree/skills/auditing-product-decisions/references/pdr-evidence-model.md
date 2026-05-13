@@ -94,7 +94,7 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 
 ### NEVER
 
-- Expose internal database IDs in user-facing URLs ([test](tests/test_url-safety.compliance.l1.py))
+- Expose internal database IDs in user-facing URLs ([test](tests/test_url_safety.compliance.l1.py))
 - Display raw error messages from backend services to users ([review])
 ```
 
