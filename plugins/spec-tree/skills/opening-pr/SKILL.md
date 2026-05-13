@@ -18,7 +18,7 @@ A successful PR open has:
 - Branch topology classified as a peer branch or a stacked branch before push
 - Title under 70 chars in Conventional Commits format (matches `/committing-changes`)
 - Body delivered to `gh` on stdin via `--body-file -` (real newlines, no `\n` escapes, no temp file)
-- Draft by default; ready-for-review only when explicitly requested
+- Always opened as draft; promoted to ready-for-review only when the author asserts the change is mergeable and the project's local closure gate has just passed (see `<draft_lifecycle>`)
 - No self-reference in title, body, or branch name
 - PR URL printed for the user
 
@@ -37,7 +37,7 @@ This skill does NOT:
 </context>
 
 <project_specialization>
-After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as product-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, draft-policy overrides).
+After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as product-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, project-specific closure-gate commands). The project-level file cannot override the always-draft policy in critical rule 5 — it can only add detail to the lifecycle (e.g., name the project's closure-gate command, list project-specific reviewers, refine the post-ready guidance).
 </project_specialization>
 
 <context_gathering>
@@ -325,7 +325,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 **Flag rationale:**
 
-- `--draft` — default for this skill; promote to ready-for-review only on explicit request.
+- `--draft` — mandatory on every `gh pr create`. Promotion to ready-for-review is a separate, explicit step performed via `gh pr ready` in Step 5, with the lifecycle prerequisites checked first. See `<draft_lifecycle>` for the rationale.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin matches `/committing-changes` conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
@@ -351,13 +351,48 @@ gh pr view <pr-number> --json reviews,comments \
 
 Compare timestamps against your last push. New entries after the push are re-reviews of the latest state — read them in full before declaring the PR done. Never assume "no new review" without checking both surfaces.
 
-**Step 5 (optional, on user request): Mark ready for review**
+**Step 5 (only on explicit author request AND the prerequisites in `<draft_lifecycle>` are met): Mark ready for review**
 
 ```bash
+# Promote draft → ready. This is a deliberate signal; expensive CI fires here.
 gh pr ready <pr-number>
+
+# Revert ready → draft. Use this before pushing follow-up commits to a ready PR
+# so subsequent pushes do not re-fire expensive verification.
+gh pr ready --undo <pr-number>
 ```
 
+Confirm before promoting:
+
+- The author just ran the project's local closure gate.
+- The gate passed.
+- The author asserts the change is mergeable as-is.
+
+If any answer is no, stay in draft.
+
 </workflow>
+
+<draft_lifecycle>
+
+**A pull request's draft/ready state is a cost signal to CI and a readiness signal to reviewers.** Most CI configurations gate expensive verification — full end-to-end suites, integration tests, deploy-then-verify workflows — behind `ready_for_review` while bot reviewers and lightweight checks (lint, unit) run on every push regardless. The lifecycle this skill enforces:
+
+| Phase          | PR state      | What runs                                                         | What the author does                                                                            |
+| -------------- | ------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Open**       | draft         | Bot reviewers, lightweight checks, preview deployment             | Read bot feedback; decide what to address                                                       |
+| **Iterate**    | draft         | Same as Open — each follow-up push re-fires only the cheap checks | Address bot comments; refactor; push more commits; run local checks                             |
+| **Closure**    | draft → ready | Expensive verification fires once at the flip                     | Run the project's local closure gate; confirm pass; explicitly request promotion                |
+| **Post-ready** | ready         | Every push re-fires expensive verification                        | Default: revert to draft with `gh pr ready --undo` before pushing; flip back to ready when done |
+
+**Rules:**
+
+1. **Always open as draft.** The PR enters the iteration phase. Mandatory — see critical rule 5.
+2. **Stay draft through the entire iteration phase.** Push as many commits as needed; bot reviewers and cheap checks run every time, expensive CI stays silent. The local closure gate (project-specific full-test command — examples: `pnpm check:full`, `make test`, `cargo test --all`; see `spx/local/opening-pr.md` if the project defines its own) is the author's responsibility during this phase.
+3. **Promote to ready only when ready means ready.** Never promote as a side effect of opening, pushing, or "the work looks done." Promotion is a deliberate signal: the author has just run the local closure gate, it passed, and the change is mergeable. CI spends expensive budget on that signal.
+4. **For post-ready follow-ups, revert to draft first.** GitHub does not auto-revert state on push. If review feedback after the ready flip requires more commits, run `gh pr ready --undo <pr-number>`, iterate while draft, then promote again when the closure gate passes anew. The narrow exception: a single small fix the author specifically wants validated against ready-state CI.
+
+**The local closure gate is the author's responsibility, not CI's.** CI is the validation; the gate is the assertion that validation is worth spending budget on. Skipping the gate makes the ready flip a guess instead of a signal — and turns the rest of the team's CI budget into the cost of that guess.
+
+</draft_lifecycle>
 
 <critical_rules>
 
@@ -365,7 +400,7 @@ gh pr ready <pr-number>
 2. **NEVER include self-reference** in title, body, or branch name — no "Claude", "AI", "agent", "Co-Authored-By: Claude".
 3. **NEVER use `--body "..."` for multi-line content** — gh does not expand `\n`. Use `--body-file`.
 4. **NEVER use `--fill`** with this skill — it adds nothing once `--body-file` is present.
-5. **DRAFT BY DEFAULT** — `--draft` is mandatory unless the user explicitly says "ready for review".
+5. **ALWAYS OPEN AS DRAFT** — `--draft` is mandatory on `gh pr create`, with no exceptions. Promotion to ready-for-review is a separate, deliberate signal performed via `gh pr ready` (see `<draft_lifecycle>` and Step 5). Never combine "open" and "promote" in the same action, even when the author asks to open a ready PR — open as draft, then promote in a second step so the lifecycle prerequisites are checked.
 6. **NEVER `gh run watch`** — for CI status, surface a single `gh pr checks` or `gh run view` and stop. Polling is forbidden.
 7. **AFTER FOLLOW-UP PUSHES, check both `reviews` AND `comments`** — bots often post re-reviews as PR-level issue comments rather than formal reviews. Checking only `reviews` will silently miss re-feedback on the latest commit.
 8. **CLASSIFY BRANCH TOPOLOGY BEFORE PUSH** — peer branches target the default branch and contain only their payload; stacked branches target the previous stack branch and remain draft until their base merges.
@@ -415,7 +450,8 @@ EOF
 
 # View / promote / inspect
 gh pr view --web
-gh pr ready <pr-number>
+gh pr ready <pr-number>          # draft → ready (fires expensive CI; see <draft_lifecycle>)
+gh pr ready --undo <pr-number>   # ready → draft (use before pushing more commits to a ready PR)
 gh pr checks <pr-number>
 ```
 
