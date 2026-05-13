@@ -39,12 +39,14 @@ Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`
 
 Surfaced by `claude-review` on PR 14 (2026-05-13).
 
-## 14. `.evidence.md` artifact type unrecognized by methodology
+## 14. PDR Rust row lacks the hyphen→underscore explanation
 
-`spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.evidence.md` introduces a `.evidence.md` artifact suffix as supporting material for `21-compact-continuity.pdr.md`. The file's own Status section documents the gap: `/spec-tree:contextualizing` globs only `*.adr.md`, `*.pdr.md`, `PLAN.md`, and `ISSUES.md`, so `.evidence.md` is reachable only by direct read or grep — not by deterministic context loading. No PDR formalizes the artifact type.
+`spx/15-test-infrastructure.pdr.md` shows both `<product>-testing` (Cargo package name) and `<product>_testing` (Rust import path) in the per-language table. Cargo normalizes hyphens to underscores in import paths, but readers unfamiliar with this convention may read the two forms as a contradiction. A single inline sentence — *Cargo normalizes hyphens to underscores in the import path: package `product-testing` → `use product_testing::...`* — closes the gap.
 
-**Resolutions to choose from:**
+Surfaced by `claude-review` on PR 14 round 3 (2026-05-13).
 
-- Formalize `.evidence.md` via a methodology PDR (parallel to `.adr.md` / `.pdr.md` / `PLAN.md` / `ISSUES.md`) and extend `/spec-tree:contextualizing` to include it in the glob set.
-- Fold the diagnostic content into the PDR's Rationale or an appendix and delete the standalone file.
-- Rename the file to `PLAN.md` or `ISSUES.md` so it lands inside the recognized taxonomy.
+## 15. `committing-changes` example uses uppercase `L1` instead of canonical `l1`
+
+`plugins/spec-tree/skills/committing-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
+
+Surfaced by `claude-review` on PR 14 rounds 2–3 (2026-05-13).
