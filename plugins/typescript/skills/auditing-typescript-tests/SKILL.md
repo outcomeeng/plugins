@@ -174,14 +174,14 @@ The test proves correctness against an independent oracle, not self-consistency.
 
 For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/generators/*`, or `./helpers`:
 
-1. Open the imported support file.
+1. Open the imported test-infrastructure file.
 2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any mocking pattern — inside the harness module body or its setup path.
 3. If the import targets `@testing/fixtures/*`, REJECT with a `fixture_import` finding. Fixtures are inert files: tests may read, copy, or pass fixture paths, but executed tests must not import fixture modules or consume fixture exports.
 4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
 5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
-6. If the support file imports another support file, trace one level at a time until the chain terminates at a non-test module.
+6. If the test-infrastructure file imports another test-infrastructure file, trace one level at a time until the chain terminates at a non-test module.
 
-The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the support module. When recording audit findings, cite the stable step name `harness_chain` and finding code, not numbered checklist item positions.
+The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the test-infrastructure module. When recording audit findings, cite the stable step name `harness_chain` and finding code, not numbered checklist item positions.
 
 </step>
 
