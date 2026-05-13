@@ -30,6 +30,8 @@ A handoff artifact exists for a future reader who must continue work. Create one
 
 When the work has reached the user-approved stopping state and all remaining issues already live in higher persistence tiers, omit the session file and close with `--no-session`. A session with no continuation reader creates queue noise and splits truth away from the durable map.
 
+Example of the omit case: a session lands a spec amendment, writes a `PLAN.md` entry for deferred CLI work, and commits both. Every continuation thread is persisted — the spec carries the new rule, `PLAN.md` carries the deferred work — so `/handoff --no-session` (or `/release`) closes correctly and no `.spx/sessions/todo/` file is created.
+
 The artifact is not a retrospective, changelog, lessons-learned notebook, or duplicate of PLAN.md/ISSUES.md. Reusable lessons belong in methodology. Open issues belong in the owning spec tree node. Review and validation facts belong in commit/PR history unless a future reader needs them to resume.
 
 </artifact_purpose>
