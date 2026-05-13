@@ -161,6 +161,25 @@ class TestAddCollision:
         assert (results / "tool.1").read_text() == "b"
         assert (results / "tool.2").read_text() == "c"
 
+    def test_max_collision_suffix_is_reachable(self, tmp_path: pathlib.Path) -> None:
+        """Pin the boundary: the docstring promises ``up to MAX_COLLISION_SUFFIX``
+        appended suffixes. With ``MAX_COLLISION_SUFFIX = 999`` and the base name
+        pre-occupied, the script must accept up to 999 collision suffixes
+        (``.1`` through ``.999``) before raising. Tests pre-create every slot
+        through ``.999`` to force the script onto the final reachable slot —
+        a regression that drops the last candidate (off-by-one in the suffix
+        range) makes the slot unreachable and the script raises.
+        """
+        results = pathlib.Path(_run("mkdir", "--parent", str(tmp_path)).stdout.strip())
+        # Pre-occupy ``tool`` and ``tool.1`` … ``tool.998`` so the next
+        # ``add`` MUST land on ``tool.999`` (the boundary slot).
+        (results / "tool").write_text("base")
+        for suffix in range(1, 999):
+            (results / f"tool.{suffix}").write_text(f"slot {suffix}")
+        result = _run("add", str(results), "tool", stdin="final")
+        assert result.returncode == 0
+        assert (results / "tool.999").read_text() == "final"
+
 
 class TestAddInputSources:
     def test_reads_from_stdin_by_default(self, tmp_path: pathlib.Path) -> None:

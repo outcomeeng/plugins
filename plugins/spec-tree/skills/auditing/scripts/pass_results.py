@@ -119,12 +119,19 @@ def add(*, directory: Path, command: str, content: str) -> Path:
     Returns the path of the written file.
     """
     base_name = filename_for_command(command)
-    target = directory / base_name
-    for suffix in range(1, MAX_COLLISION_SUFFIX + 1):
+    # Generate the candidate sequence eagerly so every candidate up to
+    # ``MAX_COLLISION_SUFFIX`` is actually checked. An in-place "assign
+    # next target at end of loop body" pattern is off-by-one: the final
+    # ``.N`` is set but never tested before the loop exits.
+    candidates = [directory / base_name]
+    candidates.extend(
+        directory / f"{base_name}.{suffix}"
+        for suffix in range(1, MAX_COLLISION_SUFFIX + 1)
+    )
+    for target in candidates:
         if not target.exists():
             target.write_text(content, encoding="utf-8")
             return target
-        target = directory / f"{base_name}.{suffix}"
     raise OSError(
         f"too many collisions for {base_name!r} in {directory} "
         f"(exceeded MAX_COLLISION_SUFFIX={MAX_COLLISION_SUFFIX})"
