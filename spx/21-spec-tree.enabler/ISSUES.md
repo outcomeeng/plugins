@@ -20,6 +20,16 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 `outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the EXCLUDE + derived-state model. The upstream needs to be rewritten to match.
 
+## 13. `.evidence.md` artifact type unrecognized by methodology
+
+`spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.evidence.md` introduces a `.evidence.md` artifact suffix as supporting material for `21-compact-continuity.pdr.md`. The file's own Status section documents the gap: `/spec-tree:contextualizing` globs only `*.adr.md`, `*.pdr.md`, `PLAN.md`, and `ISSUES.md`, so `.evidence.md` is reachable only by direct read or grep — not by deterministic context loading. No PDR formalizes the artifact type.
+
+**Resolutions to choose from:**
+
+- Formalize `.evidence.md` via a methodology PDR (parallel to `.adr.md` / `.pdr.md` / `PLAN.md` / `ISSUES.md`) and extend `/spec-tree:contextualizing` to include it in the glob set.
+- Fold the diagnostic content into the PDR's Rationale or an appendix and delete the standalone file.
+- Rename the file to `PLAN.md` or `ISSUES.md` so it lands inside the recognized taxonomy.
+
 ## 12. Repo-wide evidence links still contain legacy test naming (RESOLVED)
 
 Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`, `*.integration.test.{ext}`, `*.e2e.test.{ext}`, `test_*.unit.{ext}`, `test_*.integration.{ext}`, `test_*.e2e.{ext}`) in spec assertions, spec-tree templates, examples, and methodology references was rewritten to the canonical `<subject>.<evidence>.<level>[.<runner>]` form, splitting mixed-evidence specs across one file per evidence type. Remaining mentions of the legacy tokens are scoped to:
