@@ -8,7 +8,7 @@ CAN ship inside `plugins/spec-tree/skills/auditing/scripts/`, run from any consu
 
 ### Compliance
 
-- ALWAYS: `verdict.py` defines exactly one canonical schema for audit verdicts — `Status` ∈ {APPROVED, REJECTED, PASS, FAIL, UNKNOWN}, `Severity` ∈ {reject, warning, info}, frozen `Finding`/`Row`/`Verdict` dataclasses, and a `SCHEMA_VERSION` constant ([test](tests/test_verdict.scenario.l1.py))
+- ALWAYS: `verdict.py` defines exactly one canonical schema for audit verdicts — `Status` ∈ {APPROVED, REJECTED, PASS, FAIL, UNKNOWN}, `Severity` ∈ {REJECT, WARNING, INFO}, frozen `Finding`/`Row`/`Verdict` dataclasses, and a `SCHEMA_VERSION` constant ([test](tests/test_verdict.scenario.l1.py))
 - ALWAYS: `verdict.parse_json` validates JSON input against the schema and raises `VerdictValidationError` on missing keys, unknown status values, unknown severity values, or schema-version mismatch ([test](tests/test_verdict.scenario.l1.py))
 - ALWAYS: `verdict.to_json_dict` and `verdict.from_json_dict` round-trip a `Verdict` instance through JSON without loss — the serialized-then-parsed verdict equals the original ([test](tests/test_verdict.scenario.l1.py))
 - ALWAYS: `verdict.roll_up` returns REJECTED if any child is FAIL or REJECTED, UNKNOWN if any child is UNKNOWN and none are FAIL/REJECTED, APPROVED if every child is PASS or APPROVED, and UNKNOWN when the input is empty ([test](tests/test_verdict.scenario.l1.py))

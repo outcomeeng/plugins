@@ -230,7 +230,7 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 <output_format>
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `reject`; `FAIL` if any critical finding is `reject`; `UNKNOWN` if the subagent file cannot be read or the audit cannot complete. Recommendations land as `warning` findings; strengths and quick fixes land as `info` findings.
+The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `REJECT`; `FAIL` if any critical finding is `REJECT`; `UNKNOWN` if the subagent file cannot be read or the audit cannot complete. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
 
 ```json
 {
@@ -248,7 +248,7 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
           "file": "<subagent-file>",
           "line": null,
           "rule": "<issue-category>",
-          "severity": "reject",
+          "severity": "REJECT",
           "message": "Current: <…>. Should be: <…>. Why it matters: <…>. Fix: <…>."
         }
       ]

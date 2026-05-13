@@ -249,7 +249,7 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 <output_format>
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `reject`. Worth-improving and Keep-these-aspects observations land as `warning` and `info` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
+The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
 
 ```json
 {
@@ -267,7 +267,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
           "file": "<skill-file>",
           "line": null,
           "rule": "<strength-name>",
-          "severity": "info",
+          "severity": "INFO",
           "message": "<what it does> — removing this would <specific consequence>"
         }
       ]
@@ -281,7 +281,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
           "file": "<skill-file>",
           "line": null,
           "rule": "<issue-name>",
-          "severity": "warning",
+          "severity": "WARNING",
           "message": "Current: <what exists>. Change to: <what it should be>. Benefit: <specific gain>."
         }
       ]
@@ -295,7 +295,7 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
           "file": "<skill-file>",
           "line": null,
           "rule": "<issue-name>",
-          "severity": "reject",
+          "severity": "REJECT",
           "message": "Current: <what exists>. Fix: <specific action>. Impact if unfixed: <what breaks>."
         }
       ]

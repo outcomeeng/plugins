@@ -145,7 +145,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The calling agent or orchestrator captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `reject` for blocking violations.
+The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 
 ```json
 {
@@ -165,7 +165,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 }
 ```
 
-Each finding carries `file`, `line`, `rule` (the concern name or specific violation), `severity: "reject"`, and `message` (the one-line "why this fails"). Include correct-approach Rust samples and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each finding carries `file`, `line`, `rule` (the concern name or specific violation), `severity: "REJECT"`, and `message` (the one-line "why this fails"). Include correct-approach Rust samples and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
 </output_format>
 

@@ -15,8 +15,8 @@ Status value space:
   ``UNKNOWN``.
 - Skill-level overall and per-row status (individual contribution): ``PASS``
   | ``FAIL`` | ``UNKNOWN``.
-- Finding severity (per finding): ``reject`` | ``warning`` | ``info``. Only
-  ``reject`` findings flip a row to ``FAIL``.
+- Finding severity (per finding): ``REJECT`` | ``WARNING`` | ``INFO``. Only
+  ``REJECT`` findings flip a row to ``FAIL``.
 
 Rollup rule (``roll_up``): any ``FAIL`` or ``REJECTED`` child → ``REJECTED``.
 Otherwise, if any child is ``UNKNOWN`` → ``UNKNOWN``. Otherwise → ``APPROVED``.
@@ -33,7 +33,7 @@ SCHEMA_VERSION = 1
 
 ROOT_STATUSES: frozenset[str] = frozenset({"APPROVED", "REJECTED", "UNKNOWN"})
 SKILL_STATUSES: frozenset[str] = frozenset({"PASS", "FAIL", "UNKNOWN"})
-SEVERITIES: frozenset[str] = frozenset({"reject", "warning", "info"})
+SEVERITIES: frozenset[str] = frozenset({"REJECT", "WARNING", "INFO"})
 
 # HTML-comment-delimited JSON-block markers for the ``markdown+json`` carrier
 # surface. Defined here as the single canonical source so producer
@@ -63,26 +63,15 @@ class Status(StrEnum):
 class Severity(StrEnum):
     """Finding severity. Only ``REJECT`` findings cause a row to ``FAIL``.
 
-    Case convention is asymmetric by design: member names are uppercase
-    (``REJECT``, ``WARNING``, ``INFO``), wire values are lowercase
-    (``"reject"``, ``"warning"``, ``"info"``). The marketplace's audit
-    verdict format adopts the broader JSON-schema convention of
-    lowercase enum tags for severity-like fields — the same convention
-    used by log-level enums, HTTP problem-details, and most lint-rule
-    severity vocabularies. :class:`Status` is uppercase on both sides
-    because status values are verdict words rendered verbatim into
-    report cells, where uppercase signals decisiveness.
-
-    ``from_json_dict`` validates against ``SEVERITIES`` so a malformed
-    wire value raises rather than coercing silently. For equality
-    checks, prefer ``finding.severity == Severity.REJECT`` (member) or
-    ``finding.severity == "reject"`` (wire value) — never the uppercase
-    string by analogy with :class:`Status`, which silently mismatches.
+    Member names and wire values are both uppercase, matching the
+    :class:`Status` convention so that ``finding.severity == "REJECT"``
+    and ``status == "PASS"`` are consistent equality checks across the
+    schema.
     """
 
-    REJECT = "reject"
-    WARNING = "warning"
-    INFO = "info"
+    REJECT = "REJECT"
+    WARNING = "WARNING"
+    INFO = "INFO"
 
 
 class VerdictValidationError(ValueError):
@@ -183,7 +172,7 @@ def roll_up(child_overalls: list[Status]) -> Status:
 def row_status_from_findings(findings: tuple[Finding, ...]) -> Status:
     """Derive a row's status from its findings.
 
-    ``FAIL`` if any finding has severity ``reject``; ``PASS`` otherwise.
+    ``FAIL`` if any finding has severity ``REJECT``; ``PASS`` otherwise.
     Warning and info findings do not cause ``FAIL``. ``UNKNOWN`` is never
     derived from findings — a row reaches ``UNKNOWN`` only when the
     producing skill cannot evaluate the concern.
