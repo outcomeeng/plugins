@@ -259,7 +259,15 @@ Harnesses, generators, and inert fixtures are production code. They live in the 
 - `product_testing/fixtures/<name>.py` — pytest fixture body functions; exported as `@pytest.fixture`-decorated callables.
 - `product_testing/fixtures/` (data subdirectory) — inert files read from disk by path.
 
-pytest's `conftest.py` mechanism remains in use for collection — markers, hooks, plugin registration, and discovery shims. A `conftest.py` at the spx root (or per-node) may do `from product_testing.fixtures import *` to expose fixture callables to pytest. Fixture body code (the `@pytest.fixture`-decorated functions, harness initialization, mediator classes) belongs in `product_testing/`, never in `conftest.py`.
+pytest's `conftest.py` mechanism remains in use for collection — markers, hooks, plugin registration, and discovery shims. A `conftest.py` at the spx root (or per-node) exposes fixture callables to pytest by importing them by name from their `product_testing.fixtures.*` modules:
+
+```python
+# conftest.py
+from product_testing.fixtures.database import db_harness, transaction
+from product_testing.fixtures.filesystem import tmp_tree
+```
+
+Star imports (`from product_testing.fixtures import *`) are banned — they hide which fixture names enter scope, break static analysis, and trip `ruff` `F401`/`F403`. Fixture body code (the `@pytest.fixture`-decorated functions, harness initialization, mediator classes) belongs in `product_testing/`, never in `conftest.py`.
 
 </test_data_policy>
 
