@@ -27,3 +27,14 @@ Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`
 - `plugins/{python,typescript}/skills/standardizing-*-tests/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
 - `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` and `plugins/develop/skills/auditing-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
 - `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
+
+## 13. Marketplace-scoped PDR MUST rules carry `[review]` where `[test]` is possible
+
+`spx/15-test-infrastructure.pdr.md` Compliance MUST rules all tag `([review])`. Several are structurally checkable against this marketplace's own spec tree without human judgment:
+
+- "Every spec tree governed by this methodology has the canonical subtree `infrastructure → testing → {generators, fixtures, harnesses}`" — a conformance test can walk `spx/` and assert the slugs exist at the expected indices.
+- "Test files follow `<subject>.<evidence>.<level>[.<runner>]`" — a compliance test already exists for the naming convention via `15-test-language.adr.md` and the validator under `spx/15-validation.enabler/`. The PDR's rule should reuse or wrap that evidence rather than re-state it as `[review]`.
+
+`[review]` is correct for cross-product rules (this repo cannot assert what other products do). The marketplace's own tree is in scope and should carry `[test]` evidence where the assertion is structurally checkable.
+
+Surfaced by `claude-review` on PR 14 (2026-05-13).
