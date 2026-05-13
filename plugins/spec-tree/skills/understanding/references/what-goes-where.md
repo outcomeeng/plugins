@@ -2,16 +2,17 @@
 
 Every artifact in the Spec Tree has a specific purpose. Content placed in the wrong artifact creates confusion and duplication.
 
-| Artifact type    | Purpose                    | Contains                         | Verified by       |
-| ---------------- | -------------------------- | -------------------------------- | ----------------- |
-| **ADR**          | GOVERNS how (architecture) | Decisions, rationale, invariants | ADR audit         |
-| **PDR**          | GOVERNS what (product)     | Decisions, product invariants    | PDR audit         |
-| **Enabler spec** | DESCRIBES infrastructure   | What it provides, assertions     | Tests             |
-| **Outcome spec** | DESCRIBES hypothesis       | Outcome belief, assertions       | Tests             |
-| **Test**         | PROVES assertions          | Test code                        | Test runner       |
-| **Enforcement**  | CONSTRAINS structure       | Lint rules, AST selectors        | Tests on the rule |
-| **PLAN.md**      | DEFERS remaining steps     | Concrete plan for a node         | Next agent        |
-| **ISSUES.md**    | DEFERS known issues        | Gaps, bugs, untestable specs     | Next agent        |
+| Artifact type           | Purpose                                  | Contains                                     | Verified by                    |
+| ----------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------ |
+| **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                      |
+| **PDR**                 | GOVERNS what (product)                   | Decisions, product invariants                | PDR audit                      |
+| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                          |
+| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                          |
+| **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                    |
+| **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, architecture audit |
+| **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule              |
+| **PLAN.md**             | DEFERS remaining steps                   | Concrete plan for a node                     | Next agent                     |
+| **ISSUES.md**           | DEFERS known issues                      | Gaps, bugs, untestable specs                 | Next agent                     |
 
 </overview>
 
@@ -87,7 +88,7 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Test code organized by level:
+**Contains:** Typed assertion files only, one evidence type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
 
 | Level | Suffix           | Question                             |
 | ----- | ---------------- | ------------------------------------ |
@@ -95,9 +96,35 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | 2     | `.l2.test.{ext}` | Does it work with real dependencies? |
 | 3     | `.l3.test.{ext}` | Does it work for users?              |
 
-**Does NOT contain:** Spec content, decision rationale, test data, test constants, dummy data, fixtures, or anything other than test assertion code.
+Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
+
+**Does NOT contain:** Spec content, decision rationale, test harnesses, test generators, or fixtures. Harnesses and generators are test-infrastructure production code with their own home outside `tests/` and outside `spx/` (see `<test_infrastructure>`). Fixtures are inert input files read from disk by path — never imported by executed tests.
 
 </test_files>
+
+<test_infrastructure>
+
+**Purpose:** PROVIDES the harnesses, generators, and inert fixtures that test assertion files depend on.
+
+Test harnesses (modules that mediate access to the system under test), test generators (factories producing valid inputs), and inert fixtures (captured payloads, recorded transcripts, sample documents) are **production code**. They implement behavior, carry their own spec assertions in the spec tree, and pass the same audits as any other production module. They differ from product code only in purpose: they enable test assertions rather than deliver product value.
+
+**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`. See `spx/15-test-infrastructure.adr.md`.
+
+**Implementation location (normative per language):** A sibling directory to product code, outside `spx/` and outside any `tests/` directory:
+
+| Language       | Test-infrastructure home                                                                                                                                                                                                                                                                           |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TypeScript** | `testing/` at project root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                     |
+| **Python**     | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/` — `<package>` is the product's Python package name                                                                                                                            |
+| **Rust**       | A workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
+
+**The term is "infrastructure", not "support".** "Test support", "test helpers", "test utilities", and "test tools" are anti-terms — they connote ungoverned utility code, the opposite of what these artifacts are.
+
+**Verified by:** Code audit, test evidence audit, architecture audit — the same audit gates that govern product modules.
+
+**Does NOT contain:** Test assertion code (lives in `spx/<node>/tests/`), spec content, or decision rationale.
+
+</test_infrastructure>
 
 <enforcement>
 
