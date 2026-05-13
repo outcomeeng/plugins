@@ -90,11 +90,11 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 
 **Contains:** Typed assertion files only, one evidence type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
 
-| Level | Suffix           | Question                             |
-| ----- | ---------------- | ------------------------------------ |
-| 1     | `.l1.test.{ext}` | Is our logic correct?                |
-| 2     | `.l2.test.{ext}` | Does it work with real dependencies? |
-| 3     | `.l3.test.{ext}` | Does it work for users?              |
+| Level | Suffix shape                | Question                             |
+| ----- | --------------------------- | ------------------------------------ |
+| 1     | `.<evidence>.l1.test.{ext}` | Is our logic correct?                |
+| 2     | `.<evidence>.l2.test.{ext}` | Does it work with real dependencies? |
+| 3     | `.<evidence>.l3.test.{ext}` | Does it work for users?              |
 
 Each file imports the module under test — directly or through a test-infrastructure harness — and exercises the behavior its assertions claim.
 
