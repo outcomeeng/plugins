@@ -83,9 +83,16 @@ Decision records (ADR/PDR) are files within a node directory, not child nodes. B
 ```text
 NN-slug.{enabler|outcome}/
 ├── slug.md              # Spec file (no type suffix, no numeric prefix)
-├── tests/               # Co-located test files
+├── tests/               # Co-located [test]-lane evidence files
 │   ├── {test files}     # Named by product convention (see below)
 │   └── ...
+├── evals/               # Co-located [eval]-lane directories (optional)
+│   └── {rule-slug}/     # One directory per [eval] assertion
+│       ├── eval.toml    # Definition: title, cases, prompt, threshold, trials
+│       ├── cases.jsonl  # Durable case data
+│       ├── prompt.md    # Prompt template
+│       ├── history.jsonl    # Append-only run summaries (committed)
+│       └── runs/        # Full transcripts (gitignored)
 ├── PLAN.md              # Escape hatch: deferred plan (optional)
 ├── ISSUES.md            # Escape hatch: known issues (optional)
 └── NN-child.{enabler|outcome}/   # Nested child nodes (optional)
@@ -97,7 +104,7 @@ NN-slug.{enabler|outcome}/
 - The slug matches the directory name without the numeric prefix and type suffix
 - Example: `43-status-rollup.outcome/` contains `status-rollup.md`
 
-**Test files:**
+**Test files (`[test]` lane):**
 
 - Co-located in `tests/` within the node directory
 - Must encode evidence type and execution level in the filename — one evidence type per file
@@ -107,6 +114,15 @@ NN-slug.{enabler|outcome}/
   - TypeScript: `slug.scenario.l1.test.ts`, `slug.property.l1.test.ts`, `slug.conformance.l2.test.ts`
   - Python: `test_slug.scenario.l1.py`, `test_slug.property.l1.py`, `test_slug.conformance.l2.py`
 - An optional runner token sits between level and the test extension when a non-default runner applies (e.g., `slug.scenario.l2.playwright.test.ts`)
-- Assertions specify output, verified by test (`[test]`) or review (`[review]`)
+- Verified by `[test]` evidence
+
+**Eval directories (`[eval]` lane):**
+
+- Co-located in `evals/{rule-slug}/` within the node directory, one directory per `[eval]` assertion
+- Each directory carries `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl` (all committed)
+- The `runs/` subdirectory holds full transcripts and is gitignored
+- Verified by `[eval]` evidence (the dedicated eval runner)
+
+Assertions specify output, verified by `[test]`, `[eval]`, or `[review]` per `<evidence_mechanisms>` in `assertion-types.md`.
 
 </common_structure>
