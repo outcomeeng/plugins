@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  {{What this skill does}}.
-  Use when {{trigger conditions}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when {{trigger conditions}}.
 ---
 
 <objective>

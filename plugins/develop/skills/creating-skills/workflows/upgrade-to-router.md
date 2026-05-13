@@ -84,10 +84,9 @@ Replace original SKILL.md with router structure:
 
 ```yaml
 ---
-name: { skill-name }
-description: |
-  {What it does}.
-  Use when {trigger conditions}.
+name: "{skill-name}"
+description: >-
+  ALWAYS invoke this skill when {trigger conditions}.
 ---
 ```
 

@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  {{What this skill does}}.
-  Use when {{trigger conditions}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when {{trigger conditions}}.
 ---
 
 <essential_principles>
@@ -46,16 +45,18 @@ All in `references/`:
 | ------------------ | ----------- |
 | {{reference-1}}.md | {{Purpose}} |
 | {{reference-2}}.md | {{Purpose}} |
-| </reference_index> |             |
+
+</reference_index>
 
 <workflows_index>
 All in `workflows/`:
 
-| Workflow           | Purpose     |
-| ------------------ | ----------- |
-| {{workflow-1}}.md  | {{Purpose}} |
-| {{workflow-2}}.md  | {{Purpose}} |
-| </workflows_index> |             |
+| Workflow          | Purpose     |
+| ----------------- | ----------- |
+| {{workflow-1}}.md | {{Purpose}} |
+| {{workflow-2}}.md | {{Purpose}} |
+
+</workflows_index>
 
 <success_criteria>
 A well-executed {{skill name}}:

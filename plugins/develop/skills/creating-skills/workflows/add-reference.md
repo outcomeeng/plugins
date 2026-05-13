@@ -80,10 +80,11 @@ Code examples, recipes, or reusable patterns...
 ```markdown
 <api_reference>
 
-| Method           | Purpose | Example     |
-| ---------------- | ------- | ----------- |
-| method1          | Does X  | `example()` |
-| </api_reference> |         |             |
+| Method  | Purpose | Example     |
+| ------- | ------- | ----------- |
+| method1 | Does X  | `example()` |
+
+</api_reference>
 ```
 
 Write to: `~/.claude/skills/{skill-name}/references/{reference-name}.md`

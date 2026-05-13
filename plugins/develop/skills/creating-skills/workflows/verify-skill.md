@@ -126,15 +126,16 @@ Consider adding to SKILL.md:
 <staleness_indicators>
 Signs a skill may need verification:
 
-| Indicator               | Check                              |
-| ----------------------- | ---------------------------------- |
-| Time-sensitive info     | Dates, version numbers, "as of..." |
-| External URLs           | Links to docs, tutorials           |
-| API references          | Endpoints, authentication          |
-| Library versions        | Package versions, imports          |
-| Best practices          | Recommendations that evolve        |
-| Deprecated features     | Old patterns still referenced      |
-| </staleness_indicators> |                                    |
+| Indicator           | Check                              |
+| ------------------- | ---------------------------------- |
+| Time-sensitive info | Dates, version numbers, "as of..." |
+| External URLs       | Links to docs, tutorials           |
+| API references      | Endpoints, authentication          |
+| Library versions    | Package versions, imports          |
+| Best practices      | Recommendations that evolve        |
+| Deprecated features | Old patterns still referenced      |
+
+</staleness_indicators>
 
 <success_criteria>
 Verification is complete when:

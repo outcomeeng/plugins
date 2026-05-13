@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  Guide for {{domain/task}}.
-  Use when users need to {{trigger conditions}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when users need to {{trigger conditions}}.
 ---
 
 <objective>
@@ -16,13 +15,14 @@ Provide step-by-step guidance for {{domain/task}}.
 <before_implementation>
 Gather context to ensure successful implementation:
 
-| Source                   | Gather                                    |
-| ------------------------ | ----------------------------------------- |
-| **Codebase**             | Existing structure, patterns, conventions |
-| **Conversation**         | User's specific requirements, constraints |
-| **Skill References**     | Domain patterns from `references/`        |
-| **User Guidelines**      | Project-specific conventions              |
-| </before_implementation> |                                           |
+| Source               | Gather                                    |
+| -------------------- | ----------------------------------------- |
+| **Codebase**         | Existing structure, patterns, conventions |
+| **Conversation**     | User's specific requirements, constraints |
+| **Skill References** | Domain patterns from `references/`        |
+| **User Guidelines**  | Project-specific conventions              |
+
+</before_implementation>
 
 <workflow>
 Copy this checklist and track progress:
@@ -76,11 +76,12 @@ Copy this checklist and track progress:
 
 <official_documentation>
 
-| Resource                  | URL     | Use For     |
-| ------------------------- | ------- | ----------- |
-| {{Resource 1}}            | {{URL}} | {{Purpose}} |
-| {{Resource 2}}            | {{URL}} | {{Purpose}} |
-| </official_documentation> |         |             |
+| Resource       | URL     | Use For     |
+| -------------- | ------- | ----------- |
+| {{Resource 1}} | {{URL}} | {{Purpose}} |
+| {{Resource 2}} | {{URL}} | {{Purpose}} |
+
+</official_documentation>
 
 <success_criteria>
 Guide task is complete when:

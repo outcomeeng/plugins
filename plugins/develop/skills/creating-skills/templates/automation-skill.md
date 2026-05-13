@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  Automate {{process/task}} for {{domain}}.
-  Use when users need to {{trigger conditions}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when users need to {{trigger conditions}}.
 ---
 
 <objective>
@@ -20,21 +19,23 @@ Execute {{process}} reliably and repeatably.
 <before_implementation>
 Gather context to ensure successful implementation:
 
-| Source                   | Gather                                    |
-| ------------------------ | ----------------------------------------- |
-| **Codebase**             | Existing structure, patterns, conventions |
-| **Conversation**         | User's specific requirements, constraints |
-| **Skill References**     | Domain patterns from `references/`        |
-| **User Guidelines**      | Project-specific conventions              |
-| </before_implementation> |                                           |
+| Source               | Gather                                    |
+| -------------------- | ----------------------------------------- |
+| **Codebase**         | Existing structure, patterns, conventions |
+| **Conversation**     | User's specific requirements, constraints |
+| **Skill References** | Domain patterns from `references/`        |
+| **User Guidelines**  | Project-specific conventions              |
+
+</before_implementation>
 
 <available_scripts>
 
-| Script                    | Purpose     | Usage                             |
-| ------------------------- | ----------- | --------------------------------- |
-| `scripts/{{script-1}}.py` | {{Purpose}} | `python {{script-1}}.py {{args}}` |
-| `scripts/{{script-2}}.py` | {{Purpose}} | `python {{script-2}}.py {{args}}` |
-| </available_scripts>      |             |                                   |
+| Script                    | Purpose     | Usage                              |
+| ------------------------- | ----------- | ---------------------------------- |
+| `scripts/{{script-1}}.py` | {{Purpose}} | `python3 {{script-1}}.py {{args}}` |
+| `scripts/{{script-2}}.py` | {{Purpose}} | `python3 {{script-2}}.py {{args}}` |
+
+</available_scripts>
 
 <dependencies>
 **Runtime**:
@@ -67,11 +68,12 @@ pip install {{packages}}
 
 <error_handling>
 
-| Error             | Cause     | Recovery       |
-| ----------------- | --------- | -------------- |
-| {{Error 1}}       | {{Cause}} | {{How to fix}} |
-| {{Error 2}}       | {{Cause}} | {{How to fix}} |
-| </error_handling> |           |                |
+| Error       | Cause     | Recovery       |
+| ----------- | --------- | -------------- |
+| {{Error 1}} | {{Cause}} | {{How to fix}} |
+| {{Error 2}} | {{Cause}} | {{How to fix}} |
+
+</error_handling>
 
 <workflow>
 1. **Prepare**: Verify input and dependencies

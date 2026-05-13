@@ -151,7 +151,7 @@ Quality-critical skills include explicit feedback loops.
 <process>
 
 1. Analyze input; create `changes.json` plan.
-2. Validate the plan: `python validate_changes.py changes.json`.
+2. Validate the plan: `python3 validate_changes.py changes.json`.
 3. If validation fails, fix the plan and re-validate.
 4. Only when valid: execute changes.
 5. Verify output.

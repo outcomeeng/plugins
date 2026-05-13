@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  Create {{artifacts}} for {{domain}}.
-  Use when users ask to build {{triggers}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when users ask to build {{triggers}}.
 ---
 
 <objective>
@@ -16,13 +15,14 @@ Create production-quality {{artifacts}} that follow {{domain}} best practices.
 <before_implementation>
 Gather context to ensure successful implementation:
 
-| Source                   | Gather                                    |
-| ------------------------ | ----------------------------------------- |
-| **Codebase**             | Existing structure, patterns, conventions |
-| **Conversation**         | User's specific requirements, constraints |
-| **Skill References**     | Domain patterns from `references/`        |
-| **User Guidelines**      | Project-specific conventions              |
-| </before_implementation> |                                           |
+| Source               | Gather                                    |
+| -------------------- | ----------------------------------------- |
+| **Codebase**         | Existing structure, patterns, conventions |
+| **Conversation**     | User's specific requirements, constraints |
+| **Skill References** | Domain patterns from `references/`        |
+| **User Guidelines**  | Project-specific conventions              |
+
+</before_implementation>
 
 <required_clarifications>
 Ask about USER'S context (not domain knowledge):

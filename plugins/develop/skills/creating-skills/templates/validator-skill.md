@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  Validate {{subject}} for {{compliance/quality}}.
-  Use when users ask to check, audit, or verify {{triggers}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when users ask to check, audit, or verify {{triggers}}.
 ---
 
 <objective>
@@ -16,22 +15,24 @@ Enforce quality standards by systematically validating {{subject}} against defin
 <before_implementation>
 Gather context to ensure successful implementation:
 
-| Source                   | Gather                                    |
-| ------------------------ | ----------------------------------------- |
-| **Codebase**             | Existing structure, patterns, conventions |
-| **Conversation**         | User's specific requirements, constraints |
-| **Skill References**     | Domain patterns from `references/`        |
-| **User Guidelines**      | Project-specific conventions              |
-| </before_implementation> |                                           |
+| Source               | Gather                                    |
+| -------------------- | ----------------------------------------- |
+| **Codebase**         | Existing structure, patterns, conventions |
+| **Conversation**     | User's specific requirements, constraints |
+| **Skill References** | Domain patterns from `references/`        |
+| **User Guidelines**  | Project-specific conventions              |
+
+</before_implementation>
 
 <quality_criteria>
 
-| Criterion           | Weight | Pass Threshold |
-| ------------------- | ------ | -------------- |
-| {{Criterion 1}}     | {{X%}} | {{Threshold}}  |
-| {{Criterion 2}}     | {{X%}} | {{Threshold}}  |
-| {{Criterion 3}}     | {{X%}} | {{Threshold}}  |
-| </quality_criteria> |        |                |
+| Criterion       | Weight | Pass Threshold |
+| --------------- | ------ | -------------- |
+| {{Criterion 1}} | {{X%}} | {{Threshold}}  |
+| {{Criterion 2}} | {{X%}} | {{Threshold}}  |
+| {{Criterion 3}} | {{X%}} | {{Threshold}}  |
+
+</quality_criteria>
 
 <scoring_rubric>
 **3 (Excellent)**: {{Definition}}

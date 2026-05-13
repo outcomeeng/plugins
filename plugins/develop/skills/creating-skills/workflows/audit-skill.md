@@ -115,18 +115,19 @@ If fixing:
 <audit_anti_patterns>
 Common anti-patterns to flag:
 
-| Anti-Pattern           | Description                                             |
-| ---------------------- | ------------------------------------------------------- |
-| Skippable principles   | Essential principles in separate file instead of inline |
-| Monolithic skill       | Single file over 500 lines                              |
-| Mixed concerns         | Procedures and knowledge in same file                   |
-| Vague steps            | "Handle the error appropriately"                        |
-| Untestable criteria    | "User is satisfied"                                     |
-| Markdown headings      | Using # instead of XML tags in body                     |
-| Missing routing        | Complex skill without intake/routing                    |
-| Broken references      | Files mentioned but don't exist                         |
-| Redundant content      | Same information in multiple places                     |
-| </audit_anti_patterns> |                                                         |
+| Anti-Pattern         | Description                                             |
+| -------------------- | ------------------------------------------------------- |
+| Skippable principles | Essential principles in separate file instead of inline |
+| Monolithic skill     | Single file over 500 lines                              |
+| Mixed concerns       | Procedures and knowledge in same file                   |
+| Vague steps          | "Handle the error appropriately"                        |
+| Untestable criteria  | "User is satisfied"                                     |
+| Markdown headings    | Using # instead of XML tags in body                     |
+| Missing routing      | Complex skill without intake/routing                    |
+| Broken references    | Files mentioned but don't exist                         |
+| Redundant content    | Same information in multiple places                     |
+
+</audit_anti_patterns>
 
 <success_criteria>
 Audit is complete when:

@@ -1,8 +1,7 @@
 ---
-name: { { skill-name } }
-description: |
-  Analyze {{subject}} for {{purpose}}.
-  Use when users ask to review, analyze, or extract insights from {{triggers}}.
+name: "{{skill-name}}"
+description: >-
+  ALWAYS invoke this skill when users ask to review, analyze, or extract insights from {{triggers}}.
 ---
 
 <objective>
@@ -16,13 +15,14 @@ Extract actionable insights from {{subject}} by applying systematic analysis.
 <before_implementation>
 Gather context to ensure successful implementation:
 
-| Source                   | Gather                                    |
-| ------------------------ | ----------------------------------------- |
-| **Codebase**             | Existing structure, patterns, conventions |
-| **Conversation**         | User's specific requirements, constraints |
-| **Skill References**     | Domain patterns from `references/`        |
-| **User Guidelines**      | Project-specific conventions              |
-| </before_implementation> |                                           |
+| Source               | Gather                                    |
+| -------------------- | ----------------------------------------- |
+| **Codebase**         | Existing structure, patterns, conventions |
+| **Conversation**     | User's specific requirements, constraints |
+| **Skill References** | Domain patterns from `references/`        |
+| **User Guidelines**  | Project-specific conventions              |
+
+</before_implementation>
 
 <analysis_scope>
 **What to analyze**:
@@ -40,12 +40,13 @@ Gather context to ensure successful implementation:
 
 <evaluation_criteria>
 
-| Criterion              | Weight | How to Assess |
-| ---------------------- | ------ | ------------- |
-| {{Criterion 1}}        | {{X%}} | {{Method}}    |
-| {{Criterion 2}}        | {{X%}} | {{Method}}    |
-| {{Criterion 3}}        | {{X%}} | {{Method}}    |
-| </evaluation_criteria> |        |               |
+| Criterion       | Weight | How to Assess |
+| --------------- | ------ | ------------- |
+| {{Criterion 1}} | {{X%}} | {{Method}}    |
+| {{Criterion 2}} | {{X%}} | {{Method}}    |
+| {{Criterion 3}} | {{X%}} | {{Method}}    |
+
+</evaluation_criteria>
 
 <output_format>
 
