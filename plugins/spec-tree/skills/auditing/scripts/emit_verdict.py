@@ -204,12 +204,17 @@ def _escape_inline(text: str) -> str:
     """Escape a string for inline markdown context (outside a table cell).
 
     Replaces newlines with spaces so a multi-line value still renders on
-    one row. Escapes backticks so values rendered inside inline code
-    spans (`` `{_escape_inline(value)}` ``) don't close their span
-    prematurely when the value itself contains a backtick. Backslashes
-    and pipes are left alone — they have no special inline meaning.
+    one row. Replaces backticks with single quotes because CommonMark
+    does **not** process backslash escapes inside backtick code spans —
+    a value containing a backtick rendered as `` `{_escape_inline(value)}` ``
+    would prematurely close the span no matter how the backtick is
+    "escaped". Substituting ``'`` for ``` ` ``` keeps the displayed value
+    a one-token, span-safe approximation; values containing literal
+    backticks (rare in audit targets) lose the backtick character but
+    do not break the surrounding markdown. Backslashes and pipes are
+    left alone — they have no special inline meaning.
     """
-    return text.replace("\n", " ").replace("`", r"\`")
+    return text.replace("\n", " ").replace("`", "'")
 
 
 def _read_input(path: str | None) -> str:

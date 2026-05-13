@@ -63,17 +63,21 @@ class Status(StrEnum):
 class Severity(StrEnum):
     """Finding severity. Only ``REJECT`` findings cause a row to ``FAIL``.
 
-    Note the case convention: member names are uppercase (``REJECT``,
-    ``WARNING``, ``INFO``) but the JSON wire values are lowercase
-    (``"reject"``, ``"warning"``, ``"info"``). This differs from
-    :class:`Status`, whose member names and wire values are both
-    uppercase. Schema convention treats severity as a free-text tag in
-    the wire format. ``from_json_dict`` validates against
-    ``SEVERITIES`` so a malformed wire value raises rather than coercing
-    silently; a caller writing ``finding.severity == "REJECT"`` (by
-    analogy with ``Status``) compares against the wrong string and
-    silently misses the finding — use ``Severity.REJECT`` or
-    ``"reject"`` for equality checks.
+    Case convention is asymmetric by design: member names are uppercase
+    (``REJECT``, ``WARNING``, ``INFO``), wire values are lowercase
+    (``"reject"``, ``"warning"``, ``"info"``). The marketplace's audit
+    verdict format adopts the broader JSON-schema convention of
+    lowercase enum tags for severity-like fields — the same convention
+    used by log-level enums, HTTP problem-details, and most lint-rule
+    severity vocabularies. :class:`Status` is uppercase on both sides
+    because status values are verdict words rendered verbatim into
+    report cells, where uppercase signals decisiveness.
+
+    ``from_json_dict`` validates against ``SEVERITIES`` so a malformed
+    wire value raises rather than coercing silently. For equality
+    checks, prefer ``finding.severity == Severity.REJECT`` (member) or
+    ``finding.severity == "reject"`` (wire value) — never the uppercase
+    string by analogy with :class:`Status`, which silently mismatches.
     """
 
     REJECT = "reject"
@@ -247,6 +251,12 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
     and only surfaces in the rollup arithmetic (which handles both
     vocabularies gracefully). The convention is documented on
     ``Verdict``; enforcement is left to producer-side review.
+
+    Consumer-side consequence: a caller writing
+    ``verdict.overall in ROOT_STATUSES`` to discriminate "is this a
+    wrapper?" returns ``False`` for a correctly-emitted leaf with
+    ``overall == "PASS"``. Discriminate by structure (``verdict.children
+    != ()``) rather than by the ``overall`` vocabulary.
 
     Coerces non-string metadata values to ``str`` rather than raising:
     ``{"line_count": 42}`` parses as ``{"line_count": "42"}``,
