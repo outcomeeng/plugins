@@ -163,12 +163,12 @@ Apply these at the corresponding step of the `/auditing-tests` workflow.
 
 **Production code vs test harnesses — both are codebase imports:**
 
-| Import target          | Correct pattern                             | Classification    |
-| ---------------------- | ------------------------------------------- | ----------------- |
-| Production module      | `from product.config import parse_config`   | Direct coupling   |
-| Test harness (package) | `from product_testing.harnesses import ...` | Indirect coupling |
-| Co-located test helper | `from .helpers import ConfigTestHarness`    | Indirect coupling |
-| Shared fixtures        | `from tests.conftest import db_harness`     | Indirect coupling |
+| Import target          | Correct pattern                                   | Classification    |
+| ---------------------- | ------------------------------------------------- | ----------------- |
+| Production module      | `from product.config import parse_config`         | Direct coupling   |
+| Test harness (package) | `from product_testing.harnesses import ...`       | Indirect coupling |
+| Co-located test helper | `from .helpers import ConfigTestHarness`          | Indirect coupling |
+| Shared fixtures        | `from product_testing.fixtures import db_harness` | Indirect coupling |
 
 Test harnesses wrap production modules, so they provide **indirect coupling**. When a test imports a harness, follow the chain: verify the harness itself has direct coupling to the module the assertion is about. If the harness is also a tautology, the coupling chain is broken.
 
@@ -345,9 +345,9 @@ Trigger: two or more in-scope tests sharing any of these patterns:
 - repeated database seeding or transaction setup
 - repeated `tempfile.TemporaryDirectory()` or `tmp_path` scaffolding with identical structure
 - repeated mock patches (`@patch("same.module.path")`) across multiple test files
-- repeated `conftest.py`-style setup appearing inline in multiple files instead of being shared
+- repeated fixture-setup logic appearing inline in multiple files instead of being shared as `@pytest.fixture` callables in `product_testing/fixtures/`
 
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or an addition to `tests/conftest.py`.
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or a `product_testing/fixtures/<name>.py` module exporting pytest fixtures. Fixture body code never belongs in any `tests/conftest.py` — that file is for pytest discovery/registration only, per `spx/15-test-infrastructure.adr.md`.
 
 Gate 2 status:
 
@@ -358,7 +358,7 @@ Gate 2 status:
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `tests/conftest.py`.
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `product_testing/fixtures/{name}.py` — never `tests/conftest.py`.
 
 </verdict_format>
 
