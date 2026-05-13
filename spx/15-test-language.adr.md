@@ -42,7 +42,7 @@ Alternatives rejected: a single runner spanning all evidence mechanisms (collaps
 
 ### Recognized by
 
-All `[test]` evidence files in `spx/**/tests/` use the Python naming convention `test_{subject}.{evidence}.{level}[.{runner}].py`. Every `[test](path)` link in a spec assertion resolves to a file under this convention. No `[test]` link points outside the pytest-discovered spec-tree subtree.
+All `[test]` evidence files in `spx/**/tests/` use the Python naming convention `test_{subject}.{evidence}.{level}[.{runner}].py`. Every `[test](path)` link in a spec assertion resolves to a file under this convention. No `[test]` link points outside the pytest-discovered spec-tree subtree. Python test infrastructure that these `[test]` files depend on lives at the methodology-mandated path declared by `spx/15-test-infrastructure.pdr.md` (`<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/`), never inside any `tests/` directory.
 
 ### MUST
 

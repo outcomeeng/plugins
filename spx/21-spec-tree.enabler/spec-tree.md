@@ -19,7 +19,7 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 - ALWAYS: load complete spec-tree context before any implementation work ([review])
 - ALWAYS: use atemporal voice in all specs — specs are permanent truth ([review])
-- ALWAYS: the `/understanding` skill's references declare the canonical test-infrastructure subtree `infrastructure → testing → {generators, fixtures, harnesses}` with normative slugs, per `spx/15-test-infrastructure.adr.md` ([review])
-- ALWAYS: the methodology — skill prose, references, templates, audit findings, examples — uses "infrastructure" as the category term for test harnesses, generators, and inert fixtures, per `spx/15-test-infrastructure.adr.md` ([review])
+- ALWAYS: the `/understanding` skill's references declare the canonical test-infrastructure subtree `infrastructure → testing → {generators, fixtures, harnesses}` with normative slugs, per `spx/15-test-infrastructure.pdr.md` ([review])
+- ALWAYS: the methodology — skill prose, references, templates, audit findings, examples — uses "infrastructure" as the category term for test harnesses, generators, and inert fixtures, per `spx/15-test-infrastructure.pdr.md` ([review])
 - NEVER: proceed with partial context — abort if any required document is missing ([review])
-- NEVER: the methodology uses "support", "helpers", "utilities", or "tools" as a governing category in the testing context — these are anti-terms per `spx/15-test-infrastructure.adr.md` ([review])
+- NEVER: the methodology uses "support", "helpers", "utilities", or "tools" as a governing category in the testing context — these are anti-terms per `spx/15-test-infrastructure.pdr.md` ([review])

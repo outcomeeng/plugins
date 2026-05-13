@@ -108,7 +108,7 @@ Each file imports the module under test — directly or through a test-infrastru
 
 Test harnesses (modules that mediate access to the system under test), test generators (factories producing valid inputs), and inert fixtures (captured payloads, recorded transcripts, sample documents) are **production code**. They implement behavior, carry their own spec assertions in the spec tree, and pass the same audits as any other production module. They differ from product code only in purpose: they enable test assertions rather than deliver product value.
 
-**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`. See `spx/15-test-infrastructure.adr.md`.
+**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`. See `spx/15-test-infrastructure.pdr.md`.
 
 **Implementation location (normative per language):** A sibling directory to product code, outside `spx/` and outside any `tests/` directory:
 
