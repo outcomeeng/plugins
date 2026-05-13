@@ -114,7 +114,7 @@ Dispatch to `auditing-{lang}-architecture`. Findings populate row 5. If no ADRs 
 
 <phase number="6" name="emit">
 
-For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other). Write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts (FAIL when any determinism invariant was violated mid-run). The aggregator then rolls up wrapper rows plus children overalls into the wrapper's `overall`:
+For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator's stdout pipes directly into `emit_verdict.py`, which renders the wrapper to the requested surface form (`markdown`, `markdown+json`, or `json-only`; default `markdown+json` for PR-comment delivery). The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
@@ -130,21 +130,14 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --target <scope-target> \
   --metadata branch=<branch-name> \
   --metadata scope_hash=<scope-hash> \
-  > "$CHILDREN_DIR/audit-wrapper.json"
-
-# After emit_verdict has rendered the wrapper, remove $CHILDREN_DIR
-# (the orchestrator owns cleanup — pass_results.mkdir does not register
-# an atexit handler). The wrapper file lives inside the scratch dir, so
-# rm -rf $CHILDREN_DIR removes children + wrapper in one step.
-rm -rf "$CHILDREN_DIR"
-```
-
-Render the wrapper to the requested surface form via `emit_verdict.py`. The caller forwards a `--format` value (`markdown`, `markdown+json`, or `json-only`); default to `markdown+json` for PR-comment delivery:
-
-```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
-  --file /tmp/audit-wrapper.json \
+| python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
   --format "${AUDIT_FORMAT:-markdown+json}"
+
+# Caller owns cleanup: the orchestrator removes $CHILDREN_DIR after the
+# rendered verdict is delivered (pass_results.mkdir does not register an
+# atexit handler). See spx/13-plugin-and-runtime-conventions.adr.md for
+# the marketplace-wide scratch-storage rules.
+rm -rf "$CHILDREN_DIR"
 ```
 
 The orchestrator does not write the verdict to disk — the caller delivers it. The orchestrator never hand-formats markdown; deterministic rendering lives in `emit_verdict.py`.
