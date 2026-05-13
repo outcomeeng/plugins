@@ -90,7 +90,7 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 ### MUST
 
 - All text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([review])
-- Export files conform to RFC 4180 CSV format ([test](tests/export.compliance.l1.test.ts))
+- Export files conform to RFC 4180 CSV format ([test](tests/test_export.compliance.l1.py))
 
 ### NEVER
 
