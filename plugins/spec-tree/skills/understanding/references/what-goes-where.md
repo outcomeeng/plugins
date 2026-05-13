@@ -11,8 +11,8 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
 | **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, test evidence audit, architecture audit |
 | **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule                                   |
-| **PLAN.md**             | COORDINATES pending steps                | Concrete plan for a node                     | Next session                                        |
-| **ISSUES.md**           | COORDINATES known issues                 | Gaps, bugs, untestable specs                 | Next session                                        |
+| **PLAN.md**             | COORDINATES pending steps                | Concrete plan for a node                     | Any agent in the next session                       |
+| **ISSUES.md**           | COORDINATES known issues                 | Gaps, bugs, untestable specs                 | Any agent in the next session                       |
 
 </overview>
 
