@@ -28,7 +28,7 @@ Test audit is gaining a new Gate 1 step (`testability`) that can emit findings a
 
 - `references/audit-verdict.xsd` accepts `testability` and the new file element.
 - Fixtures in `references/fixtures/` cover pass and fail cases for both enum and structural checks.
-- `tests/test_audit_verdict_schema.unit.py` exercises the new scenarios.
+- `tests/test_audit_verdict_schema.scenario.l1.py` exercises the new scenarios.
 - `spx validation audit-verdict` validates real verdicts containing the new step.
 
 ## Origin

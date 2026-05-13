@@ -8,12 +8,12 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 ### Scenarios
 
-- Given a spec-tree enabler directory, when its contents are listed, then a spec file named `{slug}.md` exists ([test](tests/test_spec_tree.unit.py))
-- Given a node directory with a numeric prefix, when validated, then the prefix is an integer between 10 and 99 ([test](tests/test_spec_tree.unit.py))
+- Given a spec-tree enabler directory, when its contents are listed, then a spec file named `{slug}.md` exists ([test](tests/test_spec_tree.scenario.l1.py))
+- Given a node directory with a numeric prefix, when validated, then the prefix is an integer between 10 and 99 ([test](tests/test_spec_tree.scenario.l1.py))
 
 ### Properties
 
-- Every node directory in the tree contains exactly one spec file matching `{slug}.md` — no orphan directories exist ([test](tests/test_spec_tree.unit.py))
+- Every node directory in the tree contains exactly one spec file matching `{slug}.md` — no orphan directories exist ([test](tests/test_spec_tree.property.l1.py))
 
 ### Compliance
 

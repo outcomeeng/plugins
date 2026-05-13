@@ -8,4 +8,4 @@ CAN be verified for correctness before changes reach the main branch
 
 ### Compliance
 
-- ALWAYS: `just check` runs all quality steps defined by child enablers and exits 0 on a clean main branch — gate integrity requires every step to pass ([test](tests/test_test_infrastructure.integration.py))
+- ALWAYS: `just check` runs all quality steps defined by child enablers and exits 0 on a clean main branch — gate integrity requires every step to pass ([test](tests/test_test_infrastructure.compliance.l2.py))

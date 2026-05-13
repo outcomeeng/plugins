@@ -89,13 +89,13 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 
 **Contains:** Test code organized by level:
 
-| Level       | Suffix                    | Question                             |
-| ----------- | ------------------------- | ------------------------------------ |
-| Unit        | `.unit.test.{ext}`        | Is our logic correct?                |
-| Integration | `.integration.test.{ext}` | Does it work with real dependencies? |
-| E2E         | `.e2e.test.{ext}`         | Does it work for users?              |
+| Level | Suffix           | Question                             |
+| ----- | ---------------- | ------------------------------------ |
+| 1     | `.l1.test.{ext}` | Is our logic correct?                |
+| 2     | `.l2.test.{ext}` | Does it work with real dependencies? |
+| 3     | `.l3.test.{ext}` | Does it work for users?              |
 
-**Does NOT contain:** Spec content, decision rationale, or anything other than test code.
+**Does NOT contain:** Spec content, decision rationale, test data, test constants, dummy data, fixtures, or anything other than test assertion code.
 
 </test_files>
 

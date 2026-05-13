@@ -90,11 +90,11 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 ### MUST
 
 - All text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([review])
-- Export files conform to RFC 4180 CSV format ([test](tests/export.unit.test.ts))
+- Export files conform to RFC 4180 CSV format ([test](tests/export.compliance.l1.test.ts))
 
 ### NEVER
 
-- Expose internal database IDs in user-facing URLs ([test](tests/url-safety.unit.test.ts))
+- Expose internal database IDs in user-facing URLs ([test](tests/test_url-safety.compliance.l1.py))
 - Display raw error messages from backend services to users ([review])
 ```
 
@@ -116,7 +116,7 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 **Fixing bad rules:**
 
 - "Follow accessibility best practices" → "Meet WCAG 2.1 Level AA for all interactive components ([review])"
-- "Be fast" → "API responses return within 200ms at p95 under normal load ([test](tests/performance.e2e.test.ts))"
+- "Be fast" → "API responses return within 200ms at p95 under normal load ([test](tests/test_performance.compliance.l3.py))"
 
 </compliance_quality>
 

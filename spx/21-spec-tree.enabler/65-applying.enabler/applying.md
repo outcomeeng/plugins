@@ -8,10 +8,10 @@ CAN produce implementations that conform to their governing specs on the first p
 
 ### Scenarios
 
-- Given a target outcome node, when the applying flow starts, then `/contextualizing` is invoked before any implementation ([test](tests/test_applying.unit.py))
-- Given an outcome with testable assertions, when the applying flow runs, then tests are written before implementation code ([test](tests/test_applying.unit.py))
-- Given implementation completes, when audit gates run, then code, test evidence, and architecture audits produce structured verdicts ([test](tests/test_applying.unit.py))
-- Given an audit gate returns REJECT, when the flow continues, then remediation is attempted before proceeding ([test](tests/test_applying.unit.py))
+- Given a target outcome node, when the applying flow starts, then `/contextualizing` is invoked before any implementation ([test](tests/test_applying.scenario.l1.py))
+- Given an outcome with testable assertions, when the applying flow runs, then tests are written before implementation code ([test](tests/test_applying.scenario.l1.py))
+- Given implementation completes, when audit gates run, then code, test evidence, and architecture audits produce structured verdicts ([test](tests/test_applying.scenario.l1.py))
+- Given an audit gate returns REJECT, when the flow continues, then remediation is attempted before proceeding ([test](tests/test_applying.scenario.l1.py))
 
 ### Compliance
 

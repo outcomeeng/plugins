@@ -176,7 +176,7 @@ Report flow status for each rule:
 MUST: "all pages load in under 2 seconds" ([review])
 → Referenced by: spx/.../21-performance.outcome assertions ✓
 
-NEVER: "expose internal IDs in URLs" ([test](tests/url-safety.unit.test.ts))
+NEVER: "expose internal IDs in URLs" ([test](tests/url-safety.compliance.l1.test.ts))
 → Referenced by: spx/.../21-url-safety.outcome assertions ✓
 
 NEVER: "use branded terminology in error messages" ([review])
