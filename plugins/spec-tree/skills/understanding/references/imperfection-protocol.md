@@ -1,5 +1,5 @@
 <objective>
-The imperfection protocol governs how Claude tracks and resolves observed imperfections during any work session. It is loaded by `/understanding` so all spec-tree work — and any skill that inherits this foundation, such as `/handing-off` — can rely on the ledger without depending on user-level configuration.
+The imperfection protocol governs how Claude tracks and resolves observed imperfections during any work session. It is loaded by `/understanding` so all spec-tree work — and any skill that inherits this foundation, such as `/handing-off` — can rely on the ledger without depending on user-scope configuration.
 
 The repo is the artifact the user ships. Small defects — a stale comment, a broken link, an inconsistent name, a missing test — accumulate into incoherence. Claude addresses observed imperfections immediately because that is the simplest and most respectful thing to do.
 
@@ -12,9 +12,9 @@ When Claude observes an imperfection — failing validation, broken link, outdat
 - The exact imperfection
 - The file path, line, command output, or page state that exposed it
 - The skill or workflow that governs the fix
-- The proposed handling (fix-now, surface, or hand off)
+- The proposed handling (fix now, ask for operator judgment, or write to the correct coordination artifact)
 
-A safe local fix is applied immediately without asking. A blocking decision is surfaced via `AskUserQuestion` immediately. A non-blocking decision is held for the closing protocol below.
+A safe local fix is applied immediately without asking. A blocking decision is surfaced via `AskUserQuestion` immediately. A non-blocking decision is held until the next natural checkpoint.
 
 </recording>
 
@@ -22,23 +22,23 @@ A safe local fix is applied immediately without asking. A blocking decision is s
 
 The ledger is unified. An imperfection observed in the current session is owned by Claude regardless of when it entered the repo, who introduced it, or whether it pre-dates the current session. Never qualify an imperfection by its origin — no "pre-existing", "not introduced this turn", "inherited", "out of scope of this turn", "not authored by me", or equivalent phrasing. Record every observed imperfection equally and identically.
 
-The closing protocol decides whether to fix now (Option 1), track and defer (Option 2), or confirm absence (Option 3) — origin never modifies that decision and never appears in the language used to describe the imperfection.
+The closing protocol decides whether to fix now, record the issue in the right artifact with operator agreement, or proceed because no unresolved imperfection remains. Origin never modifies that decision and never appears in the language used to describe the imperfection.
 
 </no_origin_distinction>
 
 <closing_protocol>
 
-Every turn ends with `AskUserQuestion`. This is the only valid way to close a turn — no plain-text closings, no trailing "let me know", no offers in prose. The question presents three options that frame Claude's recommendation and let the user choose.
+Every turn ends with `AskUserQuestion`. This is the only valid way to close a turn — no plain-text closings, no trailing "let me know", no offers in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
 
-**The closing protocol applies at task completion, not at every milestone.** A turn is a checkpoint when the user's stated goal is still unfulfilled. While the goal is unfulfilled, Claude continues working — reports brief status updates, surfaces blockers via `AskUserQuestion` only when input is genuinely required (not confirmation), and never proposes "separate session", "future session", or "next session" as an out. Deferring work to a future session is a closing reflex, not a real plan. If the work is in front of Claude and the goal demands it, Claude does it.
+**The closing protocol applies at task completion, not at every milestone.** A turn is a checkpoint when the user's stated goal is still unfulfilled. While the goal is unfulfilled, Claude continues working — reports brief status updates, surfaces blockers via `AskUserQuestion` only when input is genuinely required, and never proposes "separate session", "future session", or "next session" as an out. Recording future-session coordination is appropriate only when the user accepts that destination or runtime constraints require persistence.
 
 The user's stated goal governs what "task complete" means. When the user says "fix CI", the task is unfinished while CI is red. Component milestones (a single test passes, a single migration commits) are progress, not completion. Closing the session before the goal is achieved is a violation of the user's instruction.
 
-**Option 1 — Address discovered imperfections first.** Use when one or more imperfections were observed and not yet fixed.
+**Handling 1 — Address discovered imperfections first.** Use when one or more imperfections were observed and not yet fixed.
 
-**Option 2 — Track imperfections and proceed.** Use when the user may rationally prefer to postpone the fix.
+**Handling 2 — Record unresolved imperfections and proceed.** Use when the user may rationally prefer to postpone the fix. The destination must match the artifact taxonomy: specs/ADRs/PDRs for truth changes, methodology for workflow rules, PLAN.md for pending node work, and ISSUES.md for known node issues.
 
-**Option 3 — Everything is impeccable; hand off.** Use only when Claude is 100% certain (a) the imperfection ledger is empty AND (b) the user's stated goal for this session is fully achieved. An empty ledger alone does not authorize handoff; the goal must be met.
+**Handling 3 — Proceed to the next governed workflow step.** Use only when the imperfection ledger is empty and the user's stated goal for this session has reached its acceptance state. An empty ledger alone does not authorize closure. Invoke `/handing-off` only when cross-session handoff is the actual next workflow step.
 
 </closing_protocol>
 
@@ -46,6 +46,6 @@ The user's stated goal governs what "task complete" means. When the user says "f
 
 Spec-tree skills that close sessions (notably `/handing-off`) lean on the ledger rather than re-implementing reflection. Workflow 02 of `/handing-off` reviews remaining imperfections and classifies them by destination. Skills that do not close sessions still record imperfections during their work — a fix-now resolution within a workflow is the most common path.
 
-The ledger is per-conversation, not persistent across sessions. Resolved imperfections don't need to carry forward; the persistence hierarchy in `/handing-off` decides what becomes durable (spec amendments, methodology updates, escape hatches) and what's session-only.
+The ledger is per-conversation and does not persist by itself. Resolved imperfections don't need to carry forward. Unresolved entries persist only when written to the right artifact: spec amendments for product truth, methodology updates for workflow rules, or node-local PLAN.md / ISSUES.md escape hatches for future-session coordination. PLAN.md and ISSUES.md entries are committed to git in the same change that introduces them — they are durable, git-tracked coordination artifacts. Session files under `.spx/sessions/` are the only spec-tree artifacts that remain outside git; `spx session` shares them across worktrees.
 
 </spec_tree_integration>
