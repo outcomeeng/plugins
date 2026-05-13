@@ -21,20 +21,20 @@ ModuleNotFoundError: No module named 'click'  # But click IS installed!
 
 ```bash
 $ uv run which pytest
-/opt/homebrew/bin/pytest  # ❌ WRONG - System pytest, not project venv
+/opt/homebrew/bin/pytest  # ❌ WRONG - System pytest, not product venv
 ```
 
-The system pytest uses a different Python that doesn't have your project's dependencies.
+The system pytest uses a different Python that doesn't have your product's dependencies.
 
-### Fix: Install Dev Dependencies in Project Venv
+### Fix: Install Dev Dependencies in Product Venv
 
 ```bash
-# This installs pytest AND all dev deps in the project venv
+# This installs pytest AND all dev deps in the product venv
 uv pip install -e ".[dev]"
 
 # Verify
 uv run which pytest
-# /path/to/project/.venv/bin/pytest  # ✅ CORRECT
+# /path/to/product/.venv/bin/pytest  # ✅ CORRECT
 ```
 
 ---
@@ -63,7 +63,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # Brittle, breaks easily
 **Step 1: Structure**
 
 ```
-project/
+product/
 ├── pyproject.toml
 ├── mypackage/              # Main package
 │   └── ...
@@ -111,7 +111,7 @@ from mypackage_testing.fixtures import create_user  # ✅ Works everywhere
 ### The Problem: Multiple test directories collide
 
 ```
-project/
+product/
 ├── spx/.../21-foo.outcome/tests/test_generics.scenario.l1.py  # Co-located tests
 └── spx/.../54-bar.outcome/tests/test_generics.mapping.l1.py   # Different evidence file
 ```
@@ -165,15 +165,15 @@ test-cov:
 
 ## ADR Compliance: Test Infrastructure
 
-Every Python project ADR governing test infrastructure should express rules in Compliance:
+Every Python product ADR governing test infrastructure should express rules in Compliance:
 
 ````markdown
 ## Compliance
 
 ### MUST
 
-- Test utilities (fixtures, harnesses, helpers) are packaged as `{project}_testing/`
-- `pyproject.toml` includes `{project}` and `{project}_testing` as installable packages
+- Test utilities (fixtures, harnesses, helpers) are packaged as `{product}_testing/`
+- `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages
 - pytest uses `--import-mode=importlib` when co-located test files can share module names
 
 ### NEVER
@@ -208,9 +208,9 @@ Before running tests, verify:
 Before running any tests, verify:
 
 ```bash
-# 1. pytest is from project venv
+# 1. pytest is from product venv
 uv run which pytest
-# Expected: /path/to/project/.venv/bin/pytest
+# Expected: /path/to/product/.venv/bin/pytest
 # If wrong: uv pip install -e ".[dev]"
 
 # 2. Test utilities are importable

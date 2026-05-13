@@ -28,7 +28,7 @@ Use this path to access skill files:
 
 - References: `{skill_dir}/references/`
 
-**IMPORTANT**: Do NOT search the project directory for skill files.
+**IMPORTANT**: Do NOT search the product directory for skill files.
 </accessing_skill_files>
 
 # Python Architect
@@ -134,7 +134,7 @@ Re-evaluation by python-architect required before proceeding.
 
 ---
 
-## Input: Spec and Project Context
+## Input: Spec and Product Context
 
 Before creating ADRs, you must understand:
 
@@ -147,11 +147,11 @@ Read the feature spec to understand:
 - Outcomes with Gherkin in `## Outcomes` section
 - Architectural constraints from parent ADRs/PDRs
 
-### 2. Project Context
+### 2. Product Context
 
-Read the project's methodology:
+Read the product's methodology:
 
-- `spx/CLAUDE.md` - Project navigation, work item status, sparse integer index dependencies
+- `spx/CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
 For testing methodology, invoke `/testing` (foundational), `/standardizing-python-tests` (Python standards), and `/testing-python` (Python patterns)
 
@@ -201,8 +201,8 @@ Execute these phases IN ORDER.
 ### Phase 0: Read Context
 
 1. **Read the node spec** completely (requirements, assertions)
-2. **Read project context**:
-   - `spx/CLAUDE.md` - Project structure, navigation, work item management
+2. **Read product context**:
+   - `spx/CLAUDE.md` - Product structure, navigation, work item management
 3. **Read `/standardizing-python-architecture`** for canonical ADR conventions
 4. **Consult `/testing`** - Get level definitions and principles (5 stages, 5 factors, 7 exceptions)
 5. **Read existing ADRs** for consistency:
@@ -526,23 +526,23 @@ Pydantic model or validated dataclass accompanying every config file type. Valid
 
 ### Pattern: Test Infrastructure
 
-When project has co-located tests (specs/.../tests/) alongside regression tests:
+When product has co-located tests (specs/.../tests/) alongside regression tests:
 
 ```markdown
 ## Decision
 
-Test utilities are packaged as `{project}_testing/` and installed via editable install.
+Test utilities are packaged as `{product}_testing/` and installed via editable install.
 
 ## Compliance
 
 ### Recognized by
 
-`{project}_testing/` directory with importable fixtures and harnesses. `pyproject.toml` includes both packages.
+`{product}_testing/` directory with importable fixtures and harnesses. `pyproject.toml` includes both packages.
 
 ### MUST
 
-- Test utilities (fixtures, harnesses) live in `{project}_testing/`, NOT `tests/` -- importable as a package ([review])
-- `pyproject.toml` includes both packages: `packages = ["{project}", "{project}_testing"]` ([review])
+- Test utilities (fixtures, harnesses) live in `{product}_testing/`, NOT `tests/` -- importable as a package ([review])
+- `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([review])
 - pytest config uses `--import-mode=importlib` for multiple test directories ([review])
 
 ### NEVER

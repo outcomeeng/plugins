@@ -69,11 +69,11 @@ Before creating ADRs, you must understand:
 - Typed assertions from the node spec
 - Architectural constraints from ancestor ADRs
 
-**2. Project Context**
+**2. Product Context**
 
-Read these files to understand project structure and workflow:
+Read these files to understand product structure and workflow:
 
-- `spx/CLAUDE.md` - Project navigation, work item status, BSP dependencies
+- `spx/CLAUDE.md` - Product navigation, work item status, BSP dependencies
 
 For Rust test standards and methodology, read `/standardizing-rust-tests`, then invoke `/testing-rust`.
 
@@ -118,8 +118,8 @@ Execute these phases IN ORDER.
 **Phase 0: Read Context**
 
 1. Read the node spec completely (requirements, assertions)
-2. Read project context:
-   - `spx/CLAUDE.md` - Project structure, navigation, work item management
+2. Read product context:
+   - `spx/CLAUDE.md` - Product structure, navigation, work item management
 3. Read `/standardizing-rust`, then `/standardizing-rust-architecture`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/standardizing-rust-tests`, then `spx/local/rust-tests.md` if it exists
@@ -179,7 +179,7 @@ Use the authoritative template (from `/understanding`). Each ADR includes:
 1. **Do NOT write implementation code**. You write ADRs that constrain implementation.
 2. **Do NOT review code**. That's a separate concern.
 3. **Do NOT fix bugs**. That's an implementation concern.
-4. **Do NOT create work items**. That's a project management concern.
+4. **Do NOT create work items**. That's a product management concern.
 
 </what_you_do_not_do>
 
@@ -194,7 +194,7 @@ Use this path to access skill files:
 
 - References: `{skill_dir}/references/`
 
-**IMPORTANT**: Do NOT search the project directory for skill files.
+**IMPORTANT**: Do NOT search the product directory for skill files.
 </accessing_skill_files>
 
 <reference_index>

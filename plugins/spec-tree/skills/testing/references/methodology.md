@@ -73,7 +73,7 @@ Use `L1`, `L2`, and `L3` to describe execution pain and environment dependence.
 Examples:
 
 - `L1`: pure logic, tmp files, normal filesystem work, git, repo-required test runners, and standard subprocesses expected on a working machine
-- `L2`: local dev servers, Docker, browsers, project-specific binaries, full bootstrap or install costs, and other real local dependencies that are slower or less ubiquitous
+- `L2`: local dev servers, Docker, browsers, product-specific binaries, full bootstrap or install costs, and other real local dependencies that are slower or less ubiquitous
 - `L3`: network access, shared environments, live third-party services, and anything requiring credentials
 
 ## Five-stage router
@@ -119,7 +119,7 @@ Choose the level from operational reality, not from habit.
 | ----------------------------------------------- | ------------- | ------------------------------- |
 | "Prices are calculated correctly"               | `L1`          | Pure calculation                |
 | "User can export data as CSV"                   | `L1`          | File I/O with tmp dirs is cheap |
-| "CLI processes a Hugo site"                     | `L2`          | Project-specific binary         |
+| "CLI processes a Hugo site"                     | `L2`          | Product-specific binary         |
 | "Database query returns users"                  | `L2`          | Real database required          |
 | "User can complete checkout with live provider" | `L3`          | Remote provider required        |
 | "Works in Safari against the live site"         | `L3`          | Real browser and remote system  |
@@ -133,7 +133,7 @@ Choose the level from operational reality, not from habit.
 | Standard dev tools: git, node, curl | `L1`          |
 | Database                            | `L2`          |
 | External HTTP API                   | `L2` or `L3`  |
-| Project-specific binary             | `L2`          |
+| Product-specific binary             | `L2`          |
 | Browser API                         | `L2` or `L3`  |
 | Live third-party service            | `L3`          |
 | Real credentials                    | `L3`          |

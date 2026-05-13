@@ -5,7 +5,7 @@
 # Exports:
 #   CLAUDE_SESSION_ID   Claude Code session id. Used by spec-tree to scope
 #                       handoff accumulation under .spx/sessions/$CLAUDE_SESSION_ID/.
-#   CLAUDE_PROJECT_DIR  Claude Code project root, made available to Bash tool calls.
+#   CLAUDE_PROJECT_DIR  Claude Code product root, made available to Bash tool calls.
 #   PROJECT_DIR         Short alias for CLAUDE_PROJECT_DIR.
 #
 # The per-runtime .spx/sessions/$CLAUDE_SESSION_ID directory is still created
@@ -58,7 +58,7 @@ main() {
 	if [[ -z "$project_dir" ]]; then
 		project_dir="$(json_string '.cwd' <<<"$input" || true)"
 		if [[ -n "$project_dir" ]]; then
-			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the project root"
+			warn "CLAUDE_PROJECT_DIR is unset; falling back to .cwd, which may not be the product root"
 		fi
 	fi
 
@@ -76,7 +76,7 @@ main() {
 			append_export "CLAUDE_PROJECT_DIR" "$project_dir"
 			append_export "PROJECT_DIR" "$project_dir"
 		else
-			warn "project directory unavailable; not exporting CLAUDE_PROJECT_DIR or PROJECT_DIR"
+			warn "product directory unavailable; not exporting CLAUDE_PROJECT_DIR or PROJECT_DIR"
 		fi
 	} >>"$env_file"
 }

@@ -44,7 +44,7 @@ Step-by-step process for consistency.
 
 | Type        | Location               | Scope                | Priority |
 | ----------- | ---------------------- | -------------------- | -------- |
-| **Project** | `.claude/agents/`      | Current project only | Highest  |
+| **Product** | `.claude/agents/`      | Current product only | Highest  |
 | **User**    | `~/.claude/agents/`    | All projects         | Lower    |
 | **CLI**     | `--agents` flag        | Current session      | Medium   |
 | **Plugin**  | Plugin's `agents/` dir | All projects         | Lowest   |
@@ -225,7 +225,7 @@ Users can explicitly request a subagent:
 <management>
 <using_agents_command>
 **Recommended**: Use `/agents` command for interactive management:
-- View all available subagents (built-in, user, project, plugin)
+- View all available subagents (built-in, user, product, plugin)
 - Create new subagents with guided setup
 - Edit existing subagents and their tool access
 - Delete custom subagents
@@ -236,7 +236,7 @@ Users can explicitly request a subagent:
 <direct_file_management>
 **Alternative**: Edit subagent files directly:
 
-- Project: `.claude/agents/subagent-name.md`
+- Product: `.claude/agents/subagent-name.md`
 - User: `~/.claude/agents/subagent-name.md`
 
 Follow the file format specified above (YAML frontmatter + system prompt).
@@ -278,7 +278,7 @@ You are a test automation specialist creating thorough, maintainable test suites
 <workflow>
 1. Analyze the code to understand functionality
 2. Identify test cases (happy path, edge cases, error conditions)
-3. Write tests using the project's testing framework
+3. Write tests using the product's testing framework
 4. Run tests to verify they pass
 </workflow>
 

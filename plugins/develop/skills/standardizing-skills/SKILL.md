@@ -299,7 +299,7 @@ The context window is shared. A skill competes for tokens with the system prompt
 
 **What Claude needs (include):**
 
-- Project-specific conventions that contradict common patterns
+- Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
 - Failure modes from actual usage (not hypotheticals)
 - Verification commands and thresholds
@@ -411,7 +411,7 @@ Do NOT define aliases, add troubleshooting sections, or explain what the variabl
 | `${CLAUDE_SKILL_DIR}`   | Skill's SKILL.md directory | Yes                          | **No**                |
 | `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
 | `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
-| `$CLAUDE_PROJECT_DIR`   | Project working directory  | No                           | **Yes**               |
+| `$CLAUDE_PROJECT_DIR`   | Product working directory  | No                           | **Yes**               |
 
 For hook scripts bundled with a plugin skill, use `${CLAUDE_PLUGIN_ROOT}`:
 

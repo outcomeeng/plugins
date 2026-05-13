@@ -66,7 +66,7 @@ spx/32-api.enabler/54-auth.outcome/tests/registry_fetch.conformance.l2.rs
 spx/32-api.enabler/54-auth.outcome/tests/login_flow.scenario.l3.rs
 ```
 
-Repository overlays may restrict which levels the project supports. Follow the repo-local Rust test convention when it exists.
+Repository overlays may restrict which levels the product supports. Follow the repo-local Rust test convention when it exists.
 </core_model>
 
 <level_tooling>
@@ -83,7 +83,7 @@ Level rules:
 - Pure computation, parsing, serialization, config loading, command building, and cheap temp-dir filesystem behavior belong at Level 1
 - Real workspace binaries, local DBs, local queues, local HTTP services, and containerized collaborators belong at Level 2
 - Remote APIs, deployed systems, SaaS collaborators, browser UI, and shared environments belong at Level 3
-- Project overlays may disable Level 3 when the suite cannot safely stand up or isolate those collaborators
+- Product overlays may disable Level 3 when the suite cannot safely stand up or isolate those collaborators
 
 </level_tooling>
 

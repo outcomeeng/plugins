@@ -43,7 +43,7 @@ The ADR template (from `/understanding`) defines exactly these sections:
 
 <testability_in_compliance>
 
-ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/testing` router and `/testing-rust` decide how assertions are verified once they combine spec assertions, architecture constraints, and project infrastructure.
+ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/testing` router and `/testing-rust` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
 
 **The mechanism:** Compliance rules that mandate observable seams, explicit ownership and boundary types, DI, and the absence of mocking frameworks.
 
@@ -190,7 +190,7 @@ The architect needs enough testing context to write effective Compliance rules. 
 - Git, filesystem, tempdirs, and standard Rust tooling are Level 1
 - Real workspace binaries, codegen tools, and local services that require setup are Level 2
 - External APIs, SaaS systems, browsers, and deployed environments are Level 3
-- Project overlays, especially `spx/local/rust-tests.md`, may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator
+- Product overlays, especially `spx/local/rust-tests.md`, may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator
 
 **How levels relate to ADRs:** The ADR does not assign levels. It establishes constraints that determine what levels are achievable. "MUST accept a runner as parameter" makes Level 1 possible for command-building logic. "NEVER call external APIs from domain logic" preserves Level 1 for the domain and pushes the real remote boundary to Level 3 or to a repo-specific product decision.
 
@@ -202,7 +202,7 @@ The architect needs enough testing context to write effective Compliance rules. 
 | ----------------------------- | ---------------------------------------------- | ---------------------------------- |
 | `## Testing Strategy` section | Not in the authoritative ADR template          | `/testing` skill output            |
 | Level assignment tables       | Downstream concern; depends on spec assertions | `/testing` Stage 2                 |
-| Escalation rationale          | Downstream concern; depends on project infra   | `/testing` Stage 2                 |
+| Escalation rationale          | Downstream concern; depends on product infra   | `/testing` Stage 2                 |
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |

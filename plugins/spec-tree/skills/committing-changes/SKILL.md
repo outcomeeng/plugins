@@ -35,7 +35,7 @@ This skill does NOT:
 </context>
 
 <project_specialization>
-After loading this skill, check whether `spx/local/committing-changes.md` exists (path is relative to the repository root). If it does, read it and apply its rules as project-specific additions to the commit workflow (e.g., plugin versioning requirements, additional staging targets, project-specific validation steps).
+After loading this skill, check whether `spx/local/committing-changes.md` exists (path is relative to the repository root). If it does, read it and apply its rules as product-specific additions to the commit workflow (e.g., plugin versioning requirements, additional staging targets, product-specific validation steps).
 </project_specialization>
 
 <context_gathering>
@@ -47,7 +47,7 @@ After loading this skill, check whether `spx/local/committing-changes.md` exists
 | **git status**   | Staged, unstaged, untracked files                       |
 | **git diff**     | Actual changes to commit                                |
 | **git log**      | Recent commit style for consistency                     |
-| **Project docs** | Custom commit types (CLAUDE.md, CONTRIBUTING.md)        |
+| **Product docs** | Custom commit types (CLAUDE.md, CONTRIBUTING.md)        |
 | **Conversation** | User's intent - what story/issue does this commit solve |
 
 </context_gathering>
@@ -116,9 +116,9 @@ Changed files:
 
 <verification_protocol>
 
-**Step 0: Run Project-Specific Validation (BEFORE Staging)**
+**Step 0: Run Product-Specific Validation (BEFORE Staging)**
 
-Before staging any files, check CLAUDE.md for project-specific validation commands and run them. This prevents having to re-stage after auto-fixes.
+Before staging any files, check CLAUDE.md for product-specific validation commands and run them. This prevents having to re-stage after auto-fixes.
 
 ```bash
 # Check CLAUDE.md for commands like:
@@ -241,7 +241,7 @@ Projects may define custom types:
 | **research** | Academic/books   | Research notes                 |
 | **meta**     | Process docs     | Process/workflow documentation |
 
-Check project's CLAUDE.md or commit-standards.md for custom types.
+Check product's CLAUDE.md or commit-standards.md for custom types.
 
 **IMPORTANT:** NEVER USE `chore:`. Everything has purpose; use specific type instead
 

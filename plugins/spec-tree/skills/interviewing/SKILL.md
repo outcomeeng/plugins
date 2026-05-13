@@ -25,7 +25,7 @@ Works two ways without duplication:
 Before asking ANY questions:
 
 1. Research the codebase — existing patterns, conventions, tech stack
-2. Read project docs — README, CLAUDE.md, existing specs
+2. Read product docs — README, CLAUDE.md, existing specs
 3. Analyze the input — what's defined, ambiguous, missing
 4. Form preliminary opinions (e.g., "this approach seems fragile", "auth model is underspecified")
 

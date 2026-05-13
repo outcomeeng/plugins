@@ -123,10 +123,10 @@ pub const STATUS_FAIL: &str = "fail";
 pub const STATUS_SKIPPED: &str = "skipped";
 ```
 
-**No re-export of library constants.** When production code and tests both need an HTTP status code, both import from the same canonical source (`http::StatusCode`, framework constants, etc.). Never create project-local aliases.
+**No re-export of library constants.** When production code and tests both need an HTTP status code, both import from the same canonical source (`http::StatusCode`, framework constants, etc.). Never create product-local aliases.
 
 ```rust
-// ❌ rejected: project-local re-export
+// ❌ rejected: product-local re-export
 pub const HTTP_OK: u16 = 200;
 
 // ✅ preferred: both production and test code import from the canonical source

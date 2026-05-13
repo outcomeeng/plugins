@@ -113,10 +113,10 @@ it("GIVEN empty email WHEN parsing user THEN throws ValidationError", () => {
 Run ALL tools before declaring fixed:
 
 ```bash
-<project-typecheck-command>
-<project-lint-fix-command>
-<project-lint-command>
-<project-test-command>
+<product-typecheck-command>
+<product-lint-fix-command>
+<product-lint-command>
+<product-test-command>
 
 # Bare-repo fallback examples only when no repository wrapper exists:
 # npx tsc --noEmit

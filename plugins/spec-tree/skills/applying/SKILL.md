@@ -28,7 +28,7 @@ Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequen
 
 <language_detection>
 
-Before starting Step 3, determine the project language:
+Before starting Step 3, determine the product language:
 
 - `tsconfig.json` exists → **TypeScript**
 - `pyproject.toml` or `setup.py` exists → **Python**

@@ -84,7 +84,7 @@ Decision records (ADR/PDR) are files within a node directory, not child nodes. B
 NN-slug.{enabler|outcome}/
 ├── slug.md              # Spec file (no type suffix, no numeric prefix)
 ├── tests/               # Co-located test files
-│   ├── {test files}     # Named by project convention (see below)
+│   ├── {test files}     # Named by product convention (see below)
 │   └── ...
 ├── PLAN.md              # Escape hatch: deferred plan (optional)
 ├── ISSUES.md            # Escape hatch: known issues (optional)
@@ -101,7 +101,7 @@ NN-slug.{enabler|outcome}/
 
 - Co-located in `tests/` within the node directory
 - Must indicate test level (unit, integration, e2e) in the filename
-- Naming follows the project's language convention, e.g.:
+- Naming follows the product's language convention, e.g.:
   - TypeScript: `slug.unit.test.ts`, `slug.integration.test.ts`
   - Python: `test_slug.unit.py`, `test_slug.integration.py`
 - Assertions specify output, verified by test (`[test]`) or review (`[review]`)

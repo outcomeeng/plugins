@@ -10,7 +10,7 @@ created_at: [prefilled by spx session handoff]
 ---
 <metadata>
   timestamp: [UTC timestamp]
-  project: [Project name from cwd]
+  product: [Product name from cwd]
   git_branch: [Current branch]
   git_status: [clean | dirty]
   working_directory: [Full path]

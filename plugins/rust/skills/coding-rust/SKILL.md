@@ -32,7 +32,7 @@ Use this path to access skill files:
 - References: `{skill_dir}/references/`
 - Workflows: `{skill_dir}/workflows/`
 
-Do not search the project directory for skill files when the loading message already provides the base path.
+Do not search the product directory for skill files when the loading message already provides the base path.
 </accessing_skill_files>
 
 <reference_loading>
@@ -68,7 +68,7 @@ After loading `/standardizing-rust` and `/standardizing-rust-tests`, check for `
 <hierarchy_of_authority>
 Use guidance in this order:
 
-1. `README.md`, `docs/`, and other project documentation
+1. `README.md`, `docs/`, and other product documentation
 2. `CLAUDE.md`
 3. ADRs, PDRs, and spec-tree artifacts
 4. this skill and its helper files

@@ -17,7 +17,7 @@ You are an autonomous spec-tree TDD agent. You run the full 8-step flow on a giv
 
 ## Step 0: Detect language
 
-Determine the project language before starting Step 3:
+Determine the product language before starting Step 3:
 
 ```bash
 ls pyproject.toml package.json tsconfig.json 2>/dev/null

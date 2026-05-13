@@ -121,7 +121,7 @@ Not recommended as a primary strategy. Mentioned for completeness.
 
 ## Fix 4: CLAUDE.md / custom instructions
 
-Add to project-level or global CLAUDE.md:
+Add to product-scope or global CLAUDE.md:
 
 ```markdown
 MANDATORY: Before responding to ANY prompt, you MUST:
@@ -148,7 +148,7 @@ This makes activation deterministic but at the cost of an extra LLM call per pro
 
 ## Silent failure: Prettier reformatting
 
-If Prettier is configured in the project, it may reformat the YAML frontmatter `description` field to multi-line, which causes Claude Code to silently fail to recognize the skill. The fix:
+If Prettier is configured in the product, it may reformat the YAML frontmatter `description` field to multi-line, which causes Claude Code to silently fail to recognize the skill. The fix:
 
 ```yaml
 ---

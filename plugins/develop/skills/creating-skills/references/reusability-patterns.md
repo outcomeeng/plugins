@@ -114,7 +114,7 @@ Before creating a skill, analyze the domain:
 
 | Varies                                | Constant                   |
 | ------------------------------------- | -------------------------- |
-| Database (Postgres, MongoDB, Prisma)  | Project structure patterns |
+| Database (Postgres, MongoDB, Prisma)  | Product structure patterns |
 | CSS framework (Tailwind, CSS Modules) | Component architecture     |
 | Auth provider (NextAuth, Clerk)       | Error handling patterns    |
 | Deployment target (Vercel, AWS)       | Performance best practices |

@@ -709,7 +709,7 @@ Patterns from Verilog-2001 (IEEE 1364-2001) to flag when reviewing SystemVerilog
 
 **When NOT to flag legacy patterns**:
 
-- File is explicitly Verilog-2001 (`.v` extension, project standard says Verilog)
+- File is explicitly Verilog-2001 (`.v` extension, product standard says Verilog)
 - Legacy IP core that cannot be modified
 - Vendor-provided primitives or wrappers
 

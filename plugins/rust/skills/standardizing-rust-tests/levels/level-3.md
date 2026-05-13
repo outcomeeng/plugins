@@ -87,5 +87,5 @@ fn sync_command_uploads_to_remote_sandbox() {
 </anti_patterns>
 
 <repo_local_overlays>
-Project instructions or `spx/local/rust-tests.md` may disable Level 3 for a repository. When they do, route local binary and fixture flows to Level 2 and surface true remote-collaborator assertions as product decisions.
+Product instructions or `spx/local/rust-tests.md` may disable Level 3 for a repository. When they do, route local binary and fixture flows to Level 2 and surface true remote-collaborator assertions as product decisions.
 </repo_local_overlays>

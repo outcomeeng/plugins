@@ -1,7 +1,7 @@
 <l2_local_infrastructure>
 
 <purpose>
-Use `l2` when the assertion needs real local infrastructure: Docker containers, local databases or queues, local dev servers, browser execution against local services, or project binaries installed during bootstrap.
+Use `l2` when the assertion needs real local infrastructure: Docker containers, local databases or queues, local dev servers, browser execution against local services, or product binaries installed during bootstrap.
 </purpose>
 
 <source_shape>
@@ -59,13 +59,13 @@ This is `l2` because the proof depends on a real local database. The harness mod
 </example>
 
 <migration_note>
-Older projects may have harnesses shaped like `new PostgresHarness()` plus `start()`. Migrate the harness when the test itself is being rewritten, rather than making harness migration a prerequisite for unrelated fixes. When migrating, move toward a typed factory plus `startOrThrow(setupMessage)` so missing local infrastructure fails with the diagnostic at the call site. If a project already has a documented equivalent API, keep the local name while preserving the same contract: typed handle, explicit setup failure message, and cleanup method.
+Older projects may have harnesses shaped like `new PostgresHarness()` plus `start()`. Migrate the harness when the test itself is being rewritten, rather than making harness migration a prerequisite for unrelated fixes. When migrating, move toward a typed factory plus `startOrThrow(setupMessage)` so missing local infrastructure fails with the diagnostic at the call site. If a product already has a documented equivalent API, keep the local name while preserving the same contract: typed handle, explicit setup failure message, and cleanup method.
 </migration_note>
 
 <reject>
 
 - Replacing the local dependency with `vi.mock`, `jest.mock`, or a fake that hides the asserted behavior
-- Duplicated server, database, browser, or project-binary setup across test files
+- Duplicated server, database, browser, or product-binary setup across test files
 - Passing tests that silently skip mandatory local evidence
 
 </reject>

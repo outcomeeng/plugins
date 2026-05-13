@@ -27,7 +27,7 @@ Read `/standardizing-agent-prompts` for voice, description, constraint, and anti
 
 1. Run `/agents` command
 2. Select "Create New Agent"
-3. Choose project-level (`.claude/agents/`) or user-level (`~/.claude/agents/`)
+3. Choose product-scope (`.claude/agents/`) or user-scope (`~/.claude/agents/`)
 4. Define the subagent:
    - **name**: lowercase-with-hyphens
    - **description**: When should this subagent be used?
@@ -71,11 +71,11 @@ Provide specific, actionable feedback with file:line references.
 <file_structure>
 | Type | Location | Scope | Priority |
 |------|----------|-------|----------|
-| **Project** | `.claude/agents/` | Current project only | Highest |
+| **Product** | `.claude/agents/` | Current product only | Highest |
 | **User** | `~/.claude/agents/` | All projects | Lower |
 | **Plugin** | Plugin's `agents/` dir | All projects | Lowest |
 
-Project-level subagents override user-level when names conflict.
+Product-scope subagents override user-scope when names conflict.
 </file_structure>
 
 <configuration>
@@ -292,7 +292,7 @@ Run `/agents` for an interactive interface to:
 <manual_editing>
 You can also edit subagent files directly:
 
-- Project: `.claude/agents/subagent-name.md`
+- Product: `.claude/agents/subagent-name.md`
 - User: `~/.claude/agents/subagent-name.md`
 
 </manual_editing>

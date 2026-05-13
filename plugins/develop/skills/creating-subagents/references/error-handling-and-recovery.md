@@ -257,7 +257,7 @@ Deadline: Before responding to main chat
 ```markdown
 Type: Reject
 From: test-writer
-Reason: Cannot write tests - no testing framework configured in project
+Reason: Cannot write tests - no testing framework configured in product
 Recommendation: Install Jest or similar framework first
 ```
 

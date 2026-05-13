@@ -9,7 +9,7 @@ CAN choose `l1`, `l2`, or `l3` from evidence cost and dependency availability ra
 ### Compliance
 
 - ALWAYS: `l1` TypeScript guidance applies to deterministic local evidence, including pure functions, cheap temporary filesystem work, standard repository-required tools, and dependency-injected Stage 5 doubles — local determinism is the deciding property ([review])
-- ALWAYS: `l2` TypeScript guidance applies to real local infrastructure, including Docker containers, local databases or queues, local dev servers, browsers against local services, and project binaries installed during bootstrap — heavier local setup remains local evidence ([review])
+- ALWAYS: `l2` TypeScript guidance applies to real local infrastructure, including Docker containers, local databases or queues, local dev servers, browsers against local services, and product binaries installed during bootstrap — heavier local setup remains local evidence ([review])
 - ALWAYS: `l3` TypeScript guidance applies only to remote, shared, credentialed, or network-dependent systems that cannot be reproduced through local real infrastructure — remote evidence is selected by necessity ([review])
 - ALWAYS: level documentation names files by operational meaning, such as `l1-local-deterministic.md`, `l2-local-infrastructure.md`, and `l3-remote-credentialed.md` — filenames describe the level rather than repeating the level token ([review])
 - ALWAYS: Playwright or browser execution receives a runner token when it uses a non-default runner, while its level still comes from infrastructure cost and dependency availability — runner choice does not determine level ([review])

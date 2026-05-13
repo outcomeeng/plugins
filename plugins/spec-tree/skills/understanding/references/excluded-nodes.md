@@ -21,13 +21,13 @@ When a spec and its tests are authored before the implementation exists, the nod
 
 **Why visible, not hidden:** The file shows where specified nodes exist. Agents and humans discover it by reading the `spx/` directory — no hunting required.
 
-**Why in `spx/`, not project root:** The file describes spec tree state. It belongs with the tree, not as project-root cruft.
+**Why in `spx/`, not product root:** The file describes spec tree state. It belongs with the tree, not as product-root cruft.
 
 </spx_exclude_file>
 
 <quality_gate_integration>
 
-The `spx` CLI reads `spx/EXCLUDE` and filters paths at invocation time. It never writes to project configuration files (`pyproject.toml`, `package.json`, `tsconfig.json`). The project's own tools always run against all files — `spx` handles scoping.
+The `spx` CLI reads `spx/EXCLUDE` and filters paths at invocation time. It never writes to product configuration files (`pyproject.toml`, `package.json`, `tsconfig.json`). The product's own tools always run against all files — `spx` handles scoping.
 
 `spx` discovers tests by walking `spx/**/tests/`, groups files by extension, and dispatches to the correct runner per group. A single tree can contain tests in multiple languages.
 
@@ -39,7 +39,7 @@ The `spx` CLI reads `spx/EXCLUDE` and filters paths at invocation time. It never
 
 **Linters always check.** A specified test file is still valid code with correct style. Excluding it from linting would mask real quality issues.
 
-**No config manipulation.** `spx` passes exclusion flags to each tool at invocation time (e.g., `--ignore` for pytest, `--exclude` for vitest). The project's own `pyproject.toml` or `tsconfig.json` is never touched by spec-tree tooling.
+**No config manipulation.** `spx` passes exclusion flags to each tool at invocation time (e.g., `--ignore` for pytest, `--exclude` for vitest). The product's own `pyproject.toml` or `tsconfig.json` is never touched by spec-tree tooling.
 
 </quality_gate_integration>
 

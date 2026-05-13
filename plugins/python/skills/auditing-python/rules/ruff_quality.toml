@@ -1,5 +1,5 @@
 # Ruff Quality Configuration for High-Assurance Python
-# Used by auditing-python skill when project lacks its own ruff config
+# Used by auditing-python skill when product lacks its own ruff config
 
 [lint]
 # Rule sets for comprehensive coverage

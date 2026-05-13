@@ -57,7 +57,7 @@ Choose the level from execution pain and dependency availability:
 | Level | Infrastructure                                    | Default runner | Typical runtime |
 | ----- | ------------------------------------------------- | -------------- | --------------- |
 | `l1`  | Python stdlib, temp dirs, repo-required dev tools | pytest         | milliseconds    |
-| `l2`  | Docker, browsers, dev servers, project binaries   | pytest         | seconds         |
+| `l2`  | Docker, browsers, dev servers, product binaries   | pytest         | seconds         |
 | `l3`  | Remote services, credentials, shared environments | pytest         | seconds/minutes |
 
 Use a runner token when a non-default runner owns execution:
@@ -94,8 +94,8 @@ All Python tests must follow the same quality baseline as production Python:
 - Fixture parameters and helper functions have type annotations
 - Test data uses named constants, factories, builders, or Hypothesis strategies
 - Assertions target behavior and include enough detail to diagnose failure
-- Imports use the project package layout: `product.*` and `product_testing.*` in examples
-- Test files stay co-located with the spec node they prove unless the project has a documented alternative
+- Imports use the product package layout: `product.*` and `product_testing.*` in examples
+- Test files stay co-located with the spec node they prove unless the product has a documented alternative
 
 Prefer `tmp_path` for filesystem tests:
 
@@ -257,7 +257,7 @@ Strings and numbers are never valid fixtures. A string literal representing a do
 <credential_policy>
 `l3` tests with credentials must be explicit and safe:
 
-- Load credentials from documented environment variables or project secret helpers
+- Load credentials from documented environment variables or product secret helpers
 - Skip only when the test is optional for the current command
 - Fail loudly when the selected command claims to run required credentialed evidence
 - Never silently pass when required credentials are missing
@@ -296,7 +296,7 @@ Reject or rewrite these patterns:
 - Deep relative imports into stable shared test infrastructure
 - Silent skips for required credentialed evidence
 
-Do not require `spx validation literal` for Python tests. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in project)` in Python projects. Enforce source-owned values through review and Python test standards instead.
+Do not require `spx validation literal` for Python tests. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in product)` in Python projects. Enforce source-owned values through review and Python test standards instead.
 
 </anti_patterns>
 

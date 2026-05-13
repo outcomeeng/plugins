@@ -4,7 +4,7 @@ PROVIDES EXCLUDE-aware invocation logic inside the `spx` CLI
 SO THAT spec-tree projects in any language
 CAN author specs and tests before implementation without breaking the quality gate
 
-The `spx` CLI reads node paths from `spx/EXCLUDE` and passes exclusion flags to each tool at invocation time. It never writes to project configuration files (`pyproject.toml`, `package.json`, `tsconfig.json`). Test runners are auto-detected by walking `spx/**/tests/` and grouping files by extension.
+The `spx` CLI reads node paths from `spx/EXCLUDE` and passes exclusion flags to each tool at invocation time. It never writes to product configuration files (`pyproject.toml`, `package.json`, `tsconfig.json`). Test runners are auto-detected by walking `spx/**/tests/` and grouping files by extension.
 
 ## Assertions
 
@@ -28,5 +28,5 @@ The `spx` CLI reads node paths from `spx/EXCLUDE` and passes exclusion flags to 
 ### Compliance
 
 - NEVER: exclude specified nodes from linting — style is checked regardless of implementation existence ([review])
-- NEVER: write to project configuration files — `spx` passes flags at invocation time ([review])
+- NEVER: write to product configuration files — `spx` passes flags at invocation time ([review])
 - ALWAYS: auto-detect test runners from file extensions — no explicit language configuration required ([review])

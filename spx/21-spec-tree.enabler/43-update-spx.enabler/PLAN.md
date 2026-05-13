@@ -6,7 +6,7 @@ Concrete remaining steps to implement the [update-spx enabler](update-spx.md). R
 
 | Artifact                 | Plugin    | Purpose                                                    |
 | ------------------------ | --------- | ---------------------------------------------------------- |
-| `/updating-spx` (skill)  | spec-tree | Methodology: diff template vs project file, merge strategy |
+| `/updating-spx` (skill)  | spec-tree | Methodology: diff template vs product file, merge strategy |
 | `/update-spx` (command)  | spec-tree | User-facing command that invokes the skill                 |
 | `spx-updater` (agent)    | spec-tree | Subagent that preloads the skill for autonomous execution  |
 | `/understanding` changes | spec-tree | Staleness detection on session start                       |

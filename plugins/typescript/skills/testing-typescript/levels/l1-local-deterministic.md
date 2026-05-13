@@ -86,7 +86,7 @@ describe("writeNormalizedSourceManifest", () => {
     }
   });
 
-  it("writes normalized source paths in a temp project", async () => {
+  it("writes normalized source paths in a temp product", async () => {
     projectDir = await mkdtemp(join(tmpdir(), "manifest-"));
     const manifestPath = join(projectDir, "manifest.json");
 
@@ -100,7 +100,7 @@ describe("writeNormalizedSourceManifest", () => {
 });
 ```
 
-This remains `l1` because the test uses only local temp-dir state and calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, project binaries, or shared services.
+This remains `l1` because the test uses only local temp-dir state and calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, product binaries, or shared services.
 
 </temp_dir_example>
 

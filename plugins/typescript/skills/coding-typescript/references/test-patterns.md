@@ -53,7 +53,7 @@ describe("normalizeSourcePath", () => {
 });
 ```
 
-Use this pattern when inputs vary across a real domain: paths, names, identifiers, content, option sets, encodings, counts, or structured project shapes.
+Use this pattern when inputs vary across a real domain: paths, names, identifiers, content, option sets, encodings, counts, or structured product shapes.
 
 For fast-check v4, use `fc.string({ unit: arbitrary })` when building strings from a character or token arbitrary. `fc.stringOf(arbitrary)` is a v3 API and must not appear in new examples.
 

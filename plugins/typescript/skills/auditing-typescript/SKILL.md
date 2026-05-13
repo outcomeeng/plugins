@@ -31,8 +31,8 @@ Almost every Typecsript file must be covered by tests. Invoke `/auditing-typescr
 <quick_start>
 
 1. Check for `spx/local/typescript.md` if present, then invoke `/testing` for methodology + `/testing-typescript` for TypeScript patterns
-2. Load project config: `CLAUDE.md`, `tsconfig.json`, `package.json` (Phase 0)
-3. Run automated gates -- project validation command (Phase 1, blocking)
+2. Load product config: `CLAUDE.md`, `tsconfig.json`, `package.json` (Phase 0)
+3. Run automated gates -- product validation command (Phase 1, blocking)
 4. Run tests -- verify all pass (Phase 2, blocking)
 5. **Comprehend every function** -- predict, verify, investigate (Phase 3)
 6. Check ADR/PDR compliance (Phase 4)
@@ -64,7 +64,7 @@ APPROVED means every concern passes. REJECTED means at least one fails. APPROVED
 
 Execute phases IN ORDER. Do not skip.
 
-**Phase 0: Scope and Project Config**
+**Phase 0: Scope and Product Config**
 
 1. Determine target files/directories
 2. Read `CLAUDE.md`/`README.md` for validation commands and test runners
@@ -72,9 +72,9 @@ Execute phases IN ORDER. Do not skip.
 
 **Phase 1: Automated Gates** (blocking)
 
-Run the project's validation command. Catches everything linters handle: type safety, naming, magic numbers, unused imports, security rules.
+Run the product's validation command. Catches everything linters handle: type safety, naming, magic numbers, unused imports, security rules.
 
-If the project lacks its own linter configs, use the reference configs in `${CLAUDE_SKILL_DIR}/rules/`:
+If the product lacks its own linter configs, use the reference configs in `${CLAUDE_SKILL_DIR}/rules/`:
 
 | File                   | Purpose                                      |
 | ---------------------- | -------------------------------------------- |
@@ -84,13 +84,13 @@ If the project lacks its own linter configs, use the reference configs in `${CLA
 
 Non-zero exit = REJECTED. Do not proceed.
 
-Do NOT manually re-check what linters catch. If the project's linters are properly configured per `/standardizing-typescript`, they handle type annotations, naming, unused imports, commented-out code, and security rules.
+Do NOT manually re-check what linters catch. If the product's linters are properly configured per `/standardizing-typescript`, they handle type annotations, naming, unused imports, commented-out code, and security rules.
 
 **Note**: Some rules require manual verification during Phase 3 -- deep relative imports, unqualified `any`, `@ts-ignore` without justification.
 
 **Phase 2: Test Execution** (blocking)
 
-Run the full test suite. Use the project's test runner from `CLAUDE.md`.
+Run the full test suite. Use the product's test runner from `CLAUDE.md`.
 
 If tests require infrastructure (databases, Docker), attempt to provision it. Do not skip tests because infrastructure "isn't running" -- try to start it first.
 
@@ -157,7 +157,7 @@ See `${CLAUDE_SKILL_DIR}/references/false-positive-handling.md` for application 
 
 **Phase 4: ADR/PDR Compliance**
 
-Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify each constraint is followed. Undocumented deviations = REJECTED. If the project has no spec hierarchy, this concern is N/A.
+Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify each constraint is followed. Undocumented deviations = REJECTED. If the product has no spec hierarchy, this concern is N/A.
 
 | Decision Record Constraint           | Violation Example                   | Verdict  |
 | ------------------------------------ | ----------------------------------- | -------- |
@@ -255,7 +255,7 @@ Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for complete APPROVED and
 
 Review is complete when:
 
-- [ ] Project validation command run (Phase 1)
+- [ ] Product validation command run (Phase 1)
 - [ ] Test suite run (Phase 2)
 - [ ] Every function comprehended via predict/verify protocol (Phase 3)
 - [ ] Design evaluated: IO/logic, DI, SRP, error quality (Phase 3)

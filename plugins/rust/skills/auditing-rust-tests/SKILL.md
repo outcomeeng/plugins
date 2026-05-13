@@ -41,7 +41,7 @@ A gate failure skips every later gate.
 !`cat "spx/local/rust-tests.md" || echo "spx/local/rust-tests.md not found; apply skills only."`
 
 <codex_fallback>
-If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for product-specific overlay files:
 
 1. Read `spx/local/rust.md` if it exists. It supersedes any skills.
 2. Read `spx/local/rust-tests.md` if it exists. It supersedes any skills.
@@ -53,7 +53,7 @@ If you see `cat` commands above, shell injection did not run (Codex or similar e
 Gate 0 tool dependencies:
 
 - `cargo fmt --check` and `cargo clippy` must be runnable (V1)
-- `cargo llvm-cov` or the project's declared coverage tool (C1)
+- `cargo llvm-cov` or the product's declared coverage tool (C1)
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
@@ -80,7 +80,7 @@ Each file must match `<subject>.<evidence>.<level>[.<runner>].rs` where:
 - `<level>` is one of: `l1`, `l2`, `l3`
 - `<runner>` is optional (e.g., `tokio`, `actix`)
 
-Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Rust test filename convention. If project instructions or repo-local overlays disable Level 3, fail `.l3.rs` files for that project.
+Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Rust test filename convention. If product instructions or repo-local overlays disable Level 3, fail `.l3.rs` files for that product.
 </check>
 
 <check id="R1" name="source_file_reads">
@@ -140,7 +140,7 @@ Check coverage availability:
 cargo llvm-cov --version
 ```
 
-Fail Gate 0 when project instructions require measured coverage and this command fails. Otherwise record coverage tooling as unavailable and continue with the other evidence properties.
+Fail Gate 0 when product instructions require measured coverage and this command fails. Otherwise record coverage tooling as unavailable and continue with the other evidence properties.
 </check>
 
 Gate 0 status:
@@ -342,7 +342,7 @@ Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Rust: F1, R
 <failure_modes>
 **Failure 1: Treated binary tests as uncoupled**
 
-Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture helpers. The test spawned the project binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
+Claude rejected a binary L2 test because it imported only `assert_cmd`, `predicates`, and fixture helpers. The test spawned the product binary and asserted stdout/exit behavior. Coupling existed through `cargo_bin("mybin")`.
 
 How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to the named binary contract.
 
@@ -352,11 +352,11 @@ Claude accepted a test that read `src/rules.rs` and searched for a string. The i
 
 How to avoid: Gate 0 fails production source-file reads from tests.
 
-**Failure 3: Hard-coded a project-specific Level 3 restriction**
+**Failure 3: Hard-coded a product-specific Level 3 restriction**
 
 Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
 
-How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when project instructions or repo-local overlays disable Level 3.
+How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when product instructions or repo-local overlays disable Level 3.
 </failure_modes>
 
 <success_criteria>

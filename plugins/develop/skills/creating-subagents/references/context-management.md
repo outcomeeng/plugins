@@ -264,7 +264,7 @@ For complex debugging:
 Automatically save to memory:
 
 - User-stated preferences: "I prefer TypeScript over JavaScript"
-- Project conventions: "This codebase uses Jest for testing"
+- Product conventions: "This codebase uses Jest for testing"
 - Critical decisions: "Decided to use OAuth2 for authentication"
 - Frequent patterns: "API endpoints follow REST naming: /api/v1/{resource}"
 
@@ -354,7 +354,7 @@ Summary format:
 ```markdown
 <memory_structure>
 .claude/memory/
-  core-facts.md          # Essential project information
+  core-facts.md          # Essential product information
   decisions.md           # Key decisions and rationale
   patterns.md            # Discovered patterns and conventions
   {subagent}-state.json  # Subagent-specific state
@@ -383,7 +383,7 @@ model: sonnet
 ---
 
 <role>
-You are a system architect maintaining coherent design across project evolution.
+You are a system architect maintaining coherent design across product evolution.
 </role>
 
 <memory_management>

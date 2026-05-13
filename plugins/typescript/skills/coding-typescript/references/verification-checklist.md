@@ -20,16 +20,16 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 
 ```bash
 # TypeScript validation through the repository's canonical command
-<project-typecheck-command>
+<product-typecheck-command>
 
 # Auto-fix style issues through the repository's canonical command, when available
-<project-lint-fix-command>
+<product-lint-fix-command>
 
 # Lint validation through the repository's canonical command
-<project-lint-command>
+<product-lint-command>
 
 # Run tests through the repository's canonical command
-<project-test-command>
+<product-test-command>
 
 # Bare-repo fallback examples only when no repository wrapper exists:
 # npx tsc --noEmit

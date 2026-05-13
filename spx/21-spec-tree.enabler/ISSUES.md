@@ -10,7 +10,7 @@ Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.
 
 ## 9. `committing-changes` references `just check`
 
-`skill-structure.md` line 457: "Run project validation (e.g., `just check`)." Should reference `spx` validation as the spec-tree quality gate. `just check` is the project's own concern, separate from spec-tree.
+`skill-structure.md` line 457: "Run product validation (e.g., `just check`)." Should reference `spx` validation as the spec-tree quality gate. `just check` is the product's own concern, separate from spec-tree.
 
 ## 10. Spec headers diverged from upstream methodology
 

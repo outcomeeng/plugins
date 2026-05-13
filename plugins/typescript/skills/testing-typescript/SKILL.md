@@ -49,7 +49,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
-**Command placeholders:** Resolve `<project-test-command>`, `<project-typecheck-command>`, `<project-lint-command>`, and optional `<project-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
+**Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
 
 **Workflow:**
 
@@ -95,7 +95,7 @@ For each assertion, apply the `/testing` methodology:
 | Pure computation/algorithm      | `l1`          |
 | File I/O with temp dirs         | `l1`          |
 | Standard dev tools (git, curl)  | `l1`          |
-| Project-specific binary         | `l2`          |
+| Product-specific binary         | `l2`          |
 | Database, Docker                | `l2`          |
 | Real credentials, external APIs | `l3`          |
 
@@ -116,10 +116,10 @@ Create test files following `/standardizing-typescript-tests`:
 
 ```bash
 # Resolve from repo docs or scripts; fallback: npx vitest run
-<project-test-command> {node_path}/tests/
+<product-test-command> {node_path}/tests/
 ```
 
-If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full project test command when no focused form exists.
+If the canonical wrapper rejects a path suffix, run the closest supported focused command and record the exact command used. For example, use a wrapper-provided filter flag, a package script that accepts `--`, or the full product test command when no focused form exists.
 
 Tests should FAIL with import errors or assertion errors (implementation does not exist yet).
 
@@ -235,13 +235,13 @@ For each rejection reason:
 
 ```bash
 # Run the node tests through the repository's canonical test command; fallback: npx vitest run
-<project-test-command> {node_path}/tests/
+<product-test-command> {node_path}/tests/
 
 # Run the repository's canonical TypeScript validation; fallback: npx tsc --noEmit
-<project-typecheck-command>
+<product-typecheck-command>
 
 # Run the repository's canonical lint validation for the changed files; fallback: npx eslint src/ test/
-<project-lint-command> {node_path}/tests/
+<product-lint-command> {node_path}/tests/
 ```
 
 ### Step 4: Report What Was Fixed
@@ -300,10 +300,10 @@ See `/standardizing-typescript-tests` for:
 Read the matching level guide after choosing a level:
 
 - `levels/l1-local-deterministic.md` - pure functions, temp dirs, standard local tools, Stage 5 doubles
-- `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and project binaries
+- `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and product binaries
 - `levels/l3-remote-credentialed.md` - remote services, shared environments, and credentials
 
-Also check for `spx/local/typescript-tests.md` at the repository root -- project-specific overrides apply after this reference.
+Also check for `spx/local/typescript-tests.md` at the repository root -- product-specific overrides apply after this reference.
 
 </patterns_reference>
 

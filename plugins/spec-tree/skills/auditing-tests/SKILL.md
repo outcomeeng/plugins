@@ -34,7 +34,7 @@ A test that imports nothing from the codebase will pass forever regardless of wh
 
 **RUN COVERAGE, DON'T GUESS.**
 
-Read the project's CLAUDE.md for the test and coverage command. Run coverage without the test (baseline), then with the test. Report actual deltas per source file. Never reason about what paths a test "probably" covers.
+Read the product's CLAUDE.md for the test and coverage command. Run coverage without the test (baseline), then with the test. Report actual deltas per source file. Never reason about what paths a test "probably" covers.
 
 **NO MECHANICAL DETECTION.**
 
@@ -89,7 +89,7 @@ Read the test file's import statements. Classify each import:
 | ---------------------------------------------- | -------------------------- |
 | Test framework (vitest, pytest, jest)          | Framework — does not count |
 | Node modules / pip packages                    | Library — does not count   |
-| Codebase path (relative import, project alias) | Codebase — counts          |
+| Codebase path (relative import, product alias) | Codebase — counts          |
 
 **Zero codebase imports → REJECT — "no coupling" (tautology).**
 
@@ -159,7 +159,7 @@ Check assertion-type-to-strategy alignment:
 
 **Step 3d: Coverage**
 
-Read the project's CLAUDE.md, package.json, pyproject.toml, or Justfile. Find the test and coverage command.
+Read the product's CLAUDE.md, package.json, pyproject.toml, or Justfile. Find the test and coverage command.
 
 1. Run coverage **excluding** the test file under audit — this is the baseline
 2. Run coverage **including** the test file under audit
@@ -181,7 +181,7 @@ Delta: +24.6% — new coverage ✓
 
 Coverage measures execution breadth (which lines and branches are hit), not assertion strength. A property-based test that exercises fully-covered code with a broader input domain adds genuine evidence that coverage cannot measure.
 
-If the project has no coverage tooling configured: note as a finding but do not REJECT solely for this. The other three properties still apply.
+If the product has no coverage tooling configured: note as a finding but do not REJECT solely for this. The other three properties still apply.
 
 </step>
 

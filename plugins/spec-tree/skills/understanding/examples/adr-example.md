@@ -23,7 +23,7 @@ Stored status requires someone (human or agent) to keep it synchronized with rea
 | Trade-off                           | Mitigation / reasoning                                                 |
 | ----------------------------------- | ---------------------------------------------------------------------- |
 | Must run tests to know status       | Test execution is fast for unit tests; integration tests can be cached |
-| No "in progress" or "blocked" state | These are workflow states, not product states — track in project tools |
+| No "in progress" or "blocked" state | These are workflow states, not product states — track in product tools |
 
 ## Invariants
 

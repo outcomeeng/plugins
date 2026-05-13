@@ -171,7 +171,7 @@ Use `[test](...)` for automated evidence and `[review]` for semantic constraints
 
 Nodes with specs and tests but no implementation are listed in `spx/EXCLUDE`. The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Linting always applies — style is checked regardless of implementation existence.
 
-`spx` never writes to project configuration files. It passes exclusion flags to each tool at invocation time.
+`spx` never writes to product configuration files. It passes exclusion flags to each tool at invocation time.
 
 Remove entries when implementation begins and tests should start running.
 

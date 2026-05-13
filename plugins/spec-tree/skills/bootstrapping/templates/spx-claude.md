@@ -133,7 +133,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents, returning structured APPROVED/REJECTED verdicts. Use agents when running multiple audits in parallel; use skills when you want to discuss findings with the user.
 
-**Delete rows that don't apply to your project.**
+**Delete rows that don't apply to your product.**
 
 | User Says...             | Skill                               | Agent                             |
 | ------------------------ | ----------------------------------- | --------------------------------- |
@@ -155,7 +155,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. **Delete sections below that don't apply to your project.**
+Test level is encoded in the filename. **Delete sections below that don't apply to your product.**
 
 ### TypeScript
 
@@ -193,7 +193,7 @@ Use `[test](...)` for automated evidence and `[review]` for semantic constraints
 
 Nodes with specs and tests but no implementation are listed in `spx/EXCLUDE`. The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Linting always applies — style is checked regardless of implementation existence.
 
-`spx` never writes to project configuration files. It passes exclusion flags to each tool at invocation time.
+`spx` never writes to product configuration files. It passes exclusion flags to each tool at invocation time.
 
 Remove entries when implementation begins and tests should start running.
 

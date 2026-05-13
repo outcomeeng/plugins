@@ -19,7 +19,7 @@ MUST run tests and confirm they pass AFTER making changes.
 MUST preserve exact functionality — all tests must pass after refinement.
 MUST preserve dependency injection patterns — NEVER remove injected parameters or seam boundaries.
 MUST preserve ownership semantics — NEVER introduce unnecessary clones or weaken lifetime bounds.
-MUST follow project standards from CLAUDE.md when present.
+MUST follow product standards from CLAUDE.md when present.
 MUST verify refactored code would pass `/auditing-rust` checklist.
 
 NEVER modify code that lacks test coverage — flag it and stop.
@@ -139,9 +139,9 @@ If scope is unclear: ask for clarification before modifying.
 2. **Find tests** — locate test modules and L2 tests covering the code
 3. **Validate test quality** — apply `/testing-rust` principles: no generated mocks, behavior-only
 4. **Run tests (before)** — `cargo test --all-targets` must pass
-5. **Load standards** — read project CLAUDE.md if present
+5. **Load standards** — read product CLAUDE.md if present
 6. **Analyze code** — identify opportunities matching focus areas
-7. **Apply refinements** — make changes following project standards
+7. **Apply refinements** — make changes following product standards
 8. **Run tests (after)** — `cargo test --all-targets` must still pass
 9. **Validate types** — `cargo check --all-targets` to verify no errors introduced
 10. **Present results** — show refined code with test validation summary

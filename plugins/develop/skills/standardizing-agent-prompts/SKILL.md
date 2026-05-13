@@ -168,7 +168,7 @@ If no — cut it.
 
 **What Claude needs (include):**
 
-- Project-specific conventions that contradict common patterns
+- Product-specific conventions that contradict common patterns
 - Domain knowledge not in training data
 - Failure modes from actual usage (not hypotheticals)
 - Verification commands and thresholds

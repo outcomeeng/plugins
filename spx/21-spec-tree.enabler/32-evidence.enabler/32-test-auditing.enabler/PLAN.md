@@ -42,4 +42,4 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 
 ## Origin
 
-Conversation on 2026-04-24 exploring how to detect the constant-bag evasion pattern discovered in a TypeScript project (camelCase literals in a test-support module imported by a single test file).
+Conversation on 2026-04-24 exploring how to detect the constant-bag evasion pattern discovered in a TypeScript product (camelCase literals in a test-support module imported by a single test file).

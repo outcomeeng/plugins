@@ -24,7 +24,7 @@ Three modes:
 **Recent Commits:**
 !`git log --oneline -5 || echo 'Not a git repo'`
 
-**Project Language Indicators:**
+**Product Language Indicators:**
 !`ls pyproject.toml package.json tsconfig.json 2>/dev/null || echo 'No indication of Python or TypeScript'`
 </context>
 

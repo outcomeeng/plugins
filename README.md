@@ -16,7 +16,7 @@ This repository publishes two plugin surfaces from the same source tree:
 ## Philosophy
 
 1. **RTFM:** Follow state-of-the-art (SOTA) model prompting guidance, such as [structured prompts based on XML tags](https://docs.prompts.ag/guidelines)
-2. **KILO:** *Keep It Local and Observable* — the golden source for all specifications lives locally within the project's Git repository
+2. **KILO:** *Keep It Local and Observable* — the golden source for all specifications lives locally within the product's Git repository
 
 ## Quick Start
 
@@ -52,7 +52,7 @@ Codex registers the marketplace source in the user's `~/.codex/config.toml` and 
 # Spec Tree methodology (requires spx CLI)
 claude plugin install spec-tree@outcomeeng
 
-# Language plugins (install per project, require spx CLI)
+# Language plugins (install per product, require spx CLI)
 claude plugin install python@outcomeeng
 claude plugin install typescript@outcomeeng
 
@@ -63,7 +63,7 @@ claude plugin install develop@outcomeeng
 
 #### Codex
 
-After adding the marketplace, enable only the plugins a project needs in that repo's committed `.codex/config.toml`:
+After adding the marketplace, enable only the plugins a product needs in that repo's committed `.codex/config.toml`:
 
 ```toml
 [plugins."spec-tree@outcomeeng"]
@@ -242,7 +242,7 @@ Meta-skills for Codex and Claude Code plugin development. No spx CLI required.
 | Skill | `/auditing-commands`  | Audit slash commands            |
 | Skill | `/auditing-subagents` | Audit subagent configurations   |
 
-Credit: These meta skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The commands `/handoff` and `/pickup` are based on `/whats-next` from the same project.
+Credit: These meta skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The commands `/handoff` and `/pickup` are based on `/whats-next` from the same product.
 
 ### frontend
 

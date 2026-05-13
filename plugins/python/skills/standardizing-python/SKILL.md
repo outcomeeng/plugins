@@ -187,13 +187,13 @@ class Status:
     FAIL = "fail"
 ```
 
-**No re-export of library constants.** When production code and tests both need an HTTP status code, both import from the same canonical source (`http.HTTPStatus`, `fastapi.status`, etc.). Never create a project-local re-export.
+**No re-export of library constants.** When production code and tests both need an HTTP status code, both import from the same canonical source (`http.HTTPStatus`, `fastapi.status`, etc.). Never create a product-local re-export.
 
 ```python
-# ❌ REJECTED: re-export in project code
+# ❌ REJECTED: re-export in product code
 from http import HTTPStatus
 
-HTTP_OK = HTTPStatus.OK  # project-local alias
+HTTP_OK = HTTPStatus.OK  # product-local alias
 
 # ✅ REQUIRED: both production and test code import from the canonical source
 from http import HTTPStatus
@@ -256,7 +256,7 @@ Ruff's S101 rule flags `assert` statements because they can be disabled with Pyt
 2. Tests are never run with `-O` optimization
 3. The alternative (`if not x: raise AssertionError`) adds noise
 
-**Required project configuration** in `pyproject.toml`:
+**Required product configuration** in `pyproject.toml`:
 
 ```toml
 [tool.ruff.lint.per-file-ignores]
@@ -264,7 +264,7 @@ Ruff's S101 rule flags `assert` statements because they can be disabled with Pyt
 "**/tests/**/*.py" = ["S101"]
 ```
 
-If the project hasn't configured this, tests will fail linting. Fix by adding the config, not by avoiding `assert`.
+If the product hasn't configured this, tests will fail linting. Fix by adding the config, not by avoiding `assert`.
 
 </s101_policy>
 
@@ -505,15 +505,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from .....lib.utils import helper
 
 # ❌ REJECTED: Assuming working directory
-from lib.utils import helper  # Only works if CWD is project root
+from lib.utils import helper  # Only works if CWD is product root
 ```
 
-**Required Project Setup**
+**Required Product Setup**
 
 **1. Use explicit product package layout:**
 
 ```text
-myproject/
+product/
 ├── product/
 │   ├── __init__.py
 │   └── ...
@@ -530,7 +530,7 @@ myproject/
 
 ```toml
 [project]
-name = "myproject"
+name = "product"
 
 [tool.setuptools.packages.find]
 where = ["src"]

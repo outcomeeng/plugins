@@ -68,7 +68,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 **Files to skip entirely:**
 
-- `CLAUDE.md` files (project configuration, not specs)
+- `CLAUDE.md` files (product configuration, not specs)
 - Files inside `tests/` directories (test code, not specs)
 - `PLAN.md` and `ISSUES.md` files (non-durable escape hatches, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
@@ -89,7 +89,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 **Do NOT report:**
 
-- Extra sections beyond the template (specs may have project-specific additions)
+- Extra sections beyond the template (specs may have product-specific additions)
 - Missing optional sections (templates mark optional sections with "Only include if...")
 
 </structural_conformance>
@@ -151,7 +151,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understanding` first."
 2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
-3. **Scope**: Use user-specified path, or default to `spx/` in the project root.
+3. **Scope**: Use user-specified path, or default to `spx/` in the product root.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:

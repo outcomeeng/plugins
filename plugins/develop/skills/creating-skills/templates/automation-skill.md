@@ -24,7 +24,7 @@ Gather context to ensure successful implementation:
 | **Codebase**         | Existing structure, patterns, conventions |
 | **Conversation**     | User's specific requirements, constraints |
 | **Skill References** | Domain patterns from `references/`        |
-| **User Guidelines**  | Project-specific conventions              |
+| **User Guidelines**  | Product-specific conventions              |
 
 </before_implementation>
 

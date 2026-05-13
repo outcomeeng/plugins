@@ -467,6 +467,6 @@ Features to prefer when VHDL-2008 is available (most modern toolchains support i
 | External names         | `<< signal .tb.dut.sig >>`           | Not available                      |
 | Simulation control     | `std.env.stop`                       | `assert false severity failure`    |
 
-**When reviewing**: Check the project's VHDL standard. If VHDL-2008 is available, flag pre-2008 patterns as style findings (P2). If only VHDL-93 is available, don't flag missing VHDL-2008 features.
+**When reviewing**: Check the product's VHDL standard. If VHDL-2008 is available, flag pre-2008 patterns as style findings (P2). If only VHDL-93 is available, don't flag missing VHDL-2008 features.
 
 </vhdl_2008_features>

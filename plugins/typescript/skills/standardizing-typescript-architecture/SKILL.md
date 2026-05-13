@@ -80,7 +80,7 @@ Observable DI parameters in all functions that invoke external tools.
 - `l1` -> `l2`: Hugo binary required for acceptance
 ```
 
-**Why:** Level assignments depend on the spec's assertions, the project's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
+**Why:** Level assignments depend on the spec's assertions, the product's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
 
 </testability_in_compliance>
 
@@ -166,13 +166,13 @@ The architect needs to understand testing levels to write effective Compliance r
 | Level | TypeScript infrastructure               | When to use                                   |
 | ----- | --------------------------------------- | --------------------------------------------- |
 | `l1`  | Node.js built-ins + Git + temp fixtures | Pure logic, FS operations, git operations     |
-| `l2`  | Project-specific binaries/tools         | Hugo, Caddy, Claude Code, Docker, TS compiler |
+| `l2`  | Product-specific binaries/tools         | Hugo, Caddy, Claude Code, Docker, TS compiler |
 | `l3`  | External deps (GitHub, network, Chrome) | Full workflows with external services         |
 
 **Key rules:**
 
 - Git is `l1` (standard dev tool, always available in CI)
-- Project-specific tools require installation/setup (`l2`)
+- Product-specific tools require installation/setup (`l2`)
 - Network dependencies and external services are `l3`
 - SaaS services jump `l1` to `l3` (no `l2`)
 
@@ -186,7 +186,7 @@ The architect needs to understand testing levels to write effective Compliance r
 | ----------------------------- | ---------------------------------------------- | ---------------------------------- |
 | `## Testing Strategy` section | Not in the authoritative ADR template          | `/testing` skill output            |
 | Level assignment tables       | Downstream concern; depends on spec assertions | `/testing` Stage 2                 |
-| Escalation rationale          | Downstream concern; depends on project infra   | `/testing` Stage 2                 |
+| Escalation rationale          | Downstream concern; depends on product infra   | `/testing` Stage 2                 |
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |

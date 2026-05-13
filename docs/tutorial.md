@@ -1,6 +1,6 @@
 # Tutorial: Outcome Engineering with the Spec Tree Methodology
 
-This tutorial walks through the full workflow — from bootstrapping a spec tree in a new or existing project to authoring specs, implementing code, and committing changes.
+This tutorial walks through the full workflow — from bootstrapping a spec tree in a new or existing product to authoring specs, implementing code, and committing changes.
 
 ## Prerequisites
 
@@ -12,23 +12,23 @@ npm install -g @outcomeeng/spx
 claude plugin marketplace add outcomeeng/plugins
 claude plugin install spec-tree@outcomeeng
 
-# Install a language plugin for your project
+# Install a language plugin for your product
 claude plugin install python@outcomeeng      # or typescript@outcomeeng
 ```
 
 ## 1. Bootstrap a spec tree
 
-The `/bootstrap` command works for both **existing projects** (where code already exists) and **blank projects** (starting from scratch). It reads your project's CLAUDE.md and codebase to understand what the product does, then interviews you to fill in the gaps.
+The `/bootstrap` command works for both **existing projects** (where code already exists) and **blank projects** (starting from scratch). It reads your product's CLAUDE.md and codebase to understand what the product does, then interviews you to fill in the gaps.
 
-### Existing project
+### Existing product
 
-If you have a project with code but no spec tree, `/bootstrap` detects the product from your existing files:
+If you have a product with code but no spec tree, `/bootstrap` detects the product from your existing files:
 
 ```text
 > /bootstrap
 ```
 
-It reads CLAUDE.md, package.json, README, or whatever describes your project, then asks targeted questions about what's missing.
+It reads CLAUDE.md, package.json, README, or whatever describes your product, then asks targeted questions about what's missing.
 
 ![Bootstrap detects the product from CLAUDE.md](../assets/tutorial/bootstrap/20-boostrap-01-detect-product.png)
 
@@ -56,7 +56,7 @@ Before creating any files, the skill presents the full plan and lets you refine 
 
 ### Result
 
-The scaffold creates the product spec, a project guide, and top-level node stubs with the correct directory structure and sparse integer ordering:
+The scaffold creates the product spec, a product guide, and top-level node stubs with the correct directory structure and sparse integer ordering:
 
 ![Scaffold result showing created files](../assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
@@ -185,7 +185,7 @@ Use `/commit` for Conventional Commits with selective staging:
 
 The skill:
 
-1. Runs project validation (`just check`, `pnpm run check`, etc.)
+1. Runs product validation (`just check`, `pnpm run check`, etc.)
 2. Classifies changes by concern (type + scope)
 3. Stages specific files for one concern at a time
 4. Writes a commit message in imperative mood

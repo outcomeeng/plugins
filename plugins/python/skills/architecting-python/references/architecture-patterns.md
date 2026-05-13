@@ -411,11 +411,11 @@ def handle_order_request(request: Request) -> Response:
 
 ## Directory Structure
 
-Standard Python project layout:
+Standard Python product layout:
 
 ```
-project/
-├── pyproject.toml          # Project config, dependencies
+product/
+├── pyproject.toml          # Product config, dependencies
 ├── product/
 │   ├── __init__.py
 │   ├── domain/         # Business logic

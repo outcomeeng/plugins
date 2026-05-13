@@ -61,7 +61,7 @@ Choose the level from execution pain and dependency availability:
 | Level | Infrastructure                                     | Default runner | Typical runtime |
 | ----- | -------------------------------------------------- | -------------- | --------------- |
 | `l1`  | Node.js stdlib, temp dirs, repo-required dev tools | Vitest         | milliseconds    |
-| `l2`  | Docker, browsers, dev servers, project binaries    | Vitest         | seconds         |
+| `l2`  | Docker, browsers, dev servers, product binaries    | Vitest         | seconds         |
 | `l3`  | Remote services, credentials, shared environments  | Vitest         | seconds/minutes |
 
 Use `playwright` as the runner token when Playwright is the non-default runner:
@@ -126,7 +126,7 @@ Exception 5 (combinatorial cost: configurable fake with real-shaped behavior) is
 </exception_implementations>
 
 <l2_patterns>
-Use typed harness factories when tests require real infrastructure (Docker, browsers, project binaries). Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing. Read `${CLAUDE_SKILL_DIR}/references/l2-patterns.md` for the full harness factory pattern.
+Use typed harness factories when tests require real infrastructure (Docker, browsers, product binaries). Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing. Read `${CLAUDE_SKILL_DIR}/references/l2-patterns.md` for the full harness factory pattern.
 </l2_patterns>
 
 <l3_patterns>
@@ -364,7 +364,7 @@ Use harnesses for tests that interact with external systems — filesystems, bro
 ```typescript
 // testing/harnesses/{domain}.ts
 
-// Filesystem harness: manages a temp project directory for spec-tree operations
+// Filesystem harness: manages a temp product directory for spec-tree operations
 export async function withTestEnv(
   config: Config,
   callback: (env: SpecTreeEnv) => Promise<void>,
@@ -386,7 +386,7 @@ export const test = withPlaywright(baseTest);
 
 <fixtures>
 
-Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a project tree copied into a temp directory.
+Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a product tree copied into a temp directory.
 
 Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or tool under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
 
@@ -403,7 +403,7 @@ Strings and numbers are never valid fixtures by themselves. A string literal tha
 </test_data_policy>
 
 <test_infrastructure>
-Shared test infrastructure lives in a `testing/` directory at the project root and is imported via path aliases.
+Shared test infrastructure lives in a `testing/` directory at the product root and is imported via path aliases.
 
 ```text
 testing/

@@ -24,7 +24,7 @@ Define exactly what the subagent does and how it approaches tasks.
 State the role, focus areas, and approach explicitly.
 
 ❌ Bad: "Help with tests"
-✅ Good: "You are a test automation specialist. Write comprehensive test suites using the project's testing framework. Focus on edge cases and error conditions."
+✅ Good: "You are a test automation specialist. Write comprehensive test suites using the product's testing framework. Focus on edge cases and error conditions."
 </principle>
 
 <principle name="constraints">
@@ -131,7 +131,7 @@ You are a test automation specialist creating thorough, maintainable test suites
    - Happy path (expected usage)
    - Edge cases (boundary conditions)
    - Error conditions (invalid inputs, failures)
-3. Write tests using the project's testing framework
+3. Write tests using the product's testing framework
 4. Run tests to verify they pass
 5. Ensure tests are independent (no shared state)
 </workflow>

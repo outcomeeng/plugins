@@ -2,7 +2,7 @@
 
 Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
 
-`AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same project instructions.
+`AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same product instructions.
 
 ## Marketplace Is a Product
 
@@ -28,8 +28,8 @@ This file is shared by Claude Code and Codex. Follow the rule's intent with the 
 | Edit files                       | `Edit` / `Write`                 | `apply_patch`                                |
 | Search files                     | `Glob` / `Grep`                  | `exec_command` with `rg` or `rg --files`     |
 | Read-only research agents        | `Task` / configured subagents    | `spawn_agent` only when explicitly requested |
-| Project plugin settings          | `.claude/settings.json`          | `.codex/config.toml`                         |
-| User-level plugin registration   | `~/.claude/` via `claude plugin` | `~/.codex/config.toml` via `codex plugin`    |
+| Product plugin settings          | `.claude/settings.json`          | `.codex/config.toml`                         |
+| User-scope plugin registration   | `~/.claude/` via `claude plugin` | `~/.codex/config.toml` via `codex plugin`    |
 
 When these instructions say `AskUserQuestion`, Codex must use `request_user_input`. When these instructions say `Read`, `Edit`, or `Write`, Codex must use its local shell and patch tools in a way that preserves the same behavior.
 
@@ -56,7 +56,7 @@ The Outcome Engineering methodology has evolved through three generations. Only 
 - **1st → 2nd**: Moved from `specs/work/` to `spx/`, adopted durable map principles and sparse integer ordering. The three-level hierarchy (`capability/feature/story`) remained.
 - **2nd → 3rd**: Replaced the fixed three-level hierarchy with two recursive node types (`enabler`, `outcome`) that nest to arbitrary depth. Replaced `understanding-spx` with `contextualizing`. Merged the separate `spx` and `code` plugins into `spec-tree`.
 
-Historical plugin implementations are pruned from this repository. The history table explains why old project directories or installed plugins may still appear outside this checkout.
+Historical plugin implementations are pruned from this repository. The history table explains why old product directories or installed plugins may still appear outside this checkout.
 
 ## Critical Rules
 
@@ -135,7 +135,7 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 <!-- ✅ CORRECT: Use "text" for pseudo-XML -->
 <metadata>
   timestamp: [UTC timestamp]
-  project: [Project name]
+  product: [Product name]
 </metadata>
 ```
 
@@ -431,14 +431,14 @@ Certain skills must be invoked **automatically** when specific conditions are me
    - **Trigger**: User requests creating a product spec, ADR, PDR, enabler, or outcome
    - **Purpose**: Access templates, understand index assignment
    - **Example**: User says "create an outcome for search" → STOP and invoke `/authoring`
-   - **Critical**: Templates are in the `understanding` skill's directory, NOT in the project
+   - **Critical**: Templates are in the `understanding` skill's directory, NOT in the product
 
 **Pattern**: These skills are preparatory and blocking. You MUST invoke them BEFORE writing code or documents.
 
 **Rationale**: Without these skills, you will:
 
 - Miss requirements and violate ADRs
-- Search for templates that don't exist in the project
+- Search for templates that don't exist in the product
 - Create nodes with incorrect indices
 - Generate specs with wrong structure
 
@@ -452,20 +452,20 @@ Certain skills must be invoked **automatically** when specific conditions are me
 
 **NEVER manually write to these locations:**
 
-- `~/.claude/` - User home directory, not project-specific
+- `~/.claude/` - User home directory, not product-specific
 - Any path containing `.claude` in user home
-- `.claude/` files, except `.claude/settings.json` updates produced by Claude CLI project-scope plugin commands
+- `.claude/` files, except `.claude/settings.json` updates produced by Claude CLI product-scope plugin commands
 
-**ALWAYS write to project directories:**
+**ALWAYS write to product directories:**
 
 - `plugins/` - Plugin code, skills, commands, templates
 - `spx/` - Specs as durable map (see [spx/CLAUDE.md](spx/CLAUDE.md))
 - `.spx/` - Tool operational files (sessions, cache) - gitignored
-- `.claude/settings.json` - Claude project-scope plugin settings created by `claude plugin ... --scope project` and committed for collaborators
-- `.codex/config.toml` - Codex project-scope config for the plugin set this repository needs
-- Project root - Package files, config files
+- `.claude/settings.json` - Claude product-scope plugin settings created by `claude plugin ... --scope project` and committed for collaborators
+- `.codex/config.toml` - Codex product-scope config for the plugin set this repository needs
+- Product root - Package files, config files
 
-**Rationale:** Manual file operations in `.claude/` require extra permission and break workflow. Claude CLI project-scope plugin commands are the exception because they update `.claude/settings.json` for the repository's shared plugin set. Codex project config belongs in `.codex/config.toml` so collaborators inherit the plugin enablement for this repo after trusting the project.
+**Rationale:** Manual file operations in `.claude/` require extra permission and break workflow. Claude CLI product-scope plugin commands are the exception because they update `.claude/settings.json` for the repository's shared plugin set. Codex product config belongs in `.codex/config.toml` so collaborators inherit the plugin enablement for this repo after trusting the project.
 
 ### ⛔ File Removal Restrictions
 
@@ -582,11 +582,11 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 │   └── visual/
 │       └── skills/
 │           └── excalidrawing/
-├── pyproject.toml                 # uv project config + dev deps
+├── pyproject.toml                 # uv product config + dev deps
 ├── spx/                           # Specs as durable map
 │   ├── CLAUDE.md                 # Specs directory guide
 │   ├── EXCLUDE                    # Nodes skipped by the quality gate
-│   ├── local/                    # Project-specific skill overlays
+│   ├── local/                    # Product-specific skill overlays
 │   │   └── committing-changes.md
 │   ├── 15-spec-coverage.adr.md
 │   ├── 15-test-language.adr.md
@@ -632,7 +632,7 @@ just push-marketplace origin main   # explicit remote/branch
 
 Bare `git push origin main` skips the sync: the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
 
-⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong project scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
+⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong product scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
 
 ### How the marketplace cache resolves to skill content
 
@@ -654,7 +654,7 @@ No `claude plugin install`, `just push-marketplace`, or even a commit is require
 
 ### Claude Code
 
-When repo-required Claude plugins are missing, ask the user before changing project-scoped Claude settings. Use Claude's project scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
+When repo-required Claude plugins are missing, ask the user before changing product-scoped Claude settings. Use Claude's product scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
 
 ```bash
 claude plugin marketplace add outcomeeng/plugins --scope project
@@ -664,7 +664,7 @@ for plugin in develop python prose spec-tree; do
 done
 ```
 
-If an installed project-scoped plugin has been disabled, re-enable it at project scope:
+If an installed product-scoped plugin has been disabled, re-enable it at product scope:
 
 ```bash
 for plugin in develop python prose spec-tree; do
@@ -682,7 +682,7 @@ Codex marketplace registration is user-scoped. Ask the user before changing `~/.
 codex plugin marketplace add outcomeeng/plugins
 ```
 
-Enable plugins per project by committing `.codex/config.toml`. Keep the project list explicit so each repo gets only the plugins it needs:
+Enable plugins per product by committing `.codex/config.toml`. Keep the product list explicit so each repo gets only the plugins it needs:
 
 ```toml
 [plugins."develop@outcomeeng"]
@@ -705,7 +705,7 @@ enabled = true
 enabled = true
 ```
 
-If a user's global Codex config already enables a plugin that the project should keep off, add an explicit project override:
+If a user's global Codex config already enables a plugin that the product should keep off, add an explicit product override:
 
 ```toml
 [plugins."typescript@outcomeeng"]

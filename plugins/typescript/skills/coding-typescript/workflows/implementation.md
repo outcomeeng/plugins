@@ -27,7 +27,7 @@ See `<codebase_discovery>` in SKILL.md for complete guidance.
 ### Quick Checklist
 
 ```bash
-# 1. Read project docs (highest authority)
+# 1. Read product docs (highest authority)
 Read: README.md, docs/, CLAUDE.md
 
 # 2. Read the relevant skill/spec first
@@ -197,16 +197,16 @@ Before declaring completion, run ALL verification tools:
 
 ```bash
 # TypeScript validation through the repository's canonical command
-<project-typecheck-command>
+<product-typecheck-command>
 
 # Auto-fix style issues through the repository's canonical command, when available
-<project-lint-fix-command>
+<product-lint-fix-command>
 
 # Lint validation through the repository's canonical command
-<project-lint-command>
+<product-lint-command>
 
 # Tests through the repository's canonical command
-<project-test-command>
+<product-test-command>
 
 # Bare-repo fallback examples only when no repository wrapper exists:
 # npx tsc --noEmit

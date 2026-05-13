@@ -191,7 +191,7 @@ argument-hint: [issue-number]
 ---
 
 <objective>
-Find and fix issue #$ARGUMENTS following project workflow.
+Find and fix issue #$ARGUMENTS following product workflow.
 
 This ensures bugs are resolved systematically with proper testing and documentation.
 </objective>
@@ -428,13 +428,13 @@ This ensures complex tasks are approached systematically with proper planning.
 
 ```markdown
 ---
-description: Check project status
+description: Check product status
 ---
 
 <objective>
-Provide a comprehensive project health summary.
+Provide a comprehensive product health summary.
 
-This helps understand current project state across git, dependencies, and tests.
+This helps understand current product state across git, dependencies, and tests.
 </objective>
 
 <context>
@@ -673,11 +673,11 @@ No write or execution permissions.
 ```markdown
 ---
 allowed-tools: Bash(npm test:*), Bash(npm run lint:*)
-description: Run project checks
+description: Run product checks
 ---
 
 <objective>
-Run project quality checks (tests and linting).
+Run product quality checks (tests and linting).
 
 This ensures code quality while restricting to specific npm scripts.
 </objective>

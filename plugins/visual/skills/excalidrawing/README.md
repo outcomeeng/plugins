@@ -13,7 +13,7 @@ Compatible with any coding agent that supports skills. For agents that read from
 
 ## Installation
 
-Clone or download this repo, then copy it into your project's `.claude/skills/` directory:
+Clone or download this repo, then copy it into your product's `.claude/skills/` directory:
 
 ```bash
 git clone https://github.com/coleam00/excalidraw-diagram-skill.git

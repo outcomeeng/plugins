@@ -6,7 +6,7 @@ date: 2026-03-26
 
 ## How to extend the compact summary
 
-The `compactPrompt` field in `~/.claude/settings.json` (user-level) or `.claude/settings.json` (project-level) is **appended** to Claude Code's base summarization prompt. Anything written there appears under the "additional summarization instructions" clause at the bottom of the base prompt. The base prompt itself is read-only from the marketplace's position.
+The `compactPrompt` field in `~/.claude/settings.json` (user-scope) or `.claude/settings.json` (product-scope) is **appended** to Claude Code's base summarization prompt. Anything written there appears under the "additional summarization instructions" clause at the bottom of the base prompt. The base prompt itself is read-only from the marketplace's position.
 
 ### Base-prompt constraint
 
@@ -48,7 +48,7 @@ Design insights, audit findings, contradictions, or imperfections noticed during
 
 Earlier versions of this `compactPrompt` added imperative sections (`Skills`, `Starting Point`, `Persistence Proposal`) directing the receiving agent to invoke specific skills and write specific files. Those sections compounded the residual imperatives in base-prompt sections 7–9 and produced summaries that competed with the SessionStart hook directive — a failure mode where the receiving agent followed self-direction over the hook's mandate.
 
-Projects using a prior version of `compactPrompt` need to replace its value with the canonical text above. The user's `~/.claude/settings.json` is one common location; project-scope `.claude/settings.json` is another.
+Projects using a prior version of `compactPrompt` need to replace its value with the canonical text above. The user's `~/.claude/settings.json` is one common location; product-scope `.claude/settings.json` is another.
 
 ---
 

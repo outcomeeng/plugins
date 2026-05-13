@@ -47,7 +47,7 @@ Mocking severs coupling. A test that imports a module then replaces it with a mo
 
 The auditor does not guess what code paths a test exercises.
 
-1. Read the project's CLAUDE.md for the test and coverage command (e.g., `just run test`, `pnpm vitest --coverage`)
+1. Read the product's CLAUDE.md for the test and coverage command (e.g., `just run test`, `pnpm vitest --coverage`)
 2. Run coverage **without** the test file under audit — this is the baseline
 3. Run coverage **with** the test file under audit
 4. Compare: if coverage of the assertion-relevant source files did not increase, the test provides no new evidence
@@ -122,7 +122,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: check what the test imports from the codebase as the first audit phase after testability passes — coupling is prerequisite to all other evidence analysis ([review])
-- ALWAYS: run the project's coverage command to measure actual coverage delta — read CLAUDE.md for the correct command ([review])
+- ALWAYS: run the product's coverage command to measure actual coverage delta — read CLAUDE.md for the correct command ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([review])

@@ -1,5 +1,5 @@
 ---
-description: Set up a new spec tree for this project
+description: Set up a new spec tree for this product
 ---
 
 <objective>
@@ -13,7 +13,7 @@ Bootstrap a new spec tree by interviewing the user and scaffolding spx/.
 **Existing spx/ directory:**
 !`ls spx/*.product.md 2>/dev/null || echo "No product spec found"`
 
-**Project indicators:**
+**Product indicators:**
 !`ls pyproject.toml package.json tsconfig.json Cargo.toml go.mod 2>/dev/null || echo "No language indicators found"`
 
 **README (first 20 lines, if present):**

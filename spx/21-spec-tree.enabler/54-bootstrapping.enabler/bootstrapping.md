@@ -8,7 +8,7 @@ CAN adopt the Spec Tree methodology while delegating top-level structure to `/de
 
 ### Scenarios
 
-- Given a project with no `spx/` directory, when bootstrapping runs, then a product spec and `spx/CLAUDE.md` are created ([test](tests/test_bootstrapping.unit.py))
+- Given a product with no `spx/` directory, when bootstrapping runs, then a product spec and `spx/CLAUDE.md` are created ([test](tests/test_bootstrapping.unit.py))
 - Given a product name and hypothesis provided by the user, when bootstrapping runs, then the product spec contains the provided hypothesis in the three-part format ([test](tests/test_bootstrapping.unit.py))
 - Given bootstrapping completes, when `spx/CLAUDE.md` is examined, then it contains the correct `template_version` matching the installed spec-tree plugin ([test](tests/test_bootstrapping.unit.py))
 

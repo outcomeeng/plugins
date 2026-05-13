@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 
 <objective>
 
-Interview the user to understand the product, then scaffold the initial `spx/` root with a product spec and project guide. Record top-level structure intent for `/decomposing spx/`, which owns top-level child composition.
+Interview the user to understand the product, then scaffold the initial `spx/` root with a product spec and product guide. Record top-level structure intent for `/decomposing spx/`, which owns top-level child composition.
 
 </objective>
 
@@ -16,7 +16,7 @@ Interview the user to understand the product, then scaffold the initial `spx/` r
 
 This skill runs when:
 
-- The user says "bootstrap", "set up spec tree", "start a new project"
+- The user says "bootstrap", "set up spec tree", "start a new product"
 - `/authoring` detects no `spx/` directory or an empty one
 - The user invokes `/bootstrapping` directly
 
@@ -144,7 +144,7 @@ Recommend next steps:
 
 **Failure 1: Bootstrapped over an existing tree**
 
-Claude ran bootstrapping in a project that already had `spx/` with specs. The product spec was overwritten.
+Claude ran bootstrapping in a product that already had `spx/` with specs. The product spec was overwritten.
 
 How to avoid: Step 1 checks for an existing product spec. If one exists, redirect to `/authoring` or `/decomposing spx/`.
 

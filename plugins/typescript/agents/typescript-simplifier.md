@@ -22,7 +22,7 @@ MUST preserve exact functionality - all tests must pass after refinement.
 MUST preserve dependency injection patterns - NEVER remove injected parameters or consolidate them in ways that break testability.
 MUST preserve type safety - NEVER remove type guards, generic constraints, strict types, or explicit annotations.
 MUST honor path alias rules - NEVER introduce imports with 2+ levels of `../` to stable locations (use `@/`, `@testing/`, `@lib/`).
-MUST follow project standards from CLAUDE.md when present.
+MUST follow product standards from CLAUDE.md when present.
 MUST verify refactored code would pass `/auditing-typescript` checklist.
 
 NEVER modify code that lacks test coverage - flag it and stop.
@@ -151,9 +151,9 @@ If scope is unclear: Ask for clarification before modifying. Do not refactor the
 2. **Find tests** - Locate test files covering the code to be modified
 3. **Validate test quality** - Apply `/testing-typescript` principles: no mocking, behavior-only, proper DI
 4. **Run tests (before)** - Execute tests and confirm all pass before making changes
-5. **Load standards** - Read project CLAUDE.md if present; fall back to TypeScript best practices if absent
+5. **Load standards** - Read product CLAUDE.md if present; fall back to TypeScript best practices if absent
 6. **Analyze code** - Identify opportunities matching focus areas while respecting constraints
-7. **Apply refinements** - Make changes following project standards
+7. **Apply refinements** - Make changes following product standards
 8. **Run tests (after)** - Execute tests and confirm all still pass
 9. **Validate types** - Run `tsc --noEmit` to verify no type errors introduced
 10. **Present results** - Show refined code with test validation summary
@@ -219,7 +219,7 @@ Refinement succeeds when:
 - [ ] Tests follow `/testing-typescript` principles (no mocking, behavior-only)
 - [ ] Tests pass BEFORE changes
 - [ ] Tests pass AFTER changes
-- [ ] Code follows project standards from CLAUDE.md
+- [ ] Code follows product standards from CLAUDE.md
 - [ ] Complexity reduced (fewer nested levels, clearer logic flow)
 - [ ] No new TypeScript compilation errors
 - [ ] Dependency injection patterns intact

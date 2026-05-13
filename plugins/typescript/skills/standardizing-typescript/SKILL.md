@@ -434,10 +434,10 @@ import { getRepoRoot } from "@lib/paths";
 import { helper } from "../../../../lib/utils";
 
 // ❌ REJECTED: Assuming working directory
-import { helper } from "lib/utils"; // Only works if CWD is project root
+import { helper } from "lib/utils"; // Only works if CWD is product root
 ```
 
-**Required Project Setup**
+**Required Product Setup**
 
 **1. Configure `tsconfig.json` with path aliases:**
 

@@ -44,7 +44,7 @@ A gate failure skips the next gate.
 !`cat "spx/local/typescript-tests.md" || echo "spx/local/typescript-tests.md not found; apply skills only."`
 
 <codex_fallback>
-If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for product-specific overlay files:
 
 1. Read `spx/local/typescript.md` if it exists. It supersedes any skills.
 2. Read `spx/local/typescript-tests.md` if it exists. It supersedes any skills.
@@ -59,13 +59,13 @@ Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). 
 
 <preliminary_check>
 
-If `spx validation literal` is available, run it from the project root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the project:
+If `spx validation literal` is available, run it from the product root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the product:
 
 ```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts <project-root>/testing/generators/**/*.ts --json
+spx validation literal --files <spec-node-path>/tests/**/*.test.ts <product-root>/testing/generators/**/*.ts --json
 ```
 
-`<project-root>/testing/generators/**/*.ts` means the package or repository root that owns the test command. Resolve it before running; for a repo-root package, `$(git rev-parse --show-toplevel)/testing/generators/**/*.ts` is the same directory. In a monorepo package, use that package root instead. Never rewrite the glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
+`<product-root>/testing/generators/**/*.ts` means the package or repository root that owns the test command. Resolve it before running; for a repo-root package, `$(git rev-parse --show-toplevel)/testing/generators/**/*.ts` is the same directory. In a monorepo package, use that package root instead. Never rewrite the glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
 
 Findings feed into Gate 1:
 
@@ -309,8 +309,8 @@ Alignment fails when clauses are collapsed, evidence method mismatches the type,
 Detect the package manager:
 
 1. Read `package.json` `"packageManager"` field — use it if present.
-2. Else detect from the lockfile in the project root: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `bun.lockb` → bun, `package-lock.json` → npm.
-3. Else read the project's CLAUDE.md or `justfile` for the canonical test command.
+2. Else detect from the lockfile in the product root: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `bun.lockb` → bun, `package-lock.json` → npm.
+3. Else read the product's CLAUDE.md or `justfile` for the canonical test command.
 
 Run coverage twice.
 
@@ -344,7 +344,7 @@ Interpret:
 
 Coverage measures execution breadth, not assertion strength. A property-based test with a broader input domain adds evidence coverage cannot measure.
 
-If the project has no coverage tooling: record as a coverage note, do not REJECT solely for this.
+If the product has no coverage tooling: record as a coverage note, do not REJECT solely for this.
 
 </supplement>
 

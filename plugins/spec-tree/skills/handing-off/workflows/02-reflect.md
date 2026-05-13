@@ -14,9 +14,9 @@ Classify each imperfection by nature to determine the persistence target. The de
 | --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `coding-*` skill references (e.g., `coding-typescript/references/`) |
 | **Methodology**       | Skill invocation order, audit interpretation, process error  | Spec-tree plugin skill (amend skill instructions)                                   |
-| **Project rule**      | Convention specific to this codebase, forbidden pattern      | Project `CLAUDE.md`                                                                 |
+| **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `CLAUDE.md`                                                                 |
 | **Interaction style** | Response format, verbosity, tone — NOT coding patterns       | Memory (`feedback` type)                                                            |
-| **Domain knowledge**  | Who's doing what, external system locations, project context | Memory (`project`/`reference` type)                                                 |
+| **Domain knowledge**  | Who's doing what, external system locations, product context | Memory (`product`/`reference` type)                                                 |
 | **Spec correction**   | Assertion was wrong or incomplete                            | Amend the spec file directly                                                        |
 | **Task-specific**     | Only relevant to this session's work                         | Session file only                                                                   |
 

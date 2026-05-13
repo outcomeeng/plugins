@@ -292,7 +292,7 @@ Commands provide dynamic context injection and invoke the corresponding skill.
 - **`committing-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
-  - Runs project validation before committing
+  - Runs product validation before committing
 
 ## Marker-based state detection
 
@@ -454,7 +454,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 
 #### `committing-changes`
 
-1. Run project validation (e.g., `just check`).
+1. Run product validation (e.g., `just check`).
 2. Review changes: `git status`, `git diff`.
 3. Classify changes by concern — group by type+scope.
 4. Stage specific files for one concern (never `git add .`).

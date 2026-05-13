@@ -51,10 +51,10 @@ The verdict is binary. APPROVED means every concern passes. REJECTED means at le
 
 Execute the phases in order.
 
-**Phase 0: Scope and project config**
+**Phase 0: Scope and product config**
 
 1. Determine the production files in scope
-2. Read `CLAUDE.md` and `README.md` for project commands and review constraints
+2. Read `CLAUDE.md` and `README.md` for product commands and review constraints
 3. Read `Cargo.toml` and `rust-toolchain.toml` when present
 4. Identify applicable ADRs and PDRs in the spec hierarchy if the code belongs to a spec-tree node
 

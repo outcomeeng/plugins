@@ -209,7 +209,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 2. Write the spec file
 3. Create the `tests/` directory
 4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
-5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.unit.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. Without the EXCLUDE entry, `spx validation all` fails on every forward `[test]` link.
+5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. Without the EXCLUDE entry, `spx validation all` fails on every forward `[test]` link.
 
 **For decision records:**
 
@@ -225,7 +225,7 @@ Write the file directly.
 spx/{product-name}.product.md
 ```
 
-Write the file. If `spx/CLAUDE.md` doesn't exist, note that one should be created as a project guide.
+Write the file. If `spx/CLAUDE.md` doesn't exist, note that one should be created as a product guide.
 
 </step>
 
@@ -308,7 +308,7 @@ How to avoid: before writing `[review]`, answer the falsification question: "Wha
 
 **Failure 8: Over-multiplying decision records in small trees**
 
-Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust project with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/15-build.adr.md." The four ADRs collapsed into one `spx/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a project with no commits yet.
+Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/15-build.adr.md." The four ADRs collapsed into one `spx/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
 
 How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
 
@@ -336,7 +336,7 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. If your parent spec reads "X provides A, B, and C (these are the child nodes)", you have written a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualizing` walk the tree to surface children.
 
-**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a project with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
+**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
 **Tagging testable MUST/NEVER rules with `[review]`.** `[review]` silences CI enforcement — any rule tagged `[review]` will not fail a build when violated. If a concrete automated test can falsify the rule, the tag is `[test]` and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they are never `[review]`. Reserve `[review]` for semantic constraints no automated check can falsify.
 

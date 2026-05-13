@@ -36,7 +36,7 @@ This skill does NOT:
 </context>
 
 <project_specialization>
-After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as project-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, draft-policy overrides).
+After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as product-specific additions to the PR workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, draft-policy overrides).
 </project_specialization>
 
 <context_gathering>
@@ -49,7 +49,7 @@ After loading this skill, check whether `spx/local/opening-pr.md` exists (path i
 | **git branch --show-current** | Current branch name (refuse if main/master/HEAD)                |
 | **git log <base>..HEAD**      | Commits to be included (drives title and body content)          |
 | **gh repo view**              | Default base branch (usually `main`)                            |
-| **CLAUDE.md / AGENTS.md**     | Project-specific PR conventions, custom template, push commands |
+| **CLAUDE.md / AGENTS.md**     | Product-specific PR conventions, custom template, push commands |
 | **Conversation**              | Issue or spec node references for the Refs footer               |
 
 </context_gathering>
@@ -204,7 +204,7 @@ git push -u origin "$(git branch --show-current)"
 git push
 ```
 
-If the project defines a custom push command (e.g., `just push-marketplace` for the outcomeeng marketplace repo), follow the project convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
+If the product defines a custom push command (e.g., `just push-marketplace` for the outcomeeng marketplace repo), follow the product convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
 
 **Step 2: Open the PR with body piped via stdin**
 
@@ -274,7 +274,7 @@ gh pr ready <pr-number>
 
 <critical_rules>
 
-1. **NEVER push from `main` with bare `git push`** — use the project's push command (e.g., `just push-marketplace`) when one is defined.
+1. **NEVER push from `main` with bare `git push`** — use the product's push command (e.g., `just push-marketplace`) when one is defined.
 2. **NEVER include self-reference** in title, body, or branch name — no "Claude", "AI", "agent", "Co-Authored-By: Claude".
 3. **NEVER use `--body "..."` for multi-line content** — gh does not expand `\n`. Use `--body-file`.
 4. **NEVER use `--fill`** with this skill — it adds nothing once `--body-file` is present.

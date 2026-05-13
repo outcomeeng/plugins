@@ -196,7 +196,7 @@ Read the spec assertion and the test's expect/assert statements side by side.
 
 **Step-by-step:**
 
-1. **Find the coverage command.** Read the project's CLAUDE.md, package.json, pyproject.toml, or Justfile.
+1. **Find the coverage command.** Read the product's CLAUDE.md, package.json, pyproject.toml, or Justfile.
 
 2. **Identify assertion-relevant source files.** From the spec assertion and test imports, determine which source files the test should cover.
 

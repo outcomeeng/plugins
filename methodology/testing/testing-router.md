@@ -54,7 +54,7 @@ Choose the level from operational reality, not from habit.
 | --------------------------------------------- | ------------- | ------------------------------- |
 | Prices are calculated correctly               | `L1`          | Pure calculation                |
 | User can export data as CSV                   | `L1`          | File I/O with tmp dirs is cheap |
-| CLI processes a Hugo site                     | `L2`          | Project-specific binary         |
+| CLI processes a Hugo site                     | `L2`          | product-specific binary         |
 | Database query returns users                  | `L2`          | Real database required          |
 | User can complete checkout with live provider | `L3`          | Remote provider required        |
 | Works in Safari against the live site         | `L3`          | Real browser and remote system  |
@@ -68,7 +68,7 @@ Choose the level from operational reality, not from habit.
 | Standard dev tools: git, node, curl | `L1`          |
 | Database                            | `L2`          |
 | External HTTP API                   | `L2` or `L3`  |
-| Project-specific binary             | `L2`          |
+| product-specific binary             | `L2`          |
 | Browser API                         | `L2` or `L3`  |
 | Live third-party service            | `L3`          |
 | Real credentials                    | `L3`          |
@@ -130,7 +130,7 @@ Includes:
 - local dev servers
 - Docker
 - local browsers
-- project-specific binaries
+- product-specific binaries
 - fresh bootstrap or install costs
 - other local dependencies that are materially slower or less ubiquitous
 

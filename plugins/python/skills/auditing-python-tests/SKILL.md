@@ -60,7 +60,7 @@ Type annotations (`-> None`), magic values, test organization, naming convention
 !`cat "spx/local/python-tests.md" || echo "spx/local/python-tests.md not found; apply skills only."`
 
 <codex_fallback>
-If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for project-specific overlay files:
+If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for product-specific overlay files:
 
 1. Read `spx/local/python.md` if it exists. It supersedes any skills.
 2. Read `spx/local/python-tests.md` if it exists. It supersedes any skills.
@@ -71,13 +71,13 @@ If you see `cat` commands above, shell injection did not run (Codex or similar e
 
 Gate 0 tool dependencies:
 
-- `ruff` installed in the consumer project (F1, V1)
-- `mypy` installed in the consumer project (V1)
-- `pytest` installed in the consumer project (V1, C1)
+- `ruff` installed in the consumer product (F1, V1)
+- `mypy` installed in the consumer product (V1)
+- `pytest` installed in the consumer product (V1, C1)
 
 If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
 
-Do not run `spx validation literal` for Python audits. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in project)` in Python projects.
+Do not run `spx validation literal` for Python audits. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in product)` in Python projects.
 
 </prerequisites>
 
@@ -122,7 +122,7 @@ python -m pytest --co -q 2>/dev/null | grep -c 'test session starts' || true
 coverage --version 2>/dev/null || python -m pytest --co -q --no-header 2>&1 | head -1
 ```
 
-Fail Gate 0 when project instructions require measured coverage and neither `coverage` nor `pytest-cov` is available.
+Fail Gate 0 when product instructions require measured coverage and neither `coverage` nor `pytest-cov` is available.
 </check>
 
 Gate 0 status:

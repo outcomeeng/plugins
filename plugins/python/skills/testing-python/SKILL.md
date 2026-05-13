@@ -93,7 +93,7 @@ For each assertion, apply the `/testing` methodology:
 | Pure computation/algorithm      | `l1`          |
 | File I/O with temp dirs         | `l1`          |
 | Standard dev tools (git, curl)  | `l1`          |
-| Project-specific binary         | `l2`          |
+| Product-specific binary         | `l2`          |
 | Database, Docker                | `l2`          |
 | Real credentials, external APIs | `l3`          |
 

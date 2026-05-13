@@ -14,7 +14,7 @@ Read `/standardizing-agent-prompts` for voice, description, constraint, and anti
 <quick_start>
 
 <workflow>
-1. Create `.claude/commands/` directory (project) or use `~/.claude/commands/` (personal)
+1. Create `.claude/commands/` directory (product) or use `~/.claude/commands/` (personal)
 2. Create `command-name.md` file
 3. Add YAML frontmatter (at minimum: `description`)
 4. Write command prompt
@@ -194,7 +194,7 @@ Determine whether a command needs arguments:
 - Use `$1`, `$2`, `$3` for structured input: `Review PR #$1 with priority $2`
 - Add `argument-hint` in frontmatter
 
-**No arguments** — task operates on implicit context (conversation, known files, project state):
+**No arguments** — task operates on implicit context (conversation, known files, product state):
 
 - Omit `argument-hint` and don't reference `$ARGUMENTS`
 
@@ -204,10 +204,10 @@ For detailed examples and patterns, see [${CLAUDE_SKILL_DIR}/references/argument
 
 <file_structure>
 
-**Project commands**: `.claude/commands/`
+**Product commands**: `.claude/commands/`
 
 - Shared with team via version control
-- Shows `(project)` in `/help` list
+- Shows `(product)` in `/help` list
 
 **Personal commands**: `~/.claude/commands/`
 
@@ -404,7 +404,7 @@ Common command patterns with full examples are in [${CLAUDE_SKILL_DIR}/reference
 2. **Frontmatter**: Add `description` (required), `argument-hint` (if arguments needed), `allowed-tools` (if tool restrictions needed)
 3. **Body**: Use XML tags — always `<objective>`, `<process>`, `<success_criteria>`; add `<context>`, `<verification>`, `<testing>`, `<output>` as needed (see `<intelligence_rules>`)
 4. **Arguments**: Use `$ARGUMENTS` or positional `$1`/`$2` in tags (see `<arguments_intelligence>`)
-5. **Save**: Project commands in `.claude/commands/`, personal in `~/.claude/commands/`
+5. **Save**: Product commands in `.claude/commands/`, personal in `~/.claude/commands/`
 
 </generation_protocol>
 

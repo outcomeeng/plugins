@@ -17,7 +17,7 @@ Before classifying input, check whether the interview is resuming a prior sessio
 2. Re-validate against current codebase:
    - Has the input file changed since the timestamp? (compare mtime or git blob)
    - Have referenced source files changed?
-   - Have project docs (README, CLAUDE.md) changed?
+   - Have product docs (README, CLAUDE.md) changed?
 3. Flag any stale answers: "This answer may no longer apply because [reason]. Re-ask?"
 4. Display the current coverage map with `[done]` / `[current]` / `[pending]` markers
 5. Use AskUserQuestion to confirm: "Resume from [area X], or start over?"
@@ -41,7 +41,7 @@ Launch an Explore agent to:
 1. Analyze the input — what's defined, ambiguous, missing
 2. Scan the codebase for existing patterns, architecture, tech stack
 3. Check dependencies (package.json, pyproject.toml, etc.)
-4. Read project docs (README, CLAUDE.md, existing specs)
+4. Read product docs (README, CLAUDE.md, existing specs)
 
 Share the structured brief with the user before asking the first question. Include your preliminary opinions — they set the tone for a collaborative interview, not a passive one.
 

@@ -1,5 +1,5 @@
 # Mypy Strict Configuration for High-Assurance Python
-# Used by auditing-python skill when project lacks its own mypy config
+# Used by auditing-python skill when product lacks its own mypy config
 
 [mypy]
 # Core strict mode - enables most strict checks

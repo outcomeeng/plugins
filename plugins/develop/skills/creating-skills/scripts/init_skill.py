@@ -91,7 +91,7 @@ Files not intended to be loaded into context, but rather used within the output 
 
 **Examples from other skills:**
 - Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
+- Frontend builder: HTML/React boilerplate product directories
 - Typography: Font files (.ttf, .woff2)
 
 **Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
@@ -177,7 +177,7 @@ Example asset files from other skills:
 - Templates: .pptx, .docx, boilerplate directories
 - Images: .png, .jpg, .svg, .gif
 - Fonts: .ttf, .otf, .woff, .woff2
-- Boilerplate code: Project directories, starter files
+- Boilerplate code: Product directories, starter files
 - Icons: .ico, .svg
 - Data files: .csv, .json, .xml, .yaml
 

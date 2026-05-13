@@ -1,6 +1,6 @@
 <l2_patterns>
 
-Typed harness factories for tests that require real infrastructure (Docker, browsers, project binaries).
+Typed harness factories for tests that require real infrastructure (Docker, browsers, product binaries).
 
 Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing.
 

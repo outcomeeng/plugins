@@ -40,4 +40,4 @@ Feature-branch PRs push with bare `git push -u origin <branch>`. The marketplace
 
 ## Self-reference
 
-The marketplace bans agent identity strings from branch names, commit messages, PR titles, and PR bodies (see the project-level `self_reference_policy`). The base `/opening-pr` skill already enforces this — no further additions here.
+The marketplace bans agent identity strings from branch names, commit messages, PR titles, and PR bodies (see the product-scope `self_reference_policy`). The base `/opening-pr` skill already enforces this — no further additions here.
