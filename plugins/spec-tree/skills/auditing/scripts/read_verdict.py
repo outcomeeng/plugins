@@ -105,7 +105,11 @@ def extract_json(text: str) -> str:
             f"verdict block has {JSON_BLOCK_END} but no opening "
             f"{JSON_BLOCK_BEGIN} delimiter"
         )
-    if begin != -1 and end != -1 and end < begin:
+    if begin != -1 and end != -1:
+        # ``begin < end`` was handled above; reaching here means both
+        # delimiters are present and ``end < begin`` (``end == begin``
+        # is impossible since the two delimiters are distinct fixed
+        # strings).
         raise ExtractError(
             f"verdict block delimiters out of order: {JSON_BLOCK_END} "
             f"appears before {JSON_BLOCK_BEGIN}"

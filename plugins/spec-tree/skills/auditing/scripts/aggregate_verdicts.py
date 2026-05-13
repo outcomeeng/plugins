@@ -118,10 +118,15 @@ def _resolve_paths(positional: list[str], directory: str | None) -> list[Path]:
     # discovered via --directory contributes one child to the wrapper,
     # not two. Without this, a duplicated FAIL child would count twice in
     # the rollup. Map resolved -> original so error reporting preserves
-    # the caller-supplied (possibly relative) path. Hard-linked files
-    # remain undetected: ``Path.resolve`` follows symlinks but does not
-    # canonicalize to an inode; callers passing two hard-link aliases to
-    # the same file will see both as distinct children.
+    # the caller-supplied (possibly relative) path. Since positional paths
+    # are appended before ``--directory`` entries above, ``setdefault``
+    # preserves the positional spelling — a file given both positionally
+    # and via ``--directory`` keeps its positional (possibly relative)
+    # path in any later error message, which matches the caller's intent.
+    # Hard-linked files remain undetected: ``Path.resolve`` follows
+    # symlinks but does not canonicalize to an inode; callers passing two
+    # hard-link aliases to the same file will see both as distinct
+    # children.
     seen: dict[Path, Path] = {}
     for path in paths:
         seen.setdefault(path.resolve(), path)
