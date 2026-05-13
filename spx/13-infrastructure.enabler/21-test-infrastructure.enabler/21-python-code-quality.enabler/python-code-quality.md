@@ -8,10 +8,10 @@ CAN maintain type-correct, lint-clean code enforced by `just check`
 
 ### Conformance
 
-- All Python source files pass `ruff check` with the configured rule set ([test](tests/test_python_code_quality.integration.py))
-- All Python source files pass `mypy --strict` ([test](tests/test_python_code_quality.integration.py))
-- All Python source files pass `pyright` in standard mode ([test](tests/test_python_code_quality.integration.py))
+- All Python source files pass `ruff check` with the configured rule set ([test](tests/test_python_code_quality.conformance.l2.py))
+- All Python source files pass `mypy --strict` ([test](tests/test_python_code_quality.conformance.l2.py))
+- All Python source files pass `pyright` in standard mode ([test](tests/test_python_code_quality.conformance.l2.py))
 
 ### Compliance
 
-- ALWAYS: `ruff check`, `mypy`, and `pyright` run as named steps in `just check` — static analysis must block the quality gate ([test](tests/test_python_code_quality.integration.py))
+- ALWAYS: `ruff check`, `mypy`, and `pyright` run as named steps in `just check` — static analysis must block the quality gate ([test](tests/test_python_code_quality.compliance.l2.py))

@@ -160,7 +160,7 @@ Spec assertions link to their evidence inline:
 ```markdown
 ### Scenarios
 
-- Given X, when Y, then Z ([test](tests/test_slug.unit.py))
+- Given X, when Y, then Z ([test](tests/test_slug.scenario.l1.py))
 ```
 
 Use `[test](...)` for automated evidence and `[review]` for semantic constraints that cannot be checked by a finite automated test. Every assertion must carry an evidence tag.

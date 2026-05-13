@@ -37,24 +37,24 @@ Distinct element names per gate (`<findings>` vs `<assertions>` vs `<patterns>`)
 
 ### Scenarios
 
-- Given a well-formed verdict conforming to the schema, when validated against `references/audit-verdict.xsd`, then validation succeeds ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a verdict missing the `<header>` element, when validated, then validation fails with an error naming `header` ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a verdict with two `<gate>` children instead of three, when validated, then validation fails ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a gate with `status="SKIPPED"` and no `<skipped_reason>`, when validated, then validation fails ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a gate 0 `<findings count="3">` containing two `<finding>` children, when validated, then validation fails with a count-mismatch error ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a gate 2 `<pattern>` with a single `<occurrence>` child, when validated, then validation fails because patterns require at least two occurrences ([test](tests/test_audit_verdict_schema.unit.py))
-- Given a verdict with `<verdict>APPROVED</verdict>` and any `<gate status="FAIL">`, when validated by the post-schema coherence check, then validation fails ([test](tests/test_audit_verdict_schema.unit.py))
+- Given a well-formed verdict conforming to the schema, when validated against `references/audit-verdict.xsd`, then validation succeeds ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a verdict missing the `<header>` element, when validated, then validation fails with an error naming `header` ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a verdict with two `<gate>` children instead of three, when validated, then validation fails ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a gate with `status="SKIPPED"` and no `<skipped_reason>`, when validated, then validation fails ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a gate 0 `<findings count="3">` containing two `<finding>` children, when validated, then validation fails with a count-mismatch error ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a gate 2 `<pattern>` with a single `<occurrence>` child, when validated, then validation fails because patterns require at least two occurrences ([test](tests/test_audit_verdict_schema.scenario.l1.py))
+- Given a verdict with `<verdict>APPROVED</verdict>` and any `<gate status="FAIL">`, when validated by the post-schema coherence check, then validation fails ([test](tests/test_audit_verdict_schema.scenario.l1.py))
 
 ### Mappings
 
-- `<gate status>` accepts exactly `PASS`, `FAIL`, `SKIPPED` — any other value fails validation ([test](tests/test_audit_verdict_schema.unit.py))
-- `<verdict>` element content accepts exactly `APPROVED`, `REJECT` — any other value fails validation ([test](tests/test_audit_verdict_schema.unit.py))
-- `<assertion_type>` accepts exactly `Scenario`, `Mapping`, `Conformance`, `Property`, `Compliance` — any other value fails validation ([test](tests/test_audit_verdict_schema.unit.py))
-- Gate 1 finding `<step>` accepts exactly `challenge`, `scope`, `evidence`, `mocks`, `oracle`, `harness_chain`, `coupling`, `falsifiability`, `alignment`, `coverage` — any other value fails validation ([test](tests/test_audit_verdict_schema.unit.py))
+- `<gate status>` accepts exactly `PASS`, `FAIL`, `SKIPPED` — any other value fails validation ([test](tests/test_audit_verdict_schema.mapping.l1.py))
+- `<verdict>` element content accepts exactly `APPROVED`, `REJECT` — any other value fails validation ([test](tests/test_audit_verdict_schema.mapping.l1.py))
+- `<assertion_type>` accepts exactly `Scenario`, `Mapping`, `Conformance`, `Property`, `Compliance` — any other value fails validation ([test](tests/test_audit_verdict_schema.mapping.l1.py))
+- Gate 1 finding `<step>` accepts exactly `challenge`, `scope`, `evidence`, `mocks`, `oracle`, `harness_chain`, `coupling`, `falsifiability`, `alignment`, `coverage` — any other value fails validation ([test](tests/test_audit_verdict_schema.mapping.l1.py))
 
 ### Conformance
 
-- The schema file at `references/audit-verdict.xsd` conforms to the W3C XML Schema 1.1 Structures specification ([test](tests/test_audit_verdict_schema.unit.py))
+- The schema file at `references/audit-verdict.xsd` conforms to the W3C XML Schema 1.1 Structures specification ([test](tests/test_audit_verdict_schema.conformance.l1.py))
 
 ### Compliance
 

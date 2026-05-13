@@ -182,7 +182,7 @@ Spec assertions link to their evidence inline:
 ```markdown
 ### Scenarios
 
-- Given X, when Y, then Z ([test](tests/test_slug.unit.py))
+- Given X, when Y, then Z ([test](tests/test_slug.scenario.l1.py))
 ```
 
 Use `[test](...)` for automated evidence verified by a test runner, `[eval](...)` for LLM-driven behavior verified by graded cases against a structured verdict, and `[review]` for semantic constraints that no automated check can falsify. Every assertion carries exactly one evidence tag. The `[eval]` link points at a per-eval directory's `eval.toml`; the lane is declared per project (e.g., `spx/16-evidence-execution-lanes.adr.md` in this marketplace).

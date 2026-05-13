@@ -347,7 +347,7 @@ instead of throwing unhandled exception.
 ```text
 refactor: extract validation logic into separate module
 
-Prepares codebase for unit testing by isolating validation
+Prepares codebase for L1 testing by isolating validation
 from business logic.
 ```
 

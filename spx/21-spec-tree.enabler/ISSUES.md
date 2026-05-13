@@ -20,10 +20,10 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 `outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the EXCLUDE + derived-state model. The upstream needs to be rewritten to match.
 
-## 12. Repo-wide evidence links still contain legacy test naming
+## 12. Repo-wide evidence links still contain legacy test naming (RESOLVED)
 
-Several planned spec assertions, spec-tree templates, examples, and methodology references still use legacy evidence names such as `*.unit.py`, `*.integration.py`, and `*.unit.test.ts`. This session renamed only checked-in Python evidence files and their direct links.
+Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`, `*.integration.test.{ext}`, `*.e2e.test.{ext}`, `test_*.unit.{ext}`, `test_*.integration.{ext}`, `test_*.e2e.{ext}`) in spec assertions, spec-tree templates, examples, and methodology references was rewritten to the canonical `<subject>.<evidence>.<level>[.<runner>]` form, splitting mixed-evidence specs across one file per evidence type. Remaining mentions of the legacy tokens are scoped to:
 
-Needs `/aligning` to enumerate the affected spec-tree docs, `/testing` plus language-specific testing skills to select evidence modes and levels, and `/auditing-tests` where changed links resolve to test evidence.
-
-Revisit during the repo-wide evidence-naming cleanup or the next spec-tree methodology pass.
+- `plugins/{python,typescript}/skills/standardizing-*-tests/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
+- `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` and `plugins/develop/skills/auditing-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
+- `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.

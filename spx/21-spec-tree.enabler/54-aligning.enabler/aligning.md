@@ -8,9 +8,9 @@ CAN detect contradictions, gaps, and content misplacement before they reach impl
 
 ### Scenarios
 
-- Given a spec that contradicts an ancestor ADR compliance rule, when alignment is checked, then the contradiction is reported with the conflicting ADR reference ([test](tests/test_aligning.unit.py))
-- Given a spec with implementation details that belong in an ADR, when alignment is checked, then the content misplacement is flagged ([test](tests/test_aligning.unit.py))
-- Given a spec with temporal language, when alignment is checked, then the temporal markers are identified with atemporal rewrites ([test](tests/test_aligning.unit.py))
+- Given a spec that contradicts an ancestor ADR compliance rule, when alignment is checked, then the contradiction is reported with the conflicting ADR reference ([test](tests/test_aligning.scenario.l1.py))
+- Given a spec with implementation details that belong in an ADR, when alignment is checked, then the content misplacement is flagged ([test](tests/test_aligning.scenario.l1.py))
+- Given a spec with temporal language, when alignment is checked, then the temporal markers are identified with atemporal rewrites ([test](tests/test_aligning.scenario.l1.py))
 
 ### Compliance
 

@@ -46,7 +46,7 @@ it("loads configuration", () => {
 });
 ```
 
-May be legitimate for integration tests. Verify the test level matches the assertion level.
+May be legitimate when the test exercises cross-module evidence at L2 or L3. Verify the test level matches the assertion level.
 
 **False coupling** — Test imports the module but never exercises the code path relevant to the assertion.
 

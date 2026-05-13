@@ -8,9 +8,9 @@ CAN produce atomic, well-described commits that map cleanly to spec tree changes
 
 ### Scenarios
 
-- Given staged changes spanning multiple plugins, when the commit skill runs, then it recommends splitting into separate commits per plugin ([test](tests/test_committing.unit.py))
-- Given a commit message, when validated, then it conforms to Conventional Commits format (type, optional scope, description) ([test](tests/test_committing.unit.py))
-- Given spec tree changes and version bumps, when committed, then both are included in the same commit ([test](tests/test_committing.unit.py))
+- Given staged changes spanning multiple plugins, when the commit skill runs, then it recommends splitting into separate commits per plugin ([test](tests/test_committing.scenario.l1.py))
+- Given a commit message, when validated, then it conforms to Conventional Commits format (type, optional scope, description) ([test](tests/test_committing.scenario.l1.py))
+- Given spec tree changes and version bumps, when committed, then both are included in the same commit ([test](tests/test_committing.scenario.l1.py))
 
 ### Compliance
 
