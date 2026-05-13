@@ -2,17 +2,17 @@
 
 Every artifact in the Spec Tree has a specific purpose. Content placed in the wrong artifact creates confusion and duplication.
 
-| Artifact type           | Purpose                                  | Contains                                     | Verified by                    |
-| ----------------------- | ---------------------------------------- | -------------------------------------------- | ------------------------------ |
-| **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                      |
-| **PDR**                 | GOVERNS what (product)                   | Decisions, product invariants                | PDR audit                      |
-| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                          |
-| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                          |
-| **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                    |
-| **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, architecture audit |
-| **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule              |
-| **PLAN.md**             | DEFERS remaining steps                   | Concrete plan for a node                     | Next agent                     |
-| **ISSUES.md**           | DEFERS known issues                      | Gaps, bugs, untestable specs                 | Next agent                     |
+| Artifact type           | Purpose                                  | Contains                                     | Verified by                                         |
+| ----------------------- | ---------------------------------------- | -------------------------------------------- | --------------------------------------------------- |
+| **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                                           |
+| **PDR**                 | GOVERNS what (product)                   | Decisions, product invariants                | PDR audit                                           |
+| **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                                               |
+| **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                                               |
+| **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
+| **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, test evidence audit, architecture audit |
+| **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule                                   |
+| **PLAN.md**             | DEFERS remaining steps                   | Concrete plan for a node                     | Next agent                                          |
+| **ISSUES.md**           | DEFERS known issues                      | Gaps, bugs, untestable specs                 | Next agent                                          |
 
 </overview>
 
