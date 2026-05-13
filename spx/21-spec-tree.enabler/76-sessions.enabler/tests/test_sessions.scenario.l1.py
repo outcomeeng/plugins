@@ -23,7 +23,6 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 BIN_DIR = REPO_ROOT / "plugins" / "spec-tree" / "bin"

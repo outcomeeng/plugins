@@ -20,7 +20,6 @@ loader substitutes the path before the agent sees the command.
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -35,7 +34,6 @@ from verdict import (
     JSON_BLOCK_END,
     Finding,
     Row,
-    Status,
     Verdict,
     VerdictValidationError,
 )
