@@ -43,7 +43,7 @@ About to load context for an existing target and explain why lower-index sibling
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
    - `references/ordering-rules.md` — context-loading meaning of existing numeric prefixes and sibling number scope
-   - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, three-option closing protocol
+   - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, closing protocol
 3. Note operational references (loaded on demand by other skills):
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
