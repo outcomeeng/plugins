@@ -11,8 +11,8 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
 | **Test infrastructure** | PROVIDES harnesses, generators, fixtures | Production code that enables test assertions | Code audit, test evidence audit, architecture audit |
 | **Enforcement**         | CONSTRAINS structure                     | Lint rules, AST selectors                    | Tests on the rule                                   |
-| **PLAN.md**             | DEFERS remaining steps                   | Concrete plan for a node                     | Next agent                                          |
-| **ISSUES.md**           | DEFERS known issues                      | Gaps, bugs, untestable specs                 | Next agent                                          |
+| **PLAN.md**             | COORDINATES pending steps                | Concrete plan for a node                     | Next session                                        |
+| **ISSUES.md**           | COORDINATES known issues                 | Gaps, bugs, untestable specs                 | Next session                                        |
 
 </overview>
 
@@ -142,11 +142,11 @@ Test harnesses (modules that mediate access to the system under test), test gene
 
 <escape_hatches>
 
-**Purpose:** Non-durable node-local files left by `/handoff` for the next agent. They are escape hatches, not homes — prefer amending specs or fixing issues directly.
+**Purpose:** Node-local coordination files. They preserve pending work and known issues for future context loading without becoming spec truth. Prefer amending specs or fixing issues directly when the correction is clear and safe. Both files are committed to git in the same change that creates or amends them — they are durable, git-tracked artifacts, not local scratch. Session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git; `spx session` shares them across worktrees.
 
-**PLAN.md** — concrete remaining steps for a node. Written when work is interrupted. Remove when all steps are complete.
+**PLAN.md** — concrete remaining steps for a node. Written when work is interrupted or when an approved plan must persist beyond the current conversation. Commit it; remove completed items in subsequent commits.
 
-**ISSUES.md** — known issues that were deferred: spec gaps, implementation bugs, untestable assertions. Remove fixed items, add new ones.
+**ISSUES.md** — known issues that remain unresolved: spec gaps, implementation bugs, untestable assertions. Commit it; remove fixed items and add new ones in subsequent commits.
 
 **Verified by:** `/contextualizing` reads them automatically. `/pickup` checks for them.
 
@@ -181,7 +181,7 @@ ADR/PDR ──governs──→ Spec ──┤
 | Enforceable constraint   | `[review]`     | `[test]` on the lint rule                                                  |
 | Cross-cutting invariant  | Child spec     | Ancestor spec                                                              |
 | Remaining work steps     | Session file   | PLAN.md in node                                                            |
-| Known deferred issues    | Session file   | ISSUES.md in node                                                          |
+| Known unresolved issues  | Session file   | ISSUES.md in node                                                          |
 | Child-node enumeration   | Parent spec    | Remove — `/contextualizing` surfaces children; each child describes itself |
 
 </common_misplacements>

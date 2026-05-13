@@ -1,10 +1,10 @@
 <objective>
-Execute all approved persistence decisions, commit session-owned work, and create the handoff session file. This workflow closes the session — work not committed here is not persisted.
+Execute all approved persistence decisions, commit session-owned work, and either write or omit the canonical continuation. This workflow closes the session -- work not committed here is not persisted.
 
 </objective>
 
 <required_reading>
-Before writing the session file, read `references/session-format.md` for the required template.
+Before writing a Path B or Path C session file, read `references/session-format.md` for the required template.
 
 </required_reading>
 
@@ -19,7 +19,7 @@ For each approved item from workflow 03:
 </write_approved_items>
 
 <commit>
-Handoff is BLOCKED until session-owned files are committed.
+Closure is BLOCKED until session-owned files are committed.
 
 1. Enumerate every file changed during this session that belongs to the session:
    - spec files, tests, implementation code
@@ -57,7 +57,7 @@ The existence of any session is never permission to archive an in-scope session 
 </resolve_session_scope>
 
 <write_canonical_continuation>
-Every closure ends with **zero or one** handoff. Pick the path once and execute it.
+Every closure ends with **zero or one** handoff. Pick the path once and execute it. Zero is correct when no continuation reader exists.
 
 **Path A — `--no-session` (zero handoffs, a.k.a. `/release`)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
@@ -98,7 +98,7 @@ spx session archive <session-id>
 
 Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive the session that was just rewritten in place under Path B. NEVER archive TODO sessions created by other conversations — the TODO queue is shared across agents.
 
-**A handoff is incomplete if this closure creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other agents are not this closure's concern and must be left untouched.
+**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other agents are not this closure's concern and must be left untouched.
 
 **If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
 
@@ -125,9 +125,9 @@ State:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
-- Exactly zero or one canonical continuation created or rewritten by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other agents are out of scope and untouched.
-- Canonical continuation written via Path A (release), Path B (rewrite in place), or Path C (new handoff).
-- `<incorporated_sessions>` section present in the canonical continuation when the in-scope set is non-empty.
+- Exactly zero or one canonical continuation created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other agents are out of scope and untouched.
+- Continuation path executed via Path A (release), Path B (rewrite in place), or Path C (new handoff).
+- `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the in-scope set is non-empty.
 - Every in-scope session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
 - Confirmation output names the continuation path and the archived ids.
