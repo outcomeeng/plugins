@@ -136,13 +136,7 @@ seven days.
 
 ## Plugins
 
-Unless marked otherwise, the skills described below are available in both Claude Code and Codex. Commands and agents are Claude Code-only.
-
-### spec-tree
-
-The core of [Outcome Engineering](https://outcome.engineering). Three steps: **declare** (write specs), **spec** (write tests), **apply** (write implementation). Audit gates operate within each step.
-
-Codex support: the same skill set is available through the `spec-tree` Codex plugin. The slash commands and bundled agents listed below are Claude Code-only.
+Skills are available in both Claude Code and Codex. Commands and agents are Claude Code-only. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.
 
 <details>
 <summary><strong><code>/bootstrap</code> in action</strong> — interactive product interview and scaffold</summary>
@@ -158,108 +152,168 @@ Codex support: the same skill set is available through the `spec-tree` Codex plu
 
 </details>
 
-| Type    | Name                    | Step    | Purpose                                                 |
-| ------- | ----------------------- | ------- | ------------------------------------------------------- |
-| Skill   | `/understanding`        | declare | Foundation skill — loaded before any other              |
-| Skill   | `/contextualizing`      | declare | Deterministic context loading from tree                 |
-| Skill   | `/bootstrapping`        | declare | Interview user, scaffold new spec tree                  |
-| Skill   | `/authoring`            | declare | Add, define, create specs and nodes                     |
-| Skill   | `/decomposing`          | declare | Break down, split, scope work                           |
-| Skill   | `/refactoring`          | declare | Move nodes, re-scope, extract shared enablers           |
-| Skill   | `/aligning`             | declare | Check consistency, conformance, find gaps (audit gate)  |
-| Skill   | `/interviewing`         | declare | Domain-agnostic interview methodology                   |
-| Skill   | `/testing`              | spec    | Write tests driven by spec assertions                   |
-| Skill   | `/auditing-tests`       | spec    | Audit test evidence quality (audit gate)                |
-| Skill   | `/applying`             | *all*   | Orchestrator: declare + spec + apply with audit gates   |
-| Skill   | `/committing-changes`   | apply   | Conventional Commits with selective staging             |
-| Agent   | `applier`               |         | Autonomous TDD agent — runs the full flow as a subagent |
-| Agent   | `test-evidence-auditor` |         | Test evidence audit subagent (preloads auditing skill)  |
-| Agent   | `pdr-auditor`           |         | PDR audit subagent (preloads auditing skill)            |
-| Command | `/bootstrap`            |         | Set up a new spec tree                                  |
-| Command | `/author`               |         | Author a spec tree artifact (auto-detects type)         |
-| Command | `/commit`               |         | Git commit with Conventional Commits                    |
-| Command | `/apply`                |         | Run TDD flow on a subtree or from `spx/EXCLUDE`         |
-| Command | `/rtfm`                 |         | Stop ad hoc work, follow methodology                    |
-| Command | `/clarify`              |         | Clarify ambiguous requirements                          |
-| Command | `/handoff`              |         | Create timestamped context handoff                      |
-| Command | `/pickup`               |         | Load and continue from previous handoff                 |
-
-### typescript
-
-Complete TypeScript development workflow. Requires spx CLI.
-
-Codex support: the same skills are available through the `typescript` Codex plugin. The agents listed below are Claude Code-only.
-
-| Type  | Name                                | Purpose                            |
-| ----- | ----------------------------------- | ---------------------------------- |
-| Agent | `typescript-simplifier`             | Simplify code for maintainability  |
-| Agent | `typescript-code-auditor`           | Code audit subagent                |
-| Agent | `typescript-architecture-auditor`   | ADR audit subagent                 |
-| Agent | `typescript-test-auditor`           | Test evidence audit subagent       |
-| Skill | `/testing-typescript`               | TypeScript-specific testing        |
-| Skill | `/coding-typescript`                | Implementation with remediation    |
-| Skill | `/auditing-typescript`              | Strict code audit                  |
-| Skill | `/architecting-typescript`          | ADR producer with testing strategy |
-| Skill | `/auditing-typescript-architecture` | ADR audit                          |
-
-### python
-
-Complete Python development workflow. Requires spx CLI.
-
-Codex support: the same skills are available through the `python` Codex plugin. `/autopython` and the agents listed below are Claude Code-only.
-
-| Type    | Name                            | Purpose                            |
-| ------- | ------------------------------- | ---------------------------------- |
-| Agent   | `python-code-auditor`           | Code audit subagent                |
-| Agent   | `python-architecture-auditor`   | ADR audit subagent                 |
-| Agent   | `python-test-auditor`           | Test evidence audit subagent       |
-| Command | `/autopython`                   | Autonomous implementation          |
-| Skill   | `/testing-python`               | Python-specific testing patterns   |
-| Skill   | `/coding-python`                | Implementation with remediation    |
-| Skill   | `/auditing-python`              | Strict code audit                  |
-| Skill   | `/architecting-python`          | ADR producer with testing strategy |
-| Skill   | `/auditing-python-architecture` | ADR audit                          |
-
-### prose
-
-Prose craft skills for writing and reviewing. No spx CLI required.
-
-| Type  | Name              | Purpose                                     |
-| ----- | ----------------- | ------------------------------------------- |
-| Skill | `/writing-prose`  | Write varied, specific, human prose         |
-| Skill | `/auditing-prose` | Audit and edit prose for formulaic patterns |
+<!-- BEGIN PLUGIN CATALOG (generated by `just docs` — do not edit) -->
 
 ### develop
 
-Meta-skills for Codex and Claude Code plugin development. No spx CLI required.
+Plugin development: /creating-skills, /creating-commands, /creating-subagents
 
-| Type  | Name                  | Purpose                         |
-| ----- | --------------------- | ------------------------------- |
-| Skill | `/creating-skills`    | Create and refine skills        |
-| Skill | `/creating-commands`  | Create slash commands with XML  |
-| Skill | `/creating-subagents` | Create and configure subagents  |
-| Skill | `/auditing-skills`    | Audit skills for best practices |
-| Skill | `/auditing-commands`  | Audit slash commands            |
-| Skill | `/auditing-subagents` | Audit subagent configurations   |
-
-Credit: These meta skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The commands `/handoff` and `/pickup` are based on `/whats-next` from the same product.
+| Type  | Name                           | Purpose                                                                                                                                  |
+| ----- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/auditing-commands`           | Auditing, reviewing, or evaluating slash command .md files                                                                               |
+| Skill | `/auditing-skills`             | Auditing, reviewing, or evaluating SKILL.md files                                                                                        |
+| Skill | `/auditing-subagents`          | Auditing, reviewing, or evaluating subagent configuration files                                                                          |
+| Skill | `/creating-commands`           | Creating or editing slash commands                                                                                                       |
+| Skill | `/creating-skills`             | Creating, editing, or improving SKILL.md files                                                                                           |
+| Skill | `/creating-subagents`          | Creating, editing, or configuring subagents                                                                                              |
+| Skill | `/standardizing-agent-prompts` | Agent prompt writing conventions enforced across all creator and auditor skills                                                          |
+| Skill | `/standardizing-skills`        | Skill authoring standards enforced across all creating and auditing skills                                                               |
+| Agent | `command-auditor`              | Auditing, reviewing, or evaluating slash command .md files for best practices compliance, or when the user asks to audit a command       |
+| Agent | `skill-auditor`                | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                  |
+| Agent | `subagent-auditor`             | Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent |
 
 ### frontend
 
-Frontend design and styling. No spx CLI required.
+Frontend design: /designing-frontend skill
 
-| Type  | Name                  | Purpose                                |
-| ----- | --------------------- | -------------------------------------- |
-| Skill | `/designing-frontend` | Create distinctive frontend interfaces |
+| Type  | Name                  | Purpose                                                    |
+| ----- | --------------------- | ---------------------------------------------------------- |
+| Skill | `/designing-frontend` | Designing or building web components, pages, or dashboards |
 
 ### hdl
 
-HDL engineering skills for VHDL and SystemVerilog code review. No spx CLI required.
+HDL engineering: /reviewing-vhdl, /reviewing-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)
 
-| Type  | Name                       | Purpose                                                              |
-| ----- | -------------------------- | -------------------------------------------------------------------- |
-| Skill | `/reviewing-vhdl`          | Idiomatic VHDL-2008 review with synthesizability analysis            |
-| Skill | `/reviewing-systemverilog` | Idiomatic SystemVerilog IEEE 1800-2017 review for Vivado and Quartus |
+| Type  | Name                       | Purpose                                                                                          |
+| ----- | -------------------------- | ------------------------------------------------------------------------------------------------ |
+| Skill | `/reviewing-systemverilog` | Reviewing SystemVerilog or Verilog code for idiomatic style, synthesizability, or best practices |
+| Skill | `/reviewing-vhdl`          | Reviewing VHDL code for idiomatic style, synthesizability, or best practices                     |
+
+### prose
+
+Prose craft for external prose (/writing-prose, /auditing-prose) and internal team docs (/writing-internal-docs, /auditing-internal-docs)
+
+| Type  | Name                           | Purpose                                                                                                                                                                                                                                                  |
+| ----- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/auditing-internal-docs`      | Auditing or reviewing internal team documents for cleanup                                                                                                                                                                                                |
+| Skill | `/auditing-prose`              | Auditing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers                                                                                                                  |
+| Skill | `/standardizing-internal-docs` | Catalog of anti-patterns and positive patterns for internal team documents (Notion pages, runbooks, scorecards, hiring rubrics, internal policies, decision records, design specs, competency models)                                                    |
+| Skill | `/standardizing-prose`         | Prose anti-patterns enforced across all skills                                                                                                                                                                                                           |
+| Skill | `/writing-internal-docs`       | Writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content |
+| Skill | `/writing-prose`               | Writing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers                                                                                                                   |
+
+### python
+
+Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture
+
+| Type  | Name                                 | Purpose                                                                |
+| ----- | ------------------------------------ | ---------------------------------------------------------------------- |
+| Skill | `/architecting-python`               | Writing ADRs for Python                                                |
+| Skill | `/auditing-python`                   | Auditing code for Python or after writing code                         |
+| Skill | `/auditing-python-architecture`      | Auditing ADRs for Python or after writing an ADR                       |
+| Skill | `/auditing-python-tests`             | Auditing tests for Python or after writing tests                       |
+| Skill | `/coding-python`                     | Writing or fixing implementation code for Python                       |
+| Skill | `/standardizing-python`              | Python code standards enforced across all skills                       |
+| Skill | `/standardizing-python-architecture` | Python ADR conventions enforced across architect and auditor skills    |
+| Skill | `/standardizing-python-tests`        | Python testing standards enforced across all skills                    |
+| Skill | `/testing-python`                    | Writing or fixing tests for Python                                     |
+| Agent | `python-architecture-auditor`        | Audit Python ADRs for conventions, testability, and voice              |
+| Agent | `python-code-auditor`                | Audit Python code for design flaws and ADR compliance                  |
+| Agent | `python-test-auditor`                | Audit Python test code for evidence quality using the 4-property model |
+
+### rust
+
+Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rust, /auditing-rust-architecture, rust-unsafe-auditor agent
+
+| Type  | Name                               | Purpose                                                               |
+| ----- | ---------------------------------- | --------------------------------------------------------------------- |
+| Skill | `/architecting-rust`               | Writing ADRs for Rust                                                 |
+| Skill | `/auditing-rust`                   | Auditing code for Rust or after writing code                          |
+| Skill | `/auditing-rust-architecture`      | Auditing ADRs for Rust or after writing an ADR                        |
+| Skill | `/auditing-rust-tests`             | Auditing tests for Rust or after writing tests                        |
+| Skill | `/coding-rust`                     | Writing or fixing implementation code for Rust                        |
+| Skill | `/standardizing-rust`              | Rust code standards enforced across all skills                        |
+| Skill | `/standardizing-rust-architecture` | Rust ADR conventions enforced across architect and auditor skills     |
+| Skill | `/standardizing-rust-tests`        | Rust test standards enforced across all skills                        |
+| Skill | `/testing-rust`                    | Writing or fixing tests for Rust                                      |
+| Agent | `rust-architecture-auditor`        | Audit Rust ADRs for conventions, testability, and voice               |
+| Agent | `rust-code-auditor`                | Audit Rust code for design flaws and ADR compliance                   |
+| Agent | `rust-simplifier`                  | Simplifies Rust code for clarity and maintainability                  |
+| Agent | `rust-test-auditor`                | Audit Rust test code for evidence quality using the 4-property model  |
+| Agent | `rust-unsafe-auditor`              | Specialized soundness audit for Rust unsafe blocks and FFI boundaries |
+
+### spec-tree
+
+Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /auditing-product-decisions, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify
+
+| Type    | Name                          | Purpose                                                                                                                                                                        |
+| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Skill   | `/aligning`                   | Reviewing, auditing, or checking spec file conformance                                                                                                                         |
+| Skill   | `/applying`                   | Implementing any spec-tree work item                                                                                                                                           |
+| Skill   | `/auditing`                   | Running an audit pass over a code scope                                                                                                                                        |
+| Skill   | `/auditing-product-decisions` | Auditing PDRs or after writing a PDR                                                                                                                                           |
+| Skill   | `/auditing-tests`             | Auditing test evidence quality, after writing tests for a spec node, or before closing an outcome                                                                              |
+| Skill   | `/authoring`                  | Adding, defining, or creating specs, decisions, or nodes                                                                                                                       |
+| Skill   | `/bootstrapping`              | Setting up a new spec tree or when /authoring detects an empty spx/ directory                                                                                                  |
+| Skill   | `/committing-changes`         | Committing changes or when user says "commit"                                                                                                                                  |
+| Skill   | `/contextualizing`            | Asking about status, progress, or what exists in the spec tree                                                                                                                 |
+| Skill   | `/decomposing`                | Breaking down, splitting, scoping, composing, or structuring spec tree nodes                                                                                                   |
+| Skill   | `/github-actions`             | The user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds                                                       |
+| Skill   | `/handing-off`                | Closing an in-scope spec-tree session, deciding whether to create a handoff, writing a handoff, or preparing continuation context                                              |
+| Skill   | `/interviewing`               | Asking the user anything while creating or modifying any artifact (spec, ADR, PDR, test, code, doc)                                                                            |
+| Skill   | `/opening-pr`                 | Opening a pull request, creating a PR, or pushing a branch for review                                                                                                          |
+| Skill   | `/picking-up`                 | Resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another agent's saved context                                       |
+| Skill   | `/refactoring`                | Moving nodes, re-scoping content, or extracting shared enablers                                                                                                                |
+| Skill   | `/refocusing`                 | Running ad hoc commands, writing debug scripts, or writing code without a spec                                                                                                 |
+| Skill   | `/reviewing-pr`               | Reviewing a pull request — produces constructive review feedback on code quality, bugs, performance, security, and test coverage, grounded in the repository's own conventions |
+| Skill   | `/testing`                    | Writing tests or when learning the testing approach                                                                                                                            |
+| Skill   | `/understanding`              | Any spec-tree work to load methodology                                                                                                                                         |
+| Agent   | `applier`                     | Autonomous TDD agent. Runs the full spec-tree 8-step flow on a node with three audit gates                                                                                     |
+| Agent   | `audit-orchestrator`          | ALWAYS invoke for a stateful local audit run that carries findings across commits                                                                                              |
+| Agent   | `auditor`                     | Running a one-off audit over a code scope                                                                                                                                      |
+| Agent   | `pdr-auditor`                 | Audit PDR evidence quality                                                                                                                                                     |
+| Agent   | `pr-reviewer`                 | Reviewing a pull request                                                                                                                                                       |
+| Agent   | `test-evidence-auditor`       | Audit test evidence quality against spec assertions                                                                                                                            |
+| Command | `/apply`                      | Run the spec-tree TDD flow on a subtree or discover work from spx/EXCLUDE                                                                                                      |
+| Command | `/author`                     | Author a spec tree artifact (product, ADR, PDR, enabler, outcome)                                                                                                              |
+| Command | `/bootstrap`                  | Set up a new spec tree for this product                                                                                                                                        |
+| Command | `/clarify`                    | Gather requirements through questioning before executing a task                                                                                                                |
+| Command | `/commit`                     | Commit following Conventional Commits                                                                                                                                          |
+| Command | `/handoff`                    | Create timestamped handoff document for continuing work in a fresh context                                                                                                     |
+| Command | `/open-pr`                    | Open a draft PR for the current branch with curated title and body                                                                                                             |
+| Command | `/pickup`                     | Load and claim a handoff session, then stop at the post-context checkpoint unless overridden                                                                                   |
+| Command | `/release`                    | Reflect, persist, and close session without creating a handoff file (archives in-scope sessions; does NOT return them to the todo queue)                                       |
+| Command | `/rtfm`                       | Stop ad hoc work and follow the spec-tree methodology                                                                                                                          |
+
+### typescript
+
+TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent
+
+| Type  | Name                                     | Purpose                                                                    |
+| ----- | ---------------------------------------- | -------------------------------------------------------------------------- |
+| Skill | `/architecting-typescript`               | Writing ADRs for TypeScript                                                |
+| Skill | `/auditing-typescript`                   | Auditing code for TypeScript or after writing code                         |
+| Skill | `/auditing-typescript-architecture`      | Auditing ADRs for TypeScript or after writing or editing one               |
+| Skill | `/auditing-typescript-tests`             | Auditing tests for TypeScript or after writing or editing tests            |
+| Skill | `/coding-typescript`                     | Writing or fixing implementation code for TypeScript                       |
+| Skill | `/standardizing-typescript`              | TypeScript code standards enforced across all skills                       |
+| Skill | `/standardizing-typescript-architecture` | TypeScript ADR conventions enforced across architect and auditor skills    |
+| Skill | `/standardizing-typescript-tests`        | TypeScript testing standards enforced across all skills                    |
+| Skill | `/testing-typescript`                    | Writing or fixing tests for TypeScript                                     |
+| Agent | `typescript-architecture-auditor`        | Audit TypeScript ADRs for conventions, testability, and voice              |
+| Agent | `typescript-code-auditor`                | Audit TypeScript code for design flaws and ADR compliance                  |
+| Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                 |
+| Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model |
+
+### visual
+
+Visual diagrams: /excalidrawing (Excalidraw JSON generation)
+
+| Type  | Name             | Purpose                                                                         |
+| ----- | ---------------- | ------------------------------------------------------------------------------- |
+| Skill | `/excalidrawing` | Creating Excalidraw diagrams, visualizing workflows, architectures, or concepts |
+
+<!-- END PLUGIN CATALOG -->
 
 ## Using with other AI agents
 
@@ -286,6 +340,10 @@ Skills are distributed as standalone repositories, compatible with any agent tha
 - [Codex Overview](https://platform.openai.com/docs/codex/overview)
 - `codex plugin --help`
 - `codex plugin marketplace --help`
+
+## Credits
+
+The `develop` plugin's meta-skills are derived from [TÂCHES Claude Code Resources](https://github.com/glittercowboy/taches-cc-resources?tab=readme-ov-file#skills). The `/handoff` and `/pickup` spec-tree commands are based on `/whats-next` from the same project.
 
 ## License
 

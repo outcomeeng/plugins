@@ -24,6 +24,14 @@ check-manifests:
 check-skills:
     find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
 
+# Regenerate the plugin catalog in README.md from manifests and frontmatter
+docs:
+    uv run python -m outcomeeng.scripts.generate_plugin_catalog --write
+
+# Verify the README.md plugin catalog matches the source manifests (CI-friendly)
+docs-check:
+    uv run python -m outcomeeng.scripts.generate_plugin_catalog --check
+
 # Format with dprint
 fmt *args:
     dprint fmt {{args}}
@@ -50,6 +58,7 @@ check:
     }
     step "manifests"       uv run python -m outcomeeng.scripts.validate_plugins .
     step "skills"          find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
+    step "docs"            uv run python -m outcomeeng.scripts.generate_plugin_catalog --check
     step "fmt-check"       dprint check
     step "pytest"          uv run python -m pytest -v
     total=$((SECONDS - total_start))
