@@ -18,7 +18,7 @@ Rust test guidance follows this standard when:
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
 - property assertions use meaningful `proptest` or `quickcheck` properties
 - compile-time claims use compile-fail evidence
-- shared harnesses and fixtures live in test-owned support code
+- shared harnesses, generators, and fixtures live in a separate workspace-member crate (test-infrastructure production code), per `spx/15-test-infrastructure.adr.md`
 - coverage claims are measured with the repository's real coverage tool or recorded as unavailable
 
 </success_criteria>
@@ -196,7 +196,7 @@ fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
 Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
 
 ```rust
-// tests/support/spec_tree.rs
+// product-testing/src/harnesses/spec_tree.rs
 
 pub struct TestEnv {
     pub root: tempfile::TempDir,
@@ -209,13 +209,25 @@ impl TestEnv {
 }
 ```
 
+Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use product_testing::harnesses::spec_tree::TestEnv;`.
+
 **4. Fixture files**
 
-Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in `tests/fixtures/` alongside the test that uses them.
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `product-testing/` workspace-member crate under `product-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. See `spx/15-test-infrastructure.adr.md` for the cross-language rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 
-- Use co-located helper modules only when the helper serves one test file
+**5. Test infrastructure layout**
+
+Harnesses, generators, and inert fixtures are production code. They live in a separate workspace-member crate (`product-testing/` directory at workspace root, Cargo package `product-testing`, Rust import path `product_testing`), declared as a `[dev-dependencies]` entry of consumers:
+
+- `product-testing/src/harnesses/<name>.rs` — modules that mediate access to external resources.
+- `product-testing/src/generators/<name>.rs` — factories producing valid inputs for proptest/quickcheck/parameterized tests.
+- `product-testing/src/fixtures/<name>.rs` — fixture-loading code that reads inert data files by path.
+- `product-testing/fixtures/` (data subdirectory) — inert input files.
+
+Co-located helper modules are acceptable only when the helper serves a single test file. Anything shared across two or more test files belongs in `product-testing/`. Never use `tests/support/`, `crate::test_support`, `super::tests`, or `#[cfg(test)] mod` patterns as homes for shared test infrastructure — those keep ungoverned utility code inside production crates or under `tests/`.
+
 - Do not read production source files as test input to prove behavior
 
 </test_data_policy>
