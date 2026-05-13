@@ -115,16 +115,21 @@ def _render_markdown(v: Verdict, *, depth: int) -> str:
     # renderers. Today's hierarchy is at most two levels deep
     # (orchestrator wrapper + dispatched-skill children), but the
     # clamp keeps the output valid if a future composition adds depth.
+    # The same clamp applies to the children-section header below
+    # (``"#" * min(depth + 1, 6)``) and the findings-section header
+    # passed via ``depth=depth + 1`` — every heading written by this
+    # module is clamped uniformly so the output stays well-formed at
+    # every level.
     hash_prefix = "#" * min(depth, 6)
     parts.append(f"{hash_prefix} Audit verdict — {_escape_inline(v.skill)}")
     parts.append("")
     parts.append(f"- **Overall:** {v.overall.value}")
-    parts.append(f"- **Target:** `{_escape_inline(v.target)}`")
+    parts.append(f"- **Target:** `{_escape_codespan(v.target)}`")
     if v.metadata:
         parts.append("- **Metadata:**")
         for key in sorted(v.metadata):
             parts.append(
-                f"  - `{_escape_inline(key)}`: {_escape_inline(v.metadata[key])}"
+                f"  - `{_escape_codespan(key)}`: {_escape_inline(v.metadata[key])}"
             )
     parts.append("")
     if v.rows:
@@ -135,7 +140,7 @@ def _render_markdown(v: Verdict, *, depth: int) -> str:
             parts.append(findings_section)
             parts.append("")
     if v.children:
-        parts.append(f"{'#' * (depth + 1)} Child verdicts")
+        parts.append(f"{'#' * min(depth + 1, 6)} Child verdicts")
         parts.append("")
         for child in v.children:
             parts.append(_render_markdown(child, depth=depth + 2))
@@ -175,14 +180,20 @@ def _render_findings_section(rows: tuple[Row, ...], *, depth: int) -> str:
 
 
 def _render_finding_bullet(finding: Finding) -> str:
+    # ``file`` and ``rule`` are rendered inside backtick code spans;
+    # ``id`` and ``message`` are rendered in ordinary prose context.
+    # The two contexts have different backtick-handling rules — see
+    # ``_escape_codespan`` and ``_escape_inline`` for the per-context
+    # behaviour. Conflating them (a single helper that strips backticks
+    # everywhere) is the silent-fidelity-loss footgun this split avoids.
     location = (
-        f"`{_escape_inline(finding.file)}:{finding.line}`"
+        f"`{_escape_codespan(finding.file)}:{finding.line}`"
         if finding.line is not None
-        else f"`{_escape_inline(finding.file)}`"
+        else f"`{_escape_codespan(finding.file)}`"
     )
     return (
         f"- **{_escape_inline(finding.id)}** {location} — "
-        f"`{_escape_inline(finding.rule)}` "
+        f"`{_escape_codespan(finding.rule)}` "
         f"({finding.severity.value}): {_escape_inline(finding.message)}"
     )
 
@@ -201,18 +212,37 @@ def _escape_cell(text: str) -> str:
 
 
 def _escape_inline(text: str) -> str:
-    """Escape a string for inline markdown context (outside a table cell).
+    """Escape a string for inline markdown context (prose, bold, emphasis).
 
     Replaces newlines with spaces so a multi-line value still renders on
-    one row. Replaces backticks with single quotes because CommonMark
-    does **not** process backslash escapes inside backtick code spans —
-    a value containing a backtick rendered as `` `{_escape_inline(value)}` ``
-    would prematurely close the span no matter how the backtick is
-    "escaped". Substituting ``'`` for ``` ` ``` keeps the displayed value
-    a one-token, span-safe approximation; values containing literal
-    backticks (rare in audit targets) lose the backtick character but
-    do not break the surrounding markdown. Backslashes and pipes are
-    left alone — they have no special inline meaning.
+    one row. Backticks are preserved verbatim — in ordinary inline
+    context (a finding message, a bold span) a backtick opens a code
+    span that the renderer matches against the next backtick in the
+    string. The string ends at the bullet line's end, so an unmatched
+    backtick degrades to a literal character in every common renderer.
+    The fidelity-loss footgun is in code-span context (``_escape_codespan``),
+    not here.
+
+    Backslashes and pipes are left alone — they have no special inline
+    meaning outside table cells.
+    """
+    return text.replace("\n", " ")
+
+
+def _escape_codespan(text: str) -> str:
+    """Escape a string for inclusion inside a backtick code span.
+
+    CommonMark does **not** process backslash escapes inside backtick
+    code spans — a value containing a backtick rendered as
+    `` `{value}` `` would prematurely close the span no matter how the
+    backtick is "escaped". This helper substitutes ``'`` for ``` ` ```
+    so the surrounding span stays well-formed; the substitution is a
+    deliberate fidelity trade for span correctness.
+
+    Values containing literal backticks (rare in audit targets) lose
+    the backtick character on the way through. Newlines are still
+    replaced with spaces so a multi-line value does not break the row
+    layout.
     """
     return text.replace("\n", " ").replace("`", "'")
 

@@ -247,14 +247,19 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
     ``overall == "PASS"``. Discriminate by structure (``verdict.children
     != ()``) rather than by the ``overall`` vocabulary.
 
-    Coerces non-string metadata values to ``str`` rather than raising:
-    ``{"line_count": 42}`` parses as ``{"line_count": "42"}``,
-    ``{"flag": None}`` parses as ``{"flag": "None"}``. The
-    ``Verdict.metadata`` field is typed ``dict[str, str]``, so the
-    coercion preserves that contract for downstream readers; callers
-    that care about distinguishing "absent" from the string ``"None"``
-    should omit the metadata key rather than rely on the coerced
-    string.
+    Coerces non-string scalar metadata values to ``str`` rather than
+    raising: ``{"line_count": 42}`` parses as
+    ``{"line_count": "42"}``, ``{"ratio": 0.5}`` parses as
+    ``{"ratio": "0.5"}``. The ``Verdict.metadata`` field is typed
+    ``dict[str, str]``, so the coercion preserves that contract for
+    downstream readers.
+
+    Rejects ``None`` metadata values outright. Coercing ``None`` to the
+    string ``"None"`` would silently turn ``{"flag": None}`` into
+    ``{"flag": "None"}`` — a value indistinguishable from an intentional
+    string. Downstream code testing ``metadata.get("flag") is None``
+    would then incorrectly find a value. Callers that mean "no value"
+    must omit the metadata key rather than emit a JSON ``null``.
     """
     _require_keys(data, ("schema_version", "skill", "target", "overall"))
     schema_version = _require_int(data, "schema_version")
@@ -279,7 +284,14 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
     metadata_raw = data.get("metadata", {})
     if not isinstance(metadata_raw, dict):
         raise VerdictValidationError("metadata must be an object")
-    metadata = {str(k): str(v) for k, v in metadata_raw.items()}
+    metadata: dict[str, str] = {}
+    for raw_key, raw_value in metadata_raw.items():
+        if raw_value is None:
+            raise VerdictValidationError(
+                f"metadata value for {raw_key!r} is null; omit the key "
+                "instead of emitting None"
+            )
+        metadata[str(raw_key)] = str(raw_value)
     return Verdict(
         schema_version=schema_version,
         skill=_require_str(data, "skill"),

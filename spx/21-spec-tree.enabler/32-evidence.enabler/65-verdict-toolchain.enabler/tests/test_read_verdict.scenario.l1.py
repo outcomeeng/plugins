@@ -12,22 +12,15 @@ Covers the Compliance MUST clauses on ``read_verdict.py`` in
 from __future__ import annotations
 
 import json
-import pathlib
 import subprocess
-import sys
 
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[5]
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
+from _helpers import (
+    EMIT_SCRIPT,
+    JSON_BLOCK_BEGIN,
+    JSON_BLOCK_END,
+    READ_SCRIPT,
+    run_script,
 )
-EMIT_SCRIPT = SCRIPTS_DIR / "emit_verdict.py"
-READ_SCRIPT = SCRIPTS_DIR / "read_verdict.py"
-JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
-JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
 
 VALID_VERDICT_DICT: dict[str, object] = {
     "schema_version": 1,
@@ -41,24 +34,17 @@ VALID_VERDICT_DICT: dict[str, object] = {
 
 
 def _run_read(text: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, str(READ_SCRIPT)],
-        input=text,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return run_script(READ_SCRIPT, stdin=text)
 
 
 def _emit(payload: dict[str, object], fmt: str) -> str:
-    result = subprocess.run(
-        [sys.executable, str(EMIT_SCRIPT), "--format", fmt],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
+    return run_script(
+        EMIT_SCRIPT,
+        "--format",
+        fmt,
+        stdin=json.dumps(payload),
         check=True,
-    )
-    return result.stdout
+    ).stdout
 
 
 class TestJsonOnlyExtraction:

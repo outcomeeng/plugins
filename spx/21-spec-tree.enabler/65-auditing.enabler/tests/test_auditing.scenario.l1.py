@@ -363,4 +363,91 @@ def test_helpers_under_audit_are_exposed_by_module() -> None:
     assert hasattr(module, "compute_scope_hash")
     assert hasattr(module, "expand_diff_range")
     assert hasattr(module, "branch_scope")
+    assert hasattr(module, "uncommitted_scope")
     assert hasattr(module, "detect_base_ref")
+
+
+# ---------------------------------------------------------------------------
+# uncommitted_scope
+# ---------------------------------------------------------------------------
+
+
+def test_uncommitted_scope_includes_untracked_files(repo: pathlib.Path) -> None:
+    """A new file that has not been ``git add``-ed is still in scope.
+
+    ``git diff --name-only HEAD`` lists modified-and-staged files only — it
+    never reports untracked files. Without ``uncommitted_scope`` the
+    orchestrator's no-explicit-scope path would return an empty list for
+    a developer who created a new file and ran the audit before staging
+    it, halting with ``no scope detected``. The helper closes that gap
+    by unioning ``git diff HEAD`` with
+    ``git ls-files --others --exclude-standard``.
+    """
+    module = _load_audit_orchestrator()
+    (repo / "fresh.ts").write_text("brand new", encoding="utf-8")
+
+    files = module.uncommitted_scope(patterns=["*.ts"], repo=repo)
+
+    assert files == ["fresh.ts"]
+
+
+def test_uncommitted_scope_includes_modified_staged_and_untracked(
+    repo: pathlib.Path,
+) -> None:
+    """All three working-tree categories appear in the same scope.
+
+    Modified files (in ``git diff HEAD`` but not staged), staged files
+    (in ``git diff HEAD``), and untracked files (in ``git ls-files
+    --others``) all belong to "what the developer has changed since the
+    last commit" and must therefore all appear in the no-explicit-scope
+    audit.
+    """
+    module = _load_audit_orchestrator()
+    _commit_files(repo, {"committed.ts": "v1\n"}, "seed")
+    # Modify a committed file (not staged).
+    (repo / "committed.ts").write_text("v2\n", encoding="utf-8")
+    # Stage a new file.
+    (repo / "staged.ts").write_text("staged content\n", encoding="utf-8")
+    _git(repo, "add", "staged.ts")
+    # Leave a third file untracked.
+    (repo / "untracked.ts").write_text("untracked content\n", encoding="utf-8")
+
+    files = module.uncommitted_scope(repo=repo)
+
+    assert sorted(files) == ["committed.ts", "staged.ts", "untracked.ts"]
+
+
+def test_uncommitted_scope_respects_gitignore(repo: pathlib.Path) -> None:
+    """Files matched by ``.gitignore`` are excluded from the scope.
+
+    ``git ls-files --others --exclude-standard`` is the
+    ``standard``-exclusion variant — it honors ``.gitignore``,
+    ``.git/info/exclude``, and the user's global excludesfile. A
+    generated artefact (build output, virtualenv) sitting next to the
+    source must not pollute the scope.
+    """
+    module = _load_audit_orchestrator()
+    (repo / ".gitignore").write_text("ignored.ts\n", encoding="utf-8")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-m", "ignore", "--quiet")
+    (repo / "ignored.ts").write_text("should not appear", encoding="utf-8")
+    (repo / "kept.ts").write_text("should appear", encoding="utf-8")
+
+    files = module.uncommitted_scope(patterns=["*.ts"], repo=repo)
+
+    assert files == ["kept.ts"]
+
+
+def test_uncommitted_scope_is_empty_when_working_tree_clean(
+    repo: pathlib.Path,
+) -> None:
+    """A clean working tree (no diff, no untracked files) yields ``[]``.
+
+    Mirrors the orchestrator's no-scope-detected halt condition: nothing
+    to audit, empty list returned.
+    """
+    module = _load_audit_orchestrator()
+
+    files = module.uncommitted_scope(repo=repo)
+
+    assert files == []
