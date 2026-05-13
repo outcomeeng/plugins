@@ -114,12 +114,15 @@ Dispatch to `auditing-{lang}-architecture`. Findings populate row 5. If no ADRs 
 
 <phase number="6" name="emit">
 
-For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Write each partition's verdict JSON to its own file, then aggregate via `aggregate_verdicts.py`:
+For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Write each partition's verdict JSON to its own file. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts (FAIL when any determinism invariant was violated mid-run). The aggregator then rolls up wrapper rows plus children overalls into the wrapper's `overall`:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   /tmp/audit-children/typescript.json \
   /tmp/audit-children/python.json \
+  --row automated-gates=PASS \
+  --row test-execution=PASS \
+  --row determinism-contract=PASS \
   --skill auditing \
   --target <scope-target> \
   --metadata branch=<branch-name> \
@@ -164,6 +167,8 @@ The canonical schema is declared in `${CLAUDE_SKILL_DIR}/scripts/verdict.py` (`S
 ```
 
 The wrapper's three rows are the orchestrator-owned concerns (gates, tests, determinism). Per-language implementation, test-evidence, and ADR/PDR concerns live inside the children's `rows` arrays — dispatched skills own those.
+
+Two `overall` vocabularies coexist: the **orchestrator wrapper** carries `APPROVED` / `REJECTED` / `UNKNOWN` (root-level decision); each **dispatched child** carries `PASS` / `FAIL` / `UNKNOWN` (skill-level contribution). The split is grounded in `verdict.py`'s `ROOT_STATUSES` vs `SKILL_STATUSES` sets. Row statuses use the skill-level vocabulary regardless of where the row sits, since a row is always one skill's contribution.
 
 Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and every child is PASS or APPROVED; REJECTED if any row is FAIL or any child is REJECTED/FAIL; UNKNOWN if some row or child is UNKNOWN and none are FAIL/REJECTED.
 

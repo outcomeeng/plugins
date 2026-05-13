@@ -24,7 +24,7 @@ from pathlib import Path
 # (Python prepends the script's directory to ``sys.path``). Tests exercise
 # this script through ``subprocess`` calls, not via ``importlib`` loading.
 import verdict
-from verdict import Verdict, VerdictValidationError
+from verdict import Row, Status, Verdict, VerdictValidationError
 
 EXIT_OK = 0
 EXIT_VALIDATION_ERROR = 1
@@ -58,11 +58,13 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_VALIDATION_ERROR
     try:
         metadata = _parse_metadata(args.metadata)
+        rows = _parse_rows(args.row)
     except ValueError as exc:
         print(f"aggregate_verdicts: {exc}", file=sys.stderr)
         return EXIT_USAGE
     wrapper = aggregate(
         children=tuple(children),
+        rows=rows,
         skill=args.skill,
         target=args.target,
         metadata=metadata,
@@ -78,24 +80,28 @@ def main(argv: list[str] | None = None) -> int:
 def aggregate(
     *,
     children: tuple[Verdict, ...],
+    rows: tuple[Row, ...] = (),
     skill: str,
     target: str,
     metadata: dict[str, str],
 ) -> Verdict:
-    """Build a wrapper ``Verdict`` over the given children.
+    """Build a wrapper ``Verdict`` over the given children and rows.
 
-    The wrapper's ``overall`` is derived via ``verdict.roll_up`` over the
-    children's overalls. Wrapper ``rows`` are empty — the orchestrator
-    expresses per-language results through children, not through its own
-    rows.
+    The wrapper's ``overall`` is derived via ``verdict.roll_up`` over
+    the union of row statuses and children overalls — so a FAIL
+    wrapper row (e.g., a failing automated-gates row) propagates to
+    REJECTED even when every child verdict is APPROVED/PASS. ``rows``
+    defaults to empty so callers that pass none get the original
+    children-only rollup.
     """
-    overall = verdict.roll_up([child.overall for child in children])
+    rollup_inputs = [row.status for row in rows] + [child.overall for child in children]
+    overall = verdict.roll_up(rollup_inputs)
     return Verdict(
         schema_version=verdict.SCHEMA_VERSION,
         skill=skill,
         target=target,
         overall=overall,
-        rows=(),
+        rows=rows,
         children=children,
         metadata=dict(metadata),
     )
@@ -143,6 +149,29 @@ def _parse_metadata(items: list[str]) -> dict[str, str]:
         key, value = item.split("=", 1)
         metadata[key] = value
     return metadata
+
+
+def _parse_rows(items: list[str]) -> tuple[Row, ...]:
+    """Parse ``--row name=STATUS`` items into a tuple of ``Row`` objects.
+
+    ``STATUS`` must be in ``verdict.SKILL_STATUSES`` — ``PASS``,
+    ``FAIL``, or ``UNKNOWN``. Rows carry skill-level statuses regardless
+    of where the row sits, since a row is one skill's contribution.
+    ``findings`` is always empty for caller-provided rows: these are
+    summary statuses derived by the orchestrator from Phase 1/2/0
+    outcomes, not finding carriers (per-finding detail lives on the
+    children's own rows).
+    """
+    rows: list[Row] = []
+    for item in items:
+        if "=" not in item:
+            raise ValueError(f"malformed --row entry {item!r} (expected name=STATUS)")
+        name, status = item.split("=", 1)
+        if status not in verdict.SKILL_STATUSES:
+            allowed = ", ".join(sorted(verdict.SKILL_STATUSES))
+            raise ValueError(f"--row {item!r}: status must be one of {{{allowed}}}")
+        rows.append(Row(name=name, status=Status(status), findings=()))
+    return tuple(rows)
 
 
 def _write_output(path: str | None, content: str) -> None:
@@ -193,6 +222,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help=(
             "Metadata entry for the wrapper. May be repeated. Each entry "
             "is split on the first '=': key, value."
+        ),
+    )
+    parser.add_argument(
+        "--row",
+        action="append",
+        default=[],
+        metavar="NAME=STATUS",
+        help=(
+            "Wrapper-level row NAME=STATUS pair. May be repeated. STATUS "
+            "must be PASS, FAIL, or UNKNOWN. The wrapper's overall "
+            "rollup includes these row statuses alongside children "
+            "overalls."
         ),
     )
     parser.add_argument(

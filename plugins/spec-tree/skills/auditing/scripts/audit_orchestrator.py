@@ -77,6 +77,14 @@ def expand_diff_range(
     error. The ``/auditing`` skill's Phase 0 distinguishes this from a
     git failure by treating it as the no-scope-detected case (halt with
     a deliberate message) rather than re-raising.
+
+    Raises ``subprocess.CalledProcessError`` when git itself fails — an
+    invalid ``range_spec`` (typo, missing ref, unknown SHA), a corrupt
+    repository, or a runtime that lacks ``git``. Callers that want a
+    domain-specific error (e.g., the ``/auditing`` skill's "scope ref
+    not resolvable" halt message) catch and translate; this helper
+    propagates the raw subprocess error so the caller decides the
+    recovery policy.
     """
     cmd = ["git", "diff", "--name-only", range_spec]
     if patterns:

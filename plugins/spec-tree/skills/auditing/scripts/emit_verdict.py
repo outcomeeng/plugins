@@ -12,8 +12,9 @@ surface forms to stdout (or ``--output``):
 - ``json-only``      — raw JSON, no markdown carrier. For skill-to-skill
                        internal calls.
 
-Portability: stdlib only. Invoked as
-``python3 "${CLAUDE_PLUGIN_ROOT}/.../emit_verdict.py" ...``.
+Portability: stdlib only. Invoked from skill content as
+``python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" ...`` — the skill
+loader substitutes the path before the agent sees the command.
 """
 
 from __future__ import annotations
@@ -29,15 +30,20 @@ from pathlib import Path
 # the audit_orchestrator.py loader pattern is only needed for modules that
 # tests import directly.
 import verdict
-from verdict import Finding, Row, Status, Verdict, VerdictValidationError
+from verdict import (
+    JSON_BLOCK_BEGIN,
+    JSON_BLOCK_END,
+    Finding,
+    Row,
+    Status,
+    Verdict,
+    VerdictValidationError,
+)
 
 FORMAT_MARKDOWN = "markdown"
 FORMAT_MARKDOWN_JSON = "markdown+json"
 FORMAT_JSON_ONLY = "json-only"
 FORMAT_CHOICES = (FORMAT_MARKDOWN, FORMAT_MARKDOWN_JSON, FORMAT_JSON_ONLY)
-
-JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
-JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
 
 EXIT_OK = 0
 EXIT_VALIDATION_ERROR = 1

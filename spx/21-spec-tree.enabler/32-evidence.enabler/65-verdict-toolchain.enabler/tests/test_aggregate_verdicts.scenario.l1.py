@@ -171,3 +171,88 @@ class TestNoInputs:
     def test_no_positional_no_directory_fails(self) -> None:
         result = _run()
         assert result.returncode != 0
+
+
+class TestWrapperRows:
+    """Coverage for the ``--row name=STATUS`` flag.
+
+    The orchestrator owns three wrapper rows (``automated-gates``,
+    ``test-execution``, ``determinism-contract``) that the dispatched
+    audit skills do not produce. The wrapper rolls those statuses up
+    alongside the children's overalls, so a FAIL wrapper row (e.g., a
+    failing automated gate) flips the wrapper to REJECTED even when
+    every child verdict is PASS.
+    """
+
+    def test_repeated_row_flag_populates_wrapper_rows(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        a = tmp_path / "a.json"
+        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        result = _run(
+            str(a),
+            "--row",
+            "automated-gates=PASS",
+            "--row",
+            "test-execution=PASS",
+            "--row",
+            "determinism-contract=PASS",
+        )
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        names = [row["name"] for row in wrapper["rows"]]
+        assert names == ["automated-gates", "test-execution", "determinism-contract"]
+        assert all(row["status"] == "PASS" for row in wrapper["rows"])
+        assert all(row["findings"] == [] for row in wrapper["rows"])
+        assert wrapper["overall"] == "APPROVED"
+
+    def test_fail_wrapper_row_rolls_up_to_rejected(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        a = tmp_path / "a.json"
+        b = tmp_path / "b.json"
+        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        result = _run(
+            str(a),
+            str(b),
+            "--row",
+            "automated-gates=FAIL",
+            "--row",
+            "test-execution=PASS",
+            "--row",
+            "determinism-contract=PASS",
+        )
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        # Wrapper-row FAIL propagates despite all-PASS children.
+        assert wrapper["overall"] == "REJECTED"
+        statuses = {row["name"]: row["status"] for row in wrapper["rows"]}
+        assert statuses["automated-gates"] == "FAIL"
+
+    def test_no_row_flag_means_empty_rows(self, tmp_path: pathlib.Path) -> None:
+        """Backward compatibility: callers that pass no --row get the
+        original children-only rollup with empty wrapper rows."""
+        a = tmp_path / "a.json"
+        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        result = _run(str(a))
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        assert wrapper["rows"] == []
+        assert wrapper["overall"] == "APPROVED"
+
+    def test_unknown_row_status_is_rejected(self, tmp_path: pathlib.Path) -> None:
+        a = tmp_path / "a.json"
+        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        result = _run(str(a), "--row", "automated-gates=APPROVED")
+        # APPROVED is a root-level status, not a skill-level status; row
+        # statuses must be PASS / FAIL / UNKNOWN.
+        assert result.returncode != 0
+        assert "status must be" in result.stderr
+
+    def test_malformed_row_entry_is_rejected(self, tmp_path: pathlib.Path) -> None:
+        a = tmp_path / "a.json"
+        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        result = _run(str(a), "--row", "no-equals-sign")
+        assert result.returncode != 0
+        assert "expected name=STATUS" in result.stderr
