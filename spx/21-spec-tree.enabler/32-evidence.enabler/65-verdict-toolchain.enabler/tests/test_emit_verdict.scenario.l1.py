@@ -12,20 +12,8 @@ from __future__ import annotations
 
 import json
 import pathlib
-import subprocess
-import sys
 
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[5]
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
-)
-EMIT_SCRIPT = SCRIPTS_DIR / "emit_verdict.py"
-JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
-JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
+from _helpers import EMIT_SCRIPT, JSON_BLOCK_BEGIN, JSON_BLOCK_END, run_script
 
 VALID_VERDICT_DICT: dict[str, object] = {
     "schema_version": 1,
@@ -55,14 +43,13 @@ VALID_VERDICT_DICT: dict[str, object] = {
 
 
 def _run_emit(payload: dict[str, object], fmt: str) -> str:
-    result = subprocess.run(
-        [sys.executable, str(EMIT_SCRIPT), "--format", fmt],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
+    return run_script(
+        EMIT_SCRIPT,
+        "--format",
+        fmt,
+        stdin=json.dumps(payload),
         check=True,
-    )
-    return result.stdout
+    ).stdout
 
 
 class TestJsonOnlyFormat:
@@ -148,23 +135,21 @@ class TestCellEscaping:
 
 class TestExitCodes:
     def test_invalid_verdict_exits_non_zero(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(EMIT_SCRIPT), "--format", "json-only"],
-            input='{"schema_version": 1}',
-            capture_output=True,
-            text=True,
-            check=False,
+        result = run_script(
+            EMIT_SCRIPT,
+            "--format",
+            "json-only",
+            stdin='{"schema_version": 1}',
         )
         assert result.returncode != 0
         assert "invalid verdict" in result.stderr
 
     def test_malformed_json_exits_non_zero(self) -> None:
-        result = subprocess.run(
-            [sys.executable, str(EMIT_SCRIPT), "--format", "json-only"],
-            input="{not json",
-            capture_output=True,
-            text=True,
-            check=False,
+        result = run_script(
+            EMIT_SCRIPT,
+            "--format",
+            "json-only",
+            stdin="{not json",
         )
         assert result.returncode != 0
 
@@ -173,17 +158,12 @@ class TestFileIO:
     def test_reads_from_file_when_flag_given(self, tmp_path: pathlib.Path) -> None:
         payload_path = tmp_path / "verdict.json"
         payload_path.write_text(json.dumps(VALID_VERDICT_DICT))
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(EMIT_SCRIPT),
-                "--file",
-                str(payload_path),
-                "--format",
-                "json-only",
-            ],
-            capture_output=True,
-            text=True,
+        result = run_script(
+            EMIT_SCRIPT,
+            "--file",
+            str(payload_path),
+            "--format",
+            "json-only",
             check=True,
         )
         assert json.loads(result.stdout)["overall"] == "FAIL"
@@ -192,18 +172,13 @@ class TestFileIO:
         self, tmp_path: pathlib.Path
     ) -> None:
         output_path = tmp_path / "out.md"
-        subprocess.run(
-            [
-                sys.executable,
-                str(EMIT_SCRIPT),
-                "--format",
-                "json-only",
-                "--output",
-                str(output_path),
-            ],
-            input=json.dumps(VALID_VERDICT_DICT),
-            capture_output=True,
-            text=True,
+        run_script(
+            EMIT_SCRIPT,
+            "--format",
+            "json-only",
+            "--output",
+            str(output_path),
+            stdin=json.dumps(VALID_VERDICT_DICT),
             check=True,
         )
         assert output_path.exists()

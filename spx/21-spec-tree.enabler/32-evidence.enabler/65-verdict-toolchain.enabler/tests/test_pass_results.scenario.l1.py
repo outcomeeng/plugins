@@ -14,30 +14,15 @@ from __future__ import annotations
 
 import pathlib
 import subprocess
-import sys
 
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[5]
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
-)
-SCRIPT = SCRIPTS_DIR / "pass_results.py"
+from _helpers import PASS_RESULTS_SCRIPT, run_script
 
 
 def _run(
     *args: str,
     stdin: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, str(SCRIPT), *args],
-        input=stdin,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return run_script(PASS_RESULTS_SCRIPT, *args, stdin=stdin)
 
 
 class TestMkdir:

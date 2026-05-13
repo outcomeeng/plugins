@@ -66,7 +66,7 @@ If any of the three dispatched skills is missing for the target language, halt b
 1. **Determine scope.** The caller provides one of:
    - An explicit file or directory list — use as-is.
    - A git ref or diff range (`HEAD`, `main..HEAD`, a branch name) — invoke `expand_diff_range(<range>, repo=Path('.'))` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py` to enumerate the files in the range.
-   - No scope — invoke `expand_diff_range("HEAD", repo=Path('.'))` to enumerate uncommitted + staged changes. If the helper returns an empty list, halt with `no scope detected`.
+   - No scope — invoke `uncommitted_scope(repo=Path('.'))` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py` to enumerate uncommitted, staged, **and untracked** changes (a fresh file added but not yet `git add`-ed is in scope). If the helper returns an empty list, halt with `no scope detected`. `expand_diff_range("HEAD", ...)` is **not** equivalent — it omits untracked files.
 
 2. **Materialize the file list.** Filter to existing files. Sort lexicographically. This sorted list is the **frozen scope** for this run.
 
@@ -118,9 +118,22 @@ For each language partition, the dispatched skills emit JSON verdicts per the ca
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
+# Caller owns cleanup unconditionally: the trap fires whether the
+# aggregator pipeline succeeds, an earlier dispatched skill halted, or
+# the shell is interrupted. A plain `rm -rf` at the end of the block
+# would leak $CHILDREN_DIR on every non-happy exit path — exactly the
+# scenario the marketplace's persistent-/tmp environments (CI runners
+# reused across jobs, developer workstations) are vulnerable to. See
+# spx/13-plugin-and-runtime-conventions.adr.md for the marketplace-wide
+# scratch-storage rules.
+trap 'rm -rf "$CHILDREN_DIR"' EXIT
+
 # Dispatched skills emit their per-partition verdict JSON to
 # $CHILDREN_DIR/<language>.json (one file per language partition).
-
+# Replace each --row PASS below with FAIL when the corresponding phase
+# exited non-zero (Phase 1 → automated-gates, Phase 2 → test-execution)
+# or UNKNOWN when Phase 0 halted before producing a frozen scope
+# (determinism-contract).
 python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --directory "$CHILDREN_DIR" \
   --row automated-gates=PASS \
@@ -132,12 +145,6 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --metadata scope_hash=<scope-hash> \
 | python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
   --format "${AUDIT_FORMAT:-markdown+json}"
-
-# Caller owns cleanup: the orchestrator removes $CHILDREN_DIR after the
-# rendered verdict is delivered (pass_results.mkdir does not register an
-# atexit handler). See spx/13-plugin-and-runtime-conventions.adr.md for
-# the marketplace-wide scratch-storage rules.
-rm -rf "$CHILDREN_DIR"
 ```
 
 The orchestrator does not write the verdict to disk — the caller delivers it. The orchestrator never hand-formats markdown; deterministic rendering lives in `emit_verdict.py`.

@@ -15,17 +15,8 @@ from __future__ import annotations
 import json
 import pathlib
 import subprocess
-import sys
 
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[5]
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
-)
-AGGREGATE_SCRIPT = SCRIPTS_DIR / "aggregate_verdicts.py"
+from _helpers import AGGREGATE_SCRIPT, run_script
 
 
 def _child(
@@ -53,12 +44,7 @@ def _run(
     *args: str,
     extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [sys.executable, str(AGGREGATE_SCRIPT), *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return run_script(AGGREGATE_SCRIPT, *args)
 
 
 class TestPositionalChildren:
@@ -256,3 +242,56 @@ class TestWrapperRows:
         result = _run(str(a), "--row", "no-equals-sign")
         assert result.returncode != 0
         assert "expected name=STATUS" in result.stderr
+
+
+class TestMixedVocabularyChildren:
+    """Coverage for the dual ``overall`` vocabulary across children.
+
+    ``verdict.from_json_dict`` accepts both ``ROOT_STATUSES``
+    (``APPROVED`` / ``REJECTED``) and ``SKILL_STATUSES`` (``PASS`` /
+    ``FAIL``) on the wrapper's ``children``, because a wrapper composed
+    of leaf skill verdicts and a child orchestrator wrapper may receive
+    both. ``roll_up`` over the mixed set must still produce a coherent
+    wrapper overall — a single ``FAIL`` or ``REJECTED`` child flips the
+    wrapper to ``REJECTED``; an ``APPROVED`` child alongside ``PASS``
+    children keeps the wrapper ``APPROVED``.
+    """
+
+    def test_pass_and_approved_children_yield_approved_wrapper(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        leaf = tmp_path / "leaf.json"
+        nested = tmp_path / "nested.json"
+        _write_child(leaf, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        result = _run(str(leaf), str(nested))
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        assert wrapper["overall"] == "APPROVED"
+
+    def test_fail_skill_and_approved_wrapper_yield_rejected(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        leaf = tmp_path / "leaf.json"
+        nested = tmp_path / "nested.json"
+        _write_child(leaf, _child(skill="auditing-typescript", overall="FAIL"))
+        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        result = _run(str(leaf), str(nested))
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        # Mixed vocabulary: skill-level FAIL alongside root-level
+        # APPROVED still rolls up to REJECTED because any non-passing
+        # status flips the wrapper.
+        assert wrapper["overall"] == "REJECTED"
+
+    def test_pass_skill_and_rejected_wrapper_yield_rejected(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        leaf = tmp_path / "leaf.json"
+        nested = tmp_path / "nested.json"
+        _write_child(leaf, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(nested, _child(skill="auditing", overall="REJECTED"))
+        result = _run(str(leaf), str(nested))
+        assert result.returncode == 0
+        wrapper = json.loads(result.stdout)
+        assert wrapper["overall"] == "REJECTED"

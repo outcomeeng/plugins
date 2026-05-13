@@ -100,6 +100,51 @@ def expand_diff_range(
     return [line for line in result.stdout.splitlines() if line]
 
 
+def uncommitted_scope(
+    *,
+    patterns: list[str] | None = None,
+    repo: pathlib.Path,
+) -> list[str]:
+    """Return uncommitted, staged, and untracked file paths relative to HEAD.
+
+    ``git diff --name-only HEAD`` enumerates modified-and-staged files
+    only — it never lists untracked files (those that have not yet been
+    ``git add``-ed). A developer who creates a new file and runs the
+    audit before staging it would see an empty scope under
+    ``expand_diff_range("HEAD")``. This helper closes that gap by
+    unioning ``git diff --name-only HEAD`` with
+    ``git ls-files --others --exclude-standard`` and de-duplicating
+    while preserving git's order: modified/staged paths first (as git
+    diff returns them), then untracked paths (as ``ls-files`` returns
+    them, alphabetised by git). Paths matched by ``.gitignore`` are
+    excluded by ``--exclude-standard`` so build artefacts do not
+    pollute the scope.
+
+    ``patterns`` filters both halves: each pathspec is applied to the
+    ``git diff`` call and to the ``ls-files`` call so a new ``foo.ts``
+    file and an existing modified ``bar.ts`` are both retained under
+    ``patterns=["*.ts"]``.
+    """
+    modified = expand_diff_range("HEAD", patterns=patterns, repo=repo)
+    untracked_cmd = ["git", "ls-files", "--others", "--exclude-standard"]
+    if patterns:
+        untracked_cmd.append("--")
+        untracked_cmd.extend(patterns)
+    untracked_result = subprocess.run(  # noqa: S603 — fixed argv, no shell, patterns caller-controlled
+        untracked_cmd,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    untracked = [line for line in untracked_result.stdout.splitlines() if line]
+    # ``modified`` and ``untracked`` are disjoint by construction
+    # (untracked files cannot appear in ``git diff HEAD``), but a defensive
+    # ``dict.fromkeys`` round-trip is cheap insurance against future git
+    # behaviour changes and keeps the order ``modified, untracked``.
+    return list(dict.fromkeys([*modified, *untracked]))
+
+
 def branch_scope(
     base_ref: str,
     *,

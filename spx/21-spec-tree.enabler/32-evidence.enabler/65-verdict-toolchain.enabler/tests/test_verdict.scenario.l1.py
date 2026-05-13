@@ -15,36 +15,12 @@ Covers the Compliance MUST clauses on ``verdict.py`` in
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import pathlib
-import sys
-from types import ModuleType
 
 import pytest
+from _helpers import load_verdict_module
 
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[5]
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
-)
-VERDICT_MODULE = SCRIPTS_DIR / "verdict.py"
-
-
-def _load_verdict() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("verdict", VERDICT_MODULE)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load module from {VERDICT_MODULE}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["verdict"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-verdict_mod = _load_verdict()
+verdict_mod = load_verdict_module()
 
 
 VALID_VERDICT_DICT = {
@@ -171,6 +147,27 @@ class TestParseJsonRejectsSchemaViolations:
         with pytest.raises(verdict_mod.VerdictValidationError):
             verdict_mod.parse_json("{not json")
 
+    def test_rejects_null_metadata_value(self) -> None:
+        """A null metadata value would otherwise coerce to the string
+        ``"None"`` — indistinguishable from an intentional string —
+        and downstream ``metadata.get(key) is None`` checks would
+        misbehave. The parser rejects the null up front so the caller
+        is forced to omit the key when no value applies.
+        """
+        bad = json.loads(json.dumps(VALID_VERDICT_DICT))
+        bad["metadata"] = {"flag": None}
+        with pytest.raises(verdict_mod.VerdictValidationError, match="null"):
+            verdict_mod.parse_json(json.dumps(bad))
+
+    def test_coerces_non_string_scalar_metadata_value(self) -> None:
+        """Int / float metadata values are coerced to ``str`` so the
+        ``Verdict.metadata`` typing (``dict[str, str]``) holds.
+        """
+        ok = json.loads(json.dumps(VALID_VERDICT_DICT))
+        ok["metadata"] = {"line_count": 42, "ratio": 0.5}
+        v = verdict_mod.parse_json(json.dumps(ok))
+        assert v.metadata == {"line_count": "42", "ratio": "0.5"}
+
 
 class TestJsonRoundTrip:
     def test_parse_dump_parse_yields_equal_verdict(self) -> None:
@@ -273,3 +270,43 @@ class TestRowStatusFromFindings:
             verdict_mod.row_status_from_findings((warning_finding, reject_finding))
             == verdict_mod.Status.FAIL
         )
+
+
+class TestVerdictIsUnhashable:
+    """Pin the explicit ``__hash__ = None`` declaration on ``Verdict``.
+
+    ``@dataclass(frozen=True)`` normally auto-generates ``__hash__``,
+    but Verdict carries a ``dict[str, str]`` metadata field — the
+    auto-hash would fail at hash time when metadata is non-empty. The
+    production class sets ``__hash__ = None`` to surface a clear
+    ``TypeError`` at the call site instead. A regression that removes
+    the line (or replaces it with ``object`` inheritance) would silently
+    re-enable hashing for empty-metadata Verdicts and fail later for
+    populated ones — this test pins both branches now.
+    """
+
+    def _build_verdict(self, *, metadata: dict[str, str]) -> object:
+        return verdict_mod.Verdict(
+            schema_version=verdict_mod.SCHEMA_VERSION,
+            skill="auditing-x",
+            target="spx/path",
+            overall=verdict_mod.Status.PASS,
+            rows=(),
+            children=(),
+            metadata=metadata,
+        )
+
+    def test_empty_metadata_verdict_is_unhashable(self) -> None:
+        v = self._build_verdict(metadata={})
+        with pytest.raises(TypeError, match="unhashable"):
+            hash(v)
+
+    def test_populated_metadata_verdict_is_unhashable(self) -> None:
+        v = self._build_verdict(metadata={"branch": "main"})
+        with pytest.raises(TypeError, match="unhashable"):
+            hash(v)
+
+    def test_cannot_be_used_as_set_member(self) -> None:
+        v = self._build_verdict(metadata={})
+        with pytest.raises(TypeError, match="unhashable"):
+            {v}  # noqa: B018 — expression itself is the assertion subject
