@@ -32,10 +32,6 @@ The two future-PR branches `work/audit-orchestrator` and `work/pr-review-orchest
 4. **Doc updates.** Add the `pr-reviewer` agent and the review-prompt skill to the spec-tree tables in `AGENTS.md` / `CLAUDE.md`. Bump considerations: the branch already bumped `spec-tree` to `0.30.0` at branch start (a MINOR bump from `0.29.1`); that covers this PR's delta — no further bump unless `origin/main` has since advanced `spec-tree` to `0.30.x` (re-check at the rebase step).
 5. **`just check`**, then rebase onto current `origin/main` (it advanced past `0dd1bf2` mid-session — re-evaluate the `spec-tree` version against the new base per `spx/local/committing-changes.md`), then push: `git push --force-with-lease` followed by `just push-marketplace` (cache preservation + post-push `validate_install`); also `git push -u origin work/audit-orchestrator work/pr-review-orchestrator`. Then `claude-code-review` re-reviews the new shape.
 
-### Known issue, not blocking
-
-`aggregate_verdicts.py`'s `aggregate()` produces `rows=()`, but `auditing/SKILL.md` `<verdict_format>` and `auditor.md`'s expected output both show the wrapper carrying three orchestrator rows (`automated-gates`, `test-execution`, `determinism-contract`). A `--row name=STATUS` repeatable flag on `aggregate_verdicts.py` (threaded into `aggregate(rows=...)`, with the rollup over `[r.status for r in rows] + [c.overall for c in children]`) would make the documented shape achievable. Pre-existing; flagged by an earlier bot-review round. Fold into Remaining #1–#3 or a follow-up commit.
-
 ## Step 2 — `work/audit-orchestrator`
 
 The `audit-orchestrator` agent: a stateful auditing workflow that maintains worktree-local `.spx/audits/<lang>/<branch-slug>.md` so local agents iterate quickly and observably — a precursor to running the same policy on GitHub's opaque PR infrastructure.
