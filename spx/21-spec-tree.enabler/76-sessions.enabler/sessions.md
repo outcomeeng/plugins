@@ -8,7 +8,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Scenarios
 
-- Given active work on a spec node, when `/handoff` runs, then a session document is created in `.spx/sessions/todo/` with the current tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
+- Given active work on a spec node with unresolved continuation work that needs a future reader, when `/handoff` runs without `--no-session`, then a session document is created in `.spx/sessions/todo/` with the current tree state and active node path ([test](tests/test_sessions.scenario.l1.py))
+- Given active work on a spec node where every remaining issue has been persisted to a spec, ADR, PDR, PLAN.md, or ISSUES.md, when `/handoff --no-session` (or `/release`) runs, then no session document is created and every in-scope session is archived ([test](tests/test_sessions.scenario.l1.py))
 - Given a session document in `.spx/sessions/todo/`, when `/pickup` runs, then the session is moved to `.spx/sessions/doing/` and its content is emitted to stdout for context loading ([test](tests/test_sessions.scenario.l1.py))
 - Given escape hatch content is included in the session payload, when the session document is created, then that content appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
 - Given `/compact` runs mid-session, when the PostCompact hook fires, then the hook parses the compact summary from its JSON payload, emits `<SPEC-TREE_RESUMED active-node="spx/..."/>` (or `<SPEC-TREE_RESUMED/>` when no node was active), and emits `/spec-tree:understanding` and `/spec-tree:contextualizing` on the active node when the foundation marker was active pre-compact ([test](tests/test_sessions.scenario.l1.py))
@@ -26,3 +27,4 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - NEVER: add imperative sections via the `compactPrompt` configuration ("next step", "persistence proposal", "starting point") — those compound residual imperatives in base-prompt-forced sections that the marketplace cannot remove ([review])
 - NEVER: name specific skill invocations inside the `compactPrompt` configuration — skill choice belongs to the PostCompact hook directive, not to summary text the agent reads as self-direction ([review])
 - NEVER: create a session file for a compaction event within an ongoing session — the compact summary carries the state; session files are only for cross-session handoffs ([review])
+- NEVER: create a session file when no future reader needs it — when every remaining issue has been persisted to a spec, ADR, PDR, PLAN.md, or ISSUES.md, close with `/handoff --no-session` (or `/release`); a session file with no continuation reader is queue noise that splits truth away from the durable map ([review])
