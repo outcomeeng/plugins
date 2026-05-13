@@ -15,7 +15,10 @@ from __future__ import annotations
 import pathlib
 import subprocess
 
-from _helpers import PASS_RESULTS_SCRIPT, run_script
+from outcomeeng_testing.harnesses.verdict_toolchain import (
+    PASS_RESULTS_SCRIPT,
+    run_script,
+)
 
 
 def _run(

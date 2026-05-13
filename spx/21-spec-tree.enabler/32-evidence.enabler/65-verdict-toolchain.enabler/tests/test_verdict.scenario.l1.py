@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from _helpers import load_verdict_module
+from outcomeeng_testing.harnesses.verdict_toolchain import load_verdict_module
 
 verdict_mod = load_verdict_module()
 

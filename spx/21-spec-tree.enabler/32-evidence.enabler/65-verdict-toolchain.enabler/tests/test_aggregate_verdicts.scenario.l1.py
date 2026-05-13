@@ -16,7 +16,7 @@ import json
 import pathlib
 import subprocess
 
-from _helpers import AGGREGATE_SCRIPT, run_script
+from outcomeeng_testing.harnesses.verdict_toolchain import AGGREGATE_SCRIPT, run_script
 
 
 def _child(

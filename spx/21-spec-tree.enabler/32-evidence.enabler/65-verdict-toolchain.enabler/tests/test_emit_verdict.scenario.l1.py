@@ -13,7 +13,12 @@ from __future__ import annotations
 import json
 import pathlib
 
-from _helpers import EMIT_SCRIPT, JSON_BLOCK_BEGIN, JSON_BLOCK_END, run_script
+from outcomeeng_testing.harnesses.verdict_toolchain import (
+    EMIT_SCRIPT,
+    JSON_BLOCK_BEGIN,
+    JSON_BLOCK_END,
+    run_script,
+)
 
 VALID_VERDICT_DICT: dict[str, object] = {
     "schema_version": 1,
