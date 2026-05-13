@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import subprocess
 
-from _helpers import (
+from outcomeeng_testing.harnesses.verdict_toolchain import (
     EMIT_SCRIPT,
     JSON_BLOCK_BEGIN,
     JSON_BLOCK_END,
