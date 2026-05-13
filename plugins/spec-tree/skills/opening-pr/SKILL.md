@@ -15,6 +15,7 @@ Open a pull request for the current branch with a curated title and body that fo
 A successful PR open has:
 
 - Branch hygiene verified (not main/master, working tree clean, branch ahead of base)
+- Branch topology classified as a peer branch or a stacked branch before push
 - Title under 70 chars in Conventional Commits format (matches `/committing-changes`)
 - Body delivered to `gh` on stdin via `--body-file -` (real newlines, no `\n` escapes, no temp file)
 - Draft by default; ready-for-review only when explicitly requested
@@ -30,7 +31,7 @@ This skill does NOT:
 - Stage, commit, or amend (use `/committing-changes`)
 - Force-push or rewrite history
 - Merge, squash, or close the PR
-- Modify CI/CD workflows
+- Modify global git configuration or CI/CD workflows
 - Watch CI runs (polling is forbidden — see `<critical_rules>`)
 
 </context>
@@ -66,6 +67,8 @@ Each row states the **condition that must hold**; the failure response applies w
 | Working tree is clean (no uncommitted changes)               | STOP. Direct the user to `/committing-changes` or to stash.                                |
 | Branch is at least one commit ahead of the resolved base     | STOP. Nothing to PR — verify the base branch.                                              |
 | Branch is not behind the resolved base (no upstream commits) | Warn. Offer to rebase; proceed only if the user confirms.                                  |
+| Branch topology is classified as peer or stacked             | STOP. Do not push an ambiguous branch graph for review.                                    |
+| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                                                 |
 | No PR already exists for this branch                         | STOP. Surface the existing PR URL via `gh pr view --json url`.                             |
 | `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing — non-interactive `gh` calls fail opaquely otherwise. |
 
@@ -84,12 +87,24 @@ git status --porcelain
 # Resolve the base branch first — never hardcode "main"; repos may use
 # develop, master, or another default, in which case main..HEAD is wrong.
 base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+git fetch origin "${base}"
 
 # Commits ahead of base
 git log --oneline "origin/${base}..HEAD"
 
 # Diff stats against base
 git diff "origin/${base}...HEAD" --stat
+
+# Upstream safety — abort if the work branch tracks the default branch
+# (push.default=tracking would route feature-branch commits to origin/main).
+# The agent runs this as a Bash tool call; a non-zero exit (from `exit 1`
+# below) is read as a tool failure and stops the flow — that is the STOP.
+git branch -vv
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+if [ "${upstream}" = "origin/${base}" ]; then
+  echo "STOP: work branch tracks the default branch" >&2
+  exit 1
+fi
 
 # Existing PR for current branch — extract .url directly via --jq
 # (gh exits non-zero when no PR exists; redirect stderr to suppress its message)
@@ -98,6 +113,76 @@ existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null)
 ```
 
 </branch_hygiene>
+
+<branch_topology>
+
+**Classify topology before pushing.**
+
+Every PR branch is one of two shapes:
+
+| Shape       | Meaning                                                                                      | Required handling                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Peer branch | The PR targets the repository default branch and contains only its own review payload.       | Create from the current default branch. Refuse stale sibling merge commits.                               |
+| Stacked     | The PR intentionally depends on another unmerged branch and targets that branch as its base. | Name the dependency in the PR body. Keep draft until the base merges, then reconstruct onto default base. |
+
+**Peer branch gate:**
+
+```bash
+base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+git fetch origin "${base}"
+# Exit code 1 means origin/${base} is NOT an ancestor of HEAD →
+# peer gate fails. Either classify as stacked or repair the branch.
+git merge-base --is-ancestor "origin/${base}" HEAD
+# A non-empty result here means the branch carries merge commits from
+# sibling work. The peer-gate criterion "no merge commits from sibling
+# work" fails; follow the peer-gate failure path below.
+git log --merges "origin/${base}..HEAD"
+git log --oneline "origin/${base}..HEAD"
+git diff --name-only "origin/${base}...HEAD"
+```
+
+The peer gate passes only when:
+
+- `origin/${base}` is an ancestor of `HEAD`
+- the commit list contains only the intended payload
+- the changed file list matches the PR scope
+- the branch has no merge commits from sibling work (`git log --merges …` returns empty)
+
+**Peer-gate failure path.** The peer gate fails when either (a) `git merge-base --is-ancestor "origin/${base}" HEAD` exits non-zero (origin/base is not an ancestor of HEAD), or (b) `git log --merges "origin/${base}..HEAD"` returns non-empty output (the branch carries merge commits from sibling work). In either case, pick exactly one of two repair actions before pushing:
+
+1. **Repair as a peer branch** — when the divergence is unintentional (stale merges from sibling work crept in, the branch is missing recent default-branch commits, or the local branch was created from the wrong base). Rebase onto `origin/${base}`, drop sibling merge commits, and re-run the peer gate.
+2. **Reclassify as stacked** — when the dependency on an unmerged base branch is intentional. Identify the actual base branch (see the stacked-branch gate below), update the `<base>` argument used at `gh pr create` time, and run the stacked gate against it.
+
+Do not push until one of the two repair actions completes and its gate passes.
+
+**Stacked branch gate:**
+
+Before running the gate, identify `<previous-stack-branch>` from context — the parent branch the stack depends on. Sources, in order: the PR description's `Stack` or `Merge order` note (use the named ref); the branch naming convention if the product uses one; an explicit user instruction. Do not run the gate against a guessed base — substitute a ref resolved from one of the sources above and proceed only then. When none of those sources yields a ref, invoke `AskUserQuestion` to ask the user for the base branch name before continuing; do not stall silently or guess.
+
+```bash
+base_branch="<previous-stack-branch>"
+git fetch origin "${base_branch}"
+# Same exit-code semantics as the peer gate: 1 means
+# origin/${base_branch} is NOT an ancestor → the stack base is wrong.
+git merge-base --is-ancestor "origin/${base_branch}" HEAD
+git log --oneline "origin/${base_branch}..HEAD"
+git diff --name-only "origin/${base_branch}...HEAD"
+```
+
+The stacked gate passes only when:
+
+- the PR base is the previous stack branch
+- the PR body has a `Stack` or `Merge order` note naming the base dependency
+- the PR remains draft while the base branch is unmerged
+- after the base branch merges, the branch is reconstructed or rebased onto the updated default branch before final merge
+
+**Post-merge reconstruction.** Once the stack base merges, the author re-invokes `/opening-pr` (or runs the equivalent rebase manually) to re-target the PR at the default branch and re-classify it as a peer branch. The reconstruction does not happen automatically — GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base. Track this as a follow-up the moment the stack base lands.
+
+**Repair rule:**
+
+If a branch has accumulated sibling merge commits and the intended payload is small, reconstruct from the current base and cherry-pick only the payload commits. Do this before review rather than publishing an ambiguous branch graph.
+
+</branch_topology>
 
 <title_format>
 
@@ -198,10 +283,12 @@ Default template — adapt sections to the change type; drop or expand as the wo
 
 ```bash
 # First push (sets upstream)
-git push -u origin "$(git branch --show-current)"
+branch=$(git branch --show-current)
+git push -u origin HEAD:refs/heads/"${branch}"
 
 # Subsequent pushes
-git push
+branch=$(git branch --show-current)
+git push origin HEAD:refs/heads/"${branch}"
 ```
 
 If the product defines a custom push command (e.g., `just push-marketplace` for the outcomeeng marketplace repo), follow the product convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
@@ -241,7 +328,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 - `--draft` — default for this skill; promote to ready-for-review only on explicit request.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin matches `/committing-changes` conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
-- `--base` — omit to use the repo default; specify only when targeting a non-default base.
+- `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
 **Do not use `--fill` with this skill.** `--fill` is gh's autofill from commit messages. If both `--fill` and `--body-file` are passed, the explicit body wins — but `--fill` is then dead weight. Use the curated body alone.
@@ -281,6 +368,8 @@ gh pr ready <pr-number>
 5. **DRAFT BY DEFAULT** — `--draft` is mandatory unless the user explicitly says "ready for review".
 6. **NEVER `gh run watch`** — for CI status, surface a single `gh pr checks` or `gh run view` and stop. Polling is forbidden.
 7. **AFTER FOLLOW-UP PUSHES, check both `reviews` AND `comments`** — bots often post re-reviews as PR-level issue comments rather than formal reviews. Checking only `reviews` will silently miss re-feedback on the latest commit.
+8. **CLASSIFY BRANCH TOPOLOGY BEFORE PUSH** — peer branches target the default branch and contain only their payload; stacked branches target the previous stack branch and remain draft until their base merges.
+9. **PUSH WITH AN EXPLICIT DESTINATION REF** — use `HEAD:refs/heads/<branch>` so local upstream configuration cannot publish to the wrong remote branch.
 
 </critical_rules>
 
@@ -292,12 +381,16 @@ gh auth status
 git status --porcelain
 git branch --show-current
 base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
+git fetch origin "${base}"
+git branch -vv
+git merge-base --is-ancestor "origin/${base}" HEAD
 git log --oneline "origin/${base}..HEAD"
 git diff "origin/${base}...HEAD" --stat
 existing_url=$(gh pr view --json url --jq '.url' 2>/dev/null); [ -n "$existing_url" ] && echo "PR exists: $existing_url"
 
 # Push
-git push -u origin "$(git branch --show-current)"
+branch=$(git branch --show-current)
+git push -u origin HEAD:refs/heads/"${branch}"
 
 # Open draft PR against the repo default base
 GIT_TERMINAL_PROMPT=0 gh pr create \
