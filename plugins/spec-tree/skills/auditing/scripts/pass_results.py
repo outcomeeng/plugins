@@ -13,6 +13,12 @@ Two subcommands:
                     stdout. Uses ``tempfile.mkdtemp`` with prefix
                     ``audit-results-`` so the directory is unique per
                     invocation and survives until the caller removes it.
+                    **The caller owns cleanup**: this script does not
+                    register an atexit handler or remove the directory
+                    on completion. In long-lived environments with
+                    persistent ``/tmp`` (CI runners reused across jobs,
+                    developer machines), the orchestrator should remove
+                    the directory after the audit emits its verdict.
 - ``add``         — write verbatim content to a file inside an existing
                     results directory, named after the command that
                     produced it. Reads content from stdin (default) or
@@ -91,6 +97,12 @@ def mkdir(*, parent: Path | None = None) -> Path:
     Uses ``tempfile.mkdtemp`` with prefix ``audit-results-``. If
     ``parent`` is provided, the directory is created inside ``parent``;
     otherwise the system temp root is used.
+
+    Caller-owned cleanup: this function does not register an atexit
+    handler or remove the directory itself. The orchestrator should
+    remove the returned path (e.g., via ``shutil.rmtree``) after the
+    audit verdict is emitted, otherwise the directories accumulate in
+    persistent-``/tmp`` environments.
     """
     return Path(tempfile.mkdtemp(prefix=RESULTS_DIR_PREFIX, dir=parent))
 

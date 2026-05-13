@@ -25,10 +25,7 @@ from pathlib import Path
 # (Python prepends the script's directory to ``sys.path``). Tests exercise
 # this script through ``subprocess`` calls, not via ``importlib`` loading.
 import verdict
-from verdict import VerdictValidationError
-
-JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
-JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
+from verdict import JSON_BLOCK_BEGIN, JSON_BLOCK_END, VerdictValidationError
 
 EXIT_OK = 0
 EXIT_VALIDATION_ERROR = 1

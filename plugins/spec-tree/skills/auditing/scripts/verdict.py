@@ -35,6 +35,13 @@ ROOT_STATUSES: frozenset[str] = frozenset({"APPROVED", "REJECTED", "UNKNOWN"})
 SKILL_STATUSES: frozenset[str] = frozenset({"PASS", "FAIL", "UNKNOWN"})
 SEVERITIES: frozenset[str] = frozenset({"reject", "warning", "info"})
 
+# HTML-comment-delimited JSON-block markers for the ``markdown+json`` carrier
+# surface. Defined here as the single canonical source so producer
+# (``emit_verdict.py``) and consumer (``read_verdict.py``) cannot drift —
+# both import these constants rather than re-declaring them.
+JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
+JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
+
 
 class Status(StrEnum):
     """All status values a verdict or row may carry.
