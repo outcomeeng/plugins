@@ -78,9 +78,15 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def render(v: Verdict, fmt: str) -> str:
-    """Return the surface-form string for the verdict in the requested format."""
+    """Return the surface-form string for the verdict in the requested format.
+
+    All three forms terminate with a trailing newline so the output composes
+    cleanly with line-oriented tooling (`read_verdict.py` and external
+    consumers that expect a newline-terminated JSON document; matches
+    `read_verdict`'s `dump_json(...) + "\\n"` output convention).
+    """
     if fmt == FORMAT_JSON_ONLY:
-        return verdict.dump_json(v)
+        return verdict.dump_json(v) + "\n"
     md = _render_markdown(v, depth=1)
     if fmt == FORMAT_MARKDOWN:
         return md
@@ -112,7 +118,7 @@ def _render_markdown(v: Verdict, *, depth: int) -> str:
     parts.append(f"- **Overall:** {v.overall.value}")
     parts.append(f"- **Target:** `{_escape_inline(v.target)}`")
     if v.metadata:
-        parts.append(f"- **Metadata:**")
+        parts.append("- **Metadata:**")
         for key in sorted(v.metadata):
             parts.append(
                 f"  - `{_escape_inline(key)}`: {_escape_inline(v.metadata[key])}"

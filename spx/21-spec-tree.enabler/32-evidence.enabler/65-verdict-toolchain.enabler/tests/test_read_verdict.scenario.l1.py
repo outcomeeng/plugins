@@ -117,3 +117,52 @@ class TestSchemaViolations:
         result = _run_read(json.dumps(bad))
         assert result.returncode != 0
         assert "invalid verdict" in result.stderr
+
+
+class TestPartialDelimiters:
+    """Coverage for the three malformed-delimiter cases in ``read_verdict``.
+
+    The script handles each partial / reversed delimiter pattern with its
+    own error message; pinning those messages in tests locks the public
+    error contract so downstream tooling can match on them.
+    """
+
+    def test_begin_only_fails_with_no_closing_delimiter_message(self) -> None:
+        text = (
+            "Some carrier prose.\n\n" + JSON_BLOCK_BEGIN + '\n{"schema_version": 1}\n'
+        )
+        result = _run_read(text)
+        assert result.returncode != 0
+        assert JSON_BLOCK_BEGIN in result.stderr
+        assert JSON_BLOCK_END in result.stderr
+        assert "no closing" in result.stderr
+
+    def test_end_only_fails_with_no_opening_delimiter_message(self) -> None:
+        text = (
+            "Some carrier prose.\n\n"
+            + '{"schema_version": 1}\n'
+            + JSON_BLOCK_END
+            + "\n"
+        )
+        result = _run_read(text)
+        assert result.returncode != 0
+        assert JSON_BLOCK_END in result.stderr
+        assert JSON_BLOCK_BEGIN in result.stderr
+        assert "no opening" in result.stderr
+
+    def test_reversed_delimiters_fail_with_out_of_order_message(self) -> None:
+        # END marker appears before BEGIN — a malformed carrier the script
+        # must reject rather than silently extracting whatever sits between
+        # them in the wrong order.
+        text = (
+            "Some carrier prose.\n\n"
+            + JSON_BLOCK_END
+            + '\n{"schema_version": 1}\n'
+            + JSON_BLOCK_BEGIN
+            + "\n"
+        )
+        result = _run_read(text)
+        assert result.returncode != 0
+        assert "out of order" in result.stderr or "before" in result.stderr
+        assert JSON_BLOCK_BEGIN in result.stderr
+        assert JSON_BLOCK_END in result.stderr
