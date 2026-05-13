@@ -24,6 +24,5 @@ CAN run a deterministic six-phase audit producing a structured JSON verdict, ren
 - ALWAYS: emit every audit verdict through `emit_verdict.py` with the format axis forwarded from the calling workflow — orchestrator and dispatched skills produce JSON, never hand-formatted markdown ([review])
 - ALWAYS: enumerate the audit scope and compute the scope hash through `audit_orchestrator.py`'s git/scope helpers — `/auditing` never embeds git plumbing or scope hashing inline in skill prose ([review])
 - ALWAYS: the `auditor` agent invokes the `/auditing` skill on a scope and forwards the requested format (`--json`, `--markdown`, or `--markdown+json`) to `emit_verdict.py` — it owns no audit policy of its own and invokes nothing the `/auditing` skill does not already resolve ([review])
-- ALWAYS: the `pr-reviewer` agent invokes the review-prompt skill and the `/auditing` skill and posts one combined review-plus-audit PR comment — it does not re-implement the review prompt or the audit policy ([review])
 - NEVER: continue past a missing skill in the `auditing-{lang}*` trio — halt before any phase runs so callers see the gap immediately ([review])
 - NEVER: re-implement verdict shape or rollup logic in the orchestrator — the canonical schema lives in `verdict.py` and the rollup lives in `verdict.roll_up` ([review])

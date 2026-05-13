@@ -130,11 +130,12 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --target <scope-target> \
   --metadata branch=<branch-name> \
   --metadata scope_hash=<scope-hash> \
-  > /tmp/audit-wrapper.json
+  > "$CHILDREN_DIR/audit-wrapper.json"
 
 # After emit_verdict has rendered the wrapper, remove $CHILDREN_DIR
 # (the orchestrator owns cleanup — pass_results.mkdir does not register
-# an atexit handler).
+# an atexit handler). The wrapper file lives inside the scratch dir, so
+# rm -rf $CHILDREN_DIR removes children + wrapper in one step.
 rm -rf "$CHILDREN_DIR"
 ```
 
