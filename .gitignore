@@ -51,3 +51,6 @@ out/
 *.bak
 *.orig
 /.coverage
+
+# Worktrees
+.work/*
