@@ -347,7 +347,7 @@ Trigger: two or more in-scope tests sharing any of these patterns:
 - repeated mock patches (`@patch("same.module.path")`) across multiple test files
 - repeated fixture-setup logic appearing inline in multiple files instead of being shared as `@pytest.fixture` callables in `product_testing/fixtures/`
 
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or a `product_testing/fixtures/<name>.py` module exporting pytest fixtures. Fixture body code never belongs in any `tests/conftest.py` — that file is for pytest discovery/registration only, per `spx/15-test-infrastructure.adr.md`.
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or a `product_testing/fixtures/<name>.py` module exporting pytest fixtures. Fixture body code never belongs in any `tests/conftest.py` — that file is for pytest discovery/registration only, per `spx/15-test-infrastructure.pdr.md`.
 
 Gate 2 status:
 

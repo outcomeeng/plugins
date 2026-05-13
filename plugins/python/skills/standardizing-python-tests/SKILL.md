@@ -246,7 +246,7 @@ def with_test_env(config: Config) -> Generator[SpecTreeEnv, None, None]:
 
 **4. Fixture files**
 
-Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in `product_testing/fixtures/` and are read from disk by path — never imported as modules. See `spx/15-test-infrastructure.adr.md` for the cross-language rule.
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in `product_testing/fixtures/` and are read from disk by path — never imported as modules. See `spx/15-test-infrastructure.pdr.md` for the cross-language rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 
