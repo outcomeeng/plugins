@@ -27,7 +27,7 @@ Rust test audit. Three gates run in strict sequence:
 
 1. Gate 0 deterministic readiness: filename policy, forbidden source-file reads, skipped tests, generated-mock signals, Rust validation, and coverage-tool availability.
 2. Gate 1 assertion audit: per-assertion challenge, scope, evidence method, controlled implementations, oracle independence, harness chain, and four-property evidence check.
-3. Gate 2 architectural DRY: repeated setup patterns that belong in shared test support.
+3. Gate 2 architectural DRY: repeated setup patterns that belong in shared test infrastructure.
 
 A gate failure skips every later gate.
 </objective>
@@ -219,12 +219,12 @@ Reject with an `oracle` finding when the expected value is derived from the modu
 <step name="harness_chain">
 Trace every helper or harness import:
 
-- inline module helpers under `#[cfg(test)]`
-- `super::tests`, `crate::test_support`, or co-located `tests/support.rs`
-- helper functions inside `spx/.../tests/`
+- imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per `spx/15-test-infrastructure.adr.md`
+- non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` helper modules inside a product crate
+- helper functions inside `spx/.../tests/` — these are misplaced infrastructure unless they serve a single test file
 - binary harnesses built around `assert_cmd::Command::cargo_bin(...)`
 
-Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code.
+Open each harness. If the harness replaces the governed module instead of exercising it, reject with a `harness_chain` finding. Trace imports until the chain terminates at production code, fixture data, or framework/library code. If a harness lives in a non-canonical legacy location, surface an `extraction_target` finding pointing at the `product-testing` workspace-member crate.
 </step>
 
 <step name="four_properties">
@@ -268,7 +268,7 @@ Gate 1 status:
 </gate_1_assertion>
 
 <gate_2_architectural>
-Runs only if Gate 1 is PASS. Scan in-scope tests for repeated setup patterns that belong in shared support.
+Runs only if Gate 1 is PASS. Scan in-scope tests for repeated setup patterns that belong in shared test infrastructure.
 
 Trigger: two or more in-scope tests share any of these patterns:
 
@@ -279,7 +279,7 @@ Trigger: two or more in-scope tests share any of these patterns:
 - repeated stdout/stderr/exit-code assertion helpers
 - repeated tracing/debug capture setup
 
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common test-support location.
+Each finding names the pattern, lists at least two occurrences with file and line, and proposes the canonical home in the `product-testing` workspace-member crate — `product_testing::harnesses::{name}` for shared resource mediators, `product_testing::generators::{name}` for input factories, or `product_testing::fixtures::{name}` for fixture-loading code.
 
 Gate 2 status:
 
@@ -335,7 +335,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Rust: F1, R1, S1, M1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: nearest common test-support location under `tests/support/` or `crate::test_support`.
+Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Rust: F1, R1, S1, M1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
 </verdict_format>
 
