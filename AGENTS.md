@@ -381,15 +381,17 @@ Planning artifacts are ephemeral — `PLAN.md` and `ISSUES.md` are committed esc
 | Skill             | Purpose                                                                                                                  |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `/github-actions` | GitHub Actions investigation: workflow status, run discovery, log triage, gh authentication state, mutation consent gate |
+| `/reviewing-pr`   | PR review prose grounded in the repository's CLAUDE.md / AGENTS.md conventions; posts one `gh pr comment`                |
 
 ### Agents
 
-| Agent                   | Purpose                                                                       |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| `applier`               | Autonomous TDD agent — runs the full 8-step flow as a subagent                |
-| `auditor`               | Branch-scoped audit orchestrator wrapping `/auditing` with per-language state |
-| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)                  |
-| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill)                |
+| Agent                   | Purpose                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `applier`               | Autonomous TDD agent — runs the full 8-step flow as a subagent                                                            |
+| `auditor`               | One-off audit runner — invokes `/auditing` on a scope and renders the verdict per `--json`/`--markdown`/`--markdown+json` |
+| `pr-reviewer`           | CI one-off — invokes `/reviewing-pr` and `/auditing` over the PR diff and posts one combined PR comment                   |
+| `test-evidence-auditor` | Test evidence audit subagent (preloads auditing-tests skill)                                                              |
+| `pdr-auditor`           | PDR audit subagent (preloads auditing-product-decisions skill)                                                            |
 
 ### Commands
 
