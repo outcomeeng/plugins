@@ -481,10 +481,10 @@ from .position import Position
 
 ```python
 # ❌ REJECTED: Deep relative to infrastructure
-from .......tests.helpers import create_tree
+from .......tests.helpers import with_temp_product
 
 # ✅ REQUIRED: Absolute import
-from myproject_testing.harnesses import create_tree
+from myproject_testing.harnesses import with_temp_product
 ```
 
 **Anti-Patterns**

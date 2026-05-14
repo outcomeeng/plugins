@@ -23,6 +23,7 @@ def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
 
 
 def marketplace_spx_root_for_spec_tree_root_test(test_file: str) -> Path:
+    """Return the marketplace Spec Tree root for tests that need root paths."""
     return (
         marketplace_root_for_spec_tree_root_test(test_file) / SPEC_TREE_ROOT_DIRECTORY
     )

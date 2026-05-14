@@ -10,6 +10,8 @@ allowed-tools: Read, Grep, Glob, Bash
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
 
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
+
 !`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests now"`
 
 <codex_fallback>
@@ -17,7 +19,8 @@ If the `cat` commands above appear as literal text, invoke these skills before p
 
 1. `python:standardizing-python`
 2. `python:standardizing-python-tests`
-3. `spec-tree:auditing-tests`
+3. `spec-tree:testing`
+4. `spec-tree:auditing-tests`
 
 </codex_fallback>
 

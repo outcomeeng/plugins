@@ -51,6 +51,12 @@ def is_valid_node_index(index: int) -> bool:
 
 
 def iter_node_directories(spx_root: Path) -> Iterator[Path]:
+    """Yield node directories from a prepared Spec Tree root on disk.
+
+    Use this for focused fixtures whose contents are fully controlled by the
+    caller. Use iter_node_directories_from_tracked_paths for live repository
+    checks so ignored tool directories do not affect the result.
+    """
     for path in spx_root.rglob("*"):
         if path.is_dir() and parse_node_directory_name(path.name) is not None:
             yield path
