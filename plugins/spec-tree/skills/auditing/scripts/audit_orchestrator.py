@@ -457,7 +457,15 @@ class RunLock:
                     LOCK_FILE_MODE,
                 )
             except FileExistsError:
-                age = self._now() - self._path.stat().st_mtime
+                # ``stat`` itself races against another holder's
+                # ``__exit__`` (which unlinks the lock). If the file
+                # disappears between the failed ``O_EXCL`` create and
+                # the ``stat`` call, we have the same outcome as
+                # observing no lock at all — retry the atomic create.
+                try:
+                    age = self._now() - self._path.stat().st_mtime
+                except FileNotFoundError:
+                    continue
                 if age < self._max_age:
                     raise RunLockError(
                         f"lock held: {self._path} "
@@ -893,7 +901,19 @@ def _extract_table_rows(body: str, heading: str) -> list[list[str]]:
 
 
 def _serialize_state(state: AuditState) -> str:
-    """Render an :class:`AuditState` as the on-disk state-file text."""
+    """Render an :class:`AuditState` as the on-disk state-file text.
+
+    ``file_line`` and ``first_seen`` / ``resolved_at`` are written
+    without cell escaping. ``file_line`` is constrained to
+    ``<repo-relative-path>:<line>`` (no pipe, no newline in any
+    sensibly-named path); ``first_seen`` / ``resolved_at`` are git
+    SHAs (lowercase hex). Both columns also avoid the backslash that
+    drives the escape encoding, so unescaped round-trip is lossless
+    for every input the orchestrator emits. ``concern``,
+    ``root_cause``, and ``required_fix`` carry free-form prose from
+    the dispatched audit skills and so go through the escape /
+    unescape path on both directions.
+    """
     lines: list[str] = [STATE_FRONTMATTER_DELIMITER]
     lines.extend(
         [
@@ -1152,6 +1172,9 @@ def _cmd_acquire_lock(args: argparse.Namespace) -> int:
                 LOCK_FILE_MODE,
             )
         except FileExistsError:
+            # See :meth:`RunLock.__enter__` — same TOCTOU between the
+            # failed ``O_EXCL`` create and ``stat``: if the file
+            # disappears (another holder's release ran), retry.
             try:
                 age = time.time() - args.path.stat().st_mtime
             except FileNotFoundError:

@@ -358,6 +358,44 @@ def test_run_lock_respects_custom_ttl(tmp_path: pathlib.Path) -> None:
         assert lock_path.exists()
 
 
+def test_run_lock_handles_disappearance_between_excl_create_and_stat(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``RunLock`` retries when the lock vanishes between ``O_EXCL`` and ``stat``.
+
+    A concurrent holder's ``__exit__`` may unlink the lock between the
+    failed atomic create and the follow-up ``stat`` call. The race
+    must surface as the same outcome as observing no lock at all —
+    retry the atomic create — not as an uncaught ``FileNotFoundError``.
+    Simulate the race by monkeypatching ``pathlib.Path.stat`` to raise
+    ``FileNotFoundError`` exactly once; the helper must catch it,
+    re-enter the loop, and succeed.
+    """
+    module = _load_audit_orchestrator()
+    lock_path = tmp_path / "main.md.lock"
+    clock = _FakeClock()
+    # Pre-create the lock so the next acquisition takes the
+    # ``FileExistsError`` branch.
+    lock_path.write_text(str(clock.time))
+    real_stat = pathlib.Path.stat
+    calls: list[int] = []
+
+    def flaky_stat(self: pathlib.Path, *args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        if len(calls) == 1 and self == lock_path:
+            # Simulate disappearance between O_EXCL fail and stat:
+            # the lock file is no longer here.
+            lock_path.unlink()
+            raise FileNotFoundError(f"vanished: {self}")
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "stat", flaky_stat)
+
+    with module.RunLock(lock_path, now=clock):
+        assert lock_path.exists()
+
+
 def test_run_lock_creates_parent_directories(tmp_path: pathlib.Path) -> None:
     """``.spx/audits/<lang>/`` may not exist yet; the helper creates it."""
     module = _load_audit_orchestrator()
