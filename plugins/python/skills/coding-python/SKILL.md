@@ -84,7 +84,7 @@ Write minimal code that makes tests pass.
 def process_order(order: Order, config: Config) -> OrderResult: ...
 
 
-# ✅ Named constants for all literals
+# ✅ Source-owned semantic values in production modules
 MIN_ORDER_VALUE = 10
 MAX_ITEMS = 100
 
@@ -107,7 +107,7 @@ All tests should pass. If any fail, fix implementation and re-run.
 
 Clean up while keeping tests green:
 
-1. Extract constants
+1. Move semantic values to the owning source module
 2. Simplify
 3. DRY
 
@@ -144,14 +144,14 @@ Find the most recent `/auditing-python` output. Look for:
 
 For each rejection reason:
 
-| Rejection Category       | Fix Action                             |
-| ------------------------ | -------------------------------------- |
-| Magic values             | Extract to named constants             |
-| Missing type annotations | Add types to all functions             |
-| Direct external imports  | Refactor to dependency injection       |
-| Deep relative imports    | Change to absolute imports             |
-| Missing `-> None`        | Add return type                        |
-| Security issues          | Fix the vulnerability (don't suppress) |
+| Rejection Category       | Fix Action                                       |
+| ------------------------ | ------------------------------------------------ |
+| Magic values             | Move semantic values to the owning source module |
+| Missing type annotations | Add types to all functions                       |
+| Direct external imports  | Refactor to dependency injection                 |
+| Deep relative imports    | Change to absolute imports                       |
+| Missing `-> None`        | Add return type                                  |
+| Security issues          | Fix the vulnerability (don't suppress)           |
 
 ### Step 3: Verify Fixes
 
@@ -289,7 +289,7 @@ Task is complete when:
 - [ ] All tests in `{node}/tests/` pass
 - [ ] Type checking passes (`mypy`)
 - [ ] Linting passes (`ruff check`)
-- [ ] Code uses named constants (no magic values)
+- [ ] Semantic values are source-owned (no duplicated test-owned constants)
 - [ ] Code uses dependency injection (no direct external imports)
 - [ ] All functions have type annotations
 - [ ] All reviewer feedback addressed (if FIX mode)

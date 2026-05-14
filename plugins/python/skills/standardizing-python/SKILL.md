@@ -90,44 +90,38 @@ def __init__(self, config: Config):
 
 ---
 
-<named_constants>
+<source_owned_values>
 
-Test values and configuration must use named constants, not inline literals.
+Production modules must own semantic literals through enums, schemas, registries, constructors, typed factories, or public constants that production consumers can import. Tests import those source-owned values instead of defining test-local constants.
 
 ```python
-# ✅ REQUIRED: Named constants at module level
-VALID_SCORE = 85
+# ✅ REQUIRED: production source owns the domain contract
 MIN_SCORE = 0
 MAX_SCORE = 100
-VALID_INPUT = "simple"
-EXPECTED_RESULT = 42
 
 
-class TestScoreValidation:
-    def test_accepts_valid_score(self) -> None:
-        assert validate_score(VALID_SCORE) is True
-
-    def test_rejects_above_maximum(self) -> None:
-        assert validate_score(MAX_SCORE + 1) is False
+def validate_score(score: int) -> bool:
+    return MIN_SCORE <= score <= MAX_SCORE
 
 
-# ❌ REJECTED: Magic values (PLR2004)
-class TestScoreValidationBad:
-    def test_accepts_valid_score(self) -> None:
-        assert validate_score(85) is True  # What is 85?
+# ✅ REQUIRED IN TESTS: import the source-owned contract
+from product.scoring import MAX_SCORE, validate_score
 
-    def test_rejects_above_maximum(self) -> None:
-        assert validate_score(101) is False  # Magic number
+
+def test_rejects_above_maximum() -> None:
+    assert validate_score(MAX_SCORE + 1) is False
 ```
 
-**Why named constants matter:**
+```python
+# ❌ REJECTED IN TESTS: local copy of source-owned domain values
+MAX_SCORE = 100
 
-- Sharing between tests and production code
-- Clear documentation of what values mean
-- Easy updates when requirements change
-- Self-documenting test intent
 
-**PLR2004 exemptions:** Ruff's magic value rule already exempts common idiomatic values: `0`, `1`, `""`, and `"__main__"`. You don't need constants for these.
+def test_rejects_above_maximum() -> None:
+    assert validate_score(MAX_SCORE + 1) is False
+```
+
+Ruff's PLR2004 rule catches many obscure magic values, but it does not decide ownership. A local test constant that duplicates production vocabulary is still wrong when lint passes.
 
 ```python
 # ✅ OK: Idiomatic values are exempt
@@ -137,7 +131,7 @@ if __name__ == "__main__":
     main()
 ```
 
-</named_constants>
+</source_owned_values>
 
 ---
 
@@ -490,7 +484,7 @@ from .position import Position
 from .......tests.helpers import create_tree
 
 # ✅ REQUIRED: Absolute import
-from myproject_testing.helpers import create_tree
+from myproject_testing.harnesses import create_tree
 ```
 
 **Anti-Patterns**
@@ -519,10 +513,9 @@ product/
 │   └── ...
 ├── product_testing/
 │   ├── __init__.py
-│   └── ...
-├── tests/
-│   ├── __init__.py
-│   └── ...
+│   ├── generators/
+│   ├── harnesses/
+│   └── fixtures/
 └── pyproject.toml
 ```
 

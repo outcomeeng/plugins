@@ -238,6 +238,8 @@ Add property tests to explore the input space:
 ```python
 from hypothesis import given, strategies as st
 
+from product.money import SUPPORTED_CURRENCIES
+
 
 @given(
     st.lists(
@@ -246,7 +248,9 @@ from hypothesis import given, strategies as st
             product_id=st.integers(min_value=1),
             quantity=st.integers(min_value=0, max_value=1000),
             price=st.builds(
-                Money, amount=st.integers(min_value=0), currency=st.just("USD")
+                Money,
+                amount=st.integers(min_value=0),
+                currency=st.sampled_from(SUPPORTED_CURRENCIES),
             ),
         )
     )

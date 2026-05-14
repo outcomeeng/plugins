@@ -69,15 +69,15 @@ product/
 │   └── ...
 ├── mypackage_testing/      # Test utilities package (NOT tests/)
 │   ├── __init__.py
-│   ├── fixtures/
+│   ├── generators/
 │   │   ├── __init__.py
-│   │   └── users.py        # create_user(), etc.
+│   │   └── users.py        # valid_users(), etc.
 │   └── harnesses/
 │       ├── __init__.py
 │       └── cli.py          # CLIHarness, etc.
 └── spx/                    # Co-located tests (per Outcome Engineering framework)
     └── .../tests/
-        └── test_foo.scenario.l1.py # from mypackage_testing.fixtures import create_user
+        └── test_foo.scenario.l1.py # from mypackage_testing.generators import valid_users
 ```
 
 **Step 2: pyproject.toml**
@@ -101,7 +101,7 @@ uv pip install -e ".[dev]"  # Installs both packages in editable mode
 
 ```python
 # spx/.../tests/test_foo.scenario.l1.py
-from mypackage_testing.fixtures import create_user  # ✅ Works everywhere
+from mypackage_testing.generators import valid_users  # ✅ Works everywhere
 ```
 
 ---
@@ -172,7 +172,7 @@ Every Python product ADR governing test infrastructure should express rules in C
 
 ### MUST
 
-- Test utilities (fixtures, harnesses, helpers) are packaged as `{product}_testing/`
+- Test utilities are packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/`
 - `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages
 - pytest uses `--import-mode=importlib` when co-located test files can share module names
 
@@ -214,7 +214,7 @@ uv run which pytest
 # If wrong: uv pip install -e ".[dev]"
 
 # 2. Test utilities are importable
-uv run python -c "from mypackage_testing.fixtures import ...; print('OK')"
+uv run python -c "from mypackage_testing.generators import ...; from mypackage_testing.harnesses import ...; print('OK')"
 # If fails: Check pyproject.toml packages list, re-run uv pip install -e ".[dev]"
 
 # 3. pytest config has importlib mode

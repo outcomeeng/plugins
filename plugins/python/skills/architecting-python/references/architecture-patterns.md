@@ -422,10 +422,11 @@ product/
 │   ├── adapters/       # External integrations
 │   ├── ports/          # Interfaces
 │   └── main.py         # Entry point
-├── mypackage_testing/      # Test utilities (fixtures, harnesses) - INSTALLABLE
+├── mypackage_testing/      # Test utilities - INSTALLABLE
 │   ├── __init__.py
-│   ├── fixtures/           # Test data factories
-│   └── harnesses/          # Test infrastructure (CLI harness, etc.)
+│   ├── generators/         # Variable input domains
+│   ├── harnesses/          # Resource and boundary mediators
+│   └── fixtures/           # Inert data files consumed by path
 └── spx/                    # Specs as durable map (Outcome Engineering framework)
     ├── CLAUDE.md           # Navigation and work item management
     └── NN-{slug}.enabler/
@@ -436,7 +437,7 @@ product/
                 └── test_baz.conformance.l3.py
 ```
 
-**Key**: Test utilities in `mypackage_testing/` are installed via `uv pip install -e ".[dev]"`. Co-located tests in `spx/.../tests/` import from `mypackage_testing.fixtures`. See `test-infrastructure-patterns.md`.
+**Key**: Test utilities in `mypackage_testing/` are installed via `uv pip install -e ".[dev]"`. Co-located tests in `spx/.../tests/` import generators from `mypackage_testing.generators`, harnesses from `mypackage_testing.harnesses`, and consume inert fixture files by path. See `test-infrastructure-patterns.md`.
 
 ---
 
