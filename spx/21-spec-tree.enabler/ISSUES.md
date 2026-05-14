@@ -50,3 +50,49 @@ Surfaced by `claude-review` on PR 14 round 3 (2026-05-13).
 `plugins/spec-tree/skills/committing-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
 
 Surfaced by `claude-review` on PR 14 rounds 2–3 (2026-05-13).
+
+## 16. Spec Tree structure mapping tests still have small API-coverage gaps
+
+PR 25 added `outcomeeng/spec_tree_structure.py`, `outcomeeng_testing/harnesses/spec_tree.py`, and focused scenario, mapping, and conformance tests under `spx/21-spec-tree.enabler/tests/`. Review identified additional mapping contracts that remain worth pinning:
+
+- `iter_node_directories_from_tracked_paths(...)` is exercised through `marketplace_tracked_spx_node_directories(...)`, but lacks a direct mapping test over explicit tracked-path inputs.
+- `format_node_directory_name(...)` is used to construct valid inputs, but lacks a direct assertion for its valid output mapping.
+- `node_directory_name(...)` is used in scenario tests, but lacks a direct rejection test for an invalid node directory.
+
+Governed by `spx/21-spec-tree.enabler/spec-tree.md`, especially the mapping assertions for node directory parsing, formatting, traversal, and slug spec-file paths.
+
+Required handling:
+
+- Add direct `l1` mapping tests for these contracts.
+- Keep expected values source-derived from `outcomeeng/spec_tree_structure.py`; do not introduce test-owned structure constants.
+- Run `just test spx/21-spec-tree.enabler/tests/`, `uv run ruff check ...`, `uv run mypy ...`, and `just check`.
+
+Surfaced by `claude-review` on PR 25 (2026-05-14).
+
+## 17. Spec Tree structure API should choose one public spelling for node kinds
+
+`outcomeeng/spec_tree_structure.py` exports both `NodeKind.ENABLER` / `NodeKind.OUTCOME` and module-level aliases `NODE_KIND_ENABLER` / `NODE_KIND_OUTCOME`. Tests import the alias form. The dual spelling is harmless but leaves unclear whether the aliases are intentional source-owned protocol constants or convenience names.
+
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and the source-ownership rules in `spx/15-test-infrastructure.pdr.md`.
+
+Required handling:
+
+- Decide whether callers use the enum members directly or source-owned module aliases.
+- If aliases remain, document their API purpose in source and keep tests on the chosen spelling.
+- If aliases are removed, update tests and regex construction without preserving backward-compatibility shims.
+
+Surfaced by `claude-review` on PR 25 (2026-05-14).
+
+## 18. Invalid node-name mapping cases need clearer source-owned construction
+
+`spx/21-spec-tree.enabler/tests/test_spec_tree.mapping.l1.py` constructs invalid node names through inline transformations such as removing separators, stripping the kind suffix, and prefixing a formatted valid name. The tests are behaviorally correct, but some cases are hard to audit because the invalid shape is implicit in string operations rather than named by a source-owned invalid-case generator or a small explanatory comment.
+
+Governed by `spx/21-spec-tree.enabler/spec-tree.md` and `spx/15-test-infrastructure.pdr.md`.
+
+Required handling:
+
+- Prefer source-owned parser/formatter metadata plus a small generator or helper that names each invalid shape.
+- If a case remains inline, add the minimal comment that explains the malformed grammar shape being constructed.
+- Keep the assertion as mapping evidence, not property evidence.
+
+Surfaced by `claude-review` on PR 25 (2026-05-14).
