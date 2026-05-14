@@ -49,7 +49,7 @@ def test_invalid_node_directory_name_shapes_map_to_absent_parse() -> None:
         valid_name.replace(NODE_DIRECTORY_INDEX_SEPARATOR, "", 1),
         valid_name.removesuffix(NODE_KIND_ENABLER.value)
         + SPEC_FILE_SUFFIX.removeprefix(NODE_DIRECTORY_KIND_SEPARATOR),
-        f"{MIN_NODE_INDEX - MIN_NODE_INDEX}{valid_name}",
+        f"0{valid_name}",
     ]
 
     assert all(parse_node_directory_name(name) is None for name in invalid_names)
