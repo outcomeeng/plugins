@@ -1,7 +1,7 @@
 ---
 name: reviewing-pr
-description: >-
-  ALWAYS invoke this skill when reviewing a pull request — produces constructive review feedback on code quality, bugs, performance, security, and test coverage, grounded in the repository's own conventions. NEVER use this skill to emit a structured audit verdict — that is the /auditing skill's job.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the PR review skill
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

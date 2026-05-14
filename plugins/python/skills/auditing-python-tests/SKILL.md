@@ -1,8 +1,7 @@
 ---
 name: auditing-python-tests
-description: >-
-  ALWAYS invoke this skill when auditing tests for Python or after writing or editing tests.
-  NEVER use auditing-python for Python tests.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the Python test audit skill
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

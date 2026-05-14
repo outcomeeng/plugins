@@ -1,8 +1,7 @@
 ---
 name: auditing-tests
-description: >-
-  ALWAYS invoke this skill when auditing test evidence quality, after writing tests for a spec node,
-  or before closing an outcome.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the test evidence audit skill
 ---
 
 <objective>

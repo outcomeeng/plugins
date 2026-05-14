@@ -1,8 +1,7 @@
 ---
 name: auditing-typescript
-description: >-
-  ALWAYS invoke this skill when auditing code for TypeScript or after writing code.
-  NEVER modify a spec to match code without auditing the code first.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the TypeScript code audit skill
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

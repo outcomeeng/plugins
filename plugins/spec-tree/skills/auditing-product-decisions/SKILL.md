@@ -1,8 +1,7 @@
 ---
 name: auditing-product-decisions
-description: >-
-  ALWAYS invoke this skill when auditing PDRs or after writing a PDR.
-  NEVER audit PDRs without this skill.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the PDR audit skill
 ---
 
 <objective>
