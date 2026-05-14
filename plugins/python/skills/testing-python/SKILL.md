@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 !`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke spec-tree:testing manually"`
 
 <codex_fallback>
-If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+If the `cat` commands above appear as literal text, invoke these skills before proceeding:
 
 1. `python:standardizing-python`
 2. `python:standardizing-python-tests`
@@ -21,252 +21,101 @@ If you see `cat` commands above rather than skill content, shell injection did n
 </codex_fallback>
 
 <objective>
-Write or fix test files for a node specification. This skill handles both:
-1. **Writing new tests** - Given a node spec, produce test files
-2. **Fixing rejected tests** - Given reviewer feedback, fix existing tests
+Write or fix Python test files for a spec-tree node. The workflow covers new test evidence and repair of rejected test evidence.
 
-**This skill WRITES tests. It does not just design or plan.**
+This skill writes tests only after the source contract is testable. When the existing code shape blocks maintainable evidence, refactor the code under test first or record the architecture gap in the owning spec-tree node before writing the test.
 </objective>
 
 <mode_detection>
-**Determine which mode you're in:**
+Determine the mode before editing:
 
-1. **WRITE mode** - Tests don't exist yet or you're starting fresh
-   - Check: `ls {node_path}/tests/*.py` returns nothing or minimal files
-   - Action: Follow full workflow below
+| Mode  | Signal                                                     | Action                       |
+| ----- | ---------------------------------------------------------- | ---------------------------- |
+| Write | The node has no Python evidence file for the assertion     | Follow `<write_workflow>`    |
+| Fix   | `/auditing-python-tests` rejected existing Python evidence | Follow `<fix_workflow>`      |
+| Split | The test requires source architecture changes first        | Change source contract first |
 
-2. **FIX mode** - Tests exist but were rejected by reviewer
-   - Check: Recent `/auditing-python-tests` output shows REJECT with specific issues
-   - Action: Read the rejection, fix the specific issues, re-run tests
-
-**Always check which mode before proceeding.**
+Do not create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
 </mode_detection>
 
-<quick_start>
-**Input:** Node spec path (e.g., `spx/21-infra.enabler/43-parser.outcome/`)
+<write_workflow>
+Run this workflow for new Python tests:
 
-**Output:** Test files written to `{node}/tests/` directory
+1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
+2. For each assertion, use `/testing` to select evidence type, execution level, and any Stage 5 exception.
+3. Inspect the code under test and identify the production contract the test will exercise.
+4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
+5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
+6. Put only typed assertion code in the spec node's `tests/` directory.
+7. Import source-owned values from the owning module.
+8. Import variable input domains from `product_testing.generators.*`.
+9. Import harness entrypoints from `product_testing.harnesses.*`; rely on `conftest.py` only for explicit pytest discovery imports.
+10. Consume inert fixture files only by path, reading, or copying.
+11. Run the node's canonical pytest command and the repository's lint/type commands.
 
-**Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in Python.
+</write_workflow>
 
-**Workflow:**
+<fix_workflow>
+Run this workflow for rejected Python tests:
 
-```
-Check mode → WRITE or FIX → Execute → Verify → Report
-```
+1. Read the rejection and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim.
+2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
+3. Fix source architecture before fixing test syntax when the finding exposes missing source contracts.
+4. Replace test-owned constants with source-owned exports or variable generators.
+5. Replace constant-only generators with direct source imports or meaningful variable domains.
+6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.
+7. Keep `product_testing.fixtures/` for inert files only.
+8. Remove `tests/helpers`, `tests/support`, node-local helper modules, and fixture body code from `conftest.py`.
+9. Rerun the focused tests and repository-canonical Python validation commands.
 
-</quick_start>
+</fix_workflow>
 
-<write_mode_workflow>
+<source_contract_gate>
+Before writing or repairing a test, answer these checks from the code under test:
 
-## WRITE Mode: Creating New Tests
+- Does the source own every protocol value, status, route, command name, registry key, schema field, or public vocabulary item that the test needs?
+- Does the source expose pure functions, constructors, dataclasses, enums, schemas, protocols, or typed collaborators that make the behavior observable?
+- Does every side effect cross an injected boundary when the assertion needs to inspect behavior without performing the real side effect?
+- Does the expected output derive from the generated input, an independent oracle, or a source outside the module under test?
 
-### Step 1: Load Context
+If any answer is no, fix the source contract first. Do not hide the missing contract in a test constant, fixture file, or generator wrapper.
+</source_contract_gate>
 
-Read the node spec and related files:
-
-```bash
-# Read node spec
-cat {node_path}/{slug}.outcome.md
-
-# Read parent node for context (if nested)
-cat {parent_path}/{slug}.enabler.md
-
-# Check for ADRs/PDRs that constrain testing approach
-ls {node_path}/../*.adr.md {node_path}/../*.pdr.md 2>/dev/null
-```
-
-Extract from the spec:
-
-- **Assertions** - Typed assertions to verify
-- **Test Strategy** - Which levels are specified
-- **Harnesses** - Any referenced test harnesses
-
-**Note on Analysis sections:** The Analysis section documents what the spec author examined. It provides context but is not binding — implementation may diverge as understanding deepens. Use it as a starting point, not a contract.
-
-### Step 2: Determine Evidence and Level
-
-For each assertion, apply the `/testing` methodology:
-
-| Evidence location               | Minimum level |
-| ------------------------------- | ------------- |
-| Pure computation/algorithm      | `l1`          |
-| File I/O with temp dirs         | `l1`          |
-| Standard dev tools (git, curl)  | `l1`          |
-| Product-specific binary         | `l2`          |
-| Database, Docker                | `l2`          |
-| Real credentials, external APIs | `l3`          |
-
-### Step 3: Write Test Files
-
-Create test files following `/standardizing-python-tests`:
-
-**Mandatory elements:**
-
-- `-> None` return type on every test function
-- Type annotations on all parameters
-- Named constants for all test values
-- Property-based tests for parsers/serializers/math (`@given`)
-- No mocking - use dependency injection
-- File naming follows `test_<subject>.<evidence>.<level>[.<runner>].py`
-
-### Step 4: Verify Tests Fail (RED)
+<verification>
+Use the product's canonical commands. When no product-specific command exists, use the closest equivalent:
 
 ```bash
-just run test {node_path}/tests/ -v
+uv run pytest <node-path>/tests/ -v
+uv run ruff check <node-path>/tests/
+uv run mypy <node-path>/tests/
 ```
 
-Tests should FAIL with ImportError or AssertionError (implementation doesn't exist yet).
+For spec-tree products with custom validation commands, run those commands instead of raw tool invocations.
+</verification>
 
-### Step 5: Handle Specified Nodes
+<reporting>
+Report the evidence created or repaired with:
 
-If the implementation module doesn't exist yet, tests fail on import — breaking the quality gate. Add the node to `spx/EXCLUDE`:
+- Node path
+- Test files changed
+- Source contracts added or consumed
+- Harnesses, generators, inert fixture files, and `conftest.py` shims touched
+- Verification commands and outcomes
+- Remaining rejection, if an audit gate still fails
 
-```bash
-# Add node path to spx/EXCLUDE (paths relative to spx/)
-echo "76-risc-v.outcome" >> spx/EXCLUDE
-```
-
-The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Ruff still checks style. See the spec-tree `/understanding` skill's `references/excluded-nodes.md` for the full convention.
-
-Remove the entry from `spx/EXCLUDE` when implementation begins.
-
-</write_mode_workflow>
-
-<fix_mode_workflow>
-
-## FIX Mode: Fixing Rejected Tests
-
-### Step 1: Read Rejection Feedback
-
-Find the most recent `/auditing-python-tests` output. Look for:
-
-- Specific file:line locations
-- Issue categories (evidentiary gap, missing property tests, etc.)
-- Required fixes
-
-### Step 2: Apply Fixes
-
-For each rejection reason:
-
-| Rejection Category     | Fix Action                                           |
-| ---------------------- | ---------------------------------------------------- |
-| Missing `-> None`      | Add return type to test functions                    |
-| Evidentiary gap        | Rewrite test to actually verify the assertion        |
-| Mocking detected       | Replace with dependency injection                    |
-| Missing property tests | Add `@given` tests for parsers/serializers           |
-| Silent skip            | Change `skipif` to `pytest.fail()` for required deps |
-| Magic values           | Extract to named constants                           |
-| Wrong filename axes    | Rename to the `/standardizing-python-tests` pattern  |
-
-### Step 3: Verify Fixes
-
-```bash
-# Run tests again
-just run test {node_path}/tests/ -v
-
-# Check types
-just run mypy {node_path}/tests/
-
-# Check linting
-just run ruff check {node_path}/tests/
-```
-
-### Step 4: Report What Was Fixed
-
-```markdown
-## Tests Fixed
-
-### Issues Addressed
-
-| Issue           | Location       | Fix Applied                          |
-| --------------- | -------------- | ------------------------------------ |
-| Missing -> None | test_foo.py:15 | Added return type                    |
-| Magic value     | test_foo.py:23 | Extracted to EXPECTED_VALUE constant |
-
-### Verification
-
-Tests run and fail for expected reasons (RED phase complete).
-```
-
-</fix_mode_workflow>
-
-<test_writing_checklist>
-
-Before declaring tests complete:
-
-- [ ] Each Gherkin assertion has at least one test
-- [ ] Evidence mode and level match `/testing` Stage 2
-- [ ] File names use `test_<subject>.<evidence>.<level>[.<runner>].py`
-- [ ] All test functions have `-> None` return type
-- [ ] All parameters have type annotations
-- [ ] Named constants used (no magic values)
-- [ ] Parsers/serializers have property-based tests (`@given`)
-- [ ] No mocking - dependency injection where doubles needed
-- [ ] Tests run and fail for expected reasons (RED phase)
-
-</test_writing_checklist>
-
-<patterns_reference>
-
-See `/standardizing-python-tests` for:
-
-- **Level patterns** - How to write `l1`, `l2`, and `l3` tests
-- **Exception implementations** - The 7 exception cases in Python
-- **Property-based testing** - Hypothesis patterns
-- **Data factories** - Factory and builder patterns
-- **DI patterns** - Protocol and dataclass dependencies
-- **Harness patterns** - Docker, subprocess harnesses
-- **Anti-patterns** - What to avoid
-
-</patterns_reference>
-
-<output_format>
-
-**WRITE mode output:**
-
-```markdown
-## Tests Written
-
-### Node: {node_path}
-
-### Test Files Created
-
-| File                            | Level | Outcomes Covered |
-| ------------------------------- | ----- | ---------------- |
-| `tests/test_foo.scenario.l1.py` | `l1`  | Outcome 1, 2     |
-
-### Test Run (RED Phase)
-
-Tests fail as expected. Ready for review.
-```
-
-**FIX mode output:**
-
-```markdown
-## Tests Fixed
-
-### Issues Addressed
-
-| Issue   | Location    | Fix Applied |
-| ------- | ----------- | ----------- |
-| {issue} | {file:line} | {fix}       |
-
-### Verification
-
-Tests pass checklist. Ready for re-review.
-```
-
-</output_format>
+</reporting>
 
 <success_criteria>
+Python test work satisfies this skill when:
 
-Task is complete when:
-
-- [ ] Test files exist in `{node}/tests/` directory
-- [ ] Each assertion from spec has corresponding test(s)
-- [ ] Tests follow `/standardizing-python-tests` standards
-- [ ] Tests run and fail for expected reasons
-- [ ] All reviewer feedback addressed (if FIX mode)
+- Every changed test maps to a spec assertion and selected evidence type
+- Test filenames encode evidence, level, and optional runner
+- Tests import source-owned values instead of defining local constants
+- Generators represent meaningful variable domains
+- Harnesses manage resource lifecycle and pytest fixture body code
+- Inert fixtures are consumed only as files
+- `conftest.py` contains discovery or registration only
+- No framework mock replaces the behavior under test
+- Focused tests and repository-canonical validation pass or the remaining failure is reported with the blocking cause
 
 </success_criteria>

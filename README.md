@@ -211,7 +211,7 @@ Python engineering: /testing-python, /coding-python, /auditing-python, /architec
 | Skill | `/architecting-python`               | Writing ADRs for Python                                                |
 | Skill | `/auditing-python`                   | Auditing code for Python or after writing code                         |
 | Skill | `/auditing-python-architecture`      | Auditing ADRs for Python or after writing an ADR                       |
-| Skill | `/auditing-python-tests`             | Auditing tests for Python or after writing tests                       |
+| Skill | `/auditing-python-tests`             | Auditing tests for Python or after writing or editing tests            |
 | Skill | `/coding-python`                     | Writing or fixing implementation code for Python                       |
 | Skill | `/standardizing-python`              | Python code standards enforced across all skills                       |
 | Skill | `/standardizing-python-architecture` | Python ADR conventions enforced across architect and auditor skills    |

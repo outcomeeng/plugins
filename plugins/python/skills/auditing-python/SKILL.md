@@ -150,7 +150,7 @@ Evaluate import structure using the same vocabulary as `/auditing-python-tests`:
 | 2+ levels       | `from ....helpers ...`    | REJECT -- use package import     |
 | sys.path manip. | `sys.path.insert(0, ...)` | REJECT -- always                 |
 
-For stable locations (`product_testing.*`, shared fixtures), package imports are mandatory.
+For stable locations (`product_testing.harnesses.*`, `product_testing.generators.*`, and inert fixture path providers), package imports are mandatory.
 
 See `${CLAUDE_SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
 

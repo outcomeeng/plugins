@@ -1,427 +1,221 @@
 ---
 name: auditing-python-tests
 description: >-
-  ALWAYS invoke this skill when auditing tests for Python or after writing tests.
-  NEVER use auditing-python for test code.
+  ALWAYS invoke this skill when auditing tests for Python or after writing or editing tests.
+  NEVER use auditing-python for Python tests.
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke skill python:standardizing-python now"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python/SKILL.md" || echo "standardizing-python not found — invoke python:standardizing-python manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke skill python:standardizing-python-tests now"`
+!`cat "${CLAUDE_SKILL_DIR}/../standardizing-python-tests/SKILL.md" || echo "standardizing-python-tests not found — invoke python:standardizing-python-tests manually"`
 
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/testing/SKILL.md" || echo "testing not found — invoke skill spec-tree:testing now"`
-
-!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke skill spec-tree:auditing-tests now"`
+!`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests now"`
 
 <codex_fallback>
-If you see `cat` commands above rather than skill content, shell injection did not run (Codex or similar environment). Invoke these skills now before proceeding:
+If the `cat` commands above appear as literal text, invoke these skills before proceeding:
 
-1. Skill `python:standardizing-python`
-2. Skill `python:standardizing-python-tests`
-3. Skill `spec-tree:testing`
-4. Skill `spec-tree:auditing-tests`
+1. `python:standardizing-python`
+2. `python:standardizing-python-tests`
+3. `spec-tree:auditing-tests`
 
 </codex_fallback>
 
 <objective>
+Audit Python test evidence against the spec-tree test-audit properties plus Python-specific source ownership, testability, harness, generator, inert-fixture, and pytest discovery rules.
 
-Python test audit. Three gates in strict sequence, fail-closed:
-
-1. **Gate 0 — Deterministic**: filename policy, ruff, mypy, pytest collection, and coverage-tool availability check filenames, linting, types, collection, and coverage setup. Claude does not judge these rules — Gate 0 output is routed into the verdict verbatim.
-2. **Gate 1 — Assertion audit**: per-assertion LLM audit using the `/auditing-tests` workflow — coupling, falsifiability, alignment, coverage — with Python supplements applied at each property step.
-3. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns that belong in shared fixtures or harnesses.
-
-A gate failure skips every later gate.
-
+This skill audits tests and test infrastructure. It does not audit production implementation style except where source architecture affects test evidence quality.
 </objective>
 
-<quick_start>
+<audit_scope>
+For every in-scope test assertion, inspect the full evidence chain:
 
-Run Gate 0 tools, then apply the `/auditing-tests` Gate 1 workflow with Python supplements at each property step. First property failure = REJECT for that assertion.
+- The spec assertion and selected evidence type
+- The executed test file
+- Imported production modules
+- Imported `product_testing.harnesses.*` modules
+- Imported `product_testing.generators.*` modules
+- Inert fixture path providers and fixture data files referenced by the test
+- `conftest.py` files that apply to the test
 
-</quick_start>
-
-<essential_principles>
-
-Follow the four principles from `/auditing-tests`: **COUPLING FIRST**, **RUN COVERAGE DON'T GUESS**, **NO MECHANICAL DETECTION**, **BINARY VERDICT**.
-
-**NO CODE QUALITY CHECKS.**
-
-Type annotations (`-> None`), magic values, test organization, naming conventions — these are linting concerns enforced by `/standardizing-python-tests`, mypy, and ruff. The auditor evaluates evidence quality only. A test with perfect Python style and zero evidentiary value must be REJECTED. A test with missing type hints but genuine evidence of spec fulfillment is not rejected by this audit.
-
-</essential_principles>
-
-<prerequisites>
-
-1. Invoking 4 skills: Already done above.
-2. Read local overlay files, they supersede any skills and are loaded below:
-
-!`cat "spx/local/python.md" || echo "spx/local/python.md not found; apply skills only."`
-!`cat "spx/local/python-tests.md" || echo "spx/local/python-tests.md not found; apply skills only."`
-
-<codex_fallback>
-If you see `cat` commands above, shell injection did not run (Codex or similar environment). Look for product-specific overlay files:
-
-1. Read `spx/local/python.md` if it exists. It supersedes any skills.
-2. Read `spx/local/python-tests.md` if it exists. It supersedes any skills.
-
-</codex_fallback>
-
-3. Invoke `/contextualizing` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
-
-Gate 0 tool dependencies:
-
-- `ruff` installed in the consumer product (F1, V1)
-- `mypy` installed in the consumer product (V1)
-- `pytest` installed in the consumer product (V1, C1)
-
-If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
-
-Do not run `spx validation literal` for Python audits. The literal validator is TypeScript-only and reports `Skipping Literal (TypeScript not detected in product)` in Python projects.
-
-</prerequisites>
+Do not approve a test by looking only at the test file. Laundering and severed coupling can live in generators, harnesses, fixture path providers, and pytest discovery shims.
+</audit_scope>
 
 <gate_0_deterministic>
-
-Run the checks below and merge their findings.
-
-<check id="F1" name="filename_policy">
-List Python test files under the target node:
+Run deterministic checks before judgment when the repository provides the tools:
 
 ```bash
-rg --files <spec-node-path>/tests/ --glob '*.py'
+uv run pytest --collect-only -q <spec-node-path>/tests/
+uv run ruff check <spec-node-path>/tests/
+uv run mypy <spec-node-path>/tests/
 ```
 
-Each file must match `<subject>.<evidence>.<level>[.<variant>].py` where:
-
-- `<evidence>` is one of: `scenario`, `mapping`, `conformance`, `property`, `compliance`
-- `<level>` is one of: `l1`, `l2`, `l3`
-- `<variant>` is optional (e.g., `async`, `hypothesis`)
-
-Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Python test filename convention.
-</check>
-
-<check id="V1" name="python_validation">
-Run the validation sequence:
-
-```bash
-ruff check <spec-node-path>/tests/
-mypy <spec-node-path>/tests/
-pytest --collect-only -q <spec-node-path>/tests/
-```
-
-Fail Gate 0 if any command fails. A non-compiling or uncollectable test file has no auditable evidence surface.
-</check>
-
-<check id="C1" name="coverage_tool">
-Verify coverage tooling is available:
-
-```bash
-pytest --co -q --collect-only --tb=no <spec-node-path>/tests/ | head -1
-python -m pytest --co -q 2>/dev/null | grep -c 'test session starts' || true
-coverage --version 2>/dev/null || python -m pytest --co -q --no-header 2>&1 | head -1
-```
-
-Fail Gate 0 when product instructions require measured coverage and neither `coverage` nor `pytest-cov` is available.
-</check>
-
-Gate 0 status:
-
-| Condition      | Status | Action                                                        |
-| -------------- | ------ | ------------------------------------------------------------- |
-| F1 or V1 fails | FAIL   | Record findings, skip Gates 1 and 2                           |
-| C1 only        | PASS   | Record coverage note; continue with other evidence properties |
-| all pass       | PASS   | Proceed to Gate 1                                             |
-
-Gate 0 check IDs:
-
-| check_id | Source                          |
-| -------- | ------------------------------- |
-| F1       | Filename policy                 |
-| V1       | ruff / mypy / pytest collection |
-| C1       | Coverage tool availability      |
-
+Use repository-canonical commands when they exist. Report unavailable tools separately instead of silently skipping them.
 </gate_0_deterministic>
 
-<python_supplements>
-
-Apply these at the corresponding step of the `/auditing-tests` workflow.
-
-<supplement property="coupling">
-
-**Python import classification:**
-
-| Import pattern                                            | Classification                          |
-| --------------------------------------------------------- | --------------------------------------- |
-| `import pytest`                                           | Framework — does not count              |
-| `from hypothesis import given`                            | Framework — does not count              |
-| `import json`                                             | Stdlib — does not count                 |
-| `from typing import TYPE_CHECKING`                        | Type-only — does not count              |
-| `from product.config import parse_config`                 | Codebase (production) — counts          |
-| `from ..config import parse_config`                       | Codebase (production relative) — counts |
-| `from product_testing.harnesses import ConfigTestHarness` | Codebase (test infra) — counts          |
-
-**Production code vs test harnesses — both are codebase imports:**
-
-| Import target          | Correct pattern                                   | Classification    |
-| ---------------------- | ------------------------------------------------- | ----------------- |
-| Production module      | `from product.config import parse_config`         | Direct coupling   |
-| Test harness (package) | `from product_testing.harnesses import ...`       | Indirect coupling |
-| Co-located test helper | `from .helpers import ConfigTestHarness`          | Indirect coupling |
-| Shared fixtures        | `from product_testing.fixtures import db_harness` | Indirect coupling |
-
-Test harnesses wrap production modules, so they provide **indirect coupling**. When a test imports a harness, follow the chain: verify the harness itself has direct coupling to the module the assertion is about. If the harness is also a tautology, the coupling chain is broken.
-
-**Deep relative imports to test infrastructure are a red flag:**
-
-```python
-# ❌ Red flag — deep relative to test infra
-from ....tests.harnesses import ConfigTestHarness
-# Likely correct but fragile — verify the harness has real coupling
-
-# ✅ Correct — package import to test infra
-from product_testing.harnesses import ConfigTestHarness
-
-# ✅ Also correct — co-located helper via relative import
-from .helpers import ConfigTestHarness
-```
-
-Deep relative imports (`from ....`) are not themselves a coupling failure — the audit cares whether the import ultimately reaches the module under test, not the path style. But deep relative imports to test infrastructure signal the test may be importing a shared harness that wraps a different module than the assertion targets. Always trace the chain.
-
-**`TYPE_CHECKING` imports are not coupling.** Imports inside `if TYPE_CHECKING:` blocks are erased at runtime — the test has zero runtime dependency on the module. If all codebase imports are under `TYPE_CHECKING`, the test is a tautology.
-
-```python
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from product.theme import ThemeColor  # Erased at runtime — no coupling
-
-# Zero runtime codebase imports → tautology
-```
-
-**`__init__.py` re-exports can mask false coupling.** If the test imports from a package `__init__.py`, verify the specific name used is the one the assertion is about — not a sibling re-export from the same package.
-
-```python
-# Assertion is about parse_config, but test uses validate_config from same package
-from product.config import validate_config
-# parse_config is also exported from product.config but never called → false coupling
-```
-
-</supplement>
-
-<supplement property="falsifiability">
-
-**Python mocking patterns that sever coupling:**
-
-```python
-# Coupling severed — real module replaced
-from unittest.mock import patch, Mock
-
-
-@patch("product.database.query")
-def test_auth(mock_query: Mock) -> None:
-    mock_query.return_value = [{"id": 1}]
-    # Real database.query never runs
-
-
-# Coupling severed — MagicMock replaces behavior
-from unittest.mock import MagicMock
-
-database = MagicMock()
-database.query.return_value = [{"id": 1}]
-
-
-# Coupling severed — pytest-mock
-def test_auth(mocker: MockerFixture) -> None:
-    mocker.patch("product.database.query", return_value=[{"id": 1}])
-```
-
-**Legitimate alternatives mapped to `/testing` exceptions:**
-
-| Exception                | Python pattern                             | Why coupling maintained                    |
-| ------------------------ | ------------------------------------------ | ------------------------------------------ |
-| 1. Failure modes         | Class implementing Protocol, raises error  | Tests error handling of real integration   |
-| 2. Interaction protocols | Class with call-recording list             | Tests call sequence against real interface |
-| 3. Time/concurrency      | Injected clock or controllable scheduler   | Tests timing logic with real code          |
-| 4. Safety                | Class that records but doesn't execute     | Tests intent without destructive effects   |
-| 5. Combinatorial cost    | Configurable class mirroring real behavior | Tests breadth with real-shaped data        |
-| 6. Observability         | Class capturing request details            | Tests details real system hides            |
-| 7. Contract testing      | Stub validated against schema              | Tests serialization against real contract  |
-
-For each test double found:
-
-1. Identify which exception applies (must be one of the 7)
-2. Verify the double is a class implementing a Protocol — not `@patch`/`Mock()`/`MagicMock`
-3. Any `@patch`/`Mock()`/`MagicMock`/`mocker.patch` usage replacing behavior under test → coupling is severed → REJECT
-
-</supplement>
-
-<supplement property="alignment">
-
-**Property-based testing via Hypothesis is required for specific assertion types:**
-
-| Code type               | Required property        | Hypothesis pattern        |
-| ----------------------- | ------------------------ | ------------------------- |
-| Parsers                 | `parse(format(x)) == x`  | `@given(st.text())`       |
-| Serialization           | `decode(encode(x)) == x` | `@given(valid_objects())` |
-| Mathematical operations | Algebraic properties     | `@given(st.integers())`   |
-| Complex algorithms      | Invariant preservation   | `@given(valid_inputs())`  |
-
-If the spec assertion describes a Property-type claim about a parser, serializer, or math operation, and the test uses only example-based assertions:
-
-**REJECT — "misaligned: Property assertion requires property-based test strategy."**
-
-```python
-# ❌ REJECT: Parser assertion with only example-based test
-def test_parse_json_simple() -> None:
-    result = parse('{"key": "value"}')
-    assert result == {"key": "value"}
-
-
-# Missing: @given + roundtrip property
-
-
-# ✅ PASS: Meaningful roundtrip property
-@given(valid_json_values())
-def test_roundtrip(value: JsonValue) -> None:
-    assert parse(format(value)) == value
-```
-
-Verify property quality — `@given` that only checks "doesn't crash" is not a meaningful property:
-
-```python
-# ❌ REJECT: Trivial property (only tests "doesn't crash")
-@given(st.text())
-def test_parse_doesnt_crash(text: str) -> None:
-    try:
-        parse(text)
-    except ParseError:
-        pass  # No assertion about behavior
-```
-
-For filename conventions, source-owned values, inline diagnostics, fixtures, and harness placement, defer to `/standardizing-python-tests`. Treat those as standards issues unless they break coupling, falsifiability, alignment, or coverage directly.
-
-</supplement>
-
-<supplement property="coverage">
-
-**Python coverage commands (pytest-cov):**
-
-Baseline (excluding test under audit):
-
-```bash
-just run test --cov=product --cov-report=term -- --ignore=path/to/test_under_audit.py
-```
-
-With test:
-
-```bash
-just run test --cov=product --cov-report=term path/to/test_under_audit.py
-```
-
-**Alternative tooling:** Projects may use `coverage.py` directly or different `--cov` targets. Check `pyproject.toml` for `[tool.pytest.ini_options]` and `[tool.coverage]` settings.
-
-Report actual deltas:
-
-```text
-Baseline: product/config_parser.py — 43.2%
-With test: product/config_parser.py — 67.8%
-Delta: +24.6% — new coverage ✓
-```
-
-</supplement>
-
-</python_supplements>
-
-<gate_2_architectural>
-
-Runs only if Gate 1 is PASS. Scan in-scope test files for repeated setup patterns that belong in shared fixtures or harnesses.
-
-Trigger: two or more in-scope tests sharing any of these patterns:
-
-- identical `@pytest.fixture` body (same dependencies, same setup logic)
-- repeated `httpx.AsyncClient(app=...)` or `aiohttp.ClientSession` configuration
-- repeated database seeding or transaction setup
-- repeated `tempfile.TemporaryDirectory()` or `tmp_path` scaffolding with identical structure
-- repeated mock patches (`@patch("same.module.path")`) across multiple test files
-- repeated fixture-setup logic appearing inline in multiple files instead of being shared as `@pytest.fixture` callables in `product_testing/fixtures/`
-
-Each finding names the pattern, lists at least two occurrences with file and line, and proposes the nearest common location: a `product_testing/harnesses/<name>.py` module or a `product_testing/fixtures/<name>.py` module exporting pytest fixtures. Fixture body code never belongs in any `tests/conftest.py` — that file is for pytest discovery/registration only, per `spx/15-test-infrastructure.pdr.md`.
-
-Gate 2 status:
-
-- PASS if no repeated setup pattern appears in two or more in-scope tests.
-- FAIL if any repeated setup pattern appears in two or more in-scope tests.
-
-</gate_2_architectural>
+<coupling_audit>
+Classify imports by runtime coupling:
+
+| Import pattern                                         | Classification                          |
+| ------------------------------------------------------ | --------------------------------------- |
+| `import pytest`                                        | Framework, does not count               |
+| `from hypothesis import given`                         | Framework, does not count               |
+| `import json`                                          | Stdlib, does not count                  |
+| `from typing import TYPE_CHECKING`                     | Type-only, does not count               |
+| `from product.config import parse_config`              | Production coupling                     |
+| `from product_testing.harnesses import config_harness` | Indirect coupling through harness       |
+| `from product_testing.generators import valid_config`  | Input-domain provider, audit separately |
+
+Imports inside `if TYPE_CHECKING:` do not create runtime coupling. A test with only framework, stdlib, and type-only imports is a tautology unless it reaches production through a harness that itself reaches production.
+
+When a test imports a harness, inspect the harness and verify it calls the production behavior the assertion is about. A harness that builds expected values without exercising production is severed coupling.
+</coupling_audit>
+
+<falsifiability_audit>
+Reject replacement of the behavior under test:
+
+- `unittest.mock.patch` replacing the production function, class, module, client, or repository the assertion claims to verify
+- `Mock()` or `MagicMock()` standing in for behavior the assertion claims to verify
+- `mocker.patch(...)` replacing the dependency under test
+- `monkeypatch` replacing the behavior under test
+- `sys.path` or `importlib` tricks that cause tests to import alternate modules
+
+Accept explicit test doubles only when they are passed through dependency injection and map to a `/testing` Stage 5 exception:
+
+| Exception               | Python pattern                             |
+| ----------------------- | ------------------------------------------ |
+| Failure modes           | Class implementing a protocol and raising  |
+| Interaction protocols   | Class with typed call recording            |
+| Time/concurrency        | Injected clock or controllable scheduler   |
+| Safety                  | Class that records intent                  |
+| Combinatorial cost      | Configurable class mirroring real behavior |
+| Observability           | Class capturing hidden boundary details    |
+| Contract probes         | Stub validated against a real schema       |
+| </falsifiability_audit> |                                            |
+
+<source_ownership_audit>
+Reject test-owned source vocabulary:
+
+- Local constants in tests for source-owned values
+- Shared constant bags in tests, helpers, harnesses, or generators
+- Production modules created only to aggregate test values
+- Fixture files containing isolated strings or numbers
+- Generators that return source-owned singleton shapes through `st.just(...)`, singleton `st.sampled_from(...)`, or constant-returning functions
+
+Pass only when source vocabulary comes from the owning production module, runtime package, framework package, schema, enum, registry, constructor, or typed factory.
+</source_ownership_audit>
+
+<generator_audit>
+Audit every imported generator:
+
+- It represents a variable input domain with meaningful variation, composition, or shrinkage
+- It does not duplicate source-owned vocabulary
+- It does not hide arbitrary example values behind a strategy name
+- It derives expected outputs from generated inputs, an independent oracle, or a source outside the module under test
+
+Property evidence requires a meaningful property. `@given` that only checks for lack of exceptions is insufficient.
+</generator_audit>
+
+<harness_audit>
+Audit every imported harness:
+
+- It manages setup, teardown, cleanup, dependency checks, or access to external behavior
+- It reaches the production behavior the assertion is about
+- It does not replace the behavior under test with framework mocks, monkeypatches, environment stubs, network fakes, or alternate imports
+- It cleans up temp dirs, subprocesses, services, Docker resources, browsers, databases, and environment changes
+- It does not own arbitrary test data that belongs in source modules or generators
+
+Pytest fixture callables that perform setup, teardown, cleanup, or dependency access are harness entrypoints. They belong under `product_testing.harnesses.*`.
+</harness_audit>
+
+<fixture_audit>
+Audit inert fixture files and fixture path providers:
+
+- Fixture files are real-world payloads whose complete shape matters to the assertion
+- Tests consume fixture files by path, reading, or copying
+- Tests do not import fixture files as Python modules
+- Fixture files do not store isolated strings or numbers as test data
+
+Reject Python modules under `product_testing/fixtures/` that export pytest fixture body functions. That category is for inert data files under the PDR vocabulary.
+</fixture_audit>
+
+<conftest_audit>
+Inspect every `conftest.py` that applies to the test path.
+
+Allowed content:
+
+- Explicit imports of pytest fixture callables from `product_testing.harnesses.*`
+- Pytest marker registration
+- Pytest hooks that configure collection or reporting
+
+Rejected content:
+
+- Fixture body code
+- Harness classes or setup policy
+- Generated data
+- Source-owned protocol values
+- Star imports from test infrastructure packages
+- Mocking, monkeypatching, or import-path mutation
+
+</conftest_audit>
+
+<architectural_dry_audit>
+When two or more in-scope tests repeat setup or infrastructure logic, reject the duplication and identify the canonical destination:
+
+| Repeated pattern                                      | Destination                         |
+| ----------------------------------------------------- | ----------------------------------- |
+| Temp product scaffolding                              | `product_testing.harnesses.*`       |
+| Subprocess or CLI execution setup                     | `product_testing.harnesses.*`       |
+| Database, Docker, browser, service, or API setup      | `product_testing.harnesses.*`       |
+| Domain-shaped input construction with variable values | `product_testing.generators.*`      |
+| Real-world payload samples                            | `product_testing/fixtures/` as data |
+
+Do not recommend `tests/helpers`, `tests/support`, node-local helper modules, or fixture body code in `conftest.py`.
+</architectural_dry_audit>
 
 <verdict_format>
+Follow `<verdict_format>` in `/auditing-tests`.
 
-Follow `<verdict_format>` in `/auditing-tests`. Gate 0 check IDs for Python: F1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: `product_testing/harnesses/{name}.py` or `product_testing/fixtures/{name}.py` — never `tests/conftest.py`.
+For each finding, include:
 
+- Verdict property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety
+- Exact file and line
+- The imported chain when the defect is outside the test file
+- Required fix
+
+Emit `APPROVED` only when Gate 0 and all evidence-property checks pass. Emit `REJECT` when any property fails.
 </verdict_format>
 
-<reference_guides>
-Use `references/python-test-audit-examples.md` when concrete approved and rejected Python audit examples are needed.
-</reference_guides>
-
 <failure_modes>
+Failure 1: Accepted `TYPE_CHECKING` import as coupling.
 
-**Failure 1: Accepted TYPE_CHECKING import as coupling**
+Claude saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and counted it as runtime coupling. The test declared its own color values and never executed production code. Avoid this by ignoring type-only imports for coupling.
 
-Reviewer saw `from product.theme import ThemeColor` inside an `if TYPE_CHECKING:` block and classified it as direct coupling. But `TYPE_CHECKING` is `False` at runtime — the import never executes. The test declared its own color values and verified contrast math with zero connection to any theme module.
+Failure 2: Missed coupling severed by `@patch`.
 
-How to avoid: Coupling supplement — `TYPE_CHECKING` imports do not count as codebase imports.
+Claude saw a production import and approved the test, while `@patch("product.database.query")` replaced the imported behavior. Avoid this by checking decorators, fixtures, monkeypatch usage, and harness setup code.
 
-**Failure 2: Missed coupling severed by @patch**
+Failure 3: Accepted a generator that only hid a constant.
 
-Reviewer saw `from product.database import query` and classified it as direct coupling. The test function was decorated with `@patch("product.database.query")`. The real module never ran.
+Claude saw a Hypothesis strategy and treated it as property evidence. The strategy returned one copied source value through `st.just(...)`. Avoid this by inspecting generator bodies and requiring meaningful variation.
 
-How to avoid: Falsifiability supplement — check for `@patch`/`Mock()`/`MagicMock` after confirming coupling. Import + patch = coupling severed.
+Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
-**Failure 3: Confused **init**.py re-export with direct coupling**
-
-Test imported `validate_config` from `product.config`. The assertion was about `parse_config`. Both are exported from the same `__init__.py`, but the test never called `parse_config`.
-
-How to avoid: Coupling supplement — `__init__.py` re-exports can mask false coupling. Verify the specific name used matches the assertion.
-
-**Failure 4: Distracted by code quality while test was a tautology**
-
-Reviewer spent the entire audit checking for `-> None` annotations, magic values, and naming conventions. The test had perfect Python style and zero evidentiary value — it imported only pytest and hypothesis.
-
-How to avoid: Essential principles — no code quality checks. Check the four evidence properties only.
-
+Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the canonical test-infrastructure package. Avoid this by checking every applying `conftest.py`.
 </failure_modes>
 
-<rejection_triggers>
-
-| Category           | Trigger                                                     | Property       |
-| ------------------ | ----------------------------------------------------------- | -------------- |
-| **Coupling**       | Zero codebase imports (only framework/stdlib)               | Coupling       |
-| **Coupling**       | Only `TYPE_CHECKING` imports — erased at runtime            | Coupling       |
-| **Coupling**       | `__init__.py` re-export of wrong name (false coupling)      | Coupling       |
-| **Coupling**       | Import present but assertion-relevant function never called | Coupling       |
-| **Falsifiability** | `@patch` replaces imported module                           | Falsifiability |
-| **Falsifiability** | `Mock()` / `MagicMock` replaces real dependency             | Falsifiability |
-| **Falsifiability** | `mocker.patch` (pytest-mock) replaces module                | Falsifiability |
-| **Falsifiability** | Cannot name a concrete mutation that would fail the test    | Falsifiability |
-| **Alignment**      | Parser/serializer without `@given` roundtrip                | Alignment      |
-| **Alignment**      | Property assertion tested with only examples                | Alignment      |
-| **Alignment**      | Test exercises different behavior than assertion describes  | Alignment      |
-| **Coverage**       | Zero delta with baseline < 100% on assertion-relevant files | Coverage       |
-
-</rejection_triggers>
-
 <success_criteria>
+A Python test audit succeeds when:
 
-Audit is complete when:
-
-- [ ] Gate 0 run: ruff, mypy, and pytest collection all executed
-- [ ] Gate 1 complete: every assertion evaluated — coupling (with Python supplements), falsifiability, alignment, coverage (if Gate 0 PASS)
-- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has gate, step/property, and specific detail
-- [ ] For REJECT: "how tests could pass while assertions fail" explained
+- Gate 0 deterministic checks are run or unavailable tools are reported
+- Every test is traced to the spec assertion and selected evidence type
+- Runtime coupling reaches production behavior directly or through audited harnesses
+- No framework mock, monkeypatch, or import trick replaces the behavior under test
+- Source-owned values come from source modules or owning packages
+- Generators represent meaningful variable domains
+- Harnesses manage resource lifecycle and cleanup without owning arbitrary data
+- Inert fixtures are consumed only as files
+- `conftest.py` is limited to discovery, registration, and explicit harness imports
+- The verdict lists exact evidence-property findings or emits `APPROVED`
 
 </success_criteria>
