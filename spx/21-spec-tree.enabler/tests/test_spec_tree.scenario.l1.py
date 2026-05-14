@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from outcomeeng.spec_tree_structure import (
     NODE_KIND_ENABLER,
     SPEC_TREE_ROOT_DIRECTORY,
@@ -12,6 +14,7 @@ from outcomeeng.spec_tree_structure import (
 from outcomeeng_testing.harnesses.spec_tree import (
     MARKETPLACE_ROOT_REQUIRED_DIRECTORY,
     MARKETPLACE_ROOT_SENTINEL_FILE,
+    MarketplaceRootNotFoundError,
     marketplace_root_for_spec_tree_root_test,
     marketplace_tracked_spx_node_directories,
 )
@@ -53,3 +56,14 @@ def test_marketplace_root_detection_skips_consumer_pyproject_files(
         )
         == tmp_path
     )
+
+
+def test_marketplace_root_detection_reports_configuration_errors(
+    tmp_path: Path,
+) -> None:
+    consumer_root = tmp_path / SPEC_TREE_ROOT_DIRECTORY
+    consumer_root.mkdir()
+    test_file = consumer_root / Path(__file__).name
+
+    with pytest.raises(MarketplaceRootNotFoundError):
+        marketplace_root_for_spec_tree_root_test(str(test_file))

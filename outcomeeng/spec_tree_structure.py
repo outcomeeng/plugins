@@ -26,7 +26,7 @@ NODE_KIND_OUTCOME = NodeKind.OUTCOME
 
 _SLUG_PATTERN = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 _NODE_DIRECTORY_PATTERN = re.compile(
-    rf"^(?P<index>\d{{2}}){re.escape(NODE_DIRECTORY_INDEX_SEPARATOR)}"
+    rf"^(?P<index>[1-9][0-9]){re.escape(NODE_DIRECTORY_INDEX_SEPARATOR)}"
     rf"(?P<slug>{_SLUG_PATTERN}){re.escape(NODE_DIRECTORY_KIND_SEPARATOR)}"
     rf"(?P<kind>{NODE_KIND_ENABLER.value}|{NODE_KIND_OUTCOME.value})$"
 )
@@ -40,6 +40,13 @@ class NodeDirectoryName:
 
 
 def format_node_directory_name(index: int, slug: str, kind: NodeKind) -> str:
+    if not is_valid_node_index(index):
+        msg = (
+            f"Spec Tree node index must be between {MIN_NODE_INDEX} "
+            f"and {MAX_NODE_INDEX}: {index}"
+        )
+        raise ValueError(msg)
+
     return (
         f"{index}{NODE_DIRECTORY_INDEX_SEPARATOR}"
         f"{slug}{NODE_DIRECTORY_KIND_SEPARATOR}{kind.value}"

@@ -14,6 +14,10 @@ MARKETPLACE_ROOT_SENTINEL_FILE = "pyproject.toml"
 MARKETPLACE_ROOT_REQUIRED_DIRECTORY = Path("plugins/spec-tree")
 
 
+class MarketplaceRootNotFoundError(RuntimeError):
+    """Raised when a test path is not inside the plugin marketplace tree."""
+
+
 def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
     for candidate in Path(test_file).resolve().parents:
         if (candidate / MARKETPLACE_ROOT_SENTINEL_FILE).is_file() and (
@@ -25,7 +29,7 @@ def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
         f"Unable to locate marketplace root from {test_file}; expected "
         f"{MARKETPLACE_ROOT_SENTINEL_FILE} and {MARKETPLACE_ROOT_REQUIRED_DIRECTORY}"
     )
-    raise FileNotFoundError(msg)
+    raise MarketplaceRootNotFoundError(msg)
 
 
 def marketplace_tracked_spx_node_directories(test_file: str) -> list[Path]:
