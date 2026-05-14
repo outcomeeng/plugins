@@ -1331,16 +1331,39 @@ def compute_verdict_diff(
     prior_open_by_identity = {_finding_identity(f): f for f in prior_open}
     current_open_by_identity = {_finding_identity(f): f for f in current_open}
     prior_resolved_by_identity = {_finding_identity(f): f for f in prior_resolved}
-    newly_resolved_keys = set(prior_open_by_identity) - set(current_open_by_identity)
+    newly_resolved_keys = sorted(
+        set(prior_open_by_identity) - set(current_open_by_identity),
+        key=_identity_sort_key,
+    )
     newly_resolved = [prior_open_by_identity[k] for k in newly_resolved_keys]
-    carried_resolved_keys = set(prior_resolved_by_identity) - set(
-        current_open_by_identity
+    carried_resolved_keys = sorted(
+        set(prior_resolved_by_identity) - set(current_open_by_identity),
+        key=_identity_sort_key,
     )
     carried_resolved = [prior_resolved_by_identity[k] for k in carried_resolved_keys]
     enriched["resolved"] = carried_resolved + newly_resolved
-    reopened_keys = set(current_open_by_identity) & set(prior_resolved_by_identity)
+    reopened_keys = sorted(
+        set(current_open_by_identity) & set(prior_resolved_by_identity),
+        key=_identity_sort_key,
+    )
     enriched["reopened"] = [current_open_by_identity[k] for k in reopened_keys]
     return enriched
+
+
+def _identity_sort_key(
+    identity: tuple[str, int | None, str, str],
+) -> tuple[str, int, int, str, str]:
+    """Return a None-safe sort key for finding identity tuples.
+
+    Python 3 cannot compare ``None`` to ``int`` directly, so the line
+    component is split into a presence bit (0 for None, 1 for int) and a
+    numeric value (0 when None). Findings with no line sort before
+    findings with a line within the same file, then by numeric line.
+    """
+    file_, line, rule, message = identity
+    has_line = 0 if line is None else 1
+    line_value = 0 if line is None else line
+    return (file_, has_line, line_value, rule, message)
 
 
 def _cmd_verdict_diff(args: argparse.Namespace) -> int:

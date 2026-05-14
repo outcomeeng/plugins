@@ -42,6 +42,7 @@ EMIT_SCRIPT = SCRIPTS_DIR / "emit_verdict.py"
 READ_SCRIPT = SCRIPTS_DIR / "read_verdict.py"
 AGGREGATE_SCRIPT = SCRIPTS_DIR / "aggregate_verdicts.py"
 PASS_RESULTS_SCRIPT = SCRIPTS_DIR / "pass_results.py"
+AUDIT_ORCHESTRATOR_SCRIPT = SCRIPTS_DIR / "audit_orchestrator.py"
 
 
 def load_verdict_module() -> ModuleType:
@@ -82,6 +83,7 @@ def run_script(
     *args: str,
     stdin: str | None = None,
     check: bool = False,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Invoke a toolchain script as a subprocess and return the result.
 
@@ -90,6 +92,12 @@ def run_script(
     and an optional stdin payload. ``check=False`` is the default because most
     tests inspect the returncode explicitly; tests that expect success can
     pass ``check=True`` to fail fast.
+
+    ``env``, when provided, is the complete environment passed to the child
+    process — pass ``{**os.environ, "PYTHONHASHSEED": "0"}`` to derive from
+    the caller's environment. ``None`` (the default) inherits the caller's
+    environment unchanged. Tests that need to control hash randomization or
+    other environment-driven determinism set this explicitly.
     """
     return subprocess.run(
         [sys.executable, str(script), *args],
@@ -97,4 +105,5 @@ def run_script(
         capture_output=True,
         text=True,
         check=check,
+        env=env,
     )
