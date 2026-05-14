@@ -17,8 +17,6 @@ export default [
         sourceType: "module",
       },
     },
-    // This marketplace validates TypeScript syntax for plugin examples and
-    // embedded lint-rule sources. It does not ship a TypeScript lint policy.
     rules: {},
   },
 ];
