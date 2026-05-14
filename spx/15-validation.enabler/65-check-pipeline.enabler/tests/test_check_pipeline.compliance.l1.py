@@ -86,10 +86,11 @@ def _subprocess_importers() -> list[Path]:
 class TestSubprocessImportContainment:
     """Exactly one module in the package imports `subprocess`."""
 
-    def test_at_most_one_module_imports_subprocess(self) -> None:
+    def test_exactly_one_module_imports_subprocess(self) -> None:
         importers = _subprocess_importers()
-        assert len(importers) <= 1, (
-            f"`subprocess` is imported by multiple modules: {importers}"
+        assert len(importers) == 1, (
+            f"`subprocess` must be imported by exactly one module "
+            f"(the production adapter); found: {importers}"
         )
 
 
