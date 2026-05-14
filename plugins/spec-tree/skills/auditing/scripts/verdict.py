@@ -125,6 +125,13 @@ class Verdict:
     Mixed wrappers (with both rows and children) are permitted; the
     orchestrator-level rollup still applies.
 
+    ``resolved`` and ``reopened`` are verdict-level finding lists used by
+    callers that diff a current audit against a prior verdict (e.g., a
+    PR-thread review-orchestrator). Both default to empty so a stateless
+    audit run leaves them out of the rendered output. Their absence on the
+    wire is tolerated by ``from_json_dict`` so verdicts emitted before
+    these fields existed continue to parse.
+
     Not hashable. ``frozen=True`` prevents reassignment of fields, but the
     ``metadata`` dict field is mutable in place. The auto-generated
     ``__hash__`` would also fail on the dict at hash time. Explicit
@@ -140,6 +147,8 @@ class Verdict:
     rows: tuple[Row, ...] = ()
     children: tuple["Verdict", ...] = ()
     metadata: dict[str, str] = field(default_factory=dict)
+    resolved: tuple[Finding, ...] = ()
+    reopened: tuple[Finding, ...] = ()
 
     __hash__ = None  # type: ignore[assignment]
 
@@ -199,22 +208,30 @@ def to_json_dict(verdict: Verdict) -> dict[str, Any]:
             {
                 "name": row.name,
                 "status": str(row.status),
-                "findings": [
-                    {
-                        "id": finding.id,
-                        "file": finding.file,
-                        "line": finding.line,
-                        "rule": finding.rule,
-                        "severity": str(finding.severity),
-                        "message": finding.message,
-                    }
-                    for finding in row.findings
-                ],
+                "findings": [_finding_to_dict(finding) for finding in row.findings],
             }
             for row in verdict.rows
         ],
         "children": [to_json_dict(child) for child in verdict.children],
         "metadata": dict(verdict.metadata),
+        "resolved": [_finding_to_dict(finding) for finding in verdict.resolved],
+        "reopened": [_finding_to_dict(finding) for finding in verdict.reopened],
+    }
+
+
+def _finding_to_dict(finding: Finding) -> dict[str, Any]:
+    """Serialize one Finding to a JSON-compatible dict.
+
+    Extracted so to_json_dict and any future verdict-level finding lists
+    (resolved, reopened) emit the same shape from one source.
+    """
+    return {
+        "id": finding.id,
+        "file": finding.file,
+        "line": finding.line,
+        "rule": finding.rule,
+        "severity": str(finding.severity),
+        "message": finding.message,
     }
 
 
@@ -292,6 +309,14 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
                 "instead of emitting None"
             )
         metadata[str(raw_key)] = str(raw_value)
+    resolved_raw = data.get("resolved", [])
+    if not isinstance(resolved_raw, list):
+        raise VerdictValidationError("resolved must be an array")
+    resolved = tuple(_parse_finding(f) for f in resolved_raw)
+    reopened_raw = data.get("reopened", [])
+    if not isinstance(reopened_raw, list):
+        raise VerdictValidationError("reopened must be an array")
+    reopened = tuple(_parse_finding(f) for f in reopened_raw)
     return Verdict(
         schema_version=schema_version,
         skill=_require_str(data, "skill"),
@@ -300,6 +325,8 @@ def from_json_dict(data: dict[str, Any]) -> Verdict:
         rows=rows,
         children=children,
         metadata=metadata,
+        resolved=resolved,
+        reopened=reopened,
     )
 
 
@@ -324,9 +351,9 @@ def dump_json(verdict: Verdict, *, indent: int | None = 2) -> str:
 
     ``sort_keys=False`` preserves the natural schema key order from
     ``to_json_dict`` (schema_version → skill → target → overall → rows →
-    children → metadata) rather than reordering alphabetically; downstream
-    readers expecting that order — including the canonical example JSON
-    in skill prose — stay aligned.
+    children → metadata → resolved → reopened) rather than reordering
+    alphabetically; downstream readers expecting that order — including the
+    canonical example JSON in skill prose — stay aligned.
     """
     return json.dumps(to_json_dict(verdict), indent=indent, sort_keys=False)
 

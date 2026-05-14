@@ -51,6 +51,8 @@ VALID_VERDICT_DICT = {
     ],
     "children": [],
     "metadata": {"branch": "main"},
+    "resolved": [],
+    "reopened": [],
 }
 
 
@@ -180,6 +182,63 @@ class TestJsonRoundTrip:
         v = verdict_mod.parse_json(json.dumps(VALID_VERDICT_DICT))
         produced = verdict_mod.to_json_dict(v)
         assert produced == VALID_VERDICT_DICT
+
+
+RESOLVED_FINDING = {
+    "id": "f-100",
+    "file": "src/old.ts",
+    "line": 7,
+    "rule": "no-shared-bag",
+    "severity": "INFO",
+    "message": "Resolved by removing the shared bag.",
+}
+
+REOPENED_FINDING = {
+    "id": "f-200",
+    "file": "src/new.ts",
+    "line": None,
+    "rule": "no-shared-bag",
+    "severity": "REJECT",
+    "message": "Regression — shared bag re-introduced.",
+}
+
+
+class TestResolvedAndReopened:
+    def test_round_trip_preserves_resolved_findings(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "resolved": [RESOLVED_FINDING]}
+        v = verdict_mod.parse_json(json.dumps(payload))
+        assert len(v.resolved) == 1
+        assert v.resolved[0].id == RESOLVED_FINDING["id"]
+        produced = verdict_mod.to_json_dict(v)
+        assert produced["resolved"] == [RESOLVED_FINDING]
+
+    def test_round_trip_preserves_reopened_findings(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "reopened": [REOPENED_FINDING]}
+        v = verdict_mod.parse_json(json.dumps(payload))
+        assert len(v.reopened) == 1
+        assert v.reopened[0].id == REOPENED_FINDING["id"]
+        produced = verdict_mod.to_json_dict(v)
+        assert produced["reopened"] == [REOPENED_FINDING]
+
+    def test_absent_resolved_defaults_to_empty(self) -> None:
+        payload = {k: v for k, v in VALID_VERDICT_DICT.items() if k != "resolved"}
+        v = verdict_mod.parse_json(json.dumps(payload))
+        assert v.resolved == ()
+
+    def test_absent_reopened_defaults_to_empty(self) -> None:
+        payload = {k: v for k, v in VALID_VERDICT_DICT.items() if k != "reopened"}
+        v = verdict_mod.parse_json(json.dumps(payload))
+        assert v.reopened == ()
+
+    def test_non_array_resolved_rejected(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "resolved": "not-a-list"}
+        with pytest.raises(verdict_mod.VerdictValidationError, match="resolved"):
+            verdict_mod.parse_json(json.dumps(payload))
+
+    def test_non_array_reopened_rejected(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "reopened": "not-a-list"}
+        with pytest.raises(verdict_mod.VerdictValidationError, match="reopened"):
+            verdict_mod.parse_json(json.dumps(payload))
 
 
 class TestRollUpRules:
