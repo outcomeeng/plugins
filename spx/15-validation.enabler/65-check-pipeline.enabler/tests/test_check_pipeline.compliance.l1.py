@@ -1,0 +1,218 @@
+"""Level 1 compliance tests for the check-pipeline orchestrator.
+
+Verifies architectural compliance rules that can be falsified by inspecting
+source code or module-level data:
+
+- The declared step list includes a `ruff check` step and a
+  `spx validation markdown` step.
+- The production process spawner passes `start_new_session=True` so
+  signal forwarding targets a process group.
+- The SIGKILL grace-period wait uses a single `time.monotonic()` deadline
+  per signal-handler invocation.
+- The orchestrator source contains no `gh run watch` literal and no
+  `while True:` loop with an embedded `time.sleep` call.
+"""
+
+from __future__ import annotations
+
+import ast
+import inspect
+from pathlib import Path
+from typing import Final
+
+from outcomeeng.scripts import check_pipeline as pkg
+from outcomeeng.scripts.check_pipeline import STEPS, Step
+
+RUFF_TOKENS: Final = ("ruff", "check")
+SPX_MARKDOWN_TOKENS: Final = ("spx", "validation", "markdown")
+
+
+def _argv_contains_sequence(argv: tuple[str, ...], tokens: tuple[str, ...]) -> bool:
+    """Return True if `tokens` appears as a contiguous subsequence of `argv`."""
+    if not tokens:
+        return True
+    for start in range(len(argv) - len(tokens) + 1):
+        if tuple(argv[start : start + len(tokens)]) == tokens:
+            return True
+    return False
+
+
+class TestDeclaredSteps:
+    """STEPS must include the validators named in spx/ISSUES.md."""
+
+    def test_steps_is_non_empty_tuple_of_step(self) -> None:
+        assert isinstance(STEPS, tuple)
+        assert len(STEPS) >= 1
+        for step in STEPS:
+            assert isinstance(step, Step)
+
+    def test_steps_includes_ruff_check(self) -> None:
+        assert any(_argv_contains_sequence(step.argv, RUFF_TOKENS) for step in STEPS)
+
+    def test_steps_includes_spx_validation_markdown(self) -> None:
+        assert any(
+            _argv_contains_sequence(step.argv, SPX_MARKDOWN_TOKENS) for step in STEPS
+        )
+
+
+def _package_modules() -> list[Path]:
+    package_dir = Path(inspect.getfile(pkg)).parent
+    return sorted(package_dir.glob("*.py"))
+
+
+def _subprocess_importers() -> list[Path]:
+    importers: list[Path] = []
+    for module_path in _package_modules():
+        tree = ast.parse(module_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name == "subprocess" or alias.name.startswith(
+                        "subprocess.",
+                    ):
+                        importers.append(module_path)
+                        break
+            elif (
+                isinstance(node, ast.ImportFrom)
+                and node.module is not None
+                and (
+                    node.module == "subprocess" or node.module.startswith("subprocess.")
+                )
+            ):
+                importers.append(module_path)
+    return importers
+
+
+class TestSubprocessImportContainment:
+    """Exactly one module in the package imports `subprocess`."""
+
+    def test_at_most_one_module_imports_subprocess(self) -> None:
+        importers = _subprocess_importers()
+        assert len(importers) <= 1, (
+            f"`subprocess` is imported by multiple modules: {importers}"
+        )
+
+
+def _find_function_def(tree: ast.AST, name: str) -> ast.FunctionDef | None:
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    return None
+
+
+def _signal_handler_source() -> str:
+    """Return the source of every function that calls signal.signal()'s callback.
+
+    The orchestrator registers handlers via signal.signal(). For source
+    inspection, we walk every function in the package and pick those that
+    call send_signal_to_group — the orchestrator's grace-period path.
+    """
+    fragments: list[str] = []
+    for module_path in _package_modules():
+        tree = ast.parse(module_path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            calls = [
+                child
+                for child in ast.walk(node)
+                if isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "send_signal_to_group"
+            ]
+            if calls:
+                fragments.append(ast.unparse(node))
+    return "\n\n".join(fragments)
+
+
+def _monotonic_call_count(func_source: str) -> int:
+    tree = ast.parse(func_source)
+    count = 0
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "monotonic"
+        ):
+            count += 1
+    return count
+
+
+class TestBoundedGracePeriod:
+    """Signal grace-period is bounded by exactly one time.monotonic() deadline."""
+
+    def test_signal_handler_computes_one_monotonic_deadline(self) -> None:
+        source = _signal_handler_source()
+        assert source, "no signal-handling function found in package"
+        count = _monotonic_call_count(source)
+        # Allow up to 2 calls: one to compute the deadline, one inside the
+        # poll loop to compare against it.
+        assert 1 <= count <= 2, (
+            f"signal handler must use a single bounded deadline; "
+            f"found {count} time.monotonic() calls"
+        )
+
+
+def _package_source_text() -> str:
+    return "\n".join(path.read_text(encoding="utf-8") for path in _package_modules())
+
+
+class TestNoForbiddenWaitPatterns:
+    """The orchestrator source contains no `gh run watch` or `while True: sleep`."""
+
+    def test_no_gh_run_watch_literal(self) -> None:
+        source = _package_source_text()
+        assert "gh run watch" not in source
+
+    def test_no_while_true_with_time_sleep(self) -> None:
+        for module_path in _package_modules():
+            tree = ast.parse(module_path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.While):
+                    continue
+                test = node.test
+                is_while_true = isinstance(test, ast.Constant) and test.value is True
+                if not is_while_true:
+                    continue
+                for child in ast.walk(node):
+                    if (
+                        isinstance(child, ast.Call)
+                        and isinstance(child.func, ast.Attribute)
+                        and child.func.attr == "sleep"
+                    ):
+                        msg = (
+                            f"{module_path.name} contains a `while True:` loop "
+                            f"with `time.sleep()` — forbidden polling pattern"
+                        )
+                        raise AssertionError(msg)
+
+
+class TestProductionSpawnerSessionFlag:
+    """The production ProcessSpawner adapter passes start_new_session=True."""
+
+    def test_popen_call_includes_start_new_session_true(self) -> None:
+        importers = _subprocess_importers()
+        assert len(importers) == 1, (
+            "production spawner module must be the sole subprocess importer"
+        )
+        spawner_path = importers[0]
+        tree = ast.parse(spawner_path.read_text(encoding="utf-8"))
+        popen_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Attribute) and node.func.attr == "Popen")
+                or (isinstance(node.func, ast.Name) and node.func.id == "Popen")
+            )
+        ]
+        assert popen_calls, "production spawner must call subprocess.Popen"
+        for call in popen_calls:
+            kwargs = {kw.arg: kw.value for kw in call.keywords}
+            assert "start_new_session" in kwargs, (
+                "Popen call must pass start_new_session"
+            )
+            value = kwargs["start_new_session"]
+            assert isinstance(value, ast.Constant) and value.value is True, (
+                "start_new_session must be the literal True"
+            )
