@@ -607,7 +607,13 @@ def load_state(path: pathlib.Path) -> AuditState | None:
             open_findings=open_findings,
             resolved_findings=resolved_findings,
         )
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError, IndexError) as exc:
+        # ``IndexError`` surfaces when ``_parse_open_table`` /
+        # ``_parse_resolved_table`` index ``row[0]..row[5]`` against a
+        # truncated row (out-of-band editing, a partial write from a
+        # non-atomic predecessor). Callers branching on
+        # :class:`StateFileCorruptError` must see those rows as corrupt
+        # state, not as an uncaught exception.
         raise StateFileCorruptError(
             f"state file at {path} failed to parse: {exc}"
         ) from exc
@@ -1125,6 +1131,11 @@ def _cmd_sha_reachable(args: argparse.Namespace) -> int:
 
 
 def _cmd_acquire_lock(args: argparse.Namespace) -> int:
+    # Mirrors :meth:`RunLock.__enter__` — atomic ``O_CREAT | O_EXCL``
+    # acquire, fresh-vs-stale TTL discrimination, retry-after-unlink for
+    # the stale path. Changes to either path's acquisition or stale-lock
+    # handling must keep the two synchronised.
+    #
     # Unlike :class:`RunLock`, the CLI runs in its own process and exits
     # before the lock is released — there is no injectable clock to thread
     # through, and mtime defaults to the kernel's wall-clock time at write.
