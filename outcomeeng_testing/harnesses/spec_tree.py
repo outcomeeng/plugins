@@ -10,15 +10,16 @@ from outcomeeng.spec_tree_structure import (
     iter_node_directories_from_tracked_paths,
 )
 
-SPEC_TREE_ROOT_TEST_FILE_TO_MARKETPLACE_ROOT_DEPTH = 3
+MARKETPLACE_ROOT_SENTINEL_FILE = "pyproject.toml"
 
 
 def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
-    return (
-        Path(test_file)
-        .resolve()
-        .parents[SPEC_TREE_ROOT_TEST_FILE_TO_MARKETPLACE_ROOT_DEPTH]
-    )
+    for candidate in Path(test_file).resolve().parents:
+        if (candidate / MARKETPLACE_ROOT_SENTINEL_FILE).is_file():
+            return candidate
+
+    msg = f"Unable to locate marketplace root from {test_file}"
+    raise FileNotFoundError(msg)
 
 
 def marketplace_spx_root_for_spec_tree_root_test(test_file: str) -> Path:

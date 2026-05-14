@@ -82,16 +82,17 @@ Reject replacement of the behavior under test:
 
 Accept explicit test doubles only when they are passed through dependency injection and map to a `/testing` Stage 5 exception:
 
-| Exception               | Python pattern                             |
-| ----------------------- | ------------------------------------------ |
-| Failure modes           | Class implementing a protocol and raising  |
-| Interaction protocols   | Class with typed call recording            |
-| Time/concurrency        | Injected clock or controllable scheduler   |
-| Safety                  | Class that records intent                  |
-| Combinatorial cost      | Configurable class mirroring real behavior |
-| Observability           | Class capturing hidden boundary details    |
-| Contract probes         | Stub validated against a real schema       |
-| </falsifiability_audit> |                                            |
+| Exception             | Python pattern                             |
+| --------------------- | ------------------------------------------ |
+| Failure modes         | Class implementing a protocol and raising  |
+| Interaction protocols | Class with typed call recording            |
+| Time/concurrency      | Injected clock or controllable scheduler   |
+| Safety                | Class that records intent                  |
+| Combinatorial cost    | Configurable class mirroring real behavior |
+| Observability         | Class capturing hidden boundary details    |
+| Contract probes       | Stub validated against a real schema       |
+
+</falsifiability_audit>
 
 <source_ownership_audit>
 Reject test-owned source vocabulary:
