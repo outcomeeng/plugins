@@ -756,6 +756,59 @@ def test_load_state_raises_state_file_corrupt_error_on_malformed_frontmatter(
     assert str(state_path) in str(exc_info.value)
 
 
+def test_load_state_translates_truncated_row_to_state_file_corrupt_error(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A truncated table row raises ``StateFileCorruptError``, not ``IndexError``.
+
+    Callers branch on ``StateFileCorruptError`` for the recovery path
+    (e.g., discard-then-rerun). An uncaught ``IndexError`` from row
+    indexing would bypass that branch — out-of-band editing or a
+    partial write from a non-atomic predecessor must surface through
+    the same channel as a malformed frontmatter.
+    """
+    module = _load_audit_orchestrator()
+    state_path = tmp_path / "truncated.md"
+    # Valid frontmatter; Open-findings table header + separator + a row
+    # that is missing the trailing ``required_fix`` and ``first_seen``
+    # cells. The row has 4 cells where the schema expects 6.
+    state_path.write_text(
+        "\n".join(
+            [
+                "---",
+                "branch: feature/x",
+                "schema_version: 1",
+                "first_run_sha: aaa",
+                "first_run_at: 2026-01-01T00:00:00Z",
+                "last_run_sha: aaa",
+                "last_run_at: 2026-01-01T00:00:00Z",
+                "last_verdict: REJECTED",
+                "run_count: 1",
+                "next_finding_id: 2",
+                "---",
+                "",
+                "## Open findings",
+                "",
+                "| ID | File:line | Concern | Root cause | Required fix | First seen |",
+                "| --- | --- | --- | --- | --- | --- |",
+                "| f-001 | src/a.py:1 | comp | trunc |",
+                "",
+                "## Resolved findings",
+                "",
+                "| ID | File:line | Concern | Root cause | First seen | Resolved at |",
+                "| --- | --- | --- | --- | --- | --- |",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(module.StateFileCorruptError) as exc_info:
+        module.load_state(state_path)
+
+    assert str(state_path) in str(exc_info.value)
+
+
 def test_save_state_is_atomic_via_temp_then_replace(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
