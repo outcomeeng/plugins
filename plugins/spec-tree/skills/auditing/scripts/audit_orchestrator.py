@@ -1249,6 +1249,12 @@ def _collect_open_findings(verdict_dict: dict[str, object]) -> list[dict[str, ob
     child verdict. The verdict-level ``resolved`` and ``reopened`` arrays
     on a prior verdict are NOT open findings — they are state markers
     used by the diff caller, not currently-failing concerns.
+
+    Identity-collision note: callers that index the result by
+    ``_finding_identity`` (file, line, rule, message) into a dict will
+    silently keep only the last finding of any colliding tuple. Distinct
+    findings sharing the same identity tuple in one verdict indicates a
+    producer bug, not a consumer concern.
     """
     collected: list[dict[str, object]] = []
     for row in verdict_dict.get("rows", []) or []:
@@ -1264,7 +1270,7 @@ def _collect_open_findings(verdict_dict: dict[str, object]) -> list[dict[str, ob
 
 def _finding_identity(
     finding: dict[str, object],
-) -> tuple[str, object, str, str]:
+) -> tuple[str, int | None, str, str]:
     """Return the content-identity tuple for a finding.
 
     Identity is ``(file, line, rule, message)`` — the producer-stable
@@ -1274,9 +1280,15 @@ def _finding_identity(
     without being a different finding. Two findings with the same
     identity tuple are the same concern across runs.
     """
+    raw_line = finding.get("line")
+    line = (
+        raw_line
+        if isinstance(raw_line, int) and not isinstance(raw_line, bool)
+        else None
+    )
     return (
         str(finding.get("file", "")),
-        finding.get("line"),
+        line,
         str(finding.get("rule", "")),
         str(finding.get("message", "")),
     )
