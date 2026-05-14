@@ -35,6 +35,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+from outcomeeng_testing.harnesses.verdict_toolchain import load_verdict_module
 
 # parents[4] = repo root (this file lives 4 levels deep: spx/21-spec-tree.enabler/
 # 65-auditing.enabler/tests/<file>).
@@ -1928,24 +1929,38 @@ def test_helpers_under_audit_are_exposed_by_module() -> None:
 # Verdict-diff tests — the prior-verdict-thread state surface that
 # pr-review-orchestrator drives over a PR comment thread. Identity is
 # (file, line, rule, message); diff carries forward resolved across runs.
+#
+# Findings are constructed via the source-owned verdict.Finding dataclass and
+# serialized through finding_to_json_dict; the wire-shape dict shape lives in
+# verdict.py (one source for the schema), not in copied test literals.
+# Cross-process determinism of the resolved/reopened ordering is covered by
+# test_audit_orchestrator_cli.scenario.l1.py — it cannot be observed inside
+# one Python process because hash randomization is fixed per-process.
 
-VERDICT_FINDING_A = {
-    "id": "f-001",
-    "file": "src/a.ts",
-    "line": 1,
-    "rule": "no-shared-bag",
-    "severity": "REJECT",
-    "message": "shared bag in a",
-}
+_verdict_module = load_verdict_module()
+_Finding = _verdict_module.Finding
+_finding_to_json_dict = _verdict_module.finding_to_json_dict
 
-VERDICT_FINDING_B = {
-    "id": "f-002",
-    "file": "src/b.ts",
-    "line": 2,
-    "rule": "no-shared-bag",
-    "severity": "REJECT",
-    "message": "shared bag in b",
-}
+VERDICT_FINDING_A_DICT = _finding_to_json_dict(
+    _Finding(
+        id="f-001",
+        file="src/a.ts",
+        line=1,
+        rule="no-shared-bag",
+        severity=_verdict_module.Severity.REJECT,
+        message="shared bag in a",
+    )
+)
+VERDICT_FINDING_B_DICT = _finding_to_json_dict(
+    _Finding(
+        id="f-002",
+        file="src/b.ts",
+        line=2,
+        rule="no-shared-bag",
+        severity=_verdict_module.Severity.REJECT,
+        message="shared bag in b",
+    )
+)
 
 
 def _verdict(open_findings: list[dict[str, object]]) -> dict[str, object]:
@@ -1962,7 +1977,7 @@ def _verdict(open_findings: list[dict[str, object]]) -> dict[str, object]:
 
 def test_verdict_diff_first_run_returns_empty_arrays() -> None:
     module = _load_audit_orchestrator()
-    current = _verdict([VERDICT_FINDING_A, VERDICT_FINDING_B])
+    current = _verdict([VERDICT_FINDING_A_DICT, VERDICT_FINDING_B_DICT])
     enriched = module.compute_verdict_diff(prior=None, current=current)
     assert enriched["resolved"] == []
     assert enriched["reopened"] == []
@@ -1970,27 +1985,33 @@ def test_verdict_diff_first_run_returns_empty_arrays() -> None:
 
 def test_verdict_diff_resolves_findings_no_longer_open() -> None:
     module = _load_audit_orchestrator()
-    prior = _verdict([VERDICT_FINDING_A, VERDICT_FINDING_B])
-    current = _verdict([VERDICT_FINDING_A])
+    prior = _verdict([VERDICT_FINDING_A_DICT, VERDICT_FINDING_B_DICT])
+    current = _verdict([VERDICT_FINDING_A_DICT])
     enriched = module.compute_verdict_diff(prior=prior, current=current)
-    assert enriched["resolved"] == [VERDICT_FINDING_B]
+    assert enriched["resolved"] == [VERDICT_FINDING_B_DICT]
     assert enriched["reopened"] == []
 
 
 def test_verdict_diff_carries_resolved_across_runs() -> None:
     module = _load_audit_orchestrator()
-    prior = {**_verdict([VERDICT_FINDING_A]), "resolved": [VERDICT_FINDING_B]}
-    current = _verdict([VERDICT_FINDING_A])
+    prior = {
+        **_verdict([VERDICT_FINDING_A_DICT]),
+        "resolved": [VERDICT_FINDING_B_DICT],
+    }
+    current = _verdict([VERDICT_FINDING_A_DICT])
     enriched = module.compute_verdict_diff(prior=prior, current=current)
-    assert enriched["resolved"] == [VERDICT_FINDING_B]
+    assert enriched["resolved"] == [VERDICT_FINDING_B_DICT]
 
 
 def test_verdict_diff_reopens_finding_in_prior_resolved() -> None:
     module = _load_audit_orchestrator()
-    prior = {**_verdict([VERDICT_FINDING_A]), "resolved": [VERDICT_FINDING_B]}
-    current = _verdict([VERDICT_FINDING_A, VERDICT_FINDING_B])
+    prior = {
+        **_verdict([VERDICT_FINDING_A_DICT]),
+        "resolved": [VERDICT_FINDING_B_DICT],
+    }
+    current = _verdict([VERDICT_FINDING_A_DICT, VERDICT_FINDING_B_DICT])
     enriched = module.compute_verdict_diff(prior=prior, current=current)
-    assert enriched["reopened"] == [VERDICT_FINDING_B]
+    assert enriched["reopened"] == [VERDICT_FINDING_B_DICT]
     assert enriched["resolved"] == []
 
 
@@ -2002,7 +2023,7 @@ def test_verdict_diff_walks_into_child_verdicts() -> None:
         "target": "scope",
         "overall": "REJECTED",
         "rows": [],
-        "children": [_verdict([VERDICT_FINDING_A])],
+        "children": [_verdict([VERDICT_FINDING_A_DICT])],
         "metadata": {},
     }
     current_no_child_finding = {
@@ -2017,14 +2038,14 @@ def test_verdict_diff_walks_into_child_verdicts() -> None:
     enriched = module.compute_verdict_diff(
         prior=prior_with_child, current=current_no_child_finding
     )
-    assert enriched["resolved"] == [VERDICT_FINDING_A]
+    assert enriched["resolved"] == [VERDICT_FINDING_A_DICT]
 
 
 def test_verdict_diff_severity_change_is_same_finding() -> None:
     module = _load_audit_orchestrator()
-    prior_warning = {**VERDICT_FINDING_A, "severity": "WARNING"}
+    prior_warning = {**VERDICT_FINDING_A_DICT, "severity": "WARNING"}
     prior = _verdict([prior_warning])
-    current = _verdict([VERDICT_FINDING_A])  # same identity, REJECT severity
+    current = _verdict([VERDICT_FINDING_A_DICT])  # same identity, REJECT severity
     enriched = module.compute_verdict_diff(prior=prior, current=current)
     assert enriched["resolved"] == []
     assert enriched["reopened"] == []

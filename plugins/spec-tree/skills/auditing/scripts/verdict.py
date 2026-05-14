@@ -208,22 +208,25 @@ def to_json_dict(verdict: Verdict) -> dict[str, Any]:
             {
                 "name": row.name,
                 "status": str(row.status),
-                "findings": [_finding_to_dict(finding) for finding in row.findings],
+                "findings": [finding_to_json_dict(finding) for finding in row.findings],
             }
             for row in verdict.rows
         ],
         "children": [to_json_dict(child) for child in verdict.children],
         "metadata": dict(verdict.metadata),
-        "resolved": [_finding_to_dict(finding) for finding in verdict.resolved],
-        "reopened": [_finding_to_dict(finding) for finding in verdict.reopened],
+        "resolved": [finding_to_json_dict(finding) for finding in verdict.resolved],
+        "reopened": [finding_to_json_dict(finding) for finding in verdict.reopened],
     }
 
 
-def _finding_to_dict(finding: Finding) -> dict[str, Any]:
+def finding_to_json_dict(finding: Finding) -> dict[str, Any]:
     """Serialize one Finding to a JSON-compatible dict.
 
-    Extracted so to_json_dict and any future verdict-level finding lists
-    (resolved, reopened) emit the same shape from one source.
+    Public so callers (tests, future helpers) build Finding-shaped wire
+    dicts from the source-owned dataclass instead of duplicating the
+    field set as inline literals. Used by ``to_json_dict`` for both
+    row-level findings and the verdict-level ``resolved``/``reopened``
+    lists so the wire shape is emitted from one source.
     """
     return {
         "id": finding.id,
