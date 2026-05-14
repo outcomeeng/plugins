@@ -1,7 +1,8 @@
 ---
 name: auditing-rust-tests
+disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash
-description: ALWAYS invoke this skill when auditing tests for Rust or after writing tests. NEVER use auditing-rust for test code.
+description: Use when asked by the user to invoke the Rust test audit skill
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke skill rust:standardizing-rust now"`

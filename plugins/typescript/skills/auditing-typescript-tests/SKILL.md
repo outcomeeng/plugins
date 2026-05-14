@@ -1,9 +1,8 @@
 ---
 name: auditing-typescript-tests
+disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash
-description: >-
-  ALWAYS invoke this skill when auditing tests for TypeScript or after writing or editing tests.
-  NEVER use auditing-typescript for test code.
+description: Use when asked by the user to invoke the TypeScript test audit skill
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-typescript/SKILL.md" || echo "standardizing-typescript not found — invoke skill typescript:standardizing-typescript now"`

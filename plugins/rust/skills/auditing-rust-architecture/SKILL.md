@@ -1,6 +1,7 @@
 ---
 name: auditing-rust-architecture
-description: ALWAYS invoke this skill when auditing ADRs for Rust or after writing an ADR. NEVER implement from an unaudited ADR.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the Rust architecture audit skill
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

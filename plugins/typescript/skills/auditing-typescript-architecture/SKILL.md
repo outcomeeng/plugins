@@ -1,8 +1,7 @@
 ---
 name: auditing-typescript-architecture
-description: >-
-  ALWAYS invoke this skill when auditing ADRs for TypeScript or after writing or editing one.
-  NEVER implement from an unaudited ADR.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the TypeScript architecture audit skill
 allowed-tools: Read, Grep
 ---
 

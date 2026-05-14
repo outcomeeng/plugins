@@ -1,8 +1,7 @@
 ---
 name: auditing-python-architecture
-description: >-
-  ALWAYS invoke this skill when auditing ADRs for Python or after writing an ADR.
-  NEVER implement from an unaudited ADR.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the Python architecture audit skill
 allowed-tools: Read, Grep
 ---
 

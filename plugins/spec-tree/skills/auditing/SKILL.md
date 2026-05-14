@@ -1,7 +1,7 @@
 ---
 name: auditing
-description: >-
-  ALWAYS invoke this skill when running an audit pass over a code scope. Produces one structured wrapper verdict whose children carry per-language dispatched verdicts, by dispatching to language-specific auditing-{lang}* skills. NEVER use this skill to implement fixes — it dispatches to auditing-{lang}* skills for the per-language evaluation and emits one wrapper verdict.
+disable-model-invocation: true
+description: Use when asked by the user to invoke the audit skill
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

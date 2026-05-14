@@ -209,9 +209,9 @@ Python engineering: /testing-python, /coding-python, /auditing-python, /architec
 | Type  | Name                                 | Purpose                                                                |
 | ----- | ------------------------------------ | ---------------------------------------------------------------------- |
 | Skill | `/architecting-python`               | Writing ADRs for Python                                                |
-| Skill | `/auditing-python`                   | Auditing code for Python or after writing code                         |
-| Skill | `/auditing-python-architecture`      | Auditing ADRs for Python or after writing an ADR                       |
-| Skill | `/auditing-python-tests`             | Auditing tests for Python or after writing or editing tests            |
+| Skill | `/auditing-python`                   | Asked by the user to invoke the Python code audit skill                |
+| Skill | `/auditing-python-architecture`      | Asked by the user to invoke the Python architecture audit skill        |
+| Skill | `/auditing-python-tests`             | Asked by the user to invoke the Python test audit skill                |
 | Skill | `/coding-python`                     | Writing or fixing implementation code for Python                       |
 | Skill | `/standardizing-python`              | Python code standards enforced across all skills                       |
 | Skill | `/standardizing-python-architecture` | Python ADR conventions enforced across architect and auditor skills    |
@@ -228,9 +228,9 @@ Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rus
 | Type  | Name                               | Purpose                                                               |
 | ----- | ---------------------------------- | --------------------------------------------------------------------- |
 | Skill | `/architecting-rust`               | Writing ADRs for Rust                                                 |
-| Skill | `/auditing-rust`                   | Auditing code for Rust or after writing code                          |
-| Skill | `/auditing-rust-architecture`      | Auditing ADRs for Rust or after writing an ADR                        |
-| Skill | `/auditing-rust-tests`             | Auditing tests for Rust or after writing tests                        |
+| Skill | `/auditing-rust`                   | Asked by the user to invoke the Rust code audit skill                 |
+| Skill | `/auditing-rust-architecture`      | Asked by the user to invoke the Rust architecture audit skill         |
+| Skill | `/auditing-rust-tests`             | Asked by the user to invoke the Rust test audit skill                 |
 | Skill | `/coding-rust`                     | Writing or fixing implementation code for Rust                        |
 | Skill | `/standardizing-rust`              | Rust code standards enforced across all skills                        |
 | Skill | `/standardizing-rust-architecture` | Rust ADR conventions enforced across architect and auditor skills     |
@@ -246,44 +246,44 @@ Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rus
 
 Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /auditing-product-decisions, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify
 
-| Type    | Name                          | Purpose                                                                                                                                                                        |
-| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Skill   | `/aligning`                   | Reviewing, auditing, or checking spec file conformance                                                                                                                         |
-| Skill   | `/applying`                   | Implementing any spec-tree work item                                                                                                                                           |
-| Skill   | `/auditing`                   | Running an audit pass over a code scope                                                                                                                                        |
-| Skill   | `/auditing-product-decisions` | Auditing PDRs or after writing a PDR                                                                                                                                           |
-| Skill   | `/auditing-tests`             | Auditing test evidence quality, after writing tests for a spec node, or before closing an outcome                                                                              |
-| Skill   | `/authoring`                  | Adding, defining, or creating specs, decisions, or nodes                                                                                                                       |
-| Skill   | `/bootstrapping`              | Setting up a new spec tree or when /authoring detects an empty spx/ directory                                                                                                  |
-| Skill   | `/committing-changes`         | Committing changes or when user says "commit"                                                                                                                                  |
-| Skill   | `/contextualizing`            | Asking about status, progress, or what exists in the spec tree                                                                                                                 |
-| Skill   | `/decomposing`                | Breaking down, splitting, scoping, composing, or structuring spec tree nodes                                                                                                   |
-| Skill   | `/github-actions`             | The user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds                                                       |
-| Skill   | `/handing-off`                | Closing an in-scope spec-tree session, deciding whether to create a handoff, writing a handoff, or preparing continuation context                                              |
-| Skill   | `/interviewing`               | Asking the user anything while creating or modifying any artifact (spec, ADR, PDR, test, code, doc)                                                                            |
-| Skill   | `/opening-pr`                 | Opening a pull request, creating a PR, or pushing a branch for review                                                                                                          |
-| Skill   | `/picking-up`                 | Resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another agent's saved context                                       |
-| Skill   | `/refactoring`                | Moving nodes, re-scoping content, or extracting shared enablers                                                                                                                |
-| Skill   | `/refocusing`                 | Running ad hoc commands, writing debug scripts, or writing code without a spec                                                                                                 |
-| Skill   | `/reviewing-pr`               | Reviewing a pull request — produces constructive review feedback on code quality, bugs, performance, security, and test coverage, grounded in the repository's own conventions |
-| Skill   | `/testing`                    | Writing tests or when learning the testing approach                                                                                                                            |
-| Skill   | `/understanding`              | Any spec-tree work to load methodology                                                                                                                                         |
-| Agent   | `applier`                     | Autonomous TDD agent. Runs the full spec-tree 8-step flow on a node with three audit gates                                                                                     |
-| Agent   | `audit-orchestrator`          | ALWAYS invoke for a stateful local audit run that carries findings across commits                                                                                              |
-| Agent   | `auditor`                     | Running a one-off audit over a code scope                                                                                                                                      |
-| Agent   | `pdr-auditor`                 | Audit PDR evidence quality                                                                                                                                                     |
-| Agent   | `pr-reviewer`                 | Reviewing a pull request                                                                                                                                                       |
-| Agent   | `test-evidence-auditor`       | Audit test evidence quality against spec assertions                                                                                                                            |
-| Command | `/apply`                      | Run the spec-tree TDD flow on a subtree or discover work from spx/EXCLUDE                                                                                                      |
-| Command | `/author`                     | Author a spec tree artifact (product, ADR, PDR, enabler, outcome)                                                                                                              |
-| Command | `/bootstrap`                  | Set up a new spec tree for this product                                                                                                                                        |
-| Command | `/clarify`                    | Gather requirements through questioning before executing a task                                                                                                                |
-| Command | `/commit`                     | Commit following Conventional Commits                                                                                                                                          |
-| Command | `/handoff`                    | Create timestamped handoff document for continuing work in a fresh context                                                                                                     |
-| Command | `/open-pr`                    | Open a draft PR for the current branch with curated title and body                                                                                                             |
-| Command | `/pickup`                     | Load and claim a handoff session, then stop at the post-context checkpoint unless overridden                                                                                   |
-| Command | `/release`                    | Reflect, persist, and close session without creating a handoff file (archives in-scope sessions; does NOT return them to the todo queue)                                       |
-| Command | `/rtfm`                       | Stop ad hoc work and follow the spec-tree methodology                                                                                                                          |
+| Type    | Name                          | Purpose                                                                                                                                  |
+| ------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill   | `/aligning`                   | Reviewing, auditing, or checking spec file conformance                                                                                   |
+| Skill   | `/applying`                   | Implementing any spec-tree work item                                                                                                     |
+| Skill   | `/auditing`                   | Asked by the user to invoke the audit skill                                                                                              |
+| Skill   | `/auditing-product-decisions` | Asked by the user to invoke the PDR audit skill                                                                                          |
+| Skill   | `/auditing-tests`             | Asked by the user to invoke the test evidence audit skill                                                                                |
+| Skill   | `/authoring`                  | Adding, defining, or creating specs, decisions, or nodes                                                                                 |
+| Skill   | `/bootstrapping`              | Setting up a new spec tree or when /authoring detects an empty spx/ directory                                                            |
+| Skill   | `/committing-changes`         | Committing changes or when user says "commit"                                                                                            |
+| Skill   | `/contextualizing`            | Asking about status, progress, or what exists in the spec tree                                                                           |
+| Skill   | `/decomposing`                | Breaking down, splitting, scoping, composing, or structuring spec tree nodes                                                             |
+| Skill   | `/github-actions`             | The user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds                 |
+| Skill   | `/handing-off`                | Closing an in-scope spec-tree session, deciding whether to create a handoff, writing a handoff, or preparing continuation context        |
+| Skill   | `/interviewing`               | Asking the user anything while creating or modifying any artifact (spec, ADR, PDR, test, code, doc)                                      |
+| Skill   | `/opening-pr`                 | Opening a pull request, creating a PR, or pushing a branch for review                                                                    |
+| Skill   | `/picking-up`                 | Resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another agent's saved context |
+| Skill   | `/refactoring`                | Moving nodes, re-scoping content, or extracting shared enablers                                                                          |
+| Skill   | `/refocusing`                 | Running ad hoc commands, writing debug scripts, or writing code without a spec                                                           |
+| Skill   | `/reviewing-pr`               | Asked by the user to invoke the PR review skill                                                                                          |
+| Skill   | `/testing`                    | Writing tests or when learning the testing approach                                                                                      |
+| Skill   | `/understanding`              | Any spec-tree work to load methodology                                                                                                   |
+| Agent   | `applier`                     | Autonomous TDD agent. Runs the full spec-tree 8-step flow on a node with three audit gates                                               |
+| Agent   | `audit-orchestrator`          | ALWAYS invoke for a stateful local audit run that carries findings across commits                                                        |
+| Agent   | `auditor`                     | Running a one-off audit over a code scope                                                                                                |
+| Agent   | `pdr-auditor`                 | Audit PDR evidence quality                                                                                                               |
+| Agent   | `pr-reviewer`                 | Reviewing a pull request                                                                                                                 |
+| Agent   | `test-evidence-auditor`       | Audit test evidence quality against spec assertions                                                                                      |
+| Command | `/apply`                      | Run the spec-tree TDD flow on a subtree or discover work from spx/EXCLUDE                                                                |
+| Command | `/author`                     | Author a spec tree artifact (product, ADR, PDR, enabler, outcome)                                                                        |
+| Command | `/bootstrap`                  | Set up a new spec tree for this product                                                                                                  |
+| Command | `/clarify`                    | Gather requirements through questioning before executing a task                                                                          |
+| Command | `/commit`                     | Commit following Conventional Commits                                                                                                    |
+| Command | `/handoff`                    | Create timestamped handoff document for continuing work in a fresh context                                                               |
+| Command | `/open-pr`                    | Open a draft PR for the current branch with curated title and body                                                                       |
+| Command | `/pickup`                     | Load and claim a handoff session, then stop at the post-context checkpoint unless overridden                                             |
+| Command | `/release`                    | Reflect, persist, and close session without creating a handoff file (archives in-scope sessions; does NOT return them to the todo queue) |
+| Command | `/rtfm`                       | Stop ad hoc work and follow the spec-tree methodology                                                                                    |
 
 ### typescript
 
@@ -292,9 +292,9 @@ TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-types
 | Type  | Name                                     | Purpose                                                                    |
 | ----- | ---------------------------------------- | -------------------------------------------------------------------------- |
 | Skill | `/architecting-typescript`               | Writing ADRs for TypeScript                                                |
-| Skill | `/auditing-typescript`                   | Auditing code for TypeScript or after writing code                         |
-| Skill | `/auditing-typescript-architecture`      | Auditing ADRs for TypeScript or after writing or editing one               |
-| Skill | `/auditing-typescript-tests`             | Auditing tests for TypeScript or after writing or editing tests            |
+| Skill | `/auditing-typescript`                   | Asked by the user to invoke the TypeScript code audit skill                |
+| Skill | `/auditing-typescript-architecture`      | Asked by the user to invoke the TypeScript architecture audit skill        |
+| Skill | `/auditing-typescript-tests`             | Asked by the user to invoke the TypeScript test audit skill                |
 | Skill | `/coding-typescript`                     | Writing or fixing implementation code for TypeScript                       |
 | Skill | `/standardizing-typescript`              | TypeScript code standards enforced across all skills                       |
 | Skill | `/standardizing-typescript-architecture` | TypeScript ADR conventions enforced across architect and auditor skills    |
