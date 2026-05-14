@@ -1,8 +1,8 @@
 ---
 name: auditing-rust-tests
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash
 description: Use when asked by the user to invoke the Rust test audit skill
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 !`cat "${CLAUDE_SKILL_DIR}/../standardizing-rust/SKILL.md" || echo "standardizing-rust not found — invoke skill rust:standardizing-rust now"`

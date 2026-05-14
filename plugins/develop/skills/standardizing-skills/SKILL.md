@@ -48,14 +48,14 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 Every SKILL.md starts with YAML frontmatter. The fields that appear — and their constraints:
 
-| Field                      | Required | Constraint                                                                                  |
-| -------------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| `name`                     | Yes      | Lowercase letters, numbers, hyphens. ≤64 chars. Must match directory name.                  |
-| `description`              | Yes      | ≤1024 chars. Directive style (see `<descriptions>`). Passive for references.                |
-| `allowed-tools`            | No       | Comma-separated list. Restrict for audit (read-only) and reference skills.                  |
-| `argument-hint`            | No       | Free-text hint shown at invocation. Use for skills that take a path or identifier argument. |
-| `disable-model-invocation` | No       | `true` for reference skills — prevents false activations.                                   |
-| `model`                    | No       | Model ID override. Use for complex-reasoning skills that need a stronger model.             |
+| Field                      | Required | Constraint                                                                                                                                                                        |
+| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                     | Yes      | Lowercase letters, numbers, hyphens. ≤64 chars. Must match directory name.                                                                                                        |
+| `description`              | Yes      | ≤1024 chars. Directive style (see `<descriptions>`). Passive for references.                                                                                                      |
+| `allowed-tools`            | No       | Comma-separated list. Restrict for audit (read-only) and reference skills.                                                                                                        |
+| `argument-hint`            | No       | Free-text hint shown at invocation. Use for skills that take a path or identifier argument.                                                                                       |
+| `disable-model-invocation` | No       | `true` for reference skills and for validators invoked only by agents (via `skills:` preload) or by explicit `Skill(name)` calls — prevents false activations from broad prompts. |
+| `model`                    | No       | Model ID override. Use for complex-reasoning skills that need a stronger model.                                                                                                   |
 
 ```yaml
 # Invoked skill (routing, workflow, creation)
@@ -321,14 +321,14 @@ The context window is shared. A skill competes for tokens with the system prompt
 
 Six skill types. Each has a distinct purpose and primary output.
 
-| Type           | Purpose                      | Primary output                    | Key sections                                                                   |
-| -------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
-| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/` |
-| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                  |
-| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts      |
-| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                  |
-| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance                 |
-| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `disable-model-invocation: true`, passive description, `allowed-tools: Read`   |
+| Type           | Purpose                      | Primary output                    | Key sections                                                                                                                                                 |
+| -------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/`                                                                               |
+| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                                                                                                |
+| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                                    |
+| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                                |
+| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `disable-model-invocation: true` when invoked only by agents or explicit `Skill(name)` calls |
+| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `disable-model-invocation: true`, passive description, `allowed-tools: Read`                                                                                 |
 
 **Type-selection rule of thumb:**
 
