@@ -293,6 +293,29 @@ def test_lock_released_on_exception_path(tmp_path: pathlib.Path) -> None:
     assert not lock_path.exists()
 
 
+def test_spx_root_is_gitignored() -> None:
+    """The ``.spx/`` partition root is gitignored at the repo level.
+
+    The state-surface spec carries an ALWAYS assertion that audit
+    state never enters the commit history. A stale ``.gitignore``
+    rebase that silently dropped the entry would let state files
+    leak into product truth on the next ``git add``. Guard against
+    that by checking the on-disk ``.gitignore`` against the assertion.
+    """
+    # parents[5] = repo root, matching the SCRIPTS_DIR derivation.
+    repo_root = pathlib.Path(__file__).resolve().parents[5]
+    gitignore = repo_root / ".gitignore"
+    assert gitignore.is_file(), f"expected .gitignore at {gitignore}"
+    entries = {
+        line.strip()
+        for line in gitignore.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    }
+    assert ".spx/" in entries, (
+        f".gitignore must list '.spx/'; current entries: {sorted(entries)}"
+    )
+
+
 def test_branch_slug_collision_separates_state_files(tmp_path: pathlib.Path) -> None:
     """A branch literally named like another branch's slug lands on a distinct path."""
     module = _load_audit_orchestrator()

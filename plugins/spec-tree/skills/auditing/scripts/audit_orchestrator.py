@@ -412,6 +412,58 @@ def branch_slug(branch_name: str, state_dir: pathlib.Path) -> str:
     return base_slug
 
 
+def _acquire_lock_once(
+    path: pathlib.Path,
+    *,
+    max_age_seconds: float,
+    now: Callable[[], float],
+) -> int:
+    """Atomically acquire the file lock at ``path``; return its open fd.
+
+    Encapsulates the shared retry-on-stale loop used by both
+    :class:`RunLock` and the CLI ``acquire-lock`` subcommand so the
+    acquisition contract — ``O_CREAT | O_EXCL`` create with TTL-bounded
+    stale-lock handling — lives in exactly one place. Both call sites
+    handle their own post-acquisition work (timestamp write, mtime
+    normalisation) so the helper stays minimal.
+
+    ``O_CREAT | O_EXCL`` fails when the file already exists, which lets
+    two concurrent acquirers distinguish "I got the lock" from "someone
+    else holds it" without a TOCTOU window between an existence check
+    and a write.
+
+    Raises :class:`RunLockError` when an existing lock has mtime within
+    ``max_age_seconds`` of ``now()`` (fresh — another holder is active).
+    Overwrites a lock older than ``max_age_seconds`` (stale — left by a
+    crashed run) by unlinking and retrying. ``stat`` after the failed
+    ``O_EXCL`` open itself races against another holder's release; if
+    the file disappears between create and stat, the outcome is
+    equivalent to observing no lock at all — retry.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    while True:
+        try:
+            return os.open(
+                path,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                LOCK_FILE_MODE,
+            )
+        except FileExistsError:
+            try:
+                age = now() - path.stat().st_mtime
+            except FileNotFoundError:
+                continue
+            if age < max_age_seconds:
+                raise RunLockError(
+                    f"lock held: {path} (age {age:.0f}s, ttl {max_age_seconds:.0f}s)"
+                ) from None
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            continue
+
+
 class RunLock:
     """File-based exclusive lock with a TTL-based stale-lock policy.
 
@@ -443,51 +495,18 @@ class RunLock:
         self._now = now
 
     def __enter__(self) -> RunLock:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        while True:
-            # Atomic acquisition: O_CREAT | O_EXCL fails if the file
-            # already exists, which lets two concurrent acquirers
-            # distinguish "I got the lock" from "someone else holds it"
-            # without a TOCTOU window between an existence check and a
-            # write.
-            try:
-                fd = os.open(
-                    self._path,
-                    os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                    LOCK_FILE_MODE,
-                )
-            except FileExistsError:
-                # ``stat`` itself races against another holder's
-                # ``__exit__`` (which unlinks the lock). If the file
-                # disappears between the failed ``O_EXCL`` create and
-                # the ``stat`` call, we have the same outcome as
-                # observing no lock at all — retry the atomic create.
-                try:
-                    age = self._now() - self._path.stat().st_mtime
-                except FileNotFoundError:
-                    continue
-                if age < self._max_age:
-                    raise RunLockError(
-                        f"lock held: {self._path} "
-                        f"(age {age:.0f}s, ttl {self._max_age:.0f}s)"
-                    ) from None
-                # Stale (older than max_age): remove and retry the
-                # atomic create. The unlink may itself race, which is
-                # benign — whoever creates the file next holds the lock.
-                try:
-                    self._path.unlink()
-                except FileNotFoundError:
-                    pass
-                continue
-            timestamp = self._now()
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(str(timestamp))
-            # Set mtime to the injected clock value so age comparisons
-            # across acquisitions stay in the same time frame as
-            # ``now``. Production default (``now=time.time``) sees this
-            # as a no-op redundant write.
-            os.utime(self._path, (timestamp, timestamp))
-            return self
+        fd = _acquire_lock_once(
+            self._path, max_age_seconds=self._max_age, now=self._now
+        )
+        timestamp = self._now()
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(str(timestamp))
+        # Set mtime to the injected clock value so age comparisons
+        # across acquisitions stay in the same time frame as
+        # ``now``. Production default (``now=time.time``) sees this
+        # as a no-op redundant write.
+        os.utime(self._path, (timestamp, timestamp))
+        return self
 
     def __exit__(
         self,
@@ -1151,11 +1170,6 @@ def _cmd_sha_reachable(args: argparse.Namespace) -> int:
 
 
 def _cmd_acquire_lock(args: argparse.Namespace) -> int:
-    # Mirrors :meth:`RunLock.__enter__` — atomic ``O_CREAT | O_EXCL``
-    # acquire, fresh-vs-stale TTL discrimination, retry-after-unlink for
-    # the stale path. Changes to either path's acquisition or stale-lock
-    # handling must keep the two synchronised.
-    #
     # Unlike :class:`RunLock`, the CLI runs in its own process and exits
     # before the lock is released — there is no injectable clock to thread
     # through, and mtime defaults to the kernel's wall-clock time at write.
@@ -1163,36 +1177,16 @@ def _cmd_acquire_lock(args: argparse.Namespace) -> int:
     # against ``time.time()`` in the same wall-clock frame, so the omission
     # of an explicit ``os.utime`` is intentional. Tests that need a faked
     # clock exercise :class:`RunLock` directly rather than the CLI.
-    args.path.parent.mkdir(parents=True, exist_ok=True)
-    while True:
-        try:
-            fd = os.open(
-                args.path,
-                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                LOCK_FILE_MODE,
-            )
-        except FileExistsError:
-            # See :meth:`RunLock.__enter__` — same TOCTOU between the
-            # failed ``O_EXCL`` create and ``stat``: if the file
-            # disappears (another holder's release ran), retry.
-            try:
-                age = time.time() - args.path.stat().st_mtime
-            except FileNotFoundError:
-                continue
-            if age < args.max_age_seconds:
-                sys.stderr.write(
-                    f"lock held: {args.path} "
-                    f"(age {age:.0f}s, ttl {args.max_age_seconds:.0f}s)\n"
-                )
-                return 1
-            try:
-                args.path.unlink()
-            except FileNotFoundError:
-                pass
-            continue
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(str(time.time()))
-        return 0
+    try:
+        fd = _acquire_lock_once(
+            args.path, max_age_seconds=args.max_age_seconds, now=time.time
+        )
+    except RunLockError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(str(time.time()))
+    return 0
 
 
 def _cmd_release_lock(args: argparse.Namespace) -> int:

@@ -205,14 +205,14 @@ Callers that need cross-run continuity — carrying open finding IDs forward, re
 
 State partitioning and naming are deterministic. State files live at `.spx/audits/<lang>/<branch-slug>.md` rooted in the repo working tree, with the run lock at `<state-file>.lock`. The `.spx/` root is gitignored — state is local development scratch, not product truth. Language partition is the same `<lang>` the orchestrator dispatches against in Phase 3–5; branch slug is derived from the current branch via the CLI.
 
-The skill drives every CLI invocation from inside its own prose so the calling agent never constructs a path into `scripts/`. Each command below is invoked exactly once per run as part of the stateful flow.
+The skill drives every CLI invocation from inside its own prose so the calling agent never constructs a path into `scripts/`. Each command below is invoked exactly once per language partition as part of the stateful flow. Every shell variable below is set within these blocks — there are no upward references to undefined names — so an agent that runs each block in order has every value in scope.
 
-1. **Resolve the branch and the state path.**
+1. **Resolve the branch and the state path.** `LANG` is the partition language identifier from Phase 0 step 3 (`python`, `typescript`, `rust`, …). The block assumes `LANG` is set in the agent's environment — one invocation per partition with `LANG` set accordingly.
 
    ```bash
    BRANCH=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" current-branch)
    BASE=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" base-ref)
-   STATE_DIR=".spx/audits/<lang>"
+   STATE_DIR=".spx/audits/${LANG}"
    SLUG=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" \
      branch-slug --branch "$BRANCH" --state-dir "$STATE_DIR")
    STATE_FILE="$STATE_DIR/${SLUG}.md"
@@ -227,14 +227,19 @@ The skill drives every CLI invocation from inside its own prose so the calling a
    trap 'python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" release-lock --path "$LOCK_FILE"' EXIT
    ```
 
-3. **Run the audit (stateless Phases 0–6).** Capture each per-language partition's findings as JSON via `read_verdict.py` against the children written into `$CHILDREN_DIR` in Phase 6.
+3. **Run the audit (stateless Phases 0–6).** Phase 6 writes per-language verdict JSON files into the scratch directory `$CHILDREN_DIR` defined inside the Phase 6 `<phase number="6">` block above. Read this partition's verdict back into a shell variable with `read_verdict.py`:
 
-4. **Apply the state transition.** Pipe the current run's findings into `state-transition`. The CLI writes the new state file atomically and emits the `{open, resolved, reopened}` classification on stdout.
+   ```bash
+   FINDINGS_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/read_verdict.py" \
+     --file "$CHILDREN_DIR/${LANG}.json" --field findings)
+   ```
+
+4. **Apply the state transition.** Pipe `FINDINGS_JSON` into `state-transition`. The CLI writes the new state file atomically and emits the `{open, resolved, reopened}` classification on stdout. `VERDICT` is the wrapper verdict's `overall` from Phase 6 (`APPROVED`, `REJECTED`, or `UNKNOWN`).
 
    ```bash
    CURRENT_SHA=$(git rev-parse HEAD)
    NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   echo '{"findings": [...]}' | \
+   printf '%s' "$FINDINGS_JSON" | \
      python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" state-transition \
        --state-file "$STATE_FILE" \
        --branch "$BRANCH" \
@@ -243,7 +248,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
        --verdict "$VERDICT"
    ```
 
-   The `--verdict` value is the wrapper verdict's `overall` from Phase 6 (`APPROVED`, `REJECTED`, or `UNKNOWN`).
+   The stdin payload conforms to the `state-transition` contract: a JSON object with a top-level `findings` array, each entry carrying `file_line`, `concern`, `root_cause`, and `required_fix` strings. Construct `FINDINGS_JSON` as that shape (the Phase 6 dispatched-skill verdicts already populate the four fields per finding).
 
 5. **Render the emitted output** with the classification merged into the wrapper verdict's metadata (`state.open_count`, `state.resolved_this_run`, `state.reopened_this_run`). The verdict surface form follows the caller's format flag; the orchestration mode does not change which format is rendered.
 
