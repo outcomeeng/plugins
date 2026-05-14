@@ -34,6 +34,12 @@ concurrency:
 
 jobs:
   reviewer:
+    # Disabled by default. To enable, set the repository variable
+    # `CLAUDE_REVIEWER_ENABLED` to the literal string `true`:
+    #   gh variable set CLAUDE_REVIEWER_ENABLED --body true
+    # Unset or any other value skips the job, leaving claude-code-review.yml
+    # as the sole reviewer.
+    if: ${{ vars.CLAUDE_REVIEWER_ENABLED == 'true' }}
     uses: outcomeeng/gh-actions/.github/workflows/claude-code-review.yml@main
     with:
       custom_prompt: |
