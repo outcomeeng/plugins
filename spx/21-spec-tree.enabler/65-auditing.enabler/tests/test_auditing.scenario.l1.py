@@ -1728,6 +1728,123 @@ def test_cli_acquire_lock_refuses_when_fresh(tmp_path: pathlib.Path) -> None:
     assert lock_path.exists()
 
 
+def test_cli_state_transition_exits_3_on_missing_finding_keys(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A finding missing ``required_fix`` exits 3 with a clean stderr message.
+
+    A KeyError traceback would surface as exit 1 conflated with
+    lock-held; exit 3 is the agent's signal that the upstream
+    auditing skill produced a malformed payload.
+    """
+    state_path = tmp_path / "main.md"
+    payload = json.dumps(
+        {
+            "findings": [
+                {
+                    "file_line": "src/a.py:1",
+                    "concern": "comprehension",
+                    "root_cause": "tangles IO",
+                    # required_fix omitted
+                }
+            ]
+        }
+    )
+
+    rc, _, err = _run_cli(
+        "state-transition",
+        "--state-file",
+        str(state_path),
+        "--branch",
+        SAMPLE_BRANCH,
+        "--current-sha",
+        SAMPLE_FIRST_RUN_SHA,
+        "--now",
+        SAMPLE_FIRST_RUN_AT,
+        "--verdict",
+        REJECTED_VERDICT,
+        stdin=payload,
+    )
+
+    assert rc == 3
+    assert "required_fix" in err
+    assert not state_path.exists()
+
+
+def test_cli_state_transition_exits_2_on_corrupt_state_file(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A corrupt state file exits 2 distinct from lock-held (1) and bad input (3).
+
+    The agent's recovery prose names ``StateFileCorruptError`` as the
+    signal to ask the caller whether to discard the file or keep it.
+    Without a structured exit code the agent would conflate corruption
+    with other failure modes.
+    """
+    state_path = tmp_path / "corrupt.md"
+    # Frontmatter has a leading delimiter but no trailing one — the parser
+    # raises ValueError, which load_state wraps as StateFileCorruptError.
+    state_path.write_text("---\nbranch: main\n", encoding="utf-8")
+    payload = json.dumps({"findings": []})
+
+    rc, _, err = _run_cli(
+        "state-transition",
+        "--state-file",
+        str(state_path),
+        "--branch",
+        SAMPLE_BRANCH,
+        "--current-sha",
+        SAMPLE_FIRST_RUN_SHA,
+        "--now",
+        SAMPLE_FIRST_RUN_AT,
+        "--verdict",
+        REJECTED_VERDICT,
+        stdin=payload,
+    )
+
+    assert rc == 2
+    assert "corrupt state file" in err
+
+
+def test_save_state_cleans_up_tmp_on_write_text_failure(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ``write_text`` failure removes the partial ``.tmp`` orphan.
+
+    Distinct from the ``os.replace`` failure path, which intentionally
+    preserves ``.tmp`` so the new content remains recoverable. The
+    ``write_text`` failure leaves a truncated-or-empty file with no
+    recovery value, and repeated failures would accumulate orphans
+    alongside the state file without this cleanup.
+    """
+    module = _load_audit_orchestrator()
+    state_path = tmp_path / "main.md"
+
+    class WriteFailed(OSError):
+        pass
+
+    real_write_text = pathlib.Path.write_text
+
+    def failing_write_text(
+        self: pathlib.Path, data: str, *args: Any, **kwargs: Any
+    ) -> int:
+        if self.name.endswith(".tmp"):
+            # Emulate a partial write before the failure.
+            real_write_text(self, data[: len(data) // 2], *args, **kwargs)
+            raise WriteFailed(f"simulated mid-write failure: {self}")
+        return real_write_text(self, data, *args, **kwargs)
+
+    monkeypatch.setattr(pathlib.Path, "write_text", failing_write_text)
+
+    with pytest.raises(WriteFailed):
+        module.save_state(_sample_state(module), state_path)
+
+    tmp_file = state_path.with_name(state_path.name + ".tmp")
+    assert not tmp_file.exists()
+    assert not state_path.exists()
+
+
 def test_cli_state_transition_round_trips_findings(tmp_path: pathlib.Path) -> None:
     """``state-transition`` reads JSON findings on stdin, persists, emits classification."""
     state_path = tmp_path / "main.md"

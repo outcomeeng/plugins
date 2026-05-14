@@ -660,10 +660,25 @@ def save_state(state: AuditState, path: pathlib.Path) -> None:
 
     Creates ``path.parent`` if absent so callers do not need to
     pre-create ``.spx/audits/<lang>/`` for first runs.
+
+    On ``write_text`` failure (disk full, permission denied) the
+    partially-written ``.tmp`` is cleaned up so repeated failures do
+    not accumulate orphans alongside the state file. The
+    ``os.replace`` failure path is left alone — there the ``.tmp``
+    holds the intended new content and the prior state file is
+    intact, so preserving the ``.tmp`` makes the post-failure state
+    recoverable.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(_serialize_state(state), encoding="utf-8")
+    try:
+        tmp.write_text(_serialize_state(state), encoding="utf-8")
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
     os.replace(tmp, path)
 
 
@@ -1197,17 +1212,31 @@ def _cmd_release_lock(args: argparse.Namespace) -> int:
     return 0
 
 
+REQUIRED_FINDING_KEYS = ("file_line", "root_cause", "required_fix")
+
+
 def _cmd_state_transition(args: argparse.Namespace) -> int:
     payload = json.loads(sys.stdin.read())
     findings = payload.get("findings", [])
-    result = state_transition(
-        state_path=args.state_file,
-        branch=args.branch,
-        current_sha=args.current_sha,
-        now=args.now,
-        verdict=args.verdict,
-        new_findings=findings,
-    )
+    for index, finding in enumerate(findings):
+        missing = [key for key in REQUIRED_FINDING_KEYS if key not in finding]
+        if missing:
+            sys.stderr.write(
+                f"finding[{index}] missing required keys: {sorted(missing)}\n"
+            )
+            return 3
+    try:
+        result = state_transition(
+            state_path=args.state_file,
+            branch=args.branch,
+            current_sha=args.current_sha,
+            now=args.now,
+            verdict=args.verdict,
+            new_findings=findings,
+        )
+    except StateFileCorruptError as exc:
+        sys.stderr.write(f"corrupt state file: {exc}\n")
+        return 2
     json.dump(result, sys.stdout)
     sys.stdout.write("\n")
     return 0
