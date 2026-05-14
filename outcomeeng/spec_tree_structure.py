@@ -5,18 +5,30 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 
 SPEC_TREE_ROOT_DIRECTORY = "spx"
 SPEC_FILE_SUFFIX = ".md"
-NODE_KIND_ENABLER = "enabler"
-NODE_KIND_OUTCOME = "outcome"
+NODE_DIRECTORY_INDEX_SEPARATOR = "-"
+NODE_DIRECTORY_KIND_SEPARATOR = "."
 MIN_NODE_INDEX = 10
 MAX_NODE_INDEX = 99
 
+
+class NodeKind(StrEnum):
+    ENABLER = "enabler"
+    OUTCOME = "outcome"
+
+
+NODE_KIND_ENABLER = NodeKind.ENABLER
+NODE_KIND_OUTCOME = NodeKind.OUTCOME
+
 _SLUG_PATTERN = r"[a-z0-9]+(?:-[a-z0-9]+)*"
 _NODE_DIRECTORY_PATTERN = re.compile(
-    rf"^(?P<index>\d+)-(?P<slug>{_SLUG_PATTERN})\.(?P<kind>{NODE_KIND_ENABLER}|{NODE_KIND_OUTCOME})$"
+    rf"^(?P<index>\d{{2}}){re.escape(NODE_DIRECTORY_INDEX_SEPARATOR)}"
+    rf"(?P<slug>{_SLUG_PATTERN}){re.escape(NODE_DIRECTORY_KIND_SEPARATOR)}"
+    rf"(?P<kind>{NODE_KIND_ENABLER.value}|{NODE_KIND_OUTCOME.value})$"
 )
 
 
@@ -24,7 +36,14 @@ _NODE_DIRECTORY_PATTERN = re.compile(
 class NodeDirectoryName:
     index: int
     slug: str
-    kind: str
+    kind: NodeKind
+
+
+def format_node_directory_name(index: int, slug: str, kind: NodeKind) -> str:
+    return (
+        f"{index}{NODE_DIRECTORY_INDEX_SEPARATOR}"
+        f"{slug}{NODE_DIRECTORY_KIND_SEPARATOR}{kind.value}"
+    )
 
 
 def parse_node_directory_name(name: str) -> NodeDirectoryName | None:
@@ -34,7 +53,7 @@ def parse_node_directory_name(name: str) -> NodeDirectoryName | None:
     return NodeDirectoryName(
         index=int(match.group("index")),
         slug=match.group("slug"),
-        kind=match.group("kind"),
+        kind=NodeKind(match.group("kind")),
     )
 
 
@@ -57,9 +76,16 @@ def iter_node_directories(spx_root: Path) -> Iterator[Path]:
     caller. Use iter_node_directories_from_tracked_paths for live repository
     checks so ignored tool directories do not affect the result.
     """
+    node_directories: dict[Path, Path] = {}
     for path in spx_root.rglob("*"):
         if path.is_dir() and parse_node_directory_name(path.name) is not None:
-            yield path
+            resolved_path = path.resolve()
+            existing_path = node_directories.get(resolved_path)
+            if existing_path is None or (
+                existing_path.is_symlink() and not path.is_symlink()
+            ):
+                node_directories[resolved_path] = path
+    yield from sorted(node_directories.values())
 
 
 def iter_node_directories_from_tracked_paths(

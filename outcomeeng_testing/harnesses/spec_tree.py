@@ -11,22 +11,21 @@ from outcomeeng.spec_tree_structure import (
 )
 
 MARKETPLACE_ROOT_SENTINEL_FILE = "pyproject.toml"
+MARKETPLACE_ROOT_REQUIRED_DIRECTORY = Path("plugins/spec-tree")
 
 
 def marketplace_root_for_spec_tree_root_test(test_file: str) -> Path:
     for candidate in Path(test_file).resolve().parents:
-        if (candidate / MARKETPLACE_ROOT_SENTINEL_FILE).is_file():
+        if (candidate / MARKETPLACE_ROOT_SENTINEL_FILE).is_file() and (
+            candidate / MARKETPLACE_ROOT_REQUIRED_DIRECTORY
+        ).is_dir():
             return candidate
 
-    msg = f"Unable to locate marketplace root from {test_file}"
-    raise FileNotFoundError(msg)
-
-
-def marketplace_spx_root_for_spec_tree_root_test(test_file: str) -> Path:
-    """Return the marketplace Spec Tree root for tests that need root paths."""
-    return (
-        marketplace_root_for_spec_tree_root_test(test_file) / SPEC_TREE_ROOT_DIRECTORY
+    msg = (
+        f"Unable to locate marketplace root from {test_file}; expected "
+        f"{MARKETPLACE_ROOT_SENTINEL_FILE} and {MARKETPLACE_ROOT_REQUIRED_DIRECTORY}"
     )
+    raise FileNotFoundError(msg)
 
 
 def marketplace_tracked_spx_node_directories(test_file: str) -> list[Path]:

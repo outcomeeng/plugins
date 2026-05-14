@@ -54,6 +54,8 @@ uv run mypy <spec-node-path>/tests/
 ```
 
 Use repository-canonical commands when they exist. Report unavailable tools separately instead of silently skipping them.
+
+If collection, linting, type checking, or repository-canonical deterministic checks fail, halt the audit and emit `REJECT` with the failing command and diagnostic. Do not proceed to semantic evidence judgment on uncollectable, untyped, or lint-failing tests.
 </gate_0_deterministic>
 
 <coupling_audit>

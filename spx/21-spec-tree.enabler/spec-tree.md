@@ -10,6 +10,15 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 - Given a spec-tree enabler directory, when its contents are listed, then a spec file named `{slug}.md` exists ([test](tests/test_spec_tree.scenario.l1.py))
 - Given a node directory with a numeric prefix, when validated, then the prefix is an integer between 10 and 99 ([test](tests/test_spec_tree.scenario.l1.py))
+- Given a test file nested under a consumer `pyproject.toml`, when the marketplace root is detected, then the detector returns the root that also contains the marketplace plugin marker ([test](tests/test_spec_tree.scenario.l1.py))
+
+### Mappings
+
+- A node directory name matching `{index}-{slug}.{kind}` maps to parsed index, slug, and kind fields ([test](tests/test_spec_tree.mapping.l1.py))
+- A node directory name outside the node grammar maps to an absent parse result ([test](tests/test_spec_tree.mapping.l1.py))
+- A node index maps to valid when it is between 10 and 99 and invalid otherwise ([test](tests/test_spec_tree.mapping.l1.py))
+- A node directory maps to its `{slug}.md` spec file path ([test](tests/test_spec_tree.mapping.l1.py))
+- Prepared tree directory traversal maps symlinked duplicate node paths to a single yielded node directory ([test](tests/test_spec_tree.mapping.l1.py))
 
 ### Conformance
 
