@@ -1,0 +1,4 @@
+validation:
+  paths:
+    exclude:
+      - plugins/visual/skills/excalidrawing/references/.venv/
