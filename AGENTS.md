@@ -92,19 +92,9 @@ This harness spawns helper processes — a periodic `pgrep` to monitor backgroun
 No `while`/`until` poll loop. No `gh run watch`, in any form. No `sleep` to wait or pace work — foreground *or* backgrounded, on its own or in a loop. To wait for a build, CI run, process, or PR review to resolve, or to re-check on an interval, hand the wait to the runtime timer and let it re-invoke you:
 
 - **Claude Code:** `/loop` for recurring work; `ScheduleWakeup` for a single delayed re-check (pass the continuation prompt so the next firing resumes the task).
-- **Codex:** for waits where no process needs to stay open, such as GitHub PR reviews or CI runs, create a thread heartbeat with `codex_app.automation_update` — `mode: "create"`, `kind: "heartbeat"`, `destination: "thread"`, and an RRULE such as `FREQ=MINUTELY;INTERVAL=5`. When it fires, continue the same thread and inspect the external state then. Prefer this over keeping `exec_command` sessions open.
+- **Codex:** for waits where no process needs to stay open, such as GitHub PR reviews or CI runs, create a thread heartbeat through the Automations UI or any available runtime automation tool. The heartbeat may start a new thread, so the prompt must name the repository, PR number, branch, current thread purpose, and the exact state to inspect. Use a minute-based cadence such as every five minutes. Prefer this over keeping `exec_command` sessions open.
 
-  ```json
-  {
-    "mode": "create",
-    "kind": "heartbeat",
-    "destination": "thread",
-    "name": "Check PR status",
-    "prompt": "Check the PR checks and review state, then continue with the next repository-governed action.",
-    "rrule": "FREQ=MINUTELY;INTERVAL=5",
-    "status": "ACTIVE"
-  }
-  ```
+Example heartbeat prompt for a new thread: `In outcomeeng/plugins PR #25 on branch work/python-testing-pdr-alignment, inspect checks, formal reviews, PR comments, and inline review threads. Report only material changes. Continue the repository-governed review loop, and stop this heartbeat when the PR is merged, closed, or has no remaining review action.`
 
 If an earlier turn left a `sleep` or a poll loop running, identify it and terminate it by PID before doing anything else.
 
@@ -426,7 +416,7 @@ Changes reach `main` through pull requests. The path:
 
 1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`. Never commit on `main`.
 2. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
-3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections. Do **not** push feature branches with `just push-marketplace` — that recipe is for `main`.
+3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections. Do **not** push feature branches with `just push-marketplace` — that recipe is for `main`.
 4. **Review and merge.** You review and merge the PR on GitHub (a merge commit, matching existing history). An agent runs `gh pr merge` only when you explicitly tell it to. When the agent does run it, `gh pr merge <n> --rebase --delete-branch` fails its local-cleanup phase under multi-worktree checkouts — if `main` is checked out in another worktree, the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'` even though the remote merge succeeded. Workaround: drop `--delete-branch` and run `git push origin --delete <branch>` separately. Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit` either way.
 5. **Sync.** Once the PR merges, refresh your local marketplace install:
 
