@@ -1,7 +1,7 @@
 ---
 name: pr-review-orchestrator
 description: >-
-  ALWAYS invoke when reviewing a pull request — runs the PR review and the deterministic six-phase audit over the PR diff, ingests the prior audit verdict from the PR comment thread when one exists, derives resolved and reopened by diffing new findings against the prior verdict, and posts one fresh combined comment that supersedes the prior audit while keeping the latest review prose.
+  ALWAYS invoke when running a CI-side stateful pull request review — runs the PR review and the deterministic six-phase audit over the PR diff, ingests the prior audit verdict from the PR comment thread, derives resolved and reopened against it, and posts one fresh combined comment that supersedes the prior audit while keeping the latest review prose. NEVER invoke for a one-shot stateless PR review — the pr-reviewer agent handles that case without prior-verdict ingest or supersession.
 tools: Read, Bash, Glob, Grep, Skill
 model: sonnet
 skills:
