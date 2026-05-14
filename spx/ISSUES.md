@@ -30,10 +30,6 @@ Cross-cutting imperfections noticed in the marketplace that do not belong to a s
 
 **Resolution shape**: either remove the broken links (if the referenced artefacts were deliberately deleted) or restore the paths under their correct locations. The session-related links date from earlier handing-off-skill restructuring; the `test_spec_tree.unit.py` links point at a test file that has never existed and may be a copy-paste from a template. Audit gate: re-run `uv run spx validation markdown` after the fix.
 
-## `just check` does not run ruff or `spx validation markdown`
+## `just check` does not run ruff or `spx validation markdown` (RESOLVED)
 
-[Justfile](../justfile) currently runs `manifests / skills / fmt-check / pytest`. It does **not** run `ruff check` or `spx validation markdown`, which is why the lint/format/markdown drift above accumulated unnoticed across PR #10 and PR #11.
-
-A proposal exists (see the PR #11 conversation) to restructure `just check` so it runs every quality-improving check up front, with `ruff check` as the first step. The proposal references the more seasoned justfile at `/Users/shz/Code/leoherds/leoherd/justfile` as a model.
-
-**Resolution shape**: a follow-up branch off main implementing the restructured `just check` recipe. Should land before step 2 and step 3 work begins, so those PRs do not re-accumulate the same drift.
+`spx/15-validation.enabler/65-check-pipeline.enabler/` declares a signal-safe Python orchestrator at `outcomeeng/scripts/check.py` that replaces the prior bash heredoc. The new step list includes `fmt-check → ruff → manifests → skills → docs-check → markdown → pytest`, so the two previously-missing checks now run on every `just check`. The two entries above are still open imperfections the orchestrator surfaces — they remain in scope for a separate `chore(repo): ruff --fix + ruff format` PR and a follow-up that fixes or removes the broken markdown links.
