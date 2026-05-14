@@ -342,7 +342,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 After opening the PR, create a thread heartbeat with the runtime's automation tool so the first re-inspection runs after GitHub has had time to process review workflows. This replaces shell waits, `gh run watch`, and polling loops.
 
-For Codex, use `codex_app.automation_update` with `kind: "heartbeat"`, `destination: "thread"`, and an RRULE such as `FREQ=MINUTELY;INTERVAL=5`. The prompt MUST name the PR number and instruct the next turn to inspect checks, formal reviews, PR-level comments, and review-thread comments before taking the next repository-governed action.
+For Codex, use a thread automation or heartbeat attached to the current thread. Give it a minute-based cadence, for example every five minutes, and a durable prompt that names the PR number and instructs Codex to inspect checks, formal reviews, PR-level comments, and review-thread comments on each wake-up. The prompt MUST tell Codex to report only material changes and stop the heartbeat when the PR is merged, closed, or no further repository-governed action remains.
 
 For Claude Code, use the runtime timer mechanism documented by the product, such as `/loop` or `ScheduleWakeup`, with the same continuation prompt. Do not keep a shell process open for the wait.
 
