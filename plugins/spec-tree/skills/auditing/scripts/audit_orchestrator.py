@@ -695,6 +695,7 @@ def reopen_finding(
     resolved: ResolvedFinding,
     *,
     required_fix: str,
+    concern: str | None = None,
 ) -> Finding:
     """Move ``resolved`` from resolved back to open, preserving its ID.
 
@@ -705,12 +706,16 @@ def reopen_finding(
 
     ``required_fix`` is supplied by the caller because the suggested
     remediation is regenerated from the current audit per run rather
-    than carried across resolution.
+    than carried across resolution. ``concern`` is an optional override
+    so callers (e.g. :func:`state_transition`) can refresh the concern
+    label from the current run — symmetric with the carry-forward path
+    that refreshes ``concern`` from the incoming finding. Omitting it
+    keeps the prior resolved row's label.
     """
     reopened = Finding(
         id=resolved.id,
         file_line=resolved.file_line,
-        concern=resolved.concern,
+        concern=resolved.concern if concern is None else concern,
         root_cause=resolved.root_cause,
         required_fix=required_fix,
         first_seen=resolved.first_seen,
@@ -824,7 +829,7 @@ def _parse_open_table(body: str) -> list[Finding]:
         Finding(
             id=row[0],
             file_line=row[1],
-            concern=row[2],
+            concern=_unescape_cell(row[2]),
             root_cause=_unescape_cell(row[3]),
             required_fix=_unescape_cell(row[4]),
             first_seen=row[5],
@@ -840,7 +845,7 @@ def _parse_resolved_table(body: str) -> list[ResolvedFinding]:
         ResolvedFinding(
             id=row[0],
             file_line=row[1],
-            concern=row[2],
+            concern=_unescape_cell(row[2]),
             root_cause=_unescape_cell(row[3]),
             first_seen=row[4],
             resolved_at=row[5],
@@ -907,7 +912,8 @@ def _serialize_state(state: AuditState) -> str:
     lines.append(STATE_OPEN_TABLE_SEPARATOR)
     for finding in state.open_findings:
         lines.append(
-            f"| {finding.id} | {finding.file_line} | {finding.concern} "
+            f"| {finding.id} | {finding.file_line} "
+            f"| {_escape_cell(finding.concern)} "
             f"| {_escape_cell(finding.root_cause)} "
             f"| {_escape_cell(finding.required_fix)} "
             f"| {finding.first_seen} |"
@@ -919,7 +925,8 @@ def _serialize_state(state: AuditState) -> str:
     lines.append(STATE_RESOLVED_TABLE_SEPARATOR)
     for resolved in state.resolved_findings:
         lines.append(
-            f"| {resolved.id} | {resolved.file_line} | {resolved.concern} "
+            f"| {resolved.id} | {resolved.file_line} "
+            f"| {_escape_cell(resolved.concern)} "
             f"| {_escape_cell(resolved.root_cause)} | {resolved.first_seen} "
             f"| {resolved.resolved_at} |"
         )
@@ -1010,7 +1017,10 @@ def state_transition(
         )
         if resolved_match is not None:
             reopened_finding = reopen_finding(
-                state, resolved_match, required_fix=incoming["required_fix"]
+                state,
+                resolved_match,
+                required_fix=incoming["required_fix"],
+                concern=incoming.get("concern", resolved_match.concern),
             )
             reopened.append(reopened_finding)
             new_open.append(reopened_finding)
@@ -1115,6 +1125,13 @@ def _cmd_sha_reachable(args: argparse.Namespace) -> int:
 
 
 def _cmd_acquire_lock(args: argparse.Namespace) -> int:
+    # Unlike :class:`RunLock`, the CLI runs in its own process and exits
+    # before the lock is released — there is no injectable clock to thread
+    # through, and mtime defaults to the kernel's wall-clock time at write.
+    # Production reads (the next ``acquire-lock`` invocation) compute age
+    # against ``time.time()`` in the same wall-clock frame, so the omission
+    # of an explicit ``os.utime`` is intentional. Tests that need a faked
+    # clock exercise :class:`RunLock` directly rather than the CLI.
     args.path.parent.mkdir(parents=True, exist_ok=True)
     while True:
         try:

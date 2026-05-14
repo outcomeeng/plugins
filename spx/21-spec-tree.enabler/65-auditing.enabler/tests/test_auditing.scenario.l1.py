@@ -1055,6 +1055,135 @@ def test_state_round_trip_preserves_newline_in_finding_text(
     assert reloaded.open_findings[0].required_fix == REQUIRED_FIX_WITH_NEWLINE
 
 
+def test_state_round_trip_preserves_pipe_character_in_concern_field(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A finding whose concern contains ``|`` survives save → load.
+
+    An auditing skill can emit a concern label combining multiple
+    taxonomy tokens (e.g. ``"cohesion | coupling"``). Without
+    cell escaping on the concern field the row would split into more
+    cells than the schema has columns; load_state would either parse
+    the wrong field boundaries or raise ``StateFileCorruptError``.
+    """
+    module = _load_audit_orchestrator()
+    state_path = tmp_path / "main.md"
+    concern_with_pipe = "cohesion | coupling"
+    open_finding = module.Finding(
+        id="f-001",
+        file_line=REGRESSION_FILE_LINE,
+        concern=concern_with_pipe,
+        root_cause=REGRESSION_ROOT_CAUSE,
+        required_fix=REGRESSION_REQUIRED_FIX,
+        first_seen=SAMPLE_FIRST_RUN_SHA,
+    )
+    state = _state_with(
+        module,
+        open_findings=[open_finding],
+        resolved_findings=[],
+        next_finding_id=2,
+    )
+
+    module.save_state(state, state_path)
+    reloaded = module.load_state(state_path)
+
+    assert reloaded is not None
+    assert reloaded.open_findings[0].concern == concern_with_pipe
+
+
+def test_state_round_trip_preserves_pipe_character_in_resolved_concern_field(
+    tmp_path: pathlib.Path,
+) -> None:
+    """Concern-cell escaping applies to the resolved table too.
+
+    The serialiser writes ``concern`` for both Open and Resolved
+    tables; both must escape the character class, and both parsers
+    must reverse it.
+    """
+    module = _load_audit_orchestrator()
+    state_path = tmp_path / "main.md"
+    concern_with_pipe = "cohesion | coupling"
+    resolved_finding = module.ResolvedFinding(
+        id="f-001",
+        file_line=REGRESSION_FILE_LINE,
+        concern=concern_with_pipe,
+        root_cause=REGRESSION_ROOT_CAUSE,
+        first_seen=SAMPLE_FIRST_RUN_SHA,
+        resolved_at=SAMPLE_LAST_RUN_SHA,
+    )
+    state = _state_with(
+        module,
+        open_findings=[],
+        resolved_findings=[resolved_finding],
+        next_finding_id=2,
+    )
+
+    module.save_state(state, state_path)
+    reloaded = module.load_state(state_path)
+
+    assert reloaded is not None
+    assert reloaded.resolved_findings[0].concern == concern_with_pipe
+
+
+def test_state_transition_reopen_refreshes_concern_from_incoming_finding(
+    tmp_path: pathlib.Path,
+) -> None:
+    """A regression reopens with the incoming run's concern, not the resolved row's.
+
+    Symmetric with the carry-forward branch in :func:`state_transition`,
+    which refreshes ``concern`` from the incoming finding. The reopen
+    branch must do the same so an auditing skill that evolves its
+    concern taxonomy between runs sees the new label on the reopened
+    row instead of the stale resolved-row label.
+    """
+    module = _load_audit_orchestrator()
+    state_path = tmp_path / "main.md"
+
+    module.state_transition(
+        state_path=state_path,
+        branch=SAMPLE_BRANCH,
+        current_sha=SAMPLE_FIRST_RUN_SHA,
+        now=SAMPLE_FIRST_RUN_AT,
+        verdict=REJECTED_VERDICT,
+        new_findings=[
+            {
+                "file_line": "src/a.py:1",
+                "concern": "old-concern",
+                "root_cause": "tangles IO",
+                "required_fix": "v1",
+            }
+        ],
+    )
+    module.state_transition(
+        state_path=state_path,
+        branch=SAMPLE_BRANCH,
+        current_sha=SAMPLE_LAST_RUN_SHA,
+        now=SAMPLE_LAST_RUN_AT,
+        verdict=APPROVED_VERDICT,
+        new_findings=[],
+    )
+    third = module.state_transition(
+        state_path=state_path,
+        branch=SAMPLE_BRANCH,
+        current_sha="ghi9999",
+        now="2026-05-12T09:00:00Z",
+        verdict=REJECTED_VERDICT,
+        new_findings=[
+            {
+                "file_line": "src/a.py:1",
+                "concern": "new-concern",
+                "root_cause": "tangles IO",
+                "required_fix": "v2",
+            }
+        ],
+    )
+
+    assert [f["concern"] for f in third["reopened"]] == ["new-concern"]
+    state = module.load_state(state_path)
+    assert state is not None
+    assert state.open_findings[0].concern == "new-concern"
+
+
 def test_state_round_trip_preserves_pipe_and_newline_in_same_field(
     tmp_path: pathlib.Path,
 ) -> None:
