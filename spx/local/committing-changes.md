@@ -53,6 +53,10 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 - ✅ Tests, validation config, or generated repository docs when no plugin
   distribution surface changed
 
+The marketplace sync wrapper follows the same boundary: `spx/`-only,
+escape-hatch-only, product-instruction-only, local-overlay-only, test-only, and
+validation-config-only commits do not refresh local marketplace caches.
+
 ## Files to Update When Bumping Version
 
 **Plugin manifest version** (update every manifest that exists for the plugin you changed):

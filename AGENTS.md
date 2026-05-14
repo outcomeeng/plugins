@@ -419,25 +419,25 @@ For pull-request work, the path is:
 2. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
 3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections.
 4. **Review and merge.** You review and merge the PR on GitHub (a merge commit, matching existing history). An agent runs `gh pr merge` only when you explicitly tell it to. When the agent does run it, `gh pr merge <n> --rebase --delete-branch` fails its local-cleanup phase under multi-worktree checkouts — if `main` is checked out in another worktree, the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'` even though the remote merge succeeded. Workaround: drop `--delete-branch` and run `git push origin --delete <branch>` separately. Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit` either way.
-5. **Sync.** Once the PR merges, refresh your local marketplace install:
+5. **Sync.** Once a PR with plugin distribution changes merges, refresh your local marketplace install:
 
    ```bash
    git switch main && git pull
-   just sync-marketplace
+   just sync-marketplace <previous-main-ref>
    ```
 
-   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, and runs `validate_install` and `check-installed`. It does not push or pull — do the `git pull` yourself first.
+   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, and runs `validate_install` and `check-installed`. It accepts an optional base ref; when the range from that ref to `HEAD` has no changes under `plugins/`, `.claude-plugin/`, or `.agents/plugins/`, it exits without refreshing the marketplace. It does not push or pull — do the `git pull` yourself first.
 
 ### Publishing directly to `main`
 
-When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this marketplace, use `just push-marketplace` rather than bare `git push` so the local marketplace install is refreshed after the push:
+When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this marketplace, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files:
 
 ```bash
 just push-marketplace               # git push (current branch) + just sync-marketplace
 just push-marketplace origin main   # explicit remote/branch
 ```
 
-Bare `git push origin main` skips the sync: the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
+Bare `git push origin main` skips the change-aware publish wrapper. For plugin distribution changes that means the local marketplace stays stale, the Codex compatibility symlinks are not created, and `validate_install` never runs.
 
 ⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong product scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
 
@@ -455,7 +455,7 @@ While the change is still on your feature branch:
 2. Run `/reload-plugins`.
 3. Re-invoke the skill — the new content loads.
 
-No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. When the change is ready for collaborators to pick up, commit it and use the chosen Git workflow. After a PR merge or direct `main` publication, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
+No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. When the change is ready for collaborators to pick up, commit it and use the chosen Git workflow. After a PR merge or direct `main` publication that changes plugin distribution files, `git switch main && git pull && just sync-marketplace <previous-main-ref>` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
 
 ## Missing plugins or skills
 

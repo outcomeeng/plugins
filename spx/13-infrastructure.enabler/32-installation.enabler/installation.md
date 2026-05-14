@@ -13,3 +13,7 @@ CAN refresh installed plugins without breaking active sessions or local tool sta
 - Given a plugin directory exists in the Codex plugin cache and no corresponding manifest exists in the working tree, when the marketplace cache preservation step executes, then the entire cache directory for that orphaned plugin is removed ([test](tests/test_codex_plugin_cache.scenario.l1.py))
 - Given a working-tree plugin manifest declares a newer version than the Codex marketplace clone's published manifest for the same plugin, when validate_install runs, then the absence of the newer version in the Codex cache is reported as a warning that names the plugin and both versions, and the script exits zero ([test](tests/test_validate_install.scenario.l1.py))
 - Given a plugin directory exists in either the Claude Code or Codex plugin cache and no manifest exists for that plugin in the working tree, when validate_install runs, then the orphan is reported as a warning that names the plugin, and the script exits zero ([test](tests/test_validate_install.scenario.l1.py))
+
+### Compliance
+
+- ALWAYS: marketplace sync and direct-publish wrappers refresh installed plugins only when the published range changes plugin distribution files under `plugins/`, `.claude-plugin/`, or `.agents/plugins`; spec-only and escape-hatch-only commits do not refresh marketplace caches ([review])

@@ -92,8 +92,8 @@ check-installed marketplace="outcomeeng":
     echo "$codex_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
     echo "✔ installed skills valid"
 
-# Refresh local Claude and Codex marketplace installs from the current main (run after a PR merges)
-sync-marketplace:
+# Refresh local Claude and Codex marketplace installs after plugin distribution changes
+sync-marketplace base_ref="":
     #!/usr/bin/env bash
     set -euo pipefail
     for tool in claude codex uv; do
@@ -102,12 +102,19 @@ sync-marketplace:
             exit 1
         fi
     done
+    if [[ -n "{{base_ref}}" ]]; then
+        changed_paths="$(git diff --name-only "{{base_ref}}" HEAD -- plugins .claude-plugin .agents/plugins)"
+        if [[ -z "$changed_paths" ]]; then
+            echo "No plugin distribution changes since {{base_ref}}; skipping marketplace sync"
+            exit 0
+        fi
+    fi
     claude plugin marketplace update outcomeeng
     uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
     uv run python -m outcomeeng.scripts.validate_install
     just check-installed
 
-# Push directly to main (rare — PRs are the norm), then sync the local marketplace installs
+# Push directly, then sync local marketplace installs only when plugin distribution changed
 push-marketplace *push_args:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -117,8 +124,13 @@ push-marketplace *push_args:
             exit 1
         fi
     done
+    before_ref="$(git rev-parse @{upstream} 2>/dev/null || true)"
     git push {{push_args}}
-    just sync-marketplace
+    if [[ -n "$before_ref" ]]; then
+        just sync-marketplace "$before_ref"
+    else
+        just sync-marketplace
+    fi
 
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:
