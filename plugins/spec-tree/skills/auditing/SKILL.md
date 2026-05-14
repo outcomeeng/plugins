@@ -268,6 +268,47 @@ The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, disp
 
 </stateful_orchestration>
 
+<verdict_thread_orchestration>
+
+CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself (the durable cross-CI-run surface declared in `spx/15-audit-verdict-format.pdr.md`) — the skill writes nothing to `.spx/` in either mode.
+
+The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a calling agent's wording drifts; loud failure surfaces the drift on the next CI run.
+
+**MODE: prior-verdict-read.** Pull the prior audit verdict, if any, from the target PR's comment thread. The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The skill drives the pipeline below from inside its own prose so the calling agent never constructs a path into `scripts/`.
+
+```bash
+PRIOR_RAW=$(gh -R "$REPO" pr view "$PR_NUMBER" --json comments --jq \
+  '[.comments[] | select(.body | contains("<!-- AUDIT_VERDICT_JSON_BEGIN -->"))] | last | .body')
+if [ -z "$PRIOR_RAW" ] || [ "$PRIOR_RAW" = "null" ]; then
+  printf '{"prior": null}\n'
+else
+  PRIOR_JSON=$(printf '%s' "$PRIOR_RAW" | python3 "${CLAUDE_SKILL_DIR}/scripts/read_verdict.py")
+  printf '{"prior": %s}\n' "$PRIOR_JSON"
+fi
+```
+
+The skill returns `{"prior": null}` when no comment carries the `<!-- AUDIT_VERDICT_JSON_BEGIN -->` delimiter (first run on a new PR), or `{"prior": <parsed verdict>}` when the most recent audit comment is found. The caller (the `pr-review-orchestrator` agent) tolerates both shapes — the no-prior case yields empty `resolved` and `reopened` in the next mode.
+
+**MODE: with-prior-verdict.** Run the standard stateless six-phase audit, then diff the emitted verdict against the prior verdict to compute `resolved` and `reopened`, populating those arrays in the wrapper verdict that gets rendered. The caller supplies the prior verdict as a JSON file path (typically the `prior` payload returned by `prior-verdict-read`, written to a temp file).
+
+```bash
+PRIOR_FILE=$(mktemp)
+printf '%s' "$PRIOR_VERDICT_JSON" > "$PRIOR_FILE"
+# Run Phases 0–6 as documented above; capture the wrapper verdict JSON in $WRAPPER_JSON.
+ENRICHED_JSON=$(printf '%s' "$WRAPPER_JSON" | \
+  python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" verdict-diff \
+    --prior "$PRIOR_FILE")
+rm -f "$PRIOR_FILE"
+printf '%s' "$ENRICHED_JSON" | python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
+  --format "${AUDIT_FORMAT:-markdown+json}"
+```
+
+`compute_verdict_diff` (see `audit_orchestrator.py`) computes resolved + reopened by content identity `(file, line, rule, message)` — `id` and `severity` are deliberately excluded so a regenerated finding with a fresh ID or an upgraded severity matches its prior counterpart. The diff carries forward state across runs: `resolved` accumulates findings that have been resolved at any point in the PR's history (minus anything currently reopened), and `reopened` is the set of currently-open findings that match a previously-resolved entry. First-run (`PRIOR_FILE` absent or `--prior` omitted) yields empty `resolved` and `reopened` in the enriched verdict.
+
+When the caller composes a single combined PR comment from the rendered enriched verdict plus a review prose section (the `pr-review-orchestrator` flow), the JSON payload's `<!-- AUDIT_VERDICT_JSON_BEGIN --> ... <!-- AUDIT_VERDICT_JSON_END -->` delimiters are preserved verbatim so the next iteration's `prior-verdict-read` can recover this verdict as the prior. The caller MUST NOT wrap the JSON in a markdown fence and MUST NOT post the verdict as a separate comment — both would break the next ingest.
+
+</verdict_thread_orchestration>
+
 <success_criteria>
 
 - One wrapper verdict emitted, with one child verdict per language partition in the frozen scope.

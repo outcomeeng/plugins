@@ -30,6 +30,8 @@ VALID_VERDICT_DICT: dict[str, object] = {
     "rows": [{"name": "scope", "status": "PASS", "findings": []}],
     "children": [],
     "metadata": {"branch": "main"},
+    "resolved": [],
+    "reopened": [],
 }
 
 

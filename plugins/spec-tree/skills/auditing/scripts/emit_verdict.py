@@ -139,6 +139,20 @@ def _render_markdown(v: Verdict, *, depth: int) -> str:
         if findings_section:
             parts.append(findings_section)
             parts.append("")
+    if v.resolved:
+        parts.append(
+            _render_verdict_finding_section(
+                "Resolved findings", v.resolved, depth=depth + 1
+            )
+        )
+        parts.append("")
+    if v.reopened:
+        parts.append(
+            _render_verdict_finding_section(
+                "Reopened findings", v.reopened, depth=depth + 1
+            )
+        )
+        parts.append("")
     if v.children:
         parts.append(f"{'#' * min(depth + 1, 6)} Child verdicts")
         parts.append("")
@@ -176,6 +190,26 @@ def _render_findings_section(rows: tuple[Row, ...], *, depth: int) -> str:
         for finding in row.findings:
             rendered.append(_render_finding_bullet(finding))
         rendered.append("")
+    return "\n".join(rendered).rstrip("\n")
+
+
+def _render_verdict_finding_section(
+    heading: str, findings: tuple[Finding, ...], *, depth: int
+) -> str:
+    """Render one verdict-level finding list (resolved or reopened).
+
+    Used for the ``resolved`` and ``reopened`` finding lists on a Verdict
+    when a caller diffs the current audit against a prior verdict. Heading
+    level is clamped to depth 6 to match the row-section convention. The
+    same finding-bullet format used for row findings keeps the surface
+    visually consistent across all finding lists in the verdict.
+    """
+    rendered: list[str] = [
+        f"{'#' * min(depth, 6)} {_escape_inline(heading)}",
+        "",
+    ]
+    for finding in findings:
+        rendered.append(_render_finding_bullet(finding))
     return "\n".join(rendered).rstrip("\n")
 
 

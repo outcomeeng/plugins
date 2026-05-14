@@ -44,6 +44,8 @@ VALID_VERDICT_DICT: dict[str, object] = {
     ],
     "children": [],
     "metadata": {"branch": "main"},
+    "resolved": [],
+    "reopened": [],
 }
 
 
@@ -113,6 +115,62 @@ class TestMarkdownJsonFormat:
         end = out.index(JSON_BLOCK_END)
         parsed = json.loads(out[begin:end].strip())
         assert parsed == VALID_VERDICT_DICT
+
+
+RESOLVED_FINDING_DICT = {
+    "id": "f-100",
+    "file": "src/old.ts",
+    "line": 7,
+    "rule": "no-shared-bag",
+    "severity": "INFO",
+    "message": "Resolved by removing the shared bag.",
+}
+
+REOPENED_FINDING_DICT = {
+    "id": "f-200",
+    "file": "src/new.ts",
+    "line": None,
+    "rule": "no-shared-bag",
+    "severity": "REJECT",
+    "message": "Regression — shared bag re-introduced.",
+}
+
+
+class TestResolvedAndReopenedRendering:
+    def test_resolved_section_omitted_when_empty(self) -> None:
+        out = _run_emit(VALID_VERDICT_DICT, "markdown")
+        assert "Resolved findings" not in out
+
+    def test_reopened_section_omitted_when_empty(self) -> None:
+        out = _run_emit(VALID_VERDICT_DICT, "markdown")
+        assert "Reopened findings" not in out
+
+    def test_resolved_section_renders_when_present(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "resolved": [RESOLVED_FINDING_DICT]}
+        out = _run_emit(payload, "markdown")
+        assert "## Resolved findings" in out
+        assert "f-100" in out
+        assert "`src/old.ts:7`" in out
+        assert "Resolved by removing the shared bag." in out
+
+    def test_reopened_section_renders_when_present(self) -> None:
+        payload = {**VALID_VERDICT_DICT, "reopened": [REOPENED_FINDING_DICT]}
+        out = _run_emit(payload, "markdown")
+        assert "## Reopened findings" in out
+        assert "f-200" in out
+        assert "`src/new.ts`" in out
+        assert "shared bag re-introduced." in out
+
+    def test_both_sections_render_in_order(self) -> None:
+        payload = {
+            **VALID_VERDICT_DICT,
+            "resolved": [RESOLVED_FINDING_DICT],
+            "reopened": [REOPENED_FINDING_DICT],
+        }
+        out = _run_emit(payload, "markdown")
+        resolved_idx = out.index("## Resolved findings")
+        reopened_idx = out.index("## Reopened findings")
+        assert resolved_idx < reopened_idx
 
 
 class TestCellEscaping:
