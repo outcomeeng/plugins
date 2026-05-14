@@ -19,7 +19,7 @@ A successful PR open has:
 - Title under 70 chars in Conventional Commits format (matches `/committing-changes`)
 - Body delivered to `gh` on stdin via `--body-file -` (real newlines, no `\n` escapes, no temp file)
 - Always opened as draft; promoted to ready-for-review only when the author asserts the change is mergeable and the project's local closure gate has just passed (see `<draft_lifecycle>`)
-- Runtime heartbeat scheduled immediately after PR creation for the first review/check re-inspection
+- Runtime heartbeat created or requested immediately after PR creation for the first review/check re-inspection
 - No self-reference in title, body, or branch name
 - PR URL printed for the user
 
@@ -340,9 +340,9 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 **Step 4: Create the review/check heartbeat**
 
-After opening the PR, create a thread heartbeat with the runtime's automation tool so the first re-inspection runs after GitHub has had time to process review workflows. This replaces shell waits, `gh run watch`, and polling loops.
+After opening the PR, create or request a thread heartbeat with the runtime's automation tool so the first re-inspection runs after GitHub has had time to process review workflows. This replaces shell waits, `gh run watch`, and polling loops.
 
-For Codex, use a thread automation or heartbeat attached to the current thread. Give it a minute-based cadence, for example every five minutes, and a durable prompt that names the PR number and instructs Codex to inspect checks, formal reviews, PR-level comments, and review-thread comments on each wake-up. The prompt MUST tell Codex to report only material changes and stop the heartbeat when the PR is merged, closed, or no further repository-governed action remains.
+For Codex, use a thread automation or heartbeat. The runtime may start a new thread, so seed the heartbeat with the repository, PR number, branch, current thread purpose, and the next repository-governed action. Give it a minute-based cadence, for example every five minutes, and a durable prompt that instructs Codex to inspect checks, formal reviews, PR-level comments, and review-thread comments on each wake-up. The prompt MUST tell Codex to report only material changes and stop the heartbeat when the PR is merged, closed, or no further repository-governed action remains.
 
 For Claude Code, use the runtime timer mechanism documented by the product, such as `/loop` or `ScheduleWakeup`, with the same continuation prompt. Do not keep a shell process open for the wait.
 
@@ -411,7 +411,7 @@ If any answer is no, stay in draft.
 3. **NEVER use `--body "..."` for multi-line content** — gh does not expand `\n`. Use `--body-file`.
 4. **NEVER use `--fill`** with this skill — it adds nothing once `--body-file` is present.
 5. **ALWAYS OPEN AS DRAFT** — `--draft` is mandatory on `gh pr create`, with no exceptions. Promotion to ready-for-review is a separate, deliberate signal performed via `gh pr ready` (see `<draft_lifecycle>` and Step 6), and only on explicit human instruction. Never combine "open" and "promote" in the same action, even when a user appears to ask for a ready PR — open as draft, then wait for the human to issue the promotion as a second step so the lifecycle prerequisites are checked.
-6. **ALWAYS CREATE A PR HEARTBEAT AFTER OPENING** — schedule a thread heartbeat for review/check re-inspection immediately after surfacing the PR URL. Do not ask whether to create it.
+6. **ALWAYS CREATE OR REQUEST A PR HEARTBEAT AFTER OPENING** — schedule a thread heartbeat for review/check re-inspection immediately after surfacing the PR URL. If the runtime cannot create the heartbeat directly, ask the user to create one with a prompt that can resume the review loop from a new thread.
 7. **NEVER `gh run watch`** — for CI status, surface a single `gh pr checks` or `gh run view` and stop. Polling is forbidden.
 8. **AFTER FOLLOW-UP PUSHES, check both `reviews` AND `comments`** — bots often post re-reviews as PR-level issue comments rather than formal reviews. Checking only `reviews` will silently miss re-feedback on the latest commit.
 9. **CLASSIFY BRANCH TOPOLOGY BEFORE PUSH** — peer branches target the default branch and contain only their payload; stacked branches target the previous stack branch and remain draft until their base merges.
