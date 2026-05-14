@@ -21,7 +21,7 @@ Every TypeScript test file name encodes three independent axes:
 
 | Axis     | Tokens                                                         | Meaning                                    |
 | -------- | -------------------------------------------------------------- | ------------------------------------------ |
-| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of proof the test provides       |
+| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of evidence the test provides    |
 | Level    | `l1`, `l2`, `l3`                                               | How painful the test is to run             |
 | Runner   | optional token such as `playwright`                            | Which non-default runner executes the file |
 
@@ -388,7 +388,7 @@ export const test = withPlaywright(baseTest);
 
 Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a product tree copied into a temp directory.
 
-Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or tool under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
+Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or program under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
 
 Strings and numbers are never valid fixtures by themselves. A string literal that represents a domain value belongs in the production module or a generator, not a static file or a test-file constant.
 
@@ -396,7 +396,7 @@ Strings and numbers are never valid fixtures by themselves. A string literal tha
 
 - Keep descriptive test titles and assertion diagnostics inline; they are the only valid string literals in a test file.
 - Use aliases such as `@testing/*` for shared test infrastructure
-- Use co-located `./helpers` only when the helper serves one test file
+- Keep `spx/<node>/tests/` limited to typed assertion files; local test-adjacent modules that carry harness, generator, or fixture behavior are rejected
 
 </valid_test_data_sources>
 
@@ -411,7 +411,7 @@ testing/
 |   +-- index.ts
 |   +-- hugo.ts          # Hugo build harness
 |   +-- postgres.ts      # PostgreSQL harness
-|   +-- factories.ts     # Typed domain factories
+|   +-- factories.ts     # Harness factories
 +-- generators/
 |   +-- paths.ts         # Variable input domains
 +-- fixtures/
@@ -425,7 +425,7 @@ import { createAuditResult } from "@testing/harnesses/factories";
 import { createHugoHarness } from "@testing/harnesses/hugo";
 ```
 
-Co-located `./helpers` are acceptable only when the helper serves a single test file. Anything shared across two or more test files belongs in `testing/`.
+Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Spec-tree `tests/` directories contain typed assertion files only.
 
 </test_infrastructure>
 

@@ -134,14 +134,14 @@ For the codebase as a whole:
 
 Evaluate import structure using the same vocabulary as `/auditing-typescript-tests`:
 
-| Import pattern                                   | Classification                  |
-| ------------------------------------------------ | ------------------------------- |
-| `import { describe, expect } from "vitest"`      | Framework -- not reviewed       |
-| `import { z } from "zod"`                        | Library -- not reviewed         |
-| `import type { Config } from "../src/config"`    | Type-only -- erased at runtime  |
-| `import { parseConfig } from "../src/config"`    | Codebase (production) -- review |
-| `import { parseConfig } from "@/config"`         | Codebase (alias) -- review      |
-| `import { TestHarness } from "@testing/helpers"` | Codebase (test infra) -- review |
+| Import pattern                                     | Classification                     |
+| -------------------------------------------------- | ---------------------------------- |
+| `import { describe, expect } from "vitest"`        | Framework -- not reviewed          |
+| `import { z } from "zod"`                          | Library -- not reviewed            |
+| `import type { Config } from "../src/config"`      | Type-only -- erased at runtime     |
+| `import { parseConfig } from "../src/config"`      | Codebase (production) -- review    |
+| `import { parseConfig } from "@/config"`           | Codebase (alias) -- review         |
+| `import { TestHarness } from "@testing/harnesses"` | Test-only infrastructure -- review |
 
 **Import depth rules:**
 
@@ -151,7 +151,7 @@ Evaluate import structure using the same vocabulary as `/auditing-typescript-tes
 | 1 level   | `../types`     | Review -- truly module-internal? |
 | 2+ levels | `../../config` | REJECT -- use path alias         |
 
-For stable locations (`lib/`, `tests/helpers/`, `shared/`), path aliases are mandatory regardless of depth.
+For stable production locations (`lib/`, `shared/`), path aliases are mandatory regardless of depth. For tests and test-infrastructure modules, `@testing/harnesses/*` and `@testing/generators/*` are mandatory; product modules must not import `@testing/*`.
 
 See `${CLAUDE_SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
 

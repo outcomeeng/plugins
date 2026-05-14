@@ -39,7 +39,7 @@ Agents often skip the evidence question. They see code and decide to test the sh
 
 Do not collapse evidence, execution pain, and tool choice into one label.
 
-- **Evidence mode** describes what kind of proof the test provides.
+- **Evidence mode** describes what kind of evidence the test provides.
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
@@ -86,7 +86,7 @@ Assume a product default runner unless the file name says otherwise.
 
 Follow this progression when deciding how to place evidence:
 
-1. **Start with the proof you need**
+1. **Start with the evidence you need**
    - What failure matters?
    - What behavior needs evidence?
 2. **Choose the cheapest level that can prove it**

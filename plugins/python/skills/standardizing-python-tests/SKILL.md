@@ -17,7 +17,7 @@ Every Python test file name encodes three independent axes:
 
 | Axis     | Tokens                                                         | Meaning                                    |
 | -------- | -------------------------------------------------------------- | ------------------------------------------ |
-| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of proof the test provides       |
+| Evidence | `scenario`, `mapping`, `conformance`, `property`, `compliance` | What kind of evidence the test provides    |
 | Level    | `l1`, `l2`, `l3`                                               | How painful the test is to run             |
 | Runner   | optional token such as `playwright`                            | Which non-default runner executes the file |
 

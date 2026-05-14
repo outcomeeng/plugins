@@ -24,7 +24,7 @@ Before writing any test, route through all five stages.
 | 3B    | Can extract the pure part                            | Extract, test pure at `L1`, cover boundary behavior at the right outer level. Done. |
 | 3C    | Glue or orchestration code                           | Stage 4                                                                             |
 | 4     | Real system works: reliable, safe, cheap, observable | Use the real system at the current level. Done.                                     |
-| 4     | Real system does not work for this proof             | Stage 5                                                                             |
+| 4     | Real system does not work for this evidence          | Stage 5                                                                             |
 | 5     | Exception case matches                               | Use the matching double and record the exception. Done.                             |
 | 5     | No exception matches                                 | Move the test outward to the lowest real level that can prove it. Done.             |
 
@@ -36,7 +36,7 @@ Answer these questions before writing the test:
 2. If this test passes, what does that prove about the real system?
 3. What concrete failure would reach production without this test?
 
-Use the evidence mode that matches the proof:
+Use the evidence mode that matches the evidence:
 
 - `scenario` for user-visible or workflow-visible behavior
 - `mapping` for deterministic input-output or request-action transforms
@@ -105,7 +105,7 @@ Decision:
 - Evidence lives at `L2` -> use real dependencies there.
 - Evidence lives at `L1` -> go to Stage 3.
 
-If the proof lives at `L2` or `L3`, stop. Use the real dependencies at that level.
+If the evidence lives at `L2` or `L3`, stop. Use the real dependencies at that level.
 
 ### Level Definitions
 
@@ -237,8 +237,8 @@ Use named invariants. Keep the generators deterministic for the chosen level.
 - Skip narrower tests when the environment owns the behavior.
 - Put evidence at the lowest level that can prove the claim.
 - Prefer direct assertions over indirect side-channel checks.
-- Keep setup proportional to the proof.
-- When an assertion lives only in `L2` or `L3`, do not force an `L1` proof that cannot answer the real question.
+- Keep setup proportional to the evidence.
+- When an assertion lives only in `L2` or `L3`, do not force an `L1` evidence that cannot answer the real question.
 
 ---
 
@@ -257,11 +257,11 @@ Complex pricing rules benefit from both:
 
 ### Python CSV Export Script
 
-A Python reporting script that writes CSV output to a temporary directory is still `L1`. The filesystem is cheap and local, and the proof is whether the real file is written with the expected structure. Use the real tmp directory, real file I/O, and a `scenario` or `mapping` test at `L1`.
+A Python reporting script that writes CSV output to a temporary directory is still `L1`. The filesystem is cheap and local, and the evidence is whether the real file is written with the expected structure. Use the real tmp directory, real file I/O, and a `scenario` or `mapping` test at `L1`.
 
 ### Rust Parser and CLI
 
 A Rust manifest parser usually needs two layers of evidence:
 
 - `property + L1` for round-trip or invariant checks on the parser and serializer logic
-- `scenario + L2` for the compiled CLI over a real fixture workspace when the proof depends on the binary boundary
+- `scenario + L2` for the compiled CLI over a real fixture workspace when the evidence depends on the binary boundary

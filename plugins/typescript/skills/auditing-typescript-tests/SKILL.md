@@ -172,7 +172,7 @@ The test proves correctness against an independent oracle, not self-consistency.
 
 **Step 6 — Harness chain tracing**
 
-For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/generators/*`, or `./helpers`:
+For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `@testing/generators/*`:
 
 1. Open the imported test-infrastructure file.
 2. Search for `vi.mock`, `vi.doMock`, `vi.hoisted` with mock, `vi.stubGlobal`, `vi.stubEnv`, `jest.mock`, `msw.setupServer`, `nock(...)` — any mocking pattern — inside the harness module body or its setup path.
@@ -180,6 +180,8 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, `@testing/g
 4. If the harness mocks the module the assertion is about → coupling severed through the harness → REJECT with a `harness_chain` finding.
 5. If a generator's only behavior is returning arbitrary literals or `fc.constant(...)` wrappers that duplicate source-owned vocabulary or singleton shapes, REJECT with a `generator_laundering` finding.
 6. If the test-infrastructure file imports another test-infrastructure file, trace one level at a time until the chain terminates at a non-test module.
+
+If an executed test imports a local test-adjacent module that carries harness, generator, or fixture behavior outside the canonical `@testing/` path, REJECT with a `noncanonical_test_infrastructure` finding. Spec-tree `tests/` directories contain typed assertion files only.
 
 The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the test-infrastructure module. When recording audit findings, cite the stable step name `harness_chain` and finding code, not numbered checklist item positions.
 

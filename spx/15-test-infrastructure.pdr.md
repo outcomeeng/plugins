@@ -2,17 +2,19 @@
 
 ## Purpose
 
-This decision governs what every product built on the Spec Tree methodology observably presents for its test code: where harnesses, generators, and inert fixtures live; what category of artifact they are; and what shape the spec tree takes to govern them. Methodology users — developers and agents building products against this methodology — see this as a guarantee about the product's own surface: every spec tree has the same canonical subtree for test infrastructure, and every implementation home is at a path users can predict from the product's language.
+This decision governs what every product built on the Spec Tree methodology observably presents for test infrastructure: where harnesses, generators, and inert fixtures live; what each category means; how tests stay coupled to source behavior; and how audits inspect the full evidence chain. Methodology users — developers and agents building products against this methodology — see this as a guarantee about the product surface: every spec tree exposes the same canonical subtree, every language has a predictable implementation home, and every test-infrastructure artifact is governed as production code.
 
 ## Context
 
-**Business impact:** Methodology users decide where to put a new harness, generator, or fixture every time they extend their product. If the methodology leaves that decision to local convention, every product invents its own answer, audits cannot detect drift, and skill-driven workflows generate guidance that contradicts itself across languages. A single canonical answer turns the decision into a lookup and makes the methodology's product surface uniform.
+**Business impact:** Methodology users decide where to put a harness, generator, or fixture every time they extend their product. If the methodology leaves placement, ownership, or artifact semantics to local convention, every product invents its own answer, audits cannot detect drift, and skill-driven workflows generate contradictory guidance across languages. A single canonical answer turns the decision into a lookup and gives audits the authority to reject literal laundering, severed coupling, and helper directories masquerading as evidence.
 
 **Technical constraints:**
 
-- The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares one evidence type per test file. The contents of `spx/<node>/tests/` are typed assertion files. Harnesses, generators, and inert fixtures have nothing to assert — they exist to enable assertions — and cannot share that directory without violating the per-file evidence model.
-- Test infrastructure is production code: it implements behavior, has interfaces consumers depend on, and breaks every downstream test if it drifts. It cannot live with shipping product code without conflating the two categories under build tools, dead-code analysis, and bundle minimization.
-- Methodology users are language-diverse. The same product behavior must hold whether the product is TypeScript, Python, or Rust; per-language paths must be predictable from each language's package conventions.
+- The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares one evidence type per test file. The contents of `spx/<node>/tests/` are typed assertion files. Harnesses, generators, and inert fixtures have no assertions of their own inside `tests/` — they enable assertions and therefore live elsewhere.
+- Test infrastructure is production code for the methodology: it implements behavior, exposes interfaces that tests depend on, and can invalidate downstream evidence when it drifts. It differs from product code only in purpose: it enables test assertions instead of shipping product behavior.
+- Methodology users are language-diverse. The same product guarantee holds for TypeScript, Python, Rust, and additional language plugins; per-language paths and examples are predictable from each language's package conventions.
+- Literal laundering moves easily from a test file into a generator, harness, fixture, or shared constant module. Audits therefore treat the complete imported test-infrastructure chain as part of the evidence, not as trusted scaffolding.
+- Source code under test owns its protocol values, registries, constructors, schemas, and observable contracts. A test that cannot consume those contracts exposes a source-testability gap; test infrastructure does not repair that gap by copying values.
 
 ## Decision
 
@@ -22,42 +24,111 @@ Every spec tree governed by this methodology presents a canonical test-infrastru
 - Under it, an enabler with slug `testing`.
 - Under that, exactly three enabler children with slugs `generators`, `fixtures`, `harnesses`.
 
-The slugs are normative. The methodology never uses the term "support" in the testing context — the category methodology users see and reference is **infrastructure**.
+The slugs are normative. The methodology uses the term **infrastructure** for this testing category. The terms "support", "helpers", "utilities", and "tools" are not category names for test infrastructure.
 
 Test-infrastructure implementations live in a sibling directory to product code, outside `spx/` and outside any `tests/` directory. The per-language path methodology users can expect:
 
-| Language       | Product code                | Test-infrastructure home                                                                                                                                                                                                                                                                                    |
-| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TypeScript** | `src/` or product root      | `testing/` at project root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                              |
-| **Python**     | `<package>/`                | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/`. `<package>` is the product's Python package name (the importable identifier used in its `pyproject.toml`); illustrative example: `outcomeeng/` paired with `outcomeeng_testing/`      |
-| **Rust**       | `src/` of the product crate | A separate workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
+| Language       | Product code                | Test-infrastructure home                                                                                                                                                                                                                                                                        |
+| -------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TypeScript** | `src/` or product root      | `testing/` at product root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                  |
+| **Python**     | `<package>/`                | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/`. `<package>` is the product's importable Python package name declared by its packaging metadata; illustrative example: `outcomeeng/` paired with `outcomeeng_testing/`     |
+| **Rust**       | `src/` of the product crate | A separate workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a dev-dependency of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
 
-The Python and Rust rows use `<package>` / `<product>` placeholders because each product names its test-infrastructure directory after its own package or crate — the structural rule is uniform across products even when the name is not. TypeScript uses the literal `@testing/` path mapping because the alias is resolved by `tsconfig.json`, not by package name. When a new language plugin is created, its per-language normative path is added to this table.
+Each language plugin declares its normative path in this table or in a PDR amendment that extends this table. Language ADRs govern implementation mechanics such as `tsconfig` path mapping, Python package discovery, or Cargo workspace configuration.
+
+### Category Semantics
+
+**Source contracts come first.** Source modules expose the domain contracts tests need: protocol values, command names, status values, rule identifiers, message identifiers, schemas, registries, constructors, typed factories, or other observable source-owned APIs. When a test for existing behavior can only pass by copying source literals, pinning arbitrary example objects, mocking away the behavior under test, or hiding values in test infrastructure, the source code under test is improved first.
+
+**Harnesses manage context and resources.** A harness mediates access to real behavior or real local/remote infrastructure. It owns setup, teardown, lifecycle, cleanup, mandatory dependency checks, and diagnostics for resources such as temporary filesystems, browsers, product binaries, local services, APIs, databases, Docker containers, and remote credentialed endpoints. It does not own arbitrary domain data and does not replace the behavior an assertion claims to verify.
+
+Language skills may teach these examples:
+
+| Language       | Acceptable harness shape                                                                                                                                                                 | Rejected shape                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **TypeScript** | `withTestEnv(...)`, `withTempDir(...)`, or a typed factory such as `createPostgresHarness()` that creates resources, passes a typed handle to the test, and cleans up on every exit path | A module that exports `TYPICAL_CASES`, stubs the module under test with `vi.mock(...)`, or hides protocol values in setup       |
+| **Python**     | A context manager, pytest fixture, or factory that creates a `TemporaryDirectory`, starts a local service, yields a typed handle, and performs cleanup in `finally`                      | A fixture module that stores expected strings, copies production constants, or monkeypatches away the behavior under test       |
+| **Rust**       | A RAII guard or factory that creates a `tempfile::TempDir`, starts a local process, returns a typed handle, and releases resources through `Drop` or explicit teardown                   | A testing crate module that exports static example cases, expected outputs, or fake implementations for the behavior under test |
+
+**Generators produce variable input domains.** A generator represents a domain with meaningful variation, composition, shrinking, or systematic exploration. It is appropriate for paths, names, identifiers, content, syntax trees, option sets, structured request shapes, and other inputs where evidence improves because the test searches a space rather than naming one example.
+
+Language skills may teach these examples:
+
+| Language       | Acceptable generator shape                                                                                                       | Rejected shape                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **TypeScript** | `fast-check` `fc.Arbitrary<T>` values that vary and shrink, including boundary branches that come from source-owned constructors | `fc.constant(...)` around a source-owned singleton shape or `fc.oneof(...)` over two hand-picked copied literals |
+| **Python**     | Hypothesis strategies that compose meaningful values and shrink counterexamples                                                  | `st.just(...)` around a source-owned singleton shape or a strategy module that only renames constants            |
+| **Rust**       | `proptest` strategies that explore a type/value space and shrink counterexamples                                                 | `Just(...)` around a source-owned singleton shape or a strategy containing only hand-picked copied literals      |
+
+A constant branch inside a larger generator is valid only when it expands boundary coverage and any source-owned value still comes from the owning source module. A generator whose whole behavior is a constant source-owned singleton is not a generator; the owning source module provides the constructor, registry, or typed factory.
+
+**Fixtures are inert whole-payload inputs.** A fixture is a real input artifact whose complete shape matters to the behavior under test: a document, captured payload, recorded transcript, source file for a parser/linter/scanner, binary sample, serialized request, or directory tree. Executed tests read fixtures from disk, copy them into temporary products, or pass fixture paths to the code or tool under test. Executed tests do not import fixtures as modules, require them as dependencies, or consume fixture exports.
+
+Language skills may teach these examples:
+
+| Language       | Acceptable fixture use                                                                                                 | Rejected fixture use                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **TypeScript** | A `.ts` file under `testing/fixtures/` passed by path to ESLint, TypeScript, a parser, a scanner, or a pre-commit tool | `import { VALID_CASES } from "@testing/fixtures/rule-cases"` in an executed test |
+| **Python**     | A `.py`, `.json`, `.yaml`, or directory fixture read by path, copied into `tmp_path`, or passed to a validator         | `from package_testing.fixtures.cases import EXPECTED_VALUES` in an executed test |
+| **Rust**       | A `.rs`, `.toml`, `.json`, or directory fixture copied into a `tempfile::TempDir` or passed as a path to a parser/tool | `use product_testing::fixtures::VALID_CASES;` from executed test code            |
+
+Strings and numbers are never valid fixtures by themselves. Protocol tokens, status values, command names, rule identifiers, message identifiers, expected outputs, and edge-case sets come from source-owned contracts or generators, not from fixture files.
+
+### Evidence Chain
+
+Evidence includes the full chain from a spec assertion to the executed test file and every imported test-infrastructure artifact. A test audit opens imported harnesses, generators, and fixture references before approving the assertion. Findings name the exact artifact and the evidence property affected: source ownership, coupling, falsifiability, domain variation, oracle independence, cleanup safety, or coverage.
+
+Test infrastructure cannot make a weaker evidence shape impersonate a stronger one:
+
+- A Property assertion requires a generator or source-owned enumerable domain with meaningful variation; property-framework syntax around one example is scenario evidence.
+- A Mapping assertion requires a finite source-owned mapping or a generated finite domain with independently derived expectations; a copied expected-output table is a tautology.
+- A Scenario assertion requires a behavior-relevant case whose inputs and expected outputs are owned by source contracts, generated domains, or whole-payload fixtures; arbitrary example bags do not establish domain truth.
+- A Compliance assertion with `[test]` evidence exercises a real violating case or rule oracle; a passing-only example does not prove enforcement.
+
+### Spec Traceability
+
+The three category nodes `generators`, `fixtures`, and `harnesses` are mandatory. They govern category-wide rules even before a product has many artifacts. A test-infrastructure artifact is traceable to the spec tree in one of two ways:
+
+- The artifact is covered by the category node's assertions because it only participates in that category's standard contract.
+- The artifact exposes behavior, policy, lifecycle, or reusable semantics that materially affect evidence; it has a child spec under the relevant category node or is named by an assertion there.
+
+Methodology users can derive the governing node from an artifact path and can derive the artifact category from the governing node.
 
 ## Rationale
 
-Methodology users rely on three predictable properties: where to find a harness, generator, or fixture; what category of artifact it is; and how to add a new one. The decision above gives each property a single answer that holds across products.
+Methodology users rely on four predictable properties: where to find a harness, generator, or fixture; what category of artifact it is; who owns the values it carries; and how audits judge the evidence chain. The decision gives each property a single answer that holds across products and languages.
 
-**Why a sibling directory, not inside `tests/`.** Putting harnesses or fixtures in `tests/support/`, `tests/_support/`, `tests/helpers/`, or `tests/conftest.py` would mix ungoverned utility modules into a directory the canonical filename model declares contains only typed assertion files. Methodology users would lose the per-file evidence guarantee — and the harness chain in test-audit findings would carry false coupling credit.
+**Why a sibling directory, not inside `tests/`.** Putting harnesses, generators, or fixtures in `tests/support/`, `tests/_support/`, `tests/helpers/`, `tests/fixtures/`, `conftest.py` as a helper home, or equivalent inside-test paths mixes production-grade test infrastructure into a directory whose canonical filename model declares typed assertion files only. Methodology users lose the per-file evidence guarantee, and audit findings can no longer distinguish an assertion from scaffolding that changes the assertion's meaning.
 
-**Why a sibling directory, not inside product code.** Putting harnesses in `src/testing/`, `product/testing/`, or similar would put test-only code on the build path. Methodology users would see their bundle minimization, dead-code analysis, and dependency audits conflate the two categories; the category boundary would become implicit and drift under refactoring.
+**Why a sibling directory, not inside product code.** Putting test infrastructure in `src/testing/`, `product/testing/`, or similar puts test-only behavior on the product build path. Methodology users see bundle minimization, dead-code analysis, packaging, dependency audits, and public API review conflate product behavior with test-enabling behavior.
 
-**Why these slugs are normative.** Alternates fail to convey what the artifacts are. "Support" connotes ungoverned utility code — the opposite of production-code status. "Helpers" / "utilities" / "tools" carry the same connotation. Methodology users encountering "test infrastructure" know they are looking at production code that the spec tree governs; methodology users encountering "test support" reasonably assume they are looking at glue they can rewrite at will. The leaf slugs `generators`, `fixtures`, `harnesses` are the only three categories the methodology recognizes — every test-infrastructure artifact is exactly one of these.
+**Why source contracts come first.** Copying protocol values into tests or infrastructure decouples evidence from the code under test. If a status value, command name, diagnostic code, registry member, schema, or constructor belongs to source behavior, source exports it through a semantically named API. Tests import that API. When the API does not exist, the source shape changes before the test is accepted.
+
+**Why generators must vary.** A property test or generated scenario earns evidence value by searching an input space, shrinking counterexamples, and composing valid domain values. A constant-only generator hides a named constant behind a framework call and makes review harder without adding evidence. Source-owned singleton shapes are source contracts, not generated domains.
+
+**Why fixtures stay inert.** Whole-payload fixtures are useful because their complete shape exercises parsers, linters, scanners, validators, file walkers, and external contracts. Imported fixture modules are different: they execute as test dependencies and export test-owned values. That turns fixtures into shared constant bags and hides the evidence boundary.
+
+**Why harnesses manage resources, not truth.** A harness removes repetition around lifecycle and external systems. It must not own domain truth or replace the behavior under test. A context manager, RAII guard, or typed factory that cleans up resources increases evidence quality; a harness that mocks the asserted behavior or stores expected outputs severs evidence.
+
+**Why audits traverse the chain.** A test file can look clean while the defect lives in `@testing/generators/*`, `<package>_testing/fixtures/*`, or `<product>_testing::harnesses::*`. Full-chain inspection is the only way to reject literal laundering and coupling camouflage reliably.
 
 ## Trade-offs accepted
 
-| Trade-off                                                                                    | Mitigation / reasoning                                                                                                                                                                |
-| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Methodology users must remember a different path per language                                | The `standardizing-{lang}-tests` skill for each language documents that language's path; users consult one skill, not memorize three. The path is predictable from package naming.    |
-| Existing products with `tests/support/`, `tests/fixtures/`, `tests/conftest.py` must migrate | Migration is a file move plus import-path update — a refactor, not a behavior change. Methodology users perform it once when they adopt this decision; the new paths are stable.      |
-| The methodology mandates a specific subtree shape, not only categories                       | Normative slugs make `/aligning` enforceable: a missing `infrastructure → testing → {generators, fixtures, harnesses}` subtree is a deterministic compliance failure, not a judgment. |
-| Rust workspace-member crate requires Cargo workspace configuration                           | Single-crate Rust products adopt the workspace layout as a one-time setup; the cost is bounded and pays back the first time test infrastructure changes.                              |
+| Trade-off                                                                        | Mitigation / reasoning                                                                                                                                                                            |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Methodology users remember a different implementation path per language          | Each language's testing and auditing skills document the path and examples for that language; the category subtree and artifact semantics remain identical across languages.                      |
+| Products with inside-`tests/` helper directories or fixture modules move files   | The move preserves behavior while restoring the evidence boundary: assertion files stay in `spx/<node>/tests/`, and test infrastructure moves to the language's normative home.                   |
+| The methodology mandates artifact semantics, not only paths                      | Audits can reject laundering even when files sit in the right directory; correct placement alone does not make a generator variable, a fixture inert, or a harness coupled to source behavior.    |
+| Source modules may need architecture changes before tests become acceptable      | This is the intended forcing function. Tests that require copied source literals or replacement mocks expose missing source contracts; improving source testability produces better product APIs. |
+| Rust workspace-member test infrastructure requires Cargo workspace configuration | Rust products pay the setup cost once and gain a package boundary that keeps product crates from importing test infrastructure as shipping code.                                                  |
 
 ## Product invariants
 
-- For every test-infrastructure artifact in any product built on this methodology, a corresponding spec node exists under `<root>/<NN>-infrastructure.enabler/<NN>-testing.enabler/<NN>-{generators|fixtures|harnesses}.enabler/`. Methodology users can derive a node path from the artifact, and vice versa.
-- For every test file (matching `<subject>.<evidence>.<level>[.<runner>]`) that imports a test-infrastructure module, the import resolves to the language's normative path outside `spx/`. Methodology users can scan a test's imports and know whether each one is governed by this PDR.
-- The dependency direction is one-way: test files import from test-infrastructure modules; product modules never import test-infrastructure modules. Methodology users can rely on a product's shipping code containing no references to its test infrastructure.
+- For every product governed by this methodology, a canonical spec subtree exists at `<root>/<NN>-infrastructure.enabler/<NN>-testing.enabler/<NN>-{generators|fixtures|harnesses}.enabler/`. Methodology users can derive a node path from an artifact category and derive an artifact category from the node path.
+- For every test file matching `<subject>.<evidence>.<level>[.<runner>]` that uses a test-infrastructure artifact, the reference resolves to the language's normative path outside `spx/` and outside any `tests/` directory. Methodology users can scan a test's imports and know whether each imported artifact is governed by this PDR.
+- For every assertion, source-owned domain truth comes from source modules; generated values come from variable input domains; fixtures remain inert whole-payload inputs; harnesses manage resources and access to behavior. Methodology users can inspect the evidence chain and identify which layer owns each value.
+- The dependency direction is one-way: test assertion files depend on test infrastructure, and test infrastructure depends on product behavior only as a consumer. Product modules never import test-infrastructure modules. Methodology users can rely on a product's shipping code containing no references to its test infrastructure.
+- Test audits inspect the full test-infrastructure chain before approving evidence. Methodology users receive findings against the artifact that weakens evidence, not only against the visible test file.
 
 ## Compliance
 
@@ -66,19 +137,31 @@ Methodology users rely on three predictable properties: where to find a harness,
 - A top-level enabler with slug `infrastructure` exists in the spec tree.
 - Under it, an enabler with slug `testing` exists.
 - Under that, three enabler children with slugs `generators`, `fixtures`, `harnesses` exist.
-- Test-infrastructure implementation lives at the language's normative path (TypeScript `@testing/*`, Python `<package>_testing/*`, Rust `<product>_testing::*` from a `<product>-testing` workspace-member crate).
+- Test-infrastructure implementation lives at the language's normative path: TypeScript `@testing/*`, Python `<package>_testing/*`, Rust `<product>_testing::*` from a `<product>-testing` workspace-member crate.
 - Test files in `spx/<node>/tests/` follow the canonical filename pattern `<subject>.<evidence>.<level>[.<runner>]` and contain only typed assertion code.
+- Language testing and auditing skills teach source-first testability, harness resource management, generator domain variation, inert fixture use, and full-chain audit.
 
 ### MUST
 
 - Every spec tree governed by this methodology contains the canonical subtree `infrastructure → testing → {generators, fixtures, harnesses}` with these exact slugs ([review])
 - Test harness, generator, and fixture implementations live at the language's normative path outside `spx/` and outside any `tests/` directory ([review])
+- Source modules expose the protocol values, registries, constructors, schemas, typed factories, or other observable contracts that tests need; tests and test infrastructure consume those source contracts instead of recreating them ([review])
+- Harnesses manage setup, teardown, cleanup, resource lifecycle, dependency checks, and access to real behavior; harnesses preserve coupling to the behavior an assertion claims to verify ([review])
+- Generators represent variable input domains with meaningful variation, composition, shrinking, or systematic exploration; source-owned singleton shapes come from source constructors, registries, or typed factories ([review])
+- Fixtures are inert whole-payload inputs read from disk, copied into temporary products, or passed by path to the code or tool under test; executed tests do not consume fixture exports ([review])
+- Test audits inspect imported harnesses, generators, and fixture references before approving evidence, and findings name the exact test-infrastructure artifact plus the evidence property affected ([review])
 - Spec assertions for test-infrastructure artifacts pass the same code audit, test evidence audit, and architecture audit as any other production-code node ([review])
-- The methodology — across skills, references, templates, and audit findings — uses the term "infrastructure" for this category and never "support" ([review])
+- Language testing, standardizing, and auditing skills teach the path, ownership, generator, fixture, harness, and full-chain audit rules from this PDR for their language surface ([review])
+- The methodology — across skills, references, templates, examples, and audit findings — uses the term "infrastructure" for this category and never "support" as the category name ([review])
 
 ### NEVER
 
 - A `tests/` directory at any level of any spec tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files matching `<subject>.<evidence>.<level>[.<runner>]` ([review])
-- The terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, the language standards, or the audit skills as governing categories — these are anti-terms ([review])
+- The terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, language standards, examples, paths, or audit skills as governing categories for harnesses, generators, or fixtures ([review])
 - A test-infrastructure module is imported into a product module — the dependency direction is `tests → infrastructure`, never `product → infrastructure` ([review])
-- A test file declares a value inside the test file itself and asserts against it as if it were a domain truth — this is the No Coupling tautology defined in `/auditing-tests` evidence-model.md and is rejected wherever it appears ([review])
+- A test file, harness, generator, fixture, shared test module, or example bag declares a value and asserts against it as if it were source-owned domain truth ([review])
+- A generator's whole behavior is `fc.constant(...)`, `st.just(...)`, `Just(...)`, or an equivalent constant-only wrapper for a source-owned singleton shape ([review])
+- A fixture file stores isolated strings, numbers, protocol tokens, expected outputs, command names, status values, rule identifiers, message identifiers, or edge-case sets as test data ([review])
+- An executed test imports, requires, or consumes exports from fixture modules; fixtures are read, copied, or passed by path as inert input artifacts ([review])
+- A harness replaces the behavior under test with a mock, fake, stub, monkeypatch, intercepted network response, or equivalent mechanism while the assertion claims to verify that behavior ([review])
+- A property, mapping, scenario, or compliance assertion relies on test infrastructure that weakens the evidence type it names; framework syntax or directory placement cannot upgrade example evidence into property, mapping, or compliance evidence ([review])

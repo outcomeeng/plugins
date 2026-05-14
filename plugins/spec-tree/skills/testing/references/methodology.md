@@ -41,7 +41,7 @@ Agents often skip the evidence question. They see code and decide to test the sh
 
 Do not collapse evidence, execution pain, and tool choice into one label.
 
-- **Evidence mode** describes what kind of proof the test provides.
+- **Evidence mode** describes what kind of evidence the test provides.
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
@@ -89,7 +89,7 @@ Before writing any test, route through all five stages.
 | 3B    | Can extract the pure part                            | Extract, test pure at `L1`, cover boundary behavior at the right outer level. DONE. |
 | 3C    | Glue or orchestration code                           | Stage 4                                                                             |
 | 4     | Real system works: reliable, safe, cheap, observable | Use the real system at the current level. DONE.                                     |
-| 4     | Real system does not work for this proof             | Stage 5                                                                             |
+| 4     | Real system does not work for this evidence          | Stage 5                                                                             |
 | 5     | Exception case matches                               | Use the appropriate double and record the exception. DONE.                          |
 | 5     | No exception matches                                 | Move the test outward to the lowest real level that can prove it. DONE.             |
 
@@ -101,7 +101,7 @@ Answer these questions before writing the test:
 2. If this test passes, what does that prove about the real system?
 3. What concrete failure would reach production without this test?
 
-Use the evidence mode that matches the proof:
+Use the evidence mode that matches the evidence:
 
 - `scenario` for user-visible or workflow-visible behavior
 - `mapping` for deterministic input-output or request-action transforms
@@ -169,7 +169,7 @@ Decision:
 - Evidence lives at `L2` -> use real dependencies there.
 - Evidence lives at `L1` -> go to Stage 3.
 
-If the proof lives at `L2` or `L3`, stop. Use the real dependencies at that level.
+If the evidence lives at `L2` or `L3`, stop. Use the real dependencies at that level.
 
 ### Stage 3: What kind of `L1` code is this?
 
@@ -244,7 +244,7 @@ Focus test effort on:
 | 3. Systematic coverage  | Loops, states, combinations         | Completeness     |
 | 4. Property-based tests | Invariants across generated inputs  | Deep correctness |
 
-Simple utilities often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level proof.
+Simple utilities often need phases 1 and 2. Complex algorithms often need all four. Glue code often needs phase 1 plus the correct outer-level evidence.
 
 Property-based tests are mandatory candidates for:
 
@@ -260,7 +260,7 @@ A good test failure narrows the search space.
 
 - Put evidence at the lowest level that can prove the claim.
 - Prefer direct assertions over indirect side-channel checks.
-- Keep setup proportional to the proof.
+- Keep setup proportional to the evidence.
 - Redesign the test if a failure would not tell you what broke.
 
 ## Anti-patterns

@@ -6,7 +6,7 @@ Governs how the marketplace separates evidence by execution surface. Spec assert
 
 ## Context
 
-**Business impact:** Mismatched runners produce silent quality failures. Pytest forced over LLM-driven behavior either accepts non-determinism into the per-PR gate (where flakes destroy signal) or pushes the LLM lane behind an opt-in environment flag (where the gate stops enforcing the assertion). A general-purpose eval runner forced over deterministic Python code adds dollars and minutes for no proof gain.
+**Business impact:** Mismatched runners produce silent quality failures. Pytest forced over LLM-driven behavior either accepts non-determinism into the per-PR gate (where flakes destroy signal) or pushes the LLM lane behind an opt-in environment flag (where the gate stops enforcing the assertion). A general-purpose eval runner forced over deterministic Python code adds dollars and minutes for no evidence gain.
 
 **Technical constraints:**
 

@@ -151,14 +151,14 @@ def test_user_service_creates_and_retrieves_user(
 
 Given a situation, select the appropriate test type.
 
-| Situation                    | Evidence mode               | Level cue                             |
-| ---------------------------- | --------------------------- | ------------------------------------- |
-| Debugging during development | `mapping` or `scenario`     | Usually `l1`                          |
-| Preventing known bugs        | `scenario` or `compliance`  | Lowest level that proves the failure  |
-| Documenting behavior         | `scenario`                  | Lowest level that proves the workflow |
-| Exploring edge cases         | `property`                  | Usually `l1`                          |
-| Real local dependency proof  | `scenario` or `conformance` | `l2`                                  |
-| Remote service proof         | `scenario` or `conformance` | `l3`                                  |
+| Situation                      | Evidence mode               | Level cue                             |
+| ------------------------------ | --------------------------- | ------------------------------------- |
+| Debugging during development   | `mapping` or `scenario`     | Usually `l1`                          |
+| Preventing known bugs          | `scenario` or `compliance`  | Lowest level that proves the failure  |
+| Documenting behavior           | `scenario`                  | Lowest level that proves the workflow |
+| Exploring edge cases           | `property`                  | Usually `l1`                          |
+| Real local dependency evidence | `scenario` or `conformance` | `l2`                                  |
+| Remote service evidence        | `scenario` or `conformance` | `l3`                                  |
 
 ---
 

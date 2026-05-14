@@ -348,18 +348,19 @@ if (!API_KEY) throw new Error("API_KEY required");
 
 **Never Use Deep Relative Imports**:
 
-Before writing any import, ask: *"Is this a module-internal file (same module, moves together) or infrastructure (lib/, tests/helpers/, shared/)?"*
+Before writing any import, ask: *"Is this a module-internal file (same module, moves together), stable production infrastructure (lib/, shared/), or test-only infrastructure used from tests (`testing/harnesses/`)?"*
 
 ```typescript
 // WRONG: Deep relatives to stable locations — will REJECT in review
-import { helper } from "../../../../../../tests/helpers/tree-builder";
+import { treeBuilder } from "../../../../../../testing/harnesses/tree-builder";
 import { Logger } from "../../../../lib/logging";
 import { Config } from "../../../shared/config";
 
 // RIGHT: Configure path aliases in tsconfig.json
 import { Logger } from "@lib/logging";
 import { Config } from "@shared/config";
-import { helper } from "@testing/helpers/tree-builder";
+// In tests only:
+import { treeBuilder } from "@testing/harnesses/tree-builder";
 ```
 
 **Depth Rules:**

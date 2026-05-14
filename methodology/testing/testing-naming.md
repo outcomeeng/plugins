@@ -115,6 +115,6 @@ Do not graduate tests to other directories because they become slower or broader
 
 Avoid filenames that collapse level, runner, and evidence into one legacy class label. The filename should tell an agent:
 
-1. what proof shape the file contains
+1. what evidence shape the file contains
 2. how expensive it is to run
 3. which runner executes it when that runner is not the default
