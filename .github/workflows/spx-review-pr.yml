@@ -1,8 +1,10 @@
-# Combined PR review + audit.
+# Combined PR review + audit (one-shot, no prior-verdict ingest).
 #
 # Invokes the spec-tree `pr-reviewer` agent, which runs the PR review and the
 # audit over the PR diff and posts one combined comment (the review prose,
-# then the audit verdict rendered as the markdown+json carrier).
+# then the audit verdict rendered as the markdown+json carrier). Each push to
+# the PR posts a fresh comment; prior audit comments are not read or
+# superseded — for that, see `spx-review-pr-threaded.yml`.
 #
 # Calls the vendored reusable workflow at
 # `./.github/workflows/_claude-review-reusable.yml` so the only external
@@ -17,7 +19,7 @@
 # Anthropic action runs. Until this file lands on the default branch, only
 # `claude-code-review.yml` produces a review.
 
-name: Claude Reviewer
+name: SPX Review PR
 
 on:
   # `pull_request` (not `pull_request_target`) is the safe choice: secrets are
@@ -34,17 +36,18 @@ permissions:
   id-token: write
 
 concurrency:
-  group: claude-reviewer-${{ github.event.pull_request.number }}
+  group: spx-review-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  reviewer:
+  review:
     # Disabled by default. To enable, set the repository variable
-    # `CLAUDE_REVIEWER_ENABLED` to the literal string `true`:
-    #   gh variable set CLAUDE_REVIEWER_ENABLED --body true
+    # `SPX_REVIEW_PR` to the literal string `true`:
+    #   gh variable set SPX_REVIEW_PR --body true
     # Unset or any other value skips the job, leaving claude-code-review.yml
-    # as the sole reviewer.
-    if: ${{ vars.CLAUDE_REVIEWER_ENABLED == 'true' }}
+    # as the sole reviewer. The threaded variant is gated independently via
+    # `SPX_REVIEW_PR_THREADED` — see `spx-review-pr-threaded.yml`.
+    if: ${{ vars.SPX_REVIEW_PR == 'true' }}
     uses: ./.github/workflows/_claude-review-reusable.yml
     with:
       # Stream the agent's full SDK transcript into the job log while the
