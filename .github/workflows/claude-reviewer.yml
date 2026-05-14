@@ -4,6 +4,11 @@
 # audit over the PR diff and posts one combined comment (the review prose,
 # then the audit verdict rendered as the markdown+json carrier).
 #
+# Calls the vendored reusable workflow at
+# `./.github/workflows/_claude-review-reusable.yml` so the only external
+# dependency is `anthropics/claude-code-action` (pinned inside the reusable),
+# not a second indirection through `outcomeeng/gh-actions`.
+#
 # Transitional: `claude-code-review.yml` (the generic review-only workflow)
 # runs alongside this one until this one is proven, then it is removed.
 #
@@ -40,8 +45,14 @@ jobs:
     # Unset or any other value skips the job, leaving claude-code-review.yml
     # as the sole reviewer.
     if: ${{ vars.CLAUDE_REVIEWER_ENABLED == 'true' }}
-    uses: outcomeeng/gh-actions/.github/workflows/claude-code-review.yml@main
+    uses: ./.github/workflows/_claude-review-reusable.yml
     with:
+      # Stream the agent's full SDK transcript into the job log while the
+      # reviewer surface is under active development. Flip to `false` (or
+      # drop the input) once the agent is stable — the transcript can include
+      # file contents the agent read and verbatim prompt material, so it is
+      # not appropriate for a public-by-default reviewer.
+      show_full_output: true
       custom_prompt: |
         REPO: ${{ github.repository }}
         PR NUMBER: ${{ github.event.pull_request.number }}
