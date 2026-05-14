@@ -224,8 +224,9 @@ The skill drives every CLI invocation from inside its own prose so the calling a
    ```bash
    python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" acquire-lock \
      --path "$LOCK_FILE" || exit 1
-   trap 'python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" release-lock --path "$LOCK_FILE"' EXIT
    ```
+
+   Crash recovery is the TTL's responsibility, not a shell `trap`. The agent invokes the stateful flow as a sequence of separate `Bash` tool calls, each spawning a fresh shell; a `trap EXIT` registered in the acquisition call does not survive into later calls. If the agent or session aborts between this step and step 5's explicit release, the lock file persists until its mtime exceeds `DEFAULT_LOCK_TTL_SECONDS` (600 s), after which the next acquire-lock invocation overwrites it. The clean-exit release lives in step 5 below.
 
 3. **Run the audit (stateless Phases 0–6).** Phase 6 writes per-language verdict JSON files into the scratch directory `$CHILDREN_DIR` defined inside the Phase 6 `<phase number="6">` block above. Read this partition's verdict back into a shell variable with `read_verdict.py`:
 
@@ -250,9 +251,18 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 
    The stdin payload conforms to the `state-transition` contract: a JSON object with a top-level `findings` array, each entry carrying `file_line`, `concern`, `root_cause`, and `required_fix` strings. Construct `FINDINGS_JSON` as that shape (the Phase 6 dispatched-skill verdicts already populate the four fields per finding).
 
-5. **Render the emitted output** with the classification merged into the wrapper verdict's metadata (`state.open_count`, `state.resolved_this_run`, `state.reopened_this_run`). The verdict surface form follows the caller's format flag; the orchestration mode does not change which format is rendered.
+5. **Release the lock and render the emitted output.** Run `release-lock` as the final step of the clean-exit path; the call is idempotent so re-running is safe.
 
-The lock TTL defaults to `DEFAULT_LOCK_TTL_SECONDS` (600 seconds). A lock with mtime older than the TTL is treated as stale (left by a crashed run) and overwritten; this prevents a crashed predecessor from blocking the next run indefinitely. `release-lock` is idempotent — calling it on a missing file is a no-op so the trap is safe to register before acquisition has succeeded.
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" release-lock \
+     --path "$LOCK_FILE"
+   ```
+
+   Then render with the state classification merged into the wrapper verdict's metadata (`state.open_count`, `state.resolved_this_run`, `state.reopened_this_run`). The verdict surface form follows the caller's format flag; the orchestration mode does not change which format is rendered.
+
+The lock TTL defaults to `DEFAULT_LOCK_TTL_SECONDS` (600 seconds). A lock with mtime older than the TTL is treated as stale (left by a crashed run) and overwritten; this is the crash-recovery path. The explicit `release-lock` above is the clean-exit path.
+
+The state-transition CLI distinguishes three failure modes by exit code: `1` for lock-held / acquisition failure, `2` for `StateFileCorruptError` (the on-disk state file failed to parse), `3` for malformed stdin JSON (missing required finding keys). Exit `2` is the agent's signal to surface the state-file path and ask the caller whether to discard it for a clean re-run or keep it for inspection.
 
 The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, dispatched children, and `$CHILDREN_DIR` scratch space remain ephemeral per the stateless contract.
 
