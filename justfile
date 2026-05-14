@@ -40,35 +40,9 @@ fmt *args:
 fmt-check:
     dprint check
 
-# Run all checks with timing summary
+# Run all checks with timing summary (signal-safe Python orchestrator)
 check:
-    #!/usr/bin/env bash
-    set -e
-    declare -a labels=()
-    declare -a times=()
-    total_start=$SECONDS
-    step() {
-        local label="$1"; shift
-        local start=$SECONDS
-        echo "━━━ $label ━━━"
-        "$@"
-        local elapsed=$((SECONDS - start))
-        labels+=("$label")
-        times+=("$elapsed")
-    }
-    step "manifests"       uv run python -m outcomeeng.scripts.validate_plugins .
-    step "skills"          find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
-    step "docs"            uv run python -m outcomeeng.scripts.generate_plugin_catalog --check
-    step "fmt-check"       dprint check
-    step "pytest"          uv run python -m pytest -v
-    total=$((SECONDS - total_start))
-    echo ""
-    echo "━━━ Timing Summary ━━━"
-    for i in "${!labels[@]}"; do
-        printf "  %-20s %3ds\n" "${labels[$i]}" "${times[$i]}"
-    done
-    echo "  ────────────────────────"
-    printf "  %-20s %3ds\n" "TOTAL" "$total"
+    uv run python -m outcomeeng.scripts.check
 
 # Install lefthook git hooks
 hooks-install:
