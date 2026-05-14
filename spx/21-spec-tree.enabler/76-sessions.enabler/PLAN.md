@@ -92,6 +92,6 @@ Nothing else to change here. The plugin-side contract is already merged. If the 
 ## Pointers
 
 - Marketplace commit implementing the plugin-side contract: `ad7d696`
-- Authoritative algorithm: [`plugins/spec-tree/skills/handing-off/references/scope-resolution.md`](../../../../plugins/spec-tree/skills/handing-off/references/scope-resolution.md)
-- SessionStart hook (lazy-create expectation): [`plugins/spec-tree/bin/session-start`](../../../../plugins/spec-tree/bin/session-start)
+- Authoritative algorithm: [`plugins/spec-tree/skills/handing-off/references/scope-resolution.md`](../../../plugins/spec-tree/skills/handing-off/references/scope-resolution.md)
+- SessionStart hook (lazy-create expectation): [`plugins/spec-tree/bin/session-start`](../../../plugins/spec-tree/bin/session-start)
 - Current spx session command handlers (paths observed during plan drafting; confirm on entry): `src/commands/session/pickup.ts`, `src/commands/session/archive.ts`, `src/domains/session/index.ts`
