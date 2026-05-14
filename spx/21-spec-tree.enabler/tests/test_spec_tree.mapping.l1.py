@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from outcomeeng.spec_tree_structure import (
     MAX_NODE_INDEX,
     MIN_NODE_INDEX,
@@ -53,6 +55,26 @@ def test_invalid_node_directory_name_shapes_map_to_absent_parse() -> None:
     ]
 
     assert all(parse_node_directory_name(name) is None for name in invalid_names)
+
+
+def test_invalid_node_directory_index_maps_to_absent_parse() -> None:
+    invalid_index = str(MIN_NODE_INDEX - 1).zfill(len(str(MIN_NODE_INDEX)))
+    invalid_name = (
+        f"{invalid_index}{NODE_DIRECTORY_INDEX_SEPARATOR}"
+        f"{SPEC_TREE_ROOT_DIRECTORY}{NODE_DIRECTORY_KIND_SEPARATOR}"
+        f"{NODE_KIND_ENABLER.value}"
+    )
+
+    assert parse_node_directory_name(invalid_name) is None
+
+
+def test_format_node_directory_name_rejects_invalid_index() -> None:
+    with pytest.raises(ValueError):
+        format_node_directory_name(
+            MIN_NODE_INDEX - 1,
+            SPEC_TREE_ROOT_DIRECTORY,
+            NODE_KIND_ENABLER,
+        )
 
 
 def test_node_index_boundaries_map_to_validity() -> None:
