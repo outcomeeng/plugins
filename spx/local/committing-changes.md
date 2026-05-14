@@ -4,10 +4,19 @@ This file is loaded by the `/committing-changes` skill when working in this repo
 
 ## Version Management
 
-Plugin version bumps happen at branch start, not at merge time. The first commit
-that changes a plugin on a new branch bumps that plugin's manifests relative to
-the target base branch, normally `origin/main`. That version then stays fixed for
-the entire PR phase.
+Plugin version bumps happen only when a commit changes a plugin distribution
+surface: files under `plugins/{plugin-name}/` that installed users can load, or
+marketplace catalog fields that change how a plugin is discovered. The first
+commit on a branch that changes a plugin distribution surface bumps that plugin's
+manifests relative to the target base branch, normally `origin/main`. That
+version then stays fixed for the entire PR phase.
+
+Spec Tree files under `spx/`, including node-local `PLAN.md` and `ISSUES.md`
+escape hatches, do not bump marketplace plugin versions by themselves. They are
+product coordination and product truth, not plugin release artifacts. Root
+repository instructions such as `AGENTS.md`, local workflow overlays under
+`spx/local/`, validation config, tests, and generated repository docs also do not
+bump a plugin unless they accompany a plugin distribution-surface change.
 
 Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 
@@ -29,11 +38,20 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 - ✅ **Most common** — default for most changes
 - ✅ Bug fixes
 - ✅ Refactoring existing code
-- ✅ Documentation improvements
+- ✅ Documentation improvements inside an installed plugin surface
 - ✅ Small enhancements to existing features
 - ✅ Performance optimizations
 - ✅ Internal implementation changes
 - 🎯 **Use liberally** — when in doubt, use PATCH
+
+**No plugin version bump:**
+
+- ✅ Changes confined to `spx/`
+- ✅ Node-local `PLAN.md` or `ISSUES.md` coordination files
+- ✅ Product-level instructions such as `AGENTS.md` / `CLAUDE.md`
+- ✅ Local workflow overlays under `spx/local/`
+- ✅ Tests, validation config, or generated repository docs when no plugin
+  distribution surface changed
 
 ## Files to Update When Bumping Version
 
@@ -68,24 +86,27 @@ just check
 
 ## Version Bump Workflow
 
-**CRITICAL: bump once in the first plugin-changing commit on a branch, then do
-not bump again during PR review.**
+**CRITICAL: bump once in the first plugin-distribution commit on a branch, then
+do not bump again during PR review.**
 
 Only the version that will land on main matters. The correct workflow is:
 
 1. At branch start, compare the touched plugin's manifest version to the target
    base branch, normally `origin/main`.
-2. Choose the semantic version bump for the whole PR: MINOR for new items or
-   major functional changes; PATCH for everything else.
-3. Commit the plugin changes and all manifest version updates together in the
+2. If the branch changes only `spx/`, escape hatches, repository instructions,
+   tests, validation config, or local overlays, do not bump any plugin version.
+3. If the branch changes a plugin distribution surface, choose the semantic
+   version bump for the whole PR: MINOR for new items or major functional
+   changes; PATCH for everything else.
+4. Commit the plugin changes and all manifest version updates together in the
    first commit that changes that plugin.
-4. During review, keep that selected PR version unchanged. Follow-up commits fix
+5. During review, keep that selected PR version unchanged. Follow-up commits fix
    code, docs, specs, and review feedback without incrementing the version again.
-5. If review changes materially expand the PR from PATCH scope to MINOR scope
+6. If review changes materially expand the PR from PATCH scope to MINOR scope
    (for example, adding a new skill or command), re-select the branch version
    once to the correct semantic target and keep that new version fixed for the
    rest of review.
-6. When the PR merges, main receives the already-bumped version with no separate
+7. When the PR merges, main receives the already-bumped version with no separate
    release commit.
 
 If the branch is rebased or retargeted after main has already advanced the same
@@ -122,28 +143,38 @@ git commit -m "docs({plugin-name}): address review feedback"
 
 ## Version Bump Examples
 
-| Change                      | Old   | New   | Reason                          |
-| --------------------------- | ----- | ----- | ------------------------------- |
-| Add `/handoff` command      | 0.2.0 | 0.3.0 | New command = MINOR             |
-| Add self-organizing handoff | 0.3.0 | 0.4.0 | Major functional change = MINOR |
-| Fix typo in handoff.md      | 0.4.0 | 0.4.1 | Documentation fix = PATCH       |
-| Refactor pickup logic       | 0.4.1 | 0.4.2 | Refactoring = PATCH             |
-| Improve error messages      | 0.4.2 | 0.4.3 | Small enhancement = PATCH       |
-| Add `/designing-frontend`   | 0.4.3 | 0.5.0 | New skill = MINOR               |
+| Change                                  | Old   | New   | Reason                             |
+| --------------------------------------- | ----- | ----- | ---------------------------------- |
+| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                |
+| Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR    |
+| Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch |
+| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                |
+| Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH          |
+| Add `/designing-frontend`               | 0.4.3 | 0.5.0 | New skill = MINOR                  |
+| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Escape hatch, no plugin surface    |
+| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Escape hatch, no plugin surface    |
+| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface       |
+| Edit `spx/local/committing-changes.md`  | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin  |
+| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin     |
 
 ## After Adding/Modifying Commands or Skills
 
 1. **Make your changes** to skills, commands, templates, etc.
-2. **Determine the branch-level version bump against the target base branch**: MINOR for new items or major functional changes; PATCH for everything else
-3. **Update plugin.json once, in the first plugin-changing commit on the branch**:
+2. **Determine whether a plugin distribution surface changed.** If the change is
+   confined to `spx/`, `AGENTS.md`, `spx/local/`, tests, validation config, or
+   generated repository docs, do not bump a plugin version.
+3. **When a plugin distribution surface changed, determine the branch-level
+   version bump against the target base branch**: MINOR for new items or major
+   functional changes; PATCH for everything else.
+4. **Update plugin.json once, in the first plugin-distribution commit on the branch**:
    - `plugins/{plugin-name}/.claude-plugin/plugin.json`
    - `plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
-4. **Update marketplace catalogs**:
+5. **Update marketplace catalogs**:
    - When **adding a new plugin**: add an entry to **both** `.claude-plugin/marketplace.json` (Claude Code) and `.agents/plugins/marketplace.json` (Codex). `just check` fails if either catalog is missing the plugin.
    - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
-5. **Document changes**: Update `CLAUDE.md` if adding new commands/skills to the plugin tables
-6. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
-7. **Stage and commit EVERYTHING together** in ONE commit:
+6. **Document changes**: Update `CLAUDE.md` if adding new commands/skills to the plugin tables
+7. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
+8. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
 
    ```bash
    git add plugins/{plugin-name}/ plugins/{plugin-name}/.claude-plugin/plugin.json

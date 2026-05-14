@@ -73,7 +73,6 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
 - ⚠️ **Work plans MUST include audit gates** - After each structural step (tree surgery, spec authoring, test writing), run the relevant audit before proceeding. Do not batch all audits to the end — defects compound across steps.
-- ⚠️ **Changes land on `main` via pull request** - Feature branch → `/committing-changes` → `/open-pr` → review → merge. Never push commits straight to `main`; the only exception is a trivial fix, and even then use `just push-marketplace` (never bare `git push`) so cache preservation, marketplace refresh, and validation run in order. After a PR merges, sync your local install with `just sync-marketplace`. Full procedure in "Git workflow" below.
 - 🛑 **STOP TRIGGER — NEVER call `sleep` to wait or pace work** - No `sleep 30`, no `sleep 210; echo wake`, no `sleep` inside a backgrounded command, no `sleep` in a `while`/`until` loop. Every shell `sleep` spawns a subprocess (and file descriptors) the harness does not reliably reap; across turns and concurrent agents they accumulate until the host is exhausted and the agent is killed — this has happened in this repo. Wait via the runtime's timer mechanism instead — see "Process hygiene" below. If an earlier turn left a `sleep` running, identify it and terminate it by PID before doing anything else.
 
 - ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
@@ -412,11 +411,13 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 
 ## Git workflow
 
-Changes reach `main` through pull requests. The path:
+Use the workflow the user chooses for the current change. Pull requests are the default path for feature work, production behavior changes, broad refactors, publishing changes, and anything that needs review. Node-local `PLAN.md` and `ISSUES.md` coordination files may be committed directly when the user needs collaborators to see the coordination state immediately.
 
-1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`. Never commit on `main`.
+For pull-request work, the path is:
+
+1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`.
 2. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
-3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections. Do **not** push feature branches with `just push-marketplace` — that recipe is for `main`.
+3. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections.
 4. **Review and merge.** You review and merge the PR on GitHub (a merge commit, matching existing history). An agent runs `gh pr merge` only when you explicitly tell it to. When the agent does run it, `gh pr merge <n> --rebase --delete-branch` fails its local-cleanup phase under multi-worktree checkouts — if `main` is checked out in another worktree, the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'` even though the remote merge succeeded. Workaround: drop `--delete-branch` and run `git push origin --delete <branch>` separately. Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit` either way.
 5. **Sync.** Once the PR merges, refresh your local marketplace install:
 
@@ -427,9 +428,9 @@ Changes reach `main` through pull requests. The path:
 
    `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, and runs `validate_install` and `check-installed`. It does not push or pull — do the `git pull` yourself first.
 
-### Pushing directly to `main` (rare)
+### Publishing directly to `main`
 
-A trivial fix — a typo, a one-line doc tweak — may go straight to `main`. When it does, use `just push-marketplace`, never bare `git push`:
+When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this marketplace, use `just push-marketplace` rather than bare `git push` so the local marketplace install is refreshed after the push:
 
 ```bash
 just push-marketplace               # git push (current branch) + just sync-marketplace
@@ -454,7 +455,7 @@ While the change is still on your feature branch:
 2. Run `/reload-plugins`.
 3. Re-invoke the skill — the new content loads.
 
-No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. Commit, open the PR, and merge the PR only when the change is ready for collaborators to pick up. After the PR merges, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
+No `claude plugin install`, `just push-marketplace`, or even a commit is required for the smoke test — it is local and ephemeral. When the change is ready for collaborators to pick up, commit it and use the chosen Git workflow. After a PR merge or direct `main` publication, `git switch main && git pull && just sync-marketplace` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
 
 ## Missing plugins or skills
 

@@ -292,7 +292,7 @@ branch=$(git branch --show-current)
 git push origin HEAD:refs/heads/"${branch}"
 ```
 
-If the product defines a custom push command (e.g., `just push-marketplace` for the outcomeeng marketplace repo), follow the product convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
+If the product defines a custom branch-push command for pull-request branches, follow the product convention from CLAUDE.md / AGENTS.md instead of bare `git push`.
 
 **Step 2: Open the PR with body piped via stdin**
 
@@ -406,7 +406,7 @@ If any answer is no, stay in draft.
 
 <critical_rules>
 
-1. **NEVER push from `main` with bare `git push`** — use the product's push command (e.g., `just push-marketplace`) when one is defined.
+1. **NEVER use this skill to push from `main`** — this skill opens pull requests from work branches. Direct `main` publication is governed by the product's Git workflow, not by `/opening-pr`.
 2. **NEVER include self-reference** in title, body, or branch name — no "Claude", "AI", "agent", "Co-Authored-By: Claude".
 3. **NEVER use `--body "..."` for multi-line content** — gh does not expand `\n`. Use `--body-file`.
 4. **NEVER use `--fill`** with this skill — it adds nothing once `--body-file` is present.
