@@ -14,6 +14,10 @@ allowed-tools: Read, Grep, Glob, Bash
 
 !`cat "${CLAUDE_SKILL_DIR}/../../../spec-tree/skills/auditing-tests/SKILL.md" || echo "auditing-tests not found — invoke spec-tree:auditing-tests manually"`
 
+!`test -f spx/local/python.md && cat spx/local/python.md || true`
+
+!`test -f spx/local/python-tests.md && cat spx/local/python-tests.md || true`
+
 <codex_fallback>
 If the `cat` commands above appear as literal text, invoke these skills before proceeding:
 
@@ -21,6 +25,8 @@ If the `cat` commands above appear as literal text, invoke these skills before p
 2. `python:standardizing-python-tests`
 3. `spec-tree:testing`
 4. `spec-tree:auditing-tests`
+5. Read `spx/local/python.md` if it exists
+6. Read `spx/local/python-tests.md` if it exists
 
 </codex_fallback>
 
@@ -48,6 +54,8 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 Run deterministic checks before judgment when the repository provides the tools:
 
 ```bash
+bad_test_names="$(rg --files <spec-node-path>/tests/ --glob '*.py' | rg -v '/test_[^.]+\.(scenario|mapping|conformance|property|compliance)\.l[123](\.[^.]+)?\.py$' || true)"
+test -z "$bad_test_names"
 uv run pytest --collect-only -q <spec-node-path>/tests/
 uv run ruff check <spec-node-path>/tests/
 uv run mypy <spec-node-path>/tests/
