@@ -1,6 +1,6 @@
 ---
 name: standardizing-rust-tests
-user-invocable: false
+disable-model-invocation: true
 description: Rust test standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
