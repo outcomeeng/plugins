@@ -39,14 +39,15 @@ This skill does NOT:
 
 <classification>
 
-| Class          | Receiver action             | Use when                                                                                                                                                         |
-| -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKING`     | Fix in this PR before merge | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break. |
-| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`.                                        |
-| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change.                                                          |
-| `NOTE`         | No action expected          | Context, praise, explanation, or an observation that does not create work.                                                                                       |
+The four-class receiver-action taxonomy (`BLOCKING` / `NEEDS-ANSWER` / `FOLLOW-UP` / `NOTE`) and the comment-format examples used to express each finding live in `/standardizing-merging` `<review_classification>`. This skill does not re-state them — the same vocabulary is used by reviewers (outgoing feedback) and authors (this skill, triaging incoming feedback) so nothing has to be translated between the two sides.
 
-Severity-rank labels (`P0` / `P1` / `P2` / `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`) MUST NOT drive the receiver action queue. Receiver action is the only ordering signal.
+When triaging incoming review prose into the active PR loop:
+
+- Drive the work queue from `BLOCKING` and `NEEDS-ANSWER` only.
+- Track accepted `FOLLOW-UP` items in the owning durable location (`ISSUES.md` / `PLAN.md`).
+- Drop `NOTE` items unless the reviewer is asking for an acknowledgment.
+
+Severity-rank labels (`P0`, `critical`, `nit`, etc.) on incoming feedback are converted to one of the four classes before entering the queue — never carried through as the primary label.
 
 </classification>
 
@@ -62,7 +63,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 2: Inspect review state on all three surfaces.** Use `/standardizing-merging` `<review_inspection>` — never check only `reviews`. Run the formal-reviews + PR-level-comments query AND the review-thread-comments query, comparing timestamps against the most recent push.
 
-**Step 3: Classify feedback.** Rewrite every actionable item into the four-class model. Preserve the reviewer evidence: source comment, file path, line, and reason. Use `<comment_format>` below for each item.
+**Step 3: Classify feedback.** Rewrite every actionable item into the four-class model from `/standardizing-merging` `<review_classification>`. Preserve the reviewer evidence: source comment, file path, line, and reason. Use the comment-format shape from `<review_classification>` for each item.
 
 **Step 4: Resolve the action queue.**
 
@@ -95,35 +96,6 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 A turn that ends with "looks good, let me know if you need anything" does NOT satisfy this success criterion.
 
 </workflow>
-
-<comment_format>
-
-Use this shape when posting or summarizing review findings:
-
-```text
-BLOCKING [correctness]: path/to/file.py:42
-Evidence: The changed branch now raises on an empty profile list because ...
-Required before merge: Preserve the previous no-op behavior or add evidence that the new failure is intended.
-```
-
-```text
-NEEDS-ANSWER [scope]: path/to/file.py:108
-Evidence: The new helper duplicates logic in <other-module>, but the diff does not say why it cannot reuse it.
-Question: Is the duplication intentional (e.g., the modules will diverge soon)? If not, reuse and drop the duplicate.
-```
-
-```text
-FOLLOW-UP [test-evidence]: spx/.../tests/test_x.py
-Evidence: The test covers the happy path but not rollback.
-Track under: spx/.../ISSUES.md.
-```
-
-```text
-NOTE [praise]: path/to/file.py:200
-The new error path is clearer than what was there. No action.
-```
-
-</comment_format>
 
 <commands_reference>
 
