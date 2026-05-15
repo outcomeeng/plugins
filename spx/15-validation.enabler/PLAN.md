@@ -66,14 +66,24 @@ Six PRs, ordered for forward-only landing. Each is independently mergeable, reve
 - `outcomeeng/scripts/validate_eval_links.py` → `outcomeeng/validation/eval_links.py`
 - `outcomeeng/scripts/check.py` → `outcomeeng/validation/__main__.py`
 
-**Caller updates in the same PR:**
+**Caller updates in the same PR (complete importer list, not "any reference"):**
 
 - `Justfile`: `check`, `check-manifests`, `check-skills`, `check-installed` recipes
 - `lefthook.yml`: `validate-skill-frontmatter`, `validate-plugins` hook commands
 - `pyproject.toml`: any `[project.scripts]` entries
 - `.github/workflows/*.yml`: any reference to old paths
 - `outcomeeng/validation/_steps.py`: STEPS argv tuples point at `outcomeeng.validation.X` instead of `outcomeeng.scripts.validate_X`
-- `spx/15-validation.enabler/65-check-pipeline.enabler/tests/test_check_pipeline.compliance.l1.py`: `inspect.getfile(pkg)` target updates
+- Test imports — importers of `outcomeeng.scripts.check_pipeline`:
+  - `spx/15-validation.enabler/65-check-pipeline.enabler/tests/test_check_pipeline.scenario.l1.py`
+  - `spx/15-validation.enabler/65-check-pipeline.enabler/tests/test_check_pipeline.scenario.l2.py`
+  - `spx/15-validation.enabler/65-check-pipeline.enabler/tests/test_check_pipeline.property.l1.py`
+  - `spx/15-validation.enabler/65-check-pipeline.enabler/tests/test_check_pipeline.compliance.l1.py` (also updates its `inspect.getfile(pkg)` target)
+- Test imports — importer of `outcomeeng.scripts.validate_plugins`:
+  - `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.scenario.l1.py`
+- Test imports — importer of `outcomeeng.scripts.validate_skill_frontmatter`:
+  - `spx/15-validation.enabler/32-skill-frontmatter.enabler/tests/test_skill_frontmatter.scenario.l1.py`
+- `outcomeeng_testing/` importer of `outcomeeng.scripts.check_pipeline`:
+  - `outcomeeng_testing/harnesses/check_pipeline.py` (also a prose reference in the module docstring)
 
 **Spec-tree:**
 
