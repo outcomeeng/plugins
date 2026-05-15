@@ -1,6 +1,6 @@
 ---
 name: standardizing-python-architecture
-user-invocable: false
+disable-model-invocation: true
 description: >-
   Python ADR conventions enforced across architect and auditor skills.
   Loaded by other skills, not invoked directly.
