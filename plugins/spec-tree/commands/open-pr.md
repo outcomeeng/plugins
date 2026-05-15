@@ -39,4 +39,4 @@ argument-hint: [scope-hint]
 Skill tool → { "skill": "spec-tree:opening-pr" }
 ```
 
-Do NOT proceed manually. The skill contains the PR-opening protocol, branch-hygiene checks, title and body conventions, and the post-push review-monitoring step.
+Do NOT proceed manually. The skill contains the PR-opening protocol — title and body conventions, the `gh pr create --draft` flow, and the handoff to `/managing-pr` for the post-creation review loop. Cross-cutting merge-flow standards (branch hygiene, branch topology, push semantics, draft lifecycle, heartbeat, two-surface review inspection) live in `/standardizing-merging`, which `opening-pr` loads automatically.
