@@ -18,7 +18,6 @@ import json
 import os
 import pathlib
 
-import pytest
 from outcomeeng_testing.harnesses.verdict_toolchain import (
     AUDIT_ORCHESTRATOR_SCRIPT,
     load_verdict_module,

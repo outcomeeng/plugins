@@ -6,7 +6,6 @@ Git/subprocess functions (clone_or_fetch, commit_and_push) are Level 2.
 
 from __future__ import annotations
 
-import os
 import textwrap
 from pathlib import Path
 
