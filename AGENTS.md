@@ -4,6 +4,10 @@ Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the
 
 `AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same product instructions.
 
+## Reviewing pull requests
+
+Read [`REVIEW.md`](REVIEW.md) at the repository root before posting any findings on a pull request in this repository. It is the authoritative source for the finding-classification taxonomy (`BLOCKING`, `NEEDS-ANSWER`, `FOLLOW-UP`, `NOTE`) and the comment shape every finding must follow. Severity ranks (`P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`) are not valid finding headings here. If a review has no `BLOCKING` or `NEEDS-ANSWER` items, say so directly — do not manufacture lower-priority findings to prove that review happened.
+
 ## Marketplace Is a Product
 
 We develop this marketplace as a product using its own Spec Tree. The product specs are in `spx/` (the durable map).
