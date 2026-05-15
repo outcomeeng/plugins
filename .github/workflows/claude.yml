@@ -1,3 +1,8 @@
+# Copy this file to .github/workflows/claude.yml in your repository
+#
+# Required setup:
+# 1. Add CLAUDE_CODE_OAUTH_TOKEN to repository secrets
+
 name: Claude Code
 
 on:
@@ -22,3 +27,34 @@ jobs:
     uses: outcomeeng/gh-actions/.github/workflows/claude.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    # Authorization is automatic: the workflow accepts any actor with admin,
+    # maintain, or write permission on this repository (queried via the GitHub
+    # API). External contributors are rejected with a clear error.
+    #
+    # Uncomment and modify to customize:
+    # with:
+    #   mention_trigger: '@bot'
+    #   concurrency_cancel: false
+    #   allowed_tools: '--allowed-tools "Read,Grep,Glob,Bash(gh pr:*)"'
+    #
+    # Wall-clock budget for the Run Claude Code step (default 15 in the
+    # reusable workflow). Set to a tighter value when running on self-hosted
+    # runners so a hung mention frees the slot quickly:
+    #   timeout_minutes: 5
+    # Or gate it on a repo variable so you can adjust without editing this
+    # file (Settings → Secrets and variables → Actions → Variables). GitHub
+    # variables are strings, so wrap with fromJSON to feed the reusable
+    # workflow's numeric input:
+    #   timeout_minutes: ${{ fromJSON(vars.CLAUDE_TIMEOUT_MINUTES || '15') }}
+    # Minimum 1; GitHub Actions silently rejects `0` at runtime.
+    #
+    # Plugins from .claude/settings.json are NOT installed by default. Plugin
+    # skills with auto-invocation directives can pull mention runs into long
+    # detours that aren't part of the original intent. To opt in:
+    #   use_project_plugins: true
+    #
+    # To install specific plugins without enabling all of settings.json:
+    #   plugin_marketplaces: "acme-corp/plugins"  # marketplace owner/repo entries
+    #   extra_plugins: "internal-style@acme-corp" # plugins to install
+    #
+    # See README "Plugins and marketplaces" for the full rationale.
