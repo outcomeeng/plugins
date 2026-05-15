@@ -2,7 +2,7 @@
 name: standardizing-merging
 user-invocable: false
 description: >-
-  Cross-cutting standards for the merge flow — branch hygiene, branch topology, push semantics, draft/ready lifecycle, heartbeat protocol, and three-surface review inspection.
+  Cross-cutting standards for the merge flow — branch hygiene, branch topology, push semantics, draft/ready lifecycle, heartbeat protocol, three-surface review inspection, and the four-class review-finding taxonomy used by both authors and reviewers.
   Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
@@ -21,6 +21,7 @@ A skill that loads this reference satisfies the merge-flow standards when, at mi
 - Pull requests are opened as draft and promoted to ready only on explicit human instruction with the closure gate freshly passed
 - Waiting for CI, review, or check resolution is delegated to the runtime timer (no shell `sleep`, no `gh pr checks --watch`, no `until`/`while` polling)
 - Review state is inspected on all three surfaces — formal `reviews`, PR-level `comments`, AND review-thread comments via `gh api .../pulls/<n>/comments` — never one or two alone
+- Every review finding (whether produced by an author triaging incoming feedback or by a reviewer producing outgoing feedback) is labeled with one of `BLOCKING`, `NEEDS-ANSWER`, `FOLLOW-UP`, or `NOTE` — never with severity ranks (`P0`/`P1`/`critical`/`high`/`medium`/`low`/`minor`/`nit`)
 
 </success_criteria>
 
@@ -232,9 +233,9 @@ After opening a PR or after a follow-up push, hand the wait to the runtime timer
 
 <review_inspection>
 
-**After opening a PR and after every follow-up push, inspect both review surfaces.**
+**After opening a PR and after every follow-up push, inspect all three review surfaces.**
 
-Automated reviewers (and humans) often re-fire on follow-up pushes. They may post as **formal reviews** OR as **PR-level issue comments** OR as **review-thread comments on specific lines** — checking only one surface misses feedback. Run this once after each push, then triage:
+Automated reviewers (and humans) often re-fire on follow-up pushes. They may post as **formal reviews** OR as **PR-level issue comments** OR as **review-thread comments on specific lines** — checking only one or two surfaces misses feedback. Run this once after each push, then triage:
 
 ```bash
 # Formal reviews + PR-level issue comments
@@ -253,6 +254,52 @@ Compare timestamps against the most recent push. New entries after that push are
 
 </review_inspection>
 
+<review_classification>
+
+**Every review finding — whether produced by a reviewer (outgoing feedback on someone else's PR) or by an author triaging incoming feedback (review of one's own PR) — is labeled with exactly one of four classes.** The taxonomy is shared so reviewer output and author triage use the same vocabulary; nothing has to be translated between them.
+
+| Class          | Receiver action             | Use when                                                                                                                                                         |
+| -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING`     | Fix in this PR before merge | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break. |
+| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`.                                        |
+| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change.                                                          |
+| `NOTE`         | No action expected          | Context, praise, explanation, or an observation that does not create work.                                                                                       |
+
+`BLOCKING` and `NEEDS-ANSWER` are the only classes that drive the active PR loop. `FOLLOW-UP` items belong in a short summary and must name the owning tracking location when retention is useful (e.g., `Track under: spx/.../ISSUES.md`). `NOTE` items are optional and must be omitted when they add noise.
+
+**Severity-rank labels MUST NOT replace the four classes.** No `P0` / `P1` / `P2` / `P3`, no `critical` / `high` / `medium` / `low`, no `minor` / `nit` headings. Risk words may appear inside the rationale only when they add concrete evidence, never as a finding's primary label. Receiver action is the only ordering signal.
+
+**If a review has no `BLOCKING` or `NEEDS-ANSWER` items, say so directly.** Do not manufacture lower-priority findings to prove that review happened.
+
+**Comment format — use this shape when posting or summarizing findings:**
+
+```text
+BLOCKING [correctness]: path/to/file.py:42
+Evidence: The changed branch now raises on an empty profile list because ...
+Required before merge: Preserve the previous no-op behavior or add evidence that the new failure is intended.
+```
+
+```text
+NEEDS-ANSWER [scope]: path/to/file.py:108
+Evidence: The new helper duplicates logic in <other-module>, but the diff does not say why it cannot reuse it.
+Question: Is the duplication intentional (e.g., the modules will diverge soon)? If not, reuse and drop the duplicate.
+```
+
+```text
+FOLLOW-UP [test-evidence]: spx/.../tests/test_x.py
+Evidence: The test covers the happy path but not rollback.
+Track under: spx/.../ISSUES.md.
+```
+
+```text
+NOTE [praise]: path/to/file.py:200
+The new error path is clearer than what was there. No action.
+```
+
+The bracketed dimension (`[correctness]`, `[scope]`, `[test-evidence]`, `[praise]`, etc.) names the concern category and is free-form — it adds context without becoming a parallel classification axis.
+
+</review_classification>
+
 <cross_cutting_nevers>
 
 These NEVERs cut across the named sections above. Each one is enforced by the section in parentheses; this list exists so consuming skills can cite it without re-stating the rule body.
@@ -266,5 +313,6 @@ These NEVERs cut across the named sections above. Each one is enforced by the se
 7. NEVER include self-reference in any merge-flow artifact — no "Claude", "AI", "agent", "Co-Authored-By: Claude".
 8. NEVER push an ambiguous branch graph (`<branch_topology>`).
 9. NEVER duplicate the heartbeat — one per PR (`<heartbeat>`).
+10. NEVER label a review finding with a severity rank (`P0`/`P1`/`critical`/`high`/`medium`/`low`/`minor`/`nit`) — use `BLOCKING` / `NEEDS-ANSWER` / `FOLLOW-UP` / `NOTE` (`<review_classification>`).
 
 </cross_cutting_nevers>
