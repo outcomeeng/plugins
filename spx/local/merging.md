@@ -1,0 +1,33 @@
+# Marketplace Merge Rules
+
+Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository. Marketplace-specific overrides to the base merge flow.
+
+## Merge authority
+
+**Require explicit human merge instruction.** The marketplace's [CLAUDE.md Git workflow](../../CLAUDE.md) states: "You review and merge the PR on GitHub. An agent runs `gh pr merge` only when you explicitly tell it to." This overrides the autonomous-merge default from `/managing-pr` `<merge_gate>`.
+
+When the merge gate reports green:
+
+- End with `AWAIT_MERGE_INSTRUCTION` and surface the gate-pass summary.
+- Do NOT run `gh pr merge` autonomously.
+- Wait for explicit user instruction to merge.
+
+## Merge command
+
+When the user authorizes the merge, use a merge commit (preserves PR history; matches existing main):
+
+```bash
+gh pr merge <pr-number> --merge
+git push origin --delete <branch>
+gh pr view <pr-number> --json state,mergedAt,mergeCommit
+```
+
+`--delete-branch` is omitted because `gh pr merge` fails its local-cleanup phase under multi-worktree checkouts when `main` is already checked out in another worktree (the merge succeeds on the remote, but the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'`). Delete the remote branch separately with `git push origin --delete <branch>`, then verify with `gh pr view`.
+
+## Closure gate
+
+The marketplace's closure gate is `just check`. Run it before any draft → ready promotion per `/standardizing-merging` `<draft_lifecycle>` rule 3 and before any merge authorization request.
+
+## Post-merge
+
+After the merge lands on `main`, refresh the local marketplace install per the [CLAUDE.md sync step](../../CLAUDE.md): `git switch main && git pull && just sync-marketplace <previous-main-ref>`.
