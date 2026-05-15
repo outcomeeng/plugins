@@ -207,7 +207,7 @@ def clone_or_fetch(
         )
         if result.returncode != 0:
             # Repo might be empty — init it
-            print(f"  Clone failed (empty repo?), initializing fresh")
+            print("  Clone failed (empty repo?), initializing fresh")
             subprocess.run(
                 ["git", "init"], cwd=repo_path, check=True, capture_output=True
             )
@@ -344,7 +344,7 @@ def distribute_repo(
         commit_and_push(repo_path, message)
         print(f"  Pushed changes to {github_org}/{repo_name}")
     else:
-        print(f"  No changes to push")
+        print("  No changes to push")
 
 
 def get_source_sha() -> str:
