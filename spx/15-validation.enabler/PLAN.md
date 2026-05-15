@@ -92,15 +92,31 @@ Six PRs, ordered for forward-only landing. Each is independently mergeable, reve
 - `outcomeeng/scripts/distribute_skills.py` → `outcomeeng/distribution/distribute.py`
 - `outcomeeng/scripts/preserve_codex_plugin_cache.py` → `outcomeeng/distribution/codex_cache.py`
 
-**Caller updates:**
+**Caller updates (every importer of the moved modules; complete list, not "any in-tree script"):**
 
 - `Justfile`: `sync-marketplace` recipe references `outcomeeng.distribution.codex_cache` (still bash for now — PR-3 collapses the heredoc)
 - `.github/workflows/distribute-skills.yml`: path reference
-- Any in-tree script that imports these modules
+- Test imports — importers of `outcomeeng.scripts.build_plugins`:
+  - `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.property.l1.py`
+  - `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.scenario.l1.py`
+  - `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_expand_include.scenario.l1.py`
+  - `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_render_text.scenario.l1.py`
+- Test imports — importer of `outcomeeng.scripts.preserve_codex_plugin_cache`:
+  - `spx/13-infrastructure.enabler/32-installation.enabler/tests/test_codex_plugin_cache.scenario.l1.py`
+- Test imports — importers of `outcomeeng.scripts.distribute_skills`:
+  - `spx/32-distribution.enabler/tests/test_distribute_skills.scenario.l1.py`
+  - `spx/32-distribution.enabler/tests/test_distribute_skills.property.l1.py`
+- `outcomeeng_testing/` importers of `outcomeeng.scripts.build_plugins`:
+  - `outcomeeng_testing/harnesses/src_tree.py` (also a prose reference in the module docstring)
+  - `outcomeeng_testing/harnesses/dist_tree.py`
+  - `outcomeeng_testing/harnesses/scenarios.py`
+  - `outcomeeng_testing/generators/directives.py`
+- Embedded literal references to `outcomeeng.scripts.build_plugins` in test diagnostics (the four `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/` files above carry `"outcomeeng.scripts.build_plugins is a stub; implement it before "` in stub-guard messages); update the literals in the same commit so the diagnostics stay accurate
+- Prose references in committed coordination files: `spx/18-plugin-build.enabler/PLAN.md` and `spx/18-plugin-build.enabler/ISSUES.md` mention the old module path — sweep these in the same PR so the escape hatches do not point at a renamed target
 
-**Spec-tree:** existing tests under `spx/32-distribution.enabler/tests/` update their import paths.
+**Spec-tree:** the test moves above are spec-tree-internal — no node files move. The four `spx/18-plugin-build.enabler/.../tests/` files and the one `spx/13-infrastructure.enabler/32-installation.enabler/tests/` file stay in their nodes; only their `from outcomeeng.scripts.<X>` imports change to `from outcomeeng.distribution.<Y>`. The `spx/32-distribution.enabler/tests/` files do the same. No additions, deletions, or renames at the node level.
 
-**Test plan:** existing `test_distribute_skills.scenario.l1.py` and any other distribution tests pass at new locations.
+**Test plan:** `just check` runs end-to-end after the move; the nine importing files above pass with the new import paths; `pytest spx/18-plugin-build.enabler` and `pytest spx/13-infrastructure.enabler` both pass.
 
 ### PR-3 — `distribution.sync.py`
 
