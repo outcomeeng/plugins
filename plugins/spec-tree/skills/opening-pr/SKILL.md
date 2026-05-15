@@ -25,18 +25,18 @@ A successful PR open has:
 
 </success_criteria>
 
-<scope>
+<anti_patterns>
 
-This skill does NOT:
+Patterns that break this skill's flow. Never:
 
-- Stage, commit, or amend (use `/committing-changes`)
-- Force-push or rewrite history
-- Merge, squash, or close the PR
-- Modify global git configuration or CI/CD workflows
-- Watch CI runs (forbidden by `/standardizing-merging` `<critical_rules>`)
-- Track review feedback or drive the iteration loop after creation (use `/managing-pr`)
+- Stage, commit, or amend here — use `/committing-changes`.
+- Force-push or rewrite history.
+- Merge, squash, or close the PR — those belong to `/managing-pr` after creation.
+- Modify global git configuration or CI/CD workflows.
+- Watch CI runs in-shell, poll for status, or use `gh pr checks --watch` — forbidden by `/standardizing-merging` `<cross_cutting_nevers>` item 5.
+- Track review feedback or drive the iteration loop after creation — use `/managing-pr`.
 
-</scope>
+</anti_patterns>
 
 <project_specialization>
 After loading this skill, check whether `spx/local/opening-pr.md` exists (path is relative to the repository root). If it does, read it and apply its rules as product-specific additions to the PR creation workflow (e.g., extra pre-flight checks, marketplace-specific template sections, push-command overrides, project-specific closure-gate commands).
@@ -48,7 +48,7 @@ The project-level file MUST NOT: fold the promotion into `gh pr create` itself, 
 Project-specific draft-lifecycle refinements (recognizing project-specific forms of the explicit human instruction; defining how the closure gate is run; defining when post-ready follow-up pushes may keep the PR ready) belong in `spx/local/merging.md` instead of the per-skill overlay, so `/managing-pr` and `/opening-pr` see the same rules.
 </project_specialization>
 
-<context_gathering>
+<context>
 
 **Before opening a PR, gather context:**
 
@@ -61,7 +61,7 @@ Project-specific draft-lifecycle refinements (recognizing project-specific forms
 | **CLAUDE.md / AGENTS.md**     | Product-specific PR conventions, custom template, push commands |
 | **Conversation**              | Issue or spec node references for the Refs footer               |
 
-</context_gathering>
+</context>
 
 <title_format>
 
@@ -96,13 +96,7 @@ refactor: extract validation into dedicated module
 fix(parser): handle nested expressions and empty operands
 ```
 
-**Rules** (inherited from `/committing-changes`):
-
-- ≤70 chars
-- Imperative mood, no period
-- No `chore:` — pick the specific type
-- No state words ("missing", "broken", "wrong")
-- No self-reference ("Claude", "AI", "agent")
+**Rules** — defined in `/committing-changes` (subject-line constraints: length, mood, type vocabulary, banned words, self-reference). Do not maintain a copy here; load `/committing-changes` and follow what it states.
 
 </title_format>
 
@@ -205,7 +199,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 **Flag rationale:**
 
-- `--draft` — mandatory on every `gh pr create`. See `/standardizing-merging` `<draft_lifecycle>` and `<critical_rules>` rule 3.
+- `--draft` — mandatory on every `gh pr create`. See `/standardizing-merging` `<draft_lifecycle>` rule 1.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin matches `/committing-changes` conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.

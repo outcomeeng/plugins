@@ -1,6 +1,6 @@
 ---
 name: standardizing-merging
-user-invocable: false
+disable-model-invocation: true
 description: >-
   Cross-cutting standards for the merge flow — branch hygiene, branch topology, push semantics, draft/ready lifecycle, heartbeat protocol, three-surface review inspection, and the four-class review-finding taxonomy used by both authors and reviewers.
   Loaded by other skills, not invoked directly.
@@ -30,7 +30,16 @@ This is a reference skill. opening-pr and managing-pr load these standards. Do n
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/merging.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., extra pre-flight checks, project-specific closure gate command, push command overrides, draft-lifecycle refinements).
+When another skill loads this reference inside a repository, check for `spx/local/merging.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization. Topics the overlay MAY refine:
+
+- Extra pre-flight checks beyond `<branch_hygiene>`.
+- The project-specific closure gate command.
+- Push command overrides — the explicit destination ref form must be preserved.
+- Draft-lifecycle refinements — additional explicit-instruction signal forms; project-specific rules for keeping a PR ready across follow-up pushes.
+- **Merge authority** — whether `gh pr merge` runs autonomously when the merge gate is green (the default in `/managing-pr` `<merge_gate>`) or requires explicit human instruction before merging.
+- **Merge command** — which `gh pr merge` flags the project uses (rebase merge, merge commit, squash; whether `--delete-branch` runs inline or as a separate `git push origin --delete <branch>` to avoid multi-worktree cleanup failures).
+
+If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply.
 
 The repo-local file CANNOT override the always-draft mandate — `gh pr create --draft` remains mandatory on every PR open, and promotion to ready remains a separate `gh pr ready` command.
 </repo_local_overlay>

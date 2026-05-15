@@ -8,29 +8,35 @@ allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 
 <objective>
 
-Drive the post-creation pull request loop without treating advisory review prose as approval, merge authority, or completion. This skill owns the iteration phase: read review state on every relevant surface, classify each item by required receiver action, address BLOCKING and NEEDS-ANSWER items, push follow-up commits, and report the next repository-governed action. PR creation, branch hygiene, push semantics, draft lifecycle, heartbeat protocol, and three-surface review inspection are inherited from `/standardizing-merging`. Commits and the closure gate run via `/committing-changes`.
+Drive the post-creation pull request loop without treating unstructured review prose as approval, merge authority, or completion. This skill owns the iteration phase: read review state on every relevant surface, classify each item by required receiver action, address BLOCKING and NEEDS-ANSWER items, push follow-up commits, and merge when the validated review/check gates prove no work remains. PR creation, branch hygiene, push semantics, draft lifecycle, heartbeat protocol, and three-surface review inspection are inherited from `/standardizing-merging`. Commits and the closure gate run via `/committing-changes`.
 
 </objective>
 
-<scope>
+<anti_patterns>
 
-This skill does NOT:
+Patterns that break this skill's loop. Never:
 
-- Create the PR (use `/opening-pr`)
-- Push commits to a branch with no PR (use `/opening-pr`)
-- Merge, squash, or close the PR
-- Promote draft → ready without the four prerequisites in `/standardizing-merging` `<draft_lifecycle>`
-- Stage or compose commit messages (use `/committing-changes`)
-- Watch CI runs, poll in-shell, or `sleep` to wait (use `/standardizing-merging` `<heartbeat>`)
-- Review someone else's PR with the goal of producing review prose for them (use `/reviewing-pr`)
+- Use this skill to create the PR — use `/opening-pr`. The same applies to pushing commits to a branch that has no PR yet.
+- Squash or close the PR through this skill — the iteration loop does not own lifecycle termination.
+- Promote draft → ready without the four prerequisites in `/standardizing-merging` `<draft_lifecycle>` rule 3 — explicit human instruction, closure gate just run, gate passed, change asserted mergeable.
+- Compose commits or commit messages here — use `/committing-changes`.
+- Review someone else's PR with this skill — use `/reviewing-pr`.
+- Skip the upstream-safety check before a follow-up push. A branch created with `git switch -c <branch> origin/main` sets upstream to `origin/main`; with `push.default=tracking`, a bare `git push` then routes feature-branch commits directly to `origin/main`. Re-run `/standardizing-merging` `<branch_hygiene>` on every push.
+- Drive the work queue from severity ranks (`P0`, `P1`, `critical`, `nit`). The four-class receiver-action taxonomy is the only valid label set.
+- Create a second heartbeat for the same PR — refresh the existing one per `/standardizing-merging` `<heartbeat>`.
+- End the turn with vague handoff prose. Name one of the action tokens from `<workflow>` Step 8.
+- Include self-reference in commits, comments, or PR text.
 
-</scope>
+</anti_patterns>
 
 <essential_principles>
 
 - Advisory review comments are normal PR feedback. They are distinct from GitHub approval reviews, merge decisions, and reactions.
 - Classify every review item by required receiver action: `BLOCKING`, `NEEDS-ANSWER`, `FOLLOW-UP`, or `NOTE`.
 - Drive the work loop only from `BLOCKING` and `NEEDS-ANSWER` items. `FOLLOW-UP` items are tracked in the owning durable location when worth preserving. `NOTE` items create no work.
+- A PR may merge only after at least one current-head human or bot review on an inspected surface uses the expected four-class format and leaves no `BLOCKING` or `NEEDS-ANSWER` work.
+- Wait at least five minutes after the latest pushed commit before merge evaluation, so review automation has time to respond without shell polling.
+- All required checks must be terminal-green before merge. Running, queued, pending, skipped-required, neutral-required, cancelled, timed-out, or failing checks block merge.
 - Keep review scope tied to the PR diff plus immediate context needed to judge it.
 - Use one-shot inspections per `/standardizing-merging` `<review_inspection>`; never watch CI, poll, or keep a shell process alive while waiting.
 - When code changes are required, invoke the relevant coding/testing/spec/prose skill via the Skill tool before editing. This skill coordinates the PR loop; domain skills own implementation quality.
@@ -50,6 +56,35 @@ When triaging incoming review prose into the active PR loop:
 Severity-rank labels (`P0`, `critical`, `nit`, etc.) on incoming feedback are converted to one of the four classes before entering the queue — never carried through as the primary label.
 
 </classification>
+
+<merge_gate>
+
+Automatic merge is allowed only when every condition below holds in the same one-shot inspection pass:
+
+- PR state is `OPEN` and `isDraft` is false.
+- The inspected head SHA matches the branch head fetched from origin.
+- At least five minutes have elapsed since the latest pushed commit on the PR branch.
+- At least one current-head review exists from a human or bot reviewer on an inspected surface and uses the expected four-class format: findings are labeled `BLOCKING`, `NEEDS-ANSWER`, `FOLLOW-UP`, or `NOTE`, or the review states in that vocabulary that no merge-blocking work remains.
+- Current-head review state has no `BLOCKING` items, no `NEEDS-ANSWER` items, and no unresolved change-request review.
+- All required checks in `statusCheckRollup` are complete and successful. Any queued, in-progress, pending, failing, cancelled, timed-out, missing, or ambiguous required check blocks merge.
+- Branch hygiene passes, including the upstream-safety check.
+- The PR branch has been rebased onto current `origin/<base>` or is already a fast-forward descendant of it.
+- The repo-local overlay (`spx/local/merging.md` per `/standardizing-merging` `<repo_local_overlay>`) does not require explicit human merge instruction.
+
+When the gate passes, merge immediately using the project's merge command. The default is rebase merge with remote-branch deletion; the repo-local overlay may specify a different command (e.g., merge commit, squash, or a two-step delete that avoids multi-worktree cleanup failures):
+
+```bash
+gh pr merge <pr-number> --rebase --delete-branch
+git fetch origin <base>
+git switch --detach "origin/<base>"
+git status --porcelain
+```
+
+If the repo-local overlay requires explicit human merge instruction, do not run `gh pr merge`. End with `AWAIT_MERGE_INSTRUCTION`, surface the gate-pass summary, and wait for the user to authorize the merge.
+
+When the five-minute review window has not elapsed, refresh the heartbeat and report `WAIT_FOR_REVIEW_WINDOW`.
+
+</merge_gate>
 
 <workflow>
 
@@ -82,18 +117,18 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7: Re-inspect after push and refresh the heartbeat.** Run the three-surface review inspection again. Refresh the existing PR heartbeat per `/standardizing-merging` `<heartbeat>` instead of creating a second one — one heartbeat per PR.
 
-**Step 8: Report the next repository-governed action.** End the turn with one of these named tokens stated explicitly:
+**Step 8: Merge or report the next repository-governed action.** Evaluate `<merge_gate>` before reporting. If the gate passes, merge with `gh pr merge <pr-number> --rebase --delete-branch`, fetch the base branch, detach at `origin/<base>`, verify clean status, and end with `POST_MERGE_VERIFY` if the project requires post-merge verification. If the gate does not pass, end with one of these named tokens stated explicitly:
 
 - `WAIT_FOR_CHECKS` — checks still running; heartbeat will re-fire
 - `WAIT_FOR_REVIEW` — checks green, awaiting human or bot review
+- `WAIT_FOR_REVIEW_WINDOW` — checks and review are present, but five minutes have not elapsed since the latest push
 - `FIX_BLOCKING:<item>` — at least one BLOCKING item remains
 - `ANSWER_NEEDED:<item>` — at least one NEEDS-ANSWER item remains
 - `MARK_READY` — closure gate passed, four prerequisites hold, ready for explicit human promotion
-- `MERGE_AUTHORIZED` — user has explicitly authorized merge
+- `MERGE_BLOCKED:<reason>` — merge gate failed for a concrete reason not covered by another token
+- `AWAIT_MERGE_INSTRUCTION` — merge gate passed but the repo-local overlay requires explicit human authorization before `gh pr merge`
 - `SYNC_BASE` — base branch has advanced; rebase needed before further action
 - `POST_MERGE_VERIFY` — PR merged; run post-merge verification per the project's Git workflow
-
-A turn that ends with "looks good, let me know if you need anything" does NOT satisfy this success criterion.
 
 </workflow>
 
@@ -112,6 +147,9 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
 
 # Checks (one-shot — NEVER --watch)
 gh pr checks <pr-number>
+
+# Merge only after <merge_gate> passes
+gh pr merge <pr-number> --rebase --delete-branch
 
 # Post a PR-level comment (top of the conversation)
 gh pr comment <pr-number> --body-file - <<'EOF'
@@ -157,31 +195,20 @@ For pre-flight, branch topology, push semantics, draft lifecycle, and heartbeat 
 - Every `NEEDS-ANSWER` item has an answer, an investigation result, or a direct question for the required human judgment
 - Every retained `FOLLOW-UP` item is recorded in the owning durable location (`ISSUES.md` or `PLAN.md`) before the PR loop moves on
 - Every push re-runs `/standardizing-merging` `<branch_hygiene>`, including the upstream-safety check
-- The turn ends with one of the named action tokens from `<workflow>` Step 8 stated explicitly — never "looks good, let me know if you need anything"
+- Automatic merge happens only after `<merge_gate>` passes in the current inspection pass
+- A wild or unstructured review never satisfies the required-review condition for merge
+- The turn ends with one of the named action tokens from `<workflow>` Step 8 stated explicitly, never with vague handoff prose
 
 </success_criteria>
-
-<critical_rules>
-
-1. **NEVER use this skill to create a PR** — use `/opening-pr`.
-2. **NEVER promote draft → ready without the four prerequisites in `/standardizing-merging` `<draft_lifecycle>` rule 3** — explicit human instruction, closure gate just run, gate passed, change asserted mergeable.
-3. **NEVER inspect only `reviews` after a push** — always check `reviews` AND PR-level `comments` AND review-thread comments via `gh api .../pulls/<n>/comments`.
-4. **NEVER watch CI, poll in-shell, or `sleep` to wait** — use `/standardizing-merging` `<heartbeat>`.
-5. **NEVER skip the upstream-safety check before a follow-up push** — `push.default=tracking` will publish feature-branch commits to `origin/main` if upstream is set wrong.
-6. **NEVER drive the queue from severity ranks** — `BLOCKING` / `NEEDS-ANSWER` / `FOLLOW-UP` / `NOTE` is the only valid taxonomy.
-7. **NEVER end the turn with vague handoff prose** — name one of the action tokens from `<workflow>` Step 8.
-8. **NEVER create a second heartbeat for the same PR** — refresh the existing one per `/standardizing-merging` `<heartbeat>`.
-9. **NEVER include self-reference** in commits, comments, or PR text — no "Claude", "AI", "agent", "Co-Authored-By: Claude".
-
-</critical_rules>
 
 <failure_modes>
 
 Real failure patterns to avoid:
 
-- **Treating advisory bot prose as approval.** Bot reviewers (e.g., automated review agents) often post observations as PR-level issue comments with no `state: APPROVED`. The author reads "looks good overall" and ships — missing the BLOCKING item buried later in the same comment. Classify every actionable line, not just the conclusion.
+- **Treating advisory bot prose as approval.** Bot reviewers often post observations as PR-level issue comments with no `state: APPROVED`. The author reads "looks good overall" and ships — missing the BLOCKING item buried later in the same comment. Classify every actionable line, not just the conclusion.
 - **Checking only `reviews` and missing comment-surface re-feedback.** After a follow-up push, bot reviewers often re-fire as PR-level issue comments rather than formal reviews. A `gh pr view --json reviews` query returns the prior approval and looks clean; the new comments-surface critique is invisible until merge time. The three-surface inspection in `/standardizing-merging` `<review_inspection>` is the antidote.
 - **Skipping the upstream-safety check on follow-up pushes.** A branch created with `git switch -c <branch> origin/main` sets upstream to `origin/main`. With `push.default=tracking`, a bare `git push` then routes feature-branch commits directly to `origin/main`. Re-run `<branch_hygiene>` on every push.
 - **Burning expensive CI on guesses.** Promoting draft → ready without the closure gate makes the ready flip a guess. CI then spends the team's budget validating an unverified assertion. The four prerequisites are not optional.
+- **Waiting for permission after the merge gate passed.** A green, unblocked, reviewed PR was reported with an extra "what next" prompt, wasting a heartbeat cycle. Once `<merge_gate>` passes, merge immediately; the gate is the merge authority.
 
 </failure_modes>
