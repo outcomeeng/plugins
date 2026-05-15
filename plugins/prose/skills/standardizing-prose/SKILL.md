@@ -1,6 +1,6 @@
 ---
 name: standardizing-prose
-user-invocable: false
+disable-model-invocation: true
 description: >-
   Prose anti-patterns enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
