@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 
 <objective>
 
-Drive the post-creation pull request loop without treating advisory review prose as approval, merge authority, or completion. This skill owns the iteration phase: read review state on every relevant surface, classify each item by required receiver action, address BLOCKING and NEEDS-ANSWER items, push follow-up commits, and report the next repository-governed action. PR creation, branch hygiene, push semantics, draft lifecycle, heartbeat protocol, and two-surface review inspection are inherited from `/standardizing-merging`. Commits and the closure gate run via `/committing-changes`.
+Drive the post-creation pull request loop without treating advisory review prose as approval, merge authority, or completion. This skill owns the iteration phase: read review state on every relevant surface, classify each item by required receiver action, address BLOCKING and NEEDS-ANSWER items, push follow-up commits, and report the next repository-governed action. PR creation, branch hygiene, push semantics, draft lifecycle, heartbeat protocol, and three-surface review inspection are inherited from `/standardizing-merging`. Commits and the closure gate run via `/committing-changes`.
 
 </objective>
 
@@ -70,7 +70,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 - Answer or investigate `NEEDS-ANSWER` items before coding speculative fixes.
 - Track accepted `FOLLOW-UP` items in the owning node's `ISSUES.md` or `PLAN.md` when they are worth keeping. Edit those files directly with the `Edit` or `Write` tool — they are committed coordination artifacts, not spec assertions.
 
-**Step 5: Validate focused changes.** Run the narrowest meaningful validation after each fix pass. Before pushing when the PR is approaching ready-for-review or merge consideration, run the project's local closure gate (named in `spx/local/standardizing-merging.md` if defined) — that gate is the assertion required by `/standardizing-merging` `<draft_lifecycle>` rule 3 before any draft → ready promotion.
+**Step 5: Validate focused changes.** Run the narrowest meaningful validation after each fix pass. Before pushing when the PR is approaching ready-for-review or merge consideration, run the project's local closure gate (named in `spx/local/merging.md` if defined) — that gate is the assertion required by `/standardizing-merging` `<draft_lifecycle>` rule 3 before any draft → ready promotion.
 
 **Step 6: Commit and push deliberately.**
 
