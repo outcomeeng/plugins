@@ -1,6 +1,6 @@
 ---
 name: standardizing-skills
-user-invocable: false
+disable-model-invocation: true
 description: >-
   Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
