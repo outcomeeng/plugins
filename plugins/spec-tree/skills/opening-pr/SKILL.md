@@ -45,7 +45,7 @@ The project-level file MAY refine: extra pre-flight checks specific to the proje
 
 The project-level file MUST NOT: fold the promotion into `gh pr create` itself, skip the closure gate before promotion, override the always-draft mandate, or weaken the upstream-safety check.
 
-Project-specific draft-lifecycle refinements (recognizing project-specific forms of the explicit human instruction; defining how the closure gate is run; defining when post-ready follow-up pushes may keep the PR ready) belong in `spx/local/standardizing-merging.md` instead of the per-skill overlay, so `/managing-pr` and `/opening-pr` see the same rules.
+Project-specific draft-lifecycle refinements (recognizing project-specific forms of the explicit human instruction; defining how the closure gate is run; defining when post-ready follow-up pushes may keep the PR ready) belong in `spx/local/merging.md` instead of the per-skill overlay, so `/managing-pr` and `/opening-pr` see the same rules.
 </project_specialization>
 
 <context_gathering>

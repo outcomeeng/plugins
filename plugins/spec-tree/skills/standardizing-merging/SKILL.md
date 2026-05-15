@@ -2,7 +2,7 @@
 name: standardizing-merging
 user-invocable: false
 description: >-
-  Cross-cutting standards for the merge flow — branch hygiene, branch topology, push semantics, draft/ready lifecycle, heartbeat protocol, and two-surface review inspection.
+  Cross-cutting standards for the merge flow — branch hygiene, branch topology, push semantics, draft/ready lifecycle, heartbeat protocol, and three-surface review inspection.
   Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
@@ -20,7 +20,7 @@ A skill that loads this reference satisfies the merge-flow standards when, at mi
 - Every push uses an explicit destination ref (`HEAD:refs/heads/<branch>`)
 - Pull requests are opened as draft and promoted to ready only on explicit human instruction with the closure gate freshly passed
 - Waiting for CI, review, or check resolution is delegated to the runtime timer (no shell `sleep`, no `gh pr checks --watch`, no `until`/`while` polling)
-- Review state is inspected on both the `reviews` and `comments` surfaces — never one alone
+- Review state is inspected on all three surfaces — formal `reviews`, PR-level `comments`, AND review-thread comments via `gh api .../pulls/<n>/comments` — never one or two alone
 
 </success_criteria>
 
@@ -29,7 +29,7 @@ This is a reference skill. opening-pr and managing-pr load these standards. Do n
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/standardizing-merging.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., extra pre-flight checks, project-specific closure gate command, push command overrides, draft-lifecycle refinements).
+When another skill loads this reference inside a repository, check for `spx/local/merging.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization (e.g., extra pre-flight checks, project-specific closure gate command, push command overrides, draft-lifecycle refinements).
 
 The repo-local file CANNOT override the always-draft mandate — `gh pr create --draft` remains mandatory on every PR open, and promotion to ready remains a separate `gh pr ready` command.
 </repo_local_overlay>
@@ -189,9 +189,9 @@ If the product defines a custom branch-push command for pull-request branches, f
 **Rules:**
 
 1. **Always open as draft.** Mandatory. `gh pr create --draft` on every PR open, no exceptions.
-2. **Stay draft through the entire iteration phase.** Push as many commits as needed; bot reviewers and cheap checks run every time, expensive CI stays silent. The local closure gate (project-specific full-test command — examples: `pnpm check:full`, `make test`, `cargo test --all`; `spx/local/standardizing-merging.md` may name a project-specific gate) is the author's responsibility during this phase.
-3. **Promote to ready only when ready means ready, and only on explicit human instruction.** Agent inference that "the work looks done" never qualifies. The explicit instruction may take either of two forms: (a) a direct chat command from the user ("mark ready", "promote to ready"); or (b) a user-approved implementation plan that specifies opening a ready PR after the closure gate passes. Project-local rules in `spx/local/standardizing-merging.md` may declare additional signal forms specific to the repository. In every case the promotion is a deliberate human signal: the local closure gate has just passed, the change is mergeable, and CI spends expensive budget on that signal. When the explicit instruction is a user-approved plan, `gh pr ready` runs immediately after the draft `gh pr create` — as a separate command, never folded into `gh pr create` itself.
-4. **For post-ready follow-ups, default to reverting to draft first.** GitHub does not auto-revert state on push, so the default is `gh pr ready --undo <pr-number>` before the follow-up push; iterate while draft; promote again when the closure gate passes anew and the human author re-instructs the promotion. Project-local rules in `spx/local/standardizing-merging.md` may permit keeping the PR ready when the project's closure gate has just re-passed immediately before the follow-up push — in that case the follow-up push re-fires expensive CI exactly once, with a fresh gate-passed signal backing it.
+2. **Stay draft through the entire iteration phase.** Push as many commits as needed; bot reviewers and cheap checks run every time, expensive CI stays silent. The local closure gate (project-specific full-test command — examples: `pnpm check:full`, `make test`, `cargo test --all`; `spx/local/merging.md` may name a project-specific gate) is the author's responsibility during this phase.
+3. **Promote to ready only when ready means ready, and only on explicit human instruction.** Agent inference that "the work looks done" never qualifies. The explicit instruction may take either of two forms: (a) a direct chat command from the user ("mark ready", "promote to ready"); or (b) a user-approved implementation plan that specifies opening a ready PR after the closure gate passes. Project-local rules in `spx/local/merging.md` may declare additional signal forms specific to the repository. In every case the promotion is a deliberate human signal: the local closure gate has just passed, the change is mergeable, and CI spends expensive budget on that signal. When the explicit instruction is a user-approved plan, `gh pr ready` runs immediately after the draft `gh pr create` — as a separate command, never folded into `gh pr create` itself.
+4. **For post-ready follow-ups, default to reverting to draft first.** GitHub does not auto-revert state on push, so the default is `gh pr ready --undo <pr-number>` before the follow-up push; iterate while draft; promote again when the closure gate passes anew and the human author re-instructs the promotion. Project-local rules in `spx/local/merging.md` may permit keeping the PR ready when the project's closure gate has just re-passed immediately before the follow-up push — in that case the follow-up push re-fires expensive CI exactly once, with a fresh gate-passed signal backing it.
 
 **Promotion command:**
 
