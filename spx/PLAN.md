@@ -82,7 +82,8 @@ Each phase is one PR. Phases land in order; each is independently merge-ready an
 
 ## Constraints
 
-- Each phase keeps `python -m outcomeeng.<old_path>` shims if external consumers (CI workflows in sibling repos, contributor scripts in adjacent worktrees) might still reference the old paths. Shims are documented in the PR description and removed in a follow-up once consumers update.
+- Each phase is one PR that moves the modules and updates every caller in lockstep — `Justfile`, `lefthook.yml`, `pyproject.toml` `[project.scripts]`, CI workflows under `.github/workflows/`, and any in-tree script that invokes the moved path. No shims, no compatibility re-exports, no two-step migrations.
+- `Justfile` recipes are the contract every contributor uses; they must continue to work on every merge. Each phase PR runs `just --list` and the affected recipes locally before opening.
 - No phase changes the public behavior of any validator, builder, or fixer. The PRs are pure rename + rewire; behavior is verified by the existing tests passing unchanged at the new module paths.
 - Each phase's compliance and conformance tests update their import paths in lockstep with the move; no test references a stale path after the phase merges.
 
