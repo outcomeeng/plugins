@@ -197,9 +197,18 @@ def preserve_during_upgrade(
 
     for plugin in sorted(working_tree_plugins):
         plugin_dir = marketplace_dir / plugin
+        if not plugin_dir.is_dir():
+            # Plugin not installed in this user's Codex — preservation has
+            # nothing to act on. Silent skip; do not flag as an unexpected
+            # state.
+            continue
         in_window = resolved_history.published_versions(plugin)
         current_real = _newest_real_version_dir(plugin_dir)
         if current_real is None:
+            # Cache directory exists but holds no real version directory.
+            # This is unexpected — Codex installs the current version as
+            # a real directory. Surface as a warning so the operator can
+            # investigate.
             skipped_plugins.append(plugin)
             continue
 
