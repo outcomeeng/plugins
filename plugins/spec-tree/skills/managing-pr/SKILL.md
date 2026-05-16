@@ -117,7 +117,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7: Re-inspect after push and refresh the heartbeat.** Run the three-surface review inspection again. Refresh the existing PR heartbeat per `/standardizing-merging` `<heartbeat>` instead of creating a second one — one heartbeat per PR.
 
-**Step 8: Merge or report the next repository-governed action.** Evaluate `<merge_gate>` before reporting. If the gate passes, merge with `gh pr merge <pr-number> --rebase --delete-branch`, fetch the base branch, detach at `origin/<base>`, verify clean status, and end with `POST_MERGE_VERIFY` if the project requires post-merge verification. If the gate does not pass, end with one of these named tokens stated explicitly:
+**Step 8: Merge or report the next repository-governed action.** Evaluate `<merge_gate>` before reporting. If the gate passes, merge using the command specified in `<merge_gate>` (the repo-local overlay's merge command if defined; otherwise the default `gh pr merge <pr-number> --rebase --delete-branch`), fetch the base branch, detach at `origin/<base>`, verify clean status, and end with `POST_MERGE_VERIFY` if the project requires post-merge verification. If the gate does not pass, end with one of these named tokens stated explicitly:
 
 - `WAIT_FOR_CHECKS` — checks still running; heartbeat will re-fire
 - `WAIT_FOR_REVIEW` — checks green, awaiting human or bot review
