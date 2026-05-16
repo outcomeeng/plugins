@@ -10,7 +10,7 @@
 # remove this file when only the default review is desired, or remove
 # `claude-review-default.yml` when only the custom variant is desired.
 
-name: Claude Review (custom)
+name: Marketplace Code Review (REVIEW.md)
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ permissions:
   id-token: write
 
 jobs:
-  review:
+  marketplace-review:
     uses: ./.github/workflows/_claude-review.yml
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

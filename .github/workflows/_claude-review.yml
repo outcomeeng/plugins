@@ -207,7 +207,13 @@ jobs:
     needs: [authorize, validate-workflow]
     if: needs.authorize.outputs.authorized == 'true' && needs.validate-workflow.outputs.matches == 'true'
     concurrency:
-      group: claude-review-${{ github.event.pull_request.number }}
+      # github.workflow resolves to the CALLER workflow's `name:` field.
+      # Distinct caller names (e.g. "Claude Review (default)" and
+      # "Marketplace Code Review (REVIEW.md)") give each caller its own
+      # concurrency lane on the same PR — without this discriminator,
+      # both callers share the lane and cancel-in-progress would cause
+      # them to cancel each other on every push.
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
       cancel-in-progress: ${{ inputs.concurrency_cancel }}
     runs-on: ${{ startsWith(inputs.runner, '[') && fromJSON(inputs.runner) || inputs.runner }}
     timeout-minutes: ${{ fromJSON(inputs.timeout_minutes) }}
