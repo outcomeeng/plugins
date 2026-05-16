@@ -72,21 +72,7 @@ sync-marketplace base_ref="":
 
 # Push directly, then sync local marketplace installs only when plugin distribution changed
 push-marketplace *push_args:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for tool in git claude codex uv; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            echo "Missing required tool: $tool" >&2
-            exit 1
-        fi
-    done
-    before_ref="$(git rev-parse @{upstream} 2>/dev/null || true)"
-    git push {{push_args}}
-    if [[ -n "$before_ref" ]]; then
-        just sync-marketplace "$before_ref"
-    else
-        just sync-marketplace
-    fi
+    uv run python -m outcomeeng.distribution.push {{push_args}}
 
 # Remove __pycache__, .pytest_cache, and other generated files
 clean:
