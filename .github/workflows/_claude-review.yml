@@ -306,7 +306,7 @@ jobs:
           trim() { local s=${1#"${1%%[![:space:]]*}"}; printf '%s' "${s%"${s##*[![:space:]]}"}"; }
           OVERRIDE_ALLOW_LIST=$(trim "$OVERRIDE_ALLOW_LIST")
           APPEND_ALLOW_LIST=$(trim "$APPEND_ALLOW_LIST")
-          baseline='Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)'
+          baseline='Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(sed:*),Bash(grep:*),Bash(head:*)'
           if [[ -n "$OVERRIDE_ALLOW_LIST" ]]; then
             allowlist="$OVERRIDE_ALLOW_LIST"
             if [[ -n "$APPEND_ALLOW_LIST" ]]; then

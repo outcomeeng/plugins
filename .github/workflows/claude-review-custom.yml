@@ -55,35 +55,18 @@ jobs:
 
         3. **Compose the review in memory.** Do not write the body to a file. Do not call the `Write` tool. Do not redirect Bash output to disk.
 
-        4. **Post the review with one command, using `printf` and stdin:**
+        4. **Post the review with one command, using `printf` and stdin.** The entire `printf … | gh pr comment …` pipeline MUST be one physical shell line. Do not split with `\`-newline continuations — the runner's command parser treats continued lines as separate operations and denies the fragments as unapproved invocations.
 
            ```bash
-           printf '%s\n' \
-             '## Spec Tree Review [PR #${{ github.event.pull_request.number }}]: <PR title>' \
-             '' \
-             '**Summary.** <one or two sentences>' \
-             '' \
-             '### BLOCKING [correctness]: path/to/file.py:42' \
-             'Evidence: <quote the diff and explain the failure mode>.' \
-             'Required before merge: <concrete change>.' \
-             '' \
-             '---' \
-             '' \
-             '## Findings out of scope for merge' \
-             '' \
-             '### FOLLOW-UP [test-evidence]: path/to/test.py' \
-             'Evidence: <what is missing>.' \
-             'Track under: <issues file or tracker>.' \
-             | gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file /dev/stdin
+           printf '%s\n' '## Spec Tree Review [PR #${{ github.event.pull_request.number }}]: <PR title>' '' '**Summary.** <one or two sentences>' '' '### BLOCKING [correctness]: path/to/file.py:42' 'Evidence: <quote the diff and explain the failure mode>.' 'Required before merge: <concrete change>.' '' '---' '' '## Findings out of scope for merge' '' '### FOLLOW-UP [test-evidence]: path/to/test.py' 'Evidence: <what is missing>.' 'Track under: <issues file or tracker>.' | gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file /dev/stdin
            ```
 
-           Quoting rule: wrap literal text in single quotes so `$`, backticks, and backslashes pass through unchanged. Each argument to `printf '%s\n'` is one line of output. Blank lines are `''`.
+           Quoting rule: wrap literal text in single quotes so `$`, backticks, and backslashes pass through unchanged. Each argument to `printf '%s\n'` is one line of output. Blank lines are `''`. The example above wraps visually in your view, but it is a single physical line — preserve that when you compose your own invocation.
 
-        5. **If you need to revise the comment you just posted,** use `--edit-last`:
+        5. **If you need to revise the comment you just posted,** use `--edit-last` (still one physical line):
 
            ```bash
-           printf '%s\n' '<revised content>' \
-             | gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --edit-last --body-file /dev/stdin
+           printf '%s\n' '<revised content>' | gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --edit-last --body-file /dev/stdin
            ```
 
         ## Environment
@@ -99,6 +82,7 @@ jobs:
         | `gh api repos/<o>/<r>/issues/comments/<id> -X PATCH` | The Actions integration token lacks permission. Use `gh pr comment --edit-last` instead. |
         | `gh pr view <N> --repo <O/R>` without `--json` | Default view fetches `statusCheckRollup`, which the token cannot access. Always pass `--json`, and never request the `statusCheckRollup` field. Safe fields: `number,title,body,author,baseRefName,headRefName,additions,deletions,changedFiles`. |
         | Helper scripts written to disk to assemble the body | Same write blockage; also adds turns for nothing the `printf` form does not already do. |
+        | Backslash-newline (`\`) continuations in shell commands | The runner's parser flags continued lines as multiple operations and gates the fragments separately, even when every binary in the pipeline is approved. Keep `printf … \| gh pr comment …` on one physical line. |
 
         ## Review shape
 
