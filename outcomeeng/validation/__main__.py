@@ -2,7 +2,7 @@
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.check
+    uv run python -m outcomeeng.validation
 
 Constructs the production `ProcessSpawner` adapter, binds the output sink
 to stdout, and runs the declared step list. Returns the orchestrator's
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import sys
 
-from outcomeeng.scripts.check_pipeline import STEPS, ProductionSpawner, run
+from outcomeeng.validation import STEPS, ProductionSpawner, run
 
 
 def main() -> int:

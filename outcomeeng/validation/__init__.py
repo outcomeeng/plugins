@@ -11,14 +11,14 @@ Public surface:
 
 from __future__ import annotations
 
-from outcomeeng.scripts.check_pipeline._model import (
+from outcomeeng.validation._engine import run
+from outcomeeng.validation._model import (
     ProcessHandle,
     ProcessSpawner,
     Step,
 )
-from outcomeeng.scripts.check_pipeline._runner import run
-from outcomeeng.scripts.check_pipeline._spawner import ProductionSpawner
-from outcomeeng.scripts.check_pipeline._steps import STEPS
+from outcomeeng.validation._spawner import ProductionSpawner
+from outcomeeng.validation._steps import STEPS
 
 __all__ = [
     "STEPS",

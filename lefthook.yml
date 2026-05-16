@@ -7,11 +7,11 @@ pre-commit:
       priority: 0
     validate-skill-frontmatter:
       glob: "**/SKILL.md"
-      run: uv run python -m outcomeeng.scripts.validate_skill_frontmatter {staged_files}
+      run: uv run python -m outcomeeng.validation.skill_frontmatter {staged_files}
       priority: 5
     validate-plugins:
       glob: "*.json"
-      run: uv run python -m outcomeeng.scripts.validate_plugins .
+      run: uv run python -m outcomeeng.validation.plugins .
       priority: 10
     dprint:
       glob: "*.{md,python,ts,js,json,jsonc}"

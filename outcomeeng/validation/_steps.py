@@ -14,9 +14,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.scripts.check_pipeline._model import Step
+from outcomeeng.validation._model import Step
 
-_REPO_ROOT: Final = Path(__file__).resolve().parents[3]
+_REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 
 
 def _skill_files() -> tuple[str, ...]:
@@ -29,7 +29,7 @@ STEPS: Final = (
     Step(label="ruff", argv=("uv", "run", "ruff", "check", ".")),
     Step(
         label="manifests",
-        argv=("uv", "run", "python", "-m", "outcomeeng.scripts.validate_plugins", "."),
+        argv=("uv", "run", "python", "-m", "outcomeeng.validation.plugins", "."),
     ),
     Step(
         label="skills",
@@ -38,7 +38,7 @@ STEPS: Final = (
             "run",
             "python",
             "-m",
-            "outcomeeng.scripts.validate_skill_frontmatter",
+            "outcomeeng.validation.skill_frontmatter",
             *_skill_files(),
         ),
     ),

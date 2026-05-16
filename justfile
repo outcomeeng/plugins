@@ -18,11 +18,11 @@ test-ts *args:
 
 # Check plugin and marketplace manifests
 check-manifests:
-    uv run python -m outcomeeng.scripts.validate_plugins .
+    uv run python -m outcomeeng.validation.plugins .
 
 # Check SKILL.md frontmatter in all skills
 check-skills:
-    find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.scripts.validate_skill_frontmatter {} +
+    find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
 docs:
@@ -42,7 +42,7 @@ fmt-check:
 
 # Run all checks with timing summary (signal-safe Python orchestrator)
 check:
-    uv run python -m outcomeeng.scripts.check
+    uv run python -m outcomeeng.validation
 
 # Install lefthook git hooks
 hooks-install:
@@ -61,9 +61,9 @@ check-installed marketplace="outcomeeng":
     claude_count=$(echo "$claude_files" | grep -c . || true)
     codex_count=$(echo "$codex_files" | grep -c . || true)
     echo "━━━ Claude Code install ($claude_count files) ━━━"
-    echo "$claude_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
+    echo "$claude_files" | xargs uv run python -m outcomeeng.validation.skill_frontmatter
     echo "━━━ Codex install ($codex_count files) ━━━"
-    echo "$codex_files" | xargs uv run python -m outcomeeng.scripts.validate_skill_frontmatter
+    echo "$codex_files" | xargs uv run python -m outcomeeng.validation.skill_frontmatter
     echo "✔ installed skills valid"
 
 # Refresh local Claude and Codex marketplace installs after plugin distribution changes
@@ -85,7 +85,7 @@ sync-marketplace base_ref="":
     fi
     claude plugin marketplace update outcomeeng
     uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
-    uv run python -m outcomeeng.scripts.validate_install
+    uv run python -m outcomeeng.validation.install
     just check-installed
 
 # Push directly, then sync local marketplace installs only when plugin distribution changed

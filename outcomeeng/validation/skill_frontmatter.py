@@ -7,7 +7,7 @@ allowlist maintained here.
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.validate_skill_frontmatter [SKILL.md ...]
+    uv run python -m outcomeeng.validation.skill_frontmatter [SKILL.md ...]
 
 Exit codes:
     0 - All files valid (or no SKILL.md files in args)

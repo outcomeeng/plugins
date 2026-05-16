@@ -1,4 +1,4 @@
-"""Level 1 compliance tests for the check-pipeline orchestrator.
+"""Level 1 compliance tests for the gate orchestrator.
 
 Verifies architectural compliance rules that can be falsified by inspecting
 source code or module-level data:
@@ -11,6 +11,12 @@ source code or module-level data:
   per signal-handler invocation.
 - The orchestrator source contains no `gh run watch` literal and no
   `while True:` loop with an embedded `time.sleep` call.
+
+The compliance scope is the gate's underscore-prefixed modules (`_engine`,
+`_model`, `_spawner`, `_steps`, plus `__init__` and `__main__`). Sibling
+validator modules (`plugins`, `skill_frontmatter`, `install`, `eval_links`)
+in the same `outcomeeng.validation` package are independent CLIs and not
+governed by these assertions.
 """
 
 from __future__ import annotations
@@ -20,8 +26,8 @@ import inspect
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.scripts import check_pipeline as pkg
-from outcomeeng.scripts.check_pipeline import STEPS, Step
+from outcomeeng import validation as pkg
+from outcomeeng.validation import STEPS, Step
 
 RUFF_TOKENS: Final = ("ruff", "check")
 SPX_MARKDOWN_TOKENS: Final = ("spx", "validation", "markdown")
@@ -56,8 +62,17 @@ class TestDeclaredSteps:
 
 
 def _package_modules() -> list[Path]:
+    """Return the gate orchestrator's own modules.
+
+    The `outcomeeng.validation` package contains the gate orchestrator
+    (`_engine`, `_model`, `_spawner`, `_steps`, plus `__init__` and
+    `__main__`) and four sibling validator CLIs (`plugins`,
+    `skill_frontmatter`, `install`, `eval_links`). Only the gate's own
+    modules — those whose filename starts with `_` — are governed by this
+    spec's compliance assertions.
+    """
     package_dir = Path(inspect.getfile(pkg)).parent
-    return sorted(package_dir.glob("*.py"))
+    return sorted(p for p in package_dir.glob("*.py") if p.name.startswith("_"))
 
 
 def _subprocess_importers() -> list[Path]:

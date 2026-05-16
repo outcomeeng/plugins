@@ -1,4 +1,4 @@
-"""Level 1 property tests for the check-pipeline orchestrator.
+"""Level 1 property tests for the gate orchestrator.
 
 Verifies invariants that must hold across arbitrary step lists:
 - Spawn invocation order matches the declared step-list order.
@@ -15,8 +15,8 @@ from typing import Final
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from outcomeeng.scripts.check_pipeline import Step, run
-from outcomeeng_testing.harnesses.check_pipeline import RecordingSpawner
+from outcomeeng.validation import Step, run
+from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 LABEL_ALPHABET: Final = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"

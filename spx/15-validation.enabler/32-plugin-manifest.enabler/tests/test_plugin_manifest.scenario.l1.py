@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.scripts.validate_plugins import (
+from outcomeeng.validation.plugins import (
     check_catalog_sync,
     check_manifest_parity,
     discover_targets,

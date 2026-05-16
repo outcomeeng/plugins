@@ -1,12 +1,12 @@
-# Process Injection for the Check Pipeline
+# Process Injection for the Gate
 
 ## Purpose
 
-This decision governs how the check-pipeline orchestrator creates and supervises subprocesses, so that the orchestrator's behavior — step ordering, header printing, timing summary, exit-code propagation, signal forwarding — is verifiable at `l1` without invoking the real validators it wraps.
+This decision governs how the gate orchestrator creates and supervises subprocesses, so that the orchestrator's behavior — step ordering, header printing, timing summary, exit-code propagation, signal forwarding — is verifiable at `l1` without invoking the real validators it wraps.
 
 ## Context
 
-**Business impact:** The orchestrator runs every step in the marketplace's quality gate. A regression in its sequencing, signal handling, or exit-code propagation silently weakens the gate. Verification has to be cheap enough to run on every change, which means `l1` tests against the orchestrator's logic — not `l2` integration tests against `ruff`, `pytest`, and `dprint`.
+**Business impact:** The gate orchestrator runs every step in the marketplace's quality gate. A regression in its sequencing, signal handling, or exit-code propagation silently weakens the gate. Verification has to be cheap enough to run on every change, which means `l1` tests against the orchestrator's logic — not `l2` integration tests against `ruff`, `pytest`, and `dprint`.
 
 **Technical constraints:**
 
@@ -17,7 +17,7 @@ This decision governs how the check-pipeline orchestrator creates and supervises
 
 ## Decision
 
-The check-pipeline orchestrator accepts a `ProcessSpawner` Protocol parameter for subprocess creation and a `TextIO`-like sink for output, both passed through dependency injection; the production entry point binds them to `subprocess.Popen` (with `start_new_session=True`) and `sys.stdout`, and `l1` tests bind them to in-process doubles that record invocations and emit deterministic exit codes.
+The gate orchestrator accepts a `ProcessSpawner` Protocol parameter for subprocess creation and a `TextIO`-like sink for output, both passed through dependency injection; the production entry point binds them to `subprocess.Popen` (with `start_new_session=True`) and `sys.stdout`, and `l1` tests bind them to in-process doubles that record invocations and emit deterministic exit codes.
 
 ## Rationale
 
@@ -25,7 +25,7 @@ A `ProcessSpawner` Protocol whose single method returns an object implementing `
 
 An output sink as a second injected dependency lets tests capture the header lines (`━━━ {label} ━━━`) and timing summary (`━━━ Timing Summary ━━━` followed by rows) as strings rather than scraping stdout. Production binds it to `sys.stdout`; tests bind it to `io.StringIO`. The sink boundary keeps the orchestrator's prose stable while letting tests assert on what gets emitted.
 
-The step list stays as a module-level `tuple[Step, ...]` of `Step(label, argv)` dataclass instances. Steps are inert data — they do not require their own injection seam — and a module-level tuple keeps `spx/15-validation.enabler/65-check-pipeline.enabler/check-pipeline.md`'s compliance assertion ("the declared step list includes `ruff check` and `spx validation markdown`") falsifiable by reading the constant rather than running the orchestrator.
+The step list stays as a module-level `tuple[Step, ...]` of `Step(label, argv)` dataclass instances. Steps are inert data — they do not require their own injection seam — and a module-level tuple keeps `spx/15-validation.enabler/65-gate.enabler/gate.md`'s compliance assertion ("the declared step list includes `ruff check` and `spx validation markdown`") falsifiable by reading the constant rather than running the orchestrator.
 
 Alternatives rejected:
 
@@ -45,17 +45,17 @@ Alternatives rejected:
 
 ### Recognized by
 
-The orchestrator module exposes a top-level `run(spawner: ProcessSpawner, sink: TextIO, steps: tuple[Step, ...]) -> int` function. The production entry point (`outcomeeng/scripts/check.py`'s `if __name__ == "__main__":` block) constructs the default `ProcessSpawner` adapter over `subprocess.Popen` and passes `sys.stdout`. `l1` tests pass recording doubles for both. No module under `outcomeeng/scripts/check_pipeline/` imports `subprocess` outside the production adapter.
+The orchestrator module exposes a top-level `run(spawner: ProcessSpawner, sink: TextIO, steps: tuple[Step, ...]) -> int` function. The production entry point (`outcomeeng/validation/__main__.py`'s `if __name__ == "__main__":` block) constructs the default `ProcessSpawner` adapter over `subprocess.Popen` and passes `sys.stdout`. `l1` tests pass recording doubles for both. The gate orchestrator's underscore-prefixed modules (`_engine.py`, `_model.py`, `_spawner.py`, `_steps.py`, plus `__init__.py` and `__main__.py`) import `subprocess` only in the production `_spawner.py` adapter. Sibling validator modules in the same package (`plugins.py`, `skill_frontmatter.py`, `install.py`, `eval_links.py`) are independent CLIs and may import `subprocess` for their own purposes.
 
 ### MUST
 
 - The orchestrator's step-execution function accepts the `ProcessSpawner` and the output sink as parameters — enables `l1` verification of step ordering, header emission, timing summary content, and exit-code propagation without launching real validators ([review])
 - The `ProcessSpawner` Protocol method returns a handle exposing `pid: int`, `poll() -> int | None`, `wait() -> int`, and `send_signal_to_group(sig: int) -> None` — names every observable the signal-handling path needs ([review])
 - The production `ProcessSpawner` adapter passes `start_new_session=True` to `subprocess.Popen` so the returned handle's `send_signal_to_group` can target the child's process group via `os.killpg` — keeps the orchestrator's signal-forwarding promise on a real OS process tree ([review])
-- The step list is exposed as a module-level `tuple[Step, ...]` constant (`STEPS`) importable by tests — enables the `spx/15-validation.enabler/65-check-pipeline.enabler/check-pipeline.md` compliance assertion about `ruff check` and `spx validation markdown` to be verified by reading the constant ([review])
+- The step list is exposed as a module-level `tuple[Step, ...]` constant (`STEPS`) importable by tests — enables the `spx/15-validation.enabler/65-gate.enabler/gate.md` compliance assertion about `ruff check` and `spx validation markdown` to be verified by reading the constant ([review])
 
 ### NEVER
 
-- The orchestrator module imports `subprocess` outside the production `ProcessSpawner` adapter — coupling the step loop to the real subprocess module defeats `l1` testability ([review])
+- A gate orchestrator module (`_engine.py`, `_model.py`, `_spawner.py`, `_steps.py`, `__init__.py`, `__main__.py`) imports `subprocess` outside the production `_spawner.py` adapter — coupling the step loop to the real subprocess module defeats `l1` testability ([review])
 - Tests for the orchestrator use `unittest.mock.patch`, `monkeypatch.setattr`, or `MagicMock` to replace `subprocess`, `os.killpg`, `time.monotonic`, or any other module the orchestrator imports — `spx/15-test-infrastructure.pdr.md` `<dependency_injection>` prohibits framework replacement of the behavior under test ([review])
 - The step list is loaded from a config file, environment variable, or plugin discovery mechanism — drift in the gate's composition is the regression `spx/ISSUES.md` records; the fixed tuple is the safeguard ([review])

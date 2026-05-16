@@ -1,4 +1,4 @@
-"""Level 1 scenario tests for the check-pipeline orchestrator.
+"""Level 1 scenario tests for the gate orchestrator.
 
 Verifies the orchestrator's externally observable behavior — header lines,
 timing summary content, exit codes — under a passing pipeline and a
@@ -13,8 +13,8 @@ from __future__ import annotations
 import io
 from typing import Final
 
-from outcomeeng.scripts.check_pipeline import STEPS, Step, run
-from outcomeeng_testing.harnesses.check_pipeline import RecordingSpawner
+from outcomeeng.validation import STEPS, Step, run
+from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 PASS: Final = 0
 FAIL: Final = 2

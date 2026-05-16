@@ -1,4 +1,4 @@
-"""Level 2 scenario test for the check-pipeline orchestrator's signal forwarding.
+"""Level 2 scenario test for the gate orchestrator's signal forwarding.
 
 Exercises the real OS process tree: launches the orchestrator's `run()` in a
 real subprocess with a single long-sleeping step that ignores SIGTERM, sends
@@ -31,7 +31,7 @@ def _wrapper_program() -> str:
     # Prints the child PID to stderr so the test can observe it.
     return r"""
 import sys, io
-from outcomeeng.scripts.check_pipeline import (
+from outcomeeng.validation import (
     ProductionSpawner,
     Step,
     run,
