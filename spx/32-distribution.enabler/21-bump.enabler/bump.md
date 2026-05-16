@@ -4,7 +4,7 @@ PROVIDES the manifest version-bumping orchestration that detects which plugins c
 SO THAT marketplace maintainers and CI workflows
 CAN bump every modified plugin's version field consistently across all manifests for that plugin in a single command, preview the bump without writing, and verify in CI that every changed plugin already carries a bump
 
-The `outcomeeng.distribution.bump` module enumerates plugin directories under `plugins/`, asks an injected change probe which of them have any path under `plugins/{name}/**` changed since `base_ref`, reads the working-tree and `base_ref` versions of every manifest each changed plugin owns (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`), and either writes the next version — incremented on the selected semantic segment — back to every owned manifest (default mode), reports what it would write without touching the filesystem (`--dry-run`), or verifies that every changed plugin's version is already ahead of the base reference (`--check`). The selected segment defaults to `patch`; `minor` and `major` are explicit opt-ins. The base reference defaults to `origin/main`.
+The `outcomeeng.distribution.bump` module enumerates plugin directories under `plugins/`, asks an injected change probe which of them have any path under `plugins/{name}/**` changed since `base_ref` along with the git file-status of each change, reads the working-tree and `base_ref` versions of every manifest each changed plugin owns (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`), and either writes the next version — incremented on the resolved semantic segment — back to every owned manifest (default mode), reports what it would write without touching the filesystem (`--dry-run`), or verifies that every changed plugin's version is already ahead of the base reference (`--check`). Without an explicit `--segment` flag, the segment is auto-detected per plugin: a plugin whose changes add, delete, or rename a skill, command, agent, or whole plugin manifest gets a `minor` bump; any other change pattern gets a `patch` bump. Auto-detection never selects `major` — major bumps require explicit `--segment major`. An explicit `--segment` flag overrides the per-plugin auto-detection and emits a stderr warning naming any plugin whose detected segment differs from the explicit value. The base reference defaults to `origin/main`.
 
 ## Assertions
 
@@ -19,10 +19,14 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under `p
 - Given `--dry-run` and a clean changed plugin at version `0.4.1`, when bump runs, then the would-be new version `0.4.2` is reported on stdout and no manifest is written ([test](tests/test_bump.scenario.l1.py))
 - Given `--check` and every changed plugin's working-tree version is already ahead of its `base_ref` version, when bump runs, then it exits 0 with no diagnostic and no manifest is written ([test](tests/test_bump.scenario.l1.py))
 - Given `--check` and a changed plugin whose working-tree version equals its `base_ref` version, when bump runs, then it exits non-zero with a diagnostic naming the unbumped plugin and no manifest is written ([test](tests/test_bump.scenario.l1.py))
+- Given no explicit `--segment` and a changed plugin whose changes add a new `skills/{slug}/SKILL.md`, when bump runs, then that plugin's version is incremented at the `minor` segment ([test](tests/test_bump.scenario.l1.py))
+- Given no explicit `--segment` and a changed plugin whose only changes are modifications of existing files, when bump runs, then that plugin's version is incremented at the `patch` segment ([test](tests/test_bump.scenario.l1.py))
+- Given explicit `--segment patch` and a changed plugin whose auto-detection would yield `minor`, when bump runs, then that plugin's version is written at the `patch` segment and a stderr warning names the plugin and its detected segment ([test](tests/test_bump.scenario.l1.py))
 
 ### Mappings
 
 - `--segment patch` increments the third semver component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.mapping.l1.py))
+- Auto-detection maps each `(file-status, path-pattern)` pair to a segment: an `A`/`D`/`R` change to `skills/{slug}/SKILL.md`, `commands/{slug}.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
 
 ### Compliance
 
@@ -34,3 +38,6 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under `p
 - NEVER: reformat manifest content beyond the version field — every byte outside the `"version": "{old}"` substring is preserved character-for-character, so version bumps produce minimal diffs and do not churn manifest authors' formatting choices ([test](tests/test_bump.compliance.l1.py))
 - NEVER: write any manifest when `--dry-run` or `--check` is selected — both modes are read-only regardless of plugin state ([test](tests/test_bump.compliance.l1.py))
 - NEVER: combine `--dry-run` with `--check` — the modes are mutually exclusive and the CLI parser rejects their combined use ([test](tests/test_bump.compliance.l1.py))
+- ALWAYS: when `--segment` is unspecified, the resolved segment is the auto-detected per-plugin segment from the file-status pattern of changes under `plugins/{name}/**` ([test](tests/test_bump.compliance.l1.py))
+- ALWAYS: when `--segment` is specified and a plugin's detected segment differs from the explicit value, the explicit value is used and a stderr warning names the plugin and its detected segment ([test](tests/test_bump.compliance.l1.py))
+- NEVER: auto-detection chooses `major` — major bumps require explicit `--segment major` ([test](tests/test_bump.compliance.l1.py))

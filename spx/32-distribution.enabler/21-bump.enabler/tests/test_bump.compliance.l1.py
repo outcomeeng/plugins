@@ -40,6 +40,8 @@ from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
     CODEX_MANIFEST,
     REQUIRED_TOOLS,
+    ChangedPath,
+    FileStatus,
     ManifestRecord,
     Mode,
     Segment,
@@ -50,6 +52,7 @@ from outcomeeng_testing.generators.bump import (
     manifest_fixture_path,
     manifest_relpath,
     manifest_text,
+    patch_changes,
     version_of,
 )
 from outcomeeng_testing.harnesses.bump import (
@@ -69,7 +72,7 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     missing_tool: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo"))
     content_probe = ScriptedContentProbe(content={})
     manifest_reader = ScriptedManifestReader(manifests={})
     manifest_writer = RecordingManifestWriter()
@@ -106,7 +109,9 @@ def test_tool_availability_is_probed_before_any_other_probe_or_write() -> None:
     content = manifest_text(plugin, "0.4.1")
 
     event_log: list[str] = []
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}), event_log=event_log)
+    change_probe = ScriptedChangeProbe(
+        changed=patch_changes(plugin), event_log=event_log
+    )
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, claude_path): content}, event_log=event_log
     )
@@ -150,7 +155,7 @@ def test_branch_already_bumped_refuses_to_write_with_diagnostic(
     working_tree_content = manifest_text(plugin, "0.4.2")
     base_ref_content = manifest_text(plugin, "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, claude_path): base_ref_content},
     )
@@ -193,7 +198,7 @@ def test_branch_already_bumped_blocks_every_changed_plugin_before_any_write(
     bar_wt = manifest_text("bar", "0.4.1")
     bar_base = manifest_text("bar", "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo", "bar"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, foo_path): foo_base,
@@ -232,7 +237,7 @@ def test_unchanged_plugins_never_have_manifests_written() -> None:
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     foo_content = manifest_text("foo", "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo"))
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, foo_path): foo_content},
     )
@@ -284,7 +289,7 @@ def test_dual_manifest_plugin_writes_every_owned_manifest() -> None:
     claude_content = manifest_text(plugin, "0.4.1")
     codex_content = manifest_text(plugin, "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, claude_path): claude_content,
@@ -342,7 +347,7 @@ def test_non_version_content_is_preserved_character_for_character() -> None:
     original = manifest_fixture_path("representative_plugin.json").read_text()
     old_version = version_of(original)
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, claude_path): original},
     )
@@ -388,7 +393,7 @@ def test_read_only_modes_never_write_regardless_of_plugin_state(
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
 
     for wt_version, base_version in [("0.4.1", "0.4.1"), ("0.4.2", "0.4.1")]:
-        change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+        change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
         content_probe = ScriptedContentProbe(
             content={(BASE_REF, claude_path): manifest_text(plugin, base_version)},
         )
@@ -434,3 +439,50 @@ def test_dry_run_and_check_are_mutually_exclusive_at_the_cli_boundary(
     captured = capsys.readouterr()
     assert excinfo.value.code != 0
     assert "not allowed with" in captured.err
+
+
+def test_auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> None:
+    """End-to-end NEVER rule: even when changes include every minor-triggering
+    pattern, auto-detection (segment=None) writes at most a `minor` bump.
+    Major requires explicit `--segment major`.
+
+    Mutants this kills: an `auto_segment` that returns `Segment.MAJOR` on
+    any input, or a `bump()` that interprets None-segment as MAJOR.
+    """
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+
+    # Throw the kitchen sink of minor-triggering patterns at it.
+    changes = (
+        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/skills/new/SKILL.md"),
+        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/commands/new-command.md"),
+        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/agents/new-agent.md"),
+        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/.codex-plugin/plugin.json"),
+    )
+
+    change_probe = ScriptedChangeProbe(changed={plugin: changes})
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, claude_path): content},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        segment=None,  # auto-detect
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    new_version = version_of(written[claude_path])
+    # Minor (0.5.0), never major (1.0.0), even with every minor-triggering pattern present.
+    assert new_version == "0.5.0"

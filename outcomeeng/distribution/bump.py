@@ -30,7 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -64,6 +64,27 @@ class Mode(StrEnum):
     WRITE = "write"
     DRY_RUN = "dry-run"
     CHECK = "check"
+
+
+class FileStatus(StrEnum):
+    """Git file-status tokens emitted by `git diff --name-status -M`."""
+
+    ADDED = "A"
+    DELETED = "D"
+    MODIFIED = "M"
+    RENAMED = "R"
+
+
+@dataclass(frozen=True)
+class ChangedPath:
+    """One repository-relative path changed since `base_ref` with its status.
+
+    For renames, `path` is the destination path (the path that exists in
+    the working tree after the rename).
+    """
+
+    status: FileStatus
+    path: str
 
 
 @dataclass(frozen=True)
@@ -110,10 +131,10 @@ class ManifestRecord:
 
 
 class ChangeProbe(Protocol):
-    """Returns the set of plugin names with any path under
-    `plugins/{name}/**` changed since `base_ref`."""
+    """Returns a mapping from plugin name to the file-status-tagged paths
+    that changed under `plugins/{name}/**` since `base_ref`."""
 
-    def __call__(self, base_ref: str) -> frozenset[str]: ...
+    def __call__(self, base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]: ...
 
 
 class ContentProbe(Protocol):
@@ -156,9 +177,50 @@ def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
     return frozenset(plugins)
 
 
+def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
+    """Resolve the warranted semver segment from a plugin's changed paths.
+
+    An `A`/`D`/`R` change to a structural path inside the plugin yields
+    `MINOR`; every other pattern yields `PATCH`. Auto-detection never
+    selects `MAJOR` — major bumps require explicit human opt-in per
+    `spx/local/committing-changes.md`.
+
+    Structural paths (relative to `plugins/{name}/`):
+
+    - `skills/{slug}/SKILL.md`
+    - `commands/{slug}.md`
+    - `agents/{slug}.md`
+    - `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`
+    """
+    for change in changes:
+        if change.status is FileStatus.MODIFIED:
+            continue
+        if _is_minor_triggering_path(change.path):
+            return Segment.MINOR
+    return Segment.PATCH
+
+
+def _is_minor_triggering_path(path: str) -> bool:
+    parts = path.split("/")
+    if len(parts) < 4 or parts[0] != PLUGINS_DIR or not parts[1]:
+        return False
+    rest = parts[2:]
+    if len(rest) == 3 and rest[0] == "skills" and rest[2] == "SKILL.md":
+        return True
+    if len(rest) == 2 and rest[0] in ("commands", "agents") and rest[1].endswith(".md"):
+        return True
+    if (
+        len(rest) == 2
+        and rest[0] in (".claude-plugin", ".codex-plugin")
+        and rest[1] == "plugin.json"
+    ):
+        return True
+    return False
+
+
 def bump(
     base_ref: str,
-    segment: Segment,
+    segment: Segment | None = None,
     *,
     mode: Mode = Mode.WRITE,
     change_probe: ChangeProbe,
@@ -167,7 +229,13 @@ def bump(
     manifest_writer: ManifestWriter,
     tool_probe: ToolProbe,
 ) -> int:
-    """Run the bump orchestration. Returns the process exit code."""
+    """Run the bump orchestration. Returns the process exit code.
+
+    When `segment` is `None`, the segment is auto-detected per plugin via
+    `auto_segment(changes)` over the `ChangeProbe`'s reported changes.
+    When `segment` is a concrete value, it overrides per-plugin detection
+    and a stderr warning names any plugin whose detected segment differs.
+    """
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
@@ -177,13 +245,22 @@ def bump(
     if not changed:
         return 0
 
-    plans: list[tuple[str, ManifestRecord, Version]] = []
+    plans: list[tuple[str, ManifestRecord, Version, Segment]] = []
     already_bumped_plugins: list[str] = []
     unbumped_plugins: list[str] = []
     for plugin in sorted(changed):
         records = manifest_reader(plugin)
         if not records:
             continue
+        plugin_changes = changed[plugin]
+        detected = auto_segment(plugin_changes)
+        if segment is not None and segment is not detected:
+            print(
+                f"Plugin {plugin}: explicit --segment {segment} overrides "
+                f"detected {detected}",
+                file=sys.stderr,
+            )
+        resolved = segment if segment is not None else detected
         plugin_already_bumped = False
         for record in records:
             working_tree_version = _version_from_manifest_text(record.content)
@@ -192,7 +269,7 @@ def bump(
                 base_ref_version = _version_from_manifest_text(base_ref_content)
                 if working_tree_version != base_ref_version:
                     plugin_already_bumped = True
-            plans.append((plugin, record, working_tree_version))
+            plans.append((plugin, record, working_tree_version, resolved))
         if plugin_already_bumped:
             already_bumped_plugins.append(plugin)
         else:
@@ -217,11 +294,14 @@ def bump(
             )
         return 1
 
-    increment = _SEGMENT_DISPATCH[segment]
-    for plugin, record, working_tree_version in plans:
+    for plugin, record, working_tree_version, resolved in plans:
+        increment = _SEGMENT_DISPATCH[resolved]
         new_version = increment(working_tree_version)
         if mode is Mode.DRY_RUN:
-            print(f"{plugin}: {record.path} {working_tree_version} -> {new_version}")
+            print(
+                f"{plugin}: {record.path} {working_tree_version} -> "
+                f"{new_version} ({resolved})"
+            )
             continue
         manifest_writer(record.path, _replace_version(record.content, str(new_version)))
     return 0
@@ -236,9 +316,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         mode = Mode.CHECK
     else:
         mode = Mode.WRITE
+    segment = Segment(args.segment) if args.segment is not None else None
     return bump(
         args.base_ref,
-        Segment(args.segment),
+        segment,
         mode=mode,
         change_probe=_real_change_probe,
         content_probe=_real_content_probe,
@@ -263,14 +344,44 @@ def _replace_version(content: str, new_version: str) -> str:
     return new_content
 
 
-def _real_change_probe(base_ref: str) -> frozenset[str]:
+def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
     result = subprocess.run(
-        ["git", "diff", "--name-only", base_ref, "--"],
+        ["git", "diff", "--name-status", "-M", base_ref, "--"],
         capture_output=True,
         text=True,
         check=True,
     )
-    return changed_plugins_from_diff(result.stdout.splitlines())
+    changes: dict[str, list[ChangedPath]] = {}
+    for line in result.stdout.splitlines():
+        change = _parse_diff_line(line)
+        if change is None:
+            continue
+        parts = change.path.split("/", 2)
+        if len(parts) < 2 or parts[0] != PLUGINS_DIR or not parts[1]:
+            continue
+        changes.setdefault(parts[1], []).append(change)
+    return {plugin: tuple(paths) for plugin, paths in changes.items()}
+
+
+def _parse_diff_line(line: str) -> ChangedPath | None:
+    if not line:
+        return None
+    fields = line.split("\t")
+    if not fields:
+        return None
+    raw_status = fields[0]
+    status_letter = raw_status[0] if raw_status else ""
+    try:
+        status = FileStatus(status_letter)
+    except ValueError:
+        return None
+    if status is FileStatus.RENAMED:
+        if len(fields) < 3:
+            return None
+        return ChangedPath(status=status, path=fields[2])
+    if len(fields) < 2:
+        return None
+    return ChangedPath(status=status, path=fields[1])
 
 
 def _real_content_probe(base_ref: str, path: str) -> str | None:
@@ -321,8 +432,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--segment",
         choices=[s.value for s in Segment],
-        default=Segment.PATCH.value,
-        help="Semver segment to increment (default: patch).",
+        default=None,
+        help=(
+            "Semver segment to increment. When omitted, the segment is "
+            "auto-detected per plugin from the file-status pattern of "
+            "changes under plugins/<name>/**. When provided, overrides "
+            "auto-detection for every changed plugin and emits a stderr "
+            "warning naming any plugin whose detected segment differs."
+        ),
     )
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
@@ -347,7 +464,9 @@ __all__ = [
     "PLUGINS_DIR",
     "REQUIRED_TOOLS",
     "ChangeProbe",
+    "ChangedPath",
     "ContentProbe",
+    "FileStatus",
     "ManifestReader",
     "ManifestRecord",
     "ManifestWriter",
@@ -355,6 +474,7 @@ __all__ = [
     "Segment",
     "ToolProbe",
     "Version",
+    "auto_segment",
     "bump",
     "changed_plugins_from_diff",
     "main",

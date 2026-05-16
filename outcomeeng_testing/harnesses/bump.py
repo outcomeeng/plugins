@@ -27,7 +27,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from collections.abc import Mapping
+
 from outcomeeng.distribution.bump import (
+    ChangedPath,
     ChangeProbe,
     ContentProbe,
     ManifestReader,
@@ -54,13 +57,17 @@ class RecordingToolProbe:
 
 @dataclass
 class ScriptedChangeProbe:
-    """ChangeProbe that returns a scripted set of plugin names for any base_ref."""
+    """ChangeProbe that returns a scripted plugin→changed-paths mapping.
 
-    changed: frozenset[str]
+    `changed` maps plugin name → tuple of `ChangedPath` values; the probe
+    returns the mapping unchanged for any `base_ref` query.
+    """
+
+    changed: Mapping[str, tuple[ChangedPath, ...]]
     queries: list[str] = field(default_factory=list)
     event_log: list[str] | None = None
 
-    def __call__(self, base_ref: str) -> frozenset[str]:
+    def __call__(self, base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
         self.queries.append(base_ref)
         if self.event_log is not None:
             self.event_log.append(f"change:{base_ref}")

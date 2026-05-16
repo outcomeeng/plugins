@@ -32,6 +32,8 @@ from outcomeeng.distribution.bump import (
 from outcomeeng_testing.generators.bump import (
     manifest_relpath,
     manifest_text,
+    minor_change,
+    patch_changes,
     version_of,
 )
 from outcomeeng_testing.harnesses.bump import (
@@ -52,7 +54,7 @@ def test_only_changed_plugin_manifests_are_written() -> None:
     foo_content = manifest_text("foo", "0.4.1")
     bar_content = manifest_text("bar", "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo"))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, foo_claude): foo_content,
@@ -92,7 +94,7 @@ def test_dual_manifest_plugin_writes_both_with_same_new_version() -> None:
     claude_content = manifest_text(plugin, "0.4.1")
     codex_content = manifest_text(plugin, "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, claude_path): claude_content,
@@ -146,7 +148,7 @@ def test_segment_selection_produces_expected_version(
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     claude_content = manifest_text(plugin, old_version)
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, claude_path): claude_content},
     )
@@ -172,7 +174,7 @@ def test_segment_selection_produces_expected_version(
 
 
 def test_no_changed_plugins_exits_zero_without_writing() -> None:
-    change_probe = ScriptedChangeProbe(changed=frozenset())
+    change_probe = ScriptedChangeProbe(changed={})
     content_probe = ScriptedContentProbe(content={})
     manifest_reader = ScriptedManifestReader(manifests={})
     manifest_writer = RecordingManifestWriter()
@@ -200,7 +202,7 @@ def test_dry_run_reports_would_be_new_version_without_writing(
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     content = manifest_text(plugin, "0.4.1")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({plugin}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
     content_probe = ScriptedContentProbe(
         content={(BASE_REF, claude_path): content},
     )
@@ -240,7 +242,7 @@ def test_check_passes_when_every_changed_plugin_is_already_bumped(
     bar_wt = manifest_text("bar", "0.5.0")
     bar_base = manifest_text("bar", "0.4.7")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo", "bar"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, foo_path): foo_base,
@@ -284,7 +286,7 @@ def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
     bar_wt = manifest_text("bar", "0.5.0")
     bar_base = manifest_text("bar", "0.4.7")
 
-    change_probe = ScriptedChangeProbe(changed=frozenset({"foo", "bar"}))
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
     content_probe = ScriptedContentProbe(
         content={
             (BASE_REF, foo_path): foo_unchanged,
@@ -317,3 +319,106 @@ def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
     # Diagnostic names the unbumped plugin but not the already-bumped one.
     assert "foo" in captured.err
     assert "bar" not in captured.err
+
+
+def test_auto_detected_segment_is_minor_for_new_skill_addition() -> None:
+    """No explicit --segment + an ADDED SKILL.md → minor bump for that plugin."""
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+
+    change_probe = ScriptedChangeProbe(changed={plugin: minor_change(plugin)})
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, claude_path): content},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        segment=None,  # auto-detect
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    # 0.4.1 + auto-detected minor → 0.5.0 (not 0.4.2 which would be patch).
+    assert version_of(written[claude_path]) == "0.5.0"
+
+
+def test_auto_detected_segment_is_patch_for_modification_only_changes() -> None:
+    """No explicit --segment + only MODIFIED changes → patch bump."""
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, claude_path): content},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        segment=None,  # auto-detect
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    assert version_of(written[claude_path]) == "0.4.2"
+
+
+def test_explicit_segment_patch_overrides_detected_minor_with_warning(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`--segment patch` against an auto-detected `minor` writes patch
+    and warns on stderr naming the plugin and the detected segment.
+    """
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    content = manifest_text(plugin, "0.4.1")
+
+    change_probe = ScriptedChangeProbe(changed={plugin: minor_change(plugin)})
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, claude_path): content},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={plugin: (ManifestRecord(path=claude_path, content=content),)},
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        Segment.PATCH,  # explicit override
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    written = dict(manifest_writer.writes)
+    assert exit_code == 0
+    # Explicit patch wins → 0.4.2 (not 0.5.0).
+    assert version_of(written[claude_path]) == "0.4.2"
+    # Warning surfaces the discrepancy on stderr.
+    assert plugin in captured.err
+    assert "minor" in captured.err

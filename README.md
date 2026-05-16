@@ -139,23 +139,41 @@ seven days.
 When working on the marketplace itself, every branch that changes a plugin's
 distribution surface bumps that plugin's version exactly once. The `just bump`
 recipe automates this — it detects which plugins changed under `plugins/<name>/**`
-since `origin/main`, updates the `version` field in every manifest each plugin
-owns (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`)
-in lockstep, and refuses to bump a second time when the branch already carries
-a bump:
+since `origin/main`, classifies each plugin's change pattern into a semver
+segment, and updates the `version` field in every manifest each plugin owns
+(`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`)
+in lockstep:
 
 ```bash
-just bump                          # patch bump for every changed plugin vs origin/main
-just bump origin/main minor        # minor bump
-just bump main major               # major bump vs local main
+just bump                          # auto-detect segment per plugin vs origin/main
 just bump-dry                      # preview without writing
 just bump-check                    # CI gate: exit non-zero if any changed plugin needs a bump
+just bump origin/main minor        # force minor for every changed plugin (warns on disagreements)
+just bump main major               # major bump vs local main (must be explicit)
 ```
+
+#### Auto-detection rules
+
+By default, the segment is detected per plugin from the file-status pattern of
+its changes:
+
+| Plugin's changes include…                                                                          | Segment |
+| -------------------------------------------------------------------------------------------------- | ------- |
+| Added / deleted / renamed `skills/<slug>/SKILL.md`                                                 | `minor` |
+| Added / deleted / renamed `commands/<slug>.md` or `agents/<slug>.md`                               | `minor` |
+| Added `.claude-plugin/plugin.json` or `.codex-plugin/plugin.json` (whole plugin or new surface)    | `minor` |
+| Anything else — modifications to existing files, internal helpers, templates, references, fixtures | `patch` |
+
+`major` is never auto-detected — it captures a deliberate stability commitment
+and requires explicit `--segment major`. Passing an explicit `--segment` flag
+overrides per-plugin detection and emits a stderr warning naming any plugin
+whose detected segment differed (so you don't silently override the file-status
+evidence). The bumper refuses to write when the branch already carries a bump,
+and preserves manifest bytes character-for-character outside the `version` field
+so bumps produce minimal diffs.
 
 Only paths under `plugins/<name>/**` count as distribution-surface changes; edits
 to `spx/`, `AGENTS.md`, tests, or other top-level files do not trigger a bump.
-The bumper preserves manifest formatting character-for-character outside the
-`version` field, so bumps produce minimal diffs.
 
 ## Plugins
 

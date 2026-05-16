@@ -21,7 +21,12 @@ from pathlib import Path
 import outcomeeng_testing
 from hypothesis import strategies as st
 
-from outcomeeng.distribution.bump import PLUGINS_DIR
+from outcomeeng.distribution.bump import (
+    CLAUDE_MANIFEST,
+    PLUGINS_DIR,
+    ChangedPath,
+    FileStatus,
+)
 
 _FIXTURES_ROOT: Path = Path(outcomeeng_testing.__file__).parent / "fixtures" / "bump"
 
@@ -48,6 +53,33 @@ def manifest_fixture_path(name: str) -> Path:
     a temporary product; the fixture is never imported as a Python module.
     """
     return _FIXTURES_ROOT / name
+
+
+def patch_change(plugin: str) -> tuple[ChangedPath, ...]:
+    """Single MODIFIED manifest change — `auto_segment` yields PATCH."""
+    return (
+        ChangedPath(
+            status=FileStatus.MODIFIED,
+            path=manifest_relpath(plugin, CLAUDE_MANIFEST),
+        ),
+    )
+
+
+def minor_change(plugin: str, *, slug: str = "new-skill") -> tuple[ChangedPath, ...]:
+    """Single ADDED SKILL.md change — `auto_segment` yields MINOR."""
+    return (
+        ChangedPath(
+            status=FileStatus.ADDED,
+            path=f"{PLUGINS_DIR}/{plugin}/skills/{slug}/SKILL.md",
+        ),
+    )
+
+
+def patch_changes(*plugins: str) -> dict[str, tuple[ChangedPath, ...]]:
+    """Build a `ChangeProbe`-shaped mapping where each plugin gets a
+    single MODIFIED change (auto-detected segment: PATCH).
+    """
+    return {plugin: patch_change(plugin) for plugin in plugins}
 
 
 def plugin_names() -> st.SearchStrategy[str]:
@@ -94,6 +126,9 @@ __all__ = [
     "manifest_fixture_path",
     "manifest_relpath",
     "manifest_text",
+    "minor_change",
+    "patch_change",
+    "patch_changes",
     "plugin_names",
     "relative_subpaths",
     "version_of",
