@@ -130,9 +130,9 @@ class TestHarnessSurface:
     """The harness exposes every symbol the spec mandates.
 
     The thread-store spec asserts that the harness exposes
-    ``make_pr_json``, ``with_temp_local_store``, ``run_script``, and an
-    importlib loader for the facade module. These tests verify the
-    contract holds and the helpers behave as advertised.
+    ``make_changes_json``, ``with_temp_local_store``, ``run_script``,
+    and an importlib loader for the facade module. These tests verify
+    the contract holds and the helpers behave as advertised.
     """
 
     def test_with_temp_local_store_restores_environment(
