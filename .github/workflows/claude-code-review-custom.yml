@@ -15,7 +15,7 @@
 # Optional inputs cover model selection, full claude_args passthrough,
 # custom trigger phrase, Bedrock/Vertex routing, and a runner override.
 
-name: Claude Code Review
+name: Custom Code Review
 
 on:
   workflow_call:
