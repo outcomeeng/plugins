@@ -1,0 +1,12 @@
+{
+  "name": "fixture-plugin",
+  "version": "0.4.1",
+  "description": "Mixed-case description mentioning version 0.4.1 inline in prose",
+  "author": {
+    "name": "Outcome Engineering"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": ["compact", "array", "stays", "single-line"],
+  "skills": "./skills/"
+}
