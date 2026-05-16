@@ -2,9 +2,13 @@
 
 Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository. Marketplace-specific overrides to the base merge flow.
 
+## Merge authority
+
+This repository follows the autonomous-merge default from `/managing-pr` `<merge_gate>`. When all gate conditions hold (no `BLOCKING` or `NEEDS-ANSWER` work, terminal-green checks, five-minute review window elapsed, branch rebased onto current base, ready PR), the agent merges immediately using the command in `## Merge command` below — no separate explicit human merge instruction is required.
+
 ## Merge command
 
-When the user authorizes the merge, use a merge commit (preserves PR history; matches existing main):
+Use a merge commit (preserves PR history; matches existing main):
 
 ```bash
 gh pr merge <pr-number> --merge
