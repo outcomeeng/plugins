@@ -2,12 +2,12 @@
 
 Every review finding must be classified by required receiver action. Use only these four classes as finding headings:
 
-| Class          | Receiver action              | Use when                                                                                                                                                         |
-| -------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKING`     | Fix in this PR before merge. | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break. |
-| `NEEDS-ANSWER` | Answer before merge.         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`.                                        |
-| `FOLLOW-UP`    | Track outside this PR.       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change.                                                          |
-| `NOTE`         | No action expected.          | Context, praise, explanation, or an observation that does not create work.                                                                                       |
+| Class          | Receiver action             | Use when                                                                                                                                                        |
+| -------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING`     | Fix in this PR before merge | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break |
+| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`                                        |
+| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change                                                          |
+| `NOTE`         | No action expected          | Context, praise, explanation, or an observation that does not create work                                                                                       |
 
 Do not use `P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, or `nit` as finding headings. Risk words may appear inside the rationale only when they add concrete evidence.
 
