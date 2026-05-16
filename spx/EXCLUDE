@@ -18,6 +18,7 @@
 21-spec-tree.enabler/54-bootstrapping.enabler
 21-spec-tree.enabler/65-applying.enabler
 21-spec-tree.enabler/65-committing.enabler
+21-spec-tree.enabler/76-pr-workflow.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler
 21-spec-tree.enabler/13-agent-environment.enabler
