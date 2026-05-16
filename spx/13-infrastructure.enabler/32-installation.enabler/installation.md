@@ -24,4 +24,4 @@ CAN refresh installed plugins without breaking active sessions or local tool sta
 ### Compliance
 
 - ALWAYS: marketplace sync and direct-publish wrappers refresh installed plugins only when the published range changes plugin distribution files under `plugins/`, `.claude-plugin/`, or `.agents/plugins`; spec-only and escape-hatch-only commits do not refresh marketplace caches ([review])
-- NEVER: derive the preservation set from a pre-upgrade cache snapshot — the set is computed from git history of the working-tree manifest and the working-tree's current published version, never from observed cache state ([review])
+- NEVER: derive the preservation set from a pre-upgrade cache snapshot — the set is always computed from current repository state (git history of the working-tree manifest for Codex, cache directory listing for Claude) and the working-tree's current published version, never from observed cache state ([review])
