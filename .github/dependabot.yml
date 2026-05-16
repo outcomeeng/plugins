@@ -1,0 +1,24 @@
+# Dependabot keeps SHA-pinned GitHub Actions current. When a new release of
+# an action ships, it opens a PR that updates the SHA AND the trailing
+# `# vX.Y.Z` comment together, so reviewers can see at a glance which version
+# is moving without resolving the SHA by hand.
+#
+# The github-actions ecosystem covers everything under .github/workflows/.
+# Reusable-workflow refs (uses: <owner>/<repo>/.github/workflows/<file>@<ref>)
+# are tracked too, including outcomeeng/gh-actions/.github/workflows/claude.yml
+# which is pinned to a main-branch SHA.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
