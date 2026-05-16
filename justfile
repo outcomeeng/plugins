@@ -68,25 +68,7 @@ check-installed marketplace="outcomeeng":
 
 # Refresh local Claude and Codex marketplace installs after plugin distribution changes
 sync-marketplace base_ref="":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    for tool in claude codex uv; do
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            echo "Missing required tool: $tool" >&2
-            exit 1
-        fi
-    done
-    if [[ -n "{{base_ref}}" ]]; then
-        changed_paths="$(git diff --name-only "{{base_ref}}" HEAD -- plugins .claude-plugin .agents/plugins)"
-        if [[ -z "$changed_paths" ]]; then
-            echo "No plugin distribution changes since {{base_ref}}; skipping marketplace sync"
-            exit 0
-        fi
-    fi
-    claude plugin marketplace update outcomeeng
-    uv run python -m outcomeeng.distribution.codex_cache outcomeeng
-    uv run python -m outcomeeng.validation.install
-    just check-installed
+    uv run python -m outcomeeng.distribution.sync {{base_ref}}
 
 # Push directly, then sync local marketplace installs only when plugin distribution changed
 push-marketplace *push_args:
