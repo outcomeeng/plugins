@@ -26,6 +26,12 @@ from typing import Any
 ENV_BACKEND = "SPX_VET_BACKEND"
 DEFAULT_BACKEND_NAME = "local"
 
+# Override env for ``current_slug()`` — when set, the value is the
+# branch name the helper feeds into ``branch_slug``. Backend-agnostic:
+# the local backend translates branch → slug via ``branch_slug``; a
+# future ``gh_pr`` backend would translate branch → PR number.
+ENV_BRANCH = "SPX_VET_BRANCH"
+
 
 # Exception types are declared in ``errors.py`` so backend modules can
 # raise them without forming an import cycle with this facade. Loaded
@@ -163,3 +169,42 @@ def list(slug: str) -> "builtins.list[str]":  # noqa: A001 — module-level CRUD
     """Return the record names present under ``slug``."""
     names: builtins.list[str] = get_backend().list(slug)
     return names
+
+
+# ---------------------------------------------------------------------------
+# Slug derivation — the CRUD CLIs fall back to this when ``--slug`` is omitted.
+# ---------------------------------------------------------------------------
+
+
+def current_slug() -> str:
+    """Return the slug for the current thread, derived from env or git.
+
+    Source precedence:
+
+    1. ``SPX_VET_BRANCH`` env — explicit, backend-agnostic override
+    2. ``git symbolic-ref --short HEAD`` in the current working
+       directory — the operator's current branch
+
+    Detached HEAD or missing git aborts with a structured error message
+    that names the ``SPX_VET_BRANCH`` override so the operator can
+    recover without reading source.
+
+    Slug derivation itself is delegated to the canonical
+    ``branch_slug`` re-exported from the auditing skill.
+    """
+    branch_slug_mod = _load_sibling("branch_slug")
+    branch = os.environ.get(ENV_BRANCH, "").strip()
+    if branch:
+        return str(branch_slug_mod.branch_slug(branch))
+    try:
+        branch = branch_slug_mod.detect_current_branch(pathlib.Path.cwd())
+    except branch_slug_mod.DetachedHeadError as exc:
+        raise ConfigurationError(
+            f"cannot derive slug on detached HEAD; set {ENV_BRANCH} to override: {exc}"
+        ) from exc
+    except FileNotFoundError as exc:
+        # ``subprocess.run`` raises FileNotFoundError when git is not on PATH.
+        raise ConfigurationError(
+            f"cannot derive slug: git is not on PATH; set {ENV_BRANCH} to override"
+        ) from exc
+    return str(branch_slug_mod.branch_slug(branch))

@@ -11,12 +11,16 @@ universal rules:
 - No CRUD CLI calls ``open()``, ``os.remove``/``os.unlink``,
   ``shutil.rmtree``, or ``Path.write_text``/``write_bytes``/``unlink`` —
   verified by AST inspection.
+- Every CRUD CLI's ``--slug`` argparse argument is optional and falls
+  back to ``thread_store.current_slug()`` when omitted — verified by
+  source-level inspection of the ``add_argument`` call.
 """
 
 from __future__ import annotations
 
 import ast
 import pathlib
+import re
 
 import pytest
 
@@ -129,4 +133,39 @@ class TestCliAvoidsDirectFilesystemPrimitives:
         assert not violations, (
             f"{script_path.name} uses forbidden filesystem primitives: "
             + "; ".join(violations)
+        )
+
+
+class TestCrudCliSlugIsOptional:
+    """Source-level check: ``--slug`` is optional on every CRUD CLI.
+
+    The agent never names the thread address; every CRUD CLI falls back
+    to ``thread_store.current_slug()`` when ``--slug`` is omitted.
+    Guards against an accidental regression where ``--slug`` is made
+    ``required=True`` again. Mirrors the analogous
+    ``TestComputeDiffSlugIsOptional`` check in the reviewing-changes
+    lens's compliance test.
+    """
+
+    @pytest.mark.parametrize(
+        "script_path",
+        [
+            WRITE_RECORD_SCRIPT,
+            READ_RECORD_SCRIPT,
+            DELETE_RECORD_SCRIPT,
+            LIST_RECORDS_SCRIPT,
+        ],
+    )
+    def test_slug_argument_is_optional(self, script_path: pathlib.Path) -> None:
+        source = script_path.read_text(encoding="utf-8")
+        slug_arg_match = re.search(
+            r"add_argument\(\s*['\"]--slug['\"][^)]*\)", source, re.DOTALL
+        )
+        assert slug_arg_match is not None, (
+            f"{script_path.name} must declare a --slug argparse argument so "
+            "callers can override slug derivation in tests"
+        )
+        assert "required=True" not in slug_arg_match.group(0), (
+            f"{script_path.name} --slug must NOT be required=True — the CLI "
+            "derives the slug via thread_store.current_slug() when omitted"
         )

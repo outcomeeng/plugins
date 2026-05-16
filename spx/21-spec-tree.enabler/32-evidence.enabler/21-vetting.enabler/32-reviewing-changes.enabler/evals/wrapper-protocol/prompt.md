@@ -12,14 +12,13 @@
 You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol is:
 
 1. Invoke the `spec-tree:reviewing-changes` skill.
-2. Read `pr.json` for the current branch slug via the thread-store `read_record.py` CLI.
-3. Run `compute_diff.py` against the recorded `baseRefName`.
-4. Apply the swappable judgment-style prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md` to the diff.
-5. Emit a `review-result.json` document conforming to the schema in `review_result.py`.
-6. Invoke `validate_review_result.py` against the emitted JSON. If it exits non-zero, fix the issue and re-emit. Loop until exit 0.
-7. Persist the validated JSON via the thread-store `write_record.py --name review-result.json` CLI.
-8. Run `render_review.py` to produce the markdown surface.
-9. Persist the rendered markdown via `write_record.py --name review.md`.
+2. Run `compute_diff.py` (no arguments — the script resolves the current thread and `base_ref` from env, an optional `changes.json` override in the thread, or git defaults; it aborts with stderr naming every source when none yields a value).
+3. Apply the swappable judgment-style prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md` to the diff.
+4. Emit a `review-result.json` document conforming to the schema in `review_result.py`.
+5. Invoke `validate_review_result.py` against the emitted JSON. If it exits non-zero, fix the issue and re-emit. Loop until exit 0.
+6. Persist the validated JSON via the thread-store `write_record.py --name review-result.json` CLI (no `--slug` — the CLI resolves the thread internally).
+7. Run `render_review.py` to produce the markdown surface (no `--slug`).
+8. Persist the rendered markdown via `write_record.py --name review.md` (no `--slug`).
 
 **The rules under audit in this eval:**
 
@@ -45,4 +44,4 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 }
 ```
 
-Each `tool_calls` entry is a short string naming the CLI script (e.g. `"read_record.py --name pr.json"`, `"validate_review_result.py"`, `"write_record.py --name review-result.json"`). Use the script basename without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `review_result_decision` field reports the decision your simulated agent would emit. The grader checks structural presence in `tool_calls` and the decision direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).
+Each `tool_calls` entry is a short string naming the CLI script (e.g. `"compute_diff.py"`, `"validate_review_result.py"`, `"write_record.py --name review-result.json"`). Use the script basename without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `review_result_decision` field reports the decision your simulated agent would emit. The grader checks structural presence in `tool_calls` and the decision direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).

@@ -52,6 +52,10 @@ _audit_orchestrator = _load_audit_orchestrator()
 
 # Re-export. ``is`` identity holds — the same function object.
 branch_slug = _audit_orchestrator.branch_slug
+detect_current_branch = _audit_orchestrator.detect_current_branch
+detect_base_ref = _audit_orchestrator.detect_base_ref
+DetachedHeadError = _audit_orchestrator.DetachedHeadError
+BaseRefNotConfiguredError = _audit_orchestrator.BaseRefNotConfiguredError
 BRANCH_SLUG_MAX_LENGTH = _audit_orchestrator.BRANCH_SLUG_MAX_LENGTH
 BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = (
     _audit_orchestrator.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH

@@ -69,6 +69,18 @@ CELL_ESCAPE_PIPE = r"\|"
 CELL_ESCAPE_NEWLINE = r"\n"
 
 
+class BaseRefNotConfiguredError(RuntimeError):
+    """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
+
+    The default ``detect_base_ref(strict=False)`` falls back to
+    ``DEFAULT_BASE_REF`` because the auditing skill tolerates a missing
+    remote (single-developer repos, fresh bootstraps). The strict
+    variant exists for the reviewing-changes lens, which refuses to
+    pick a fallback because the operator needs a definitive answer
+    about which ref the diff was computed against.
+    """
+
+
 class DetachedHeadError(RuntimeError):
     """Raised when current-branch detection runs against a detached HEAD.
 
@@ -316,7 +328,7 @@ def is_sha_reachable(sha: str, *, repo: pathlib.Path) -> bool:
     return True
 
 
-def detect_base_ref(repo: pathlib.Path) -> str:
+def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
     """Return the bare base-branch name configured by ``origin/HEAD``.
 
     Reads ``refs/remotes/origin/HEAD`` and strips the
@@ -326,8 +338,14 @@ def detect_base_ref(repo: pathlib.Path) -> str:
     git before any audit runs.
 
     When the symbolic ref is absent (no remote configured, fresh
-    bootstrap, solo developer repo), returns ``DEFAULT_BASE_REF`` so
-    callers can still compose diff ranges without halting.
+    bootstrap, solo developer repo):
+
+    - ``strict=False`` (default): returns ``DEFAULT_BASE_REF`` so callers
+      can still compose diff ranges without halting. The auditing skill
+      relies on this fallback.
+    - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
+      reviewing-changes lens uses this variant so the operator gets a
+      definitive answer rather than a silently-chosen literal.
     """
     result = subprocess.run(
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],  # noqa: S607 — git resolved via PATH by design; portable helper, no fixed install path
@@ -337,10 +355,16 @@ def detect_base_ref(repo: pathlib.Path) -> str:
         check=False,
     )
     if result.returncode != 0:
+        if strict:
+            raise BaseRefNotConfiguredError(f"refs/remotes/origin/HEAD unset at {repo}")
         return DEFAULT_BASE_REF
     line = result.stdout.strip()
     if line.startswith(ORIGIN_HEAD_REF_PREFIX):
         return line[len(ORIGIN_HEAD_REF_PREFIX) :]
+    if strict:
+        raise BaseRefNotConfiguredError(
+            f"refs/remotes/origin/HEAD has unexpected shape: {line!r}"
+        )
     return DEFAULT_BASE_REF
 
 
