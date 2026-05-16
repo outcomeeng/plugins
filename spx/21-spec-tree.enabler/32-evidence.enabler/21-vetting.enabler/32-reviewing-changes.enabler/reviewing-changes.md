@@ -1,0 +1,40 @@
+# Reviewing Changes
+
+PROVIDES a vetting lens that produces a structured judgment-style review of working changes — a `review-result.json` machine-readable result plus a `review.md` human-readable surface — against an explicit base ref, persisted through thread-store and validated by a Python policy module whose CLI is the arbiter
+SO THAT developers reviewing their own changes before opening a PR and CI reviewing a branch's diff against its base ref
+CAN obtain a deterministically-validated review (decision plus structured findings plus acknowledgements) that the producing agent cannot self-approve into an inconsistent state
+
+## Assertions
+
+### Scenarios
+
+- Given a `pr.json` with `base_ref` set under the configured thread-store backend, the script chain reads it, computes the diff against `base_ref`, emits a review result, validates it through the arbiter CLI, and writes both `review-result.json` and `review.md` for the current branch slug ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given a JSON document conforming to the review-result schema on stdin or via `--file`, `validate_review_result.py` exits 0 ([test](tests/test_validate_review_result.scenario.l1.py))
+- Given a JSON document missing a required key, `validate_review_result.py` exits non-zero with a structured error message naming the missing key ([test](tests/test_validate_review_result.scenario.l1.py))
+- Given a JSON document with an unknown `decision`, `severity`, or `concern` value, `validate_review_result.py` exits non-zero with a structured error message naming the unknown value and the allowed set ([test](tests/test_validate_review_result.scenario.l1.py))
+- Given a JSON document where `decision == "approve"` and at least one finding has `severity == "must_fix"`, `validate_review_result.py` exits non-zero with a structured error naming the offending finding identifiers ([test](tests/test_validate_review_result.scenario.l1.py))
+- `review_result.parse_json` returns a `ReviewResult` dataclass on a conforming document and raises `ReviewResultValidationError` on every violation surfaced by the arbiter ([test](tests/test_review_result.scenario.l1.py))
+- `review_result.to_json_dict` and `review_result.from_json_dict` round-trip a `ReviewResult` instance without loss ([test](tests/test_review_result.scenario.l1.py))
+
+### Mappings
+
+- `Decision` enum members map to the wire values `approve`, `request_changes`, `comment` ([test](tests/test_review_result.scenario.l1.py))
+- `Severity` enum members map to the wire values `must_fix`, `suggestion`, `nit` ([test](tests/test_review_result.scenario.l1.py))
+- `Concern` enum members map to exactly the eight wire values `quality`, `bugs`, `performance`, `security`, `test_coverage`, `architecture`, `docs`, `consistency` ([test](tests/test_review_result.scenario.l1.py))
+
+### Properties
+
+- For every `ReviewResult` instance, `from_json_dict(to_json_dict(r)) == r` — serialization is lossless ([test](tests/test_review_result.property.l1.py))
+- For every finding with `severity == "must_fix"` combined with `decision == "approve"`, `parse_json` raises `ReviewResultValidationError` — the consistency invariant holds across the full input space, not just sampled examples ([test](tests/test_review_result.property.l1.py))
+
+### Compliance
+
+- ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Decision`, `Severity`, `Concern` enums — the canonical review-result schema lives in one Python module ([test](tests/test_review_result.scenario.l1.py))
+- ALWAYS: `validate_review_result.py` accepts JSON on stdin or via `--file` and pipes it through `review_result.parse_json` — the CLI is the arbiter the wrapper agent invokes to validate every result it emits ([test](tests/test_validate_review_result.scenario.l1.py))
+- ALWAYS: every script under `plugins/spec-tree/skills/reviewing-changes/scripts/` performs every filesystem effect through `thread_store` — no script calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any other direct filesystem primitive ([test](tests/test_reviewing_changes.compliance.l1.py))
+- ALWAYS: the swappable review prompt template lives at `plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` and the skill prose loads it via `${CLAUDE_SKILL_DIR}/references/review-prompt.md` ([test](tests/test_reviewing_changes.compliance.l1.py))
+- ALWAYS: the wrapper agent at `plugins/spec-tree/agents/changes-reviewer.md` declares `model: sonnet`, `tools: Bash, Read, Skill`, and `skills:` listing `spec-tree:reviewing-changes` ([test](tests/test_reviewing_changes.compliance.l1.py))
+- ALWAYS: the wrapper agent invokes `validate_review_result.py` against every JSON document it emits before any persistence call and treats a non-zero exit as a re-emit signal — the agent never hand-validates JSON it just emitted, per the cross-lens contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/vetting.md` ([review])
+- NEVER: any script under `plugins/spec-tree/skills/reviewing-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md` ([test](tests/test_reviewing_changes.compliance.l1.py))
+- NEVER: the wrapper agent reads or writes files under the thread-store backend's storage paths directly — every read and write routes through the script chain, per the cross-lens contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/vetting.md` ([review])
+- NEVER: the review prompt is embedded inside `SKILL.md` or any script — the prompt is one standalone markdown file at the declared reference path so swapping the prompt does not require touching code ([test](tests/test_reviewing_changes.compliance.l1.py))

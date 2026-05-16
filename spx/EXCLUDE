@@ -19,6 +19,9 @@
 21-spec-tree.enabler/65-applying.enabler
 21-spec-tree.enabler/65-committing.enabler
 21-spec-tree.enabler/32-evidence.enabler/21-sync-exclude.enabler
+21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler
+21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/21-thread-store.enabler
+21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/32-reviewing-changes.enabler
 21-spec-tree.enabler/13-agent-environment.enabler
 21-spec-tree.enabler/13-infrastructure.enabler
 21-spec-tree.enabler/13-infrastructure.enabler/21-github-actions.enabler
