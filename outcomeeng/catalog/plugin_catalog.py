@@ -25,7 +25,7 @@ Default (no flag) prints the generated block to stdout without touching files.
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.generate_plugin_catalog [--write | --check]
+    uv run python -m outcomeeng.catalog.plugin_catalog [--write | --check]
 """
 
 from __future__ import annotations

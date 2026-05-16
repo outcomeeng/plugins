@@ -49,7 +49,7 @@ STEPS: Final = (
             "run",
             "python",
             "-m",
-            "outcomeeng.scripts.generate_plugin_catalog",
+            "outcomeeng.catalog.plugin_catalog",
             "--check",
         ),
     ),
