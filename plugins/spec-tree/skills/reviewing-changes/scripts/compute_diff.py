@@ -31,7 +31,6 @@ from types import ModuleType
 
 CHANGES_RECORD_NAME = "changes.json"
 ENV_BASE_REF = "SPX_VET_BASE_REF"
-ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
 
 
 def _load_thread_store() -> ModuleType:
@@ -60,6 +59,34 @@ def _load_thread_store() -> ModuleType:
     return module
 
 
+def _load_branch_slug() -> ModuleType:
+    """Load the ``branch_slug`` re-export module via ``importlib``.
+
+    The re-export lives at
+    ``plugins/spec-tree/skills/thread-store/scripts/branch_slug.py`` and
+    surfaces the canonical git helpers from ``audit_orchestrator``
+    (``detect_base_ref``, ``BaseRefNotConfiguredError``). Loading here
+    keeps the strict base-ref derivation a single source rather than a
+    private duplicate inside this script.
+    """
+    cached = sys.modules.get("branch_slug")
+    if cached is not None:
+        return cached
+    path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "thread-store"
+        / "scripts"
+        / "branch_slug.py"
+    )
+    spec = importlib.util.spec_from_file_location("branch_slug", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load branch_slug from {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["branch_slug"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _read_changes_json(thread_store: ModuleType, slug: str) -> dict[str, object] | None:
     """Return the parsed ``changes.json`` override, or ``None`` when absent.
 
@@ -80,38 +107,15 @@ def _read_changes_json(thread_store: ModuleType, slug: str) -> dict[str, object]
     return parsed
 
 
-def _resolve_base_ref_from_git_strict() -> str:
-    """Derive base_ref from ``refs/remotes/origin/HEAD``; no fallback.
-
-    Returns the bare branch name (e.g. ``main``) stripped of the
-    ``refs/remotes/origin/`` prefix. Raises ``RuntimeError`` when the
-    symbolic ref is unset (no remote, fresh bootstrap) or git itself
-    is not on PATH — the operator must then supply ``SPX_VET_BASE_REF``
-    or seed ``changes.json``.
-    """
-    try:
-        result = subprocess.run(  # noqa: S607 — git resolved via PATH by design
-            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("git is not on PATH") from exc
-    if result.returncode != 0:
-        raise RuntimeError("refs/remotes/origin/HEAD is unset (no remote configured)")
-    line = result.stdout.strip()
-    if not line.startswith(ORIGIN_HEAD_REF_PREFIX):
-        raise RuntimeError(f"refs/remotes/origin/HEAD has unexpected shape: {line!r}")
-    return line[len(ORIGIN_HEAD_REF_PREFIX) :]
-
-
 def _resolve_base_ref(changes: dict[str, object] | None) -> str:
     """Resolve base_ref via env → file → git, aborting when no source yields one.
 
     The error message names every source so the operator knows which to
     populate. No fallback to a literal default — silent fallbacks would
-    let a diff compute against the wrong ref without surfacing it.
+    let a diff compute against the wrong ref without surfacing it. The
+    strict git derivation delegates to ``audit_orchestrator.detect_base_ref(strict=True)``
+    via the ``branch_slug`` re-export so the symbolic-ref read lives in
+    one source.
     """
     env_value = os.environ.get(ENV_BASE_REF, "").strip()
     if env_value:
@@ -120,13 +124,20 @@ def _resolve_base_ref(changes: dict[str, object] | None) -> str:
         file_value = changes.get("base_ref")
         if isinstance(file_value, str) and file_value:
             return file_value
+    branch_slug = _load_branch_slug()
     try:
-        return _resolve_base_ref_from_git_strict()
-    except RuntimeError as exc:
+        return str(branch_slug.detect_base_ref(pathlib.Path.cwd(), strict=True))
+    except branch_slug.BaseRefNotConfiguredError as exc:
         raise RuntimeError(
             "cannot resolve base_ref from any source; tried: "
             f"{ENV_BASE_REF} env, {CHANGES_RECORD_NAME} 'base_ref' field, "
             f"git symbolic-ref refs/remotes/origin/HEAD ({exc})"
+        ) from exc
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "cannot resolve base_ref from any source; tried: "
+            f"{ENV_BASE_REF} env, {CHANGES_RECORD_NAME} 'base_ref' field, "
+            f"git symbolic-ref refs/remotes/origin/HEAD (git is not on PATH)"
         ) from exc
 
 
