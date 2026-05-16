@@ -1,6 +1,6 @@
 ---
 name: standardizing-typescript-architecture
-disable-model-invocation: true
+user-invocable: false
 description: >-
   TypeScript ADR conventions enforced across architect and auditor skills.
   Loaded by other skills, not invoked directly.

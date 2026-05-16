@@ -1,6 +1,5 @@
 ---
 name: auditing-tests
-disable-model-invocation: true
 description: Use when asked by the user to invoke the test evidence audit skill
 ---
 

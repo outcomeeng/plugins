@@ -1,6 +1,6 @@
 ---
 name: standardizing-skills
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
@@ -11,7 +11,7 @@ Canonical standards for skill authoring. Every rule that `/auditing-skills` enfo
 </objective>
 
 <success_criteria>
-Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description is directive (invoked skill) or `disable-model-invocation: true` with a passive description (reference skill), and (e) the skill passes `/auditing-skills` with no must-fix items.
+Skills conform to these standards when, at minimum: (a) the SKILL.md is under 500 lines, (b) the body uses pure XML structure with no markdown headings, (c) `<objective>` and `<success_criteria>` tags are present, (d) the description is directive (invoked skill) or `user-invocable: false` with a passive description (reference skill), and (e) the skill passes `/auditing-skills` with no must-fix items.
 </success_criteria>
 
 <reference_note>
@@ -46,16 +46,35 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 <frontmatter>
 
-Every SKILL.md starts with YAML frontmatter. The fields that appear — and their constraints:
+Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about runtime behavior; read this section when it is about how this marketplace authors skills.
 
-| Field                      | Required | Constraint                                                                                                                                                                        |
-| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                     | Yes      | Lowercase letters, numbers, hyphens. ≤64 chars. Must match directory name.                                                                                                        |
-| `description`              | Yes      | ≤1024 chars. Directive style (see `<descriptions>`). Passive for references.                                                                                                      |
-| `allowed-tools`            | No       | Comma-separated list. Restrict for audit (read-only) and reference skills.                                                                                                        |
-| `argument-hint`            | No       | Free-text hint shown at invocation. Use for skills that take a path or identifier argument.                                                                                       |
-| `disable-model-invocation` | No       | `true` for reference skills and for validators invoked only by agents (via `skills:` preload) or by explicit `Skill(name)` calls — prevents false activations from broad prompts. |
-| `model`                    | No       | Model ID override. Use for complex-reasoning skills that need a stronger model.                                                                                                   |
+| Field                      | Required    | Constraint                                                                                                                                                                                                                        |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                     | No          | Lowercase letters, numbers, hyphens. ≤64 chars. Must match the directory name when set. If omitted, the directory name is used.                                                                                                   |
+| `description`              | Recommended | Directive style for invoked skills (see `<descriptions>`); passive for references. Combined with `when_to_use` the listing is capped at 1,536 chars; put the key trigger first.                                                   |
+| `when_to_use`              | No          | Extra trigger phrases or example requests appended to `description` in the skill listing. Shares the 1,536-char cap.                                                                                                              |
+| `argument-hint`            | No          | Free-text hint shown during `/` autocomplete (e.g. `[issue-number]`).                                                                                                                                                             |
+| `arguments`                | No          | Named positional arguments for `$name` substitution in the body. Space-separated string or YAML list; names map to argument positions in order.                                                                                   |
+| `allowed-tools`            | No          | Tools Claude may use without per-call approval while the skill is active. Space-separated string or YAML list. Restrict for audit (read-only) and reference skills.                                                               |
+| `disable-model-invocation` | No          | `true` to **block programmatic invocation entirely** — Claude cannot load the skill, including via the Skill tool, and the skill cannot be preloaded into subagents. Use for `/deploy`-style user-only commands. Default `false`. |
+| `user-invocable`           | No          | `false` to hide from the `/` autocomplete menu while keeping Claude able to invoke via the Skill tool. Description stays in context. Use for reference skills that other skills load programmatically. Default `true`.            |
+| `model`                    | No          | Model override for this skill (`opus`, `sonnet`, `haiku`, or `inherit`). Reverts to the session model on the next prompt.                                                                                                         |
+| `effort`                   | No          | Effort level (`low`, `medium`, `high`, `xhigh`, `max`) — overrides the session effort while the skill is active.                                                                                                                  |
+| `context`                  | No          | `fork` to run the skill in a forked subagent context. Combine with `agent`.                                                                                                                                                       |
+| `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                        |
+| `hooks`                    | No          | Hooks scoped to this skill's lifecycle. See the Claude Code hooks reference for shape.                                                                                                                                            |
+| `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                                  |
+| `shell`                    | No          | `bash` (default) or `powershell` for inline `` !`command` `` and `` ```! `` blocks. PowerShell requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                                      |
+
+**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately:
+
+| Frontmatter                      | User can invoke (`/skill`) | Claude can invoke (Skill tool) | Description in context |
+| -------------------------------- | -------------------------- | ------------------------------ | ---------------------- |
+| *(default)*                      | Yes                        | Yes                            | Always                 |
+| `disable-model-invocation: true` | Yes                        | **No**                         | Not in context         |
+| `user-invocable: false`          | **No**                     | Yes                            | Always                 |
+
+Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` at runtime.
 
 ```yaml
 # Invoked skill (routing, workflow, creation)
@@ -68,19 +87,31 @@ description: >-
 ```
 
 ```yaml
-# Reference skill (standards, loaded by others)
+# Reference skill (standards, loaded programmatically by other skills)
 ---
 name: standardizing-skills
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 ```
 
+```yaml
+# User-only command (side effects; Claude must not auto-trigger)
+---
+name: deploy
+disable-model-invocation: true
+description: Deploy the application to production
+allowed-tools: Bash(git *) Bash(./deploy *)
+---
+```
+
 Audit skills (`auditing-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per the CLAUDE.md read-only rule — audit runs never modify files.
 
 **Directory match is mandatory.** `skills/authoring/` → `name: authoring`. A mismatch breaks skill lookup.
+
+**Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent skill invoke it via the Skill tool — there is no preload field on the consumer side.
 
 </frontmatter>
 
@@ -152,10 +183,10 @@ ALWAYS invoke this skill when auditing Python ADRs.
 
 **Match user speech over formal jargon:** Use abbreviations users would use (ADR not Architecture Decision Record). Avoid corporate speak.
 
-**Reference skills** use `disable-model-invocation: true` with a passive description:
+**Reference skills** use `user-invocable: false` with a passive description:
 
 ```yaml
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
 ```
@@ -321,14 +352,14 @@ The context window is shared. A skill competes for tokens with the system prompt
 
 Six skill types. Each has a distinct purpose and primary output.
 
-| Type           | Purpose                      | Primary output                    | Key sections                                                                                                                                                 |
-| -------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/`                                                                               |
-| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                                                                                                |
-| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                                    |
-| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                                |
-| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `disable-model-invocation: true` when invoked only by agents or explicit `Skill(name)` calls |
-| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `disable-model-invocation: true`, passive description, `allowed-tools: Read`                                                                                 |
+| Type           | Purpose                      | Primary output                    | Key sections                                                                                                                                        |
+| -------------- | ---------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Builder**    | Create new artifacts         | Code, documents, widgets, configs | Required clarifications, output spec, domain standards, templates in `assets/`                                                                      |
+| **Guide**      | Teach procedures             | Step-by-step workflows, tutorials | Numbered workflow, input→output example pairs, decision trees                                                                                       |
+| **Automation** | Execute multi-step processes | Processed files, transformed data | Tested scripts in `scripts/`, error handling, dependencies, I/O contracts                                                                           |
+| **Analyzer**   | Extract insights             | Reports, summaries, reviews       | Analysis scope, evaluation criteria, output format, synthesis                                                                                       |
+| **Validator**  | Enforce quality              | Pass/fail verdicts, scores        | Criteria with thresholds, scoring rubric, remediation guidance; `user-invocable: false` when invoked only by agents or explicit `Skill(name)` calls |
+| **Reference**  | Share domain knowledge       | Standards loaded by other skills  | `user-invocable: false`, passive description, `allowed-tools: Read`                                                                                 |
 
 **Type-selection rule of thumb:**
 
@@ -354,14 +385,14 @@ Reference skills hold shared domain knowledge that multiple skills need. They ar
 ```yaml
 ---
 name: standardizing-{domain}
-disable-model-invocation: true
+user-invocable: false
 description: >-
   {Domain} standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 ```
 
-- `disable-model-invocation: true` — prevents false activations from user prompts.
+- `user-invocable: false` — prevents false activations from user prompts.
 - Passive description (no `ALWAYS`/`NEVER`) — directive descriptions trigger false activations for a reference.
 - `allowed-tools: Read` — reference skills only read.
 

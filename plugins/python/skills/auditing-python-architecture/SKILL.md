@@ -1,6 +1,5 @@
 ---
 name: auditing-python-architecture
-disable-model-invocation: true
 description: Use when asked by the user to invoke the Python architecture audit skill
 allowed-tools: Read, Grep
 ---

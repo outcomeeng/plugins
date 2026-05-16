@@ -1,6 +1,5 @@
 ---
 name: auditing-typescript
-disable-model-invocation: true
 description: Use when asked by the user to invoke the TypeScript code audit skill
 allowed-tools: Read, Bash, Glob, Grep
 ---

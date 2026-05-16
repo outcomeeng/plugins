@@ -1,6 +1,5 @@
 ---
 name: auditing-typescript-architecture
-disable-model-invocation: true
 description: Use when asked by the user to invoke the TypeScript architecture audit skill
 allowed-tools: Read, Grep
 ---

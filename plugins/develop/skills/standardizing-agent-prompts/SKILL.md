@@ -1,6 +1,6 @@
 ---
 name: standardizing-agent-prompts
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Agent prompt writing conventions enforced across all creator and auditor skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read
@@ -89,10 +89,10 @@ ALWAYS invoke this skill when auditing Python ADRs.
 - Natural terms: "testing-python" not "python-unit-test-framework"
 - Plain language: "read all specs" not "hierarchical context ingestion protocol"
 
-**Reference skills** use `disable-model-invocation: true` with a passive description:
+**Reference skills** use `user-invocable: false` with a passive description:
 
 ```yaml
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
 ```

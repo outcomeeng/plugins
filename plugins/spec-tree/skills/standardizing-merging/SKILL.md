@@ -1,6 +1,6 @@
 ---
 name: standardizing-merging
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, PR authority gate, four-class review classification, three review surfaces, action tokens, and repo-local overlay topics.
   Loaded by /opening-pr and /managing-pr.
