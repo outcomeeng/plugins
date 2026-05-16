@@ -8,7 +8,11 @@ CAN obtain a deterministically-validated review (decision plus structured findin
 
 ### Scenarios
 
-- Given a `pr.json` with `base_ref` set under the configured thread-store backend, the script chain reads it, computes the diff against `base_ref`, emits a review result, validates it through the arbiter CLI, and writes both `review-result.json` and `review.md` for the current branch slug ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given a `changes.json` with `base_ref` set under the configured thread-store backend, the script chain reads it, computes the diff against that `base_ref`, emits a review result, validates it through the arbiter CLI, and writes both `review-result.json` and `review.md` to the current thread ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given no `changes.json` under the thread-store backend AND `SPX_VET_BASE_REF` set in the environment, the script chain uses the env value as `base_ref` and proceeds without requiring the override file ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given no `changes.json` AND no `SPX_VET_BASE_REF` AND `git symbolic-ref refs/remotes/origin/HEAD` resolves, the script chain uses that symbolic ref (stripped of the `refs/remotes/origin/` prefix) as `base_ref` ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given `SPX_VET_BASE_REF` set AND `changes.json` `base_ref` set, `compute_diff.py` uses the env value — env overrides file ([test](tests/test_skill_orchestration.scenario.l2.py))
+- Given no `changes.json` AND no `SPX_VET_BASE_REF` AND no `refs/remotes/origin/HEAD` symbolic ref, `compute_diff.py` exits non-zero with a stderr message naming all three sources so the operator can identify which to populate ([test](tests/test_skill_orchestration.scenario.l2.py))
 - Given a JSON document conforming to the review-result schema on stdin or via `--file`, `validate_review_result.py` exits 0 ([test](tests/test_validate_review_result.scenario.l1.py))
 - Given a JSON document missing a required key, `validate_review_result.py` exits non-zero with a structured error message naming the missing key ([test](tests/test_validate_review_result.scenario.l1.py))
 - Given a JSON document with an unknown `decision`, `severity`, or `concern` value, `validate_review_result.py` exits non-zero with a structured error message naming the unknown value and the allowed set ([test](tests/test_validate_review_result.scenario.l1.py))
