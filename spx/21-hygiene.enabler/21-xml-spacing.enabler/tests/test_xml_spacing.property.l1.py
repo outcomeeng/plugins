@@ -1,4 +1,4 @@
-"""Level 1 property tests for scripts/fix-xml-spacing.py."""
+"""Level 1 property tests for outcomeeng.hygiene.xml_spacing."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Final
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from outcomeeng.scripts import fix_xml_spacing
+from outcomeeng.hygiene import xml_spacing
 
 TEXT_ALPHABET: Final = (
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-"
@@ -85,10 +85,10 @@ def test_fix_file_is_idempotent_for_generated_markdown(content: str) -> None:
         path = Path(tmpdir) / "sample.md"
         path.write_text(content, encoding="utf-8", newline="")
 
-        fix_xml_spacing.fix_file(path)
+        xml_spacing.fix_file(path)
         after_first = path.read_text(encoding="utf-8")
 
-        fix_xml_spacing.fix_file(path)
+        xml_spacing.fix_file(path)
         after_second = path.read_text(encoding="utf-8")
 
         assert after_second == after_first
