@@ -2,16 +2,6 @@
 
 Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository. Marketplace-specific overrides to the base merge flow.
 
-## Merge authority
-
-**Require explicit human merge instruction.** The marketplace's [CLAUDE.md Git workflow](../../CLAUDE.md) states: "You review and merge the PR on GitHub. An agent runs `gh pr merge` only when you explicitly tell it to." This overrides the autonomous-merge default from `/managing-pr` `<merge_gate>`.
-
-When the merge gate reports green:
-
-- End with `AWAIT_MERGE_INSTRUCTION` and surface the gate-pass summary.
-- Do NOT run `gh pr merge` autonomously.
-- Wait for explicit user instruction to merge.
-
 ## Merge command
 
 When the user authorizes the merge, use a merge commit (preserves PR history; matches existing main):
