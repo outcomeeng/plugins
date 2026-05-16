@@ -7,13 +7,13 @@ order. Remove steps as they complete.
 
 The include-directive vertical slice (committed `5eb8c8c`) demonstrates the
 canonical test pattern for this subtree: stage-isolated test files,
-source-owned constants from `outcomeeng.scripts.build_plugins`, named
+source-owned constants from `outcomeeng.distribution.build`, named
 scenarios from `outcomeeng_testing.harnesses.scenarios`, optional
 Hypothesis property tests where algebraic structure exists, IMPLEMENTED
 flag skip-gate. Each subsequent slice repeats this pattern for one
 directive family or behavioral concern.
 
-`outcomeeng.scripts.build_plugins` is currently a typed stub with
+`outcomeeng.distribution.build` is currently a typed stub with
 `IMPLEMENTED: Final = False`. All test files skip cleanly until the
 flag flips to True after the build is implemented.
 
@@ -137,7 +137,7 @@ idempotence. Plus two new high-value tests the auditor recommended:
   same installable skill set as the current `plugins/` minus the 12
   `standardizing-*` skills. This is the migration safety test.
 
-## Step 7 — implement outcomeeng.scripts.build_plugins
+## Step 7 — implement outcomeeng.distribution.build
 
 Once all tests are scaffolded and skipping via the IMPLEMENTED flag,
 flip to /python:coding-python and implement each stage until tests

@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 from hypothesis import given
 
-from outcomeeng.scripts.build_plugins import (
+from outcomeeng.distribution.build import (
     IMPLEMENTED,
     Directive,
     format_directive,
@@ -23,7 +23,7 @@ from outcomeeng_testing.generators.directives import directives
 def _require_module_implemented() -> None:
     if not IMPLEMENTED:
         pytest.fail(
-            "outcomeeng.scripts.build_plugins is a stub; implement it before "
+            "outcomeeng.distribution.build is a stub; implement it before "
             "running this test, or filter via `spx test passing` "
             "(node is listed in spx/EXCLUDE)"
         )

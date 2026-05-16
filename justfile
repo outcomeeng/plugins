@@ -84,7 +84,7 @@ sync-marketplace base_ref="":
         fi
     fi
     claude plugin marketplace update outcomeeng
-    uv run python -m outcomeeng.scripts.preserve_codex_plugin_cache outcomeeng
+    uv run python -m outcomeeng.distribution.codex_cache outcomeeng
     uv run python -m outcomeeng.validation.install
     just check-installed
 

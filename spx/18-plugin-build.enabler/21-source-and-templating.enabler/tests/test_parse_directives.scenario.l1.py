@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from outcomeeng.scripts.build_plugins import (
+from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
     IMPLEMENTED,
@@ -24,7 +24,7 @@ from outcomeeng.scripts.build_plugins import (
 def _require_module_implemented() -> None:
     if not IMPLEMENTED:
         pytest.fail(
-            "outcomeeng.scripts.build_plugins is a stub; implement it before "
+            "outcomeeng.distribution.build is a stub; implement it before "
             "running this test, or filter via `spx test passing` "
             "(node is listed in spx/EXCLUDE)"
         )

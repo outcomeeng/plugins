@@ -21,11 +21,11 @@ from typing import Final
 
 # Implementation status flag. Tests gate on this via:
 #
-#     from outcomeeng.scripts.build_plugins import IMPLEMENTED
+#     from outcomeeng.distribution.build import IMPLEMENTED
 #     import pytest
 #     if not IMPLEMENTED:
 #         pytest.skip(
-#             "outcomeeng.scripts.build_plugins is a stub",
+#             "outcomeeng.distribution.build is a stub",
 #             allow_module_level=True,
 #         )
 #

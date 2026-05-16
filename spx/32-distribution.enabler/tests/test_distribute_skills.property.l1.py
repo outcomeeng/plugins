@@ -1,4 +1,4 @@
-"""Level 1 property tests for scripts/distribute_skills.py."""
+"""Level 1 property tests for outcomeeng/distribution/distribute.py."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from outcomeeng.scripts import distribute_skills
+from outcomeeng.distribution import distribute as distribute_skills
 
 FRONTMATTER_MINIMAL = """\
 ---

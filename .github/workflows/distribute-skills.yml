@@ -9,7 +9,7 @@ on:
       - "plugins/*/.claude-plugin/**"
       - "plugins/*/.codex-plugin/**"
       - "scripts/distribution.yml"
-      - "outcomeeng/scripts/distribute_skills.py"
+      - "outcomeeng/distribution/distribute.py"
       - ".github/workflows/distribute-skills.yml"
 
   workflow_dispatch:
@@ -51,4 +51,4 @@ jobs:
             ARGS="--repo ${{ inputs.repo }}"
           fi
 
-          PYTHONPATH=. python -m outcomeeng.scripts.distribute_skills $ARGS
+          PYTHONPATH=. python -m outcomeeng.distribution.distribute $ARGS
