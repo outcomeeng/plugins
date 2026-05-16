@@ -24,7 +24,7 @@ A preservation set derived from git history of the manifest satisfies both requi
 
 The ten-day window covers typical developer session lifetimes — a working week plus weekend margin — while remaining narrow enough that the symlink set stays bounded for plugins under active development. Versions outside the window are pruned because they fall outside any reasonable in-flight conversation scope.
 
-Two alternatives were rejected. The first — pin Codex resolution to the working tree, mirroring the Claude Code resolver — diverges from the Codex version-pathed lookup contract; the resolver is part of Codex's interface, not a marketplace concern. The second — maintain an external sidecar file recording preserved versions — introduces a second source of truth that drifts under exactly the bypass scenarios this decision exists to address; git history already carries the authoritative record.
+Two alternatives were rejected. The first — pin Codex resolution to the working tree, bypassing the versioned cache — diverges from the Codex version-pathed lookup contract; the resolver is part of Codex's interface, not a marketplace concern. The same version-pathed constraint applies to Claude Code; its preservation decision is governed separately in `spx/13-infrastructure.enabler/32-installation.enabler/21-claude-cache-preservation.pdr.md`. The second — maintain an external sidecar file recording preserved versions — introduces a second source of truth that drifts under exactly the bypass scenarios this decision exists to address; git history already carries the authoritative record.
 
 ## Trade-offs accepted
 
