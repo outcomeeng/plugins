@@ -1,52 +1,60 @@
-# Vendored Claude Code Review reusable workflow.
+# Claude Review reusable workflow.
 #
-# Source: outcomeeng/gh-actions/.github/workflows/claude-code-review.yml
-# Vendored into this repo so the reviewer surface depends only on the
-# upstream `anthropics/claude-code-action`, not on a second indirection
-# through the `outcomeeng/gh-actions` repo. While the reviewer skill and
-# agent are under active development, edits land here without coordinating
-# with `outcomeeng/gh-actions`.
+# Vendored from outcomeeng/gh-actions and trimmed to one responsibility:
+# take a `prompt` and run the authorize → validate-workflow → claude-review
+# job graph against it. Two callers in this repo —
+# `claude-review-default.yml` and `claude-review-custom.yml` — differ only
+# in the `prompt:` they pass.
 #
-# When the reviewer is stable, decide whether to fold this back into
-# `outcomeeng/gh-actions` or keep the local copy.
-#
-# Usage in caller workflow:
+# Usage in a caller workflow:
 #
 #   on:
 #     pull_request:
-#       types: [opened, synchronize]
+#       types: [opened, synchronize, reopened, ready_for_review]
 #
 #   jobs:
 #     review:
-#       uses: ./.github/workflows/_claude-review-reusable.yml
+#       uses: ./.github/workflows/_claude-review.yml
 #       secrets:
 #         CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-#
-# Optional inputs cover model selection, full claude_args passthrough,
-# custom trigger phrase, Bedrock/Vertex routing, and a runner override.
+#       with:
+#         prompt: |
+#           <multi-line prompt body>
+#         timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15' }}
 
 name: Claude Review (reusable)
 
 on:
   workflow_call:
     inputs:
+      prompt:
+        description: "Review prompt sent to the Claude Code action. Required."
+        type: string
+        required: true
       runner:
         description: |
-          Runner selection for all three jobs. Accepts either:
-          - A single label: 'ubuntu-slim', 'ubuntu-latest', 'self-hosted'
-          - A JSON array of labels: '["self-hosted","laptop"]'
-          The wrapper detects which form was passed and dispatches correctly.
-          Security: self-hosted runners must not be used from public repos or repos that accept PRs from untrusted forks. The reusable-workflow validate-workflow gate restricts what untrusted PRs can change, but the runner host itself is shared across runs. Only set a self-hosted runner here when every PR contributor is trusted (typical for private org repos).
+          Runner selection for all three jobs. Accepts either a single label
+          ('ubuntu-slim', 'ubuntu-latest', 'self-hosted') or a JSON array of
+          labels ('["self-hosted","laptop"]'). The wrapper detects the form.
+          Security: self-hosted runners must not be used from public repos or
+          repos that accept PRs from untrusted forks. The validate-workflow
+          gate restricts what untrusted PRs can change, but the runner host
+          itself is shared across runs. Only set a self-hosted runner here
+          when every PR contributor is trusted (typical for private org repos).
         type: string
         default: ubuntu-slim
       concurrency_cancel:
-        description: "Cancel in-progress reviews when PR is updated."
+        description: "Cancel in-progress reviews when the PR is updated."
         type: boolean
         default: false
-      custom_prompt:
-        description: "Custom review prompt (replaces the default review prompt)."
+      timeout_minutes:
+        description: |
+          Wall-clock budget for the Run Claude Code Review step, as a string
+          (e.g. '15'). GitHub repo variables are already strings — pass
+          `vars.X || '15'` directly. Do NOT wrap in fromJSON in the caller;
+          the reusable parses it as a number at consumption.
         type: string
-        default: ""
+        default: "15"
       model:
         description: "Claude model to use, e.g. claude-opus-4-7. Folded into claude_args as --model. Empty means use the action's default."
         type: string
@@ -202,6 +210,7 @@ jobs:
       group: claude-review-${{ github.event.pull_request.number }}
       cancel-in-progress: ${{ inputs.concurrency_cancel }}
     runs-on: ${{ startsWith(inputs.runner, '[') && fromJSON(inputs.runner) || inputs.runner }}
+    timeout-minutes: ${{ fromJSON(inputs.timeout_minutes) }}
     permissions:
       contents: read
       pull-requests: write
@@ -347,44 +356,12 @@ jobs:
           echo "$ADDITIONAL_ENV" | jq -r 'keys[]'
           echo "::endgroup::"
 
-      - name: Set review prompt
-        id: set-prompt
-        run: |
-          if [ -n "${{ inputs.custom_prompt }}" ]; then
-            delimiter="CLAUDE_PROMPT_$(cat /proc/sys/kernel/random/uuid)"
-            {
-              echo "prompt<<$delimiter"
-              echo "${{ inputs.custom_prompt }}"
-              echo "$delimiter"
-            } >> "$GITHUB_OUTPUT"
-          else
-            {
-              echo "prompt<<EOF"
-              cat <<'PROMPT_EOF'
-          REPO: ${{ github.repository }}
-          PR NUMBER: ${{ github.event.pull_request.number }}
-
-          Please review this pull request and provide feedback on:
-          - Code quality and best practices
-          - Potential bugs or issues
-          - Performance considerations
-          - Security concerns
-          - Test coverage
-
-          Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
-
-          Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
-          PROMPT_EOF
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@fefa07e9c665b7320f08c3b525980457f22f58aa # v1.0.111
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: ${{ steps.set-prompt.outputs.prompt }}
+          prompt: ${{ inputs.prompt }}
           claude_args: ${{ steps.claude-args.outputs.args }}
           trigger_phrase: ${{ inputs.trigger_phrase }}
           use_bedrock: ${{ inputs.use_bedrock }}

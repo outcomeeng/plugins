@@ -1,16 +1,16 @@
-# Self-contained Custom Code Review for this repository.
+# Claude Review (custom) — marketplace-specific REVIEW.md prompt.
 #
 # Triggers on every PR and invokes the vendored reusable workflow at
-# `./_claude-review-reusable.yml` with a marketplace-specific custom prompt
-# that follows `REVIEW.md`. The reusable carries the authorize +
-# validate-workflow gates and the Anthropic action invocation; this caller
-# supplies the `pull_request` trigger and the custom prompt body.
+# `./_claude-review.yml` with a prompt that follows `REVIEW.md`. The
+# reusable carries the authorize + validate-workflow gates and the
+# Anthropic action invocation; this caller supplies the `pull_request`
+# trigger and the custom prompt body.
 #
-# Runs alongside `claude-code-review.yml` (the stock variant). Both fire on
-# every PR; remove this file when only the stock review is desired, or
-# remove `claude-code-review.yml` when only the custom variant is desired.
+# Runs alongside `claude-review-default.yml`. Both fire on every PR;
+# remove this file when only the default review is desired, or remove
+# `claude-review-default.yml` when only the custom variant is desired.
 
-name: Custom Code Review
+name: Claude Review (custom)
 
 on:
   pull_request:
@@ -25,13 +25,14 @@ permissions:
 
 jobs:
   review:
-    uses: ./.github/workflows/_claude-review-reusable.yml
+    uses: ./.github/workflows/_claude-review.yml
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     with:
       concurrency_cancel: true
-      timeout_minutes: ${{ fromJSON(vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15') }}
-      custom_prompt: |
+      # GitHub variables are strings — pass them directly without fromJSON.
+      timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15' }}
+      prompt: |
         REPO: ${{ github.repository }}
         PR NUMBER: ${{ github.event.pull_request.number }}
 
