@@ -4,7 +4,7 @@ Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this r
 
 ## Merge authority
 
-This repository follows the autonomous-merge default from `/managing-pr` `<merge_gate>`. When all gate conditions hold (no `BLOCKING` or `NEEDS-ANSWER` work, terminal-green checks, five-minute review window elapsed, branch rebased onto current base, ready PR), the agent merges immediately using the command in `## Merge command` below — no separate explicit human merge instruction is required.
+This repository follows the gate-green-autonomous default for both promotion and merge from `/standardizing-merging` `<pr_authority_gate>`. When the gate's predicates hold for the applicable action (closure gate passed, required checks terminal-green, current-head four-class review with no `BLOCKING` or `NEEDS-ANSWER`, five-minute settle window elapsed, branch hygiene including upstream-safety, no production-class markers, plus the merge-only predicates for merge), the agent runs the action's command immediately using the command in `## Merge command` below — no separate explicit human instruction is required for promotion or merge.
 
 ## Merge command
 
@@ -20,7 +20,7 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 ## Closure gate
 
-The marketplace's closure gate is `just check`. Run it before any draft → ready promotion per `/standardizing-merging` `<draft_lifecycle>` rule 3 and before any merge authorization request.
+The marketplace's closure gate is `just check`. Run it before any push that approaches ready or merge; it is the project-specific closure-gate predicate of `/standardizing-merging` `<pr_authority_gate>` for both promotion-time and merge-time evaluation.
 
 ## Post-merge
 

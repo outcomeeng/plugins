@@ -27,7 +27,7 @@ The spec-tree plugin's PR-management skills declare a single named gate — the 
 Alternatives rejected:
 
 - **Keep promotion human-gated and merge autonomous.** Splits one decision across two authority models; produces the stall the gate exists to prevent.
-- **Require explicit instruction for both promotion and merge.** Forecloses the autonomous-merge path the marketplace already authorizes through `<merge_gate>` and overlay-default. Imposes operator latency on PR loops whose state already proves the conditions the instruction would assert.
+- **Require explicit instruction for both promotion and merge.** Forecloses the autonomous-merge path the marketplace already authorizes through the gate-green-autonomous default. Imposes operator latency on PR loops whose state already proves the conditions the instruction would assert.
 - **Implicit gate with no overlay override.** Removes consumers' ability to declare stricter authority where compliance, staged rollout, or audit policy requires human merge decisions.
 
 ## Trade-offs accepted
@@ -56,7 +56,7 @@ Alternatives rejected:
 - `plugins/spec-tree/skills/standardizing-merging/SKILL.md` declares a named PR authority gate whose predicates are observable and finite-time-decidable: closure-gate result, required-check terminal-greenness on `statusCheckRollup`, current-head four-class review with no unresolved `BLOCKING` or `NEEDS-ANSWER` on at least one inspected surface, latest-push timestamp at least five minutes prior to evaluation, branch hygiene including upstream safety, and absence of project-declared production-class markers ([review])
 - The gate authorizes both draft → ready promotion and merge from a single verdict for non-production PRs; the agent performs both actions without separate explicit human instruction when the gate is satisfied ([review])
 - `plugins/spec-tree/skills/standardizing-merging/SKILL.md` `<repo_local_overlay>` enumerates both **Draft-promotion authority** and **Merge authority** as overlay-refinable topics, parallel to each other and to the gate's other overlay points ([review])
-- `plugins/spec-tree/skills/managing-pr/SKILL.md` `<workflow>` Step 8 distinguishes gate-green-autonomous promotion from overlay-requires-human promotion using named action tokens; the same workflow distinguishes gate-green-autonomous merge from overlay-requires-human merge ([review])
+- `plugins/spec-tree/skills/managing-pr/SKILL.md` `<the_managing_flow>` distinguishes gate-green-autonomous promotion from overlay-requires-human promotion using named action tokens from /standardizing-merging `<action_tokens>`; the same flow distinguishes gate-green-autonomous merge from overlay-requires-human merge ([review])
 - Production-class PR recognition mechanisms (label, branch pattern, file pattern, manifest declaration) are declared by each consuming project in its `spx/local/merging.md`; the skill withholds autonomous authority when a PR cannot be classified and the overlay declares no recognition mechanism ([review])
 
 ### NEVER
