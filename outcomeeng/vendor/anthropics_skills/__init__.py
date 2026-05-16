@@ -5,5 +5,5 @@ License: Apache 2.0 (see LICENSE.txt alongside this package)
 
 Only the files required for SKILL.md frontmatter validation are vendored.
 Do not modify the vendored files in place — extensions live in
-`outcomeeng.scripts.validate_skill_frontmatter`.
+`outcomeeng.validation.skill_frontmatter`.
 """

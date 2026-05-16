@@ -1,9 +1,9 @@
-"""Recording doubles for the check-pipeline orchestrator.
+"""Recording doubles for the gate orchestrator.
 
 These harnesses implement the `ProcessSpawner` and `ProcessHandle` Protocols
-declared in `outcomeeng.scripts.check_pipeline`. They are spies (recording
-calls) and stubs (returning scripted exit codes), used by `l1` tests to
-verify orchestration behavior without launching real subprocesses.
+declared in `outcomeeng.validation`. They are spies (recording calls) and
+stubs (returning scripted exit codes), used by `l1` tests to verify
+orchestration behavior without launching real subprocesses.
 
 Exception case: Stage 5, Interaction protocols — the orchestrator's
 correctness depends on the sequence and shape of spawn/wait/signal calls.
@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from outcomeeng.scripts.check_pipeline import ProcessHandle, ProcessSpawner
+from outcomeeng.validation import ProcessHandle, ProcessSpawner
 
 
 @dataclass

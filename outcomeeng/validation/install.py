@@ -14,7 +14,7 @@ current.
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.validate_install [marketplace]
+    uv run python -m outcomeeng.validation.install [marketplace]
 
 Exit codes:
     0 - All checks passed

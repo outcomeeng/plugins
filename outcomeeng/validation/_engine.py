@@ -18,7 +18,7 @@ from collections.abc import Sequence
 from types import FrameType
 from typing import Final, TextIO
 
-from outcomeeng.scripts.check_pipeline._model import ProcessHandle, ProcessSpawner, Step
+from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Step
 
 _FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
 _GRACE_SECONDS: Final = 2.0

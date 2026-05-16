@@ -10,7 +10,7 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-from outcomeeng.scripts.validate_skill_frontmatter import (
+from outcomeeng.validation.skill_frontmatter import (
     main,
     validate_file,
 )

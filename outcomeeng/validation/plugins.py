@@ -15,7 +15,7 @@ Also checks:
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.validate_plugins [root_dir]
+    uv run python -m outcomeeng.validation.plugins [root_dir]
 
 Exit codes:
     0 - All validations passed

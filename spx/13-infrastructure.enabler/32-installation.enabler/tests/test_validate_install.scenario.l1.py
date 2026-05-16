@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.scripts import validate_install
+from outcomeeng.validation import install as validate_install
 
 MARKETPLACE_NAME = "outcomeeng"
 PLUGIN_NAME = "demo-plugin"
