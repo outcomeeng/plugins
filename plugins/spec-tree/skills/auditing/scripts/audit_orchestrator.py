@@ -36,6 +36,9 @@ DEFAULT_BASE_REF = "main"
 DEFAULT_LOCK_TTL_SECONDS = 600
 LOCK_FILE_MODE = 0o644
 BRANCH_SLUG_COLLISION_SUFFIX_LENGTH = 8
+BRANCH_SLUG_MAX_LENGTH = 64
+BRANCH_SLUG_DOT_SUBSTITUTE = "__dot__"
+BRANCH_SLUG_DOTDOT_SUBSTITUTE = "__dotdot__"
 ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
 ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
@@ -388,27 +391,70 @@ def _read_frontmatter_branch(path: pathlib.Path) -> str | None:
     return None
 
 
-def branch_slug(branch_name: str, state_dir: pathlib.Path) -> str:
-    """Derive the on-disk state-file slug for ``branch_name``.
+def branch_slug(branch_name: str, state_dir: pathlib.Path | None = None) -> str:
+    """Derive the on-disk slug for ``branch_name``.
 
-    Replaces every ``/`` in the branch name with ``__`` to produce a
-    flat-filesystem-safe slug. If an existing state file at
+    Constructs the slug in three stages:
+
+    1. Replace every ``/`` in the branch name with ``__`` so the result
+       fits in a single filesystem path component.
+    2. Replace a whole-segment ``.`` or ``..`` value with a distinct
+       token so the slug never resolves to the current or parent
+       directory. Internal ``.`` characters survive (they cannot
+       resolve a parent segment by themselves).
+    3. Bound the slug at ``BRANCH_SLUG_MAX_LENGTH`` characters. When
+       the base slug exceeds the bound, truncate and append
+       ``--<sha8>`` where ``sha8`` is the first eight hex characters of
+       SHA-256(branch_name) so distinct branches with a long common
+       prefix remain distinguishable.
+
+    When ``state_dir`` is provided and an existing state file at
     ``state_dir/<base-slug>.md`` records a *different* branch in its
-    frontmatter, appends ``--<sha8>`` where ``sha8`` is the first eight
-    hex characters of SHA-256(branch_name). The suffix is deterministic
-    so re-runs land on the same state file across invocations.
+    frontmatter, the same ``--<sha8>`` suffix disambiguates. The
+    suffix is deterministic so re-runs land on the same slug across
+    invocations.
 
-    Same-branch state files (frontmatter ``branch:`` matches
-    ``branch_name``) reuse the base slug — no suffix.
+    The ``state_dir`` argument is optional — passing ``None`` disables
+    the state-file collision check, which is the calling convention
+    callers use when they do not maintain audit-state files (the
+    thread-store helper consumes this contract via re-export).
     """
-    base_slug = branch_name.replace("/", "__")
-    existing = state_dir / f"{base_slug}.md"
-    if existing.is_file():
-        existing_branch = _read_frontmatter_branch(existing)
-        if existing_branch is not None and existing_branch != branch_name:
-            digest = hashlib.sha256(branch_name.encode("utf-8")).hexdigest()
-            suffix = digest[:BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
-            return f"{base_slug}--{suffix}"
+    # Stage 1: replace slashes.
+    slashed = branch_name.replace("/", "__")
+
+    # Stage 2: defuse whole-segment ``.`` / ``..`` values.
+    if slashed == ".":
+        base_slug = BRANCH_SLUG_DOT_SUBSTITUTE
+    elif slashed == "..":
+        base_slug = BRANCH_SLUG_DOTDOT_SUBSTITUTE
+    else:
+        base_slug = slashed
+
+    digest = hashlib.sha256(branch_name.encode("utf-8")).hexdigest()
+    suffix = digest[:BRANCH_SLUG_COLLISION_SUFFIX_LENGTH]
+    suffix_with_separator = f"--{suffix}"
+
+    # Stage 3: bound the length.
+    if len(base_slug) > BRANCH_SLUG_MAX_LENGTH:
+        truncated_prefix_length = BRANCH_SLUG_MAX_LENGTH - len(suffix_with_separator)
+        return f"{base_slug[:truncated_prefix_length]}{suffix_with_separator}"
+
+    # Stage 4 (optional): state-collision disambiguation.
+    if state_dir is not None:
+        existing = state_dir / f"{base_slug}.md"
+        if existing.is_file():
+            existing_branch = _read_frontmatter_branch(existing)
+            if existing_branch is not None and existing_branch != branch_name:
+                collided = f"{base_slug}{suffix_with_separator}"
+                # Collision suffix also obeys the length bound.
+                if len(collided) > BRANCH_SLUG_MAX_LENGTH:
+                    truncated_prefix_length = BRANCH_SLUG_MAX_LENGTH - len(
+                        suffix_with_separator
+                    )
+                    return (
+                        f"{base_slug[:truncated_prefix_length]}{suffix_with_separator}"
+                    )
+                return collided
     return base_slug
 
 
