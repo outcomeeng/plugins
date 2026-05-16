@@ -1,6 +1,5 @@
 ---
 name: auditing
-disable-model-invocation: true
 description: Use when asked by the user to invoke the audit skill
 allowed-tools: Read, Bash, Glob, Grep
 ---

@@ -1,6 +1,6 @@
 ---
 name: standardizing-python
-disable-model-invocation: true
+user-invocable: false
 description: >-
   Python code standards enforced across all skills. Loaded by other skills, not invoked directly.
 allowed-tools: Read

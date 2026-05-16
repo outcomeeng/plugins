@@ -1,6 +1,5 @@
 ---
 name: auditing-typescript-tests
-disable-model-invocation: true
 description: Use when asked by the user to invoke the TypeScript test audit skill
 allowed-tools: Read, Grep, Glob, Bash
 ---

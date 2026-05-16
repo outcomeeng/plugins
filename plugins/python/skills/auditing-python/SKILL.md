@@ -1,6 +1,5 @@
 ---
 name: auditing-python
-disable-model-invocation: true
 description: Use when asked by the user to invoke the Python code audit skill
 allowed-tools: Read, Bash, Glob, Grep
 ---

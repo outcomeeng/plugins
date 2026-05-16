@@ -1,6 +1,5 @@
 ---
 name: reviewing-pr
-disable-model-invocation: true
 description: Use when asked by the user to invoke the PR review skill
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---

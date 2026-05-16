@@ -1,6 +1,5 @@
 ---
 name: auditing-product-decisions
-disable-model-invocation: true
 description: Use when asked by the user to invoke the PDR audit skill
 ---
 

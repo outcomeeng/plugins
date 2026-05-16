@@ -1,6 +1,5 @@
 ---
 name: auditing-rust-tests
-disable-model-invocation: true
 description: Use when asked by the user to invoke the Rust test audit skill
 allowed-tools: Read, Grep, Glob, Bash
 ---

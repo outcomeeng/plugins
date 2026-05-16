@@ -1,6 +1,5 @@
 ---
 name: auditing-rust-architecture
-disable-model-invocation: true
 description: Use when asked by the user to invoke the Rust architecture audit skill
 allowed-tools: Read, Grep, Glob, Bash
 ---
