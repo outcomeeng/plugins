@@ -30,6 +30,12 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     with:
       concurrency_cancel: true
+      # Stream the agent's full SDK transcript into the job log while the
+      # reviewer surface is under active development. Flip to `false` (or
+      # drop the input) once the agent is stable — the transcript can
+      # include file contents the agent read and verbatim prompt material,
+      # so it is not appropriate for a public-by-default reviewer.
+      show_full_output: true
       # GitHub variables are strings — pass them directly without fromJSON.
       timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15' }}
       prompt: |

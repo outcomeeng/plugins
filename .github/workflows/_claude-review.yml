@@ -110,12 +110,17 @@ on:
         description: "JSON object string of env vars to set on the claude-code-action step. Used to pass cloud-provider config (AWS_REGION, ANTHROPIC_VERTEX_PROJECT_ID, etc.) without changing the action invocation."
         type: string
         default: "{}"
+      use_project_plugins:
+        description: |
+          When true, read `.claude/settings.json` from the caller repository and install the plugins it declares under `enabledPlugins` plus the marketplaces under `extraKnownMarketplaces`. Default false so the review job runs with no project plugins — many plugins ship skills with "ALWAYS invoke before X" mandates that pull Claude into tools (Read, Grep, Glob, git) outside the wrapper's allowlist, burning turns on permission denials before any review comment is posted. Set true only when the project plugins are review-appropriate and the allowlist is widened to match (via append_allow_list / override_allow_list).
+        type: boolean
+        default: false
       plugin_marketplaces:
-        description: "Space-separated list of extra marketplaces to register beyond `.claude/settings.json`'s `extraKnownMarketplaces` (owner/repo, ref ignored — pin via settings.json)."
+        description: "Space-separated list of marketplaces to register (`owner/repo`, ref ignored — pin via the marketplace repo). Appends to the project's `extraKnownMarketplaces` when `use_project_plugins` is true; sole source when false."
         type: string
         default: ""
       extra_plugins:
-        description: "Space-separated extra plugins to install beyond `.claude/settings.json`'s `enabledPlugins`."
+        description: "Space-separated list of plugins to install. Appends to the project's `enabledPlugins` when `use_project_plugins` is true; sole source when false."
         type: string
         default: ""
     secrets:
@@ -235,19 +240,24 @@ jobs:
         env:
           PLUGIN_MARKETPLACES: ${{ inputs.plugin_marketplaces }}
           EXTRA_PLUGINS: ${{ inputs.extra_plugins }}
+          USE_PROJECT_PLUGINS: ${{ inputs.use_project_plugins }}
         run: |
           set -euo pipefail
           plugins=""
           marketplaces=""
 
-          if [[ -f .claude/settings.json ]]; then
-            jq empty .claude/settings.json
-            plugins=$(jq -r '.enabledPlugins // {} | to_entries[] | select(.value == true) | .key' .claude/settings.json)
-            marketplaces=$(jq -r '
-              .extraKnownMarketplaces // {} | to_entries[]
-              | select(.value.source.source == "github")
-              | "https://github.com/" + .value.source.repo + ".git"
-            ' .claude/settings.json)
+          if [[ "$USE_PROJECT_PLUGINS" == "true" ]]; then
+            if [[ -f .claude/settings.json ]]; then
+              jq empty .claude/settings.json
+              plugins=$(jq -r '.enabledPlugins // {} | to_entries[] | select(.value == true) | .key' .claude/settings.json)
+              marketplaces=$(jq -r '
+                .extraKnownMarketplaces // {} | to_entries[]
+                | select(.value.source.source == "github")
+                | "https://github.com/" + .value.source.repo + ".git"
+              ' .claude/settings.json)
+            fi
+          elif [[ -f .claude/settings.json ]]; then
+            echo "::notice::.claude/settings.json found but use_project_plugins is false; its enabledPlugins and extraKnownMarketplaces are ignored. Set use_project_plugins: true to opt in, or list specific plugins via extra_plugins and marketplaces via plugin_marketplaces."
           fi
 
           for p in $EXTRA_PLUGINS; do
@@ -364,7 +374,7 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@fefa07e9c665b7320f08c3b525980457f22f58aa # v1.0.111
+        uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1.0.123
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ inputs.prompt }}

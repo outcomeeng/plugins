@@ -7,7 +7,7 @@
 # superseded — for that, see `spx-review-pr-threaded.yml`.
 #
 # Calls the vendored reusable workflow at
-# `./.github/workflows/_claude-review-reusable.yml` so the only external
+# `./.github/workflows/_claude-review.yml` so the only external
 # dependency is `anthropics/claude-code-action` (pinned inside the reusable),
 # not a second indirection through `outcomeeng/gh-actions`.
 #
@@ -48,15 +48,18 @@ jobs:
     # as the sole reviewer. The threaded variant is gated independently via
     # `SPX_REVIEW_PR_THREADED` — see `spx-review-pr-threaded.yml`.
     if: ${{ vars.SPX_REVIEW_PR == 'true' }}
-    uses: ./.github/workflows/_claude-review-reusable.yml
+    uses: ./.github/workflows/_claude-review.yml
     with:
+      # The one-shot reviewer invokes the spec-tree pr-reviewer agent,
+      # which requires the spec-tree plugin to be loaded.
+      use_project_plugins: true
       # Stream the agent's full SDK transcript into the job log while the
       # reviewer surface is under active development. Flip to `false` (or
       # drop the input) once the agent is stable — the transcript can include
       # file contents the agent read and verbatim prompt material, so it is
       # not appropriate for a public-by-default reviewer.
       show_full_output: true
-      custom_prompt: |
+      prompt: |
         REPO: ${{ github.repository }}
         PR NUMBER: ${{ github.event.pull_request.number }}
 
