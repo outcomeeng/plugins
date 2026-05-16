@@ -74,6 +74,18 @@ sync-marketplace base_ref="":
 push-marketplace *push_args:
     uv run python -m outcomeeng.distribution.push {{push_args}}
 
+# Bump the manifest version of every plugin with changes under plugins/<name>/** since base_ref
+bump base_ref="origin/main" segment="patch":
+    uv run python -m outcomeeng.distribution.bump --segment {{segment}} {{base_ref}}
+
+# Preview what `just bump` would write without touching any manifest
+bump-dry base_ref="origin/main" segment="patch":
+    uv run python -m outcomeeng.distribution.bump --dry-run --segment {{segment}} {{base_ref}}
+
+# Exit non-zero if any changed plugin still needs a bump (CI-friendly)
+bump-check base_ref="origin/main":
+    uv run python -m outcomeeng.distribution.bump --check {{base_ref}}
+
 # Remove every gitignored file and directory (git clean -fdX semantics)
 clean:
     uv run python -m outcomeeng.hygiene.clean

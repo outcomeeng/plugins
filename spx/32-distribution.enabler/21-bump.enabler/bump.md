@@ -1,0 +1,36 @@
+# Bump
+
+PROVIDES the manifest version-bumping orchestration that detects which plugins changed against a base reference and updates each changed plugin's manifest version once per branch
+SO THAT marketplace maintainers and CI workflows
+CAN bump every modified plugin's version field consistently across all manifests for that plugin in a single command, preview the bump without writing, and verify in CI that every changed plugin already carries a bump
+
+The `outcomeeng.distribution.bump` module enumerates plugin directories under `plugins/`, asks an injected change probe which of them have any path under `plugins/{name}/**` changed since `base_ref`, reads the working-tree and `base_ref` versions of every manifest each changed plugin owns (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`), and either writes the next version — incremented on the selected semantic segment — back to every owned manifest (default mode), reports what it would write without touching the filesystem (`--dry-run`), or verifies that every changed plugin's version is already ahead of the base reference (`--check`). The selected segment defaults to `patch`; `minor` and `major` are explicit opt-ins. The base reference defaults to `origin/main`.
+
+## Assertions
+
+### Scenarios
+
+- Given a working tree with changes under `plugins/foo/**` and no changes under `plugins/bar/**` since `base_ref`, when bump runs, then only `foo`'s manifests are written ([test](tests/test_bump.scenario.l1.py))
+- Given a plugin owns both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` and has changes since `base_ref`, when bump runs, then both manifests are written with the same new version ([test](tests/test_bump.scenario.l1.py))
+- Given the default invocation, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `0.4.2` ([test](tests/test_bump.scenario.l1.py))
+- Given `--segment minor`, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `0.5.0` ([test](tests/test_bump.scenario.l1.py))
+- Given `--segment major`, when bump runs against a changed plugin at version `0.4.1`, then the manifest version is written as `1.0.0` ([test](tests/test_bump.scenario.l1.py))
+- Given no plugin under `plugins/` has any change since `base_ref`, when bump runs, then it exits 0 and no manifest is written ([test](tests/test_bump.scenario.l1.py))
+- Given `--dry-run` and a clean changed plugin at version `0.4.1`, when bump runs, then the would-be new version `0.4.2` is reported on stdout and no manifest is written ([test](tests/test_bump.scenario.l1.py))
+- Given `--check` and every changed plugin's working-tree version is already ahead of its `base_ref` version, when bump runs, then it exits 0 with no diagnostic and no manifest is written ([test](tests/test_bump.scenario.l1.py))
+- Given `--check` and a changed plugin whose working-tree version equals its `base_ref` version, when bump runs, then it exits non-zero with a diagnostic naming the unbumped plugin and no manifest is written ([test](tests/test_bump.scenario.l1.py))
+
+### Mappings
+
+- `--segment patch` increments the third semver component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.mapping.l1.py))
+
+### Compliance
+
+- ALWAYS: changes are detected only under `plugins/{name}/**` — any file change inside that prefix counts as a distribution-surface change for plugin `{name}`, and no path outside that prefix triggers any bump ([test](tests/test_bump.property.l1.py))
+- ALWAYS: every manifest a changed plugin owns is written in the same bump pass — when both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` exist, both receive the same new version in one bump invocation ([test](tests/test_bump.compliance.l1.py))
+- ALWAYS: check availability of `git` before any orchestration step — missing tools fail fast with a diagnostic rather than partway through the sequence ([test](tests/test_bump.compliance.l1.py))
+- NEVER: bump a plugin whose working-tree version already differs from its `base_ref` version — the branch already carries a bump for that plugin, and re-bumping during PR review is the failure `spx/local/committing-changes.md` prohibits ([test](tests/test_bump.compliance.l1.py))
+- NEVER: write a manifest for a plugin with no changes under `plugins/{name}/**` since `base_ref` — change detection is the sole trigger for writing ([test](tests/test_bump.compliance.l1.py))
+- NEVER: reformat manifest content beyond the version field — every byte outside the `"version": "{old}"` substring is preserved character-for-character, so version bumps produce minimal diffs and do not churn manifest authors' formatting choices ([test](tests/test_bump.compliance.l1.py))
+- NEVER: write any manifest when `--dry-run` or `--check` is selected — both modes are read-only regardless of plugin state ([test](tests/test_bump.compliance.l1.py))
+- NEVER: combine `--dry-run` with `--check` — the modes are mutually exclusive and the CLI parser rejects their combined use ([test](tests/test_bump.compliance.l1.py))

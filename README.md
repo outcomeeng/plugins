@@ -134,6 +134,29 @@ From this checkout, `just push-marketplace` wraps the Codex upgrade with cache
 path preservation so active sessions with stale skill paths keep resolving for
 seven days.
 
+### Bumping plugin versions on a branch
+
+When working on the marketplace itself, every branch that changes a plugin's
+distribution surface bumps that plugin's version exactly once. The `just bump`
+recipe automates this — it detects which plugins changed under `plugins/<name>/**`
+since `origin/main`, updates the `version` field in every manifest each plugin
+owns (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`)
+in lockstep, and refuses to bump a second time when the branch already carries
+a bump:
+
+```bash
+just bump                          # patch bump for every changed plugin vs origin/main
+just bump origin/main minor        # minor bump
+just bump main major               # major bump vs local main
+just bump-dry                      # preview without writing
+just bump-check                    # CI gate: exit non-zero if any changed plugin needs a bump
+```
+
+Only paths under `plugins/<name>/**` count as distribution-surface changes; edits
+to `spx/`, `AGENTS.md`, tests, or other top-level files do not trigger a bump.
+The bumper preserves manifest formatting character-for-character outside the
+`version` field, so bumps produce minimal diffs.
+
 ## Plugins
 
 Skills are available in both Claude Code and Codex. Commands and agents are Claude Code-only. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.
