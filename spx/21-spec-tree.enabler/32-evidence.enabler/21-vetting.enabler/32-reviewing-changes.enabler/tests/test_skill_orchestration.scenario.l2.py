@@ -1,32 +1,23 @@
-"""End-to-end scenario test for the reviewing-changes script chain.
+"""End-to-end scenario tests for the reviewing-changes script chain.
 
-Covers this clause in ``../reviewing-changes.md``:
+Covers the Scenario clauses in ``../reviewing-changes.md`` that govern
+how ``compute_diff.py`` resolves ``base_ref`` and how the end-to-end
+chain persists outputs:
 
-Scenarios
-- Given a ``pr.json`` with ``base_ref`` set under the configured
-  thread-store backend, the script chain reads it, computes the diff
-  against ``base_ref``, emits a review result, validates it through the
-  arbiter CLI, and writes both ``review-result.json`` and ``review.md``
-  for the current branch slug.
+1. ``changes.json`` with ``base_ref`` set → chain reads it and uses
+   that ref end-to-end (review-result.json + review.md both persisted).
+2. No ``changes.json`` + ``SPX_VET_BASE_REF`` env set → env value is
+   used as ``base_ref``.
+3. No ``changes.json`` + no env + ``refs/remotes/origin/HEAD`` resolves
+   → derived from that symbolic ref, stripped of the prefix.
+4. Env set + file set → env wins (precedence).
+5. No source available → non-zero exit; stderr names all three sources
+   so the operator can identify which to populate.
 
-The test wires the chain end-to-end against a synthetic git repository
-seeded under a ``tmp_path``-rooted thread store:
-
-1. Initialise a git product in ``tmp_path``, commit a base file,
-   create a branch, and commit a follow-up modification — the branch
-   tip differs from the base by a real diff.
-2. Write a ``pr.json`` record (via ``write_record.py``) describing the
-   PR shape: ``baseRefName`` = the base branch name.
-3. Invoke ``compute_diff.py`` to produce a non-empty diff on stdout.
-4. Pipe a synthesised, conforming ``review-result.json`` through
-   ``validate_review_result.py`` and then ``write_record.py``.
-5. Invoke ``render_review.py`` to produce ``review.md`` and persist it
-   through ``write_record.py``.
-6. Assert both records are retrievable through ``read_record.py``
-   under the branch's slug.
-
-The test is ``l2`` because it spawns ``git`` and multiple Python
-subprocesses; it does not depend on remote services or credentials.
+The tests are ``l2`` because they spawn ``git`` and multiple Python
+subprocesses against a synthetic git repository seeded under a
+``tmp_path``-rooted thread store; they do not depend on remote services
+or credentials.
 """
 
 from __future__ import annotations
@@ -125,7 +116,7 @@ def _make_env_for_temp_store(
     ),
 )
 class TestSkillOrchestrationChain:
-    """End-to-end chain: pr.json → diff → review-result → arbiter → render."""
+    """End-to-end chain: changes.json → diff → review-result → arbiter → render."""
 
     def test_chain_persists_review_result_and_review_md(
         self, tmp_path: pathlib.Path
@@ -145,27 +136,22 @@ class TestSkillOrchestrationChain:
         branch_slug_module = load_branch_slug_module()
         slug = branch_slug_module.branch_slug("feature/x")
 
-        # 4. Seed pr.json into the thread store.
-        pr_payload = json.dumps(
-            {
-                "baseRefName": base_ref,
-                "headRefName": "feature/x",
-                "number": 1,
-                "title": "Synthetic PR",
-            }
-        )
+        # 4. Seed changes.json into the thread store. The lens reads
+        #    only `base_ref`; the override file is the platform-neutral
+        #    file the consumer may author when overriding auto-derivation.
+        changes_payload = json.dumps({"base_ref": base_ref})
         result = run_script(
             WRITE_RECORD_SCRIPT,
             "--slug",
             slug,
             "--name",
-            "pr.json",
-            stdin=pr_payload,
+            "changes.json",
+            stdin=changes_payload,
             env=env,
         )
         assert result.returncode == 0, result.stderr
 
-        # 5. compute_diff.py reads pr.json (via the thread store), runs
+        # 5. compute_diff.py reads changes.json (via the thread store), runs
         #    git diff against the base, and emits the diff to stdout.
         diff_result = subprocess.run(  # noqa: S603 — script path is from the harness
             [
@@ -263,3 +249,116 @@ class TestSkillOrchestrationChain:
         )
         assert read_md.returncode == 0
         assert read_md.stdout.strip() != ""
+
+
+def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
+    """Manually set ``refs/remotes/origin/HEAD`` without needing a real remote.
+
+    The synthetic repo has no remote; ``git symbolic-ref`` lets us point
+    ``refs/remotes/origin/HEAD`` directly at a local branch so
+    ``compute_diff``'s strict origin-HEAD derivation has something to find.
+    """
+    _run_git(
+        "symbolic-ref",
+        "refs/remotes/origin/HEAD",
+        f"refs/remotes/origin/{branch}",
+        cwd=repo,
+    )
+    # The symbolic ref above only exists if the target ref exists too.
+    # Mirror the local branch's tip into the remote-tracking namespace.
+    rev = _run_git("rev-parse", branch, cwd=repo).stdout.strip()
+    _run_git("update-ref", f"refs/remotes/origin/{branch}", rev, cwd=repo)
+
+
+@pytest.mark.skipif(
+    not COMPUTE_DIFF_SCRIPT.exists(),
+    reason="compute_diff.py is not yet present.",
+)
+class TestComputeDiffBaseRefDerivation:
+    """compute_diff.py resolves base_ref from env → file → git, in that order."""
+
+    def _setup_repo_and_store(
+        self, tmp_path: pathlib.Path
+    ) -> tuple[pathlib.Path, pathlib.Path, str]:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_branch(repo)
+        store_root = tmp_path / "store"
+        store_root.mkdir()
+        return repo, store_root, base_ref
+
+    def _slug_for(self, branch: str) -> str:
+        return load_branch_slug_module().branch_slug(branch)
+
+    def _run_compute_diff(
+        self, repo: pathlib.Path, env: dict[str, str], slug: str
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(  # noqa: S603 — script path is from the harness
+            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_env_base_ref_works_without_changes_json(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref = self._setup_repo_and_store(tmp_path)
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env["SPX_VET_BASE_REF"] = base_ref
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "README.md" in result.stdout
+
+    def test_git_origin_head_works_without_changes_or_env(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref = self._setup_repo_and_store(tmp_path)
+        _set_origin_head(repo, base_ref)
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env.pop("SPX_VET_BASE_REF", None)
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "README.md" in result.stdout
+
+    def test_env_overrides_changes_json_when_both_set(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref = self._setup_repo_and_store(tmp_path)
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        # Seed changes.json with a bogus ref. If the file wins, git diff
+        # will fail; if env wins, the run succeeds.
+        run_script(
+            WRITE_RECORD_SCRIPT,
+            "--slug",
+            slug,
+            "--name",
+            "changes.json",
+            stdin=json.dumps({"base_ref": "ref-that-does-not-exist"}),
+            env=env,
+        )
+        env["SPX_VET_BASE_REF"] = base_ref
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "README.md" in result.stdout
+
+    def test_aborts_when_no_source_yields_base_ref(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, _base_ref = self._setup_repo_and_store(tmp_path)
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env.pop("SPX_VET_BASE_REF", None)
+        # No changes.json seeded; no env; no origin/HEAD symbolic ref.
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode != 0
+        # The error must name every source so the operator can pick one.
+        for token in ("SPX_VET_BASE_REF", "changes.json", "origin/HEAD"):
+            assert token in result.stderr, (
+                f"stderr should name {token!r}; got: {result.stderr!r}"
+            )

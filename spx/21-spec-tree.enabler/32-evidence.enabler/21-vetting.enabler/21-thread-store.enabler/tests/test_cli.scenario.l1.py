@@ -6,22 +6,30 @@ Covers the Scenario clauses on the CLI surface in
 - ``write_record.py``, ``read_record.py``, ``delete_record.py``, and
   ``list_records.py`` accept slug + name + payload via stdin or
   ``--file`` and exit 0 on success.
+- ``thread_store.current_slug()`` derives the slug from
+  ``SPX_VET_BRANCH`` env or ``git symbolic-ref --short HEAD``; every CRUD
+  CLI invoked without ``--slug`` falls back to that derivation. Detached
+  HEAD or missing git aborts with a structured error.
 
 The compliance clauses on the CLI surface (every CLI invokes the
-facade; no CLI calls direct filesystem primitives) live in
-``test_cli.compliance.l1.py`` — one evidence type per file.
+facade; no CLI calls direct filesystem primitives; ``--slug`` is
+optional on every CRUD CLI) live in ``test_cli.compliance.l1.py`` —
+one evidence type per file.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import pathlib
+import subprocess
 
 from outcomeeng_testing.harnesses.thread_store import (
     DELETE_RECORD_SCRIPT,
     LIST_RECORDS_SCRIPT,
     READ_RECORD_SCRIPT,
     WRITE_RECORD_SCRIPT,
+    load_branch_slug_module,
     run_script,
     with_temp_local_store,
 )
@@ -33,13 +41,55 @@ PAYLOAD = '{"verdict":"APPROVED"}'
 
 
 def _env_for(tmp_path: pathlib.Path) -> dict[str, str]:
-    import os
-
     return {
         **os.environ,
         "SPX_VET_BACKEND": "local",
         "SPX_VET_LOCAL_ROOT": str(tmp_path),
     }
+
+
+def _init_git_repo(repo: pathlib.Path, branch: str = "feature/x") -> None:
+    """Initialise a tiny git repo at ``repo`` switched to ``branch``."""
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    }
+    subprocess.run(  # noqa: S603 — args derived from the test
+        ["git", "init", "-q", "-b", "main", str(repo)],
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(  # noqa: S603
+        ["git", "config", "commit.gpgsign", "false"],
+        cwd=repo,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    (repo / "seed.txt").write_text("x", encoding="utf-8")
+    subprocess.run(  # noqa: S603
+        ["git", "add", "seed.txt"], cwd=repo, env=env, check=True, capture_output=True
+    )
+    subprocess.run(  # noqa: S603
+        ["git", "commit", "-q", "-m", "init"],
+        cwd=repo,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(  # noqa: S603
+        ["git", "switch", "-c", branch],
+        cwd=repo,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
 
 
 class TestWriteRecordCli:
@@ -202,3 +252,120 @@ class TestCliJsonRoundTrip:
             check=True,
         )
         assert json.loads(result.stdout) == {"k": "v", "n": 1}
+
+
+class TestSlugDerivationWhenOmitted:
+    """When ``--slug`` is omitted the CLIs derive via ``thread_store.current_slug()``.
+
+    Source precedence: ``SPX_VET_BRANCH`` env beats ``git symbolic-ref
+    --short HEAD``; detached HEAD or missing git aborts with a structured
+    stderr message naming the override so the operator can recover.
+    """
+
+    def test_env_branch_yields_derived_slug(self, tmp_path: pathlib.Path) -> None:
+        env = {**_env_for(tmp_path), "SPX_VET_BRANCH": "feature/x"}
+        expected_slug = load_branch_slug_module().branch_slug("feature/x")
+        result = run_script(
+            WRITE_RECORD_SCRIPT,
+            "--name",
+            NAME,
+            stdin=PAYLOAD,
+            env=env,
+        )
+        assert result.returncode == 0, result.stderr
+        assert (tmp_path / expected_slug / NAME).read_text() == PAYLOAD
+
+    def test_git_current_branch_yields_derived_slug(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        _init_git_repo(repo, branch="feature/y")
+        store_root = tmp_path / "store"
+        store_root.mkdir()
+        env = {
+            **os.environ,
+            "SPX_VET_BACKEND": "local",
+            "SPX_VET_LOCAL_ROOT": str(store_root),
+            "PWD": str(repo),
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_CONFIG_SYSTEM": "/dev/null",
+        }
+        env.pop("SPX_VET_BRANCH", None)
+        expected_slug = load_branch_slug_module().branch_slug("feature/y")
+        result = subprocess.run(  # noqa: S603 — script path is from the harness
+            ["python3", str(WRITE_RECORD_SCRIPT), "--name", NAME],
+            cwd=repo,
+            env=env,
+            input=PAYLOAD,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert (store_root / expected_slug / NAME).read_text() == PAYLOAD
+
+    def test_detached_head_without_env_override_aborts(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        _init_git_repo(repo, branch="feature/z")
+        # Switch to detached HEAD at the same commit.
+        subprocess.run(  # noqa: S603
+            ["git", "switch", "--detach", "HEAD"],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        env = {
+            **os.environ,
+            "SPX_VET_BACKEND": "local",
+            "SPX_VET_LOCAL_ROOT": str(tmp_path / "store"),
+            "PWD": str(repo),
+        }
+        env.pop("SPX_VET_BRANCH", None)
+        result = subprocess.run(  # noqa: S603
+            ["python3", str(WRITE_RECORD_SCRIPT), "--name", NAME],
+            cwd=repo,
+            env=env,
+            input=PAYLOAD,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode != 0
+        assert "SPX_VET_BRANCH" in result.stderr
+
+    def test_git_unavailable_without_env_override_aborts(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        import sys
+
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        # No git init — the cwd is not a git repo, and PATH is wiped of
+        # everything except sys.executable's directory so the Python
+        # binary still runs but the script's git subprocess can't find git.
+        python_dir = str(pathlib.Path(sys.executable).parent)
+        env = {
+            "SPX_VET_BACKEND": "local",
+            "SPX_VET_LOCAL_ROOT": str(tmp_path / "store"),
+            "PWD": str(repo),
+            "PATH": python_dir,
+            # Python needs HOME for some imports on macOS; keep a benign value.
+            "HOME": str(tmp_path),
+        }
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, str(WRITE_RECORD_SCRIPT), "--name", NAME],
+            cwd=repo,
+            env=env,
+            input=PAYLOAD,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode != 0
+        # The error should name either git or SPX_VET_BRANCH so the
+        # operator knows how to recover.
+        assert "git" in result.stderr.lower() or "SPX_VET_BRANCH" in result.stderr

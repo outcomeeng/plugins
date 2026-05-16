@@ -39,7 +39,11 @@ def _load_thread_store() -> ModuleType:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Write a record to the thread store.")
-    parser.add_argument("--slug", required=True, help="thread slug")
+    parser.add_argument(
+        "--slug",
+        default=None,
+        help="thread slug; derived via thread_store.current_slug() when omitted",
+    )
     parser.add_argument("--name", required=True, help="record name")
     parser.add_argument(
         "--file",
@@ -55,8 +59,15 @@ def main(argv: list[str] | None = None) -> int:
         payload = sys.stdin.buffer.read()
 
     thread_store = _load_thread_store()
+    slug = args.slug
+    if slug is None:
+        try:
+            slug = thread_store.current_slug()
+        except thread_store.ConfigurationError as exc:
+            sys.stderr.write(f"{exc}\n")
+            return 1
     try:
-        thread_store.write(args.slug, args.name, payload)
+        thread_store.write(slug, args.name, payload)
     except thread_store.ThreadStoreError as exc:
         sys.stderr.write(f"{exc}\n")
         return 1

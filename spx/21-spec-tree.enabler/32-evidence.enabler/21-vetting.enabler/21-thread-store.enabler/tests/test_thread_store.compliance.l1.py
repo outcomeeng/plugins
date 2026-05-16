@@ -28,7 +28,7 @@ from outcomeeng_testing.harnesses.thread_store import (
     load_branch_slug_module,
     load_fs_backend_module,
     load_thread_store_module,
-    make_pr_json,
+    make_changes_json,
     with_temp_local_store,
 )
 
@@ -148,23 +148,25 @@ class TestHarnessSurface:
         finally:
             os.environ.pop("SPX_VET_BACKEND", None)
 
-    def test_make_pr_json_writes_payload_with_base_ref(
+    def test_make_changes_json_writes_payload_with_base_ref(
         self, tmp_path: pathlib.Path
     ) -> None:
         import json
 
-        target = make_pr_json(tmp_path, base_ref="main")
+        target = make_changes_json(tmp_path, base_ref="main")
         payload = json.loads(target.read_text())
-        assert payload["baseRefName"] == "main"
-        assert "headRefName" in payload
+        assert payload["base_ref"] == "main"
+        assert target.name == "changes.json"
 
-    def test_make_pr_json_merges_overrides(self, tmp_path: pathlib.Path) -> None:
+    def test_make_changes_json_merges_overrides(self, tmp_path: pathlib.Path) -> None:
         import json
 
-        target = make_pr_json(tmp_path, base_ref="main", number=42, title="Custom")
+        target = make_changes_json(
+            tmp_path, base_ref="main", extra_field="future-extension"
+        )
         payload = json.loads(target.read_text())
-        assert payload["number"] == 42
-        assert payload["title"] == "Custom"
+        assert payload["base_ref"] == "main"
+        assert payload["extra_field"] == "future-extension"
 
     def test_facade_module_loads_via_importlib(self) -> None:
         ts = load_thread_store_module()

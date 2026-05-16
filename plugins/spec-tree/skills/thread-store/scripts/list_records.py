@@ -32,12 +32,23 @@ def _load_thread_store() -> ModuleType:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="List records in a thread.")
-    parser.add_argument("--slug", required=True, help="thread slug")
+    parser.add_argument(
+        "--slug",
+        default=None,
+        help="thread slug; derived via thread_store.current_slug() when omitted",
+    )
     args = parser.parse_args(argv)
 
     thread_store = _load_thread_store()
+    slug = args.slug
+    if slug is None:
+        try:
+            slug = thread_store.current_slug()
+        except thread_store.ConfigurationError as exc:
+            sys.stderr.write(f"{exc}\n")
+            return 1
     try:
-        names = thread_store.list(args.slug)
+        names = thread_store.list(slug)
     except thread_store.ThreadStoreError as exc:
         sys.stderr.write(f"{exc}\n")
         return 1

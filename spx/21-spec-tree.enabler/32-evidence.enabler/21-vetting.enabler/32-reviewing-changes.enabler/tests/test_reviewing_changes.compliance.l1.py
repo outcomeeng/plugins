@@ -47,7 +47,8 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
 # Filesystem-write primitives the scripts MUST NOT use directly. Read
 # primitives (``open(..., 'rb')``, ``Path.read_bytes``, ``Path.read_text``)
 # are permitted because ``compute_diff.py`` legitimately reads the diff
-# subprocess's stdout and reads pr.json via ``thread_store``.
+# subprocess's stdout and reads the optional ``changes.json`` override via
+# ``thread_store``.
 FORBIDDEN_NAME_CALLS = {"open"}
 FORBIDDEN_ATTR_CALLS = {
     ("os", "remove"),
@@ -303,4 +304,35 @@ class TestWrapperAgentFrontmatter:
         # Skills field must list spec-tree:reviewing-changes.
         assert "spec-tree:reviewing-changes" in frontmatter, (
             f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:reviewing-changes"
+        )
+
+
+class TestComputeDiffSlugIsOptional:
+    """``compute_diff.py --slug`` is optional — the script derives the slug.
+
+    Guards against an accidental regression where ``--slug`` is made
+    required again. The agent never names a slug in its prose; the script
+    falls back to ``thread_store.current_slug()`` when ``--slug`` is
+    omitted. Inspecting the argparse parser directly is faster than
+    fixturing a git repo + running subprocess.
+    """
+
+    def test_compute_diff_slug_argument_is_optional(self) -> None:
+        if not COMPUTE_DIFF_SCRIPT.is_file():
+            pytest.skip("compute_diff.py not yet present")
+        # Source-level check: argparse declares --slug with required=False
+        # (the default) or omits required=True from add_argument.
+        source = COMPUTE_DIFF_SCRIPT.read_text(encoding="utf-8")
+        # Look for the add_argument call for --slug and confirm
+        # required=True is NOT set on it.
+        slug_arg_match = re.search(
+            r"add_argument\(\s*['\"]--slug['\"][^)]*\)", source, re.DOTALL
+        )
+        assert slug_arg_match is not None, (
+            "compute_diff.py must declare a --slug argparse argument "
+            "(even if optional) so callers can override slug derivation"
+        )
+        assert "required=True" not in slug_arg_match.group(0), (
+            "compute_diff.py --slug must NOT be required=True — the script "
+            "derives the slug via thread_store.current_slug() when omitted"
         )

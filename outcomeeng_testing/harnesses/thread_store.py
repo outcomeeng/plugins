@@ -17,10 +17,11 @@ Provides the shared scaffolding consumed by every test file under
   filesystem backend at a ``tmp_path``-rooted ``.spx/reviews`` tree by
   setting ``SPX_VET_LOCAL_ROOT`` and ``SPX_VET_BACKEND`` for the duration
   of the test, then restores prior values on exit.
-- ``make_pr_json``. A factory for synthetic pull-request-like JSON
-  payloads that the consumer-lens tests will exercise once the lens
-  lands. Lives in the harness because consumer tests across multiple
-  lens nodes will need the same shape.
+- ``make_changes_json``. A factory for synthetic ``changes.json``
+  override payloads — the platform-neutral override file the
+  reviewing-changes lens reads from the thread store. Lives in the
+  harness because consumer tests across multiple lens nodes use the
+  same shape.
 
 The harness lives in ``outcomeeng_testing/harnesses/`` per
 ``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is
@@ -185,30 +186,28 @@ def with_temp_local_store(tmp_path: pathlib.Path) -> Iterator[pathlib.Path]:
                 os.environ[key] = value
 
 
-def make_pr_json(
+def make_changes_json(
     tmp_path: pathlib.Path,
     base_ref: str,
     **kw: object,
 ) -> pathlib.Path:
-    """Write a synthetic PR-shaped JSON payload to ``tmp_path`` and return its path.
+    """Write a synthetic ``changes.json`` override payload to ``tmp_path`` and return its path.
 
-    A real PR payload from ``gh pr view`` carries many fields; the harness
-    writes a minimal shape with the keys the consumer lens reads
-    (``baseRefName``, ``headRefName``, ``number``, ``title``) and merges
-    any caller overrides on top. Lens tests pass this path to scripts
-    that read the PR JSON without consulting the live ``gh`` CLI.
+    The reviewing-changes lens reads an optional ``changes.json`` override
+    file from the thread store; this factory writes the same shape to a
+    plain ``tmp_path`` location so harness tests can exercise the
+    file-parsing surface without standing up a full thread-store backend.
+    The minimum payload carries ``base_ref`` (the only field
+    ``compute_diff.py`` consults); callers may merge additional keys for
+    future extensions.
 
     ``base_ref`` is named explicitly because the diff range a lens
-    computes is anchored on it; every caller passes one. Other fields
-    accept defaults that the harness fills in.
+    computes is anchored on it; every caller passes one.
     """
     payload: dict[str, object] = {
-        "baseRefName": base_ref,
-        "headRefName": "feature-branch",
-        "number": 1,
-        "title": "Synthetic PR for thread-store harness",
+        "base_ref": base_ref,
     }
     payload.update(kw)
-    target = tmp_path / "pr.json"
+    target = tmp_path / "changes.json"
     target.write_text(json.dumps(payload), encoding="utf-8")
     return target
