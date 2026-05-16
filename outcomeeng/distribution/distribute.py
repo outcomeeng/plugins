@@ -5,9 +5,9 @@ to source plugins, then copies skill directories to each repo.
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.distribute_skills --dry-run
-    uv run python -m outcomeeng.scripts.distribute_skills --repo foundation
-    uv run python -m outcomeeng.scripts.distribute_skills  # distribute all repos
+    uv run python -m outcomeeng.distribution.distribute --dry-run
+    uv run python -m outcomeeng.distribution.distribute --repo foundation
+    uv run python -m outcomeeng.distribution.distribute  # distribute all repos
 """
 
 from __future__ import annotations

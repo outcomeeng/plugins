@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from outcomeeng.scripts.build_plugins import (
+from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
     IncludeDirective,

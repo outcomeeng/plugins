@@ -14,7 +14,7 @@ from __future__ import annotations
 from hypothesis import strategies as st
 from hypothesis.strategies import DrawFn, SearchStrategy
 
-from outcomeeng.scripts.build_plugins import (
+from outcomeeng.distribution.build import (
     Directive,
     IncludeDirective,
     RequireSkillDirective,

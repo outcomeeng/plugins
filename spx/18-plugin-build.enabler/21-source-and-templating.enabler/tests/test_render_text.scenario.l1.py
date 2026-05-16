@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.scripts.build_plugins import IMPLEMENTED, render_text
+from outcomeeng.distribution.build import IMPLEMENTED, render_text
 from outcomeeng_testing.harnesses.scenarios import (
     SCENARIO_MULTILINE_INCLUDE,
     SCENARIO_SIMPLE_INCLUDE,
@@ -23,7 +23,7 @@ from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 def _require_module_implemented() -> None:
     if not IMPLEMENTED:
         pytest.fail(
-            "outcomeeng.scripts.build_plugins is a stub; implement it before "
+            "outcomeeng.distribution.build is a stub; implement it before "
             "running this test, or filter via `spx test passing` "
             "(node is listed in spx/EXCLUDE)"
         )

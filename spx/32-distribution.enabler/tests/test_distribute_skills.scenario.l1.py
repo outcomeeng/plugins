@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.scripts import distribute_skills
+from outcomeeng.distribution import distribute as distribute_skills
 
 
 # =============================================================================

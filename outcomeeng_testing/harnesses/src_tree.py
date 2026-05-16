@@ -2,7 +2,7 @@
 
 SrcTreeBuilder writes plugins and shared topics to a given root, validating
 inputs against the canonical kebab-case naming rules. Layout constants come
-from outcomeeng.scripts.build_plugins so the harness stays aligned with the
+from outcomeeng.distribution.build so the harness stays aligned with the
 production module's contract.
 """
 
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
-from outcomeeng.scripts.build_plugins import (
+from outcomeeng.distribution.build import (
     AGENTS_SUBDIR_NAME,
     AGENT_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,

@@ -17,8 +17,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from outcomeeng.scripts import preserve_codex_plugin_cache
-from outcomeeng.scripts.preserve_codex_plugin_cache import DEFAULT_MARKETPLACE
+from outcomeeng.distribution import codex_cache as preserve_codex_plugin_cache
+from outcomeeng.distribution.codex_cache import DEFAULT_MARKETPLACE
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"

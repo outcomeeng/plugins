@@ -24,7 +24,7 @@ bindings:
 
 Resolution: roll out the include-directive vertical slice pattern
 (stage-isolated tests, source-owned constants from
-`outcomeeng.scripts.build_plugins`, named scenarios from
+`outcomeeng.distribution.build`, named scenarios from
 `outcomeeng_testing.harnesses.scenarios`, IMPLEMENTED-flag skip-gate)
 to each remaining assertion. See `PLAN.md` for ordering.
 
@@ -35,7 +35,7 @@ describe repo configuration shape (justfile recipe presence, lefthook
 hook presence, marketplace JSON paths) rather than build behavior.
 The `/python:auditing-python-tests` audit classified the corresponding
 test scaffolds as having severed coupling: the tests grep static
-config files and never exercise `outcomeeng.scripts.build_plugins`.
+config files and never exercise `outcomeeng.distribution.build`.
 
 Resolution: split the four assertions:
 
