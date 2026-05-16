@@ -74,11 +74,6 @@ sync-marketplace base_ref="":
 push-marketplace *push_args:
     uv run python -m outcomeeng.distribution.push {{push_args}}
 
-# Remove __pycache__, .pytest_cache, and other generated files
+# Remove every gitignored file and directory (git clean -fdX semantics)
 clean:
-    find . -type f -name '.DS_Store' -delete 2>/dev/null || true
-    find . -path '*/__pycache__/*.pyc' -delete 2>/dev/null || true
-    find . -type d -name "__pycache__" -empty -delete 2>/dev/null || true
-    find . -path '*/.pytest_cache/*' -delete 2>/dev/null || true
-    find . -type d -name ".pytest_cache" -empty -delete 2>/dev/null || true
-    @echo "Cleaned __pycache__ and .pytest_cache"
+    uv run python -m outcomeeng.hygiene.clean

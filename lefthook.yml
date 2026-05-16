@@ -2,7 +2,7 @@ pre-commit:
   commands:
     fix-xml-spacing:
       glob: "*.md"
-      run: uv run python -m outcomeeng.scripts.fix_xml_spacing {staged_files}
+      run: uv run python -m outcomeeng.hygiene.xml_spacing {staged_files}
       stage_fixed: true
       priority: 0
     validate-skill-frontmatter:

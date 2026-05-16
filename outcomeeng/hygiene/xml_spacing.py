@@ -5,7 +5,7 @@ and removes indentation from closing tags. Respects code fences.
 
 Usage::
 
-    uv run python -m outcomeeng.scripts.fix_xml_spacing FILE [FILE ...]
+    uv run python -m outcomeeng.hygiene.xml_spacing FILE [FILE ...]
 """
 
 from __future__ import annotations
