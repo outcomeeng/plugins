@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import pathlib
+import string
 import sys
 from types import ModuleType
 
@@ -61,66 +62,101 @@ def _load_review_result() -> ModuleType:
     return module
 
 
+RENDER_DIR = pathlib.Path(__file__).resolve().parent.parent / "references" / "render"
+DEFAULT_TITLE = "Change Review"
+FOLLOWUPS_HEADER = "---\n\n## Findings out of scope for merge"
+
+
+def _load_template(name: str) -> string.Template:
+    """Load and return a ``string.Template`` for the named render template.
+
+    Templates live under ``references/render/`` — one markdown file per
+    render section. Substituted via stdlib ``string.Template`` so the
+    rendered shape is data, not f-string concatenation. The GH-hosted
+    ``spec-tree-review`` workflow can consume the same files.
+    """
+    return string.Template((RENDER_DIR / name).read_text(encoding="utf-8"))
+
+
+def _load_static(name: str) -> str:
+    """Load a render template that has no placeholders; return its text."""
+    return (RENDER_DIR / name).read_text(encoding="utf-8").rstrip()
+
+
+def _location(finding: "object") -> str:
+    """Return the ``file:line`` location string used in finding headings."""
+    return f"{finding.file}:{finding.line}"  # type: ignore[attr-defined]
+
+
+def _render_finding(template: string.Template, finding: "object") -> str:
+    """Substitute a finding's fields into a per-class template."""
+    return template.substitute(
+        concern=str(finding.concern),  # type: ignore[attr-defined]
+        location=_location(finding),
+        message=finding.message,  # type: ignore[attr-defined]
+        rule=finding.rule,  # type: ignore[attr-defined]
+    ).rstrip()
+
+
+def _partition_findings(
+    findings: list["object"],
+) -> tuple[list["object"], list["object"]]:
+    """Split findings into (blockers, followups) by severity.
+
+    ``must_fix`` → BLOCKING; ``suggestion`` and ``nit`` → FOLLOW-UP. The
+    four-class render shape has no NOTE; nits are folded into
+    FOLLOW-UP so no information is lost.
+    """
+    blockers = [f for f in findings if str(f.severity) == "must_fix"]  # type: ignore[attr-defined]
+    followups = [
+        f
+        for f in findings
+        if str(f.severity) in ("suggestion", "nit")  # type: ignore[attr-defined]
+    ]
+    return blockers, followups
+
+
 def _render_markdown(result: "object") -> str:
     """Render a parsed ``ReviewResult`` into the ``review.md`` surface.
 
-    The shape is deterministic: a header naming the decision, the
-    summary paragraph, an acknowledgements section when present, and a
-    findings table sorted by severity then concern. The renderer keeps
-    no policy of its own — the decision and severity wire values flow
-    through unchanged so a downstream reader can grep on them.
+    Loads per-section templates from ``references/render/``, partitions
+    findings by render class, substitutes placeholders via stdlib
+    ``string.Template``, and assembles the body in section order
+    (blockers / no-blockers → followups → acknowledgements). The shape
+    matches the GH ``spec-tree-review`` workflow's four-class taxonomy.
     """
-    decision = str(result.decision)  # type: ignore[attr-defined]
-    summary = result.summary  # type: ignore[attr-defined]
-    findings = result.findings  # type: ignore[attr-defined]
-    acknowledgements = result.acknowledgements  # type: ignore[attr-defined]
+    document_tpl = _load_template("document.md")
+    blocking_tpl = _load_template("finding-blocking.md")
+    followup_tpl = _load_template("finding-followup.md")
+    acks_tpl = _load_template("acknowledgements.md")
+    no_blockers_text = _load_static("no-blockers.md")
 
-    lines: list[str] = []
-    lines.append(f"# Review: {decision}")
-    lines.append("")
-    if summary:
-        lines.append(summary)
-        lines.append("")
+    findings = list(result.findings)  # type: ignore[attr-defined]
+    blockers, followups = _partition_findings(findings)
+    # Stable ordering: by concern then id, for both classes.
+    blockers.sort(key=lambda f: (str(f.concern), f.id))
+    followups.sort(key=lambda f: (str(f.concern), f.id))
 
-    if acknowledgements:
-        lines.append("## Acknowledgements")
-        lines.append("")
-        for ack in acknowledgements:
-            lines.append(f"- {ack}")
-        lines.append("")
-
-    if findings:
-        lines.append("## Findings")
-        lines.append("")
-        lines.append("| ID | Severity | Concern | File:Line | Rule | Message |")
-        lines.append("| --- | --- | --- | --- | --- | --- |")
-        # Severity sort order: must_fix first, then suggestion, then nit.
-        severity_order = {"must_fix": 0, "suggestion": 1, "nit": 2}
-        sorted_findings = sorted(
-            findings,
-            key=lambda f: (
-                severity_order.get(str(f.severity), 99),
-                str(f.concern),
-                f.id,
-            ),
-        )
-        for finding in sorted_findings:
-            location = f"{finding.file}:{finding.line}"
-            # Pipe characters in messages would break the markdown
-            # table; escape them with a backslash so the table parses.
-            message = finding.message.replace("|", r"\|")
-            lines.append(
-                f"| {finding.id} | {finding.severity} | {finding.concern} "
-                f"| {location} | {finding.rule} | {message} |"
-            )
-        lines.append("")
+    body_parts: list[str] = []
+    if blockers:
+        body_parts.extend(_render_finding(blocking_tpl, f) for f in blockers)
     else:
-        lines.append("## Findings")
-        lines.append("")
-        lines.append("_No findings._")
-        lines.append("")
+        body_parts.append(no_blockers_text)
 
-    return "\n".join(lines)
+    if followups:
+        body_parts.append(FOLLOWUPS_HEADER)
+        body_parts.extend(_render_finding(followup_tpl, f) for f in followups)
+
+    acknowledgements = list(result.acknowledgements)  # type: ignore[attr-defined]
+    if acknowledgements:
+        items = "\n".join(f"- {a}" for a in acknowledgements)
+        body_parts.append(acks_tpl.substitute(items=items).rstrip())
+
+    body = "\n\n".join(body_parts)
+    summary = result.summary or ""  # type: ignore[attr-defined]
+    return (
+        document_tpl.substitute(title=DEFAULT_TITLE, summary=summary, body=body) + "\n"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
