@@ -58,6 +58,14 @@ RENDER_REVIEW_SCRIPT = SCRIPTS_DIR / "render_review.py"
 WRAPPER_AGENT_PATH = REPO_ROOT / "plugins" / "spec-tree" / "agents" / "changes-agent.md"
 RENDER_TEMPLATES_DIR = REFERENCES_DIR / "render"
 
+# Fixture rule citation: a real path-style citation that satisfies the
+# parser's rule-form check. Points at this lens's own spec so the citation
+# is stable and self-contained — no external rule required.
+FIXTURE_RULE_CITATION = (
+    "spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/"
+    "32-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
+)
+
 
 def load_review_result_module() -> ModuleType:
     """Load the ``review_result`` policy module via importlib.
@@ -84,6 +92,27 @@ def load_review_result_module() -> ModuleType:
         )
     module = importlib.util.module_from_spec(spec)
     sys.modules["review_result"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_render_review_module() -> ModuleType:
+    """Load the ``render_review`` script as a module via importlib.
+
+    Mirrors :func:`load_review_result_module`. Tests that introspect the
+    severity → render-class partitioning function or the template-loading
+    helpers load the module here. ``render_review`` itself imports
+    ``review_result`` and ``thread_store``; both are wired via sibling
+    importlib in the script.
+    """
+    cached = sys.modules.get("render_review")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location("render_review", RENDER_REVIEW_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load render_review from {RENDER_REVIEW_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["render_review"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -144,7 +173,7 @@ def make_review_result_dict(
                 "severity": "suggestion",
                 "file": "example.py",
                 "line": 10,
-                "rule": "naming",
+                "rule": FIXTURE_RULE_CITATION,
                 "message": "Consider a more descriptive name.",
             }
         ]

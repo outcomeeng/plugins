@@ -29,6 +29,26 @@ Emit one of three decisions on the document:
 - `suggestion` — the author should consider a change; it is not required for the diff to land.
 - `nit` — a minor stylistic preference; the author may ignore it.
 
+## Rule citation
+
+Every finding's `rule` field is a stable, path-style citation into an existing rule in the spec-tree or skill ecosystem. The repository's `CLAUDE.md` / `AGENTS.md` and the spec nodes you loaded as context name the rules; `rule` points at one of them. Accepted forms:
+
+- `spx/<path-to-spec-or-decision>.md:<MUST|NEVER|ALWAYS>:<n>` — citation into a spec assertion or an ADR/PDR compliance rule, where `<n>` is the 1-based ordinal of the bullet under that section.
+  - Examples: `spx/15-test-language.adr.md:NEVER:1`, `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/32-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:3`.
+- `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — citation into a named rule inside a standardizing skill (the slug matches a heading or named rule in the skill).
+  - Example: `plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice`.
+- `AGENTS.md:<section-slug>` or `CLAUDE.md:<section-slug>` — citation into a top-level repo-instruction section (use only when the rule lives in the repo-root instructions and not in a more specific location).
+
+The `rule` field is a citation, not text. Never populate it with:
+
+- Free-form prose describing what to do (`fix the naming issue`, `add the missing test`).
+- A required-action statement (`add error handling`, `validate the input`).
+- A tracking location (`ISSUES.md`, `PLAN.md`, `track in the bug queue`).
+- An invented identifier that does not point at a real rule loaded in the context.
+- A bare rule label without a path (`naming`, `atemporal-voice` without the path prefix).
+
+If you observe a defect that no loaded rule covers, the finding's `concern` and `message` carry the substance; populate `rule` with the closest broader rule that does cover the concern category (e.g., `CLAUDE.md:critical-rules` for repo-wide hygiene). When no broader rule fits, the finding is likely outside the lens's scope — re-classify or drop it rather than invent a citation.
+
 ## Acknowledgements
 
 Always emit at least one acknowledgement when the diff makes a positive change — a defect fixed, a test added, a refactor that improves clarity, a doc that explains a non-obvious behaviour. Acknowledgements are short strings; the author reads them as confirmation that the review noticed the good as well as the bad.

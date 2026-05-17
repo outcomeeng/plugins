@@ -136,6 +136,20 @@ _REQUIRED_FINDING_KEYS = (
     "message",
 )
 
+# Accepted path-prefixes for ``Finding.rule`` citations. A rule must cite an
+# existing rule in the spec-tree or skill ecosystem; the parser enforces the
+# structural form here (a path beginning with one of these prefixes). The
+# semantic check — that the cited rule actually exists at the referenced
+# location — is the lens prompt's concern and the future deterministic
+# diff-reference check's concern; it is not enforced at parse time.
+_RULE_CITATION_PREFIXES = (
+    "spx/",
+    "plugins/",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "SKILL.md",
+)
+
 
 def parse_json(text: str) -> ReviewResult:
     """Parse a JSON document into a :class:`ReviewResult`.
@@ -254,15 +268,34 @@ def _parse_finding(data: Any) -> Finding:
     severity_raw = _require_str(data, "severity")
     severity = _parse_enum(severity_raw, Severity, field="severity")
     line = _require_int(data, "line")
+    rule = _require_str(data, "rule")
+    _validate_rule_citation(rule)
     return Finding(
         id=_require_str(data, "id"),
         concern=concern,
         severity=severity,
         file=_require_str(data, "file"),
         line=line,
-        rule=_require_str(data, "rule"),
+        rule=rule,
         message=_require_str(data, "message"),
     )
+
+
+def _validate_rule_citation(rule: str) -> None:
+    """Reject ``rule`` values that are not path-style citations.
+
+    Accepts a string starting with one of ``_RULE_CITATION_PREFIXES``.
+    Rejects empty strings, free-form prose, action text, and tracking
+    locations. The semantic check (that the cited rule exists at the
+    location) is not enforced here.
+    """
+    if not rule:
+        raise ReviewResultValidationError("finding 'rule' must be a non-empty string")
+    if not rule.startswith(_RULE_CITATION_PREFIXES):
+        raise ReviewResultValidationError(
+            f"finding 'rule' must be a path-style citation starting with one of "
+            f"{list(_RULE_CITATION_PREFIXES)}; got {rule!r}"
+        )
 
 
 def _parse_enum(value: str, enum_cls: type[StrEnum], *, field: str) -> Any:

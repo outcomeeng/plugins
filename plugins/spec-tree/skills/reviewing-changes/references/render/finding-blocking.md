@@ -1,4 +1,4 @@
 ### BLOCKING [$concern]: $location
 
 Evidence: $message
-Required: $rule
+Rule violated: $rule

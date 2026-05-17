@@ -415,7 +415,23 @@ outcomeeng/plugins/                 # Marketplace: outcomeeng
 
 ## Git workflow
 
+### Autonomy
+
+In this marketplace the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here. Standing authorization covers:
+
+- Committing changes via `/committing-changes` (the skill loads the marketplace's commit rules from `spx/local/committing-changes.md`; the agent does not bypass the skill).
+- Pushing the feature branch via `/opening-pr` (which runs the branch-hygiene checks and `git push -u origin HEAD:refs/heads/<branch>`).
+- Opening the draft PR via `/opening-pr` (which calls `gh pr create --draft` with a curated title and body).
+- Iterating on the PR via `/managing-pr` (commit + push + heartbeat + review inspection).
+- Merging via `/managing-pr` under the gate-green-autonomous default declared by `/standardizing-merging` `<pr_authority_gate>` and refined in `spx/local/merging.md`.
+
+The skills are mandatory: every commit goes through `/committing-changes`; every PR open goes through `/opening-pr`; every PR iteration goes through `/managing-pr`. The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the skill flow.
+
+The autonomy does **not** cover: force-push, branch deletion on the remote outside the merge flow, direct push to `main` outside `just push-marketplace`, skipping pre-commit hooks (`--no-verify`), skipping commit signing, or any action explicitly forbidden by the Git Safety Protocol or `<self_reference_policy>`. Those still require explicit human instruction in the same turn.
+
 Use the workflow the user chooses for the current change. Pull requests are the default path for feature work, production behavior changes, broad refactors, publishing changes, and anything that needs review. Node-local `PLAN.md` and `ISSUES.md` coordination files may be committed directly when the user needs collaborators to see the coordination state immediately.
+
+### Lifecycle
 
 For pull-request work, the path is:
 

@@ -351,6 +351,7 @@ REQUIRED_RENDER_TEMPLATES = (
     "document.md",
     "finding-blocking.md",
     "finding-followup.md",
+    "followups-header.md",
     "no-blockers.md",
     "acknowledgements.md",
 )
@@ -395,14 +396,54 @@ class TestRenderTemplatesAreDataFiles:
         if not RENDER_REVIEW_SCRIPT.is_file():
             pytest.skip("render_review.py not yet present")
         source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
-        # The four-class heading prefixes must NOT appear as literal
-        # strings in the script — they belong in the template files.
-        # The FOLLOWUPS_HEADER constant is the one allowed literal
-        # (separator + section heading); other render-shape literals
-        # are forbidden.
-        forbidden_in_script = ("### BLOCKING", "### FOLLOW-UP", "### NEEDS-ANSWER")
+        # Heading prefixes and the followups-section header must NOT
+        # appear as literal strings in the script — they belong in the
+        # template files under references/render/.
+        forbidden_in_script = (
+            "### BLOCKING",
+            "### FOLLOW-UP",
+            "### NEEDS-ANSWER",
+            "## Findings out of scope",
+        )
         for needle in forbidden_in_script:
             assert needle not in source, (
                 f"render_review.py must not embed the render-template "
                 f"literal {needle!r} — move it to references/render/"
             )
+
+
+class TestPromptTeachesRuleCitation:
+    """The lens prompt instructs the model to populate ``Finding.rule`` as a citation.
+
+    The arbiter enforces structural form; the prompt enforces the semantic
+    that ``rule`` cites an existing rule in the spec-tree or skill
+    ecosystem. The prompt must contain a Rule citation section that names
+    the accepted path forms and forbids text/action/location populations.
+    """
+
+    def test_prompt_contains_rule_citation_section(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        assert "## Rule citation" in prompt_source, (
+            "review-prompt.md must include a 'Rule citation' section "
+            "that defines what Finding.rule should contain"
+        )
+
+    def test_prompt_names_accepted_rule_path_forms(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        # Each accepted form's distinguishing prefix must appear in the
+        # prompt so the model can pattern-match its citations.
+        for prefix in ("spx/", "plugins/", "SKILL.md", "AGENTS.md", "CLAUDE.md"):
+            assert prefix in prompt_source, (
+                f"review-prompt.md must mention the {prefix!r} citation form "
+                "so the model populates Finding.rule with the correct shape"
+            )
+
+    def test_prompt_forbids_text_action_or_location_in_rule(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        # The prompt must explicitly state that rule is a citation, not
+        # text/action/location. The "Never populate it with" anchor
+        # makes the prohibition findable for review and stable for tests.
+        assert "Never populate it with" in prompt_source, (
+            "review-prompt.md must include an explicit 'Never populate it "
+            "with' clause forbidding prose/action/location text in Finding.rule"
+        )

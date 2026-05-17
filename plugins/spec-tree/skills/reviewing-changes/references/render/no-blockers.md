@@ -1,1 +1,1 @@
-No BLOCKING or NEEDS-ANSWER items.
+No BLOCKING items.
