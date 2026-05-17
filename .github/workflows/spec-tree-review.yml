@@ -1,0 +1,53 @@
+# Spec Tree PR review.
+#
+# Thin caller of the upstream `spec-tree-review.yml` reusable from
+# outcomeeng/gh-actions. The reusable carries the authorize +
+# validate-workflow gates, the spec-tree-aware review prompt (which reads
+# this repository's `REVIEW.template.md` when present and falls back to
+# the embedded BLOCKING/DEBT/FOLLOW-UP taxonomy otherwise), the
+# `sed`/`grep`/`head` allowlist extension, and the Claude Code action
+# invocation. Pin to a full commit SHA so the composite actions checked
+# out by the reusable stay in lockstep with the workflow file content
+# the upstream's validate-workflow gate compares against the default
+# branch.
+#
+# `ready_for_review` is deliberately omitted from the trigger types:
+# the event always fires on a SHA the previous opened/synchronize
+# already reviewed (no commits land at the draft → ready transition),
+# so subscribing to it would duplicate every promotion review.
+
+name: Spec Tree Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  # Required by the reusable workflow's OIDC exchange for the OAuth token.
+  id-token: write
+
+jobs:
+  spec-tree-review:
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@d86469c812393846813a02676f8d5696e56c8cb2 # main
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    with:
+      # Cancel an in-flight review when a new push lands — the old run's
+      # findings would be stale against the new SHA.
+      concurrency_cancel: true
+      # Wall-clock budget for the Run Claude Code Review step. Override
+      # at runtime by setting the CLAUDE_REVIEW_TIMEOUT_MINUTES repo
+      # variable (Settings → Secrets and variables → Actions → Variables)
+      # to e.g. '5' to fail fast when a run hangs. Minimum 1; '0' is
+      # silently rejected by GitHub. GitHub variables are strings —
+      # pass them directly without fromJSON.
+      timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15' }}
+      # Stream the agent's full SDK transcript into the job log while the
+      # reviewer surface is under active development. Flip to `false` (or
+      # drop the input) once the agent is stable — the transcript can
+      # include file contents the agent read and verbatim prompt material,
+      # so it is not appropriate for a public-by-default reviewer.
+      show_full_output: true
