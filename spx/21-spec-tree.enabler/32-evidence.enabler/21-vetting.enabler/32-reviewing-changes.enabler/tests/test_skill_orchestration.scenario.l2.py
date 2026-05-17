@@ -388,3 +388,145 @@ class TestComputeDiffBaseRefDerivation:
             assert token in result.stderr, (
                 f"stderr should name {token!r}; got: {result.stderr!r}"
             )
+
+
+def _add_secondary_branch(repo: pathlib.Path, branch: str, filename: str) -> None:
+    """Create ``branch`` off ``main`` carrying a single distinct file commit.
+
+    The resulting branch differs from ``feature/x`` so a diff against ``main``
+    over the secondary branch surfaces the unique filename rather than the
+    feature/x payload — that is the signal the head_ref tests assert on.
+    Returns to ``feature/x`` so subsequent commands run from the same HEAD
+    the other tests assume.
+    """
+    _run_git("switch", "main", cwd=repo)
+    _run_git("switch", "-c", branch, cwd=repo)
+    (repo / filename).write_text("secondary branch content\n", encoding="utf-8")
+    _run_git("add", filename, cwd=repo)
+    _run_git("commit", "-q", "-m", f"add {filename} on {branch}", cwd=repo)
+    _run_git("switch", "feature/x", cwd=repo)
+
+
+@pytest.mark.skipif(
+    not COMPUTE_DIFF_SCRIPT.exists(),
+    reason="compute_diff.py is not yet present.",
+)
+class TestComputeDiffHeadRefDerivation:
+    """compute_diff.py resolves head_ref from env → file → literal HEAD.
+
+    Asserts the parallel precedence chain to TestComputeDiffBaseRefDerivation
+    so the spec's new head_ref scenarios carry executed evidence. A secondary
+    branch with its own distinct filename gives each scenario a falsifiable
+    signal: when head_ref selects the secondary branch, the diff surfaces
+    that file; when head_ref defaults to literal HEAD (feature/x), it does
+    not.
+    """
+
+    def _setup_repo_with_secondary(
+        self, tmp_path: pathlib.Path
+    ) -> tuple[pathlib.Path, pathlib.Path, str, str]:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_branch(repo)
+        secondary = "feature/y"
+        _add_secondary_branch(repo, secondary, "SECONDARY.md")
+        store_root = tmp_path / "store"
+        store_root.mkdir()
+        return repo, store_root, base_ref, secondary
+
+    def _slug_for(self, branch: str) -> str:
+        return load_branch_slug_module().branch_slug(branch)
+
+    def _run_compute_diff(
+        self, repo: pathlib.Path, env: dict[str, str], slug: str
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(  # noqa: S603 — script path is from the harness
+            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
+            cwd=repo,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    def test_env_head_ref_selects_alternate_head(self, tmp_path: pathlib.Path) -> None:
+        repo, store_root, base_ref, secondary = self._setup_repo_with_secondary(
+            tmp_path
+        )
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env["SPX_VET_BASE_REF"] = base_ref
+        env["SPX_VET_HEAD_REF"] = secondary
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        # head_ref pointed at the secondary branch — its file appears, not
+        # feature/x's README change. This is what distinguishes head_ref
+        # selection from the default-HEAD behaviour.
+        assert "SECONDARY.md" in result.stdout
+        assert "world" not in result.stdout
+
+    def test_changes_json_head_ref_selects_alternate_head(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref, secondary = self._setup_repo_with_secondary(
+            tmp_path
+        )
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        run_script(
+            WRITE_RECORD_SCRIPT,
+            "--slug",
+            slug,
+            "--name",
+            "changes.json",
+            stdin=json.dumps({"base_ref": base_ref, "head_ref": secondary}),
+            env=env,
+        )
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "SECONDARY.md" in result.stdout
+        assert "world" not in result.stdout
+
+    def test_env_head_ref_overrides_changes_json_head_ref(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref, secondary = self._setup_repo_with_secondary(
+            tmp_path
+        )
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        # Seed changes.json with the secondary as head_ref; env points back
+        # to feature/x. If env wins, the diff surfaces feature/x's payload;
+        # if file wins, the diff surfaces SECONDARY.md.
+        run_script(
+            WRITE_RECORD_SCRIPT,
+            "--slug",
+            slug,
+            "--name",
+            "changes.json",
+            stdin=json.dumps({"base_ref": base_ref, "head_ref": secondary}),
+            env=env,
+        )
+        env["SPX_VET_HEAD_REF"] = "feature/x"
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "world" in result.stdout
+        assert "SECONDARY.md" not in result.stdout
+
+    def test_head_ref_defaults_to_literal_head_when_no_source(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref, _secondary = self._setup_repo_with_secondary(
+            tmp_path
+        )
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env["SPX_VET_BASE_REF"] = base_ref
+        env.pop("SPX_VET_HEAD_REF", None)
+        # No changes.json head_ref field; no SPX_VET_HEAD_REF; HEAD is
+        # feature/x, so the diff must surface feature/x's payload, not
+        # secondary's SECONDARY.md.
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "world" in result.stdout
+        assert "SECONDARY.md" not in result.stdout
