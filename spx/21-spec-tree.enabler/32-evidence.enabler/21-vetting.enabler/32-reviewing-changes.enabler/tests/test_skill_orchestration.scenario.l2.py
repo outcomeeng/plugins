@@ -248,7 +248,25 @@ class TestSkillOrchestrationChain:
             env=env,
         )
         assert read_md.returncode == 0
-        assert read_md.stdout.strip() != ""
+        rendered = read_md.stdout
+        # Four-class render shape (matches the GH spec-tree-review
+        # workflow): the default fixture has decision=request_changes
+        # with one suggestion-severity finding and no must_fix. Render
+        # should emit the no-blockers line and a FOLLOW-UP heading.
+        assert "## Change Review" in rendered, (
+            "review.md must carry the Change Review title from document.md template"
+        )
+        assert "No BLOCKING or NEEDS-ANSWER items." in rendered, (
+            "no-blockers.md content must appear when no must_fix findings are present"
+        )
+        assert "### FOLLOW-UP [quality]:" in rendered, (
+            "suggestion-severity finding must render as FOLLOW-UP via finding-followup.md"
+        )
+        # The legacy table format must NOT appear — confirms the
+        # template-driven render replaces the f-string-table render.
+        assert "| Severity |" not in rendered, (
+            "legacy findings table must not appear in the rendered markdown"
+        )
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:

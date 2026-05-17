@@ -1,5 +1,5 @@
 ---
-name: changes-reviewer
+name: changes-agent
 description: >-
   ALWAYS invoke when reviewing working changes on the current branch against a base ref. Runs the reviewing-changes lens — computes the diff, applies the judgment-style review prompt, validates the emitted JSON through the arbiter CLI, and persists `review-result.json` plus a rendered `review.md` to the current thread. The lens auto-derives slug and `base_ref` from env or git; no pre-authoring is required. NEVER invoke for reviewing changes in a GitHub PR thread — that surface is handled by the pr-reviewer agent.
 tools: Bash, Read, Skill

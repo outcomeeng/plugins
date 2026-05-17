@@ -11,15 +11,23 @@ universal rules across the skill's files rather than per-case scenarios:
   ``plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
   review-prompt.md``.
-- The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
+- The wrapper agent at ``plugins/spec-tree/agents/changes-agent.md``
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
   listing ``spec-tree:reviewing-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
+- The per-section render templates live under
+  ``plugins/spec-tree/skills/reviewing-changes/references/render/`` and
+  ``render_review.py`` loads them via stdlib ``string.Template`` —
+  rendered shape is data the script substitutes, not f-string
+  concatenation in code.
 - No script under the skill's ``scripts/`` directory imports a third-party
   package, depends on ``uv`` at runtime, or imports any ``outcomeeng_*``
   module.
 - The judgment-style review prompt is NEVER embedded inside ``SKILL.md``
   or any ``.py`` file — the prompt is one standalone markdown file.
+- The render templates are NEVER embedded inside ``render_review.py`` as
+  f-string literals — the templates are standalone markdown files under
+  ``references/render/``.
 """
 
 from __future__ import annotations
@@ -34,6 +42,7 @@ import pytest
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     RENDER_REVIEW_SCRIPT,
+    RENDER_TEMPLATES_DIR,
     REVIEW_PROMPT_PATH,
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
@@ -336,3 +345,64 @@ class TestComputeDiffSlugIsOptional:
             "compute_diff.py --slug must NOT be required=True — the script "
             "derives the slug via thread_store.current_slug() when omitted"
         )
+
+
+REQUIRED_RENDER_TEMPLATES = (
+    "document.md",
+    "finding-blocking.md",
+    "finding-followup.md",
+    "no-blockers.md",
+    "acknowledgements.md",
+)
+
+
+class TestRenderTemplatesAreDataFiles:
+    """Render templates live under ``references/render/`` as standalone files.
+
+    The rendered ``review.md`` shape (four-class headings, no-blockers
+    phrasing, finding body shape) is the externally observable verdict
+    format. Two surfaces consume it (the local lens and the GH
+    ``spec-tree-review`` workflow); both must read from the same source.
+    These tests guard the file enumeration, the template-loading
+    discipline of ``render_review.py``, and the absence of embedded
+    f-string render literals.
+    """
+
+    @pytest.mark.parametrize("template_name", REQUIRED_RENDER_TEMPLATES)
+    def test_template_file_exists(self, template_name: str) -> None:
+        path = RENDER_TEMPLATES_DIR / template_name
+        assert path.is_file(), (
+            f"required render template {template_name!r} missing at {path}"
+        )
+
+    def test_render_review_loads_templates_via_string_template(self) -> None:
+        if not RENDER_REVIEW_SCRIPT.is_file():
+            pytest.skip("render_review.py not yet present")
+        source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
+        # Source-level checks: the script imports `string` and uses
+        # `string.Template` for substitution. Both are required for the
+        # render-shape-as-data invariant.
+        assert re.search(r"^import\s+string\b", source, re.MULTILINE), (
+            "render_review.py must import the stdlib `string` module to "
+            "use string.Template for render substitution"
+        )
+        assert "string.Template(" in source, (
+            "render_review.py must instantiate string.Template — required "
+            "by the render-templates-as-data invariant"
+        )
+
+    def test_render_review_does_not_embed_template_headings(self) -> None:
+        if not RENDER_REVIEW_SCRIPT.is_file():
+            pytest.skip("render_review.py not yet present")
+        source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
+        # The four-class heading prefixes must NOT appear as literal
+        # strings in the script — they belong in the template files.
+        # The FOLLOWUPS_HEADER constant is the one allowed literal
+        # (separator + section heading); other render-shape literals
+        # are forbidden.
+        forbidden_in_script = ("### BLOCKING", "### FOLLOW-UP", "### NEEDS-ANSWER")
+        for needle in forbidden_in_script:
+            assert needle not in source, (
+                f"render_review.py must not embed the render-template "
+                f"literal {needle!r} — move it to references/render/"
+            )
