@@ -4,8 +4,10 @@ Resolves the current thread (via ``thread_store.current_slug()``,
 which honors ``SPX_VET_BRANCH`` or falls back to git current branch),
 reads the optional ``changes.json`` override from the thread, resolves
 ``base_ref`` from the precedence chain (env → file → git symbolic-ref),
-runs ``git diff <base_ref>..HEAD`` via ``subprocess``, and emits the
-diff to stdout. Every filesystem effect against the thread-store backend
+resolves ``head_ref`` from a parallel precedence chain
+(``SPX_VET_HEAD_REF`` env → ``changes.json`` ``head_ref`` field →
+literal ``HEAD``), runs ``git diff <base_ref>...<head_ref>`` (three-dot,
+merge-base) via ``subprocess``, and emits the diff to stdout. Every filesystem effect against the thread-store backend
 routes through the ``thread_store`` facade.
 
 Exit codes:
@@ -31,6 +33,8 @@ from types import ModuleType
 
 CHANGES_RECORD_NAME = "changes.json"
 ENV_BASE_REF = "SPX_VET_BASE_REF"
+ENV_HEAD_REF = "SPX_VET_HEAD_REF"
+DEFAULT_HEAD_REF = "HEAD"
 
 
 def _load_thread_store() -> ModuleType:
@@ -107,6 +111,23 @@ def _read_changes_json(thread_store: ModuleType, slug: str) -> dict[str, object]
     return parsed
 
 
+def _resolve_head_ref(changes: dict[str, object] | None) -> str:
+    """Resolve head_ref via env → file → literal ``HEAD``.
+
+    Symmetric with ``_resolve_base_ref`` but with a literal default so
+    the common "diff against current HEAD" case requires no
+    configuration. Same precedence: env overrides file overrides default.
+    """
+    env_value = os.environ.get(ENV_HEAD_REF, "").strip()
+    if env_value:
+        return env_value
+    if changes is not None:
+        file_value = changes.get("head_ref")
+        if isinstance(file_value, str) and file_value:
+            return file_value
+    return DEFAULT_HEAD_REF
+
+
 def _resolve_base_ref(changes: dict[str, object] | None) -> str:
     """Resolve base_ref via env → file → git, aborting when no source yields one.
 
@@ -176,8 +197,11 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"{exc}\n")
         return 1
 
-    completed = subprocess.run(  # noqa: S603 — base_ref derived from validated sources
-        ["git", "diff", f"{base_ref}..HEAD"],
+    head_ref = _resolve_head_ref(changes)
+
+    completed = subprocess.run(  # noqa: S603 — refs derived from validated sources
+        # Three-dot (merge-base) diff: what head_ref added since branching from base_ref.
+        ["git", "diff", f"{base_ref}...{head_ref}"],
         capture_output=True,
         text=True,
         check=False,

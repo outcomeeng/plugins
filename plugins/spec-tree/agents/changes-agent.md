@@ -1,7 +1,7 @@
 ---
 name: changes-agent
 description: >-
-  ALWAYS invoke when reviewing working changes on the current branch against a base ref. Runs the reviewing-changes lens — computes the diff, applies the judgment-style review prompt, validates the emitted JSON through the arbiter CLI, and persists `review-result.json` plus a rendered `review.md` to the current thread. The lens auto-derives slug and `base_ref` from env or git; no pre-authoring is required. NEVER invoke for reviewing changes in a GitHub PR thread — that surface is handled by the pr-reviewer agent.
+  ALWAYS invoke when reviewing working changes against a base ref. Accepts an optional input naming the scope to review — a PR reference (`#N`, GitHub URL, `owner/repo#N`), a local or remote branch reference, a `from...to` git rev range, or nothing (defaults to the current branch). Parses the input, sets the lens env vars accordingly, runs the reviewing-changes lens — computes the diff, applies the judgment-style review prompt, validates the emitted JSON through the arbiter CLI, and persists `review-result.json` plus a rendered `review.md` to the current thread. NEVER invoke for posting review comments to a GitHub PR thread — that surface is handled by the pr-reviewer agent.
 tools: Bash, Read, Skill
 model: sonnet
 skills:
@@ -16,25 +16,45 @@ Thin wrapper for the reviewing-changes lens. Hold no validation policy, no I/O p
 
 <inputs>
 
-No required input. `compute_diff.py` resolves the current thread and the `base_ref` internally — env (`SPX_VET_BRANCH`, `SPX_VET_BASE_REF`) overrides, then an optional `changes.json` override file in the current thread, then git defaults (`git symbolic-ref --short HEAD` for the branch, `git symbolic-ref refs/remotes/origin/HEAD` for the base ref). When no source yields a value, the script aborts non-zero with a stderr message naming every source so the operator can populate one.
+One optional input names the scope to review. Four forms are accepted; the agent parses the form and resolves `from_ref` (base) and `to_ref` (head) accordingly. The chain then runs against `git diff <from_ref>...<to_ref>` per the lens skill.
+
+| Input form                 | Recognized by                                                                                           | `from_ref` (base)                                                           | `to_ref` (head)                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------- |
+| **Empty / none**           | input omitted                                                                                           | auto via `git symbolic-ref refs/remotes/origin/HEAD`                        | `HEAD` (current checkout)                 |
+| **PR reference**           | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n> --json baseRefName,headRefName` | `origin/<headRefName>` from the same call |
+| **Local branch reference** | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | auto via `git symbolic-ref refs/remotes/origin/HEAD`                        | the supplied token                        |
+| **`from...to` range**      | contains `...` (three dots) as a delimiter                                                              | the token before `...`                                                      | the token after `...`                     |
+
+The agent never `git switch`-es, never `git checkout`-s, never mutates working state. The `head_ref` dimension on `compute_diff.py` makes the diff target a ref, not the current HEAD; the working tree stays untouched regardless of which input mode fires.
+
+Ambiguity resolution: a token containing `...` is always a range. A bare `#<digits>` is always a PR reference. A token that matches both a branch name and a PR reference (rare) prefers PR-reference handling — be explicit by using `<owner>/<repo>#<n>` to disambiguate.
 
 </inputs>
 
 <protocol>
 
-1. **Invoke the lens skill.** Call `spec-tree:reviewing-changes` via the Skill tool. The skill teaches the chain and provides the exact script paths via `${CLAUDE_SKILL_DIR}` substitution.
+1. **Parse the input.** Identify which of the four input forms (empty, PR reference, local branch reference, `from...to` range) was supplied. Resolve to a `(from_ref, to_ref)` pair using the table in `<inputs>`. For PR references, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields. For ranges, split on the first `...`. For local branches, verify the ref resolves via `git rev-parse --verify <token>` before proceeding; if it does not, report the failure to the caller and stop.
 
-2. **Compute the diff.** Run the `compute_diff.py` CLI (path provided by the skill prose) with no arguments. Capture stdout — that is the unified diff against the auto-resolved base ref. On non-zero exit, read the stderr message; the script names every source it tried so the operator can populate one.
+2. **Configure the chain via env.** Export the resolved refs as env vars before invoking the chain:
 
-3. **Load the swappable prompt.** Use the Read tool to load the prompt template at the path the skill prose names. The skill prose owns the exact `${CLAUDE_SKILL_DIR}/references/...` expression; this prompt body does not construct it.
+   - For the empty input form: export nothing — the chain's auto-resolution handles both refs.
+   - For non-empty inputs: export `SPX_VET_BASE_REF=<from_ref>` and `SPX_VET_HEAD_REF=<to_ref>`. The chain's precedence chain picks these up.
 
-4. **Apply the prompt.** Read the diff plus the repository's `CLAUDE.md` / `AGENTS.md` conventions. Apply the prompt template's instructions and emit one `review-result.json` document conforming to the schema declared in `review_result.py`.
+   Never write a `changes.json` thread record from this agent — the env path is the agent's interface to the chain; the file path is reserved for operator pre-authoring outside this agent.
 
-5. **Validate via the arbiter.** Pipe the emitted JSON to the `validate_review_result.py` CLI invoked through the skill. If the arbiter exits non-zero, inspect stderr, fix the issue surfaced there (a missing key, an unknown enum value, or the consistency invariant — `decision == "approve"` combined with any `severity == "must_fix"` finding), and re-emit. Loop until exit 0.
+3. **Invoke the lens skill.** Call `spec-tree:reviewing-changes` via the Skill tool. The skill teaches the chain and provides the exact script paths via `${CLAUDE_SKILL_DIR}` substitution.
 
-6. **Persist the result.** Pipe the validated JSON to the thread-store `write_record.py` CLI with `--name review-result.json` (no `--slug` — the CLI resolves the thread internally).
+4. **Compute the diff.** Run the `compute_diff.py` CLI (path provided by the skill prose) with no arguments. Capture stdout — that is the unified diff. On non-zero exit, read the stderr message; the script names every source it tried so the operator can populate one.
 
-7. **Render and persist the surface.** Pipe `render_review.py` (invoked through the skill, no `--slug`) to the thread-store `write_record.py` CLI with `--name review.md`.
+5. **Load the swappable prompt.** Use the Read tool to load the prompt template at the path the skill prose names. The skill prose owns the exact `${CLAUDE_SKILL_DIR}/references/...` expression; this prompt body does not construct it.
+
+6. **Apply the prompt.** Read the diff plus the repository's `CLAUDE.md` / `AGENTS.md` conventions. Apply the prompt template's instructions and emit one `review-result.json` document conforming to the schema declared in `review_result.py`.
+
+7. **Validate via the arbiter.** Pipe the emitted JSON to the `validate_review_result.py` CLI invoked through the skill. If the arbiter exits non-zero, inspect stderr, fix the issue surfaced there (a missing key, an unknown enum value, or the consistency invariant — `decision == "approve"` combined with any `severity == "must_fix"` finding), and re-emit. Loop until exit 0.
+
+8. **Persist the result.** Pipe the validated JSON to the thread-store `write_record.py` CLI with `--name review-result.json` (no `--slug` — the CLI resolves the thread internally).
+
+9. **Render and persist the surface.** Pipe `render_review.py` (invoked through the skill, no `--slug`) to the thread-store `write_record.py` CLI with `--name review.md`.
 
 </protocol>
 
@@ -65,11 +85,12 @@ Neither artifact is committed to git — the `.spx/` root is gitignored. The thr
 
 A run is complete when ALL of the following hold:
 
+- The input form was identified before invoking the chain. For non-empty inputs, `SPX_VET_BASE_REF` and `SPX_VET_HEAD_REF` were exported with the resolved refs. For empty input, no env vars were exported and the chain's auto-resolution governed both refs.
 - The lens skill ran and the script chain executed in the prescribed order (compute diff → load prompt → emit → validate → persist result → render → persist surface).
 - The arbiter accepted the emitted JSON (exit 0); any prior emissions that failed the arbiter were corrected and re-emitted.
 - `review-result.json` exists in the current thread (resolved by the backend) and validates against `review_result.parse_json`.
 - `review.md` exists in the current thread and reads as judgment-style prose plus a findings table.
 - No record under the thread store was created outside the thread-store CLI chain.
-- This prompt body names no slug, no `pr.json`, and no `baseRefName`; references no concrete path into `plugins/spec-tree/skills/reviewing-changes/scripts/`; and carries no schema vocabulary beyond the arbiter-driven mentions above.
+- This prompt body names no slug and no `changes.json` write path. The `baseRefName` and `headRefName` field names appear ONLY inside the PR-reference resolution call to `gh pr view` (input-form recognition is the agent's concern; the chain itself remains GitHub-agnostic). No concrete path into `plugins/spec-tree/skills/reviewing-changes/scripts/` appears; no schema vocabulary appears beyond the arbiter-driven mentions above.
 
 </success_criteria>

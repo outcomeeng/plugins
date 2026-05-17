@@ -1,4 +1,4 @@
 ### FOLLOW-UP [$concern]: $location
 
 Issue: $message
-Track under: $rule
+Rule: $rule

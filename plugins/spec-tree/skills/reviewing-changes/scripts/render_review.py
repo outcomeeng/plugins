@@ -64,7 +64,6 @@ def _load_review_result() -> ModuleType:
 
 RENDER_DIR = pathlib.Path(__file__).resolve().parent.parent / "references" / "render"
 DEFAULT_TITLE = "Change Review"
-FOLLOWUPS_HEADER = "---\n\n## Findings out of scope for merge"
 
 
 def _load_template(name: str) -> string.Template:
@@ -104,8 +103,8 @@ def _partition_findings(
     """Split findings into (blockers, followups) by severity.
 
     ``must_fix`` → BLOCKING; ``suggestion`` and ``nit`` → FOLLOW-UP. The
-    four-class render shape has no NOTE; nits are folded into
-    FOLLOW-UP so no information is lost.
+    two-class render shape has no NEEDS-ANSWER or NOTE class; nits fold
+    into FOLLOW-UP.
     """
     blockers = [f for f in findings if str(f.severity) == "must_fix"]  # type: ignore[attr-defined]
     followups = [
@@ -122,14 +121,16 @@ def _render_markdown(result: "object") -> str:
     Loads per-section templates from ``references/render/``, partitions
     findings by render class, substitutes placeholders via stdlib
     ``string.Template``, and assembles the body in section order
-    (blockers / no-blockers → followups → acknowledgements). The shape
-    matches the GH ``spec-tree-review`` workflow's four-class taxonomy.
+    (blockers / no-blockers → followups → acknowledgements). Two render
+    classes: BLOCKING for ``must_fix`` and FOLLOW-UP for
+    ``suggestion``/``nit``.
     """
     document_tpl = _load_template("document.md")
     blocking_tpl = _load_template("finding-blocking.md")
     followup_tpl = _load_template("finding-followup.md")
     acks_tpl = _load_template("acknowledgements.md")
     no_blockers_text = _load_static("no-blockers.md")
+    followups_header_text = _load_static("followups-header.md")
 
     findings = list(result.findings)  # type: ignore[attr-defined]
     blockers, followups = _partition_findings(findings)
@@ -144,7 +145,7 @@ def _render_markdown(result: "object") -> str:
         body_parts.append(no_blockers_text)
 
     if followups:
-        body_parts.append(FOLLOWUPS_HEADER)
+        body_parts.append(followups_header_text)
         body_parts.extend(_render_finding(followup_tpl, f) for f in followups)
 
     acknowledgements = list(result.acknowledgements)  # type: ignore[attr-defined]
