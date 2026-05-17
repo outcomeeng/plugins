@@ -249,19 +249,27 @@ class TestSkillOrchestrationChain:
         )
         assert read_md.returncode == 0
         rendered = read_md.stdout
-        # Four-class render shape (matches the GH spec-tree-review
-        # workflow): the default fixture has decision=request_changes
-        # with one suggestion-severity finding and no must_fix. Render
-        # should emit the no-blockers line and a FOLLOW-UP heading.
+        # Two-class render shape: the default fixture has
+        # decision=request_changes with one suggestion-severity finding
+        # and no must_fix. Render should emit the no-blockers line and a
+        # FOLLOW-UP heading. NEEDS-ANSWER and NOTE classes are not
+        # emitted by this lens (ephemeral self-review).
         assert "## Change Review" in rendered, (
             "review.md must carry the Change Review title from document.md template"
         )
-        assert "No BLOCKING or NEEDS-ANSWER items." in rendered, (
+        assert "No BLOCKING items." in rendered, (
             "no-blockers.md content must appear when no must_fix findings are present"
         )
         assert "### FOLLOW-UP [quality]:" in rendered, (
             "suggestion-severity finding must render as FOLLOW-UP via finding-followup.md"
         )
+        # NEEDS-ANSWER and NOTE heading prefixes must not appear — they
+        # belong to GH-PR-thread semantics, not the local lens.
+        for forbidden in ("### NEEDS-ANSWER", "### NOTE"):
+            assert forbidden not in rendered, (
+                f"local lens must not render {forbidden!r} — that class belongs "
+                f"to the GH PR thread, not ephemeral self-review"
+            )
         # The legacy table format must NOT appear — confirms the
         # template-driven render replaces the f-string-table render.
         assert "| Severity |" not in rendered, (

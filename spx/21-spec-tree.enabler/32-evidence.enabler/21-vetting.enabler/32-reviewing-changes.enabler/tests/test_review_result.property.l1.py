@@ -28,6 +28,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_RULE_CITATION,
     load_review_result_module,
     make_review_result_dict,
 )
@@ -78,7 +79,14 @@ def _finding_strategy(
         severity=st.sampled_from(severities),
         file=st.from_regex(r"[a-z_]{1,12}\.py", fullmatch=True),
         line=st.integers(min_value=1, max_value=10_000),
-        rule=st.from_regex(r"[a-z_]{1,16}", fullmatch=True),
+        # Rule citation form: a path-style string starting with one of the
+        # accepted prefixes (see review_result._RULE_CITATION_PREFIXES).
+        # Generated as `spx/<segment>.md:<KIND>:<n>` to match the parser's
+        # structural check without depending on any real spec file.
+        rule=st.from_regex(
+            r"spx/[a-z]{1,8}\.md:(ALWAYS|NEVER|MUST):[1-9][0-9]?",
+            fullmatch=True,
+        ),
         message=st.text(
             alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs", "Po")),
             min_size=0,
@@ -176,7 +184,7 @@ class TestConsistencyInvariantUniversal:
                     "severity": severity,
                     "file": "x.py",
                     "line": idx + 1,
-                    "rule": "r",
+                    "rule": FIXTURE_RULE_CITATION,
                     "message": "m",
                 }
                 for idx in range(finding_count)

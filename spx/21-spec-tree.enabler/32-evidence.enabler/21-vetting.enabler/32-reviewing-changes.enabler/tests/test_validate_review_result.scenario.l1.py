@@ -29,6 +29,7 @@ import json
 import pathlib
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_RULE_CITATION,
     VALIDATE_REVIEW_RESULT_SCRIPT,
     make_review_result_dict,
     run_script,
@@ -91,7 +92,7 @@ class TestUnknownEnumValueRejection:
             "severity": "blocker",
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         document = make_review_result_dict(findings=[bad_finding])
@@ -109,7 +110,7 @@ class TestUnknownEnumValueRejection:
             "severity": "suggestion",
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         document = make_review_result_dict(findings=[bad_finding])
@@ -131,7 +132,7 @@ class TestConsistencyInvariantRejection:
             "severity": "must_fix",
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         document = make_review_result_dict(decision="approve", findings=[offending])

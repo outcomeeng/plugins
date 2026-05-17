@@ -34,6 +34,8 @@ import json
 import pytest
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_RULE_CITATION,
+    load_render_review_module,
     load_review_result_module,
     make_review_result_dict,
 )
@@ -163,7 +165,7 @@ class TestParseJsonRejection:
             "severity": "blocker",  # not a Severity member
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
@@ -181,7 +183,7 @@ class TestParseJsonRejection:
             "severity": "suggestion",
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
@@ -199,7 +201,7 @@ class TestParseJsonRejection:
             "severity": "must_fix",
             "file": "x.py",
             "line": 1,
-            "rule": "r",
+            "rule": FIXTURE_RULE_CITATION,
             "message": "m",
         }
         payload = json.dumps(
@@ -236,3 +238,129 @@ class TestRoundTrip:
         emitted = json.dumps(review_result.to_json_dict(first))
         second = review_result.parse_json(emitted)
         assert first == second
+
+
+class TestSeverityToRenderClassMapping:
+    """``Severity`` members map to render classes via the partitioning function.
+
+    ``must_fix`` → BLOCKING (the blockers partition).
+    ``suggestion`` and ``nit`` → FOLLOW-UP (the followups partition).
+
+    The mapping is total over ``Severity`` and lives in
+    ``render_review._partition_findings``. Asserting it directly closes the
+    Mapping-typed evidence the spec declares for the severity → render-class
+    rule.
+    """
+
+    def _make_finding(self, severity: str, finding_id: str):
+        review_result = load_review_result_module()
+        return review_result.Finding(
+            id=finding_id,
+            concern=review_result.Concern("quality"),
+            severity=review_result.Severity(severity),
+            file="example.py",
+            line=1,
+            rule=FIXTURE_RULE_CITATION,
+            message="m",
+        )
+
+    def test_must_fix_partitions_into_blockers(self) -> None:
+        render_review = load_render_review_module()
+        blockers, followups = render_review._partition_findings(
+            [self._make_finding("must_fix", "F-001")]
+        )
+        assert [f.id for f in blockers] == ["F-001"]
+        assert followups == []
+
+    def test_suggestion_partitions_into_followups(self) -> None:
+        render_review = load_render_review_module()
+        blockers, followups = render_review._partition_findings(
+            [self._make_finding("suggestion", "F-002")]
+        )
+        assert blockers == []
+        assert [f.id for f in followups] == ["F-002"]
+
+    def test_nit_partitions_into_followups(self) -> None:
+        render_review = load_render_review_module()
+        blockers, followups = render_review._partition_findings(
+            [self._make_finding("nit", "F-003")]
+        )
+        assert blockers == []
+        assert [f.id for f in followups] == ["F-003"]
+
+    def test_mixed_severities_split_across_classes(self) -> None:
+        render_review = load_render_review_module()
+        findings = [
+            self._make_finding("must_fix", "F-001"),
+            self._make_finding("suggestion", "F-002"),
+            self._make_finding("nit", "F-003"),
+            self._make_finding("must_fix", "F-004"),
+        ]
+        blockers, followups = render_review._partition_findings(findings)
+        assert {f.id for f in blockers} == {"F-001", "F-004"}
+        assert {f.id for f in followups} == {"F-002", "F-003"}
+
+
+class TestRuleCitationForm:
+    """``Finding.rule`` must be a path-style citation; the parser rejects others.
+
+    Accepted prefixes: ``spx/``, ``plugins/``, ``AGENTS.md``, ``CLAUDE.md``,
+    ``SKILL.md``. The semantic check (cited rule exists at the location)
+    is the lens prompt's concern and is not enforced at parse time.
+    """
+
+    @pytest.mark.parametrize(
+        "rule",
+        [
+            "spx/21-spec-tree.enabler/spec-tree.md:ALWAYS:1",
+            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
+            "AGENTS.md:critical-rules",
+            "CLAUDE.md:imperfection-protocol",
+            "SKILL.md:render-templates-as-data",
+        ],
+    )
+    def test_parser_accepts_path_style_rule(self, rule: str) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "quality",
+            "severity": "suggestion",
+            "file": "x.py",
+            "line": 1,
+            "rule": rule,
+            "message": "m",
+        }
+        # parse_json should not raise on a conforming rule citation.
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[finding]))
+        )
+
+    @pytest.mark.parametrize(
+        "rule",
+        [
+            "",
+            "naming",
+            "fix the typo",
+            "Track under: ISSUES.md",
+            "r",
+            "spec/auth.md:ALWAYS:1",  # wrong prefix (spec/ not spx/)
+        ],
+    )
+    def test_parser_rejects_non_citation_rule(self, rule: str) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "quality",
+            "severity": "suggestion",
+            "file": "x.py",
+            "line": 1,
+            "rule": rule,
+            "message": "m",
+        }
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(
+                json.dumps(make_review_result_dict(findings=[finding]))
+            )
+        # The error message must name the offending value so the wrapper
+        # agent can correlate the rejection with the finding it emitted.
+        assert "rule" in str(excinfo.value)

@@ -1,1 +1,2 @@
 {"timestamp":"2026-05-16T10-15-01Z","schema_version":"1","git_sha":"a441712","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,"total_cost_usd":1.11414,"total_duration_ms":24996.0,"transcript":"runs/2026-05-16T10-15-01Z.json"}
+{"timestamp":"2026-05-17T15-59-57Z","schema_version":"1","git_sha":"1f22d31","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,"total_cost_usd":1.55659375,"total_duration_ms":24337.0,"transcript":"runs/2026-05-17T15-59-57Z.json"}
