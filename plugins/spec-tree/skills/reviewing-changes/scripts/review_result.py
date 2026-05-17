@@ -10,7 +10,7 @@ reviewing-changes lens produces. Declares:
   the parse → validate → render boundary.
 - ``ReviewResultValidationError`` — raised on every schema violation,
   including the consistency invariant (``decision == "approve"`` AND any
-  finding with ``severity == "must_fix"``).
+  finding with ``severity == "blocking"``).
 - ``parse_json``, ``to_json_dict``, ``from_json_dict`` — the parser entry
   points. ``parse_json`` enforces the consistency invariant before
   returning, so direct Python callers that bypass the arbiter CLI still
@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class Decision(StrEnum):
@@ -35,7 +35,7 @@ class Decision(StrEnum):
 
     Wire values are the lowercase tokens consumed by the arbiter CLI and
     rendered into ``review.md``. ``approve`` combined with any
-    ``must_fix`` finding violates the consistency invariant enforced in
+    ``blocking`` finding violates the consistency invariant enforced in
     :func:`parse_json`.
     """
 
@@ -45,32 +45,37 @@ class Decision(StrEnum):
 
 
 class Severity(StrEnum):
-    """Finding severity. ``must_fix`` is the only severity that drives
+    """Finding severity. ``blocking`` is the only severity that drives
     the consistency invariant — an ``approve`` decision combined with at
-    least one ``must_fix`` finding is rejected by the parser.
+    least one ``blocking`` finding is rejected by the parser.
     """
 
-    MUST_FIX = "must_fix"
-    SUGGESTION = "suggestion"
-    NIT = "nit"
+    BLOCKING = "blocking"
+    DEBT = "debt"
+    FOLLOW_UP = "follow_up"
 
 
 class Concern(StrEnum):
-    """The eight concerns a finding may classify under.
+    """The six categories a finding may classify under, grouped by
+    three axes:
+
+    - What the code does vs. what it is supposed to do: ``consistency``,
+      ``security``, ``performance``.
+    - How we know it does what it is supposed to do: ``evidence``.
+    - How it does what it is supposed to do: ``standards``,
+      ``architecture``.
 
     The set is closed: any finding whose ``concern`` is outside this
     enumeration is rejected by the parser with the unknown value and the
     full allowed set surfaced in the error message.
     """
 
-    QUALITY = "quality"
-    BUGS = "bugs"
-    PERFORMANCE = "performance"
-    SECURITY = "security"
-    TEST_COVERAGE = "test_coverage"
-    ARCHITECTURE = "architecture"
-    DOCS = "docs"
     CONSISTENCY = "consistency"
+    SECURITY = "security"
+    PERFORMANCE = "performance"
+    EVIDENCE = "evidence"
+    STANDARDS = "standards"
+    ARCHITECTURE = "architecture"
 
 
 class ReviewResultValidationError(ValueError):
@@ -87,6 +92,13 @@ class Finding:
     """One review finding within a review result.
 
     Frozen so any mutation between parse and validate raises ``FrozenInstanceError``.
+
+    Label asymmetry by severity, mirrored in the render templates:
+    ``blocking`` and ``debt`` findings render ``message`` as Evidence and
+    ``action`` as the Required change in this PR; ``follow_up`` findings
+    render ``message`` as Issue and ``action`` as the Track-under location.
+    The single ``action`` field carries both senses; the render template
+    applies the right label per severity.
     """
 
     id: str
@@ -96,6 +108,7 @@ class Finding:
     line: int
     rule: str
     message: str
+    action: str
 
 
 @dataclass(frozen=True)
@@ -125,7 +138,9 @@ _REQUIRED_DOCUMENT_KEYS = (
     "acknowledgements",
 )
 
-# Required keys per finding.
+# Required keys per finding. ``action`` carries the Required change (for
+# blocking/debt) or the Track-under location (for follow_up); the render
+# templates apply the right label per severity.
 _REQUIRED_FINDING_KEYS = (
     "id",
     "concern",
@@ -134,6 +149,7 @@ _REQUIRED_FINDING_KEYS = (
     "line",
     "rule",
     "message",
+    "action",
 )
 
 # Accepted path-prefixes for ``Finding.rule`` citations. A rule must cite an
@@ -163,7 +179,7 @@ def parse_json(text: str) -> ReviewResult:
     3. ``from_json_dict`` — convert to the frozen dataclass, parsing
        enums and findings along the way.
     4. Consistency invariant — ``decision == "approve"`` AND any finding
-       with ``severity == "must_fix"`` raises with the offending finding
+       with ``severity == "blocking"`` raises with the offending finding
        identifiers in the message.
 
     Step 4 is enforced inside this function (not only in the CLI) so
@@ -215,11 +231,11 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
     # Consistency invariant — enforced in the parser so every entry path
     # surfaces it, not just the CLI arbiter.
     if decision == Decision.APPROVE:
-        offenders = [f.id for f in findings if f.severity == Severity.MUST_FIX]
+        offenders = [f.id for f in findings if f.severity == Severity.BLOCKING]
         if offenders:
             raise ReviewResultValidationError(
                 "consistency invariant violated: decision=='approve' with "
-                f"must_fix finding(s) {offenders}"
+                f"blocking finding(s) {offenders}"
             )
 
     return ReviewResult(
@@ -256,6 +272,7 @@ def _finding_to_dict(finding: Finding) -> dict[str, Any]:
         "line": finding.line,
         "rule": finding.rule,
         "message": finding.message,
+        "action": finding.action,
     }
 
 
@@ -278,6 +295,7 @@ def _parse_finding(data: Any) -> Finding:
         line=line,
         rule=rule,
         message=_require_str(data, "message"),
+        action=_require_str(data, "action"),
     )
 
 

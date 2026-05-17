@@ -249,19 +249,28 @@ class TestSkillOrchestrationChain:
         )
         assert read_md.returncode == 0
         rendered = read_md.stdout
-        # Two-class render shape: the default fixture has
-        # decision=request_changes with one suggestion-severity finding
-        # and no must_fix. Render should emit the no-blockers line and a
-        # FOLLOW-UP heading. NEEDS-ANSWER and NOTE classes are not
-        # emitted by this lens (ephemeral self-review).
+        # Three-class render shape (matches the REVIEW.template.md
+        # taxonomy): the default fixture has decision=request_changes
+        # with one follow_up-severity finding and no blocking. Render
+        # should emit the no-blockers line and a FOLLOW-UP heading.
+        # NEEDS-ANSWER and NOTE classes are not emitted by this lens
+        # (ephemeral self-review).
         assert "## Change Review" in rendered, (
             "review.md must carry the Change Review title from document.md template"
         )
         assert "No BLOCKING items." in rendered, (
-            "no-blockers.md content must appear when no must_fix findings are present"
+            "no-blockers.md content must appear when no blocking findings are present"
         )
-        assert "### FOLLOW-UP [quality]:" in rendered, (
-            "suggestion-severity finding must render as FOLLOW-UP via finding-followup.md"
+        assert "### FOLLOW-UP [standards]:" in rendered, (
+            "follow_up-severity finding must render as FOLLOW-UP via finding-followup.md"
+        )
+        # Label asymmetry: FOLLOW-UP renders message as Issue and action
+        # as Track-under (BLOCKING/DEBT render them as Evidence + Required).
+        assert "Issue: " in rendered, (
+            "FOLLOW-UP finding must render its message under the Issue label"
+        )
+        assert "Track under: " in rendered, (
+            "FOLLOW-UP finding must render its action under the Track-under label"
         )
         # NEEDS-ANSWER and NOTE heading prefixes must not appear — they
         # belong to GH-PR-thread semantics, not the local lens.

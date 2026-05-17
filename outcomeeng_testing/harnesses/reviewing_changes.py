@@ -152,10 +152,12 @@ def make_review_result_dict(
     """Return a synthetic review-result dict with every required field.
 
     Default shape: a single ``request_changes`` decision with one
-    ``suggestion``-severity finding under the ``quality`` concern, one
-    acknowledgement, and a summary. The defaults make the conforming
-    case the trivial caller; rejection-path tests mutate one field on
-    the returned dict to construct each violation.
+    ``follow_up``-severity finding under the ``standards`` concern, one
+    acknowledgement, and a summary. The follow_up finding carries an
+    ``action`` populated with a placeholder tracking location to satisfy
+    the required-field check. The defaults make the conforming case the
+    trivial caller; rejection-path tests mutate one field on the
+    returned dict to construct each violation.
 
     ``schema_version`` defaults to the module-level ``SCHEMA_VERSION``
     from the loaded ``review_result`` module so tests automatically pick
@@ -169,12 +171,13 @@ def make_review_result_dict(
         findings = [
             {
                 "id": "F-001",
-                "concern": "quality",
-                "severity": "suggestion",
+                "concern": "standards",
+                "severity": "follow_up",
                 "file": "example.py",
                 "line": 10,
                 "rule": FIXTURE_RULE_CITATION,
                 "message": "Consider a more descriptive name.",
+                "action": "ISSUES.md",
             }
         ]
     if acknowledgements is None:

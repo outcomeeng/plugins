@@ -5,7 +5,7 @@ Covers these clauses in ``../reviewing-changes.md``:
 Properties
 - For every ``ReviewResult`` instance, ``from_json_dict(to_json_dict(r)) == r``
   — serialization is lossless across the generated input space.
-- For every finding with ``severity == "must_fix"`` combined with
+- For every finding with ``severity == "blocking"`` combined with
   ``decision == "approve"``, ``parse_json`` raises
   ``ReviewResultValidationError`` — the consistency invariant holds
   across the full input space, not just sampled examples.
@@ -39,17 +39,17 @@ def _concern_values() -> list[str]:
     return sorted(member.value for member in review_result.Concern)
 
 
-def _severity_values_excluding_must_fix() -> list[str]:
+def _severity_values_excluding_blocking() -> list[str]:
     """Severity wire values valid for *all* decisions.
 
-    Used by the round-trip property strategy: must_fix is excluded so
+    Used by the round-trip property strategy: blocking is excluded so
     Hypothesis cannot generate a document that violates the consistency
     invariant (which would short-circuit ``parse_json`` and defeat the
     round-trip property).
     """
     review_result = load_review_result_module()
     return sorted(
-        member.value for member in review_result.Severity if member.value != "must_fix"
+        member.value for member in review_result.Severity if member.value != "blocking"
     )
 
 
@@ -65,7 +65,7 @@ def _finding_strategy(
 ) -> st.SearchStrategy[dict[str, Any]]:
     """Generate finding-shaped dicts with the given allowed severities."""
     return st.builds(
-        lambda fid, concern, severity, file, line, rule, message: {
+        lambda fid, concern, severity, file, line, rule, message, action: {
             "id": fid,
             "concern": concern,
             "severity": severity,
@@ -73,6 +73,7 @@ def _finding_strategy(
             "line": line,
             "rule": rule,
             "message": message,
+            "action": action,
         },
         fid=st.from_regex(r"F-[0-9]{3}", fullmatch=True),
         concern=st.sampled_from(_concern_values()),
@@ -92,6 +93,11 @@ def _finding_strategy(
             min_size=0,
             max_size=64,
         ),
+        action=st.text(
+            alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs", "Po")),
+            min_size=0,
+            max_size=64,
+        ),
     )
 
 
@@ -101,8 +107,8 @@ def _conforming_review_result_dicts() -> st.SearchStrategy[dict[str, Any]]:
     The strategy alternates two shapes:
 
     1. ``decision`` is one of ``request_changes`` / ``comment``, findings
-       may carry any severity including ``must_fix``.
-    2. ``decision`` is ``approve``, findings carry only non-``must_fix``
+       may carry any severity including ``blocking``.
+    2. ``decision`` is ``approve``, findings carry only non-``blocking``
        severities.
 
     Both shapes are conforming, so ``parse_json`` accepts each generated
@@ -125,7 +131,7 @@ def _conforming_review_result_dicts() -> st.SearchStrategy[dict[str, Any]]:
         summary=st.text(min_size=0, max_size=64),
     )
 
-    approve_without_must_fix = st.builds(
+    approve_without_blocking = st.builds(
         lambda findings, acks, summary: {
             "schema_version": review_result.SCHEMA_VERSION,
             "decision": "approve",
@@ -134,13 +140,13 @@ def _conforming_review_result_dicts() -> st.SearchStrategy[dict[str, Any]]:
             "acknowledgements": acks,
         },
         findings=st.lists(
-            _finding_strategy(_severity_values_excluding_must_fix()), max_size=4
+            _finding_strategy(_severity_values_excluding_blocking()), max_size=4
         ),
         acks=st.lists(st.text(min_size=0, max_size=32), max_size=3),
         summary=st.text(min_size=0, max_size=64),
     )
 
-    return st.one_of(request_or_comment, approve_without_must_fix)
+    return st.one_of(request_or_comment, approve_without_blocking)
 
 
 class TestRoundTripProperty:
@@ -159,7 +165,7 @@ class TestRoundTripProperty:
 class TestConsistencyInvariantUniversal:
     """For every ``(decision, severity)`` combination, ``parse_json``
     raises iff ``decision == "approve"`` AND any finding has
-    ``severity == "must_fix"``.
+    ``severity == "blocking"``.
 
     The cross-product over the two enums is finite (3 × 3 = 9), so the
     property is verified by exhaustion rather than by sampling. The
@@ -180,18 +186,19 @@ class TestConsistencyInvariantUniversal:
             findings = [
                 {
                     "id": f"F-{idx:03d}",
-                    "concern": "quality",
+                    "concern": "consistency",
                     "severity": severity,
                     "file": "x.py",
                     "line": idx + 1,
                     "rule": FIXTURE_RULE_CITATION,
                     "message": "m",
+                    "action": "a",
                 }
                 for idx in range(finding_count)
             ]
             document = make_review_result_dict(decision=decision, findings=findings)
             payload = json.dumps(document)
-            inconsistent = decision == "approve" and severity == "must_fix"
+            inconsistent = decision == "approve" and severity == "blocking"
             if inconsistent:
                 with pytest.raises(review_result.ReviewResultValidationError):
                     review_result.parse_json(payload)

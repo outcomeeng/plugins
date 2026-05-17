@@ -50,7 +50,7 @@ Ambiguity resolution: a token containing `...` is always a range. A bare `#<digi
 
 6. **Apply the prompt.** Read the diff plus the repository's `CLAUDE.md` / `AGENTS.md` conventions. Apply the prompt template's instructions and emit one `review-result.json` document conforming to the schema declared in `review_result.py`.
 
-7. **Validate via the arbiter.** Pipe the emitted JSON to the `validate_review_result.py` CLI invoked through the skill. If the arbiter exits non-zero, inspect stderr, fix the issue surfaced there (a missing key, an unknown enum value, or the consistency invariant — `decision == "approve"` combined with any `severity == "must_fix"` finding), and re-emit. Loop until exit 0.
+7. **Validate via the arbiter.** Pipe the emitted JSON to the `validate_review_result.py` CLI invoked through the skill. If the arbiter exits non-zero, inspect stderr, fix the issue surfaced there (a missing key, an unknown enum value, or the consistency invariant — `decision == "approve"` combined with any `severity == "blocking"` finding), and re-emit. Loop until exit 0.
 
 8. **Persist the result.** Pipe the validated JSON to the thread-store `write_record.py` CLI with `--name review-result.json` (no `--slug` — the CLI resolves the thread internally).
 

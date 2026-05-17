@@ -1,4 +1,4 @@
-### BLOCKING [$concern]: $location
+### DEBT [$concern]: $location
 
 Reference: $rule
 Evidence: $message

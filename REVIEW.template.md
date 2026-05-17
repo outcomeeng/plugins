@@ -1,20 +1,29 @@
 # Code Review Instructions
 
-Inspect the changeset under review and the checked out working tree. Emit findings only when they exist. Catch and classify findings only — provide no praise, suggestions, or commentary that does not require action before merging. Never modify any file in the working tree; classification is the only output.
+Inspect the changeset under review and the checked out working tree. Emit findings only when they exist. Provide no praise or commentary that is neither a finding nor a tracking commitment. Never modify any file in the working tree; classification is the only output.
 
 **ALWAYS:** report findings. When the changeset omits a fact a finding depends on, frame the finding as worst-case or conditional. Example: "Evidence: cannot verify X from the changeset; if assumption Y holds, this breaks Z because …"
 
-**NEVER:** emit open questions, suggestions, or commentary that does not constitute a finding. Questions add rounds the system cannot afford.
+**NEVER:** emit open questions or speculative commentary that does not constitute a finding. Questions add CI roundtrips this single-pass review cannot recover from.
 
-Every finding has two dimensions: **category** and **severity**. Use only these 5 categories and 3 severities.
+Every finding has two dimensions: **category** and **severity**. Use only these 6 categories and 3 severities.
 
-## **Category:** Classify all your findings into one of 5 categories
+## **Category:** Classify all your findings into one of 6 categories, grouped by three axes
 
-1. **Correctness:** drift between the layers — what the decisions (PDRs and ADRs) govern, what the spec asserts, what tests and evals verify, and what the implementation does. A finding is a correctness one when a lower layer no longer matches a higher one.
-2. **Security:** confidentiality, integrity, availability.
-3. **Standards:** adherence to `CLAUDE.md` and the rules declared in standardizing-* skills (naming conventions, command tokens, file structure, language idioms).
-4. **Test evidence:** inadequate coverage of declared assertions; unmaintainable tests (literals, magic numbers, test-owned constants, duplication).
-5. **Architecture:** violation of structural principles declared by ADRs or PDRs — layer boundaries, separation of concerns, dependency directions, module-shape rules. A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
+**What the code does vs. what it is supposed to do**
+
+- **Consistency:** equivalence across the layers — what the decisions (PDRs and ADRs) govern, what the spec asserts, what tests and evals verify, and what the implementation does. A finding is a consistency one when a lower layer does not match a higher one. The reviewer surfaces the disagreement; they do not judge which side is right.
+- **Security:** confidentiality, integrity, availability.
+- **Performance:** unbounded loops, hot-path allocations, O(n^2) traversals where O(n) suffices, synchronous I/O on async paths, and similar pessimisations that change the changeset's runtime characteristics under realistic load.
+
+**How we know it does what it is supposed to do**
+
+- **Evidence:** inadequate coverage of declared assertions by tests or evals; unmaintainable tests (literals, magic numbers, test-owned constants, duplication); evals that no longer exercise the assertions they claim to.
+
+**How it does what it is supposed to do**
+
+- **Standards:** adherence to `CLAUDE.md` and the rules declared in standardizing-* skills (naming conventions, command tokens, file structure, language idioms).
+- **Architecture:** violation of structural principles declared by ADRs or PDRs — layer boundaries, separation of concerns, dependency directions, module-shape rules. A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
 ## **Severity:** triage each finding to one of 3 levels
 
@@ -26,12 +35,14 @@ Every finding has two dimensions: **category** and **severity**. Use only these 
 
 ## **Reporting:** Return your findings exactly as below
 
-The bracket after the severity names the category: one of `correctness`, `security`, `standards`, `test-evidence`, `architecture`
+The bracket after the severity names the category: one of `consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`.
+
+Label asymmetry by severity is intentional: `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`; `FOLLOW-UP` requires only a tracking commitment elsewhere and uses `Reference:` + `Issue:` + `Track under:`.
 
 ```text
-### BLOCKING [correctness]: path/to/file.py:42
+### BLOCKING [consistency]: path/to/file.py:42
 Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
-Evidence: <quote the diff or behavior and explain the failure mode>.
+Evidence: <quote the diff or behavior and explain the disagreement between layers>.
 Required: <concrete change>.
 ```
 
@@ -51,16 +62,7 @@ Track under: <ISSUES.md file or product-specific issue tracker>.
 
 ## **Completeness:** Aim for *first-time right*
 
-Emit every finding the changeset under review exhibits in the **first** review pass. A subsequent pass on the unchanged changeset either confirms prior findings or notes them as addressed in a push between passes.
-
-When a subsequent pass on the revised changeset surfaces a defect a prior pass missed, the new finding is emitted with a `[drift]` bracket after the category bracket so the author and other reviewers can see it is a late finding:
-
-```text
-### BLOCKING [correctness] [drift]: path/to/file.py:42
-Reference: <as above>.
-Evidence: <as above>.
-Required: <as above>.
-```
+Each review pass is independent and self-contained — there is no cross-pass continuity, and CI replays the prompt from scratch on every `pull_request` event. Surface every finding the changeset exhibits in the **first** pass against that changeset; a finding missed on pass 1 has no second chance unless the diff itself changes. Read the diff once, methodically, across all categories before composing the comment.
 
 ## **No findings:** say so directly
 

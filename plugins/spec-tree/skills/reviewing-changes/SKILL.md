@@ -77,7 +77,7 @@ The validate-as-arbiter pattern is the cross-lens contract for the reviewing-cha
 - Persists a `review-result.json` document that has not passed the arbiter.
 - Treats agent prose as authoritative when the arbiter and the prose disagree.
 
-The consistency invariant — `decision == "approve"` combined with any finding whose `severity == "must_fix"` — is enforced inside `review_result.parse_json` so direct Python callers that bypass the CLI still surface the violation. The CLI is the entry point the wrapper agent reads as exit code.
+The consistency invariant — `decision == "approve"` combined with any finding whose `severity == "blocking"` — is enforced inside `review_result.parse_json` so direct Python callers that bypass the CLI still surface the violation. The CLI is the entry point the wrapper agent reads as exit code.
 
 </validate_as_arbiter>
 

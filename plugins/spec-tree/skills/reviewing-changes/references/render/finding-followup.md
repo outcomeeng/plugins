@@ -1,4 +1,5 @@
 ### FOLLOW-UP [$concern]: $location
 
+Reference: $rule
 Issue: $message
-Rule: $rule
+Track under: $action

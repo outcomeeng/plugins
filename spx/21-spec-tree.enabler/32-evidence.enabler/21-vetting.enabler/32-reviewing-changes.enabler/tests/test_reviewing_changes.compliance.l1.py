@@ -84,13 +84,13 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
 # show up in SKILL.md or a .py file, the prompt body has leaked from the
 # reference file into a place it should not live.
 #
-# Schema vocabulary (``must_fix``, ``request_changes``, ``acknowledgements``)
+# Schema vocabulary (``blocking``, ``request_changes``, ``acknowledgements``)
 # is excluded because those tokens legitimately appear in rendering code
 # (e.g., to switch on severity) and in skill-prose orchestration
 # (referring to the schema the agent emits).
 PROMPT_FINGERPRINT_PHRASES = (
     "You are reviewing",
-    "Apply each of the eight concerns",
+    "Inspect every line",
 )
 
 
@@ -350,8 +350,8 @@ class TestComputeDiffSlugIsOptional:
 REQUIRED_RENDER_TEMPLATES = (
     "document.md",
     "finding-blocking.md",
+    "finding-debt.md",
     "finding-followup.md",
-    "followups-header.md",
     "no-blockers.md",
     "acknowledgements.md",
 )
@@ -396,14 +396,13 @@ class TestRenderTemplatesAreDataFiles:
         if not RENDER_REVIEW_SCRIPT.is_file():
             pytest.skip("render_review.py not yet present")
         source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
-        # Heading prefixes and the followups-section header must NOT
-        # appear as literal strings in the script — they belong in the
-        # template files under references/render/.
+        # Render-class heading prefixes must NOT appear as literal
+        # strings in the script — they belong in the template files.
         forbidden_in_script = (
             "### BLOCKING",
+            "### DEBT",
             "### FOLLOW-UP",
             "### NEEDS-ANSWER",
-            "## Findings out of scope",
         )
         for needle in forbidden_in_script:
             assert needle not in source, (
