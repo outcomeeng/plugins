@@ -205,3 +205,83 @@ def test_real_prior_version_directory_outside_window_is_left_in_place(
     )
     assert real_prior not in result.pruned_links
     assert current_dir.is_dir() and not current_dir.is_symlink()
+
+
+def test_plugin_not_installed_in_codex_skips_silently(tmp_path: Path) -> None:
+    """A plugin present in the working tree whose cache directory does not
+    exist (the plugin is not installed in this user's Codex) is skipped
+    silently — it does not land in `result.skipped_plugins` and therefore
+    triggers no warning. Preservation has nothing to act on for that plugin.
+    """
+    cache_root = tmp_path / "cache"
+    # Only the installed plugin has a cache directory; the other plugin's
+    # absence from the cache mirrors the real-world "in marketplace, not in
+    # config.toml" state.
+    installed_plugin = PLUGIN_NAME
+    uninstalled_plugin = "frontend"
+    installed_dir = (
+        cache_root / DEFAULT_MARKETPLACE / installed_plugin / CURRENT_VERSION
+    )
+    (installed_dir / "skills" / "x").mkdir(parents=True)
+    uninstalled_dir = cache_root / DEFAULT_MARKETPLACE / uninstalled_plugin
+    assert not uninstalled_dir.exists()
+
+    with with_marketplace_repo(
+        tmp_path,
+        [
+            ManifestCommit(
+                plugin=installed_plugin, version=CURRENT_VERSION, days_ago=0
+            ),
+            ManifestCommit(plugin=uninstalled_plugin, version="0.4.0", days_ago=0),
+        ],
+    ) as repo:
+        history = GitPluginHistory(repo_root=repo.root, window_days=10)
+        result = preserve_during_upgrade(
+            DEFAULT_MARKETPLACE,
+            cache_root=cache_root,
+            history=history,
+            runner=_quiet_runner,
+        )
+
+    assert uninstalled_plugin not in result.skipped_plugins, (
+        f"expected {uninstalled_plugin} to skip silently (no warning) "
+        f"because its cache directory does not exist; got "
+        f"skipped_plugins={result.skipped_plugins}"
+    )
+    assert not uninstalled_dir.exists(), (
+        f"expected {uninstalled_dir} to remain absent (preservation cannot "
+        "create plugin cache directories — that is Codex's job)"
+    )
+
+
+def test_cache_dir_present_without_real_version_warns(tmp_path: Path) -> None:
+    """A plugin in the working tree whose cache directory exists but holds
+    no real version directory is an unexpected state — Codex installs the
+    current version as a real directory. Preservation surfaces this case
+    via `result.skipped_plugins` so the operator can investigate.
+    """
+    cache_root = tmp_path / "cache"
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    plugin_dir.mkdir(parents=True)
+    # Cache dir exists but is empty — no real version directory present.
+    assert plugin_dir.is_dir()
+
+    with with_marketplace_repo(
+        tmp_path,
+        [
+            ManifestCommit(plugin=PLUGIN_NAME, version=CURRENT_VERSION, days_ago=0),
+        ],
+    ) as repo:
+        history = GitPluginHistory(repo_root=repo.root, window_days=10)
+        result = preserve_during_upgrade(
+            DEFAULT_MARKETPLACE,
+            cache_root=cache_root,
+            history=history,
+            runner=_quiet_runner,
+        )
+
+    assert PLUGIN_NAME in result.skipped_plugins, (
+        f"expected {PLUGIN_NAME} in result.skipped_plugins "
+        "(cache dir exists but contains no real version directory); got "
+        f"skipped_plugins={result.skipped_plugins}"
+    )
