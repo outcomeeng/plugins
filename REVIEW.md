@@ -1,30 +1,39 @@
 # Code Review Instructions
 
-Every review finding must be classified by required receiver action. Use only these four classes as finding headings:
+Cover, in this order:
 
-| Class          | Receiver action             | Use when                                                                                                                                                        |
-| -------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKING`     | Fix in this PR before merge | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break |
-| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`                                        |
-| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change                                                          |
-| `NOTE`         | No action expected          | Context, praise, explanation, or an observation that does not create work                                                                                       |
+1. Correctness: absolute consistency between what the spec asserts, what tests and evals verify, and what code does
+2. Security: confidentiality, integrity, availability
+3. Validation of spec, test and code quality: violation of standards (CLAUDE.md and skills)
+4. Test evidence: inadequate coverage of all assertions, unmaintainable tests (literals, magic numbers, test-owned constants, duplication)
+5. Architecture: violation of ADR and skill governance and fundamental architectural principles
 
-Do not use `P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, or `nit` as finding headings. Risk words may appear inside the rationale only when they add concrete evidence.
+| Class          | Receiver action             | Use when                                                                                                                                                                                           |
+| -------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING`     | Fix in this PR before merge | Correctness (spec–test–code equivalence and adherence to PDRs and ADRs), security risk, violation of standards (CLAUDE.md and skills), insufficient test evidence or drift risk in tests and evals |
+| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing and the answer can clear the concern or upgrade it to `BLOCKING`                                                                                                        |
+| `FOLLOW-UP`    | Track outside this PR       | Justified concern, gap or material improvement, but addressing it would widen the PR: architectural deficiencies in need of wider refactoring, technical debt                                      |
 
-`BLOCKING` and `NEEDS-ANSWER` are the only classes that enter the active PR loop. `FOLLOW-UP` items belong in a short summary and must name the owning tracking location when retention is useful. `NOTE` items are optional and must be omitted when they add noise.
+Do not use `P0`/`P1`/`P2`/`P3` or `critical`/`high`/`medium`/`low`/`minor`/`nit` as finding headings.
 
-Use this finding shape:
+Finding shape:
 
 ```text
-BLOCKING [correctness]: path/to/file.py:42
-Evidence: The changed branch now raises on an empty profile list because ...
-Required before merge: Preserve the previous no-op behavior or add evidence that the new failure is intended.
+### BLOCKING [correctness]: path/to/file.py:42
+Evidence: <quote the diff or behavior and explain the failure mode>.
+Required before merge: <concrete change>.
 ```
 
 ```text
-FOLLOW-UP [test-evidence]: spx/.../tests/test_x.py
-Evidence: The test covers the happy path but not rollback.
-Track under: spx/.../ISSUES.md.
+### NEEDS-ANSWER [test-harness]: path/to/spec-file.md:97
+Reference: <quote the spec, test or implementation code and justify why the question needs to be answered before merge>.
+Question: <concrete question to answer before merge: >.
 ```
 
-If a review has no `BLOCKING` or `NEEDS-ANSWER` items, say so directly. Do not manufacture lower-priority findings to prove that review happened.
+```text
+### FOLLOW-UP [test-evidence]: `path/to/foo.compliance.test.ts`
+Issue: <what is missing or worthy of improvement>.
+Track under: <ISSUES.md file or product-specific issue tracker>.
+```
+
+If the diff has no `BLOCKING` or `NEEDS-ANSWER` findings, say so directly in the comment. Do not invent lower-priority findings to prove the review happened.
