@@ -2,11 +2,12 @@
 #
 # Required setup:
 # 1. Add CLAUDE_CODE_OAUTH_TOKEN to repository secrets
-# 2. The spec-tree wrapper installs plugins from your .claude/settings.json
-#    by default (use_project_plugins=true). Register the marketplaces under
-#    `extraKnownMarketplaces` and enable the plugins under `enabledPlugins`.
+# 2. Plugins from .claude/settings.json are NOT installed by default. To
+#    enable the methodology skills for mention runs, set
+#    `use_project_plugins: true` below AND register the relevant
+#    marketplaces under `extraKnownMarketplaces` in your `.claude/settings.json`.
 
-name: Claude Code Spec Tree
+name: Spec Tree
 
 on:
   issue_comment:
@@ -27,16 +28,21 @@ permissions:
 
 jobs:
   spec-tree:
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree.yml@dc6b7c907d714188195b748b29826014885a28b9 # main
+    # Pin to a full-length commit SHA per GitHub's hardening guidance — never @main or @v1.
+    # Renovate keeps this SHA current; the trailing `# main` comment is the branch
+    # Renovate tracks. See README "Security" for the full rationale.
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree.yml@762dbe20ebd46f46a5868e1b0a2f20f4ea53c1ab # main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     # Authorization is automatic: the workflow accepts any actor with admin,
     # maintain, or write permission on this repository (queried via the GitHub
     # API). External contributors are rejected with a clear error.
     #
-    # Uncomment and modify to customize:
+    # Uncomment and modify to customize. The reusable defaults
+    # `trigger_phrase` to `@spec-tree` (not `@claude`) so that callers who also
+    # install the generic `claude.yml` workflow route mentions correctly.
     # with:
-    #   trigger_phrase: '@claude'
+    #   trigger_phrase: '@your-phrase'
     #   concurrency_cancel: false
     #
     # Wall-clock budget for the Run Claude Code step (default 15 in the
@@ -49,11 +55,11 @@ jobs:
     #   timeout_minutes: ${{ vars.CLAUDE_TIMEOUT_MINUTES || '15' }}
     # Minimum 1; GitHub Actions silently rejects `0` at runtime.
     #
-    # Unlike the generic `claude.yml` reusable, `spec-tree.yml` defaults
-    # use_project_plugins to true — the methodology skills declared in
-    # your .claude/settings.json are installed for every mention. Override
-    # if you want a non-plugin mention experience for this caller:
-    #   use_project_plugins: false
+    # Plugins from .claude/settings.json are NOT installed by default — same
+    # as the generic `claude.yml` reusable. Plugin skills with auto-invocation
+    # directives can pull mention runs into long detours that aren't part of
+    # the original intent. To opt in:
+    #   use_project_plugins: true
     #
     # To install specific plugins on top of (or instead of) the project's
     # settings.json declarations:
