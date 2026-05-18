@@ -25,7 +25,7 @@ permissions:
 
 jobs:
   spec-tree-review:
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@d521c1bba3db49c7d11d1010a7b892b409b75e55 # main
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@dc6b7c907d714188195b748b29826014885a28b9 # main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     # Authorization is automatic: the review runs only when the PR author has
@@ -39,10 +39,11 @@ jobs:
     # Wall-clock budget for the Run Claude Code Review step (default 15 in
     # the reusable workflow). Set to a tighter value when running on
     # self-hosted runners so a hung run frees the slot quickly:
-    #   timeout_minutes: 5
+    #   timeout_minutes: '5'
     # Or gate it on a repo variable so you can adjust without editing this
-    # file (Settings → Secrets and variables → Actions → Variables):
-    #   timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || 15 }}
+    # file (Settings → Secrets and variables → Actions → Variables). The
+    # input is typed `string` so quoted forms pass through unchanged:
+    #   timeout_minutes: ${{ vars.CLAUDE_REVIEW_TIMEOUT_MINUTES || '15' }}
     # Minimum 1; GitHub Actions silently rejects `0` at runtime.
     #
     # The spec-tree-review wrapper bakes in its own REVIEW.md-aware review
