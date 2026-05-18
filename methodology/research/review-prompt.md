@@ -4,7 +4,7 @@ Review one pull request and post one comment with the review. Follow the steps i
 
 ## Inputs
 
-- `REPO` — `<owner>/<repo>` (e.g. `leoherds/leoherd`)
+- `REPO` — `<owner>/<repo>` (e.g. `outcomeeng/plugins`)
 - `PR_NUMBER` — integer
 
 ## Steps
@@ -69,16 +69,22 @@ The runner sandboxes filesystem writes. The forms below have all been observed t
 
 ## Review shape
 
-Cover, in this order: correctness, project conventions (from `CLAUDE.md`), potential bugs, performance, security, test coverage.
+Cover, in this order:
+
+1. Correctness: absolute consistency between what the spec asserts, what tests and evals verify, and what code does
+2. Security: confidentiality, integrity, availability
+3. Validation of spec, test and code quality: violation of standards (CLAUDE.md and skills)
+4. Test evidence: inadequate coverage of all assertions, unmaintainable tests (literals, magic numbers, test-owned constants, duplication)
+5. Architecture: violation of ADR and skill governance and fundamental architectural principles
 
 Classify every finding by required receiver action. When `REVIEW.md` is present, it overrides this default taxonomy.
 
-| Class          | Receiver action              | Use when                                                                                      |
-| -------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `BLOCKING`     | Fix in this PR before merge. | Correctness bug, security risk, data-loss risk, broken required validation, policy violation. |
-| `NEEDS-ANSWER` | Answer before merge.         | A required fact is missing and the answer can clear the concern or upgrade it to `BLOCKING`.  |
-| `FOLLOW-UP`    | Track outside this PR.       | Valid concern, but fixing it would widen the PR or does not affect merge safety.              |
-| `NOTE`         | No action expected.          | Context, praise, or observation that does not create work. Omit when it adds noise.           |
+| Class          | Receiver action             | Use when                                                                                                                                                                                           |
+| -------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING`     | Fix in this PR before merge | Correctness (spec–test–code equivalence and adherence to PDRs and ADRs), security risk, violation of standards (CLAUDE.md and skills), insufficient test evidence or drift risk in tests and evals |
+| `NEEDS-ANSWER` | Answer before merge         | A required fact is missing and the answer can clear the concern or upgrade it to `BLOCKING`                                                                                                        |
+| `FOLLOW-UP`    | Track outside this PR       | Justified concern, gap or material improvement, but addressing it would widen the PR: architectural deficiencies in need of wider refactoring, technical debt                                      |
+| `NOTE`         | No action expected.         | Context, praise, or observation that does not create work. Omit when it adds noise.                                                                                                                |
 
 Do not use `P0`/`P1`/`P2`/`P3` or `critical`/`high`/`medium`/`low`/`minor`/`nit` as finding headings.
 

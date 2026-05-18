@@ -65,6 +65,14 @@ def _load_review_result() -> ModuleType:
 RENDER_DIR = pathlib.Path(__file__).resolve().parent.parent / "references" / "render"
 DEFAULT_TITLE = "Change Review"
 
+# Severity wire value → render template filename. Mirrors the spec
+# clause that maps the three severities to render-class headings.
+_SEVERITY_TO_TEMPLATE = {
+    "blocking": "finding-blocking.md",
+    "debt": "finding-debt.md",
+    "follow_up": "finding-followup.md",
+}
+
 
 def _load_template(name: str) -> string.Template:
     """Load and return a ``string.Template`` for the named render template.
@@ -94,59 +102,60 @@ def _render_finding(template: string.Template, finding: "object") -> str:
         location=_location(finding),
         message=finding.message,  # type: ignore[attr-defined]
         rule=finding.rule,  # type: ignore[attr-defined]
+        action=finding.action,  # type: ignore[attr-defined]
     ).rstrip()
 
 
 def _partition_findings(
     findings: list["object"],
-) -> tuple[list["object"], list["object"]]:
-    """Split findings into (blockers, followups) by severity.
-
-    ``must_fix`` → BLOCKING; ``suggestion`` and ``nit`` → FOLLOW-UP. The
-    two-class render shape has no NEEDS-ANSWER or NOTE class; nits fold
-    into FOLLOW-UP.
-    """
-    blockers = [f for f in findings if str(f.severity) == "must_fix"]  # type: ignore[attr-defined]
-    followups = [
-        f
-        for f in findings
-        if str(f.severity) in ("suggestion", "nit")  # type: ignore[attr-defined]
-    ]
-    return blockers, followups
+) -> dict[str, list["object"]]:
+    """Split findings into three buckets keyed by severity wire value."""
+    buckets: dict[str, list["object"]] = {
+        "blocking": [],
+        "debt": [],
+        "follow_up": [],
+    }
+    for finding in findings:
+        buckets[str(finding.severity)].append(finding)  # type: ignore[attr-defined]
+    return buckets
 
 
 def _render_markdown(result: "object") -> str:
     """Render a parsed ``ReviewResult`` into the ``review.md`` surface.
 
     Loads per-section templates from ``references/render/``, partitions
-    findings by render class, substitutes placeholders via stdlib
-    ``string.Template``, and assembles the body in section order
-    (blockers / no-blockers → followups → acknowledgements). Two render
-    classes: BLOCKING for ``must_fix`` and FOLLOW-UP for
-    ``suggestion``/``nit``.
+    findings by severity, substitutes placeholders via stdlib
+    ``string.Template``, and assembles the body in severity order
+    (BLOCKING → DEBT → FOLLOW-UP → acknowledgements). When no BLOCKING
+    finding is present, the no-blockers template stands in for the
+    BLOCKING section. Label asymmetry by severity lives in the templates:
+    blocking/debt render ``message``/``action`` as Evidence/Required;
+    follow_up renders them as Issue/Track-under.
     """
     document_tpl = _load_template("document.md")
-    blocking_tpl = _load_template("finding-blocking.md")
-    followup_tpl = _load_template("finding-followup.md")
-    acks_tpl = _load_template("acknowledgements.md")
     no_blockers_text = _load_static("no-blockers.md")
-    followups_header_text = _load_static("followups-header.md")
+    severity_templates = {
+        sev: _load_template(name) for sev, name in _SEVERITY_TO_TEMPLATE.items()
+    }
+    acks_tpl = _load_template("acknowledgements.md")
 
     findings = list(result.findings)  # type: ignore[attr-defined]
-    blockers, followups = _partition_findings(findings)
-    # Stable ordering: by concern then id, for both classes.
-    blockers.sort(key=lambda f: (str(f.concern), f.id))
-    followups.sort(key=lambda f: (str(f.concern), f.id))
+    buckets = _partition_findings(findings)
+    for bucket in buckets.values():
+        bucket.sort(key=lambda f: (str(f.concern), f.id))  # type: ignore[attr-defined]
 
     body_parts: list[str] = []
-    if blockers:
-        body_parts.extend(_render_finding(blocking_tpl, f) for f in blockers)
+    if buckets["blocking"]:
+        body_parts.extend(
+            _render_finding(severity_templates["blocking"], f)
+            for f in buckets["blocking"]
+        )
     else:
         body_parts.append(no_blockers_text)
 
-    if followups:
-        body_parts.append(followups_header_text)
-        body_parts.extend(_render_finding(followup_tpl, f) for f in followups)
+    for severity in ("debt", "follow_up"):
+        for finding in buckets[severity]:
+            body_parts.append(_render_finding(severity_templates[severity], finding))
 
     acknowledgements = list(result.acknowledgements)  # type: ignore[attr-defined]
     if acknowledgements:

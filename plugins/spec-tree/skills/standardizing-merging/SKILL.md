@@ -191,7 +191,7 @@ Every review finding — whether produced by a reviewer (outgoing feedback) or b
 | -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BLOCKING`     | Fix in this PR before merge | The PR introduces a correctness bug, security risk, data-loss risk, production-safety risk, broken required validation, secret exposure, or direct policy break. |
 | `NEEDS-ANSWER` | Answer before merge         | A required fact is missing from the diff or PR context, and the answer can clear the concern or convert it to `BLOCKING`.                                        |
-| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR or does not affect merge safety for this change.                                                          |
+| `FOLLOW-UP`    | Track outside this PR       | The concern is valid, but fixing it would widen the PR.                                                                                                          |
 | `NOTE`         | No action expected          | Context, praise, explanation, or an observation that does not create work.                                                                                       |
 
 `BLOCKING` and `NEEDS-ANSWER` drive the active PR loop. `FOLLOW-UP` items belong in a short summary and name the owning tracking location when retention is useful (e.g., `Track under: spx/.../ISSUES.md`). `NOTE` items are optional and must be omitted when they add noise.

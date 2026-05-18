@@ -13,7 +13,7 @@ Scenarios
   a structured error message naming the unknown value and the allowed
   set.
 - Given a JSON document where ``decision == "approve"`` and at least
-  one finding has ``severity == "must_fix"``,
+  one finding has ``severity == "blocking"``,
   ``validate_review_result.py`` exits non-zero with a structured error
   naming the offending finding identifiers.
 
@@ -88,18 +88,19 @@ class TestUnknownEnumValueRejection:
     ) -> None:
         bad_finding = {
             "id": "F-001",
-            "concern": "quality",
+            "concern": "consistency",
             "severity": "blocker",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         document = make_review_result_dict(findings=[bad_finding])
         result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
         assert result.returncode != 0
         assert "blocker" in result.stderr
-        assert "must_fix" in result.stderr
+        assert "blocking" in result.stderr
 
     def test_unknown_concern_exits_nonzero_naming_value_and_allowed_set(
         self,
@@ -107,33 +108,35 @@ class TestUnknownEnumValueRejection:
         bad_finding = {
             "id": "F-001",
             "concern": "marketing",
-            "severity": "suggestion",
+            "severity": "follow_up",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         document = make_review_result_dict(findings=[bad_finding])
         result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
         assert result.returncode != 0
         assert "marketing" in result.stderr
-        assert "quality" in result.stderr
+        assert "consistency" in result.stderr
 
 
 class TestConsistencyInvariantRejection:
-    """``approve`` + ``must_fix`` exits non-zero and names the offending IDs."""
+    """``approve`` + ``blocking`` exits non-zero and names the offending IDs."""
 
-    def test_approve_with_must_fix_exits_nonzero_naming_offending_finding_ids(
+    def test_approve_with_blocking_exits_nonzero_naming_offending_finding_ids(
         self,
     ) -> None:
         offending = {
             "id": "F-042",
-            "concern": "bugs",
-            "severity": "must_fix",
+            "concern": "consistency",
+            "severity": "blocking",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         document = make_review_result_dict(decision="approve", findings=[offending])
         result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))

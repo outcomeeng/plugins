@@ -12,11 +12,11 @@ Scenarios
 Mappings
 - ``Decision`` enum members map to the wire values ``approve``,
   ``request_changes``, ``comment``.
-- ``Severity`` enum members map to the wire values ``must_fix``,
-  ``suggestion``, ``nit``.
-- ``Concern`` enum members map to exactly the eight wire values
-  ``quality``, ``bugs``, ``performance``, ``security``,
-  ``test_coverage``, ``architecture``, ``docs``, ``consistency``.
+- ``Severity`` enum members map to the wire values ``blocking``,
+  ``debt``, ``follow_up``.
+- ``Concern`` enum members map to exactly the six wire values
+  ``consistency``, ``security``, ``performance``, ``evidence``,
+  ``standards``, ``architecture``.
 
 Compliance (subset)
 - The policy module declares ``SCHEMA_VERSION``, frozen ``Finding`` and
@@ -81,31 +81,29 @@ class TestDecisionMapping:
 
 
 class TestSeverityMapping:
-    """``Severity`` members map to the wire values ``must_fix``,
-    ``suggestion``, ``nit``."""
+    """``Severity`` members map to the wire values ``blocking``,
+    ``debt``, ``follow_up``."""
 
     def test_severity_members_map_to_wire_values(self) -> None:
         review_result = load_review_result_module()
         wire_values = {member.value for member in review_result.Severity}
-        assert wire_values == {"must_fix", "suggestion", "nit"}
+        assert wire_values == {"blocking", "debt", "follow_up"}
 
 
 class TestConcernMapping:
-    """``Concern`` members map to exactly the eight wire values
+    """``Concern`` members map to exactly the six wire values
     declared in the spec."""
 
-    def test_concern_members_map_to_eight_wire_values(self) -> None:
+    def test_concern_members_map_to_six_wire_values(self) -> None:
         review_result = load_review_result_module()
         wire_values = {member.value for member in review_result.Concern}
         assert wire_values == {
-            "quality",
-            "bugs",
-            "performance",
-            "security",
-            "test_coverage",
-            "architecture",
-            "docs",
             "consistency",
+            "security",
+            "performance",
+            "evidence",
+            "standards",
+            "architecture",
         }
 
 
@@ -119,9 +117,9 @@ class TestParseJsonConforming:
         assert isinstance(result, review_result.ReviewResult)
         assert result.decision == review_result.Decision("request_changes")
 
-    def test_parse_json_accepts_approve_with_no_must_fix(self) -> None:
+    def test_parse_json_accepts_approve_with_no_blocking(self) -> None:
         review_result = load_review_result_module()
-        # Approve with a suggestion-only finding is the canonical
+        # Approve with a follow_up-only finding is the canonical
         # "approve with minor notes" shape.
         payload = json.dumps(make_review_result_dict(decision="approve"))
         result = review_result.parse_json(payload)
@@ -161,48 +159,51 @@ class TestParseJsonRejection:
         review_result = load_review_result_module()
         bad_finding = {
             "id": "F-001",
-            "concern": "quality",
+            "concern": "consistency",
             "severity": "blocker",  # not a Severity member
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
         message = str(excinfo.value)
         assert "blocker" in message
-        assert "must_fix" in message  # part of the allowed set
+        assert "blocking" in message  # part of the allowed set
 
     def test_unknown_concern_raises_with_value_and_allowed_set(self) -> None:
         review_result = load_review_result_module()
         bad_finding = {
             "id": "F-001",
             "concern": "marketing",  # not a Concern member
-            "severity": "suggestion",
+            "severity": "follow_up",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
         message = str(excinfo.value)
         assert "marketing" in message
-        assert "quality" in message  # part of the allowed set
+        assert "consistency" in message  # part of the allowed set
 
-    def test_approve_with_must_fix_raises_consistency_invariant(self) -> None:
+    def test_approve_with_blocking_raises_consistency_invariant(self) -> None:
         review_result = load_review_result_module()
         offending_finding = {
             "id": "F-001",
-            "concern": "bugs",
-            "severity": "must_fix",
+            "concern": "consistency",
+            "severity": "blocking",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
             "message": "m",
+            "action": "a",
         }
         payload = json.dumps(
             make_review_result_dict(decision="approve", findings=[offending_finding])
@@ -239,12 +240,49 @@ class TestRoundTrip:
         second = review_result.parse_json(emitted)
         assert first == second
 
+    def test_action_field_round_trips(self) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "follow_up",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_RULE_CITATION,
+            "message": "Issue body",
+            "action": "ISSUES.md",
+        }
+        document = make_review_result_dict(findings=[finding])
+        first = review_result.parse_json(json.dumps(document))
+        assert first.findings[0].action == "ISSUES.md"
+        emitted = json.dumps(review_result.to_json_dict(first))
+        second = review_result.parse_json(emitted)
+        assert second.findings[0].action == "ISSUES.md"
+
+    def test_missing_action_field_raises(self) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "follow_up",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_RULE_CITATION,
+            "message": "m",
+            # action is required; omitting it must raise
+        }
+        document = make_review_result_dict(findings=[finding])
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(json.dumps(document))
+        assert "action" in str(excinfo.value)
+
 
 class TestSeverityToRenderClassMapping:
     """``Severity`` members map to render classes via the partitioning function.
 
-    ``must_fix`` → BLOCKING (the blockers partition).
-    ``suggestion`` and ``nit`` → FOLLOW-UP (the followups partition).
+    ``blocking`` → BLOCKING bucket.
+    ``debt`` → DEBT bucket.
+    ``follow_up`` → FOLLOW-UP bucket.
 
     The mapping is total over ``Severity`` and lives in
     ``render_review._partition_findings``. Asserting it directly closes the
@@ -256,49 +294,54 @@ class TestSeverityToRenderClassMapping:
         review_result = load_review_result_module()
         return review_result.Finding(
             id=finding_id,
-            concern=review_result.Concern("quality"),
+            concern=review_result.Concern("consistency"),
             severity=review_result.Severity(severity),
             file="example.py",
             line=1,
             rule=FIXTURE_RULE_CITATION,
             message="m",
+            action="a",
         )
 
-    def test_must_fix_partitions_into_blockers(self) -> None:
+    def test_blocking_partitions_into_blocking_bucket(self) -> None:
         render_review = load_render_review_module()
-        blockers, followups = render_review._partition_findings(
-            [self._make_finding("must_fix", "F-001")]
+        buckets = render_review._partition_findings(
+            [self._make_finding("blocking", "F-001")]
         )
-        assert [f.id for f in blockers] == ["F-001"]
-        assert followups == []
+        assert [f.id for f in buckets["blocking"]] == ["F-001"]
+        assert buckets["debt"] == []
+        assert buckets["follow_up"] == []
 
-    def test_suggestion_partitions_into_followups(self) -> None:
+    def test_debt_partitions_into_debt_bucket(self) -> None:
         render_review = load_render_review_module()
-        blockers, followups = render_review._partition_findings(
-            [self._make_finding("suggestion", "F-002")]
+        buckets = render_review._partition_findings(
+            [self._make_finding("debt", "F-002")]
         )
-        assert blockers == []
-        assert [f.id for f in followups] == ["F-002"]
+        assert buckets["blocking"] == []
+        assert [f.id for f in buckets["debt"]] == ["F-002"]
+        assert buckets["follow_up"] == []
 
-    def test_nit_partitions_into_followups(self) -> None:
+    def test_follow_up_partitions_into_follow_up_bucket(self) -> None:
         render_review = load_render_review_module()
-        blockers, followups = render_review._partition_findings(
-            [self._make_finding("nit", "F-003")]
+        buckets = render_review._partition_findings(
+            [self._make_finding("follow_up", "F-003")]
         )
-        assert blockers == []
-        assert [f.id for f in followups] == ["F-003"]
+        assert buckets["blocking"] == []
+        assert buckets["debt"] == []
+        assert [f.id for f in buckets["follow_up"]] == ["F-003"]
 
-    def test_mixed_severities_split_across_classes(self) -> None:
+    def test_mixed_severities_split_across_buckets(self) -> None:
         render_review = load_render_review_module()
         findings = [
-            self._make_finding("must_fix", "F-001"),
-            self._make_finding("suggestion", "F-002"),
-            self._make_finding("nit", "F-003"),
-            self._make_finding("must_fix", "F-004"),
+            self._make_finding("blocking", "F-001"),
+            self._make_finding("follow_up", "F-002"),
+            self._make_finding("debt", "F-003"),
+            self._make_finding("blocking", "F-004"),
         ]
-        blockers, followups = render_review._partition_findings(findings)
-        assert {f.id for f in blockers} == {"F-001", "F-004"}
-        assert {f.id for f in followups} == {"F-002", "F-003"}
+        buckets = render_review._partition_findings(findings)
+        assert {f.id for f in buckets["blocking"]} == {"F-001", "F-004"}
+        assert {f.id for f in buckets["debt"]} == {"F-003"}
+        assert {f.id for f in buckets["follow_up"]} == {"F-002"}
 
 
 class TestRuleCitationForm:
@@ -323,12 +366,13 @@ class TestRuleCitationForm:
         review_result = load_review_result_module()
         finding = {
             "id": "F-001",
-            "concern": "quality",
-            "severity": "suggestion",
+            "concern": "consistency",
+            "severity": "follow_up",
             "file": "x.py",
             "line": 1,
             "rule": rule,
             "message": "m",
+            "action": "a",
         }
         # parse_json should not raise on a conforming rule citation.
         review_result.parse_json(
@@ -350,12 +394,13 @@ class TestRuleCitationForm:
         review_result = load_review_result_module()
         finding = {
             "id": "F-001",
-            "concern": "quality",
-            "severity": "suggestion",
+            "concern": "consistency",
+            "severity": "follow_up",
             "file": "x.py",
             "line": 1,
             "rule": rule,
             "message": "m",
+            "action": "a",
         }
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(
