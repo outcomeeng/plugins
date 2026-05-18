@@ -58,7 +58,7 @@ def grade(case: Case, assistant_message: str) -> GradeResult:
 # placeholders let cases assert that a field is present and of the
 # expected type without pinning a literal value — useful when the
 # agent's emission is variable but the schema requires the field.
-_SENTINEL_MATCHERS: dict[str, "Callable[[Any], bool]"] = {
+_SENTINEL_MATCHERS: dict[str, Callable[[Any], bool]] = {
     "#string": lambda actual: isinstance(actual, str),
     "#notnull": lambda actual: actual is not None,
     "#present": lambda actual: True,
