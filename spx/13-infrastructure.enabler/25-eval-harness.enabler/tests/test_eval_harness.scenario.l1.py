@@ -150,6 +150,90 @@ def test_is_subset_list_matching_is_cardinality_aware() -> None:
     assert is_subset(expected, actual_two)
 
 
+def test_is_subset_string_sentinel_matches_any_string() -> None:
+    assert is_subset({"action": "#string"}, {"action": "Add a null check"})
+    assert is_subset({"action": "#string"}, {"action": ""})
+
+
+def test_is_subset_string_sentinel_rejects_non_string() -> None:
+    assert not is_subset({"action": "#string"}, {"action": None})
+    assert not is_subset({"action": "#string"}, {"action": 42})
+    assert not is_subset({"action": "#string"}, {"action": ["a"]})
+    assert not is_subset({"action": "#string"}, {"action": {"k": "v"}})
+    assert not is_subset({"action": "#string"}, {"action": True})
+
+
+def test_is_subset_notnull_sentinel_matches_any_non_null() -> None:
+    assert is_subset({"action": "#notnull"}, {"action": "x"})
+    assert is_subset({"action": "#notnull"}, {"action": ""})
+    assert is_subset({"action": "#notnull"}, {"action": 0})
+    assert is_subset({"action": "#notnull"}, {"action": False})
+    assert is_subset({"action": "#notnull"}, {"action": []})
+    assert is_subset({"action": "#notnull"}, {"action": {}})
+
+
+def test_is_subset_notnull_sentinel_rejects_null() -> None:
+    assert not is_subset({"action": "#notnull"}, {"action": None})
+
+
+def test_is_subset_present_sentinel_matches_any_value_including_null() -> None:
+    assert is_subset({"action": "#present"}, {"action": "x"})
+    assert is_subset({"action": "#present"}, {"action": None})
+    assert is_subset({"action": "#present"}, {"action": 0})
+    assert is_subset({"action": "#present"}, {"action": []})
+
+
+def test_is_subset_present_sentinel_rejects_when_key_missing() -> None:
+    # Dict-level "key must exist" check happens BEFORE is_subset is
+    # invoked on the value, so a missing key fails regardless of the
+    # sentinel that would have matched the value.
+    assert not is_subset({"action": "#present"}, {})
+
+
+def test_is_subset_sentinel_only_applies_at_expected_position() -> None:
+    # Sentinels are an expected-side convention. The dispatch keys on
+    # `expected`, so a non-sentinel expected string is compared by
+    # equality regardless of actual. When expected is `#string` and
+    # actual happens to equal the literal `#string`, the sentinel
+    # matcher still fires (because actual is a string) — the result is
+    # the same as equality would yield, but the path is the matcher.
+    assert is_subset({"action": "#string"}, {"action": "#string"})
+    assert is_subset({"action": "#string"}, {"action": "other"})
+
+
+def test_is_subset_sentinel_used_with_coupled_finding_attributes() -> None:
+    # The wider eval-harness rule requires every sentinel be paired with
+    # a coupled discriminator. Verify the combined shape still works:
+    # severity + concern carry the discrimination; action only checks
+    # type, not value.
+    expected = {
+        "findings": [
+            {"severity": "blocking", "concern": "consistency", "action": "#string"}
+        ]
+    }
+    actual_match = {
+        "findings": [
+            {
+                "severity": "blocking",
+                "concern": "consistency",
+                "action": "Add a null check before the dereference",
+                "rule": "spx/.../rule:1",
+            }
+        ]
+    }
+    actual_no_action = {
+        "findings": [
+            {"severity": "blocking", "concern": "consistency", "rule": "spx/.../rule:1"}
+        ]
+    }
+    actual_wrong_severity = {
+        "findings": [{"severity": "follow_up", "concern": "consistency", "action": "x"}]
+    }
+    assert is_subset(expected, actual_match)
+    assert not is_subset(expected, actual_no_action)
+    assert not is_subset(expected, actual_wrong_severity)
+
+
 def test_grade_passes_when_must_contain_subset_matches() -> None:
     case = _case(
         must_contain=[
