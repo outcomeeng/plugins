@@ -9,6 +9,7 @@ given eval is declared by that eval's prompt.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -53,6 +54,17 @@ def grade(case: Case, assistant_message: str) -> GradeResult:
     return GradeResult(passed=not reasons, reasons=tuple(reasons))
 
 
+# Sentinel matchers at expected positions. Karate-style `#`-prefixed
+# placeholders let cases assert that a field is present and of the
+# expected type without pinning a literal value — useful when the
+# agent's emission is variable but the schema requires the field.
+_SENTINEL_MATCHERS: dict[str, Callable[[Any], bool]] = {
+    "#string": lambda actual: isinstance(actual, str),
+    "#notnull": lambda actual: actual is not None,
+    "#present": lambda actual: True,
+}
+
+
 def is_subset(expected: Any, actual: Any) -> bool:
     """Return True when ``expected`` is a recursive structural subset of ``actual``.
 
@@ -68,6 +80,16 @@ def is_subset(expected: Any, actual: Any) -> bool:
       because each expected element rescans the unconsumed actual elements;
       that is fine for eval case files, so do not author large
       expected-list assertions.
+    - Sentinel strings: an expected scalar equal to ``#string``, ``#notnull``,
+      or ``#present`` is treated as a type/presence matcher rather than as
+      a literal. ``#string`` matches any string. ``#notnull`` matches any
+      non-null value. ``#present`` matches any value (including null) so
+      long as the parent dict key is in the actual document; per-key
+      existence is enforced by the dict path before this scalar arm runs.
+      The sentinel convention follows Karate's ``#``-prefixed placeholder
+      syntax and is an expected-side convention only — an actual value
+      that happens to equal ``"#string"`` also matches by equality, so the
+      sentinel never leaks "any-string" semantics to the actual side.
     - Scalars: equality (``expected == actual``). Python's ``bool ==
       int`` semantics carry through — ``is_subset(True, 1)`` returns
       True because ``True == 1``. This matches the JSON structural
@@ -93,4 +115,8 @@ def is_subset(expected: Any, actual: Any) -> bool:
             else:
                 return False
         return True
+    if isinstance(expected, str):
+        matcher = _SENTINEL_MATCHERS.get(expected)
+        if matcher is not None:
+            return matcher(actual)
     return bool(expected == actual)
