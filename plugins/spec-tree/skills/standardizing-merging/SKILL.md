@@ -8,8 +8,12 @@ allowed-tools: Read
 ---
 
 <objective>
-The shared vocabulary the two PR flows consume. /opening-pr walks the opening flow (one-shot, linear, terminates at exit). /managing-pr walks the managing flow (loop body, re-enters per heartbeat fire). This skill is referenced, not flow-shaped — it defines the concepts, gates, commands, and tokens the two flows invoke. There is no flow here.
+The shared vocabulary the two PR flows consume. /opening-pr walks the opening flow (one-shot, linear, terminates at exit). /managing-pr walks the managing flow (loop body, re-enters per heartbeat fire). This skill defines the concepts, gates, commands, and tokens the two flows invoke; it carries no flow itself.
 </objective>
+
+<reference_note>
+This is a reference skill. /opening-pr and /managing-pr load this vocabulary automatically. Do not invoke directly.
+</reference_note>
 
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization. Topics the overlay MAY refine:
@@ -23,7 +27,7 @@ When loaded inside a repository, check for `spx/local/merging.md` at the reposit
 - Keep-ready signal forms — project-specific rules for keeping a PR ready across follow-up pushes when the closure gate has just re-passed.
 - **Merge command** — which `gh pr merge` flags the project uses (rebase merge, merge commit, squash; whether `--delete-branch` runs inline or as a separate `git push origin --delete <branch>` to avoid multi-worktree cleanup failures).
 
-If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. When the overlay declares no production-class recognition mechanism and a PR cannot otherwise be classified, the gate withholds autonomous authority rather than guess.
+If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. **Absence of a production-class recognition mechanism means the project has not opted in to production-class gating — every PR is treated as non-production-class.** The other gate predicates (clean current-head bot review, required checks terminal-green, branch hygiene, commit-age) still apply, so a non-blocking bot review on the current head remains a prerequisite for autonomous merge. Repos that need a production-class hold must declare the recognition mechanism in the overlay.
 
 The overlay cannot override the always-draft mandate — `gh pr create --draft` is mandatory on every PR open. Promotion to ready remains a separate `gh pr ready` command; the overlay's draft-promotion-authority topic governs who authorizes the promotion (gate evaluation versus explicit human instruction), not whether the promotion command runs separately.
 </repo_local_overlay>
@@ -32,16 +36,16 @@ The overlay cannot override the always-draft mandate — `gh pr create --draft` 
 
 Conditions that must hold before every push (initial or follow-up). Failure stops the calling flow.
 
-| Condition (must hold)                                        | Failure response                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Current branch is not `main`, `master`, or detached HEAD     | STOP. PRs are opened from feature branches.                                                |
-| Working tree is clean (no uncommitted changes)               | STOP. Direct the user to /committing-changes or to stash.                                  |
-| Branch is at least one commit ahead of the resolved base     | STOP. Nothing to PR — verify the base branch.                                              |
-| Branch is not behind the resolved base (no upstream commits) | Warn. Offer to rebase; proceed only if the user confirms.                                  |
-| Branch topology is classified as peer or stacked             | STOP. See `<branch_topology>`.                                                             |
-| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                                                 |
-| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.                             |
-| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing — non-interactive `gh` calls fail opaquely otherwise. |
+| Condition (must hold)                                        | Failure response                                               |
+| ------------------------------------------------------------ | -------------------------------------------------------------- |
+| Current branch is not `main`, `master`, or detached HEAD     | STOP. Switch to a feature branch.                              |
+| Working tree is clean (no uncommitted changes)               | STOP. Commit via /committing-changes or stash before pushing.  |
+| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.        |
+| Branch is not behind the resolved base (no upstream commits) | Warn. Offer to rebase; proceed only if the user confirms.      |
+| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.             |
+| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                     |
+| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`. |
+| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                          |
 
 Commands:
 
@@ -134,7 +138,7 @@ Both transitions are gated by the **PR authority gate**, evaluated at the moment
 
 **Predicates** (all must hold for the applicable action):
 
-- The project's local closure gate has been run against the latest pushed commit and passed. The local closure gate is the author's responsibility, not CI's — CI is the validation; the closure gate is the assertion that validation is worth spending budget on.
+- The project's local closure gate has been run against the latest pushed commit and passed. The author runs the local closure gate before each push that approaches ready or merge; CI runs validation on the resulting commit. The closure gate asserts the work is worth CI budget.
 - All required checks on the PR's `statusCheckRollup` are terminal-green for the current head. Any queued, in-progress, pending, failing, cancelled, timed-out, missing, or ambiguous required check blocks authority.
 - At least one current-head four-class review on an inspected surface (see `<review_inspection>`) has no unresolved `BLOCKING` or `NEEDS-ANSWER`.
 - The latest pushed commit is at least five minutes old at evaluation time, so review automation has time to respond without shell polling.
