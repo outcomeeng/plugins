@@ -24,9 +24,9 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 2 — Inspect three surfaces.** Run /standardizing-merging `<review_inspection>` queries. Compare timestamps against the most recent push; entries after that push are re-reviews of the latest state.
 
-**Step 3 — Classify every finding.** Apply the four-class taxonomy from /standardizing-merging `<review_classification>`. Convert any severity-rank labels (`P0`, `critical`, `nit`) on incoming feedback to one of the four classes before queuing.
+**Step 3 — Classify every finding.** Apply the three-severity / six-category taxonomy from /standardizing-merging `<review_classification>`. Convert any severity-rank labels (`P0`, `critical`, `nit`) or legacy class labels (`NEEDS-ANSWER`, `NOTE`) on incoming feedback to one of the three severities before queuing — reframe open questions as findings and omit commentary that does not constitute a finding.
 
-**Step 4 — Drive the queue.** Address `BLOCKING` first. Answer or investigate `NEEDS-ANSWER` before coding speculative fixes. Record accepted `FOLLOW-UP` items in the owning node's `ISSUES.md` or `PLAN.md` (edit those files directly via the Edit or Write tool — they are committed coordination artifacts, not spec assertions). Drop `NOTE` items unless the reviewer requests acknowledgment.
+**Step 4 — Drive the queue.** Address `BLOCKING` first, then `DEBT` — both require fix-in-this-PR. Record accepted `FOLLOW-UP` items in the owning node's `ISSUES.md` or `PLAN.md` (edit those files directly via the Edit or Write tool — they are committed coordination artifacts, not spec assertions).
 
 **Step 5 — Push follow-ups deliberately.** Validate via the narrowest meaningful check after each fix. Before any push approaching ready or merge, run the project's local closure gate (named in `spx/local/merging.md` if defined). Commit via /committing-changes. Re-run /standardizing-merging `<branch_hygiene>` before every push — hygiene applies on every push, not only at creation. Push via /standardizing-merging `<push_semantics>`. For post-ready follow-ups, default to `gh pr ready --undo <pr-number>` before pushing per /standardizing-merging `<pr_authority_gate>` post-ready follow-up rule, unless `spx/local/merging.md` permits keeping the PR ready when the closure gate has just re-passed.
 
@@ -79,7 +79,7 @@ EOF
 gh pr review <pr-number> --comment --body-file - <<'EOF'
 Summary of remaining items:
 - 1 BLOCKING ...
-- 2 NEEDS-ANSWER ...
+- 2 DEBT ...
 EOF
 
 # Reply within an existing review thread (line-level comment)
@@ -106,8 +106,8 @@ The managing flow satisfies its contract when, at minimum:
 
 - /standardizing-merging and /committing-changes are loaded before any inspection or push.
 - Each pass inspects all three surfaces from /standardizing-merging `<review_inspection>`.
-- Every finding is labeled with one of `BLOCKING` / `NEEDS-ANSWER` / `FOLLOW-UP` / `NOTE` — never a severity rank.
-- The work queue is driven from `BLOCKING` and `NEEDS-ANSWER` only.
+- Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label.
+- The work queue is driven from `BLOCKING` and `DEBT` only — both require fix-in-this-PR.
 - Every follow-up push re-runs /standardizing-merging `<branch_hygiene>`.
 - Promotion fires autonomously under gate-green-autonomous draft-promotion authority; under overlay-requires-human, `MARK_READY` is emitted instead.
 - Merge fires autonomously under gate-green-autonomous merge authority; under overlay-requires-human, `AWAIT_MERGE_INSTRUCTION` is emitted instead.

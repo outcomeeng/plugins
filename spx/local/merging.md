@@ -4,7 +4,7 @@ Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this r
 
 ## Merge authority
 
-This repository follows the gate-green-autonomous default for both promotion and merge from `/standardizing-merging` `<pr_authority_gate>`. When the gate's predicates hold for the applicable action (closure gate passed, required checks terminal-green, current-head four-class review with no `BLOCKING` or `NEEDS-ANSWER`, five-minute settle window elapsed, branch hygiene including upstream-safety, no production-class markers, plus the merge-only predicates for merge), the agent runs the action's command immediately using the command in `## Merge command` below — no separate explicit human instruction is required for promotion or merge.
+This repository follows the gate-green-autonomous default for both promotion and merge from `/standardizing-merging` `<pr_authority_gate>`. When the gate's predicates hold for the applicable action (closure gate passed, required checks terminal-green, current-head three-severity review with no `BLOCKING` or `DEBT`, five-minute settle window elapsed, branch hygiene including upstream-safety, no production-class markers, plus the merge-only predicates for merge), the agent runs the action's command immediately using the command in `## Merge command` below — no separate explicit human instruction is required for promotion or merge.
 
 ## Merge command
 

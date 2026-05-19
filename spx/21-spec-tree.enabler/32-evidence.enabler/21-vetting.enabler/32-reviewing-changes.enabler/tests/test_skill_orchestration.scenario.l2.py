@@ -253,8 +253,9 @@ class TestSkillOrchestrationChain:
         # taxonomy): the default fixture has decision=request_changes
         # with one follow_up-severity finding and no blocking. Render
         # should emit the no-blockers line and a FOLLOW-UP heading.
-        # NEEDS-ANSWER and NOTE classes are not emitted by this lens
-        # (ephemeral self-review).
+        # The legacy class labels NEEDS-ANSWER and NOTE are not in the
+        # current three-severity taxonomy and must not appear in any
+        # rendered output.
         assert "## Change Review" in rendered, (
             "review.md must carry the Change Review title from document.md template"
         )
@@ -272,12 +273,13 @@ class TestSkillOrchestrationChain:
         assert "Track under: " in rendered, (
             "FOLLOW-UP finding must render its action under the Track-under label"
         )
-        # NEEDS-ANSWER and NOTE heading prefixes must not appear — they
-        # belong to GH-PR-thread semantics, not the local lens.
+        # Legacy four-class headings must not appear — the taxonomy
+        # dropped NEEDS-ANSWER (open questions) and NOTE (commentary) in
+        # favour of the three-severity / six-category shape.
         for forbidden in ("### NEEDS-ANSWER", "### NOTE"):
             assert forbidden not in rendered, (
-                f"local lens must not render {forbidden!r} — that class belongs "
-                f"to the GH PR thread, not ephemeral self-review"
+                f"render must not emit {forbidden!r} — that label is not "
+                f"part of the three-severity taxonomy from REVIEW.template.md"
             )
         # The legacy table format must NOT appear — confirms the
         # template-driven render replaces the f-string-table render.
