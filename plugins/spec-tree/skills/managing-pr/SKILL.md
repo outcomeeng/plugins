@@ -34,6 +34,14 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7 — Evaluate the PR authority gate and act.** Apply /standardizing-merging `<pr_authority_gate>` at the moment that fits the PR's current state.
 
+When evaluating the review predicate, check the `spec-tree-review / spec-tree-review` check conclusion observed in Step 2. If it reports `conclusion: skipped` and no current-head four-class review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`:
+
+1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@claude` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
+2. Post one PR-level comment with body exactly `<trigger-phrase> review` via `gh pr comment <pr-number>`.
+3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, refresh the heartbeat, and exit Step 7. The mention-triggered reviewer's posted findings become the current-head four-class review the next heartbeat reads.
+
+Otherwise, branch on PR state:
+
 - **PR is draft (`isDraft = true`):** evaluate the gate's promotion-time predicates. If every predicate holds, consult the overlay's draft-promotion-authority topic:
   - **Gate-green-autonomous (default):** run `gh pr ready <pr-number>`, refresh the heartbeat, and emit `WAIT_FOR_CHECKS` while ready-state CI fires.
   - **Overlay-requires-human:** emit `MARK_READY` and wait for the operator's explicit promotion instruction.
@@ -112,6 +120,7 @@ The managing flow satisfies its contract when, at minimum:
 - Promotion fires autonomously under gate-green-autonomous draft-promotion authority; under overlay-requires-human, `MARK_READY` is emitted instead.
 - Merge fires autonomously under gate-green-autonomous merge authority; under overlay-requires-human, `AWAIT_MERGE_INSTRUCTION` is emitted instead.
 - Production-class PRs trigger `PRODUCTION_HOLD:<reason>` for both actions regardless of overlay.
+- A skipped auto-review job (`spec-tree-review / spec-tree-review: conclusion: skipped`) triggers the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`.
 - Each pass that does not fire an autonomous action emits exactly one token from /standardizing-merging `<action_tokens>`.
 - No `<self_reference>` violation per /standardizing-merging.
 
