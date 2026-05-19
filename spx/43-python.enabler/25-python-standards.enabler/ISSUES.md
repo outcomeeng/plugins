@@ -60,3 +60,16 @@ Required handling:
 - Review every Python skill and reference for copied source vocabulary, constant-only generator guidance, replacement mocks, fixture-body laundering, `sys.path` tricks, and test-owned example bags.
 - Fix source guidance first where examples preserve a hard-to-test source shape.
 - Validate the edited skills and run `just check`.
+
+## 5. Production-code vocabulary ownership lacks a spec assertion
+
+`plugins/python/skills/standardizing-python/SKILL.md` carries two rules under `<source_owned_values>` that apply to all Python consumers, not only tests: "Artifacts are downstream of Python" and "Container keys are vocabulary". The only spec assertion backing these rules lives in `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/32-test-data-ownership.enabler/test-data-ownership.md`, which is scoped to test evidence. The skill layer is broader than the spec layer that governs it.
+
+Governed by:
+
+- `spx/43-python.enabler/25-python-standards.enabler/python-standards.md`
+- `spx/43-python.enabler/25-python-standards.enabler/29-python-code.enabler/python-code.md` (or wherever production-code Python standards land)
+
+Required handling:
+
+- Either add an ALWAYS assertion in a production-code Python standards node that governs artifact-downstream and container-key vocabulary ownership for all Python consumers, or narrow the standardizing-python paragraphs back to test-only scope so the rule stays inside the spec node that backs it.

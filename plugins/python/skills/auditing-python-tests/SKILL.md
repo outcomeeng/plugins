@@ -106,15 +106,42 @@ Accept explicit test doubles only when they are passed through dependency inject
 </falsifiability_audit>
 
 <source_ownership_audit>
-Reject test-owned source vocabulary:
+The audit asks one question per test case: *where does this case come from?* The legitimate sources:
 
-- Local constants in tests for source-owned values
-- Shared constant bags in tests, helpers, harnesses, or generators
-- Production modules created only to aggregate test values
-- Fixture files containing isolated strings or numbers
-- Generators that return source-owned singleton shapes through `st.just(...)`, singleton `st.sampled_from(...)`, or constant-returning functions
+| Evidence type | Case source                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
+| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
+| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
+| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
+| Compliance    | The decision record being enforced — the case is the rule itself                                                                                                       |
+| Any (fixture) | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
 
-Pass only when source vocabulary comes from the owning production module, runtime package, framework package, schema, enum, registry, constructor, or typed factory.
+The first five rows pair an evidence type with the case source it normally takes. The Fixture row is cross-cutting: any evidence type may use an inert fixture file as the case. An auditor classifying a test case checks both the evidence type and whether the case is a whole-payload fixture file.
+
+A case that does not have a documentable source outside the author's head is a tautology dressed as a measurement — the test confirms the author's understanding forever, never the spec. The defect is in the case's *origin*. Lexical location (`Final` at module scope, plain assignment, inline literal), syntactic form, and reuse pattern (shared bag, single-value, parametrize row) are irrelevant — the audit names them only as forms the same defect takes.
+
+**Vocabulary check (where the values live).** Independently of case provenance, the *values* used in cases must come from the right home:
+
+| Value kind                                                   | Lives in                                                                      |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Production vocabulary (labels, paths, schema fields, tokens) | Owning production module, imported                                            |
+| Variable input domain                                        | Generator under `product_testing/generators/`                                 |
+| Resource-bound or runner-tuning value (timeouts, retries)    | The harness module that owns the resource, under `product_testing/harnesses/` |
+| Whole-payload real-world sample                              | Inert fixture file under `product_testing/fixtures/`, read by path            |
+| One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                              |
+
+For each test case, name the source. REJECT against the missing source when:
+
+- The case's value is production vocabulary the test re-declares instead of imports.
+- The case's value is a container key or f-string template key hand-written by the author — keys are vocabulary; the key belongs to the owning production module.
+- The case's value is a hand-copied YAML/HCL/bash/JSON schema field name — artifacts are downstream; the Python module that renders or consumes the artifact owns the vocabulary, and that module must be created if it does not yet exist.
+- The case's value is a runner-tuning literal at test scope — the harness that owns the resource owns the timeout, retry count, or polling interval.
+- The case's input or expected output is hand-picked by the author with no source the audit can name — REJECT, the case is a tautology regardless of where it sits lexically.
+
+When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it. Source shape is improvable per `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/21-source-testability.enabler/source-testability.md`.
+
+Pass only when every case is traceable to a source independent of the author and every value lives in its proper home.
 </source_ownership_audit>
 
 <generator_audit>
@@ -214,6 +241,18 @@ Claude saw a Hypothesis strategy and treated it as property evidence. The strate
 Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
 Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the canonical test-infrastructure package. Avoid this by checking every applying `conftest.py`.
+
+Failure 5: Accepted a hand-picked test case as evidence.
+
+Claude saw `parse("name=alice")` followed by `assert result.name == "alice"` and approved the test. The string `"name=alice"` was invented by the author to demonstrate their understanding of the parser. The same author wrote (or read) the parser. Every future run confirms the author's understanding — that `"name=alice"` parses to a record with `name` field equal to `"alice"` — never the spec assertion about parser correctness. Avoid this by asking, for every case, where the case comes from: a generator, an oracle, a fixture, source-owned vocabulary, or the spec assertion text itself. If the answer is "the author chose it because it seemed reasonable", REJECT.
+
+Failure 6: Container-literal keys treated as opaque scaffolding.
+
+Claude saw `INVENTORY_JSON = f'{{"flatcar-version":"{VERSION}",...}}'` and classified it as test-fixture scaffolding because the *values* were synthetic. The *keys* were production-owned label vocabulary the author hand-wrote into the template — hand-picked cases for the parser or consumer that reads the JSON. Avoid this by auditing keys and values separately; the construction `json.dumps({LABEL: synthetic_value, ...})` with `LABEL` imported is the only legitimate form.
+
+Failure 7: "Artifact is the source-of-truth" rationalization.
+
+Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an HCL attribute, or a systemd unit path. The value appeared in a parsed artifact file but no Python module owned it. Claude classified the artifact as the source-of-truth and accepted the case. The artifact is downstream — a Python module either renders or consumes it, and the absence of that Python module is the architectural defect, not the test's fault for finding nothing to import. Avoid this by naming the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
 </failure_modes>
 
 <success_criteria>
@@ -224,6 +263,10 @@ A Python test audit succeeds when:
 - Runtime coupling reaches production behavior directly or through audited harnesses
 - No framework mock, monkeypatch, or import trick replaces the behavior under test
 - Source-owned values come from source modules or owning packages
+- Every test case is traceable to a source independent of the author — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
+- Container keys are imported from the owning production module, not hand-written
+- Runner-tuning values live on the harness that owns the resource, not at test scope
+- Missing source-of-truth modules are named in the verdict and routed to source-shape improvement, not absorbed into the test
 - Generators represent meaningful variable domains
 - Harnesses manage resource lifecycle and cleanup without owning arbitrary data
 - Inert fixtures are consumed only as files
