@@ -6,7 +6,7 @@ Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the
 
 ## Reviewing pull requests
 
-Read [`REVIEW.md`](REVIEW.md) at the repository root before posting any findings on a pull request in this repository. It is the authoritative source for the finding-classification taxonomy (`BLOCKING`, `NEEDS-ANSWER`, `FOLLOW-UP`, `NOTE`) and the comment shape every finding must follow. Severity ranks (`P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`) are not valid finding headings here. If a review has no `BLOCKING` or `NEEDS-ANSWER` items, say so directly — do not manufacture lower-priority findings to prove that review happened.
+Read [`REVIEW.template.md`](REVIEW.template.md) at the repository root before posting any findings on a pull request in this repository. The template is the consumer-override surface for the `/standardizing-merging` skill — by default it mirrors the skill's three-severity (`BLOCKING` / `DEBT` / `FOLLOW-UP`) × six-category (`consistency` / `security` / `performance` / `evidence` / `standards` / `architecture`) taxonomy and the comment shape every finding must follow. Severity ranks (`P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`) are not valid finding headings here, and neither are the legacy class labels `NEEDS-ANSWER` and `NOTE` — open questions are reframed as findings, and bare commentary or praise is omitted. If a review has no `BLOCKING` or `DEBT` items, say so directly — do not manufacture lower-priority findings to prove that review happened.
 
 ## Marketplace Is a Product
 

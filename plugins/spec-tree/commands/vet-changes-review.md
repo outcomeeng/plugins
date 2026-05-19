@@ -5,9 +5,9 @@ allowed-tools: Bash, Read, Skill
 ---
 
 <objective>
-Run the reviewing-changes lens against the current branch's diff and surface the verdict to the main agent. The main agent (or operator) decides what to do next: if `decision == "request_changes"`, fix the must_fix findings before pushing; if `decision == "approve"` or `"comment"`, proceed to `/open-pr` or commit.
+Run the reviewing-changes lens against the current branch's diff and surface the verdict to the main agent. The main agent (or operator) decides what to do next: if `decision == "request_changes"`, fix the `blocking` (and address the `debt`) findings before pushing; if `decision == "approve"` or `"comment"`, proceed to `/open-pr` or commit.
 
-The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same four-class verdict shape (`### BLOCKING` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
+The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
 </objective>
 
 <process>
@@ -34,7 +34,7 @@ Print, in this order:
 
 1. The absolute filesystem paths to `review-result.json` and `review.md` (under `.spx/reviews/<slug>/` on the local backend).
 2. The JSON's `decision` field, formatted as one line: `Decision: <decision>`.
-3. A one-line finding count by render class: `BLOCKING: <n>, FOLLOW-UP: <n>` (BLOCKING = findings with `severity == "must_fix"`; FOLLOW-UP = findings with `severity in ("suggestion", "nit")`).
+3. A one-line finding count by render class: `BLOCKING: <n>, DEBT: <n>, FOLLOW-UP: <n>` (mapping is identity: render class equals uppercase severity, so `blocking → BLOCKING`, `debt → DEBT`, `follow_up → FOLLOW-UP`).
 4. If `decision == "request_changes"`: the full `review.md` content. The main agent reads it and decides which findings to fix first.
 5. Else: nothing more. The artifacts are on disk; the main agent can read them if it wants the full text.
 
