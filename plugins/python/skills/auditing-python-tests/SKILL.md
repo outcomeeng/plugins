@@ -106,15 +106,18 @@ Accept explicit test doubles only when they are passed through dependency inject
 </falsifiability_audit>
 
 <source_ownership_audit>
-The audit asks one question per test case: *where does this case come from?* The legitimate sources, by evidence type:
+The audit asks one question per test case: *where does this case come from?* The legitimate sources:
 
-| Evidence type | Case source                                                                                     |
-| ------------- | ----------------------------------------------------------------------------------------------- |
-| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author     |
-| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                 |
-| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases       |
-| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author) |
-| Compliance    | The decision record being enforced — the case is the rule itself                                |
+| Evidence type | Case source                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
+| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
+| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
+| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
+| Compliance    | The decision record being enforced — the case is the rule itself                                                                                                       |
+| Any (fixture) | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
+
+The first five rows pair an evidence type with the case source it normally takes. The Fixture row is cross-cutting: any evidence type may use an inert fixture file as the case. An auditor classifying a test case checks both the evidence type and whether the case is a whole-payload fixture file.
 
 A case that does not have a documentable source outside the author's head is a tautology dressed as a measurement — the test confirms the author's understanding forever, never the spec. The defect is in the case's *origin*. Lexical location (`Final` at module scope, plain assignment, inline literal), syntactic form, and reuse pattern (shared bag, single-value, parametrize row) are irrelevant — the audit names them only as forms the same defect takes.
 

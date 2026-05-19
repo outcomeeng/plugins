@@ -53,15 +53,18 @@ Scripts and command entrypoints stay thin. Tests verify argument parsing and dis
 </source_first_testability>
 
 <test_data_policy>
-Every test case — input and expected output — derives from a source independent of the test author's invention. The legitimate sources, by evidence type:
+Every test case — input and expected output — derives from a source independent of the test author's invention. The legitimate sources:
 
-| Evidence type | Case source                                                                                     |
-| ------------- | ----------------------------------------------------------------------------------------------- |
-| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author     |
-| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                 |
-| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases       |
-| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author) |
-| Compliance    | The decision record being enforced — the case is the rule itself                                |
+| Evidence type | Case source                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
+| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
+| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
+| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
+| Compliance    | The decision record being enforced — the case is the rule itself                                                                                                       |
+| Any (fixture) | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
+
+The first five rows pair an evidence type with the case source it normally takes. The Fixture row is cross-cutting: any evidence type may use an inert fixture file as the case when the assertion is about the code's behavior on a whole real-world payload that the test author did not invent.
 
 A case the author hand-picked because it "looked reasonable" is a tautology dressed as a measurement. The author wrote or read the implementation, so the invention encodes the same model the code embodies, and every future run confirms that shared model rather than the spec. The defect is in the case's *origin*; lexical location (`Final` at module scope, plain assignment, inline literal), syntactic form, and reuse pattern (shared bag, single-value, parametrize row) are irrelevant.
 
