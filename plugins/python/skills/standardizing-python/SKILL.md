@@ -131,6 +131,10 @@ if __name__ == "__main__":
     main()
 ```
 
+**Artifacts are downstream of Python.** A YAML, HCL, bash, JSON schema, IaC template, or any other rendered artifact file is not a legitimate source-of-truth for Python code. A Python module either renders the artifact (producing it from a typed schema or template) or consumes it (parsing it into a typed structure), and that module owns the artifact's vocabulary. Consumers that need to reason about the artifact's labels, paths, step names, or tokens import from the owning module. When no such module exists yet, the missing module is the architectural defect — the artifact is not an exemption from source ownership.
+
+**Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary and follow source ownership; only *values* may be synthetic at the call site. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed. A hand-written key is a hand-picked case for the parser or consumer that reads the container.
+
 </source_owned_values>
 
 ---
