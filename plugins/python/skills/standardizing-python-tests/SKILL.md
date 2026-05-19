@@ -100,8 +100,6 @@ Allowed harness-owned tuning:
 
 ```python
 from product_testing.harnesses.subprocess import DEFAULT_TIMEOUT_MS
-
-result = run_under_timeout(DEFAULT_TIMEOUT_MS)
 ```
 
 Rejected tuning at test scope (the subprocess harness owns the resource and the timeout):
