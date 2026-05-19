@@ -34,7 +34,9 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7 — Evaluate the PR authority gate and act.** Apply /standardizing-merging `<pr_authority_gate>` at the moment that fits the PR's current state.
 
-When evaluating the review predicate, check the `spec-tree-review / spec-tree-review` check conclusion observed in Step 2. If it reports `conclusion: skipped` and no current-head four-class review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`:
+When evaluating the review predicate, check the `spec-tree-review / spec-tree-review` check conclusion observed in Step 2. If it reports `conclusion: skipped` **with cause "PR head differs from main"** (GitHub Actions' identical-workflow-content gate, observable via `gh run view <run-id> --json` on the check's `skipped_reason` or annotations) and no current-head four-class review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`. For any other skip cause (path filter, branch filter, manual skip), emit `WAIT_FOR_REVIEW` and do not post the trigger-phrase comment — the exception is scoped to the self-modifying-PR case only.
+
+Reviewer-skipped-by-design exception steps:
 
 1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@claude` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
 2. Post one PR-level comment with body exactly `<trigger-phrase> review` via `gh pr comment <pr-number>`.
