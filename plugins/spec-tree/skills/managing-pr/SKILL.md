@@ -34,7 +34,9 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7 — Evaluate the PR authority gate and act.** Apply /standardizing-merging `<pr_authority_gate>` at the moment that fits the PR's current state.
 
-When evaluating the review predicate, check the `spec-tree-review / spec-tree-review` check conclusion observed in Step 2. If it reports `conclusion: skipped` **with cause "PR head differs from main"** (GitHub Actions' identical-workflow-content gate, observable via `gh run view <run-id> --json` on the check's `skipped_reason` or annotations) and no current-head four-class review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`. For any other skip cause (path filter, branch filter, manual skip), emit `WAIT_FOR_REVIEW` and do not post the trigger-phrase comment — the exception is scoped to the self-modifying-PR case only.
+When evaluating the review predicate, locate the `spec-tree-review / spec-tree-review` check in Step 1's `statusCheckRollup` and read its conclusion. Confirm with `gh pr checks <pr-number>` for the human-readable status. If the check is missing from the rollup or its conclusion is ambiguous, fetch the underlying job with `gh run view <run-id> --json conclusion,jobs` (the run ID is in `detailsUrl`). If the conclusion is `skipped`, retrieve the skip cause from `gh api repos/<owner>/<repo>/actions/jobs/<job-id> --jq '.steps[]'` (or read the job's annotations) — GitHub Actions records "PR head differs from main" as the cause for the identical-workflow-content gate.
+
+If the conclusion is `skipped` **with cause "PR head differs from main"** and no current-head four-class review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`. For any other skip cause (path filter, branch filter, manual skip), emit `WAIT_FOR_REVIEW` and do not post the trigger-phrase comment — the exception is scoped to the self-modifying-PR case only.
 
 Reviewer-skipped-by-design exception steps:
 
