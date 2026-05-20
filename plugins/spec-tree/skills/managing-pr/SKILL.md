@@ -125,7 +125,7 @@ The managing flow satisfies its contract when, at minimum:
 - Promotion fires autonomously under gate-green-autonomous draft-promotion authority; under overlay-requires-human, `MARK_READY` is emitted instead.
 - Merge fires autonomously under gate-green-autonomous merge authority; under overlay-requires-human, `AWAIT_MERGE_INSTRUCTION` is emitted instead.
 - Production-class PRs trigger `PRODUCTION_HOLD:<reason>` for both actions regardless of overlay.
-- A skipped auto-review job (`spec-tree-review / spec-tree-review: conclusion: skipped`) triggers the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`.
+- A skipped auto-review job (`spec-tree-review / spec-tree-review: conclusion: skipped`) **with cause "PR head differs from main"** triggers the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause (path filter, branch filter, manual skip), emit `WAIT_FOR_REVIEW` — the exception is scoped to the self-modifying-PR case only.
 - Each pass that does not fire an autonomous action emits exactly one token from /standardizing-merging `<action_tokens>`.
 - No `<self_reference>` violation per /standardizing-merging.
 
