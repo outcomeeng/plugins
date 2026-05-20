@@ -37,16 +37,16 @@ The overlay cannot override the always-draft mandate — `gh pr create --draft` 
 
 Conditions that must hold before every push (initial or follow-up). Failure stops the calling flow.
 
-| Condition (must hold)                                        | Failure response                                               |
-| ------------------------------------------------------------ | -------------------------------------------------------------- |
-| Current branch is not `main`, `master`, or detached HEAD     | STOP. Switch to a feature branch.                              |
-| Working tree is clean (no uncommitted changes)               | STOP. Commit via /committing-changes or stash before pushing.  |
-| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.        |
-| Branch is not behind the resolved base (no upstream commits) | Warn. Offer to rebase; proceed only if the user confirms.      |
-| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.             |
-| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                     |
-| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`. |
-| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                          |
+| Condition (must hold)                                        | Failure response                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Current branch is not `main`, `master`, or detached HEAD     | STOP. Switch to a feature branch.                                     |
+| Working tree is clean (no uncommitted changes)               | STOP. Commit via /committing-changes or stash before pushing.         |
+| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.               |
+| Branch is not behind the resolved base (no upstream commits) | Rebase onto `origin/<base>` per `<base_sync>`, then re-run this gate. |
+| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.                    |
+| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                            |
+| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.        |
+| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                                 |
 
 Commands:
 
@@ -120,13 +120,35 @@ Always push with an explicit destination ref:
 branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"          # first push
 git push    origin HEAD:refs/heads/"${branch}"          # subsequent pushes
+git push --force-with-lease origin HEAD:refs/heads/"${branch}"  # after a rebase (see <base_sync>)
 ```
 
 The bare `git push` and `git push -u origin <branch>` forms are forbidden because `push.default=tracking` would publish feature-branch commits to whatever upstream is configured locally — including `main` when the branch was created from `main` without an upstream reset. The `HEAD:refs/heads/<branch>` form makes the remote branch explicit and removes the dependency on local upstream configuration.
 
+A rebase rewrites branch history, so the post-rebase push cannot fast-forward. `--force-with-lease` performs the non-fast-forward push but refuses if the remote branch advanced since the last fetch, which keeps it safe on a single-author PR branch. Plain `git push --force` stays forbidden — it overwrites the remote unconditionally.
+
 If the product defines a custom branch-push command, follow the product convention from CLAUDE.md / AGENTS.md — the explicit destination ref must remain part of any custom command.
 
 </push_semantics>
+
+<base_sync>
+
+Base drift is checked on the same checkpoint that inspects reviews — every heartbeat reads review state and the `origin/<base>` position together. When the branch is behind `origin/<base>`, rebase immediately, independent of whether a review has landed and independent of whether any landed review carries findings.
+
+Rebase on drift, not at merge time. A branch behind base is superseded by a rebase before it can merge, so every check run and every review posted against the un-rebased head is wasted effort. Rebasing the moment drift appears aims CI and reviewers at the head that will actually merge, and surfaces a conflicted ("nasty") rebase early — while the heartbeat is already waiting on reviews — instead of at merge time, where an unexpected conflict or an integration regression costs a full extra review round on the critical path.
+
+`<base_sync>` reads `${base}` from the calling flow rather than re-deriving it — /managing-pr Step 1 captures it from `gh pr view --json baseRefName` (which returns the PR's actual base for both peer and stacked topologies), and /opening-pr's `<branch_hygiene>` sets it from `gh repo view --json defaultBranchRef` before any PR exists. The block runs identically in both contexts.
+
+```bash
+git fetch origin "${base}"
+git merge-base --is-ancestor "origin/${base}" HEAD || git rebase "origin/${base}"
+```
+
+Resolve textual conflicts by editing the conflict markers out, then `git rebase --continue`. The rebased tree is a fresh integration — this branch replayed on newly merged work — that no prior closure-gate run covered: the consuming flow MUST run the project's local closure gate against the rebased tree before the `--force-with-lease` push from `<push_semantics>`, and MUST fix any closure-gate failure in the same pass before pushing.
+
+A rebase that cannot be resolved autonomously — semantic conflicts, ambiguous overlapping edits — emits `SYNC_BASE` from `<action_tokens>` and waits for the operator; the heartbeat re-fires.
+
+</base_sync>
 
 <pr_authority_gate>
 
@@ -256,7 +278,7 @@ Track under: <ISSUES.md file or product-specific issue tracker>
 
 <action_tokens>
 
-The managing flow emits exactly one of these tokens per heartbeat pass when no autonomous action fires. An autonomous fire (promotion under gate-green-autonomous; merge under gate-green-autonomous) runs the command directly and does not emit a token.
+The managing flow emits exactly one of these tokens per heartbeat pass when no autonomous action fires. An autonomous fire (promotion under gate-green-autonomous; merge under gate-green-autonomous) runs the command directly and does not emit a token. A routine `<base_sync>` rebase likewise runs directly and emits no token of its own; only a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE`.
 
 | Token                                    | Emitted when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -270,7 +292,7 @@ The managing flow emits exactly one of these tokens per heartbeat pass when no a
 | `MENTION_REVIEW_NEEDED:<trigger-phrase>` | Auto-review job intentionally skipped (e.g., the PR modifies the reviewer's own workflow file, triggering the GitHub Actions "head differs from main" security skip). Post one PR-level comment containing exactly `<trigger-phrase> review` to fire the mention-triggered reviewer (which has no identical-content gate); reschedule the heartbeat to await its findings. The `review` suffix is the keyword the mention reviewer matches on — posting only the trigger phrase without it does not fire the reviewer. |
 | `PRODUCTION_HOLD:<reason>`               | PR is project-recognized as production-class; autonomous authority is withheld for both actions regardless of other predicates and overlay topics.                                                                                                                                                                                                                                                                                                                                                                     |
 | `MERGE_BLOCKED:<reason>`                 | Merge gate failed for a concrete reason not covered by another token.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `SYNC_BASE`                              | Base branch has advanced; rebase needed before further action.                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `SYNC_BASE`                              | A rebase onto the advanced base per `<base_sync>` hit a conflict that cannot be resolved autonomously; awaiting operator resolution. The heartbeat re-fires.                                                                                                                                                                                                                                                                                                                                                           |
 | `POST_MERGE_VERIFY`                      | PR merged; run post-merge verification per the project's Git workflow.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 </action_tokens>
@@ -288,6 +310,7 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - `<branch_hygiene>` predicates hold before every push (initial and every follow-up).
 - `<branch_topology>` is classified before every push, with the matching gate passing.
 - Every push uses the explicit destination ref form from `<push_semantics>`.
+- A managing-flow pass that finds the branch behind `origin/<base>` rebases it per `<base_sync>` before driving the work queue.
 - PRs are opened as draft; promotion runs only when `<pr_authority_gate>` authorizes it under the project's draft-promotion-authority overlay.
 - Waiting for CI, review, or checks is delegated to the runtime timer per `<heartbeat>`.
 - All three surfaces in `<review_inspection>` are inspected after every push.
