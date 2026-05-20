@@ -1,5 +1,5 @@
 <objective>
-Identify every spec-tree node worked on during this session. This anchors the handoff to durable locations in the spec tree so the next agent can load context via `/contextualizing`.
+Identify every spec-tree node worked on during this session. This anchors the handoff to durable locations in the spec tree so the next Claude context can load context via `/contextualizing`.
 
 </objective>
 

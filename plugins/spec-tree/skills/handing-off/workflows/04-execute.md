@@ -65,17 +65,26 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 
 1. Use the artifact id from `<resolve_session_scope>`. Derive its file path from `spx session show <artifact-id>` or the root worktree's `.spx/sessions/todo/<artifact-id>.md`.
 2. Do NOT run `spx session handoff` — that would create a second handoff and break the one-handoff end state.
-3. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative scope from every in-scope session.
-4. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
+3. Read the artifact frontmatter and preserve its existing `created_at`, `agent_session_id`, `branch`, and `worktree` values.
+4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative scope from every in-scope session.
+5. Omit `result` from the rewritten artifact because it remains an available TODO continuation.
+6. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
 
 **Path C — new handoff (one handoff, no artifact)**:
 
-1. Run `spx session handoff`. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
-2. Read `<SESSION_FILE>` to confirm it exists; note the prefilled `agent_session_id` and `created_at` values — preserve them when writing the full content below.
-3. Write `<SESSION_FILE>` using the template in `references/session-format.md`.
+1. Compose the canonical continuation content using `references/session-format.md`. Include non-empty `goal` and `next_step`; omit `result`.
+2. Pipe that content to `spx session handoff`. Do not run `spx session handoff` with empty stdin.
+   ```bash
+   cat << 'EOF' | spx session handoff
+   [canonical continuation content]
+   EOF
+   ```
+3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
+4. Read `<SESSION_FILE>` to confirm it exists and contains the CLI-prefilled `created_at`, `agent_session_id` when available, `branch`, and `worktree` values.
 
 **Content of the canonical continuation (B and C):**
 
+- Frontmatter — `priority`, `goal`, `next_step`, optional `specs`, optional `files`, and the prefilled context fields
 - `<nodes>` and `<skills>` — from `<perspective_starting_point>` and `<perspective_skills>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, escape hatches created
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context
@@ -92,13 +101,19 @@ Archive order:
 2. The most recently claimed doing session, if any.
 3. Any mid-session artifact this conversation created that is NOT the rewrite-in-place canonical (Path A archives all artifacts; Path C archives all when no rewrite happened).
 
+Before each archive command, edit the session file being archived and add or update frontmatter `result` with a non-empty completion summary:
+
+- For in-scope picked-up sessions: summarize what the closure persisted for that session and name the canonical continuation id when Path B or C created one.
+- For mid-session artifacts being archived instead of rewritten: use a result such as `Reconciled into canonical continuation <id>.` or `Closed without continuation under --no-session.`
+- Preserve existing frontmatter fields while adding `result`; do not add `tags` or `working_directory`.
+
 ```bash
 spx session archive <session-id>
 ```
 
 Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive the session that was just rewritten in place under Path B. NEVER archive TODO sessions created by other conversations — the TODO queue is shared across agents.
 
-**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other agents are not this closure's concern and must be left untouched.
+**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
 **If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
 
@@ -125,7 +140,7 @@ State:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
-- Exactly zero or one canonical continuation created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other agents are out of scope and untouched.
+- Exactly zero or one canonical continuation created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
 - Continuation path executed via Path A (release), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the in-scope set is non-empty.
 - Every in-scope session archived — none left in `todo/` or `doing/`.

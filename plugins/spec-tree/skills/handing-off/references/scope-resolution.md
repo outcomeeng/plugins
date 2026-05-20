@@ -24,7 +24,7 @@ Context compaction or a malformed marker can drop `<SESSION_SCOPE>`. Recover in 
 
 **Step 3 — Scope growth rule.**
 
-Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another agent may own work that looks related but is not yours to close.
+Scope grows ONLY by user confirmation. Do NOT auto-scan the todo queue to add sessions. Another context may own work that looks related but is not yours to close.
 
 **Step 4 — Locate mid-session artifacts.**
 
@@ -55,7 +55,7 @@ After resolving scope and locating artifacts, every session observed falls into 
 
 - **in-scope** — named in the resolved scope. Will be archived after the canonical continuation is verified.
 - **mid-session artifact** — created by this conversation's earlier `spx session handoff` and still in TODO. Workflow 04 will either rewrite it in place as the canonical continuation or archive it.
-- **unrelated** — belongs to another agent or another conversation. Leave untouched.
+- **unrelated** — belongs to another context or another conversation. Leave untouched.
 - **ambiguous** — STOP and ask the user before creating a handoff.
 
 The existence of a mid-session artifact is never, by itself, permission to archive an in-scope session. Permission flows from completing the closure workflow against the resolved scope.

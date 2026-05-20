@@ -7,10 +7,10 @@ This step comes BEFORE loading node context. The skills checklist tells Claude w
 Read the `<skills>` section from the session file and present it prominently:
 
 **Critical — invoke before starting work**
-These skills are REQUIRED. The previous agent identified them as essential. List each skill with its reasoning.
+These skills are REQUIRED. The previous Claude context identified them as essential. List each skill with its reasoning.
 
 **Missed — do not repeat these mistakes**
-The previous agent skipped these skills and it caused problems. List each missed skill with what went wrong.
+The previous Claude context skipped these skills and it caused problems. List each missed skill with what went wrong.
 
 **Next action — where to resume**
 Show the recommended skill and TDD flow position.
@@ -25,7 +25,7 @@ For each node in the `<nodes>` section:
    Glob: "spx/{node-path}/PLAN.md"
    Glob: "spx/{node-path}/ISSUES.md"
    ```
-   If found, read and present them — these contain important non-durable context the previous agent persisted as a hedge.
+   If found, read and present them — these contain important non-durable context the previous Claude context persisted as a hedge.
 
 **Step 4: Present persisted artifacts**
 

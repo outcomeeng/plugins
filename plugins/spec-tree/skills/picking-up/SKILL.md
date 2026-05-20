@@ -1,6 +1,6 @@
 ---
 name: picking-up
-description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another agent's saved context. NEVER continue spec-tree handoff work directly without this skill.
+description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 ---
 
@@ -13,13 +13,13 @@ allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 </context>
 
 <objective>
-Load and claim a handoff session to continue work from a previous context without repeating the previous agent's mistakes.
+Load and claim a handoff session to continue work from a previous context without repeating earlier mistakes.
 
 After `/contextualizing`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
 
 Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
 
-**Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains the agent's responsibility until a later `/handing-off` or `/release` workflow accounts for it explicitly.
+**Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handing-off` or `/release` workflow accounts for it explicitly.
 
 **⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualizing` has been invoked on the target node.**
 </objective>
@@ -27,13 +27,13 @@ Emit canonical pickup markers keyed by the claimed session id so later workflows
 <session_scope>
 Three rules govern a conversation's session scope:
 
-1. **Scope grows only by user confirmation.** A session enters scope when the user instructs the agent via `/picking-up`, or when the user confirms an agent-suggested pickup. Nothing else extends scope.
+1. **Scope grows only by user confirmation.** A session enters scope when the user instructs Claude via `/picking-up`, or when the user confirms a suggested pickup. Nothing else extends scope.
 
-2. **Closure has exactly one acceptable end state.** Every in-scope session becomes the agent's sole responsibility. The agent reflects, persists remaining validated relevant context, and ends with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
+2. **Closure has exactly one acceptable end state.** Every in-scope session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
 
-3. **Quick-exit escape hatch.** If, within a few turns of pickup, the agent realizes the pickup was wrong, the user has two options — only the user can choose:
+3. **Quick-exit escape hatch.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/release` (alias for `/handing-off --no-session`) to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
-   - Manually move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/` to return the session to the shared queue for another agent. This is a file operation outside `spx session`.
+   - Manually move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/` to return the session to the shared queue for another context. This is a file operation outside `spx session`.
 
    Neither action counts toward the closure workload for the in-scope set — the wrongly-claimed session leaves scope the moment the user confirms the quick exit.
 
@@ -83,7 +83,7 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    ```bash
    spx session todo --json
    ```
-2. Parse each session to extract session ID, priority and tags from frontmatter, nodes from `<nodes>` section. Limit to most recent 10.
+2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, `branch`, and `worktree` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
 3. Present options with `AskUserQuestion`:
    ```json
    {
@@ -93,8 +93,8 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
          "header": "Handoff",
          "multiSelect": false,
          "options": [
-           { "label": "2026-03-29 14:22 [high] (test-harness)", "description": "TDD step 7 on 43-fixtures.enabler — tests written, implementation needed" },
-           { "label": "2026-03-28 09:15 [medium] (auth)", "description": "Spec authoring on 32-auth.outcome — assertions need review" }
+           { "label": "2026-03-29 14:22 [high] work/session-frontmatter", "description": "Goal: roll out structured session metadata. Next: update dependent skills." },
+           { "label": "2026-03-28 09:15 [medium] main checkout", "description": "Goal: complete auth assertions. Next: review the outcome spec." }
          ]
        }
      ]
@@ -132,7 +132,7 @@ scope
 </SESSION_SCOPE>
 ```
 
-The scope marker names every in-conversation pickup that is the agent's responsibility to close. Handoff workflows read the MOST RECENT `<SESSION_SCOPE>` to determine which sessions to archive at closure. If multiple pickups happen in one conversation, later steps MUST key off this scope, not a single-session marker.
+The scope marker names every in-conversation pickup that Claude is responsible for closing. Handoff workflows read the MOST RECENT `<SESSION_SCOPE>` to determine which sessions to archive at closure. If multiple pickups happen in one conversation, later steps MUST key off this scope, not a single-session marker.
 
 Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the current pickup (checkpoints, markers, error messages).
 
@@ -179,7 +179,7 @@ How to avoid: After `/contextualizing`, present the loaded state and stop. Use `
 
 **Failure 2: Later handoff archived only the most recent doing session, orphaning earlier pickups**
 
-Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. A receiving agent then had to read multiple handoff files to reconstruct the continuation.
+Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. The next Claude context then had to read multiple handoff files to reconstruct the continuation.
 
 How to avoid: Emit (or extend) `<SESSION_SCOPE ids="...">` on every pickup so the latest marker names the full scope. Handoff workflow 04 reads the scope and archives every id. Closure ends with zero or one handoff incorporating everything — never a sidecar.
 
@@ -187,7 +187,7 @@ How to avoid: Emit (or extend) `<SESSION_SCOPE ids="...">` on every pickup so th
 
 Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
 
-How to avoid: The existence of any session — whether self-created or left by another agent — never grants permission to archive an in-scope session. Permission flows from the three scope rules: scope grows only by user confirmation; closure ends with zero or one handoff; a quick-release escape hatch exists only within a few turns of pickup. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive an in-scope session. Permission flows from the three scope rules: scope grows only by user confirmation; closure ends with zero or one handoff; a quick-release escape hatch exists only within a few turns of pickup. Pickup never archives.
 
 </failure_modes>
 

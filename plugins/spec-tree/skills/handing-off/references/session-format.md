@@ -1,23 +1,32 @@
 <template>
-Write this content to `<SESSION_FILE>` using the Write tool:
+For Path C (new handoff), pipe this content to `spx session handoff`; the command writes `<SESSION_FILE>` and prefills `created_at`, `agent_session_id`, `branch`, and `worktree`.
+
+For Path B (rewrite in place), write this content to the existing artifact file and preserve the artifact's existing `created_at`, `agent_session_id`, `branch`, and `worktree` values.
 
 ```text
 ---
+created_at: [prefilled by spx session handoff; preserve on rewrite]
+agent_session_id: [prefilled by spx session handoff when available; preserve on rewrite]
 priority: medium
-tags: [node-slug-1, node-slug-2, tech-stack]
-agent_session_id: [prefilled by spx session handoff]
-created_at: [prefilled by spx session handoff]
+branch: [prefilled by spx session handoff; preserve on rewrite]
+worktree: [prefilled by spx session handoff; preserve on rewrite]
+goal: [Why this continuation exists]
+next_step: [The first concrete action for pickup]
+specs:
+  - spx/{path-to-node}/{node-file}.md
+files:
+  - src/{path-to-file}
 ---
 <metadata>
   timestamp: [UTC timestamp]
   product: [Product name from cwd]
   git_branch: [Current branch]
   git_status: [clean | dirty]
-  working_directory: [Full path]
+  worktree: [Relative worktree value from frontmatter; empty string means main checkout]
 </metadata>
 
 <nodes>
-Spec-tree nodes worked on. The receiving agent should invoke
+Spec-tree nodes worked on. The receiving Claude context should invoke
 `/contextualizing` on each before starting work.
 
 - `spx/{path-to-node}`
@@ -75,10 +84,16 @@ Only include information that CANNOT be derived from the spec tree or git histor
 <field_guidance>
 
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
-- **`tags`**: Node slugs (strip the integer prefix — `21-test-harness.enabler` → `test-harness`) plus the language or technology stack. **Never use meta-terms that apply to every session**: `plan`, `handoff`, `session`, `continuation`, `pickup`, `release`, `commit`. If a word describes the session mechanism rather than its subject, it is forbidden as a tag.
-- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If blank (hook not active when `spx` ran), `timestamp` + `working_directory` + `git_branch` in `<metadata>` uniquely identify the session.
+- **`goal`**: Required, non-empty continuation objective. Use one sentence that identifies the user-visible outcome, not a generic handoff phrase.
+- **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
+- **`branch`**: Prefilled by `spx session handoff` from git context. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
+- **`worktree`**: Prefilled by `spx session handoff` as a path relative to the Git common-dir parent. Preserve the value as written; empty string means the main checkout. Do not write absolute paths.
+- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `branch` + `worktree` identify the session context.
 - **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
-- **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next agent will read that.
+- **`result`**: Omit from new todo continuations. Add a non-empty `result` only to sessions being archived from `doing/` or abandoned mid-session artifacts before running `spx session archive`.
+- **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
+- **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
+- **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<coordination>`**: Thin. Only cross-cutting context that cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
 - **`<incorporated_sessions>`**: Include ONLY when the in-scope set resolved by `<resolve_session_scope>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.

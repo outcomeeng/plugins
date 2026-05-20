@@ -51,7 +51,7 @@ spx/
 
 ## Process Hygiene
 
-The agent runtime spawns helper processes — a periodic `pgrep` to monitor backgrounded commands, plus a shell and its children for every command call — and does not reliably reap them. A construct that creates many short-lived children (a poll loop), a long-lived child the monitor keeps polling (`gh run watch`, a backgrounded `sleep`, an idle keep-alive command), or several heavy process trees at once will exhaust the per-user process limit: `posix_spawn` then returns `EAGAIN`, the monitor's `pgrep` crash-loops, and the agent is force-killed. The leak is not yours to fix; these rules keep it from being triggered. Apply them with the tool names of the runtime you are in.
+The runtime spawns helper processes — a periodic `pgrep` to monitor backgrounded commands, plus a shell and its children for every command call — and does not reliably reap them. A construct that creates many short-lived children (a poll loop), a long-lived child the monitor keeps polling (`gh run watch`, a backgrounded `sleep`, an idle keep-alive command), or several heavy process trees at once will exhaust the per-user process limit: `posix_spawn` then returns `EAGAIN`, the monitor's `pgrep` crash-loops, and Claude is force-killed. The leak is outside repository control; these rules keep it from being triggered. Apply them with the tool names of the runtime you are in.
 
 - **Never wait or pace work with a shell construct.** No `while`/`until` poll loop. No `gh run watch`. No `sleep` to wait — foreground or backgrounded, alone or in a loop. To wait for a build, test run, process, or review to resolve, or to re-check on an interval, use the runtime's timer: in Claude Code, `/loop` for recurring work or `ScheduleWakeup` for a single delayed re-check; in Codex, a `codex_app.automation_update` thread heartbeat. The timer re-invokes you — the wait happens between turns, not inside a shell.
 - **Background commands: one at a time, short-lived, never a keep-alive.** Every backgrounded command is a process the monitor `pgrep`s on a timer; a pile of them — or one that never exits — is the `pgrep` storm itself.
@@ -211,3 +211,21 @@ Claude Code session handoffs are stored in `.spx/sessions/` (separate from the s
 ```
 
 Use `/handoff` to create, `/pickup` to claim.
+
+Session files use structured YAML frontmatter:
+
+```yaml
+---
+priority: medium
+branch: work/example
+worktree: ecd9/spx
+goal: Implement X
+next_step: Run the focused validation
+specs:
+  - spx/36-session.enabler/session.md
+files:
+  - src/commands/session/handoff.ts
+---
+```
+
+`spx session handoff` prefills `created_at`, `agent_session_id` when available, `branch`, and `worktree`. The handoff must provide non-empty `goal` and `next_step`. Before archiving a claimed session, add a non-empty `result` to that session's frontmatter.

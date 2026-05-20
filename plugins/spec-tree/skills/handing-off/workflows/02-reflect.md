@@ -1,7 +1,7 @@
 <objective>
 Work through four perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
 
-Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-agent context, session scope.
+Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, session scope.
 
 </objective>
 
@@ -46,16 +46,16 @@ For each insight, propose the persistence target (workflow 03 confirms; workflow
 
 </perspective_path_forward>
 
-<perspective_next_agent>
-Identify exactly where the next agent picks up:
+<perspective_next_context>
+Identify exactly where the next Claude context picks up:
 
 - **Critical skills** — always include `/understanding` and `/contextualizing {node}` for each anchored node, plus language-specific skills used
 - **Missed skills** — any skill that should have been invoked but was not, and what problems skipping it caused
-- **Next skill invocation** — the specific skill the receiving agent invokes first, and why
+- **Next skill invocation** — the specific skill the receiving Claude context invokes first, and why
 - **Node path** — full path to the resumption node (e.g., `spx/21-foo.enabler/32-bar.outcome`)
 - **TDD flow position** — which step (1-8) per the `/applying` skill
 
-</perspective_next_agent>
+</perspective_next_context>
 
 <perspective_session_scope>
 Resolve which sessions are in this conversation's scope and locate any mid-session handoff artifact to reconcile.
