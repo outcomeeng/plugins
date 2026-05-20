@@ -34,6 +34,18 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 7 — Evaluate the PR authority gate and act.** Apply /standardizing-merging `<pr_authority_gate>` at the moment that fits the PR's current state.
 
+When evaluating the review predicate, locate the `spec-tree-review / spec-tree-review` check in Step 1's `statusCheckRollup` and read its conclusion. Confirm with `gh pr checks <pr-number>` for the human-readable status. If the check is missing from the rollup or its conclusion is ambiguous, fetch the underlying job with `gh run view <run-id> --json conclusion,jobs` (the run ID is in `detailsUrl`). If the conclusion is `skipped`, retrieve the skip cause from `gh api repos/<owner>/<repo>/actions/jobs/<job-id> --jq '.steps[]'` (or read the job's annotations) — GitHub Actions records "PR head differs from main" as the cause for the identical-workflow-content gate.
+
+If the conclusion is `skipped` **with cause "PR head differs from main"** and no current-head three-severity review has been posted, apply the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`. For any other skip cause (path filter, branch filter, manual skip), emit `WAIT_FOR_REVIEW` and do not post the trigger-phrase comment — the exception is scoped to the self-modifying-PR case only.
+
+Reviewer-skipped-by-design exception steps:
+
+1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@claude` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
+2. Post one PR-level comment with body exactly `<trigger-phrase> review` via `gh pr comment <pr-number>`.
+3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, refresh the heartbeat, and exit Step 7. The mention-triggered reviewer's posted findings become the current-head three-severity review the next heartbeat reads.
+
+Otherwise, branch on PR state:
+
 - **PR is draft (`isDraft = true`):** evaluate the gate's promotion-time predicates. If every predicate holds, consult the overlay's draft-promotion-authority topic:
   - **Gate-green-autonomous (default):** run `gh pr ready <pr-number>`, refresh the heartbeat, and emit `WAIT_FOR_CHECKS` while ready-state CI fires.
   - **Overlay-requires-human:** emit `MARK_READY` and wait for the operator's explicit promotion instruction.
@@ -112,6 +124,7 @@ The managing flow satisfies its contract when, at minimum:
 - Promotion fires autonomously under gate-green-autonomous draft-promotion authority; under overlay-requires-human, `MARK_READY` is emitted instead.
 - Merge fires autonomously under gate-green-autonomous merge authority; under overlay-requires-human, `AWAIT_MERGE_INSTRUCTION` is emitted instead.
 - Production-class PRs trigger `PRODUCTION_HOLD:<reason>` for both actions regardless of overlay.
+- A skipped auto-review job (`spec-tree-review / spec-tree-review: conclusion: skipped`) triggers the reviewer-skipped-by-design exception from /standardizing-merging `<pr_authority_gate>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`.
 - Each pass that does not fire an autonomous action emits exactly one token from /standardizing-merging `<action_tokens>`.
 - No `<self_reference>` violation per /standardizing-merging.
 
