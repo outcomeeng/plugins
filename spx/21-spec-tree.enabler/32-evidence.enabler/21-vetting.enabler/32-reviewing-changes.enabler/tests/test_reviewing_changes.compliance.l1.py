@@ -360,10 +360,11 @@ REQUIRED_RENDER_TEMPLATES = (
 class TestRenderTemplatesAreDataFiles:
     """Render templates live under ``references/render/`` as standalone files.
 
-    The rendered ``review.md`` shape (four-class headings, no-blockers
-    phrasing, finding body shape) is the externally observable verdict
-    format. Two surfaces consume it (the local lens and the GH
-    ``spec-tree-review`` workflow); both must read from the same source.
+    The rendered ``review.md`` shape (three-severity headings,
+    no-blockers phrasing, finding body shape) is the externally
+    observable verdict format. Two surfaces consume it (the local lens
+    and the GH ``spec-tree-review`` workflow); both must read from the
+    same source.
     These tests guard the file enumeration, the template-loading
     discipline of ``render_review.py``, and the absence of embedded
     f-string render literals.
