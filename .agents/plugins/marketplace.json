@@ -101,10 +101,10 @@
       "category": "Developer Tools"
     },
     {
-      "name": "visual",
+      "name": "work",
       "source": {
         "source": "local",
-        "path": "./plugins/visual"
+        "path": "./plugins/work"
       },
       "policy": {
         "installation": "AVAILABLE",

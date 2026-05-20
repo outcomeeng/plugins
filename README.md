@@ -353,13 +353,14 @@ TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-types
 | Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                 |
 | Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model |
 
-### visual
+### work
 
-Visual diagrams: /excalidrawing (Excalidraw JSON generation)
+Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)
 
-| Type  | Name             | Purpose                                                                         |
-| ----- | ---------------- | ------------------------------------------------------------------------------- |
-| Skill | `/excalidrawing` | Creating Excalidraw diagrams, visualizing workflows, architectures, or concepts |
+| Type  | Name                     | Purpose                                                                                                                                                                               |
+| ----- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/excalidrawing`         | Creating Excalidraw diagrams, visualizing workflows, architectures, or concepts                                                                                                       |
+| Skill | `/sanitizing-powerpoint` | Sanitizing, cleaning up, auditing, or aligning a PowerPoint (.pptx) deck — slide-master and layout structure, layout type attributes, stray fonts, non-theme colors, or layout naming |
 
 <!-- END PLUGIN CATALOG -->
 
