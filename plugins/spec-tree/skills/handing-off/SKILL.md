@@ -21,7 +21,7 @@ description: ALWAYS invoke when closing an in-scope spec-tree session, deciding 
 <objective>
 Close or transfer a spec-tree work session: persist what was learned to the right durable target, commit session-owned work, and decide whether a continuation artifact has a reader. The session file is a thin coordination envelope — the last resort for information that cannot live anywhere else.
 
-The four-workflow sequence enforces persist-then-commit-then-continuation discipline. Lean on the imperfection ledger defined in `/understanding` (`references/imperfection-protocol.md`) for what was learned and what is broken — `/understanding` is loaded before any spec-tree work, so the ledger is always available here. Session scope, persistence tier, the Path A/B/C decision, and multi-agent queue safety are spec-tree-specific concerns the ledger does not cover — they drive the workflows below.
+The four-workflow sequence enforces persist-then-commit-then-continuation discipline. Lean on the imperfection ledger defined in `/understanding` (`references/imperfection-protocol.md`) for what was learned and what is broken — `/understanding` is loaded before any spec-tree work, so the ledger is always available here. Session scope, persistence tier, the Path A/B/C decision, and multi-context queue safety are spec-tree-specific concerns the ledger does not cover — they drive the workflows below.
 
 </objective>
 
@@ -66,7 +66,7 @@ Git commit is the final persistence operation, not a fifth tier. Session-owned s
 </persistence_hierarchy>
 
 <multi_agent_awareness>
-The `.spx/sessions/todo/` queue contains work for ALL agents across ALL worktrees. NEVER archive others' work. `doing` = claimed by active agents (only archive YOUR claimed session). `archive` = completed work (safe to prune old entries).
+The `.spx/sessions/todo/` queue contains work for all active contexts across all worktrees. NEVER archive others' work. `doing` = claimed by active contexts; archive only the sessions in the resolved scope. `archive` = completed work (safe to prune old entries).
 
 </multi_agent_awareness>
 
