@@ -137,8 +137,9 @@ Base drift is checked on the same checkpoint that inspects reviews — every hea
 
 Rebase on drift, not at merge time. A branch behind base is superseded by a rebase before it can merge, so every check run and every review posted against the un-rebased head is wasted effort. Rebasing the moment drift appears aims CI and reviewers at the head that will actually merge, and surfaces a conflicted ("nasty") rebase early — while the heartbeat is already waiting on reviews — instead of at merge time, where an unexpected conflict or an integration regression costs a full extra review round on the critical path.
 
+`<base_sync>` reads `${base}` from the calling flow rather than re-deriving it — /managing-pr Step 1 captures it from `gh pr view --json baseRefName` (which returns the PR's actual base for both peer and stacked topologies), and /opening-pr's `<branch_hygiene>` sets it from `gh repo view --json defaultBranchRef` before any PR exists. The block runs identically in both contexts.
+
 ```bash
-base=$(gh pr view --json baseRefName --jq '.baseRefName')
 git fetch origin "${base}"
 git merge-base --is-ancestor "origin/${base}" HEAD || git rebase "origin/${base}"
 ```
