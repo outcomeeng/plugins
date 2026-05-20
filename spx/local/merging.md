@@ -22,6 +22,10 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 The marketplace's closure gate is `just check`. Run it before any push that approaches ready or merge; it is the project-specific closure-gate predicate of `/standardizing-merging` `<pr_authority_gate>` for both promotion-time and merge-time evaluation.
 
+## Mention-reviewer trigger phrase
+
+`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` per `/standardizing-merging` `<pr_authority_gate>` reviewer-skipped-by-design exception.
+
 ## Post-merge
 
 After the merge lands on `main`, refresh the local marketplace install per the [CLAUDE.md sync step](../../CLAUDE.md): `git switch main && git pull && just sync-marketplace <previous-main-ref>`.
