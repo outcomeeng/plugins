@@ -77,10 +77,10 @@ NEVER repackage by extracting everything and re-zipping with default tooling —
 <scripts>
 Both scripts are standard-library Python 3.11+ — no third-party dependencies, no install step.
 
-| Script                   | Purpose                                                                                        | Usage                                                                                     |
-| ------------------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `scripts/pptx_audit.py`  | Read-only six-dimension audit; prints a findings report. `--json` for machine-readable output. | `python3 ${CLAUDE_SKILL_DIR}/scripts/pptx_audit.py <deck.pptx>`                           |
-| `scripts/pptx_repack.py` | Content-surgical repackage of a working directory back into a `.pptx`, with verification.      | `python3 ${CLAUDE_SKILL_DIR}/scripts/pptx_repack.py <original.pptx> <workdir> <out.pptx>` |
+| Script                   | Purpose                                                                                        | Usage                                                                                       |
+| ------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `scripts/pptx_audit.py`  | Read-only six-dimension audit; prints a findings report. `--json` for machine-readable output. | `python3 "${CLAUDE_SKILL_DIR}/scripts/pptx_audit.py" <deck.pptx>`                           |
+| `scripts/pptx_repack.py` | Content-surgical repackage of a working directory back into a `.pptx`, with verification.      | `python3 "${CLAUDE_SKILL_DIR}/scripts/pptx_repack.py" <original.pptx> <workdir> <out.pptx>` |
 
 The audit script never writes. The repack script writes only its named output file.
 </scripts>
@@ -125,7 +125,7 @@ A sanitizing run is complete when:
 
 - [ ] The audit ran and its findings were presented to the user.
 - [ ] Only user-approved fixes were applied.
-- [ ] The repaired deck passes `pptx_repack.py` verification — ZIP integrity, XML well-formedness, member-count parity.
+- [ ] The repaired deck passes `pptx_repack.py` verification (ZIP integrity, XML well-formedness); any member-count change matches the trim scope approved in step 3.
 - [ ] The original deck was backed up before the swap.
 - [ ] A re-run of `pptx_audit.py` on the live file confirms the approved findings are resolved and no new finding appeared.
 - [ ] The temporary working directory is the only scratch artifact; the deck's folder holds only the deck and its backup.
