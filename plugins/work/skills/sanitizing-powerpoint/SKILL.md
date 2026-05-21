@@ -64,17 +64,18 @@ A `.pptx` is an OPC ZIP. Two repackaging properties matter, and `pptx_repack.py`
 - **Content-surgical.** Every part the fix did not touch is written back with identical content. Only changed parts differ.
 - **Order-preserving.** `[Content_Types].xml` stays the first member; all other members keep their original order. Some readers depend on this.
 
-`pptx_repack.py` rebuilds the archive from the original, substituting only the parts that changed in the working directory, then verifies:
+`pptx_repack.py` rebuilds the archive from the original, substituting only the parts that changed in the working directory, then verifies — and exits non-zero on failure:
 
 - ZIP integrity (`unzip -t` equivalent).
 - XML well-formedness of every changed part.
-- Member-count parity — the repaired deck has exactly as many parts as the original unless parts were deliberately added or removed (dimension 6).
+
+It also reports the member-count delta against the original. This is informational, not enforced: dimension 6 (trim) deliberately removes parts, and the script has no way to distinguish an approved trim from an accidental drop, so a changed count is printed as a note rather than gated by exit code. Compare it against the trim findings the user approved in step 3.
 
 NEVER repackage by extracting everything and re-zipping with default tooling — that reorders members and can recompress parts in ways some readers reject. Always use `pptx_repack.py`.
 </repackaging>
 
 <scripts>
-Both scripts are standard-library Python 3.10+ — no third-party dependencies, no install step.
+Both scripts are standard-library Python 3.11+ — no third-party dependencies, no install step.
 
 | Script                   | Purpose                                                                                        | Usage                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
