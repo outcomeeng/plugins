@@ -118,7 +118,7 @@ class TestThreadStoreScriptsImportOnlyStdlib:
         )
 
 
-class TestLensSkillsDoNotImportBackendsDirectly:
+class TestVerificationSkillsDoNotImportBackendsDirectly:
     """Every verification skill under ``plugins/spec-tree/skills/`` (other than
     thread-store itself) reaches persistence through the
     ``thread_store`` facade, never by importing ``fs_backend`` (or any
@@ -129,7 +129,7 @@ class TestLensSkillsDoNotImportBackendsDirectly:
     empty input and fails the moment a verification skill adds a forbidden import.
     """
 
-    def test_no_lens_skill_imports_concrete_backend(self) -> None:
+    def test_no_verification_skill_imports_concrete_backend(self) -> None:
         violations: list[str] = []
         for skill_dir in sorted(SPEC_TREE_SKILLS_DIR.iterdir()):
             if not skill_dir.is_dir():
