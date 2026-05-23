@@ -1,7 +1,7 @@
 """Reviewing-changes policy module — canonical schema and consistency invariant.
 
 The single source of truth for the ``review-result`` shape that the
-reviewing-changes lens produces. Declares:
+reviewing-changes skill produces. Declares:
 
 - ``SCHEMA_VERSION`` — the wire-format version constant.
 - ``Decision``, ``Severity``, ``Concern`` enums (``StrEnum``) — the wire
@@ -156,7 +156,7 @@ _REQUIRED_FINDING_KEYS = (
 # existing rule in the spec-tree or skill ecosystem; the parser enforces the
 # structural form here (a path beginning with one of these prefixes). The
 # semantic check — that the cited rule actually exists at the referenced
-# location — is the lens prompt's concern and the future deterministic
+# location — is the review prompt's concern and the future deterministic
 # diff-reference check's concern; it is not enforced at parse time.
 _RULE_CITATION_PREFIXES = (
     "spx/",

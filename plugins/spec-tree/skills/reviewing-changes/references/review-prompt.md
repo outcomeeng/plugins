@@ -91,4 +91,4 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 - `SKILL.md:<rule-slug>` — a skill rule referenced by relative name where the surrounding context disambiguates.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention rule.
 
-Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action` for blocking/debt; the Track-under location goes in `action` for follow_up. Inventing a citation that does not name a real rule in the loaded context is a finding the lens must not produce.
+Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action` for blocking/debt; the Track-under location goes in `action` for follow_up. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.

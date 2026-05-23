@@ -144,7 +144,7 @@ class TestCrudCliSlugIsOptional:
     Guards against an accidental regression where ``--slug`` is made
     ``required=True`` again. Mirrors the analogous
     ``TestComputeDiffSlugIsOptional`` check in the reviewing-changes
-    lens's compliance test.
+    verification skill's compliance test.
     """
 
     @pytest.mark.parametrize(

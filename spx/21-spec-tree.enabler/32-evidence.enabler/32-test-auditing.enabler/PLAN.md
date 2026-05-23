@@ -26,25 +26,25 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 4. **Coupling taxonomy — add `laundered indirect` as a distinct rejection category.**
    - Current taxonomy has six entries. Literal laundering through a test-support module is a distinct failure mode from `False` (false direct coupling). Add it and keep the property assertion's "at least six" wording honest.
 
-## Eval evidence — required when this lens ships
+## Eval evidence — required when this verification skill ships
 
-This lens is a vetting lens per the umbrella contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/vetting.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
+This verification skill is a verification skill per the umbrella contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
 
-PR #43 established the eval pattern for the first vetting lens (`reviewing-changes`). Adopt the same shape here:
+PR #43 established the eval pattern for the first verification skill (`reviewing-changes`). Adopt the same shape here:
 
 - One `evals/<rule-slug>/` directory per judgment claim, carrying `eval.toml`, `cases.jsonl`, `prompt.md`, and an append-only `history.jsonl` (committed; `runs/` gitignored).
 - Threshold `0.85` per marketplace precedent.
 - Cases use the real verdict wire shape declared by the audit's policy module. Every case couples verdict-level + finding-level expectations per eval-harness assertion #31.
-- Prompts are self-contained — do not invoke the real lens skill chain from inside the eval.
+- Prompts are self-contained — do not invoke the real verification skill chain from inside the eval.
 - One judgment surface per eval (do not mix protocol probes with judgment-direction probes).
 
-Concrete suggested evals when authoring this lens:
+Concrete suggested evals when authoring this verification skill:
 
 - `literal-laundering-detection` — diffs that route literals through camelCase support modules, fixture files, or generators-of-constants should fire the laundering finding; diffs that import the literal from production should not.
 - `testability-gate` — source code with no observable boundary for the claimed assertion fires a `testability`-step finding against the source file; source with proper seams does not.
 - `coupling-taxonomy-categorization` — each of the six existing taxonomy categories plus the new `laundered indirect` category is correctly assigned for representative cases.
 
-See `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/PLAN.md` for the full cross-lens eval design pattern and the harness limitations to design around.
+See `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/PLAN.md` for the full cross-skill eval design pattern and the harness limitations to design around.
 
 ## Out of scope
 

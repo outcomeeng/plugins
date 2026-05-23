@@ -2,7 +2,7 @@
 
 Reads the payload from stdin or ``--file`` and dispatches the write
 through the ``thread_store`` facade. The facade resolves the active
-backend via ``SPX_VET_BACKEND``; this CLI performs no direct
+backend via ``SPX_VERIFY_BACKEND``; this CLI performs no direct
 filesystem effects.
 
 Exit codes: 0 on success, non-zero on argument or backend error.

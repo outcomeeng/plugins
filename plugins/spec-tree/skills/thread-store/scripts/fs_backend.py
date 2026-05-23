@@ -5,7 +5,7 @@ atomic via the standard temp-write-plus-``os.replace`` two-phase
 protocol so a crash mid-write leaves the prior content intact.
 
 The default root is ``.spx/reviews/`` relative to the current working
-directory; the ``SPX_VET_LOCAL_ROOT`` environment variable overrides
+directory; the ``SPX_VERIFY_LOCAL_ROOT`` environment variable overrides
 this for tests and runtime customization.
 
 Stdlib-only.
@@ -43,7 +43,7 @@ def _errors_module() -> ModuleType:
 
 
 DEFAULT_LOCAL_ROOT = pathlib.Path(".spx") / "reviews"
-ENV_LOCAL_ROOT = "SPX_VET_LOCAL_ROOT"
+ENV_LOCAL_ROOT = "SPX_VERIFY_LOCAL_ROOT"
 
 
 class FilesystemBackend:
@@ -52,7 +52,7 @@ class FilesystemBackend:
     The constructor accepts an explicit ``root`` so tests can point the
     backend at a ``tmp_path``-rooted location without monkey-patching
     environment variables; production callers go through
-    ``FilesystemBackend.from_env`` which honors ``SPX_VET_LOCAL_ROOT``.
+    ``FilesystemBackend.from_env`` which honors ``SPX_VERIFY_LOCAL_ROOT``.
     """
 
     def __init__(self, root: pathlib.Path) -> None:
@@ -62,7 +62,7 @@ class FilesystemBackend:
     def from_env(cls) -> FilesystemBackend:
         """Construct a backend whose root resolves from the environment.
 
-        Reads ``SPX_VET_LOCAL_ROOT`` and falls back to ``.spx/reviews``
+        Reads ``SPX_VERIFY_LOCAL_ROOT`` and falls back to ``.spx/reviews``
         relative to the current working directory. The root is
         materialized on first write; ``from_env`` itself performs no
         filesystem I/O.

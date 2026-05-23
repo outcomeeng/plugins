@@ -1,7 +1,7 @@
 """Harness for thread-store scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/21-thread-store.enabler/tests/``:
+``spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/21-thread-store.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
@@ -15,12 +15,12 @@ Provides the shared scaffolding consumed by every test file under
   stdin and env override).
 - ``with_temp_local_store``. A context manager that points the local
   filesystem backend at a ``tmp_path``-rooted ``.spx/reviews`` tree by
-  setting ``SPX_VET_LOCAL_ROOT`` and ``SPX_VET_BACKEND`` for the duration
+  setting ``SPX_VERIFY_LOCAL_ROOT`` and ``SPX_VERIFY_BACKEND`` for the duration
   of the test, then restores prior values on exit.
 - ``make_changes_json``. A factory for synthetic ``changes.json``
   override payloads — the platform-neutral override file the
-  reviewing-changes lens reads from the thread store. Lives in the
-  harness because consumer tests across multiple lens nodes use the
+  reviewing-changes skill reads from the thread store. Lives in the
+  harness because consumer tests across multiple verification skill nodes use the
   same shape.
 
 The harness lives in ``outcomeeng_testing/harnesses/`` per
@@ -148,8 +148,8 @@ def run_script(
 
     ``env``, when provided, is the complete environment passed to the
     child process. Tests that need to control backend selection or the
-    filesystem-backend root pass ``{**os.environ, "SPX_VET_BACKEND":
-    "local", "SPX_VET_LOCAL_ROOT": str(tmp_path)}``.
+    filesystem-backend root pass ``{**os.environ, "SPX_VERIFY_BACKEND":
+    "local", "SPX_VERIFY_LOCAL_ROOT": str(tmp_path)}``.
     """
     return subprocess.run(  # noqa: S603 — script path comes from the harness, not user input
         [sys.executable, str(script), *args],
@@ -165,17 +165,17 @@ def run_script(
 def with_temp_local_store(tmp_path: pathlib.Path) -> Iterator[pathlib.Path]:
     """Point the filesystem backend at ``tmp_path`` for the duration of the test.
 
-    Sets ``SPX_VET_BACKEND=local`` and ``SPX_VET_LOCAL_ROOT=<tmp_path>``
+    Sets ``SPX_VERIFY_BACKEND=local`` and ``SPX_VERIFY_LOCAL_ROOT=<tmp_path>``
     in ``os.environ`` and restores the prior values (or removes the keys
     when they were not set) on exit. Yields the configured root so the
     test can assert against on-disk effects.
     """
     prior: dict[str, str | None] = {
-        "SPX_VET_BACKEND": os.environ.get("SPX_VET_BACKEND"),
-        "SPX_VET_LOCAL_ROOT": os.environ.get("SPX_VET_LOCAL_ROOT"),
+        "SPX_VERIFY_BACKEND": os.environ.get("SPX_VERIFY_BACKEND"),
+        "SPX_VERIFY_LOCAL_ROOT": os.environ.get("SPX_VERIFY_LOCAL_ROOT"),
     }
-    os.environ["SPX_VET_BACKEND"] = "local"
-    os.environ["SPX_VET_LOCAL_ROOT"] = str(tmp_path)
+    os.environ["SPX_VERIFY_BACKEND"] = "local"
+    os.environ["SPX_VERIFY_LOCAL_ROOT"] = str(tmp_path)
     try:
         yield tmp_path
     finally:
@@ -193,7 +193,7 @@ def make_changes_json(
 ) -> pathlib.Path:
     """Write a synthetic ``changes.json`` override payload to ``tmp_path`` and return its path.
 
-    The reviewing-changes lens reads an optional ``changes.json`` override
+    The reviewing-changes skill reads an optional ``changes.json`` override
     file from the thread store; this factory writes the same shape to a
     plain ``tmp_path`` location so harness tests can exercise the
     file-parsing surface without standing up a full thread-store backend.
@@ -201,7 +201,7 @@ def make_changes_json(
     ``compute_diff.py`` consults); callers may merge additional keys for
     future extensions.
 
-    ``base_ref`` is named explicitly because the diff range a lens
+    ``base_ref`` is named explicitly because the diff range a verification skill
     computes is anchored on it; every caller passes one.
     """
     payload: dict[str, object] = {

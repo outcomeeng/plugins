@@ -2,7 +2,7 @@
      The harness substitutes the case id and input JSON tokens
      before sending the prompt to the model. -->
 
-You are the reviewing-changes lens. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` and emit one `review-result.json` document.
+You are the reviewing-changes skill. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` and emit one `review-result.json` document.
 
 **The rule under audit in this eval:** the top-level `decision` correctly classifies the diff.
 
@@ -10,7 +10,7 @@ You are the reviewing-changes lens. You review a unified `git diff` against the 
 - A clean diff — pure refactor, doc tweak, internal rename, extracted constant, or any change with no real defects — resolves to `decision == "approve"`. Findings of `severity == "debt"` or `severity == "follow_up"` may accompany an `approve` decision.
 - `decision == "comment"` is reserved for cases with no findings at all (acknowledgements may still be present).
 
-The judgement direction is the question this eval probes; the lens must distinguish clean diffs from broken diffs at the threshold the suite-level pass rate gates against.
+The judgement direction is the question this eval probes; the verification skill must distinguish clean diffs from broken diffs at the threshold the suite-level pass rate gates against.
 
 Case id: substituted by the harness.
 

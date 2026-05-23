@@ -1,18 +1,18 @@
 ---
-description: Vet working changes via the LLM review lens; print verdict and artifact paths.
+description: Run reviewing-changes against the current branch's diff; print verdict and artifact paths.
 argument-hint: ""
 allowed-tools: Bash, Read, Skill
 ---
 
 <objective>
-Run the reviewing-changes lens against the current branch's diff and surface the verdict to the main agent. The main agent (or operator) decides what to do next: if `decision == "request_changes"`, fix the `blocking` (and address the `debt`) findings before pushing; if `decision == "approve"` or `"comment"`, proceed to `/open-pr` or commit.
+Run the reviewing-changes skill against the current branch's diff and surface the verdict to the main agent. The main agent (or operator) decides what to do next: if `decision == "request_changes"`, fix the `blocking` (and address the `debt`) findings before pushing; if `decision == "approve"` or `"comment"`, proceed to `/open-pr` or commit.
 
 The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
 </objective>
 
 <process>
 
-## Step 1: Run the lens
+## Step 1: Run the skill
 
 Invoke the `spec-tree:reviewing-changes` skill via the Skill tool. The skill teaches the script chain: derive the current thread, compute the diff against the resolved `base_ref`, apply the swappable review prompt, validate the emitted JSON through the arbiter CLI, render the markdown via the per-section templates under `references/render/`, and persist both `review-result.json` and `review.md` to the thread store.
 
@@ -42,7 +42,7 @@ Print, in this order:
 
 <success_criteria>
 
-- The lens chain ran end-to-end and persisted both `review-result.json` and `review.md`.
+- The skill's chain ran end-to-end and persisted both `review-result.json` and `review.md`.
 - The slash command printed the two paths, the decision line, the finding-count line, and (when applicable) the full `review.md`.
 - No `--slug` argument was passed to any thread-store CLI — the agent never names the thread address.
 - On `decision == "request_changes"`, the main agent sees the full verdict text without having to read it from disk.

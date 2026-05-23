@@ -1,6 +1,6 @@
 """Facade for the thread-store CRUD API.
 
-Selects a backend at runtime via ``SPX_VET_BACKEND`` (default ``local``,
+Selects a backend at runtime via ``SPX_VERIFY_BACKEND`` (default ``local``,
 which resolves to the filesystem backend) and exposes the same
 five-method CRUD surface declared by the ``Backend`` protocol.
 
@@ -23,14 +23,14 @@ from types import ModuleType
 from typing import Any
 
 
-ENV_BACKEND = "SPX_VET_BACKEND"
+ENV_BACKEND = "SPX_VERIFY_BACKEND"
 DEFAULT_BACKEND_NAME = "local"
 
 # Override env for ``current_slug()`` — when set, the value is the
 # branch name the helper feeds into ``branch_slug``. Backend-agnostic:
 # the local backend translates branch → slug via ``branch_slug``; a
 # future ``gh_pr`` backend would translate branch → PR number.
-ENV_BRANCH = "SPX_VET_BRANCH"
+ENV_BRANCH = "SPX_VERIFY_BRANCH"
 
 
 # Exception types are declared in ``errors.py`` so backend modules can
@@ -115,7 +115,7 @@ _register_default_backends()
 
 
 def get_backend() -> Any:
-    """Resolve and return the backend selected by ``SPX_VET_BACKEND``.
+    """Resolve and return the backend selected by ``SPX_VERIFY_BACKEND``.
 
     Defaults to ``local`` when the env var is unset. Raises
     ``ConfigurationError`` with the unknown name and the set of
@@ -181,12 +181,12 @@ def current_slug() -> str:
 
     Source precedence:
 
-    1. ``SPX_VET_BRANCH`` env — explicit, backend-agnostic override
+    1. ``SPX_VERIFY_BRANCH`` env — explicit, backend-agnostic override
     2. ``git symbolic-ref --short HEAD`` in the current working
        directory — the operator's current branch
 
     Detached HEAD or missing git aborts with a structured error message
-    that names the ``SPX_VET_BRANCH`` override so the operator can
+    that names the ``SPX_VERIFY_BRANCH`` override so the operator can
     recover without reading source.
 
     Slug derivation itself is delegated to the canonical

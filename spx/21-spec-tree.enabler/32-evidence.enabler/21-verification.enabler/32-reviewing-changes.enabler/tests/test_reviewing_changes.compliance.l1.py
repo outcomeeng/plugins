@@ -361,7 +361,7 @@ class TestRenderTemplatesAreDataFiles:
 
     The rendered ``review.md`` shape (three-severity headings,
     no-blockers phrasing, finding body shape) is the externally
-    observable verdict format. Two surfaces consume it (the local lens
+    observable verdict format. Two surfaces consume it (the local verification skill
     and the GH ``spec-tree-review`` workflow); both must read from the
     same source.
     These tests guard the file enumeration, the template-loading
@@ -412,7 +412,7 @@ class TestRenderTemplatesAreDataFiles:
 
 
 class TestPromptTeachesRuleCitation:
-    """The lens prompt instructs the model to populate ``Finding.rule`` as a citation.
+    """The review prompt instructs the model to populate ``Finding.rule`` as a citation.
 
     The arbiter enforces structural form; the prompt enforces the semantic
     that ``rule`` cites an existing rule in the spec-tree or skill

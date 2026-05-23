@@ -29,7 +29,7 @@ class NotFound(ThreadStoreError):
 
 
 class ConfigurationError(ThreadStoreError):
-    """Raised when ``SPX_VET_BACKEND`` selects an unknown or invalid backend.
+    """Raised when ``SPX_VERIFY_BACKEND`` selects an unknown or invalid backend.
 
     The message enumerates the registered backend names so the user can
     correct the misconfiguration without reading source.

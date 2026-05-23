@@ -7,7 +7,7 @@ Covers the Scenario clauses on the CLI surface in
   ``list_records.py`` accept slug + name + payload via stdin or
   ``--file`` and exit 0 on success.
 - ``thread_store.current_slug()`` derives the slug from
-  ``SPX_VET_BRANCH`` env or ``git symbolic-ref --short HEAD``; every CRUD
+  ``SPX_VERIFY_BRANCH`` env or ``git symbolic-ref --short HEAD``; every CRUD
   CLI invoked without ``--slug`` falls back to that derivation. Detached
   HEAD or missing git aborts with a structured error.
 
@@ -43,8 +43,8 @@ PAYLOAD = '{"verdict":"APPROVED"}'
 def _env_for(tmp_path: pathlib.Path) -> dict[str, str]:
     return {
         **os.environ,
-        "SPX_VET_BACKEND": "local",
-        "SPX_VET_LOCAL_ROOT": str(tmp_path),
+        "SPX_VERIFY_BACKEND": "local",
+        "SPX_VERIFY_LOCAL_ROOT": str(tmp_path),
     }
 
 
@@ -257,13 +257,13 @@ class TestCliJsonRoundTrip:
 class TestSlugDerivationWhenOmitted:
     """When ``--slug`` is omitted the CLIs derive via ``thread_store.current_slug()``.
 
-    Source precedence: ``SPX_VET_BRANCH`` env beats ``git symbolic-ref
+    Source precedence: ``SPX_VERIFY_BRANCH`` env beats ``git symbolic-ref
     --short HEAD``; detached HEAD or missing git aborts with a structured
     stderr message naming the override so the operator can recover.
     """
 
     def test_env_branch_yields_derived_slug(self, tmp_path: pathlib.Path) -> None:
-        env = {**_env_for(tmp_path), "SPX_VET_BRANCH": "feature/x"}
+        env = {**_env_for(tmp_path), "SPX_VERIFY_BRANCH": "feature/x"}
         expected_slug = load_branch_slug_module().branch_slug("feature/x")
         result = run_script(
             WRITE_RECORD_SCRIPT,
@@ -285,13 +285,13 @@ class TestSlugDerivationWhenOmitted:
         store_root.mkdir()
         env = {
             **os.environ,
-            "SPX_VET_BACKEND": "local",
-            "SPX_VET_LOCAL_ROOT": str(store_root),
+            "SPX_VERIFY_BACKEND": "local",
+            "SPX_VERIFY_LOCAL_ROOT": str(store_root),
             "PWD": str(repo),
             "GIT_CONFIG_GLOBAL": "/dev/null",
             "GIT_CONFIG_SYSTEM": "/dev/null",
         }
-        env.pop("SPX_VET_BRANCH", None)
+        env.pop("SPX_VERIFY_BRANCH", None)
         expected_slug = load_branch_slug_module().branch_slug("feature/y")
         result = subprocess.run(  # noqa: S603 — script path is from the harness
             ["python3", str(WRITE_RECORD_SCRIPT), "--name", NAME],
@@ -320,11 +320,11 @@ class TestSlugDerivationWhenOmitted:
         )
         env = {
             **os.environ,
-            "SPX_VET_BACKEND": "local",
-            "SPX_VET_LOCAL_ROOT": str(tmp_path / "store"),
+            "SPX_VERIFY_BACKEND": "local",
+            "SPX_VERIFY_LOCAL_ROOT": str(tmp_path / "store"),
             "PWD": str(repo),
         }
-        env.pop("SPX_VET_BRANCH", None)
+        env.pop("SPX_VERIFY_BRANCH", None)
         result = subprocess.run(  # noqa: S603
             ["python3", str(WRITE_RECORD_SCRIPT), "--name", NAME],
             cwd=repo,
@@ -335,7 +335,7 @@ class TestSlugDerivationWhenOmitted:
             check=False,
         )
         assert result.returncode != 0
-        assert "SPX_VET_BRANCH" in result.stderr
+        assert "SPX_VERIFY_BRANCH" in result.stderr
 
     def test_git_unavailable_without_env_override_aborts(
         self, tmp_path: pathlib.Path
@@ -349,8 +349,8 @@ class TestSlugDerivationWhenOmitted:
         # binary still runs but the script's git subprocess can't find git.
         python_dir = str(pathlib.Path(sys.executable).parent)
         env = {
-            "SPX_VET_BACKEND": "local",
-            "SPX_VET_LOCAL_ROOT": str(tmp_path / "store"),
+            "SPX_VERIFY_BACKEND": "local",
+            "SPX_VERIFY_LOCAL_ROOT": str(tmp_path / "store"),
             "PWD": str(repo),
             "PATH": python_dir,
             # Python needs HOME for some imports on macOS; keep a benign value.
@@ -366,6 +366,6 @@ class TestSlugDerivationWhenOmitted:
             check=False,
         )
         assert result.returncode != 0
-        # The error should name either git or SPX_VET_BRANCH so the
+        # The error should name either git or SPX_VERIFY_BRANCH so the
         # operator knows how to recover.
-        assert "git" in result.stderr.lower() or "SPX_VET_BRANCH" in result.stderr
+        assert "git" in result.stderr.lower() or "SPX_VERIFY_BRANCH" in result.stderr
