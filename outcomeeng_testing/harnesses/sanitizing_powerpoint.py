@@ -1,28 +1,4 @@
-"""Harness for sanitizing-powerpoint scenario and conformance tests.
-
-Provides the shared scaffolding consumed by every test file under
-``spx/43-work.enabler/tests/``:
-
-- ``SCRIPTS_DIR`` and per-script paths derived from it. A single source
-  keeps every test file from walking ``__file__.parents[...]`` to find
-  ``plugins/work/skills/sanitizing-powerpoint/scripts``.
-- ``load_audit`` and ``load_repack``: importlib loaders for the two
-  marketplace plugin scripts. The scripts ship under ``plugins/`` (a
-  runtime-substituted plugin directory) and are not importable as
-  packages, so tests load them through ``importlib`` instead.
-- ``write_pptx``: writes an OPC parts mapping to a tmp ZIP path,
-  preserving ``[Content_Types].xml`` as the first member per the OPC
-  packaging convention.
-- ``extract_pptx``: unpacks a ZIP into a directory tree usable as the
-  workdir argument to ``pptx_repack.py``.
-- ``minimal_parts``: returns a minimal OPC presentation package as a
-  parts mapping, with an optional orphan-layout flag that exercises
-  ``pptx_audit.py``'s dimension-1 structure check.
-
-The harness lives in ``outcomeeng_testing/harnesses/`` per
-``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is
-production code with its home outside ``tests/`` and outside ``spx/``.
-"""
+"""Test scaffolding for sanitizing-powerpoint: builds synthetic OPC PPTX archives and loads the marketplace scripts as importable modules."""
 
 from __future__ import annotations
 

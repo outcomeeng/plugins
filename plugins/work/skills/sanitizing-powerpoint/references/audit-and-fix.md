@@ -67,10 +67,9 @@ Place `type` before `preserve`, matching how PowerPoint writes it. `type="blank"
 
 ## Dimension 3 — Font hygiene
 
-Detection: collect every `typeface="…"` in the package. The expected fonts are the theme's `<a:majorFont>` / `<a:minorFont>` latin families. Flag the rest:
+Detection: collect every `typeface="…"` in slides, layouts, and masters. The expected fonts are the theme's `<a:majorFont>` / `<a:minorFont>` latin families. Theme parts and the notes/handout masters are out of scope — their `<a:font script="…">` script fallbacks are standard Office content and stay untouched. Flag the rest:
 
 - `<a:buFont typeface="Arial" …/>` — bullet-glyph font. PowerPoint's default; benign but lists `Arial` in the font manifest.
-- `<a:font script="Arab|Hebr|…" typeface="Arial"/>` — script fallbacks, usually in the notes/handout themes.
 - `<a:latin typeface="SomeFont"/>` inside a run or list style — a hardcoded run font.
 
 Fix — redirect a bullet font to the theme body font:
@@ -83,8 +82,6 @@ Fix — redirect a bullet font to the theme body font:
 ```
 
 **Before redirecting `buFont`, confirm the target font covers every `buChar` codepoint used** (collect `<a:buChar char="…"/>` values; U+2022 `•` is the usual one). A bullet font missing the glyph renders blank.
-
-Fix — drop a script fallback: delete the whole `<a:font script="…" typeface="Arial"/>` element. It is optional; the script then falls back to the latin font.
 
 After the content parts are clean, `docProps/app.xml` regenerates clean on the next PowerPoint save. To ship a clean file immediately, also remove the font's `<vt:lpstr>` entry from `app.xml`'s `<TitlesOfParts>` and decrement the "Fonts Used" count in `<HeadingPairs>` and the vector `size`.
 
