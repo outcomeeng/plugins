@@ -67,7 +67,7 @@ A `.pptx` is an OPC ZIP. Two repackaging properties matter, and `pptx_repack.py`
 `pptx_repack.py` rebuilds the archive from the original, substituting only the parts that changed in the working directory, then verifies — and exits non-zero on failure:
 
 - ZIP integrity (`unzip -t` equivalent).
-- XML well-formedness of every changed part.
+- XML well-formedness of every `.xml` and `.rels` part in the output archive.
 
 It also reports the member-count delta against the original. This is informational, not enforced: dimension 6 (trim) deliberately removes parts, and the script has no way to distinguish an approved trim from an accidental drop, so a changed count is printed as a note rather than gated by exit code. Compare it against the trim findings the user approved in step 3.
 

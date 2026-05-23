@@ -45,8 +45,8 @@ def test_verbatim_workdir_round_trips_with_zero_changed_parts(
 def test_malformed_workdir_xml_exits_with_integrity_code(tmp_path: Path) -> None:
     original = write_pptx(tmp_path / "in.pptx", minimal_parts())
     workdir = extract_pptx(original, tmp_path / "work")
-    # Corrupt a changed part: pptx_repack only validates XML on parts it
-    # detects as changed against the original, so the part must differ.
+    # pptx_repack.verify() iterates every output member and validates each
+    # `.xml` / `.rels` part; corruption of any XML part triggers exit 3.
     corrupted = workdir / "ppt" / "presentation.xml"
     corrupted.write_text("<presentation not closed")
     out_path = tmp_path / "out.pptx"
