@@ -38,9 +38,9 @@
       "description": "Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /auditing-product-decisions, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
     },
     {
-      "name": "visual",
-      "source": "./plugins/visual",
-      "description": "Visual diagrams: /excalidrawing (Excalidraw JSON generation)"
+      "name": "work",
+      "source": "./plugins/work",
+      "description": "Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)"
     },
     {
       "name": "hdl",

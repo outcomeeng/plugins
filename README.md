@@ -316,7 +316,7 @@ Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomp
 | Agent   | `applier`                     | Autonomous TDD agent. Runs the full spec-tree 8-step flow on a node with three audit gates                                                                                                                                                                                                                                                   |
 | Agent   | `audit-orchestrator`          | ALWAYS invoke for a stateful local audit run that carries findings across commits                                                                                                                                                                                                                                                            |
 | Agent   | `auditor`                     | Running a one-off audit over a code scope                                                                                                                                                                                                                                                                                                    |
-| Agent   | `changes-agent`               | Reviewing working changes against a base ref                                                                                                                                                                                                                                                                                                 |
+| Agent   | `changes-reviewer`            | Reviewing working changes against a base ref                                                                                                                                                                                                                                                                                                 |
 | Agent   | `pdr-auditor`                 | Audit PDR evidence quality                                                                                                                                                                                                                                                                                                                   |
 | Agent   | `pr-review-orchestrator`      | Running a CI-side stateful pull request review — runs the PR review and the deterministic six-phase audit over the PR diff, ingests the prior audit verdict from the PR comment thread, derives resolved and reopened against it, and posts one fresh combined comment that supersedes the prior audit while keeping the latest review prose |
 | Agent   | `pr-reviewer`                 | Reviewing a pull request                                                                                                                                                                                                                                                                                                                     |
@@ -353,13 +353,14 @@ TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-types
 | Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                 |
 | Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model |
 
-### visual
+### work
 
-Visual diagrams: /excalidrawing (Excalidraw JSON generation)
+Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)
 
-| Type  | Name             | Purpose                                                                         |
-| ----- | ---------------- | ------------------------------------------------------------------------------- |
-| Skill | `/excalidrawing` | Creating Excalidraw diagrams, visualizing workflows, architectures, or concepts |
+| Type  | Name                     | Purpose                                                                                                                                                                               |
+| ----- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/excalidrawing`         | Creating Excalidraw diagrams, visualizing workflows, architectures, or concepts                                                                                                       |
+| Skill | `/sanitizing-powerpoint` | Sanitizing, cleaning up, auditing, or aligning a PowerPoint (.pptx) deck — slide-master and layout structure, layout type attributes, stray fonts, non-theme colors, or layout naming |
 
 <!-- END PLUGIN CATALOG -->
 
