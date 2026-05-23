@@ -11,7 +11,7 @@ universal rules across the skill's files rather than per-case scenarios:
   ``plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
   review-prompt.md``.
-- The wrapper agent at ``plugins/spec-tree/agents/changes-agent.md``
+- The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
   listing ``spec-tree:reviewing-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
@@ -51,7 +51,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     VALIDATE_REVIEW_RESULT_SCRIPT,
     WRAPPER_AGENT_PATH,
 )
-
 
 # Filesystem-write primitives the scripts MUST NOT use directly. Read
 # primitives (``open(..., 'rb')``, ``Path.read_bytes``, ``Path.read_text``)

@@ -4,12 +4,12 @@
 
      Probe limitation: the eval harness captures only the final assistant
      message, not the tool-call trace. This eval therefore asks the model
-     to act as the changes-agent wrapper agent and self-report its
+     to act as the changes-reviewer wrapper agent and self-report its
      planned tool-call sequence in a structured "tool_calls" array.
      Self-report is weaker than observed behavior; the grader checks
      presence (not order) of the arbiter and persistence calls. -->
 
-You are simulating the `changes-agent` wrapper agent defined at `plugins/spec-tree/agents/changes-agent.md`. The agent's protocol is:
+You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol is:
 
 1. Invoke the `spec-tree:reviewing-changes` skill.
 2. Run `compute_diff.py` (no arguments — the script resolves the current thread and `base_ref` from env, an optional `changes.json` override in the thread, or git defaults; it aborts with stderr naming every source when none yields a value).

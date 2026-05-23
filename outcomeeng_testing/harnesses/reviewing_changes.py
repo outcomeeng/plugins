@@ -55,7 +55,9 @@ VALIDATE_REVIEW_RESULT_SCRIPT = SCRIPTS_DIR / "validate_review_result.py"
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 RENDER_REVIEW_SCRIPT = SCRIPTS_DIR / "render_review.py"
 
-WRAPPER_AGENT_PATH = REPO_ROOT / "plugins" / "spec-tree" / "agents" / "changes-agent.md"
+WRAPPER_AGENT_PATH = (
+    REPO_ROOT / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
+)
 RENDER_TEMPLATES_DIR = REFERENCES_DIR / "render"
 
 # Fixture rule citation: a real path-style citation that satisfies the
