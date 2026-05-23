@@ -259,9 +259,11 @@ class Audit:
     def colors(self):
         theme_hex = {}  # HEX -> scheme slot
         for t in self.themes:
-            scheme = ET.fromstring(self.parts[t]).find(
-                "a:themeElements/a:clrScheme", NS
-            )
+            try:
+                root = ET.fromstring(self.parts[t])
+            except ET.ParseError:
+                continue
+            scheme = root.find("a:themeElements/a:clrScheme", NS)
             if scheme is None:
                 continue
             for slot in scheme:
