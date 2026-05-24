@@ -53,7 +53,9 @@ Otherwise, branch on PR state:
   - **Overlay-requires-human:** emit `MARK_READY` and wait for the operator's explicit promotion instruction.
 
 - **PR is ready (`isDraft = false`):** evaluate the gate's merge-time predicates (including the merge-only predicates: head SHA matches branch head, branch rebased onto current `origin/<base>`). If every predicate holds, consult the overlay's merge-authority topic:
-  - **Gate-green-autonomous (default):** merge using the project's merge command. The default is rebase merge with remote-branch deletion; the overlay may specify a different command (merge commit, squash, or a two-step delete that avoids multi-worktree cleanup failures):
+  - **Gate-green-autonomous (default):** merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge with remote-branch deletion — `gh pr merge <pr-number> --rebase --delete-branch` — per the Merge command topic in /standardizing-merging. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. The overlay should document its rationale for human reviewers, but the agent follows whatever the overlay declares. The overlay also decides whether `--delete-branch` runs inline or as a separate `git push origin --delete <branch>` to avoid multi-worktree cleanup failures.
+
+    Overlay-silent default:
 
     ```bash
     gh pr merge <pr-number> --rebase --delete-branch

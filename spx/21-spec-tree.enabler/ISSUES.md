@@ -96,3 +96,14 @@ Required handling:
 - Keep the assertion as mapping evidence, not property evidence.
 
 Surfaced by `claude-review` on PR 25 (2026-05-14).
+
+## 19. Placeholder notation mixed across inline and code-block commands in standardizing-merging
+
+`plugins/spec-tree/skills/standardizing-merging/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Standardizing on a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
+
+Required handling:
+
+- Decide which form is canonical (angle-bracket everywhere vs. named placeholder inline).
+- Sweep `standardizing-merging/SKILL.md` and any other PR-flow skill that mixes the conventions.
+
+Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens scope across multiple PR-flow skills; the rebase-merge PR scope is intentionally narrow.
