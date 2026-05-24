@@ -30,13 +30,13 @@ Walk these steps in order. Every step is a routine workflow operation — schedu
 
 **Step 3 — Local review gate.** Run the changes-reviewer agent (preferred) on the working diff before push. The agent runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed — both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store.
 
-Apply the acceptance criterion to the resulting `review-result.json`:
+Apply the acceptance criterion to the resulting `review-result.json`. The gate is **severity-based**, not decision-based — the `decision` field is bound to `blocking` presence alone (`request_changes` only when at least one `blocking` finding is present; `approve` and `comment` both fire when no `blocking` finding is present, including when `debt` findings exist). A decision-based gate would let `debt`-only results through; the severity-based gate does not.
 
-- `decision == "request_changes"` with any `BLOCKING` or `DEBT` finding → STOP. Fix the findings, commit them via /committing-changes, re-invoke the reviewer, repeat until no `BLOCKING` and no `DEBT` remain.
-- `FOLLOW-UP` findings → fix the ones whose remediation stays within the PR's intended scope. Defer only those whose fix would widen scope substantively; record deferred items in the relevant node's `ISSUES.md` or `PLAN.md` (per /standardizing-merging `<review_classification>`) before pushing.
-- `decision == "approve"` or `decision == "comment"` with no remaining open findings in either severity → proceed to Step 4.
+- Any finding with `severity == "blocking"` or `severity == "debt"` → STOP. Fix every such finding, commit via /committing-changes, re-invoke the reviewer, and repeat until the `findings` array contains no `blocking` and no `debt` entry.
+- Findings with `severity == "follow_up"` → fix the ones whose remediation stays within the PR's intended scope. Defer only those whose fix would widen scope substantively; record deferred items in the relevant node's `ISSUES.md` or `PLAN.md` (per /standardizing-merging `<review_classification>`) before pushing.
+- `findings` array contains no `blocking` and no `debt` entry → proceed to Step 4. The `decision` field's value (`approve` or `comment`) is informational at this point; the severity check is the gate.
 
-The local review gate is stricter than the remote merge gate. The remote gate (per /standardizing-merging `<pr_authority_gate>`) allows `FOLLOW-UP` findings tracked elsewhere and stops on `BLOCKING`/`DEBT` only. The local pre-push pass aims for the remote review to surface nothing — every finding fixable in this PR's scope is fixed before push, and only widening-scope `FOLLOW-UP` items survive to remote.
+The local review gate is stricter than the remote merge gate. The remote gate (per /standardizing-merging `<pr_authority_gate>`) allows `follow_up` findings tracked elsewhere and stops on `blocking` / `debt` only. The local pre-push pass aims for the remote review to surface nothing — every finding fixable in this PR's scope is fixed before push, and only widening-scope `follow_up` items survive to remote.
 
 The iteration loop accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` before the next reviewer invocation so the predicates stay current.
 
@@ -159,7 +159,7 @@ The opening flow has succeeded when:
 
 - /standardizing-merging and /committing-changes are loaded before the flow begins.
 - /standardizing-merging `<branch_hygiene>` and `<branch_topology>` gates pass before push.
-- The local review gate ran on the diff that will be pushed and returned no remaining `BLOCKING` or `DEBT` findings; any `FOLLOW-UP` items either fixed in-PR or recorded in the relevant node's `ISSUES.md` / `PLAN.md` with widening-scope as the deferral rationale.
+- The local review gate ran on the diff that will be pushed and `review-result.json` contains no `blocking` or `debt` findings; any `follow_up` items either fixed in-PR or recorded in the relevant node's `ISSUES.md` / `PLAN.md` with widening-scope as the deferral rationale.
 - Push uses the explicit destination ref form from /standardizing-merging `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
