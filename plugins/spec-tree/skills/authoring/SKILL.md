@@ -209,7 +209,7 @@ spx/{parent-path}/{NN}-{slug}.{enabler|outcome}/
 2. Write the spec file
 3. Create the `tests/` directory
 4. If the implementation doesn't exist yet: add the node path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
-5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. Without the EXCLUDE entry, `spx validation all` fails on every forward `[test]` link.
+5. If the spec's assertions forward-reference test files that do not exist yet (`([test](tests/foo.conformance.l1.test.ts))` where the file is not yet authored), the EXCLUDE entry also silences markdown-link validation for those forward references. Markdown validation respects `spx/EXCLUDE`; an EXCLUDEd Declared enabler accumulates no validation errors from its to-be-authored tests. For spec-only authoring, validate with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline.
 
 **For decision records:**
 
