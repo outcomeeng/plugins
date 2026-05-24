@@ -28,7 +28,7 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 
 ## Eval evidence — required when this verification skill ships
 
-This verification skill is a verification skill per the umbrella contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
+This skill conforms to the verification contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
 
 PR #43 established the eval pattern for the first verification skill (`reviewing-changes`). Adopt the same shape here:
 

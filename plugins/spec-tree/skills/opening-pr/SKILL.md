@@ -86,7 +86,7 @@ Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit
 The PR title is one commit-subject line under 70 characters per /committing-changes:
 
 - Single commit on the branch → use that commit's subject as-is.
-- Multiple commits → synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /committing-changes `<commit_types>`, write a description that summarizes the umbrella change (not a commit list).
+- Multiple commits → synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /committing-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
 
 Examples:
 
