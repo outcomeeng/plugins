@@ -1,0 +1,5 @@
+title = "local-review-gate"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+threshold = 0.85
+trials = 1
