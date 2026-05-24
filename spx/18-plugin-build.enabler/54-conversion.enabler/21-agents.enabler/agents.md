@@ -9,7 +9,7 @@ CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manife
 ### Scenarios
 
 - Given a Claude Code agent file with `name`, `description`, `model`, `skills`, and `tools` frontmatter, when agent conversion runs, then it emits a Codex custom-agent TOML file with `name`, `description`, mapped `model`, and `developer_instructions` containing the source body plus skill and tool guidance ([test](tests/test_agents.scenario.l1.py))
-- Given a Claude Code agent file names `skills`, when agent conversion runs, then the Codex custom-agent TOML preserves those skill requirements as developer-instruction guidance because Codex custom agents do not have a Claude-style spawn-time skill preload field ([test](tests/test_agents.scenario.l1.py))
+- Given a Claude Code agent file that names `skills`, when agent conversion runs, then the Codex custom-agent TOML preserves those skill requirements as developer-instruction guidance because Codex custom agents do not have a Claude-style spawn-time skill preload field ([test](tests/test_agents.scenario.l1.py))
 - Given plugin distribution paths changed, when `just sync-marketplace` runs, then sync installs converted Codex custom-agent files into the local Codex agent directory before installed-plugin validation runs ([test](tests/test_agents.scenario.l2.py))
 
 ### Mappings
