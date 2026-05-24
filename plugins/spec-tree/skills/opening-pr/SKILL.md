@@ -13,7 +13,7 @@ The opening flow. One-shot, linear: pre-flight → topology → push → open dr
 <project_specialization>
 After loading this skill, check whether `spx/local/opening-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
 
-The overlay MUST NOT: fold promotion into `gh pr create`, skip the closure gate before promotion, override the always-draft mandate, or weaken the upstream-safety check.
+The overlay MUST NOT: fold promotion into `gh pr create`, skip the closure gate before promotion, skip or weaken the local review gate, override the always-draft mandate, or weaken the upstream-safety check.
 
 Project-specific draft-lifecycle refinements (additional explicit-instruction signal forms; keep-ready rules across follow-up pushes) live in `spx/local/merging.md` instead, so /managing-pr and /opening-pr see the same rules.
 </project_specialization>
@@ -28,7 +28,19 @@ Walk these steps in order. Every step is a routine workflow operation — schedu
 
 **Step 2 — Classify topology.** Run /standardizing-merging `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
-**Step 3 — Push.** Use the explicit destination ref form from /standardizing-merging `<push_semantics>`:
+**Step 3 — Local review gate.** Run the changes-reviewer agent (preferred) on the working diff before push. The agent runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed — both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store.
+
+Apply the acceptance criterion to the resulting `review-result.json`:
+
+- `decision == "request_changes"` with any `BLOCKING` or `DEBT` finding → STOP. Fix the findings, commit them via /committing-changes, re-invoke the reviewer, repeat until no `BLOCKING` and no `DEBT` remain.
+- `FOLLOW-UP` findings → fix the ones whose remediation stays within the PR's intended scope. Defer only those whose fix would widen scope substantively; record deferred items in the relevant node's `ISSUES.md` or `PLAN.md` (per /standardizing-merging `<review_classification>`) before pushing.
+- `decision == "approve"` or `decision == "comment"` with no remaining open findings in either severity → proceed to Step 4.
+
+The local review gate is stricter than the remote merge gate. The remote gate (per /standardizing-merging `<pr_authority_gate>`) allows `FOLLOW-UP` findings tracked elsewhere and stops on `BLOCKING`/`DEBT` only. The local pre-push pass aims for the remote review to surface nothing — every finding fixable in this PR's scope is fixed before push, and only widening-scope `FOLLOW-UP` items survive to remote.
+
+The iteration loop accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` before the next reviewer invocation so the predicates stay current.
+
+**Step 4 — Push.** Use the explicit destination ref form from /standardizing-merging `<push_semantics>`:
 
 ```bash
 branch=$(git branch --show-current)
@@ -37,7 +49,7 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md / AGENTS.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 4 — Open the draft PR.** Pipe the curated body to gh on stdin via `--body-file -`:
+**Step 5 — Open the draft PR.** Pipe the curated body to gh on stdin via `--body-file -`:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 gh pr create \
@@ -75,7 +87,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 5 — Schedule the first heartbeat.** Per /standardizing-merging `<heartbeat>`, schedule the first review/check re-inspection through the runtime timer. Verify by capturing the URL or thread ID returned by the runtime tool; only fall back to explicit user confirmation when the runtime cannot create one directly.
+**Step 6 — Schedule the first heartbeat.** Per /standardizing-merging `<heartbeat>`, schedule the first review/check re-inspection through the runtime timer. Verify by capturing the URL or thread ID returned by the runtime tool; only fall back to explicit user confirmation when the runtime cannot create one directly.
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
@@ -147,6 +159,7 @@ The opening flow has succeeded when:
 
 - /standardizing-merging and /committing-changes are loaded before the flow begins.
 - /standardizing-merging `<branch_hygiene>` and `<branch_topology>` gates pass before push.
+- The local review gate ran on the diff that will be pushed and returned no remaining `BLOCKING` or `DEBT` findings; any `FOLLOW-UP` items either fixed in-PR or recorded in the relevant node's `ISSUES.md` / `PLAN.md` with widening-scope as the deferral rationale.
 - Push uses the explicit destination ref form from /standardizing-merging `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
