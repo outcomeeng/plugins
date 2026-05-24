@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening flow. One-shot, linear: pre-flight → topology → push → open draft → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
+The opening flow. One-shot, linear: pre-flight → topology → local review gate → push → open draft → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
