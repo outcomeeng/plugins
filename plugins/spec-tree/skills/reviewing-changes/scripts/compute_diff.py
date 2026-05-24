@@ -1,11 +1,11 @@
 """CLI: compute the working diff against the resolved base ref.
 
 Resolves the current thread (via ``thread_store.current_slug()``,
-which honors ``SPX_VET_BRANCH`` or falls back to git current branch),
+which honors ``SPX_VERIFY_BRANCH`` or falls back to git current branch),
 reads the optional ``changes.json`` override from the thread, resolves
 ``base_ref`` from the precedence chain (env → file → git symbolic-ref),
 resolves ``head_ref`` from a parallel precedence chain
-(``SPX_VET_HEAD_REF`` env → ``changes.json`` ``head_ref`` field →
+(``SPX_VERIFY_HEAD_REF`` env → ``changes.json`` ``head_ref`` field →
 literal ``HEAD``), runs ``git diff <base_ref>...<head_ref>`` (three-dot,
 merge-base) via ``subprocess``, and emits the diff to stdout. Every filesystem effect against the thread-store backend
 routes through the ``thread_store`` facade.
@@ -32,8 +32,8 @@ import sys
 from types import ModuleType
 
 CHANGES_RECORD_NAME = "changes.json"
-ENV_BASE_REF = "SPX_VET_BASE_REF"
-ENV_HEAD_REF = "SPX_VET_HEAD_REF"
+ENV_BASE_REF = "SPX_VERIFY_BASE_REF"
+ENV_HEAD_REF = "SPX_VERIFY_HEAD_REF"
 DEFAULT_HEAD_REF = "HEAD"
 
 
@@ -96,7 +96,7 @@ def _read_changes_json(thread_store: ModuleType, slug: str) -> dict[str, object]
 
     A missing record is the happy path for auto-derivation. A malformed
     record (not JSON, not a dict) is a hard error — the caller asked for
-    an override but supplied something the lens cannot read.
+    an override but supplied something this skill cannot read.
     """
     try:
         payload = thread_store.read(slug, CHANGES_RECORD_NAME)

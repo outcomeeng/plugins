@@ -6,7 +6,7 @@ chain persists outputs:
 
 1. ``changes.json`` with ``base_ref`` set → chain reads it and uses
    that ref end-to-end (review-result.json + review.md both persisted).
-2. No ``changes.json`` + ``SPX_VET_BASE_REF`` env set → env value is
+2. No ``changes.json`` + ``SPX_VERIFY_BASE_REF`` env set → env value is
    used as ``base_ref``.
 3. No ``changes.json`` + no env + ``refs/remotes/origin/HEAD`` resolves
    → derived from that symbolic ref, stripped of the prefix.
@@ -97,8 +97,8 @@ def _make_env_for_temp_store(
     """
     env = {
         **os.environ,
-        "SPX_VET_BACKEND": "local",
-        "SPX_VET_LOCAL_ROOT": str(store_root),
+        "SPX_VERIFY_BACKEND": "local",
+        "SPX_VERIFY_LOCAL_ROOT": str(store_root),
         "PWD": str(cwd),
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_SYSTEM": "/dev/null",
@@ -112,7 +112,7 @@ def _make_env_for_temp_store(
     or not VALIDATE_REVIEW_RESULT_SCRIPT.exists(),
     reason=(
         "Reviewing-changes scripts are not yet present; the orchestration "
-        "test runs once the lens scripts are implemented."
+        "test runs once the verification skill scripts are implemented."
     ),
 )
 class TestSkillOrchestrationChain:
@@ -136,7 +136,7 @@ class TestSkillOrchestrationChain:
         branch_slug_module = load_branch_slug_module()
         slug = branch_slug_module.branch_slug("feature/x")
 
-        # 4. Seed changes.json into the thread store. The lens reads
+        # 4. Seed changes.json into the thread store. The verification skill reads
         #    only `base_ref`; the override file is the platform-neutral
         #    file the consumer may author when overriding auto-derivation.
         changes_payload = json.dumps({"base_ref": base_ref})
@@ -345,7 +345,7 @@ class TestComputeDiffBaseRefDerivation:
         repo, store_root, base_ref = self._setup_repo_and_store(tmp_path)
         slug = self._slug_for("feature/x")
         env = _make_env_for_temp_store(store_root, cwd=repo)
-        env["SPX_VET_BASE_REF"] = base_ref
+        env["SPX_VERIFY_BASE_REF"] = base_ref
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
@@ -357,7 +357,7 @@ class TestComputeDiffBaseRefDerivation:
         _set_origin_head(repo, base_ref)
         slug = self._slug_for("feature/x")
         env = _make_env_for_temp_store(store_root, cwd=repo)
-        env.pop("SPX_VET_BASE_REF", None)
+        env.pop("SPX_VERIFY_BASE_REF", None)
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
@@ -379,7 +379,7 @@ class TestComputeDiffBaseRefDerivation:
             stdin=json.dumps({"base_ref": "ref-that-does-not-exist"}),
             env=env,
         )
-        env["SPX_VET_BASE_REF"] = base_ref
+        env["SPX_VERIFY_BASE_REF"] = base_ref
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
@@ -390,12 +390,12 @@ class TestComputeDiffBaseRefDerivation:
         repo, store_root, _base_ref = self._setup_repo_and_store(tmp_path)
         slug = self._slug_for("feature/x")
         env = _make_env_for_temp_store(store_root, cwd=repo)
-        env.pop("SPX_VET_BASE_REF", None)
+        env.pop("SPX_VERIFY_BASE_REF", None)
         # No changes.json seeded; no env; no origin/HEAD symbolic ref.
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode != 0
         # The error must name every source so the operator can pick one.
-        for token in ("SPX_VET_BASE_REF", "changes.json", "origin/HEAD"):
+        for token in ("SPX_VERIFY_BASE_REF", "changes.json", "origin/HEAD"):
             assert token in result.stderr, (
                 f"stderr should name {token!r}; got: {result.stderr!r}"
             )
@@ -466,8 +466,8 @@ class TestComputeDiffHeadRefDerivation:
         )
         slug = self._slug_for("feature/x")
         env = _make_env_for_temp_store(store_root, cwd=repo)
-        env["SPX_VET_BASE_REF"] = base_ref
-        env["SPX_VET_HEAD_REF"] = secondary
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env["SPX_VERIFY_HEAD_REF"] = secondary
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         # head_ref pointed at the secondary branch — its file appears, not
@@ -518,7 +518,7 @@ class TestComputeDiffHeadRefDerivation:
             stdin=json.dumps({"base_ref": base_ref, "head_ref": secondary}),
             env=env,
         )
-        env["SPX_VET_HEAD_REF"] = "feature/x"
+        env["SPX_VERIFY_HEAD_REF"] = "feature/x"
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         assert "world" in result.stdout
@@ -532,9 +532,9 @@ class TestComputeDiffHeadRefDerivation:
         )
         slug = self._slug_for("feature/x")
         env = _make_env_for_temp_store(store_root, cwd=repo)
-        env["SPX_VET_BASE_REF"] = base_ref
-        env.pop("SPX_VET_HEAD_REF", None)
-        # No changes.json head_ref field; no SPX_VET_HEAD_REF; HEAD is
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env.pop("SPX_VERIFY_HEAD_REF", None)
+        # No changes.json head_ref field; no SPX_VERIFY_HEAD_REF; HEAD is
         # feature/x, so the diff must surface feature/x's payload, not
         # secondary's SECONDARY.md.
         result = self._run_compute_diff(repo, env, slug)

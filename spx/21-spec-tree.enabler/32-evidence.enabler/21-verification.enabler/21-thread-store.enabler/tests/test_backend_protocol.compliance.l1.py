@@ -150,9 +150,9 @@ class TestNonConformingBackendRefused:
                 return sorted(p.name for p in thread.iterdir())
 
         ts.register_backend("full-test", lambda: FullBackend(tmp_path))
-        monkeypatch.setenv("SPX_VET_BACKEND", "full-test")
+        monkeypatch.setenv("SPX_VERIFY_BACKEND", "full-test")
         with with_temp_local_store(tmp_path):
-            # Re-set after with_temp_local_store overrode SPX_VET_BACKEND.
-            monkeypatch.setenv("SPX_VET_BACKEND", "full-test")
+            # Re-set after with_temp_local_store overrode SPX_VERIFY_BACKEND.
+            monkeypatch.setenv("SPX_VERIFY_BACKEND", "full-test")
             backend = ts.get_backend()
         assert isinstance(backend, FullBackend)

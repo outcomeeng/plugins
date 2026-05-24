@@ -11,7 +11,7 @@ The node's other gate scenarios (`authority-gate-green`, `authority-gate-product
 Required handling when an eval-coverage sweep happens:
 
 - Add the scenario assertion above to `pr-workflow.md`.
-- Create `evals/reviewer-skipped/` with `eval.toml`, `cases.jsonl`, `prompt.md` per the cross-lens eval pattern.
+- Create `evals/reviewer-skipped/` with `eval.toml`, `cases.jsonl`, `prompt.md` per the cross-skill eval pattern.
 - Run the eval to populate `history.jsonl`.
 
 Not a retag of the `spx/15-agent-pr-authority.pdr.md` MUST rules: those rules are "the skill declares X" structural assertions, `[review]` per `spx/15-spec-coverage.adr.md` and consistent with every other MUST rule in that PDR. The follow-up is the enabler-side scenario + eval, not a PDR evidence-tag change.

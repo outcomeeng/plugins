@@ -139,14 +139,14 @@ class TestHarnessSurface:
         self, tmp_path: pathlib.Path
     ) -> None:
         sentinel = "previous-value"
-        os.environ["SPX_VET_BACKEND"] = sentinel
+        os.environ["SPX_VERIFY_BACKEND"] = sentinel
         try:
             with with_temp_local_store(tmp_path):
-                assert os.environ["SPX_VET_BACKEND"] == "local"
-                assert os.environ["SPX_VET_LOCAL_ROOT"] == str(tmp_path)
-            assert os.environ["SPX_VET_BACKEND"] == sentinel
+                assert os.environ["SPX_VERIFY_BACKEND"] == "local"
+                assert os.environ["SPX_VERIFY_LOCAL_ROOT"] == str(tmp_path)
+            assert os.environ["SPX_VERIFY_BACKEND"] == sentinel
         finally:
-            os.environ.pop("SPX_VET_BACKEND", None)
+            os.environ.pop("SPX_VERIFY_BACKEND", None)
 
     def test_make_changes_json_writes_payload_with_base_ref(
         self, tmp_path: pathlib.Path

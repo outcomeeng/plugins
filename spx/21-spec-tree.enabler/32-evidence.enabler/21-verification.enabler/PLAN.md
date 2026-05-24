@@ -1,25 +1,25 @@
-# PLAN — Cross-lens eval design pattern
+# PLAN — Shared verification eval design pattern
 
 ## Why
 
-Every vetting lens declared under this umbrella is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, the lens's judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for the first lens (`reviewing-changes`). This plan captures the design decisions future lenses should mirror, plus the harness limitations discovered along the way.
+Every verification skill declared under this umbrella is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, the verification skill's judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for the first verification skill (`reviewing-changes`). This plan captures the design decisions future verification skills should mirror, plus the harness limitations discovered along the way.
 
 `/aligning` does not detect missing `[eval]` evidence — the check is by hand against `spx/15-spec-coverage.adr.md`.
 
-## The pattern (per-lens checklist)
+## The pattern (per-skill checklist)
 
-For every vetting lens that ships under this umbrella:
+For every verification skill that ships under this umbrella:
 
-1. **Eval directory layout.** One directory per judgment claim under `<lens-enabler>/evals/<rule-slug>/`. Each carries:
+1. **Eval directory layout.** One directory per judgment claim under `<verification-skill-enabler>/evals/<rule-slug>/`. Each carries:
    - `eval.toml` — `title`, `cases`, `prompt`, `threshold`, `trials` (per `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md` assertion #14).
    - `cases.jsonl` — one curated case per line. Each line is `{"id": ..., "input": {...}, "expected_verdict": {"must_contain": [...], "must_not_contain": [...]}}`.
-   - `prompt.md` — self-contained instructions. Inline the rubric; do not require the model to invoke the real lens skill chain from inside the eval. The harness substitutes `{case_id}` and `{input_json}` placeholders.
+   - `prompt.md` — self-contained instructions. Inline the rubric; do not require the model to invoke the real verification skill chain from inside the eval. The harness substitutes `{case_id}` and `{input_json}` placeholders.
    - `history.jsonl` — append-only run summaries, committed. Developer-machine appends become git-diff noise that contributors restore; CI owns canonical baseline appends.
    - `runs/` — full transcripts, gitignored via `.gitignore`.
 
-2. **Threshold.** `0.85` per marketplace precedent (`spx/.../shared-constant-bag/eval.toml`). Do not lower the threshold to pass a flaky case; fix the case or the lens prompt. Per `spx/15-spec-coverage.adr.md` and the marketplace's never-weaken-the-spec rule, the spec governs, not the model.
+2. **Threshold.** `0.85` per marketplace precedent (`spx/.../shared-constant-bag/eval.toml`). Do not lower the threshold to pass a flaky case; fix the case or the review prompt. Per `spx/15-spec-coverage.adr.md` and the marketplace's never-weaken-the-spec rule, the spec governs, not the model.
 
-3. **Wire shape.** Use the real verdict wire shape declared by the lens's policy module — the same JSON the lens emits to its arbiter. Do not invent a simplified probe shape unless the lens has no policy module. The grader does structural subset matching, so cases need only specify the fields under test; the model still emits the full schema.
+3. **Wire shape.** Use the real verdict wire shape declared by the verification skill's policy module — the same JSON the verification skill emits to its arbiter. Do not invent a simplified probe shape unless the verification skill has no policy module. The grader does structural subset matching, so cases need only specify the fields under test; the model still emits the full schema.
 
 4. **Coupling per case.** Every case carries verdict-level + finding-level expectations per eval-harness assertion #31. Two acceptable shapes:
    - Strict (#36-compliant): both signals in one `must_contain` entry, e.g. `[{"decision": "request_changes", "findings": [{"severity": "must_fix", "concern": "security"}]}]`.
@@ -39,18 +39,18 @@ These cannot be worked around inside the harness. Eval design must accommodate t
 
 ## When to adopt the pattern
 
-- A new vetting lens ships under this umbrella → MUST carry `[eval]` evidence on its judgment surface before the spec is considered complete.
-- An existing lens has `[review]` tags on runtime LLM-behavior assertions → those are placement violations against `spx/15-spec-coverage.adr.md`. Re-tag to `[eval]` with an eval that probes the behavior (PR #43 did this for `reviewing-changes` against `evals/wrapper-protocol/`).
-- An existing lens has zero `[eval]` assertions on its judgment surface → its core deliverable is uncovered. Build evals per the pattern.
+- A new verification skill ships under this umbrella → MUST carry `[eval]` evidence on its judgment surface before the spec is considered complete.
+- An existing verification skill has `[review]` tags on runtime LLM-behavior assertions → those are placement violations against `spx/15-spec-coverage.adr.md`. Re-tag to `[eval]` with an eval that probes the behavior (PR #43 did this for `reviewing-changes` against `evals/wrapper-protocol/`).
+- An existing verification skill has zero `[eval]` assertions on its judgment surface → its core deliverable is uncovered. Build evals per the pattern.
 
-## Future vetting lenses anticipated
+## Future verification skills anticipated
 
-- `32-auditing-nodes.enabler` (mentioned in `vetting.md` umbrella spec) — when authored, will adopt the cross-lens contract and this eval pattern.
-- `32-test-auditing.enabler` (sibling under `32-evidence.enabler` — has its own PLAN.md) — when implemented, the test-auditing lens is a candidate vetting lens; its eval evidence requirements are documented in its own PLAN.
+- `32-auditing-nodes.enabler` (mentioned in `verification.md` umbrella spec) — when authored, will adopt the shared verification contract and this eval pattern.
+- `32-test-auditing.enabler` (sibling under `32-evidence.enabler` — has its own PLAN.md) — when implemented, the test-auditing skill is a candidate verification skill; its eval evidence requirements are documented in its own PLAN.
 
 ## Reference
 
-- PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/32-reviewing-changes.enabler/evals/`
+- PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/32-reviewing-changes.enabler/evals/`
 - Eval-harness contract: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
 - Evidence-execution-lanes ADR: `spx/16-evidence-execution-lanes.adr.md`

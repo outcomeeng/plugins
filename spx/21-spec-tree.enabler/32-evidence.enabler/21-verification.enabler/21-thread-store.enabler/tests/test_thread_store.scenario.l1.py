@@ -9,7 +9,7 @@ env-var resolution in ``../thread-store.md``:
 - read on a missing record raises ``NotFound`` with a structured message
 - list returns the set of record names present in a thread
 - ``get_backend()`` selects the filesystem backend by default
-- ``get_backend()`` honors ``SPX_VET_BACKEND``
+- ``get_backend()`` honors ``SPX_VERIFY_BACKEND``
 - ``get_backend()`` rejects unknown backend names with a clear error
 
 Atomicity (the universal rule under crash conditions) lives in
@@ -113,15 +113,15 @@ class TestGetBackend:
     def test_default_returns_local_filesystem_backend_rooted_at_spx_reviews(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """When ``SPX_VET_BACKEND`` and ``SPX_VET_LOCAL_ROOT`` are both unset,
+        """When ``SPX_VERIFY_BACKEND`` and ``SPX_VERIFY_LOCAL_ROOT`` are both unset,
         ``get_backend()`` returns the filesystem backend whose root is the
         canonical default path ``.spx/reviews/``.
 
         The spec asserts the default rooting; verifying the class name
         alone permits a regression where the root path silently changes.
         """
-        monkeypatch.delenv("SPX_VET_BACKEND", raising=False)
-        monkeypatch.delenv("SPX_VET_LOCAL_ROOT", raising=False)
+        monkeypatch.delenv("SPX_VERIFY_BACKEND", raising=False)
+        monkeypatch.delenv("SPX_VERIFY_LOCAL_ROOT", raising=False)
         ts = load_thread_store_module()
         fs_backend = load_fs_backend_module()
         backend = ts.get_backend()
@@ -132,8 +132,8 @@ class TestGetBackend:
     def test_explicit_local_selection(
         self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("SPX_VET_BACKEND", "local")
-        monkeypatch.setenv("SPX_VET_LOCAL_ROOT", str(tmp_path))
+        monkeypatch.setenv("SPX_VERIFY_BACKEND", "local")
+        monkeypatch.setenv("SPX_VERIFY_LOCAL_ROOT", str(tmp_path))
         ts = load_thread_store_module()
         backend = ts.get_backend()
         assert backend.__class__.__name__ == "FilesystemBackend"
@@ -141,7 +141,7 @@ class TestGetBackend:
     def test_unknown_backend_raises_configuration_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("SPX_VET_BACKEND", "nonexistent-backend")
+        monkeypatch.setenv("SPX_VERIFY_BACKEND", "nonexistent-backend")
         ts = load_thread_store_module()
         with pytest.raises(ts.ConfigurationError) as excinfo:
             ts.get_backend()

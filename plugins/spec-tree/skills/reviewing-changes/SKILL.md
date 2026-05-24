@@ -5,7 +5,7 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-Drive the reviewing-changes lens — compute the diff against the resolved base ref, apply the judgment-style review prompt, validate the emitted JSON through the arbiter CLI, and persist `review-result.json` plus a rendered `review.md` to the current thread. The arbiter is the source of validity; the wrapper agent never hand-validates the JSON it just emitted, and never names the thread address.
+Compute the diff against the resolved base ref, apply the judgment-style review prompt, validate the emitted JSON through the arbiter CLI, and persist `review-result.json` plus a rendered `review.md` to the current thread. The arbiter is the source of validity; the wrapper agent never hand-validates the JSON it just emitted, and never names the thread address.
 </objective>
 
 <api_surface>
@@ -20,7 +20,7 @@ Four entry points under `${CLAUDE_SKILL_DIR}/scripts/` and one swappable prompt 
 | `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                      |
 | `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into the agent's context                                                                  |
 
-The lens uses the thread-store CLIs at `${CLAUDE_SKILL_DIR}/../thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; the agent omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VET_BRANCH` → git current branch).
+This skill uses the thread-store CLIs at `${CLAUDE_SKILL_DIR}/../thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; the agent omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` → git current branch).
 
 </api_surface>
 
@@ -71,7 +71,7 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 
 <validate_as_arbiter>
 
-The validate-as-arbiter pattern is the cross-lens contract for the reviewing-changes lens. The agent emits JSON; the CLI is the only source of validity for that JSON; a non-zero exit is a re-emit signal, not a status to gloss over. The agent never:
+Validate-as-arbiter is the contract for this skill. The agent emits JSON; the CLI is the only source of validity for that JSON; a non-zero exit is a re-emit signal, not a status to gloss over. The agent never:
 
 - Hand-checks the required-key set, the enum membership, or the consistency invariant.
 - Persists a `review-result.json` document that has not passed the arbiter.

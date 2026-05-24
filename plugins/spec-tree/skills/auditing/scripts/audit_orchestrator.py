@@ -75,7 +75,7 @@ class BaseRefNotConfiguredError(RuntimeError):
     The default ``detect_base_ref(strict=False)`` falls back to
     ``DEFAULT_BASE_REF`` because the auditing skill tolerates a missing
     remote (single-developer repos, fresh bootstraps). The strict
-    variant exists for the reviewing-changes lens, which refuses to
+    variant exists for the reviewing-changes skill, which refuses to
     pick a fallback because the operator needs a definitive answer
     about which ref the diff was computed against.
     """
@@ -344,7 +344,7 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
       can still compose diff ranges without halting. The auditing skill
       relies on this fallback.
     - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
-      reviewing-changes lens uses this variant so the operator gets a
+      reviewing-changes skill uses this variant so the operator gets a
       definitive answer rather than a silently-chosen literal.
     """
     result = subprocess.run(

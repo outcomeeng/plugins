@@ -10,7 +10,7 @@ surfaces share one rule.
 The re-exported symbols are identity-equal to their canonical
 counterparts. Tests assert this with ``branch_slug is canonical``.
 
-See ``spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/21-thread-store.enabler/21-backend-abstraction.adr.md``
+See ``spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/21-thread-store.enabler/21-backend-abstraction.adr.md``
 for the architectural rationale.
 """
 

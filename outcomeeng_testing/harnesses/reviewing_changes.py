@@ -1,7 +1,7 @@
 """Harness for reviewing-changes scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/32-reviewing-changes.enabler/tests/``:
+``spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/32-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
@@ -61,10 +61,10 @@ WRAPPER_AGENT_PATH = (
 RENDER_TEMPLATES_DIR = REFERENCES_DIR / "render"
 
 # Fixture rule citation: a real path-style citation that satisfies the
-# parser's rule-form check. Points at this lens's own spec so the citation
+# parser's rule-form check. Points at this verification skill's own spec so the citation
 # is stable and self-contained — no external rule required.
 FIXTURE_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/32-evidence.enabler/21-vetting.enabler/"
+    "spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/"
     "32-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
 )
 

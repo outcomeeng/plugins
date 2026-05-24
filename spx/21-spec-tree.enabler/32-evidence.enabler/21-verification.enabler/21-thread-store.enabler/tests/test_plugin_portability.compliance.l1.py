@@ -8,9 +8,9 @@ keep backend selection routed through the facade:
 - Every script under ``plugins/spec-tree/skills/thread-store/scripts/``
   imports only the standard library and other thread-store scripts.
   No third-party packages, no ``outcomeeng_*`` modules.
-- No lens skill (any plugin under ``plugins/spec-tree/skills/`` other
-  than ``thread-store`` itself, plus future language-lens skills)
-  imports a concrete backend module directly. Lens code reaches
+- No verification skill (any plugin under ``plugins/spec-tree/skills/`` other
+  than ``thread-store`` itself, plus future language-verification skills)
+  imports a concrete backend module directly. Verification skill code reaches
   persistence only through the ``thread_store`` facade.
 - No backend module redefines the ``branch_slug`` function. Slug
   derivation lives in the canonical helper and is re-exported, never
@@ -44,8 +44,8 @@ LOCAL_THREAD_STORE_MODULES = frozenset(
     }
 )
 
-# Concrete backend module names a lens MUST NOT import directly. The
-# facade dispatches; the lens never names a backend.
+# Concrete backend module names a verification skill MUST NOT import directly. The
+# facade dispatches; the verification skill never names a backend.
 CONCRETE_BACKEND_MODULES = frozenset({"fs_backend"})
 
 
@@ -118,18 +118,18 @@ class TestThreadStoreScriptsImportOnlyStdlib:
         )
 
 
-class TestLensSkillsDoNotImportBackendsDirectly:
-    """Every lens skill under ``plugins/spec-tree/skills/`` (other than
+class TestVerificationSkillsDoNotImportBackendsDirectly:
+    """Every verification skill under ``plugins/spec-tree/skills/`` (other than
     thread-store itself) reaches persistence through the
     ``thread_store`` facade, never by importing ``fs_backend`` (or any
     other concrete backend module) directly.
 
-    The current marketplace has no lens skills yet — reviewing-changes
+    The current marketplace has no verification skills yet — reviewing-changes
     is declared but not implemented. The test passes trivially on an
-    empty input and fails the moment a lens adds a forbidden import.
+    empty input and fails the moment a verification skill adds a forbidden import.
     """
 
-    def test_no_lens_skill_imports_concrete_backend(self) -> None:
+    def test_no_verification_skill_imports_concrete_backend(self) -> None:
         violations: list[str] = []
         for skill_dir in sorted(SPEC_TREE_SKILLS_DIR.iterdir()):
             if not skill_dir.is_dir():
@@ -148,7 +148,7 @@ class TestLensSkillsDoNotImportBackendsDirectly:
                             f"{script.relative_to(REPO_ROOT)}: import '{module}'"
                         )
         assert not violations, (
-            "lens skills import a concrete backend module directly "
+            "verification skills import a concrete backend module directly "
             "(forbidden — route through thread_store facade):\n" + "\n".join(violations)
         )
 
@@ -156,7 +156,7 @@ class TestLensSkillsDoNotImportBackendsDirectly:
 class TestAgentsDoNotReferenceConcreteBackends:
     """Wrapper-agent prose must not name a concrete backend module.
 
-    Spec line 37 names "lens skill or wrapper agent" as joint subject.
+    Spec line 37 names "verification skill or wrapper agent" as joint subject.
     Agents are markdown files; their prose "imports" a backend by
     naming the module in instructions to the model. The check scans
     every agent file under ``plugins/spec-tree/agents/`` for the

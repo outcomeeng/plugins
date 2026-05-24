@@ -349,7 +349,7 @@ class TestRuleCitationForm:
 
     Accepted prefixes: ``spx/``, ``plugins/``, ``AGENTS.md``, ``CLAUDE.md``,
     ``SKILL.md``. The semantic check (cited rule exists at the location)
-    is the lens prompt's concern and is not enforced at parse time.
+    is the review prompt's concern and is not enforced at parse time.
     """
 
     @pytest.mark.parametrize(

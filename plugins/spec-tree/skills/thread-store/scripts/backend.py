@@ -2,7 +2,7 @@
 
 Every concrete backend implements the five-method CRUD surface declared
 here. The ``thread_store`` facade selects a registered backend at
-runtime via the ``SPX_VET_BACKEND`` environment variable and dispatches
+runtime via the ``SPX_VERIFY_BACKEND`` environment variable and dispatches
 read/write/delete/list operations through it.
 
 Stdlib-only by design — no third-party Protocol library, no ``Pydantic``,
