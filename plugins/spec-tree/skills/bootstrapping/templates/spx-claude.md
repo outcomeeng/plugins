@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.2"
+template_version: "0.18.3"
 template_source: spec-tree
 ---
 
@@ -126,6 +126,12 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 ### When checking consistency → `/aligning`
 
 Review, audit, or quality check specs. Find contradictions or gaps.
+
+### Before pushing a PR branch → `/opening-pr` (with local review gate)
+
+**BLOCKING REQUIREMENT**
+
+Every change destined for the default branch passes through the local review gate at `/opening-pr` Step 3 before push. The gate invokes the `changes-reviewer` agent on the working diff and reads the resulting `review-result.json`. The agent runs in an isolated context so the verdict is not biased by what the operator's main agent has been doing. When the agent is not installed, fall back to the `/review-changes` slash command — both invoke the same `reviewing-changes` skill chain. It stops the push on any finding with `severity == "blocking"` or `severity == "debt"` — severity-based, not decision-based, because the `decision` field is bound to `blocking` presence alone (a `debt`-only review carries `decision == "approve"` and still stops the push). `follow_up` findings are fixed in-PR unless the fix would widen the PR substantively, in which case the deferral is recorded in the relevant node's `ISSUES.md` or `PLAN.md`.
 
 ---
 
