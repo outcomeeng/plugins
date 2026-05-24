@@ -32,4 +32,6 @@
 18-plugin-build.enabler
 18-plugin-build.enabler/21-source-and-templating.enabler
 18-plugin-build.enabler/43-target-emission.enabler
+18-plugin-build.enabler/54-conversion.enabler
+18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler
 18-plugin-build.enabler/65-build-orchestration.enabler
