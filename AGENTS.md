@@ -8,9 +8,15 @@ Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the
 
 Read [`REVIEW.template.md`](REVIEW.template.md) at the repository root before posting any findings on a pull request in this repository. The template is the consumer-override surface for the `/standardizing-merging` skill — by default it mirrors the skill's three-severity (`BLOCKING` / `DEBT` / `FOLLOW-UP`) × six-category (`consistency` / `security` / `performance` / `evidence` / `standards` / `architecture`) taxonomy and the comment shape every finding must follow. Severity ranks (`P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`) are not valid finding headings here, and neither are the legacy class labels `NEEDS-ANSWER` and `NOTE` — open questions are reframed as findings, and bare commentary or praise is omitted. If a review has no `BLOCKING` or `DEBT` items, say so directly — do not manufacture lower-priority findings to prove that review happened.
 
-## Marketplace Is a Product
+## Two audiences, two design surfaces
 
-We develop this marketplace as a product using its own Spec Tree. The product specs are in `spx/` (the durable map).
+This repo is two things at once.
+
+It is a **product**, with its own spec tree under `spx/`, its own decision records, and its own implementation under `outcomeeng/` and `plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
+
+It is also a **methodology shipped as plugins** under `plugins/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of work in `plugins/` is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Skill content that ships under `plugins/` references language-neutral mechanisms or per-language conventions; never a marketplace-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
+
+Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a `plugins/` change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
 
 ## Runtime Surfaces
 
@@ -66,13 +72,15 @@ Historical plugin implementations are pruned from this repository. The history t
 
 - ⚠️ **NEVER answer ANY question without invoking at least one skill first** - If the question touches testing, specs, code, architecture, or any topic covered by a skill, invoke the relevant skill BEFORE answering. Skills are the authoritative source — not grep results, not existing files, not your training data. See the plugin catalog in [`README.md`](README.md#plugins) for the available skills.
 - ⚠️ **NEVER write code without invoking a skill first** - See the plugin catalog in [`README.md`](README.md#plugins) for language-specific coding skills.
-- ⚠️ **NEVER manually navigate `spx/` hierarchy** - Use `/contextualizing spx/path/to/node` skill
+- ⚠️ **NEVER touch a spec-tree node without invoking `/contextualizing` first** - Before implementing work on an existing node, editing an existing spec file, or opening a PR whose diff sits inside `spx/` or imports modules tested by `spx/`, invoke `/contextualizing <full-path-of-existing-node>`. The skill loads the full ancestry (product → decisions → ancestors → target) deterministically. Reading spec files directly leaves you with partial context, missing decisions, and downstream errors. The "Spec-tree navigation" section below explains how to identify the governing node from a diff.
+- ⚠️ **NEVER create a spec-tree artifact without invoking `/authoring` first** - Before creating a product spec, ADR, PDR, enabler, or outcome, invoke `/authoring`. The skill carries the templates, the index-assignment procedure, and chains into `/contextualizing` on the parent directory so sibling enumeration prevents index collisions. Do not invoke `/contextualizing` directly on a not-yet-existing node path — it will abort with "Target path not found"; the bootstrap-mode entry point belongs to `/authoring`.
 - ⚠️ **ALWAYS read CLAUDE.md in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's CLAUDE.md FIRST if it exists
 - ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
 - ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
 - ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. The `semgrep` rule enforces this.
 - ⚠️ **NEVER manually delete untracked files or empty directories** - Git doesn't track empty dirs; `.DS_Store` and `__pycache__` are gitignored artifacts. Use `just clean` to remove them
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
+- ⚠️ **The methodology is multi-language** - Skill content shipped under `plugins/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each `plugins/<lang>/skills/standardizing-<lang>-tests/SKILL.md` for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
 - ⚠️ **Python skill examples use `product.*` / `product_testing.*`** - Not `src.*` or `src_testing.*`. The `src` convention is ambiguous across Python ecosystems; `product` is unambiguous and signals "the thing we're building"
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
@@ -198,6 +206,32 @@ The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering)
 
 Planning artifacts are ephemeral — `PLAN.md` and `ISSUES.md` are committed escape hatches that `/handoff` leaves in node directories. They carry deferred plans and known issues, not spec truth; `/contextualizing` reads them, conformance checks skip them, and they are removed once resolved.
 
+### Spec-tree navigation: declaration and inverse
+
+The methodology declares forward:
+
+```text
+PDR/ADR → spec assertion → [test](path) link → test file → import → implementation file
+```
+
+The PR flow, the apply flow, and any code-change workflow need the *inverse* — from a code change in the diff back to the spec that governs it:
+
+```text
+implementation file
+  → grep imports across spx/**/tests/  (per-language import syntax)
+  → set of test files
+  → spec assertions linking those test files via [test]
+  → containing node directory under spx/
+```
+
+`spx/` contains only specs, decision records, escape hatches, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `plugins/`, in `outcomeeng/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
+
+If multiple implementation files in the diff resolve to multiple nodes, take their lowest common ancestor in the tree — `/contextualizing` on the LCA pulls constraining context for every descendant.
+
+An implementation file in the diff that no test imports has no governing spec assertion — a coverage gap the PR is shipping. Specs declare; tests verify; code complies. Surface the gap; do not invent a node to load.
+
+Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `standardizing-<lang>-tests` skill. In a consumer repo, the consumer's spec tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
+
 ### Archiving a stale session without `/release`
 
 `/release` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, escape hatches, or methodology changes, run `spx session archive <session-id>` directly:
@@ -223,33 +257,6 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 | `/auditing-{language}`              | `{language}-code-auditor`         |
 | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
 | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
-
-## Proactive Skill Invocation
-
-Certain skills must be invoked **automatically** when specific conditions are met, without waiting for explicit user request.
-
-**BEFORE implementing any work item**, you MUST:
-
-1. **Invoke `/contextualizing`** on the target node
-   - **Trigger**: User requests implementation of a work item
-   - **Purpose**: Load complete context hierarchy (product → decisions → ancestors → target)
-   - **Example**: User says "implement this outcome" → STOP and invoke `/contextualizing` FIRST
-   - **Non-negotiable**: Do NOT read spec files directly without invoking this skill
-
-2. **Invoke `/authoring`** when creating specs or nodes
-   - **Trigger**: User requests creating a product spec, ADR, PDR, enabler, or outcome
-   - **Purpose**: Access templates, understand index assignment
-   - **Example**: User says "create an outcome for search" → STOP and invoke `/authoring`
-   - **Critical**: Templates are in the `understanding` skill's directory, NOT in the product
-
-**Pattern**: These skills are preparatory and blocking. You MUST invoke them BEFORE writing code or documents.
-
-**Rationale**: Without these skills, you will:
-
-- Miss requirements and violate ADRs
-- Search for templates that don't exist in the product
-- Create nodes with incorrect indices
-- Generate specs with wrong structure
 
 ## For Claude Agents Modifying This Marketplace
 
@@ -302,116 +309,18 @@ Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/
 
 `just check` will fail if a plugin directory is missing from either catalog.
 
-### Quick Reference: File Locations
+### Top-level layout
 
-```
-outcomeeng/plugins/                 # Marketplace: outcomeeng
-├── .claude-plugin/
-│   └── marketplace.json          # Claude Code marketplace catalog
-├── .agents/
-│   └── plugins/
-│       └── marketplace.json      # Codex marketplace catalog
-├── .spx/                          # Tool operational (gitignored)
-│   └── sessions/                  # Session handoffs
-├── outcomeeng/                    # Python package
-│   ├── scripts/                  # Build/validation tools
-│   └── testing/                  # Test infrastructure
-├── plugins/
-│   ├── develop/                  # Meta-skills for plugin development
-│   │   ├── .claude-plugin/       # Claude Code manifest
-│   │   ├── .codex-plugin/        # Codex manifest
-│   │   └── skills/
-│   │       ├── standardizing-skills/
-│   │       ├── creating-skills/
-│   │       ├── creating-commands/
-│   │       ├── creating-subagents/
-│   │       ├── auditing-skills/
-│   │       ├── auditing-commands/
-│   │       └── auditing-subagents/
-│   ├── frontend/
-│   │   └── skills/
-│   │       └── designing-frontend/
-│   ├── hdl/                       # HDL engineering
-│   │   └── skills/
-│   │       ├── reviewing-vhdl/
-│   │       └── reviewing-systemverilog/
-│   ├── prose/
-│   │   └── skills/
-│   │       ├── standardizing-prose/
-│   │       ├── writing-prose/
-│   │       └── auditing-prose/
-│   ├── python/
-│   │   ├── agents/
-│   │   │   ├── python-code-auditor.md
-│   │   │   ├── python-architecture-auditor.md
-│   │   │   └── python-test-auditor.md
-│   │   └── skills/
-│   │       └── (9 skills)
-│   ├── rust/
-│   │   ├── .claude-plugin/           # Claude Code manifest
-│   │   ├── .codex-plugin/            # Codex manifest
-│   │   ├── agents/
-│   │   │   ├── rust-code-auditor.md
-│   │   │   ├── rust-architecture-auditor.md
-│   │   │   ├── rust-test-auditor.md
-│   │   │   ├── rust-simplifier.md
-│   │   │   └── rust-unsafe-auditor.md
-│   │   └── skills/
-│   │       └── (9 skills)
-│   ├── spec-tree/                # Spec Tree — 3 phases
-│   │   ├── agents/
-│   │   │   ├── applier.md
-│   │   │   ├── test-evidence-auditor.md
-│   │   │   └── pdr-auditor.md
-│   │   ├── bin/
-│   │   │   └── session-start
-│   │   ├── commands/
-│   │   │   ├── apply.md
-│   │   │   ├── author.md
-│   │   │   ├── bootstrap.md
-│   │   │   ├── clarify.md
-│   │   │   ├── commit.md
-│   │   │   ├── handoff.md
-│   │   │   ├── open-pr.md
-│   │   │   ├── pickup.md
-│   │   │   ├── release.md
-│   │   │   └── rtfm.md
-│   │   ├── hooks/
-│   │   │   └── hooks.json
-│   │   └── skills/
-│   │       └── (17 skills)
-│   ├── typescript/
-│   │   ├── agents/
-│   │   │   ├── typescript-code-auditor.md
-│   │   │   ├── typescript-architecture-auditor.md
-│   │   │   ├── typescript-test-auditor.md
-│   │   │   └── typescript-simplifier.md
-│   │   └── skills/
-│   │       └── (9 skills)
-│   └── visual/
-│       └── skills/
-│           └── excalidrawing/
-├── pyproject.toml                 # uv product config + dev deps
-├── spx/                           # Specs as durable map
-│   ├── CLAUDE.md                 # Specs directory guide
-│   ├── EXCLUDE                    # Nodes skipped by the quality gate
-│   ├── local/                    # Product-specific skill overlays
-│   │   └── committing-changes.md
-│   ├── 15-spec-coverage.adr.md
-│   ├── 15-test-language.adr.md
-│   ├── 15-audit-verdict-format.pdr.md
-│   ├── 15-validation.enabler/
-│   └── 21-spec-tree.enabler/
-│       ├── 15-context-loading.enabler/
-│       ├── 21-templates.enabler/
-│       ├── 32-decisions.enabler/
-│       │   └── 32-pdr-auditing.enabler/
-│       └── 32-evidence.enabler/
-│           ├── 21-sync-exclude.enabler/
-│           ├── 32-test-auditing.enabler/
-│           └── 43-audit-verdict-schema.enabler/
-└── AGENTS.md                      # This file
-```
+- `plugins/` — skills, agents, commands shipped to consumer repos. One subdirectory per plugin. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
+- `spx/` — this product's spec tree (durable map). See [`spx/CLAUDE.md`](spx/CLAUDE.md). Per-node `local/` holds product-specific skill overlays.
+- `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
+- `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
+- `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
+- `.spx/` — gitignored operational files (sessions, audit state).
+- `.claude/settings.json`, `.codex/config.toml` — product-scoped runtime settings, committed for collaborators.
+- `AGENTS.md` (this file), `CLAUDE.md` (symlink to `AGENTS.md`), `REVIEW.template.md` — repo-level instruction surfaces.
+
+For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The directory layout under each plugin follows the conventions in `plugins/develop/skills/`.
 
 ## Git workflow
 
