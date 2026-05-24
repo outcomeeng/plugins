@@ -1,6 +1,6 @@
 # Verification
 
-PROVIDES a shared contract — persistence shape, validation discipline, wrapper-agent shape — under which verification skills (judgment-style review of working changes, mechanical audit of spec-tree nodes, and any future skill that ships under this umbrella) produce branch-scoped evidence records
+PROVIDES a shared contract — persistence shape, validation discipline, wrapper-agent shape — under which verification skills (judgment-style review of working changes, mechanical audit of spec-tree nodes, and any future skill that ships under this contract) produce branch-scoped evidence records
 SO THAT authors of verification skills and the thin wrapper agents that drive them
 CAN compose against one persistence model, one validation discipline, and one agent shape
 

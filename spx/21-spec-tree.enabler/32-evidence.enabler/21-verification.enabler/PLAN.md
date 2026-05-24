@@ -2,13 +2,13 @@
 
 ## Why
 
-Every verification skill declared under this umbrella is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, the verification skill's judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for the first verification skill (`reviewing-changes`). This plan captures the design decisions future verification skills should mirror, plus the harness limitations discovered along the way.
+Every verification skill that conforms to the contract in `verification.md` is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, the verification skill's judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for the first verification skill (`reviewing-changes`). This plan captures the design decisions future verification skills should mirror, plus the harness limitations discovered along the way.
 
 `/aligning` does not detect missing `[eval]` evidence — the check is by hand against `spx/15-spec-coverage.adr.md`.
 
 ## The pattern (per-skill checklist)
 
-For every verification skill that ships under this umbrella:
+For every verification skill that conforms to the contract:
 
 1. **Eval directory layout.** One directory per judgment claim under `<verification-skill-enabler>/evals/<rule-slug>/`. Each carries:
    - `eval.toml` — `title`, `cases`, `prompt`, `threshold`, `trials` (per `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md` assertion #14).
@@ -39,13 +39,13 @@ These cannot be worked around inside the harness. Eval design must accommodate t
 
 ## When to adopt the pattern
 
-- A new verification skill ships under this umbrella → MUST carry `[eval]` evidence on its judgment surface before the spec is considered complete.
+- A new verification skill conforms to the contract → MUST carry `[eval]` evidence on its judgment surface before the spec is considered complete.
 - An existing verification skill has `[review]` tags on runtime LLM-behavior assertions → those are placement violations against `spx/15-spec-coverage.adr.md`. Re-tag to `[eval]` with an eval that probes the behavior (PR #43 did this for `reviewing-changes` against `evals/wrapper-protocol/`).
 - An existing verification skill has zero `[eval]` assertions on its judgment surface → its core deliverable is uncovered. Build evals per the pattern.
 
 ## Future verification skills anticipated
 
-- `32-auditing-nodes.enabler` (mentioned in `verification.md` umbrella spec) — when authored, will adopt the shared verification contract and this eval pattern.
+- `32-auditing-nodes.enabler` (mentioned in `verification.md`) — when authored, will adopt the shared verification contract and this eval pattern.
 - `32-test-auditing.enabler` (sibling under `32-evidence.enabler` — has its own PLAN.md) — when implemented, the test-auditing skill is a candidate verification skill; its eval evidence requirements are documented in its own PLAN.
 
 ## Reference
