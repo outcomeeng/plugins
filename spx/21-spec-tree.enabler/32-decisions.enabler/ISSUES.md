@@ -4,7 +4,7 @@
 
 The `/opening-pr` skill (`plugins/spec-tree/skills/opening-pr/SKILL.md`) declares a mandatory local review gate as Step 3 of its pre-flight, but the policy lives only in skill prose. There is no spec assertion in `spx/` that declares the gate as durable product truth, and no ADR/PDR that records the rationale (stricter-than-remote, FOLLOW-UP deferred only on scope-widening).
 
-**Source:** changes-reviewer finding F-001 on PR for `feat/local-review-gate` (2026-05-24). The governing principle: skill behavior changes that constitute durable product policy should be declared as spec assertions, per the truth hierarchy in `plugins/spec-tree/skills/understanding/references/durable-map.md` (`<truth_hierarchy>`: PDR/ADR → Spec → Test → Code; specs declare product truth).
+**Identified during pre-push review of `feat/local-review-gate` (2026-05-24).** The governing principle: skill behavior changes that constitute durable product policy should be declared as spec assertions, per the truth hierarchy in `plugins/spec-tree/skills/understanding/references/durable-map.md` (`<truth_hierarchy>`: PDR/ADR → Spec → Test → Code; specs declare product truth).
 
 **Why deferred from that PR:** authoring the spec assertion requires identifying the governing enabler (likely under `spx/21-spec-tree.enabler/76-pr-workflow.enabler/` or a sibling, to be confirmed via `/contextualizing`), running `/decomposing` if a new node is required, and writing the compliance rule. That work has its own scope and decomposition concerns that don't belong in a prose-edit PR.
 
