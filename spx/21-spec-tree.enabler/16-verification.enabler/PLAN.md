@@ -45,12 +45,12 @@ These cannot be worked around inside the harness. Eval design must accommodate t
 
 ## Future verification skills anticipated
 
-- `32-auditing-nodes.enabler` (mentioned in `verification.md`) — when authored, will adopt the shared verification contract and this eval pattern.
-- `32-test-auditing.enabler` (sibling under `32-evidence.enabler` — has its own PLAN.md) — when implemented, the test-auditing skill is a candidate verification skill; its eval evidence requirements are documented in its own PLAN.
+- `32-auditing-nodes.enabler` (a candidate future verification skill) — when authored, will adopt the shared verification contract and this eval pattern.
+- `spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler` (has its own PLAN.md) — when implemented, the test-auditing skill is a candidate verification skill; its eval evidence requirements are documented in its own PLAN.
 
 ## Reference
 
-- PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/32-reviewing-changes.enabler/evals/`
+- PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/`
 - Eval-harness contract: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
 - Evidence-execution-lanes ADR: `spx/16-evidence-execution-lanes.adr.md`

@@ -28,7 +28,7 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 
 ## Eval evidence — required when this verification skill ships
 
-This skill conforms to the verification contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
+This skill conforms to the verification contract in `spx/21-spec-tree.enabler/16-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
 
 PR #43 established the eval pattern for the first verification skill (`reviewing-changes`). Adopt the same shape here:
 
@@ -44,13 +44,13 @@ Concrete suggested evals when authoring this verification skill:
 - `testability-gate` — source code with no observable boundary for the claimed assertion fires a `testability`-step finding against the source file; source with proper seams does not.
 - `coupling-taxonomy-categorization` — each of the six existing taxonomy categories plus the new `laundered indirect` category is correctly assigned for representative cases.
 
-See `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/PLAN.md` for the full cross-skill eval design pattern and the harness limitations to design around.
+See `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the full cross-skill eval design pattern and the harness limitations to design around.
 
 ## Out of scope
 
 - ESLint rule implementation. Lives in `spx/43-typescript.enabler/`.
 - Ruff / Python equivalent. Lives in `spx/43-python.enabler/`.
-- Schema change for the new `testability` step and source-file findings. Lives in `spx/21-spec-tree.enabler/32-evidence.enabler/43-audit-verdict-schema.enabler/PLAN.md` — note that `spx/15-audit-verdict-format.pdr.md` has since shifted the verdict format to JSON; the XSD plan there may need revisiting before that schema work proceeds.
+- Schema change for the new `testability` step and source-file findings. The verdict format is JSON per `spx/15-audit-verdict-format.pdr.md`; the prior XSD-based `audit-verdict-schema` node has been removed, so schema work proceeds against the JSON `verdict.py` schema under `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/`.
 - Authoring the constant-object guidance itself. Lives in the language enablers.
 
 ## Done when

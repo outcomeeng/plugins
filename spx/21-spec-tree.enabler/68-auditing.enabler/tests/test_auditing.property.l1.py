@@ -19,7 +19,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 # parents[4] = repo root (this file lives 4 levels deep: spx/21-spec-tree.enabler/
-# 65-auditing.enabler/tests/<file>).
+# 68-auditing.enabler/tests/<file>).
 # Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[4]
