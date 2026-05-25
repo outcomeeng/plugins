@@ -69,7 +69,7 @@ def test_tool_availability_is_checked_before_any_runner_call() -> None:
 
 def test_changes_present_runs_full_sequence_when_every_step_succeeds() -> None:
     """No silent skip when steps return 0 — every declared step is invoked."""
-    runner = RecordingRunner(exit_codes=(0, 0, 0, 0))
+    runner = RecordingRunner(exit_codes=tuple(0 for _ in STEPS))
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
 

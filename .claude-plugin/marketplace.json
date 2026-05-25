@@ -1,7 +1,8 @@
 {
   "name": "outcomeeng",
   "metadata": {
-    "description": "Outcome Engineering plugin marketplace for Codex and Claude Code"
+    "description": "Outcome Engineering plugin marketplace for Codex and Claude Code",
+    "pluginRoot": "./dist/claude"
   },
   "owner": {
     "name": "Simon Heimlicher"
@@ -9,47 +10,47 @@
   "plugins": [
     {
       "name": "develop",
-      "source": "./plugins/develop",
+      "source": "./dist/claude/develop",
       "description": "Plugin development: /creating-skills, /creating-commands, /creating-subagents"
     },
     {
       "name": "frontend",
-      "source": "./plugins/frontend",
+      "source": "./dist/claude/frontend",
       "description": "Frontend design: /designing-frontend skill"
     },
     {
       "name": "typescript",
-      "source": "./plugins/typescript",
+      "source": "./dist/claude/typescript",
       "description": "TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent"
     },
     {
       "name": "python",
-      "source": "./plugins/python",
+      "source": "./dist/claude/python",
       "description": "Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture"
     },
     {
       "name": "prose",
-      "source": "./plugins/prose",
+      "source": "./dist/claude/prose",
       "description": "Prose craft for external prose (/writing-prose, /auditing-prose) and internal team docs (/writing-internal-docs, /auditing-internal-docs)"
     },
     {
       "name": "spec-tree",
-      "source": "./plugins/spec-tree",
+      "source": "./dist/claude/spec-tree",
       "description": "Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /auditing-product-decisions, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
     },
     {
       "name": "work",
-      "source": "./plugins/work",
+      "source": "./dist/claude/work",
       "description": "Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)"
     },
     {
       "name": "hdl",
-      "source": "./plugins/hdl",
+      "source": "./dist/claude/hdl",
       "description": "HDL engineering: /reviewing-vhdl, /reviewing-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)"
     },
     {
       "name": "rust",
-      "source": "./plugins/rust",
+      "source": "./dist/claude/rust",
       "description": "Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rust, /auditing-rust-architecture, rust-unsafe-auditor agent"
     }
   ]

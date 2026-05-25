@@ -1,0 +1,29 @@
+{
+  "name": "python",
+  "version": "0.18.0",
+  "description": "Python development workflow with testing, architecture, and coding skills",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "python",
+    "testing",
+    "code-review",
+    "architecture",
+    "automation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Python Engineering",
+    "shortDescription": "Python testing, coding, and architecture skills",
+    "longDescription": "Python development workflows covering testing, coding, review, and architecture guidance.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

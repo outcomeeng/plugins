@@ -143,7 +143,7 @@ class TestCollectSkills:
     def test_collects_skills_from_plugin(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        plugins_dir = tmp_path / "plugins"
+        plugins_dir = tmp_path / "dist" / "claude"
         self._create_skill(plugins_dir, "test-plugin", "skill-a")
         self._create_skill(plugins_dir, "test-plugin", "skill-b")
         monkeypatch.setattr(distribute_skills, "MONOREPO_ROOT", tmp_path)
@@ -157,7 +157,7 @@ class TestCollectSkills:
     def test_skips_plugin_without_skills_dir(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        plugins_dir = tmp_path / "plugins"
+        plugins_dir = tmp_path / "dist" / "claude"
         plugins_dir.mkdir(parents=True)
         monkeypatch.setattr(distribute_skills, "MONOREPO_ROOT", tmp_path)
 
@@ -168,7 +168,9 @@ class TestCollectSkills:
     def test_skips_skill_without_skill_md(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        plugins_dir = tmp_path / "plugins" / "test-plugin" / "skills" / "bad-skill"
+        plugins_dir = (
+            tmp_path / "dist" / "claude" / "test-plugin" / "skills" / "bad-skill"
+        )
         plugins_dir.mkdir(parents=True)
         monkeypatch.setattr(distribute_skills, "MONOREPO_ROOT", tmp_path)
 
@@ -179,7 +181,7 @@ class TestCollectSkills:
     def test_collects_from_multiple_plugins(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        plugins_dir = tmp_path / "plugins"
+        plugins_dir = tmp_path / "dist" / "claude"
         self._create_skill(plugins_dir, "plugin-a", "skill-1")
         self._create_skill(plugins_dir, "plugin-b", "skill-2")
         monkeypatch.setattr(distribute_skills, "MONOREPO_ROOT", tmp_path)

@@ -10,6 +10,7 @@ import pytest
 MARKETPLACE_ROOT = pathlib.Path(__file__).resolve().parents[6]
 SKILL_MD = (
     MARKETPLACE_ROOT
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"

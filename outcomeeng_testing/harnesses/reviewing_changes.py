@@ -5,7 +5,7 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
-  ``plugins/spec-tree/skills/reviewing-changes/scripts``.
+  ``src/plugins/spec-tree/skills/reviewing-changes/scripts``.
 - ``REFERENCES_DIR`` and ``REVIEW_PROMPT_PATH``. Tests that assert the
   swappable prompt is a standalone reference file consume the path from
   one source.
@@ -44,7 +44,7 @@ from typing import Any
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-SKILL_DIR = REPO_ROOT / "plugins" / "spec-tree" / "skills" / "reviewing-changes"
+SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "reviewing-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
@@ -56,7 +56,7 @@ COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 RENDER_REVIEW_SCRIPT = SCRIPTS_DIR / "render_review.py"
 
 WRAPPER_AGENT_PATH = (
-    REPO_ROOT / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
+    REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
 )
 RENDER_TEMPLATES_DIR = REFERENCES_DIR / "render"
 
@@ -72,8 +72,8 @@ FIXTURE_RULE_CITATION = (
 def load_review_result_module() -> ModuleType:
     """Load the ``review_result`` policy module via importlib.
 
-    The reviewing-changes scripts ship under ``plugins/`` (a runtime-
-    substituted plugin directory) and are not importable as a package.
+    The reviewing-changes scripts ship under ``src/plugins/`` (the authored
+    plugin source directory) and are not importable as a package.
     Tests that introspect ``SCHEMA_VERSION``, the ``Decision`` /
     ``Severity`` / ``Concern`` enums, the frozen ``Finding`` /
     ``ReviewResult`` dataclasses, or the ``parse_json`` /

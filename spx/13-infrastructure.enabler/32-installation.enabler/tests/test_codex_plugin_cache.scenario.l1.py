@@ -70,7 +70,7 @@ def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None
 
 
 def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
-    manifest = repo_root / "plugins" / plugin / ".claude-plugin" / "plugin.json"
+    manifest = repo_root / "src" / "plugins" / plugin / ".claude-plugin" / "plugin.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 

@@ -1,0 +1,11 @@
+{
+  "name": "work",
+  "version": "0.4.0",
+  "description": "Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": ["excalidraw", "diagrams", "powerpoint", "pptx", "presentations"]
+}

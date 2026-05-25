@@ -138,7 +138,7 @@ seven days.
 
 When working on the marketplace itself, every branch that changes a plugin's
 distribution surface bumps that plugin's version exactly once. The `just bump`
-recipe automates this — it detects which plugins changed under `plugins/<name>/**`
+recipe automates this — it detects which plugins changed under `src/plugins/<name>/**`
 since `origin/main`, classifies each plugin's change pattern into a semver
 segment, and updates the `version` field in every manifest each plugin owns
 (`.claude-plugin/plugin.json` and, when present, `.codex-plugin/plugin.json`)
@@ -172,7 +172,7 @@ evidence). The bumper refuses to write when the branch already carries a bump,
 and preserves manifest bytes character-for-character outside the `version` field
 so bumps produce minimal diffs.
 
-Only paths under `plugins/<name>/**` count as distribution-surface changes; edits
+Only paths under `src/plugins/<name>/**` count as distribution-surface changes; edits
 to `spx/`, `AGENTS.md`, tests, or other top-level files do not trigger a bump.
 
 ## Plugins

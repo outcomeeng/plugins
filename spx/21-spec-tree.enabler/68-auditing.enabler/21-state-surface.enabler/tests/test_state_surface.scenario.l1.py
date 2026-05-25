@@ -21,6 +21,7 @@ import pytest
 # parents[5] = repo root (this file lives 5 levels deep under spx/).
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[5]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"

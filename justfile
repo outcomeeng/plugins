@@ -22,7 +22,11 @@ check-manifests:
 
 # Check SKILL.md frontmatter in all skills
 check-skills:
-    find plugins -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
+    find src/plugins dist/claude dist/codex -name "SKILL.md" -exec uv run python -m outcomeeng.validation.skill_frontmatter {} +
+
+# Regenerate committed runtime plugin trees
+build-skills:
+    uv run python -m outcomeeng.distribution.build src dist
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
 docs:
@@ -74,7 +78,7 @@ sync-marketplace base_ref="":
 push-marketplace *push_args:
     uv run python -m outcomeeng.distribution.push {{push_args}}
 
-# Bump the manifest version of every plugin with changes under plugins/<name>/** since base_ref
+# Bump the manifest version of every plugin with changes under src/plugins/<name>/** since base_ref
 # Segment defaults to per-plugin auto-detection; pass an explicit segment to override every changed plugin.
 bump base_ref="origin/main" segment="":
     uv run python -m outcomeeng.distribution.bump {{ if segment != "" { "--segment " + segment } else { "" } }} {{base_ref}}

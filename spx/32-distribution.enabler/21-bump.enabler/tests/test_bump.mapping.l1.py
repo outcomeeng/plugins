@@ -68,28 +68,32 @@ def test_segment_increment_matches_mapping(
 # plugin whose only change is this one path).
 AUTO_SEGMENT_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
     # Minor-triggering: A/D/R on structural surfaces.
-    (FileStatus.ADDED, "plugins/foo/skills/new-skill/SKILL.md", Segment.MINOR),
-    (FileStatus.DELETED, "plugins/foo/skills/old-skill/SKILL.md", Segment.MINOR),
-    (FileStatus.RENAMED, "plugins/foo/skills/renamed/SKILL.md", Segment.MINOR),
-    (FileStatus.ADDED, "plugins/foo/commands/new-command.md", Segment.MINOR),
-    (FileStatus.DELETED, "plugins/foo/commands/old-command.md", Segment.MINOR),
-    (FileStatus.ADDED, "plugins/foo/agents/new-agent.md", Segment.MINOR),
-    (FileStatus.ADDED, "plugins/foo/.claude-plugin/plugin.json", Segment.MINOR),
-    (FileStatus.ADDED, "plugins/foo/.codex-plugin/plugin.json", Segment.MINOR),
+    (FileStatus.ADDED, "src/plugins/foo/skills/new-skill/SKILL.md", Segment.MINOR),
+    (FileStatus.DELETED, "src/plugins/foo/skills/old-skill/SKILL.md", Segment.MINOR),
+    (FileStatus.RENAMED, "src/plugins/foo/skills/renamed/SKILL.md", Segment.MINOR),
+    (FileStatus.ADDED, "src/plugins/foo/commands/new-command.md", Segment.MINOR),
+    (FileStatus.DELETED, "src/plugins/foo/commands/old-command.md", Segment.MINOR),
+    (FileStatus.ADDED, "src/plugins/foo/agents/new-agent.md", Segment.MINOR),
+    (FileStatus.ADDED, "src/plugins/foo/.claude-plugin/plugin.json", Segment.MINOR),
+    (FileStatus.ADDED, "src/plugins/foo/.codex-plugin/plugin.json", Segment.MINOR),
     # Patch-only: M on anything (status is the disqualifier).
-    (FileStatus.MODIFIED, "plugins/foo/skills/existing/SKILL.md", Segment.PATCH),
-    (FileStatus.MODIFIED, "plugins/foo/commands/existing.md", Segment.PATCH),
-    (FileStatus.MODIFIED, "plugins/foo/.claude-plugin/plugin.json", Segment.PATCH),
+    (FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md", Segment.PATCH),
+    (FileStatus.MODIFIED, "src/plugins/foo/commands/existing.md", Segment.PATCH),
+    (FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json", Segment.PATCH),
     # Patch-only: A/D/R on non-structural paths.
-    (FileStatus.ADDED, "plugins/foo/skills/existing/scripts/helper.py", Segment.PATCH),
     (
         FileStatus.ADDED,
-        "plugins/foo/skills/existing/references/notes.md",
+        "src/plugins/foo/skills/existing/scripts/helper.py",
         Segment.PATCH,
     ),
-    (FileStatus.ADDED, "plugins/foo/templates/new-template.md", Segment.PATCH),
-    (FileStatus.ADDED, "plugins/foo/hooks/hooks.json", Segment.PATCH),
-    (FileStatus.DELETED, "plugins/foo/.gitignore", Segment.PATCH),
+    (
+        FileStatus.ADDED,
+        "src/plugins/foo/skills/existing/references/notes.md",
+        Segment.PATCH,
+    ),
+    (FileStatus.ADDED, "src/plugins/foo/templates/new-template.md", Segment.PATCH),
+    (FileStatus.ADDED, "src/plugins/foo/hooks/hooks.json", Segment.PATCH),
+    (FileStatus.DELETED, "src/plugins/foo/.gitignore", Segment.PATCH),
 )
 
 
@@ -107,18 +111,18 @@ def test_auto_segment_returns_minor_when_any_change_is_minor_triggering() -> Non
     patch changes still yields MINOR for the plugin.
     """
     changes = (
-        ChangedPath(FileStatus.MODIFIED, "plugins/foo/.claude-plugin/plugin.json"),
-        ChangedPath(FileStatus.MODIFIED, "plugins/foo/skills/existing/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, "plugins/foo/skills/new/SKILL.md"),
+        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json"),
+        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md"),
+        ChangedPath(FileStatus.ADDED, "src/plugins/foo/skills/new/SKILL.md"),
     )
     assert auto_segment(changes) == Segment.MINOR
 
 
 def test_auto_segment_returns_patch_when_no_change_triggers_minor() -> None:
     changes = (
-        ChangedPath(FileStatus.MODIFIED, "plugins/foo/.claude-plugin/plugin.json"),
-        ChangedPath(FileStatus.MODIFIED, "plugins/foo/skills/existing/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, "plugins/foo/templates/foo.md"),
+        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json"),
+        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md"),
+        ChangedPath(FileStatus.ADDED, "src/plugins/foo/templates/foo.md"),
     )
     assert auto_segment(changes) == Segment.PATCH
 

@@ -12,11 +12,11 @@ Read [`REVIEW.template.md`](REVIEW.template.md) at the repository root before po
 
 This repo is two things at once.
 
-It is a **product**, with its own spec tree under `spx/`, its own decision records, and its own implementation under `outcomeeng/` and `plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
+It is a **product**, with its own spec tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
 
-It is also a **methodology shipped as plugins** under `plugins/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of work in `plugins/` is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Skill content that ships under `plugins/` references language-neutral mechanisms or per-language conventions; never a marketplace-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
+It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a marketplace-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
 
-Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a `plugins/` change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
+Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a shipped plugin change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
 
 ## Runtime Surfaces
 
@@ -49,7 +49,7 @@ This file covers repository rules that apply across both agents.
 
 Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
-Spec-tree methodology rules (node types, states, assertion types, ordering) live in `plugins/spec-tree/skills/understanding/references/` and are authoritative over `methodology/`.
+Spec-tree methodology rules (node types, states, assertion types, ordering) live in `src/plugins/spec-tree/skills/understanding/references/` and are authoritative over `methodology/`.
 
 ## Historical Context
 
@@ -80,7 +80,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. The `semgrep` rule enforces this.
 - ⚠️ **NEVER manually delete untracked files or empty directories** - Git doesn't track empty dirs; `.DS_Store` and `__pycache__` are gitignored artifacts. Use `just clean` to remove them
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
-- ⚠️ **The methodology is multi-language** - Skill content shipped under `plugins/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each `plugins/<lang>/skills/standardizing-<lang>-tests/SKILL.md` for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
+- ⚠️ **The methodology is multi-language** - Skill content shipped under `dist/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each language plugin's `standardizing-<lang>-tests` skill for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
 - ⚠️ **Python skill examples use `product.*` / `product_testing.*`** - Not `src.*` or `src_testing.*`. The `src` convention is ambiguous across Python ecosystems; `product` is unambiguous and signals "the thing we're building"
 - ⚠️ **Audit skills (`auditing-*`) must be read-only** - They produce verdicts, not code changes. `allowed-tools` should not include `Write` or `Edit`. The calling workflow decides what happens after the verdict
 - ⚠️ **NEVER weaken a spec to match code or tests** - When an audit finds an unfulfilled assertion, write the missing test or fix the implementation. The declaration governs. Removing or downgrading an assertion to make the audit pass is the exact failure mode the methodology exists to prevent.
@@ -130,12 +130,12 @@ Plugins from this marketplace are installed into consumer projects that share no
 
 Authors of skills, agents, and the scripts they invoke must assume:
 
-- ⚠️ **Only `plugins/` is guaranteed present.** Consumer checkouts do not contain `outcomeeng/`, `outcomeeng_evals/`, `outcomeeng_testing/`, `spx/`, or any other top-level directory from this repo. Anything a plugin script needs at runtime must live under that plugin's own directory tree.
+- ⚠️ **Only the installed plugin tree is guaranteed present.** Consumer checkouts do not contain `src/`, `dist/`, `outcomeeng/`, `outcomeeng_evals/`, `outcomeeng_testing/`, `spx/`, or any other top-level directory from this repo. Anything a plugin script needs at runtime must render into that plugin's own generated runtime tree under `dist/claude/` and `dist/codex/`.
 - ⚠️ **`python3` only — no `uv`.** Skill content invokes scripts via `python3 "${CLAUDE_SKILL_DIR}/path/to/script.py"` — the skill loader substitutes the path before the agent sees it. Hooks (in `hooks/hooks.json`) and MCP server configs use `${CLAUDE_PLUGIN_ROOT}` instead, since they have no skill directory. Agent definition files (under `agents/`) get neither variable substituted in the prompt body and `${CLAUDE_PLUGIN_ROOT}` is not a Bash environment variable, so agents must reach `scripts/` only by invoking a skill that resolves the path. **Python 3.11 is the minimum version.** Scripts may use `StrEnum`, `tomllib`, exception groups, and other 3.11 features without conditional fallbacks; consumers on older Python must upgrade. No `uv run`, no `pip install`, no project-scoped virtualenv.
 - ⚠️ **Stdlib only.** No `click`, no `pydantic`, no third-party JSON Schema, no `tomllib`-via-package. `argparse`, `json`, `dataclasses`, `enum`, `pathlib`, `subprocess`, `sys`, `typing` — that's the toolbox. Anything richer must be vendored or replaced.
 - ⚠️ **No on-the-fly dependency installation.** Skills must not run `pip install`, `uv pip install`, `npm install`, or any other package fetch as part of their normal flow. Consumers approve plugin installation once; runtime side effects must not include further installations.
 
-The `outcomeeng_*` Python packages in this repo are part of the marketplace's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside `plugins/` is not portable.
+The `outcomeeng_*` Python packages in this repo are part of the marketplace's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside a generated plugin runtime tree is not portable.
 
 When a skill genuinely needs richer Python machinery, the right answer is usually to write the logic in stdlib-only form, ship it inside the plugin, and document the `python3 "${CLAUDE_SKILL_DIR}/..."` invocation in the skill body.
 
@@ -198,7 +198,7 @@ Every skill, agent, and command across every plugin is listed in the auto-genera
 
 ## Spec Tree Methodology
 
-The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative methodology reference.
+The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `src/plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative methodology reference.
 
 | Step        | What happens                  | Node state after |
 | ----------- | ----------------------------- | ---------------- |
@@ -226,7 +226,7 @@ implementation file
   → containing node directory under spx/
 ```
 
-`spx/` contains only specs, decision records, escape hatches, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `plugins/`, in `outcomeeng/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
+`spx/` contains only specs, decision records, escape hatches, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
 
 If multiple implementation files in the diff resolve to multiple nodes, take their lowest common ancestor in the tree — `/contextualizing` on the LCA pulls constraining context for every descendant.
 
@@ -276,7 +276,8 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 
 **ALWAYS write to product directories:**
 
-- `plugins/` - Plugin code, skills, commands, templates
+- `src/plugins/` - Authored plugin code, skills, commands, agents, and templates
+- `dist/claude/`, `dist/codex/` - Generated runtime plugin trees committed for marketplace installation
 - `spx/` - Specs as durable map (see [spx/CLAUDE.md](spx/CLAUDE.md))
 - `.spx/` - Tool operational files (sessions, cache) - gitignored
 - `.claude/settings.json` - Claude product-scope plugin settings created by `claude plugin ... --scope project` and committed for collaborators
@@ -294,7 +295,7 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 ### Before Making Changes
 
 1. **Read the context**: Check [CLAUDE.md](CLAUDE.md:1) (this file) for current structure
-2. **Check existing commands**: Use Glob to find existing `.md` files in `plugins/*/commands/`
+2. **Check existing commands**: Use Glob to find existing `.md` files in `src/plugins/*/commands/`
 3. **Review plugin structure**: Each plugin has its own `plugin.json` in `.claude-plugin/`
    - Codex-capable plugins also have `.codex-plugin/plugin.json`
 
@@ -313,7 +314,8 @@ Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/
 
 ### Top-level layout
 
-- `plugins/` — skills, agents, commands shipped to consumer repos. One subdirectory per plugin. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
+- `src/plugins/` — authored skills, agents, commands, manifests, and templates. One subdirectory per plugin.
+- `dist/claude/`, `dist/codex/` — generated runtime plugin trees shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
 - `spx/` — this product's spec tree (durable map). See [`spx/CLAUDE.md`](spx/CLAUDE.md). Per-node `local/` holds product-specific skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
@@ -322,7 +324,7 @@ Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/
 - `.claude/settings.json`, `.codex/config.toml` — product-scoped runtime settings, committed for collaborators.
 - `AGENTS.md` (this file), `CLAUDE.md` (symlink to `AGENTS.md`), `REVIEW.template.md` — repo-level instruction surfaces.
 
-For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The directory layout under each plugin follows the conventions in `plugins/develop/skills/`.
+For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/develop/skills/`.
 
 ## Git workflow
 
@@ -347,7 +349,7 @@ Use the workflow the user chooses for the current change. Pull requests are the 
 For pull-request work, the path is:
 
 1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`.
-2. **Bump plugin versions** when the branch's first plugin-distribution commit is about to land. Run `just bump-dry` to preview, then `just bump` to write — the tool detects every plugin with changes under `plugins/<name>/**` since `origin/main`, classifies each plugin's change pattern into a semver segment (a plugin that gains, loses, or renames a skill/command/agent/manifest gets `minor`; everything else gets `patch`), and writes the resulting version in every manifest each plugin owns (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`). The same run can produce `minor` for one plugin and `patch` for another. The tool refuses to write when the branch already carries a bump (per `spx/local/committing-changes.md`'s "bump once per branch" rule). Auto-detection never selects `major` — pass `--segment major` (or `minor`/`patch`) to force a segment for every changed plugin; explicit overrides emit a stderr warning naming any plugin whose detected segment differed. The mutually-exclusive `--check` mode exits non-zero if any changed plugin still needs a bump; CI calls `just bump-check` to enforce that every PR carries its version bump.
+2. **Bump plugin versions** when the branch's first plugin-distribution commit is about to land. Run `just bump-dry` to preview, then `just bump` to write — the tool detects every plugin with changes under `src/plugins/<name>/**` since `origin/main`, classifies each plugin's change pattern into a semver segment (a plugin that gains, loses, or renames a skill/command/agent/manifest gets `minor`; everything else gets `patch`), and writes the resulting version in every manifest each plugin owns (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`). The same run can produce `minor` for one plugin and `patch` for another. The tool refuses to write when the branch already carries a bump (per `spx/local/committing-changes.md`'s "bump once per branch" rule). Auto-detection never selects `major` — pass `--segment major` (or `minor`/`patch`) to force a segment for every changed plugin; explicit overrides emit a stderr warning naming any plugin whose detected segment differed. The mutually-exclusive `--check` mode exits non-zero if any changed plugin still needs a bump; CI calls `just bump-check` to enforce that every PR carries its version bump.
 3. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
 4. **Open the PR.** Invoke `/open-pr`. It runs branch-hygiene checks, pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a draft PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It loads `spx/local/opening-pr.md` for the marketplace-specific pre-flight checks and template sections.
 5. **Review and merge.** Invoke `/managing-pr`. It drives the post-creation loop — three-surface review inspection, three-severity triage of findings, follow-up pushes — and merges autonomously when `<merge_gate>` passes. The marketplace's `spx/local/merging.md` overlay loads via `/standardizing-merging` `<repo_local_overlay>` and supplies the project-specific merge command, closure gate, and post-merge sync; merge authority stays on the skill's autonomous default. The overlay's merge command is `gh pr merge <n> --merge` followed by `git push origin --delete <branch>` (the rebase-merge default conflicts with the marketplace's merge-commit history style; the separate remote-delete sidesteps the multi-worktree failure where `git checkout main` errors when `main` is already checked out elsewhere). Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit`.
@@ -358,7 +360,7 @@ For pull-request work, the path is:
    just sync-marketplace <previous-main-ref>
    ```
 
-   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, and runs `validate_install` and `check-installed`. It accepts an optional base ref; when the range from that ref to `HEAD` has no changes under `plugins/`, `.claude-plugin/`, or `.agents/plugins/`, it exits without refreshing the marketplace. It does not push or pull — do the `git pull` yourself first.
+   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, installs generated Codex agents, and runs `validate_install` and `check-installed`. It accepts an optional base ref; when the range from that ref to `HEAD` has no changes under `src/`, `dist/`, `.claude-plugin/`, or `.agents/plugins/`, it exits without refreshing the marketplace. It does not push or pull — do the `git pull` yourself first.
 
 ### Publishing directly to `main`
 
@@ -375,7 +377,7 @@ Bare `git push origin main` skips the change-aware publish wrapper. For plugin d
 
 ### How the marketplace cache resolves to skill content
 
-`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./plugins/<name>"` path. The runtime resolves every install — pinned or unpinned — through the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`. Each `claude plugin marketplace upgrade` adds a new version directory; prior version directories persist alongside it. Per `spx/13-infrastructure.enabler/32-installation.enabler/21-claude-cache-preservation.pdr.md`, the marketplace sync recipe replaces prior version directories with symlinks to the current version, so any resolved version path lands on the same content.
+`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./dist/claude/<name>"` path. The runtime resolves every install — pinned or unpinned — through the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`. Each `claude plugin marketplace upgrade` adds a new version directory; prior version directories persist alongside it. Per `spx/13-infrastructure.enabler/32-installation.enabler/21-claude-cache-preservation.pdr.md`, the marketplace sync recipe replaces prior version directories with symlinks to the current version, so any resolved version path lands on the same content.
 
 The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked. `/reload-plugins` re-indexes the cache and re-reads SKILL.md from disk during registration; first invocations after the reload pick up the disk content. Skills already loaded into session memory keep their cached content for the rest of the session until compaction re-attaches from disk.
 

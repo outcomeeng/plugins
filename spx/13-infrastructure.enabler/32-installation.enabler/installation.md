@@ -17,4 +17,4 @@ CAN refresh installed plugins without breaking active sessions or local tool sta
 
 ### Compliance
 
-- ALWAYS: marketplace sync and direct-publish wrappers refresh installed plugins only when the published range changes plugin distribution files under `plugins/`, `.claude-plugin/`, or `.agents/plugins`; spec-only and escape-hatch-only commits do not refresh marketplace caches ([review])
+- ALWAYS: marketplace sync and direct-publish wrappers refresh installed plugins only when the published range changes plugin distribution files under `src/`, `dist/`, `.claude-plugin/`, or `.agents/plugins`; spec-only and escape-hatch-only commits do not refresh marketplace caches ([review])

@@ -1,0 +1,21 @@
+{
+  "name": "typescript",
+  "version": "0.19.0",
+  "description": "TypeScript development workflow with testing, implementation, review, and architecture skills",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "typescript",
+    "code",
+    "architecture",
+    "testing",
+    "review",
+    "simplification",
+    "tdd",
+    "bdd",
+    "sdd"
+  ]
+}

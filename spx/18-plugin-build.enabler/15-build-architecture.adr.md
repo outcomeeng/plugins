@@ -73,7 +73,7 @@ Shared content (code standards, test standards, agent-prompt conventions, and si
 
 ### Recognized by
 
-The repository contains a `src/` tree as the only authored plugin source, plus `dist/claude/` and `dist/codex/` trees as committed build outputs. Marketplace JSONs reference plugin paths under `dist/`. A build module under `outcomeeng/scripts/` is the sole writer of `dist/` content. Lefthook pre-commit configuration runs `just build-skills` and rejects commits that leave `dist/` out of sync with `src/`.
+The repository contains a `src/` tree as the only authored plugin source, plus `dist/claude/` and `dist/codex/` trees as committed build outputs. Marketplace JSONs reference plugin paths under `dist/`. `outcomeeng/distribution/build.py` is the sole writer of `dist/` content. Lefthook pre-commit configuration runs `just build-skills` and rejects commits that leave `dist/` out of sync with `src/`.
 
 ### MUST
 

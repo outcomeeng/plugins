@@ -41,7 +41,6 @@ venv/
 .hypothesis/
 
 # Build outputs
-dist/
 build/
 out/
 

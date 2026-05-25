@@ -20,11 +20,35 @@ _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 
 
 def _skill_files() -> tuple[str, ...]:
-    plugins_dir = _REPO_ROOT / "plugins"
-    return tuple(sorted(str(path) for path in plugins_dir.rglob("SKILL.md")))
+    roots = (
+        _REPO_ROOT / "src" / "plugins",
+        _REPO_ROOT / "dist" / "claude",
+        _REPO_ROOT / "dist" / "codex",
+    )
+    return tuple(
+        sorted(
+            str(path)
+            for root in roots
+            if root.is_dir()
+            for path in root.rglob("SKILL.md")
+        )
+    )
 
 
 STEPS: Final = (
+    Step(
+        label="build-skills",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.distribution.build",
+            "src",
+            "dist",
+        ),
+    ),
+    Step(label="dist-diff", argv=("git", "diff", "--exit-code", "dist")),
     Step(label="fmt-check", argv=("dprint", "check")),
     Step(label="ruff", argv=("uv", "run", "ruff", "check", ".")),
     Step(

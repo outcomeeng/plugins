@@ -1,6 +1,6 @@
 """Manifest version-bumping orchestration.
 
-Bumps the manifest version of every plugin whose `plugins/{name}/**` tree
+Bumps the manifest version of every plugin whose `src/plugins/{name}/**` tree
 has changes since a base reference (default `origin/main`). Each changed
 plugin's version is incremented exactly once across every manifest it
 owns (`.claude-plugin/plugin.json` always; `.codex-plugin/plugin.json`
@@ -9,7 +9,7 @@ when present). The increment segment defaults to `patch`; `minor` and
 
 The module's contract:
 
-- `PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST` name the path prefix
+- `SOURCE_PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST` name the path prefix
   and manifest filenames the orchestration recognizes.
 - `REQUIRED_TOOLS` names the external binaries `main()` shells out to.
 - `Version`, `Segment`, and `ManifestRecord` are the domain dataclasses.
@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Protocol
 
 REQUIRED_TOOLS: tuple[str, ...] = ("git",)
-PLUGINS_DIR: str = "plugins"
+SOURCE_PLUGINS_DIR: str = "src/plugins"
 CLAUDE_MANIFEST: str = ".claude-plugin/plugin.json"
 CODEX_MANIFEST: str = ".codex-plugin/plugin.json"
 
@@ -132,7 +132,7 @@ class ManifestRecord:
 
 class ChangeProbe(Protocol):
     """Returns a mapping from plugin name to the file-status-tagged paths
-    that changed under `plugins/{name}/**` since `base_ref`."""
+    that changed under `src/plugins/{name}/**` since `base_ref`."""
 
     def __call__(self, base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]: ...
 
@@ -163,17 +163,17 @@ class ToolProbe(Protocol):
 
 
 def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
-    """Filter diff paths to the set of plugin names changed.
-
-    A path counts as a change for plugin `{name}` exactly when its first
-    two segments are `plugins/{name}` with a non-empty `{name}`. Paths
-    outside the `plugins/` prefix produce no entry.
-    """
+    """Filter diff paths to the set of plugin names changed."""
     plugins: set[str] = set()
+    source_parts = SOURCE_PLUGINS_DIR.split("/")
     for path in paths:
         parts = path.split("/")
-        if len(parts) >= 2 and parts[0] == PLUGINS_DIR and parts[1]:
-            plugins.add(parts[1])
+        if (
+            len(parts) > len(source_parts)
+            and parts[: len(source_parts)] == source_parts
+            and parts[len(source_parts)]
+        ):
+            plugins.add(parts[len(source_parts)])
     return frozenset(plugins)
 
 
@@ -185,7 +185,7 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     selects `MAJOR` — major bumps require explicit human opt-in per
     `spx/local/committing-changes.md`.
 
-    Structural paths (relative to `plugins/{name}/`):
+    Structural paths (relative to `src/plugins/{name}/`):
 
     - `skills/{slug}/SKILL.md`
     - `commands/{slug}.md`
@@ -202,9 +202,14 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
 
 def _is_minor_triggering_path(path: str) -> bool:
     parts = path.split("/")
-    if len(parts) < 4 or parts[0] != PLUGINS_DIR or not parts[1]:
+    source_parts = SOURCE_PLUGINS_DIR.split("/")
+    if (
+        len(parts) < len(source_parts) + 3
+        or parts[: len(source_parts)] != source_parts
+        or not parts[len(source_parts)]
+    ):
         return False
-    rest = parts[2:]
+    rest = parts[len(source_parts) + 1 :]
     if len(rest) == 3 and rest[0] == "skills" and rest[2] == "SKILL.md":
         return True
     if len(rest) == 2 and rest[0] in ("commands", "agents") and rest[1].endswith(".md"):
@@ -264,7 +269,9 @@ def bump(
         plugin_already_bumped = False
         for record in records:
             working_tree_version = _version_from_manifest_text(record.content)
-            base_ref_content = content_probe(base_ref, record.path)
+            base_ref_content = _base_manifest_content(
+                content_probe, base_ref, record.path
+            )
             if base_ref_content is not None:
                 base_ref_version = _version_from_manifest_text(base_ref_content)
                 if working_tree_version != base_ref_version:
@@ -334,6 +341,25 @@ def _version_from_manifest_text(content: str) -> Version:
     return Version.parse(data["version"])
 
 
+def _base_manifest_content(
+    content_probe: ContentProbe, base_ref: str, path: str
+) -> str | None:
+    content = content_probe(base_ref, path)
+    if content is not None:
+        return content
+    legacy_path = _legacy_plugin_path(path)
+    if legacy_path == path:
+        return None
+    return content_probe(base_ref, legacy_path)
+
+
+def _legacy_plugin_path(path: str) -> str:
+    prefix = f"{SOURCE_PLUGINS_DIR}/"
+    if not path.startswith(prefix):
+        return path
+    return f"plugins/{path.removeprefix(prefix)}"
+
+
 def _replace_version(content: str, new_version: str) -> str:
     data = json.loads(content)
     old_version = data["version"]
@@ -356,10 +382,15 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
         change = _parse_diff_line(line)
         if change is None:
             continue
-        parts = change.path.split("/", 2)
-        if len(parts) < 2 or parts[0] != PLUGINS_DIR or not parts[1]:
+        parts = change.path.split("/")
+        source_parts = SOURCE_PLUGINS_DIR.split("/")
+        if (
+            len(parts) <= len(source_parts)
+            or parts[: len(source_parts)] != source_parts
+            or not parts[len(source_parts)]
+        ):
             continue
-        changes.setdefault(parts[1], []).append(change)
+        changes.setdefault(parts[len(source_parts)], []).append(change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
 
 
@@ -399,7 +430,7 @@ def _real_content_probe(base_ref: str, path: str) -> str | None:
 def _real_manifest_reader(plugin: str) -> tuple[ManifestRecord, ...]:
     records: list[ManifestRecord] = []
     for manifest in _KNOWN_MANIFESTS:
-        path_str = f"{PLUGINS_DIR}/{plugin}/{manifest}"
+        path_str = f"{SOURCE_PLUGINS_DIR}/{plugin}/{manifest}"
         path = Path(path_str)
         if path.is_file():
             records.append(ManifestRecord(path=path_str, content=path.read_text()))
@@ -418,7 +449,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="outcomeeng.distribution.bump",
         description=(
-            "Bump the manifest version of every plugin whose `plugins/{name}/**` "
+            "Bump the manifest version of every plugin whose `src/plugins/{name}/**` "
             "tree has changes since base_ref. Each changed plugin's version is "
             "incremented exactly once across every manifest it owns."
         ),
@@ -436,7 +467,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Semver segment to increment. When omitted, the segment is "
             "auto-detected per plugin from the file-status pattern of "
-            "changes under plugins/<name>/**. When provided, overrides "
+            "changes under src/plugins/<name>/**. When provided, overrides "
             "auto-detection for every changed plugin and emits a stderr "
             "warning naming any plugin whose detected segment differs."
         ),
@@ -461,7 +492,7 @@ def _build_parser() -> argparse.ArgumentParser:
 __all__ = [
     "CLAUDE_MANIFEST",
     "CODEX_MANIFEST",
-    "PLUGINS_DIR",
+    "SOURCE_PLUGINS_DIR",
     "REQUIRED_TOOLS",
     "ChangeProbe",
     "ChangedPath",

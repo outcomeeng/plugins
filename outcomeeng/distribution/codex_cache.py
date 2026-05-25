@@ -35,6 +35,7 @@ from typing import Protocol
 DEFAULT_MARKETPLACE = "outcomeeng"
 DEFAULT_WINDOW_DAYS = 10
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
+SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
@@ -60,7 +61,7 @@ class GitPluginHistory:
     window_days: int = DEFAULT_WINDOW_DAYS
 
     def working_tree_plugins(self) -> frozenset[str]:
-        plugins_dir = self.repo_root / "plugins"
+        plugins_dir = self.repo_root / SOURCE_PLUGINS_DIR
         if not plugins_dir.is_dir():
             return frozenset()
         names: set[str] = set()
@@ -73,7 +74,7 @@ class GitPluginHistory:
         return frozenset(names)
 
     def published_versions(self, plugin: str) -> frozenset[str]:
-        manifest_rel = f"plugins/{plugin}/.claude-plugin/plugin.json"
+        manifest_rel = f"{SOURCE_PLUGINS_DIR}/{plugin}/.claude-plugin/plugin.json"
         log_result = subprocess.run(
             [
                 "git",

@@ -5,11 +5,12 @@ This file is loaded by the `/committing-changes` skill when working in this repo
 ## Version Management
 
 Plugin version bumps happen only when a commit changes a plugin distribution
-surface: files under `plugins/{plugin-name}/` that installed users can load, or
-marketplace catalog fields that change how a plugin is discovered. The first
-commit on a branch that changes a plugin distribution surface bumps that plugin's
-manifests relative to the target base branch, normally `origin/main`. That
-version then stays fixed for the entire PR phase.
+surface: authored files under `src/plugins/{plugin-name}/`, generated runtime
+files under `dist/{runtime}/{plugin-name}/`, or marketplace catalog fields that
+change how a plugin is discovered. The first commit on a branch that changes a
+plugin distribution surface bumps that plugin's source manifests relative to the
+target base branch, normally `origin/main`. That version then stays fixed for
+the entire PR phase.
 
 Spec Tree files under `spx/`, including node-local `PLAN.md` and `ISSUES.md`
 escape hatches, do not bump marketplace plugin versions by themselves. They are
@@ -62,8 +63,8 @@ validation-config-only commits do not refresh local marketplace caches.
 **Plugin manifest version** (update every manifest that exists for the plugin you changed):
 
 ```bash
-plugins/{plugin-name}/.claude-plugin/plugin.json
-plugins/{plugin-name}/.codex-plugin/plugin.json  # if it exists
+src/plugins/{plugin-name}/.claude-plugin/plugin.json
+src/plugins/{plugin-name}/.codex-plugin/plugin.json  # if it exists
 ```
 
 ```json
@@ -137,11 +138,11 @@ git commit -m "docs(plugin): address review feedback"    # bumps 0.4.3 → 0.4.4
 # 1. Make your changes to skills/commands/etc
 # 2. Update every manifest for the changed plugin
 # 3. Stage the plugin changes and manifest updates together
-git add plugins/{plugin-name}/
+git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/
 git commit -m "docs({plugin-name}): refine skill guidance"
 
 # Later review feedback edits do not bump again.
-git add plugins/{plugin-name}/
+git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/
 git commit -m "docs({plugin-name}): address review feedback"
 ```
 
@@ -171,17 +172,18 @@ git commit -m "docs({plugin-name}): address review feedback"
    version bump against the target base branch**: MINOR for new items or major
    functional changes; PATCH for everything else.
 4. **Update plugin.json once, in the first plugin-distribution commit on the branch**:
-   - `plugins/{plugin-name}/.claude-plugin/plugin.json`
-   - `plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
+   - `src/plugins/{plugin-name}/.claude-plugin/plugin.json`
+   - `src/plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
 5. **Update marketplace catalogs**:
    - When **adding a new plugin**: add an entry to **both** `.claude-plugin/marketplace.json` (Claude Code) and `.agents/plugins/marketplace.json` (Codex). `just check` fails if either catalog is missing the plugin.
    - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
-6. **Document changes**: Update `CLAUDE.md` if adding new commands/skills to the plugin tables
-7. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
-8. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
+6. **Regenerate derived files**: Run `just build-skills` so `dist/claude/` and `dist/codex/` match the authored source.
+7. **Document changes**: Update `AGENTS.md` and generated docs when adding new commands/skills to the catalog-facing surfaces.
+8. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
+9. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
 
    ```bash
-   git add plugins/{plugin-name}/ plugins/{plugin-name}/.claude-plugin/plugin.json
+   git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/ src/plugins/{plugin-name}/.claude-plugin/plugin.json
    git commit -m "type(scope): your changes including version bump"
    ```
 
