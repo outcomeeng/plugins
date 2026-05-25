@@ -13,7 +13,7 @@ This decision governs how the reviewing-changes skill decomposes into Python scr
 - The scripts run under `python3` stdlib only, no `outcomeeng_*` imports, per `spx/13-plugin-and-runtime-conventions.adr.md` and the Plugin Portability Constraints in `AGENTS.md`.
 - Every filesystem effect routes through the `thread_store` facade, per the shared verification contract in `spx/21-spec-tree.enabler/16-verification.enabler/verification.md` and the backend-abstraction decision in `spx/21-spec-tree.enabler/16-verification.enabler/21-thread-store.enabler/21-backend-abstraction.adr.md`.
 - The wrapper agent at `plugins/spec-tree/agents/changes-reviewer.md` holds `model: sonnet`, `tools: Bash, Read, Skill`. Agent prompt bodies do NOT receive `${CLAUDE_SKILL_DIR}` substitution per `spx/21-spec-tree.enabler/17-auditing.adr.md`; only skill prose does. The agent therefore reaches script paths only by invoking the verification skill.
-- The wrapper agent must NOT hand-validate the JSON it just emitted — duplicate validation policy in agent prose drifts from the policy module, per verification.md.
+- The wrapper agent must NOT hand-validate the JSON it just emitted — duplicate verification policy in agent prose drifts from the policy module, per verification.md.
 - The swappable judgment-style review prompt is a standalone markdown file at `${CLAUDE_SKILL_DIR}/references/review-prompt.md` so swapping the prompt does not require touching scripts.
 - A review against a `base_ref` requires a real git diff, which the orchestrator computes once per run; the model never derives diffs from text descriptions.
 
