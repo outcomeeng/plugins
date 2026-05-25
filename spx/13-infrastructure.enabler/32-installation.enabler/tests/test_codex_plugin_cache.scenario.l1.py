@@ -12,16 +12,20 @@ in place of the production git-history walker mandated by
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+import pytest
 
 from outcomeeng.distribution import codex_cache as preserve_codex_plugin_cache
 from outcomeeng.distribution.codex_cache import DEFAULT_MARKETPLACE
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"
+UNINSTALLED_PLUGIN_NAME = "uninstalled-plugin"
 OLDER_VERSION = "0.26.5"
 CURRENT_VERSION = "0.26.6"
 
@@ -61,6 +65,12 @@ def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None
     skill_file = _skill_file(cache_root, plugin, version)
     skill_file.parent.mkdir(parents=True)
     skill_file.write_text(text)
+
+
+def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
+    manifest = repo_root / "plugins" / plugin / ".claude-plugin" / "plugin.json"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
 
 def _quiet_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -163,3 +173,32 @@ def test_orphan_plugin_cache_directory_is_pruned(tmp_path: Path) -> None:
     assert ORPHAN_PLUGIN_NAME in result.pruned_plugins, (
         f"expected {ORPHAN_PLUGIN_NAME} in result.pruned_plugins={result.pruned_plugins}"
     )
+
+
+def test_uncached_working_tree_plugin_does_not_emit_warning(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A working-tree plugin that is not installed in the local Codex cache is skipped
+    silently; cache preservation only has work to do for plugins with cache state."""
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_manifest(repo_root, PLUGIN_NAME, CURRENT_VERSION)
+    _write_manifest(repo_root, UNINSTALLED_PLUGIN_NAME, CURRENT_VERSION)
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+
+    exit_code = preserve_codex_plugin_cache.main(
+        [
+            DEFAULT_MARKETPLACE,
+            "--cache-root",
+            str(cache_root),
+            "--repo-root",
+            str(repo_root),
+            "--dry-run",
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    output = f"{captured.out}{captured.err}"
+    assert "warning:" not in output
