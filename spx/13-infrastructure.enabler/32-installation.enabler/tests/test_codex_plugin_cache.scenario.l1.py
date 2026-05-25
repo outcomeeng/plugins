@@ -3,11 +3,13 @@
 Each scenario corresponds to one assertion in
 ``spx/13-infrastructure.enabler/32-installation.enabler/installation.md``.
 
-The preservation step takes a ``PluginHistory`` provider that names the working-tree
-plugin set and per-plugin published versions in the window. Tests inject a
-``StaticHistory`` implementation (Stage 5 exception 2 -- interaction protocol DI)
-in place of the production git-history walker mandated by
-``21-codex-cache-preservation.adr.md``.
+The direct preservation scenarios take a ``PluginHistory`` provider that names the
+working-tree plugin set and per-plugin published versions in the window. They
+inject a ``StaticHistory`` implementation (Stage 5 exception 2 -- interaction
+protocol DI) in place of the production git-history walker mandated by
+``21-codex-cache-preservation.adr.md``. CLI-surface scenarios that verify
+``main()`` output call ``main()`` directly with the production ``GitPluginHistory``
+against a synthetic non-git repository.
 """
 
 from __future__ import annotations
