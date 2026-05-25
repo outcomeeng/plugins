@@ -25,7 +25,10 @@ import re
 import sys
 
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[6]
+# parents[5] = repo root (this file lives 5 levels deep: spx/21-spec-tree.enabler/
+# 16-verification.enabler/21-thread-store.enabler/tests/<file>).
+# Tree surgery that changes the enabler's depth must update this index.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[5]
 THREAD_STORE_SCRIPTS_DIR = (
     REPO_ROOT / "plugins" / "spec-tree" / "skills" / "thread-store" / "scripts"
 )

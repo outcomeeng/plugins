@@ -7,8 +7,8 @@
      model decides STOP or PROCEED by applying the skill prose at
      plugins/spec-tree/skills/opening-pr/SKILL.md Step 3. The gate's
      upstream behavior (the reviewer itself) has its own evals under
-     spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/
-     32-reviewing-changes.enabler/evals/. -->
+     spx/21-spec-tree.enabler/68-reviewing.enabler/
+     21-reviewing-changes.enabler/evals/. -->
 
 You are simulating the operator agent that runs `/opening-pr`'s Step 3 (local review gate). The agent has just invoked the `changes-reviewer` agent (or the `/review-changes` slash command) on the working diff, and the resulting `review-result.json` is provided below.
 

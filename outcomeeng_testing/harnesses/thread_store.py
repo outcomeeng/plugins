@@ -1,7 +1,7 @@
 """Harness for thread-store scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/21-thread-store.enabler/tests/``:
+``spx/21-spec-tree.enabler/16-verification.enabler/21-thread-store.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find

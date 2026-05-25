@@ -1,7 +1,7 @@
 """Harness for verdict-toolchain scenario tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/32-evidence.enabler/65-verdict-toolchain.enabler/tests/``:
+``spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. Without a single
   source, every test file walks ``__file__.parents[...]`` to find

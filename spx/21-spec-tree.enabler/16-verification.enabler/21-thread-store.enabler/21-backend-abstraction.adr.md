@@ -39,7 +39,7 @@ Env-var-driven selection over skill-argument-driven keeps the verification skill
 Alternatives rejected:
 
 - **Hardcode filesystem with no abstraction.** Adding a second backend then requires re-authoring every verification skill's persistence calls or introducing a parallel surface. The cost of one Protocol class plus one env-var lookup stays much smaller than the cost of that re-authoring across every verification skill.
-- **Each verification skill owns its persistence.** Backend swap becomes N-place change. Slug-rule drift becomes inevitable. The shared verification contract in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/verification.md` exists specifically to prevent this.
+- **Each verification skill owns its persistence.** Backend swap becomes N-place change. Slug-rule drift becomes inevitable. The shared verification contract in `spx/21-spec-tree.enabler/16-verification.enabler/verification.md` exists specifically to prevent this.
 - **Slug derivation re-implemented inside thread-store.** Two implementations of one rule guarantee drift. Re-exporting the canonical function from `audit_orchestrator.py` is the only way to keep audit and review surfaces in sync without a marketplace-wide refactor.
 - **Skill-argument backend selection.** Forces every wrapper agent to know which backend is configured. Env var lookup is a single point that the agent never references.
 

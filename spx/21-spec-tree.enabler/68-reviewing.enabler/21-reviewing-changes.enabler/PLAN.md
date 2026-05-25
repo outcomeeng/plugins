@@ -24,7 +24,7 @@ A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six 
 
 - Items 1–4 above remain open.
 - Item 2 (live-context hallucination) and item 3 (deterministic diff-reference check) remain deferred — the existing 4-eval suite is deemed sufficient for now.
-- Whether the shared verification contract is justified stays unverified until a second verification skill (e.g., `32-test-auditing.enabler`) actually lands; no speculative second-skill stub is authored.
+- Whether the shared verification contract is justified stays unverified until a second verification skill (e.g., `32-auditing-tests.enabler`) actually lands; no speculative second-skill stub is authored.
 - `spx/15-test-infrastructure.pdr.md` review-only rules where `[test]` would work (L1 `ISSUES.md` item 13) stay tracked there — out of scope for the verification skill iteration.
 
 ## Open items
@@ -54,7 +54,7 @@ A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six 
 
 ## Eval coverage today
 
-Per the cross-skill eval design pattern in `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/PLAN.md`, this verification skill carries:
+Per the cross-skill eval design pattern in `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`, this verification skill carries:
 
 - `evals/judgment-grounding/` — absence-claim hallucination (4 cases; needs translation per item 5 before re-run)
 - `evals/severity-classification/` — severity rubric adherence (4 cases; needs translation per item 5 before re-run)
@@ -69,7 +69,7 @@ Per the cross-skill eval design pattern in `spx/21-spec-tree.enabler/32-evidence
 ## Reference
 
 - PR #43 — the four evals and their spec assertions: `evals/judgment-grounding`, `evals/severity-classification`, `evals/decision-thresholds`, `evals/wrapper-protocol`
-- Shared verification eval pattern: `spx/21-spec-tree.enabler/32-evidence.enabler/21-verification.enabler/PLAN.md`
+- Shared verification eval pattern: `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`
 - PR #37 — the verification skill itself, the wrapper agent, the thread-store backend
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
 - `REVIEW.template.md` (repo root) — the taxonomy this verification skill now aligns with
