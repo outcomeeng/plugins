@@ -35,10 +35,21 @@ SESSION_RESUME = BIN_DIR / "session-resume"
 # ---------------------------------------------------------------------------
 
 
-def _handoff(sessions_dir: Path, content: str) -> subprocess.CompletedProcess:
+def _handoff(
+    sessions_dir: Path,
+    body: str,
+    *,
+    priority: str = "medium",
+    goal: str = "Verify handoff behavior",
+    next_step: str = "Inspect the session file",
+) -> subprocess.CompletedProcess:
+    # spx session handoff takes the JSON-prefix wire format: a single JSON
+    # object of caller-supplied fields on the first line, then the body bytes
+    # verbatim.
+    header = json.dumps({"priority": priority, "goal": goal, "next_step": next_step})
     return subprocess.run(
         ["spx", "session", "handoff", "--sessions-dir", str(sessions_dir)],
-        input=content,
+        input=f"{header}\n{body}",
         capture_output=True,
         text=True,
     )
@@ -83,15 +94,12 @@ class TestHandoffCreatesTodoSession:
         result = _handoff(
             tmp_path / "sessions",
             textwrap.dedent("""\
-                ---
-                priority: medium
-                goal: Verify handoff writes a file to todo/
-                next_step: Inspect the todo directory listing
-                ---
                 # Test session
 
                 Active node: spx/21-spec-tree.enabler/76-sessions.enabler/
             """),
+            goal="Verify handoff writes a file to todo/",
+            next_step="Inspect the todo directory listing",
         )
         assert result.returncode == 0, result.stderr
         todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
@@ -102,13 +110,10 @@ class TestHandoffCreatesTodoSession:
         result = _handoff(
             tmp_path / "sessions",
             textwrap.dedent(f"""\
-                ---
-                priority: medium
-                goal: Verify active node path survives the handoff write
-                next_step: Read the todo session file and assert path presence
-                ---
                 Active node: {active_node}
             """),
+            goal="Verify active node path survives the handoff write",
+            next_step="Read the todo session file and assert path presence",
         )
         assert result.returncode == 0, result.stderr
         todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
@@ -126,7 +131,9 @@ class TestPickupMovesToDoing:
         sessions_dir = tmp_path / "sessions"
         result = _handoff(
             sessions_dir,
-            "---\npriority: medium\ngoal: Move a session out of todo\nnext_step: Confirm the file no longer exists in todo\n---\n# Session\n",
+            "# Session\n",
+            goal="Move a session out of todo",
+            next_step="Confirm the file no longer exists in todo",
         )
         assert result.returncode == 0, result.stderr
         session_id = _parse_handoff_id(result.stdout)
@@ -139,7 +146,9 @@ class TestPickupMovesToDoing:
         sessions_dir = tmp_path / "sessions"
         result = _handoff(
             sessions_dir,
-            "---\npriority: medium\ngoal: Move a session into doing\nnext_step: Confirm the file exists in doing\n---\n# Session\n",
+            "# Session\n",
+            goal="Move a session into doing",
+            next_step="Confirm the file exists in doing",
         )
         assert result.returncode == 0, result.stderr
         session_id = _parse_handoff_id(result.stdout)
@@ -154,7 +163,9 @@ class TestPickupMovesToDoing:
         body = "Active node: spx/21-spec-tree.enabler/76-sessions.enabler/"
         result = _handoff(
             sessions_dir,
-            f"---\npriority: medium\ngoal: Surface session content during pickup\nnext_step: Read pickup stdout and assert body presence\n---\n{body}\n",
+            f"{body}\n",
+            goal="Surface session content during pickup",
+            next_step="Read pickup stdout and assert body presence",
         )
         assert result.returncode == 0, result.stderr
         session_id = _parse_handoff_id(result.stdout)
@@ -176,15 +187,12 @@ class TestEscapeHatchContentInSession:
         result = _handoff(
             sessions_dir,
             textwrap.dedent(f"""\
-                ---
-                priority: medium
-                goal: Preserve PLAN.md excerpt through handoff
-                next_step: Read the todo session file and assert excerpt presence
-                ---
                 # Session with PLAN.md
 
                 {plan_text}
             """),
+            goal="Preserve PLAN.md excerpt through handoff",
+            next_step="Read the todo session file and assert excerpt presence",
         )
         assert result.returncode == 0, result.stderr
         todo_files = list((sessions_dir / "todo").glob("*.md"))
@@ -197,15 +205,12 @@ class TestEscapeHatchContentInSession:
         result = _handoff(
             sessions_dir,
             textwrap.dedent(f"""\
-                ---
-                priority: medium
-                goal: Preserve ISSUES.md excerpt through handoff
-                next_step: Read the todo session file and assert excerpt presence
-                ---
                 # Session with ISSUES.md
 
                 {issues_text}
             """),
+            goal="Preserve ISSUES.md excerpt through handoff",
+            next_step="Read the todo session file and assert excerpt presence",
         )
         assert result.returncode == 0, result.stderr
         todo_files = list((sessions_dir / "todo").glob("*.md"))
