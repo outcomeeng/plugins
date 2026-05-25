@@ -142,7 +142,6 @@ class CachePreservationResult:
     linked_versions: tuple[Path, ...]
     pruned_links: tuple[Path, ...]
     pruned_plugins: tuple[str, ...]
-    skipped_plugins: tuple[str, ...]
     upgrade_returncode: int
 
 
@@ -180,7 +179,6 @@ def preserve_during_upgrade(
             linked_versions=(),
             pruned_links=(),
             pruned_plugins=(),
-            skipped_plugins=(),
             upgrade_returncode=upgrade_result.returncode,
         )
 
@@ -193,14 +191,12 @@ def preserve_during_upgrade(
 
     linked_versions: list[Path] = []
     pruned_links: list[Path] = []
-    skipped_plugins: list[str] = []
 
     for plugin in sorted(working_tree_plugins):
         plugin_dir = marketplace_dir / plugin
         in_window = resolved_history.published_versions(plugin)
         current_real = _newest_real_version_dir(plugin_dir)
         if current_real is None:
-            skipped_plugins.append(plugin)
             continue
 
         keep_versions = in_window | {current_real.name}
@@ -217,7 +213,6 @@ def preserve_during_upgrade(
         linked_versions=tuple(linked_versions),
         pruned_links=tuple(pruned_links),
         pruned_plugins=tuple(pruned_plugins),
-        skipped_plugins=tuple(skipped_plugins),
         upgrade_returncode=upgrade_result.returncode,
     )
 
@@ -368,8 +363,6 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(result.pruned_links)} pruned link(s), "
         f"{len(result.pruned_plugins)} pruned plugin(s)"
     )
-    for plugin in result.skipped_plugins:
-        print(f"warning: no current cache version found for {plugin}")
     return 0
 
 
