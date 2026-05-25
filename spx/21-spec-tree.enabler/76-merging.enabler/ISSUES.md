@@ -2,7 +2,7 @@
 
 ## 1. Reviewer-skipped-by-design exception lacks an eval-backed scenario (FOLLOW-UP)
 
-The reviewer-skipped-by-design exception — `/standardizing-merging` `<pr_authority_gate>`, `/managing-pr` Step 7, the `MENTION_REVIEW_NEEDED` action token — was added without a `pr-workflow.md` scenario assertion exercising the skip path, and without a corresponding eval.
+The reviewer-skipped-by-design exception — `/standardizing-merging` `<pr_authority_gate>`, `/managing-pr` Step 7, the `MENTION_REVIEW_NEEDED` action token — was added without a `merging.md` scenario assertion exercising the skip path, and without a corresponding eval.
 
 The node's other gate scenarios (`authority-gate-green`, `authority-gate-production`, `overlay-human-promotion`, `overlay-human-merge`, `authority-gate-hygiene`) each carry an `[eval]` link. A scenario for the skip path would fit that pattern:
 
@@ -10,7 +10,7 @@ The node's other gate scenarios (`authority-gate-green`, `authority-gate-product
 
 Required handling when an eval-coverage sweep happens:
 
-- Add the scenario assertion above to `pr-workflow.md`.
+- Add the scenario assertion above to `merging.md`.
 - Create `evals/reviewer-skipped/` with `eval.toml`, `cases.jsonl`, `prompt.md` per the cross-skill eval pattern.
 - Run the eval to populate `history.jsonl`.
 
