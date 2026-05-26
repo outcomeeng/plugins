@@ -50,7 +50,7 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
    echo "$REVIEW_RESULT_JSON" | python3 "${CLAUDE_SKILL_DIR}/scripts/validate_review_result.py"
    ```
 
-   On non-zero exit, read the stderr message verbatim, repair the JSON (fix the missing key, the unknown enum value, or the consistency-invariant violation), and re-emit. **Do not** hand-check the JSON in agent prose — the arbiter is the single source of validity.
+   On non-zero exit, read the stderr message verbatim, repair the JSON (fix the missing key or the unknown enum value), and re-emit. **Do not** hand-check the JSON in agent prose — the arbiter is the single source of validity.
 
 5. **Persist** the validated `review-result.json`:
 
@@ -73,11 +73,11 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 
 Validate-as-arbiter is the contract for this skill. The agent emits JSON; the CLI is the only source of validity for that JSON; a non-zero exit is a re-emit signal, not a status to gloss over. The agent never:
 
-- Hand-checks the required-key set, the enum membership, or the consistency invariant.
+- Hand-checks the required-key set or the enum membership.
 - Persists a `review-result.json` document that has not passed the arbiter.
 - Treats agent prose as authoritative when the arbiter and the prose disagree.
 
-The consistency invariant — `decision == "approve"` combined with any finding whose `severity == "blocking"` — is enforced inside `review_result.parse_json` so direct Python callers that bypass the CLI still surface the violation. The CLI is the entry point the wrapper agent reads as exit code.
+Schema validation — required keys, enum membership, the path-style `rule` citation form — is enforced inside `review_result.parse_json` so direct Python callers that bypass the CLI still surface violations. The reviewer emits findings only — no decision or verdict — so the CLI's exit code is the single source of validity the wrapper agent reads.
 
 </validate_as_arbiter>
 

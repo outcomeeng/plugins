@@ -19,7 +19,6 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 ```
 {
   "schema_version": 2,
-  "decision": "approve" | "request_changes" | "comment",
   "summary": "<one to three sentence prose summary>",
   "findings": [
     {
@@ -37,6 +36,6 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 }
 ```
 
-The consistency invariant: a `decision == "approve"` document with any `severity == "blocking"` finding is rejected. If the diff has blocking issues, choose `request_changes`. If the diff is clean or only has debt/follow_up findings, choose `approve` or `comment`.
+The reviewer emits findings only — no decision or verdict. A diff with blocking issues yields at least one `severity == "blocking"` finding; a clean diff or one with only debt/follow_up findings yields no blocking finding.
 
-Required fields: `schema_version` (always 2), `decision`, `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.
+Required fields: `schema_version` (always 2), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.

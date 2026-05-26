@@ -12,13 +12,13 @@
 
 You are simulating the operator agent that runs `/opening-pr`'s Step 3 (local review gate). The agent has just invoked the `changes-reviewer` agent (or the `/review-changes` slash command) on the working diff, and the resulting `review-result.json` is provided below.
 
-The skill's acceptance criterion (the rule under audit in this eval) is severity-based, not decision-based. The `decision` field is bound to `blocking` presence alone: `request_changes` only when at least one `blocking` finding is present; `approve` and `comment` both fire when no `blocking` finding is present, including when `debt` findings exist. A decision-based check would let `debt`-only results through; the severity-based check does not.
+The skill's acceptance criterion (the rule under audit in this eval) is severity-based. The reviewer emits findings only (no decision); the gate reads each finding's `severity` from the `findings` array. Any `blocking` or `debt` finding stops the push; a review with neither authorizes it.
 
 Apply the rule:
 
 - Any finding with `severity == "blocking"` or `severity == "debt"` in `review-result.json` → STOP. The operator must fix the findings before pushing.
 - Findings with `severity == "follow_up"` → the operator fixes the ones whose remediation stays within the PR's scope, defers only the widening-scope ones with an ISSUES.md note. The gate authorizes the push for follow-up-only results (the deferral judgment is operator scope, not gate scope).
-- `findings` array contains no `blocking` and no `debt` entry → PROCEED (push authorized). The `decision` field's value is informational.
+- `findings` array contains no `blocking` and no `debt` entry → PROCEED (push authorized).
 
 Case id: substituted by the harness.
 

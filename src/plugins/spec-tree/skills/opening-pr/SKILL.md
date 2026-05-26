@@ -30,11 +30,11 @@ Walk these steps in order. Every step is a routine workflow operation — schedu
 
 **Step 3 — Local review gate.** Run the changes-reviewer agent (preferred) on the working diff before push. The agent runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed — both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store.
 
-Apply the acceptance criterion to the resulting `review-result.json`. The gate is **severity-based**, not decision-based — the `decision` field is bound to `blocking` presence alone (`request_changes` only when at least one `blocking` finding is present; `approve` and `comment` both fire when no `blocking` finding is present, including when `debt` findings exist). A decision-based gate would let `debt`-only results through; the severity-based gate does not.
+Apply the acceptance criterion to the resulting `review-result.json`. The gate is **severity-based**: the reviewer emits findings only (no decision/verdict), so the gate reads each finding's `severity` from the `findings` array directly.
 
 - Any finding with `severity == "blocking"` or `severity == "debt"` → STOP. Fix every such finding, commit via /committing-changes, re-invoke the reviewer, and repeat until the `findings` array contains no `blocking` and no `debt` entry.
 - Findings with `severity == "follow_up"` → fix the ones whose remediation stays within the PR's intended scope. Defer only those whose fix would widen scope substantively; record deferred items in the relevant node's `ISSUES.md` or `PLAN.md` (per /standardizing-merging `<review_classification>`) before pushing.
-- `findings` array contains no `blocking` and no `debt` entry → proceed to Step 4. The `decision` field's value (`approve` or `comment`) is informational at this point; the severity check is the gate.
+- `findings` array contains no `blocking` and no `debt` entry → proceed to Step 4. The severity check is the gate; the result carries no decision field.
 
 The local review gate is stricter than the remote merge gate. The remote gate (per /standardizing-merging `<pr_authority_gate>`) allows `follow_up` findings tracked elsewhere and stops on `blocking` / `debt` only. The local pre-push pass aims for the remote review to surface nothing — every finding fixable in this PR's scope is fixed before push, and only widening-scope `follow_up` items survive to remote.
 

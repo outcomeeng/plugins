@@ -6,8 +6,7 @@ through ``review_result.parse_json``, and exits 0 on conformance.
 
 Exit codes:
 
-- ``0`` — the document conforms (schema, enum membership, consistency
-  invariant).
+- ``0`` — the document conforms (schema, enum membership).
 - non-zero — the document violates one or more rules; the parser's
   error message is written to stderr verbatim so the agent can
   correlate the failure with the JSON it just emitted.

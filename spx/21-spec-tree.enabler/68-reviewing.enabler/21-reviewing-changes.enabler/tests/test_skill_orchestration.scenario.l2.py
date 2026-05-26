@@ -233,11 +233,9 @@ class TestSkillOrchestrationChain:
             env=env,
         )
         assert read_rr.returncode == 0
-        assert json.loads(read_rr.stdout)["decision"] in {
-            "approve",
-            "request_changes",
-            "comment",
-        }
+        persisted = json.loads(read_rr.stdout)
+        assert "findings" in persisted
+        assert "decision" not in persisted
 
         read_md = run_script(
             READ_RECORD_SCRIPT,
@@ -250,9 +248,9 @@ class TestSkillOrchestrationChain:
         assert read_md.returncode == 0
         rendered = read_md.stdout
         # Three-class render shape (matches the REVIEW.template.md
-        # taxonomy): the default fixture has decision=request_changes
-        # with one follow_up-severity finding and no blocking. Render
-        # should emit the no-blockers line and a FOLLOW-UP heading.
+        # taxonomy): the default fixture has one follow_up-severity
+        # finding and no blocking. Render should emit the no-blockers
+        # line and a FOLLOW-UP heading.
         # The legacy class labels NEEDS-ANSWER and NOTE are not in the
         # current three-severity taxonomy and must not appear in any
         # rendered output.

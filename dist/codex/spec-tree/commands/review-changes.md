@@ -3,7 +3,7 @@ description: Run reviewing-changes against the current branch's diff; print verd
 ---
 
 <objective>
-Run the reviewing-changes skill against the current branch's diff and surface the verdict to the main agent. The main agent (or operator) decides what to do next: if `decision == "request_changes"`, fix the `blocking` (and address the `debt`) findings before pushing; if `decision == "approve"` or `"comment"`, proceed to `/open-pr` or commit.
+Run the reviewing-changes skill against the current branch's diff and surface the findings to the main agent. The reviewer emits findings only — it never decides. The main agent (or operator) decides what to do next: fix the `blocking` and `debt` findings before pushing; with none of those present, proceed to `/open-pr` or commit.
 
 The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
 </objective>
@@ -31,18 +31,17 @@ Use the same `read_record.py --name <name>` invocation the skill teaches; no `--
 Print, in this order:
 
 1. The absolute filesystem paths to `review-result.json` and `review.md` (under `.spx/reviews/<slug>/` on the local backend).
-2. The JSON's `decision` field, formatted as one line: `Decision: <decision>`.
-3. A one-line finding count by render class: `BLOCKING: <n>, DEBT: <n>, FOLLOW-UP: <n>` (mapping is identity: render class equals uppercase severity, so `blocking → BLOCKING`, `debt → DEBT`, `follow_up → FOLLOW-UP`).
-4. If `decision == "request_changes"`: the full `review.md` content. The main agent reads it and decides which findings to fix first.
-5. Else: nothing more. The artifacts are on disk; the main agent can read them if it wants the full text.
+2. A one-line finding count by render class: `BLOCKING: <n>, DEBT: <n>, FOLLOW-UP: <n>` (mapping is identity: render class equals uppercase severity, so `blocking → BLOCKING`, `debt → DEBT`, `follow_up → FOLLOW-UP`).
+3. If any `blocking` or `debt` finding is present: the full `review.md` content. The main agent reads it and decides which findings to fix first.
+4. Else: nothing more. The artifacts are on disk; the main agent can read them if it wants the full text.
 
 </process>
 
 <success_criteria>
 
 - The skill's chain ran end-to-end and persisted both `review-result.json` and `review.md`.
-- The slash command printed the two paths, the decision line, the finding-count line, and (when applicable) the full `review.md`.
+- The slash command printed the two paths, the finding-count line, and (when applicable) the full `review.md`.
 - No `--slug` argument was passed to any thread-store CLI — the agent never names the thread address.
-- On `decision == "request_changes"`, the main agent sees the full verdict text without having to read it from disk.
+- When a `blocking` or `debt` finding is present, the main agent sees the full verdict text without having to read it from disk.
 
 </success_criteria>

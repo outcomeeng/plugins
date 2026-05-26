@@ -40,8 +40,8 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
   "tool_calls": [
     "<one entry per shell command you would execute, in order>"
   ],
-  "review_result_decision": "approve" | "request_changes" | "comment"
+  "blocking_findings_present": true | false
 }
 ```
 
-Each `tool_calls` entry is a short string naming the CLI script (e.g. `"compute_diff.py"`, `"validate_review_result.py"`, `"write_record.py --name review-result.json"`). Use the script basename without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `review_result_decision` field reports the decision your simulated agent would emit. The grader checks structural presence in `tool_calls` and the decision direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).
+Each `tool_calls` entry is a short string naming the CLI script (e.g. `"compute_diff.py"`, `"validate_review_result.py"`, `"write_record.py --name review-result.json"`). Use the script basename without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the `review-result.json` your simulated agent would emit contains at least one `blocking` finding — the reviewer emits findings only, never a decision or verdict. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).

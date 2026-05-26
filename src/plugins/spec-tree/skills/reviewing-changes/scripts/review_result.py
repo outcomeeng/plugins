@@ -1,20 +1,18 @@
-"""Reviewing-changes policy module — canonical schema and consistency invariant.
+"""Reviewing-changes policy module — canonical schema.
 
 The single source of truth for the ``review-result`` shape that the
 reviewing-changes skill produces. Declares:
 
 - ``SCHEMA_VERSION`` — the wire-format version constant.
-- ``Decision``, ``Severity``, ``Concern`` enums (``StrEnum``) — the wire
-  vocabularies a review-result document may carry.
+- ``Severity``, ``Concern`` enums (``StrEnum``) — the wire vocabularies
+  a review-result document may carry.
 - Frozen ``Finding`` and ``ReviewResult`` dataclasses — values that cross
   the parse → validate → render boundary.
-- ``ReviewResultValidationError`` — raised on every schema violation,
-  including the consistency invariant (``decision == "approve"`` AND any
-  finding with ``severity == "blocking"``).
+- ``ReviewResultValidationError`` — raised on every schema violation.
 - ``parse_json``, ``to_json_dict``, ``from_json_dict`` — the parser entry
-  points. ``parse_json`` enforces the consistency invariant before
-  returning, so direct Python callers that bypass the arbiter CLI still
-  surface inconsistent documents as exceptions.
+  points. ``parse_json`` validates the schema before returning, so direct
+  Python callers that bypass the arbiter CLI still surface malformed
+  documents as exceptions.
 
 Stdlib-only. Mirrors the verdict-toolchain precedent in
 ``plugins/spec-tree/skills/auditing/scripts/verdict.py``.
@@ -30,25 +28,8 @@ from typing import Any
 SCHEMA_VERSION = 2
 
 
-class Decision(StrEnum):
-    """Top-level review verdict the producing agent emits.
-
-    Wire values are the lowercase tokens consumed by the arbiter CLI and
-    rendered into ``review.md``. ``approve`` combined with any
-    ``blocking`` finding violates the consistency invariant enforced in
-    :func:`parse_json`.
-    """
-
-    APPROVE = "approve"
-    REQUEST_CHANGES = "request_changes"
-    COMMENT = "comment"
-
-
 class Severity(StrEnum):
-    """Finding severity. ``blocking`` is the only severity that drives
-    the consistency invariant — an ``approve`` decision combined with at
-    least one ``blocking`` finding is rejected by the parser.
-    """
+    """Finding severity — one of ``blocking``, ``debt``, ``follow_up``."""
 
     BLOCKING = "blocking"
     DEBT = "debt"
@@ -115,14 +96,12 @@ class Finding:
 class ReviewResult:
     """A complete review result.
 
-    Holds the decision, the (possibly empty) tuple of findings, an
-    acknowledgement list, a free-form summary, and the schema version.
-    Frozen so the parse → validate hand-off cannot mutate the value
-    silently.
+    Holds the (possibly empty) tuple of findings, an acknowledgement
+    list, a free-form summary, and the schema version. Frozen so the
+    parse → validate hand-off cannot mutate the value silently.
     """
 
     schema_version: int
-    decision: Decision
     summary: str
     findings: tuple[Finding, ...]
     acknowledgements: tuple[str, ...]
@@ -132,7 +111,6 @@ class ReviewResult:
 # ``findings`` are required; both may be empty lists.
 _REQUIRED_DOCUMENT_KEYS = (
     "schema_version",
-    "decision",
     "summary",
     "findings",
     "acknowledgements",
@@ -178,13 +156,10 @@ def parse_json(text: str) -> ReviewResult:
        conform.
     3. ``from_json_dict`` — convert to the frozen dataclass, parsing
        enums and findings along the way.
-    4. Consistency invariant — ``decision == "approve"`` AND any finding
-       with ``severity == "blocking"`` raises with the offending finding
-       identifiers in the message.
 
-    Step 4 is enforced inside this function (not only in the CLI) so
+    Validation is enforced inside this function (not only in the CLI) so
     Python callers that bypass ``validate_review_result.py`` still
-    surface the violation. The CLI is a thin shell over this parser.
+    surface violations. The CLI is a thin shell over this parser.
     """
     try:
         raw = json.loads(text)
@@ -200,9 +175,8 @@ def parse_json(text: str) -> ReviewResult:
 def from_json_dict(data: dict[str, Any]) -> ReviewResult:
     """Parse a :class:`ReviewResult` from a JSON-compatible dict.
 
-    Validates required keys, enum membership for ``decision``,
-    ``severity`` per finding, and ``concern`` per finding, and enforces
-    the consistency invariant. Each violation raises
+    Validates required keys and enum membership for ``severity`` per
+    finding and ``concern`` per finding. Each violation raises
     :class:`ReviewResultValidationError` with a message that names the
     offending value and (for enum violations) the allowed set.
     """
@@ -212,9 +186,6 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
         raise ReviewResultValidationError(
             f"unsupported schema_version {schema_version}; expected {SCHEMA_VERSION}"
         )
-
-    decision_raw = _require_str(data, "decision")
-    decision = _parse_enum(decision_raw, Decision, field="decision")
 
     summary = _require_str(data, "summary")
 
@@ -228,19 +199,8 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
         raise ReviewResultValidationError("acknowledgements must be a JSON array")
     acknowledgements = tuple(_require_str_in_list(acks_raw, "acknowledgements"))
 
-    # Consistency invariant — enforced in the parser so every entry path
-    # surfaces it, not just the CLI arbiter.
-    if decision == Decision.APPROVE:
-        offenders = [f.id for f in findings if f.severity == Severity.BLOCKING]
-        if offenders:
-            raise ReviewResultValidationError(
-                "consistency invariant violated: decision=='approve' with "
-                f"blocking finding(s) {offenders}"
-            )
-
     return ReviewResult(
         schema_version=schema_version,
-        decision=decision,
         summary=summary,
         findings=findings,
         acknowledgements=acknowledgements,
@@ -256,7 +216,6 @@ def to_json_dict(result: ReviewResult) -> dict[str, Any]:
     """
     return {
         "schema_version": result.schema_version,
-        "decision": str(result.decision),
         "summary": result.summary,
         "findings": [_finding_to_dict(f) for f in result.findings],
         "acknowledgements": list(result.acknowledgements),
