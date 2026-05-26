@@ -78,8 +78,8 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
    # stdin = JSON header on line 1, then the body verbatim; a leading
    # '#' or '---' in the body is literal, never parsed as frontmatter.
    printf '%s\n' \
-     '{"priority":"medium","goal":"...","next_step":"...","specs":["spx/{path-to-node}/{node-file}.md"],"files":["src/{path-to-file}"]}' \
-     "${body}" \
+     '{"priority": "medium", "goal": "...", "next_step": "...", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' \
+     '[canonical continuation body — <metadata> through <incorporated_sessions>]' \
      | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
