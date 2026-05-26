@@ -67,6 +67,17 @@ STEPS: Final = (
         ),
     ),
     Step(
+        label="skill-injection",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.skill_injection_safety",
+            *_skill_files(),
+        ),
+    ),
+    Step(
         label="docs-check",
         argv=(
             "uv",
