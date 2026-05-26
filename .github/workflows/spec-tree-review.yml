@@ -31,13 +31,9 @@ permissions:
 
 jobs:
   spec-tree-review:
-    # BETA TESTER: deliberately tracks outcomeeng/gh-actions @main to surface
-    # upstream changes early without a per-release follow-up PR. Production
-    # callers must SHA-pin per the gh-actions README "Security" section
-    # (Documented exception subsection). Renovate cannot advance this
-    # reference; that is the point — pin it back to a SHA when this repo
-    # graduates to production usage.
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@main
+    # Pinned to a full outcomeeng/gh-actions commit SHA. Update this reference
+    # deliberately when accepting upstream reusable workflow changes.
+    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@b9307e58feea1093341c20be286faba202d354fb
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 

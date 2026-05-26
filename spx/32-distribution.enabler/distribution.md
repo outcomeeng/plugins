@@ -25,3 +25,5 @@ The `outcomeeng.distribution.distribute` module reads `distribution.yml` for the
 
 - NEVER: distribute agent or command files — only skill directories are copied to downstream repos ([review])
 - ALWAYS: preserve `.git/` directory when clearing target repo contents ([review])
+- ALWAYS: the distribution workflow triggers from the committed Claude runtime tree and source plugin changes — retired `plugins/` source paths never gate distribution ([test](tests/test_distribution_workflow.compliance.l1.py))
+- ALWAYS: the distribution workflow runs on the Python version declared by `pyproject.toml` — CI uses the same interpreter contract as the project metadata ([test](tests/test_distribution_workflow.compliance.l1.py))
