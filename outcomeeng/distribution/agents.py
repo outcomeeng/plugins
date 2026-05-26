@@ -248,11 +248,7 @@ def install_agents(
     for agent in converted:
         target_path = target_root / agent.filename
         rendered = render_agent_toml(agent)
-        if (
-            target_path.exists()
-            and agent.filename not in generated_owned
-            and target_path.read_text(encoding="utf-8") != rendered
-        ):
+        if target_path.exists() and agent.filename not in generated_owned:
             raise AgentConversionError(
                 f"refusing to overwrite user-owned Codex agent: {target_path}"
             )
