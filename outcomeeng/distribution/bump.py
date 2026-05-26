@@ -67,9 +67,10 @@ class Mode(StrEnum):
 
 
 class FileStatus(StrEnum):
-    """Git file-status tokens emitted by `git diff --name-status -M`."""
+    """Git file-status tokens emitted by the change-detection diff."""
 
     ADDED = "A"
+    COPIED = "C"
     DELETED = "D"
     MODIFIED = "M"
     RENAMED = "R"
@@ -79,9 +80,8 @@ class FileStatus(StrEnum):
 class ChangedPath:
     """One repository-relative path changed since `base_ref` with its status.
 
-    For renames and paired add/delete source-tree migrations, `path` is the
-    destination path in the working tree and `old_path` is the source path
-    that exists at `base_ref`.
+    For copies and renames, `path` is the destination path in the working tree
+    and `old_path` is the source path that exists at `base_ref`.
     """
 
     status: FileStatus
@@ -182,10 +182,9 @@ def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
 def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     """Resolve the warranted semver segment from a plugin's changed paths.
 
-    An `A`/`D`/`R` change to a structural path inside the plugin yields
+    An `A`/`C`/`D`/`R` change to a structural path inside the plugin yields
     `MINOR`; every other pattern yields `PATCH`. Auto-detection never
-    selects `MAJOR` — major bumps require explicit human opt-in per
-    `spx/local/committing-changes.md`.
+    selects `MAJOR`; major bumps require explicit human opt-in.
 
     Structural paths (relative to `src/plugins/{name}/`):
 
@@ -370,7 +369,16 @@ def _replace_version(content: str, new_version: str) -> str:
 
 def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
     result = subprocess.run(
-        ["git", "diff", "--name-status", "-M", base_ref, "--"],
+        [
+            "git",
+            "diff",
+            "--name-status",
+            "-M",
+            "-C",
+            "--find-copies-harder",
+            base_ref,
+            "--",
+        ],
         capture_output=True,
         text=True,
         check=True,
@@ -381,14 +389,8 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
         for line in result.stdout.splitlines()
         if (change := _parse_diff_line(line)) is not None
     )
-    base_source_paths = frozenset(
-        change.path for change in parsed_changes if change.status is FileStatus.DELETED
-    ) | frozenset(
-        change.old_path for change in parsed_changes if change.old_path is not None
-    )
     for parsed_change in parsed_changes:
-        change = _with_base_source_path(parsed_change, base_source_paths)
-        parts = change.path.split("/")
+        parts = parsed_change.path.split("/")
         source_parts = SOURCE_PLUGINS_DIR.split("/")
         if (
             len(parts) <= len(source_parts)
@@ -396,30 +398,8 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
             or not parts[len(source_parts)]
         ):
             continue
-        changes.setdefault(parts[len(source_parts)], []).append(change)
+        changes.setdefault(parts[len(source_parts)], []).append(parsed_change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
-
-
-def _with_base_source_path(
-    change: ChangedPath, base_source_paths: frozenset[str]
-) -> ChangedPath:
-    if change.status is not FileStatus.ADDED or change.old_path is not None:
-        return change
-    base_source_path = _base_source_path_for_added_src_path(change.path)
-    if base_source_path is None or base_source_path not in base_source_paths:
-        return change
-    return ChangedPath(
-        status=change.status,
-        path=change.path,
-        old_path=base_source_path,
-    )
-
-
-def _base_source_path_for_added_src_path(path: str) -> str | None:
-    prefix = f"{SOURCE_PLUGINS_DIR}/"
-    if not path.startswith(prefix):
-        return None
-    return f"plugins/{path.removeprefix(prefix)}"
 
 
 def _parse_diff_line(line: str) -> ChangedPath | None:
@@ -434,7 +414,7 @@ def _parse_diff_line(line: str) -> ChangedPath | None:
         status = FileStatus(status_letter)
     except ValueError:
         return None
-    if status is FileStatus.RENAMED:
+    if status in {FileStatus.COPIED, FileStatus.RENAMED}:
         if len(fields) < 3:
             return None
         return ChangedPath(status=status, path=fields[2], old_path=fields[1])

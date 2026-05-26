@@ -26,7 +26,7 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under `s
 ### Mappings
 
 - `--segment patch` increments the third semver component; `--segment minor` increments the second and resets the third to 0; `--segment major` increments the first and resets the second and third to 0 ([test](tests/test_bump.mapping.l1.py))
-- Auto-detection maps each `(file-status, path-pattern)` pair to a segment: an `A`/`D`/`R` change to `skills/{slug}/SKILL.md`, `commands/{slug}.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
+- Auto-detection maps each `(file-status, path-pattern)` pair to a segment: an `A`/`C`/`D`/`R` change to `skills/{slug}/SKILL.md`, `commands/{slug}.md`, `agents/{slug}.md`, or `{.claude,.codex}-plugin/plugin.json` yields `minor`; every other path or any `M` change yields `patch` ([test](tests/test_bump.mapping.l1.py))
 
 ### Compliance
 

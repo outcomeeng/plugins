@@ -207,15 +207,15 @@ Architectural Decisions Created
 
 ADRs Written
 
-| ADR                                                         | Scope          | Decision Summary                                    |
-| ----------------------------------------------------------- | -------------- | --------------------------------------------------- |
-| [Error Architecture](spx/21-error-architecture.adr.md)      | Product        | Use typed boundary errors with explicit conversions |
-| [CLI Structure](spx/32-cli.enabler/21-cli-structure.adr.md) | 32-cli enabler | Use `clap` derive and thin command handlers         |
+| ADR                                | Scope   | Decision Summary            |
+| ---------------------------------- | ------- | --------------------------- |
+| [{ADR Name}]({path to ADR})        | {scope} | {one-line decision summary} |
+| [{Second ADR Name}]({path to ADR}) | {scope} | {one-line decision summary} |
 
 Key Constraints
 
-1. {constraint from [Error Architecture](spx/21-error-architecture.adr.md)}
-2. {constraint from [CLI Structure](spx/32-cli.enabler/21-cli-structure.adr.md)}
+1. {constraint from [{ADR Name}]({path to ADR})}
+2. {constraint from [{Second ADR Name}]({path to ADR})}
 ```
 
 </output_format>

@@ -6,7 +6,7 @@ Covers the two mapping assertions in `bump.md`:
   component; MINOR increments the second and resets the third to 0;
   MAJOR increments the first and resets the second and third to 0.
 - The auto-detection (file-status, path-pattern) → segment mapping:
-  `A`/`D`/`R` on `skills/<slug>/SKILL.md`, `commands/<slug>.md`,
+  `A`/`C`/`D`/`R` on `skills/<slug>/SKILL.md`, `commands/<slug>.md`,
   `agents/<slug>.md`, or `{.claude,.codex}-plugin/plugin.json` yields
   `MINOR`; everything else yields `PATCH`.
 
@@ -67,8 +67,9 @@ def test_segment_increment_matches_mapping(
 # Each row: (status, path-relative-to-repo-root, expected segment for a
 # plugin whose only change is this one path).
 AUTO_SEGMENT_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
-    # Minor-triggering: A/D/R on structural surfaces.
+    # Minor-triggering: A/C/D/R on structural surfaces.
     (FileStatus.ADDED, "src/plugins/foo/skills/new-skill/SKILL.md", Segment.MINOR),
+    (FileStatus.COPIED, "src/plugins/foo/skills/copied-skill/SKILL.md", Segment.MINOR),
     (FileStatus.DELETED, "src/plugins/foo/skills/old-skill/SKILL.md", Segment.MINOR),
     (FileStatus.RENAMED, "src/plugins/foo/skills/renamed/SKILL.md", Segment.MINOR),
     (FileStatus.ADDED, "src/plugins/foo/commands/new-command.md", Segment.MINOR),
@@ -80,10 +81,15 @@ AUTO_SEGMENT_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
     (FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md", Segment.PATCH),
     (FileStatus.MODIFIED, "src/plugins/foo/commands/existing.md", Segment.PATCH),
     (FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json", Segment.PATCH),
-    # Patch-only: A/D/R on non-structural paths.
+    # Patch-only: A/C/D/R on non-structural paths.
     (
         FileStatus.ADDED,
         "src/plugins/foo/skills/existing/scripts/helper.py",
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.COPIED,
+        "src/plugins/foo/skills/existing/scripts/copied_helper.py",
         Segment.PATCH,
     ),
     (

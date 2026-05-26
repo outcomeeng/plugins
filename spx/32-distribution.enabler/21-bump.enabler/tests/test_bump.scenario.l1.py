@@ -326,6 +326,55 @@ def test_check_compares_added_manifest_to_base_source_path(
     assert content_probe.queries == [(BASE_REF, src_path), (BASE_REF, base_path)]
 
 
+def test_check_compares_copied_manifest_to_base_source_path(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A copied manifest compares against its recorded base source path."""
+    plugin = "foo"
+    src_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+    base_path = src_path.removeprefix("src/")
+    working_tree_content = manifest_text(plugin, "0.5.0")
+    base_content = manifest_text(plugin, "0.4.1")
+
+    change_probe = ScriptedChangeProbe(
+        changed={
+            plugin: (
+                ChangedPath(
+                    status=FileStatus.COPIED,
+                    path=src_path,
+                    old_path=base_path,
+                ),
+            ),
+        },
+    )
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, base_path): base_content},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            plugin: (ManifestRecord(path=src_path, content=working_tree_content),)
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        mode=Mode.CHECK,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert manifest_writer.writes == []
+    assert captured.err == ""
+    assert content_probe.queries == [(BASE_REF, src_path), (BASE_REF, base_path)]
+
+
 def test_check_fails_when_any_changed_plugin_is_not_yet_bumped(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
