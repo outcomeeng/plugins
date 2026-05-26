@@ -1,6 +1,5 @@
 ---
 description: Gather requirements through questioning before executing a task
-argument-hint: [task description]
 ---
 
 <objective>

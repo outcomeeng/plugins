@@ -1,7 +1,5 @@
 ---
-allowed-tools: Skill
 description: Open a draft PR for the current branch with curated title and body
-argument-hint: [scope-hint]
 ---
 
 # Open PR Context

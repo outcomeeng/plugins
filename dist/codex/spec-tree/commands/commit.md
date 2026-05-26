@@ -1,7 +1,5 @@
 ---
-allowed-tools: Skill
 description: Commit following Conventional Commits
-argument-hint: [files-to-stage]
 ---
 
 # Commit Context

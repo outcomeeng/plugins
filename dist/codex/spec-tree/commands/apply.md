@@ -1,6 +1,5 @@
 ---
 description: Run the spec-tree TDD flow on a subtree or discover work from spx/EXCLUDE
-argument-hint: "[--agent] [node-path]"
 ---
 
 <objective>

@@ -9,6 +9,8 @@ import pytest
 from outcomeeng.distribution.build import (
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
+    COMMAND_FILE_SUFFIX,
+    COMMANDS_SUBDIR_NAME,
     IMPLEMENTED,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
@@ -76,7 +78,14 @@ def test_every_source_file_emits_to_both_runtime_trees(tmp_path: Path) -> None:
         assert (
             Path(PLUGIN_NAME, SKILLS_SUBDIR_NAME, SKILL_NAME, SKILL_FILENAME) in files
         )
-        assert Path(PLUGIN_NAME, "commands", f"{COMMAND_NAME}.md") in files
+        assert (
+            Path(
+                PLUGIN_NAME,
+                COMMANDS_SUBDIR_NAME,
+                f"{COMMAND_NAME}{COMMAND_FILE_SUFFIX}",
+            )
+            in files
+        )
 
 
 def test_runtime_trees_mirror_source_structure(tmp_path: Path) -> None:
@@ -141,6 +150,27 @@ def test_codex_skill_frontmatter_strips_claude_only_fields(tmp_path: Path) -> No
     )
     for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
         assert f"{field}:" in claude_body
+        assert f"{field}:" not in codex_body
+    assert "description: Keep me." in codex_body
+
+
+def test_codex_command_frontmatter_strips_claude_only_fields(tmp_path: Path) -> None:
+    builder = SrcTreeBuilder(tmp_path)
+    builder.add_plugin(
+        PLUGIN_NAME, commands={COMMAND_NAME: FRONTMATTER_WITH_ALL_CLAUDE_FIELDS}
+    )
+
+    build(builder.src_root, tmp_path / "dist")
+
+    reader = DistTreeReader(tmp_path)
+    command_path = (
+        reader.runtime_root(Target.CODEX)
+        / PLUGIN_NAME
+        / COMMANDS_SUBDIR_NAME
+        / f"{COMMAND_NAME}{COMMAND_FILE_SUFFIX}"
+    )
+    codex_body = command_path.read_text(encoding="utf-8")
+    for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
         assert f"{field}:" not in codex_body
     assert "description: Keep me." in codex_body
 

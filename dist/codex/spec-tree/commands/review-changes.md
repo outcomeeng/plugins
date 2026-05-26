@@ -1,7 +1,5 @@
 ---
 description: Run reviewing-changes against the current branch's diff; print verdict and artifact paths.
-argument-hint: ""
-allowed-tools: Bash, Read, Skill
 ---
 
 <objective>

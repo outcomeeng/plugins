@@ -1,9 +1,6 @@
 ---
 name: handoff
 description: Create timestamped handoff document for continuing work in a fresh context
-argument-hint: "[--no-session] [--prune]"
-allowed-tools:
-  - Skill
 ---
 
 <context>

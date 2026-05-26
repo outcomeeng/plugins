@@ -1,7 +1,5 @@
 ---
 description: Reflect, persist, and close session without creating a handoff file (archives in-scope sessions; does NOT return them to the todo queue)
-allowed-tools:
-  - Skill
 ---
 
 <objective>

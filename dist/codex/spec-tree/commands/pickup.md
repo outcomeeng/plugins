@@ -1,7 +1,5 @@
 ---
-allowed-tools: Skill
 description: Load and claim a handoff session, then stop at the post-context checkpoint unless overridden
-argument-hint: "[--list] [--auto-continue]"
 ---
 
 <objective>

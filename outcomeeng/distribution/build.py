@@ -2,10 +2,7 @@
 
 Transforms src/ plugin source into committed runtime trees at dist/claude/
 and dist/codex/. The pipeline is decomposed into stages so each stage is
-independently testable. See spec at:
-
-  spx/18-plugin-build.enabler/plugin-build.md
-  spx/18-plugin-build.enabler/15-build-architecture.adr.md
+independently testable.
 
 This module owns every constant, type, and error class the build emits or
 recognizes. Tests import from here directly — there are no test-owned
@@ -100,7 +97,6 @@ COMMENT_DELIMITER_END: Final = "#!}"
 # ---------------------------------------------------------------------------
 
 # Frontmatter fields that appear in dist/claude/ and are stripped from dist/codex/.
-# See ADR section "Per-target translation".
 CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (
     "allowed-tools",
     "disable-model-invocation",
@@ -403,8 +399,9 @@ def emit_skill(
     """
     src_relative = _relative_plugin_path(src_path)
     destination = dist_root / target.value / src_relative
+    raw_text = src_path.read_text(encoding="utf-8")
     rendered = render_text(
-        src_path.read_text(encoding="utf-8"),
+        raw_text,
         shared_root=shared_root,
         variables={"target": target.value},
     )
@@ -420,7 +417,7 @@ def emit_skill(
         src_path,
         destination,
         shared_root=shared_root,
-        rendered_source=src_path.read_text(encoding="utf-8"),
+        raw_source=raw_text,
     )
 
 
@@ -586,19 +583,25 @@ def _emit_rendered_file(
     shared_root: Path,
 ) -> None:
     destination = dist_root / target.value / _relative_plugin_path(source_file)
+    raw_text = source_file.read_text(encoding="utf-8")
     rendered = render_text(
-        source_file.read_text(encoding="utf-8"),
+        raw_text,
         shared_root=shared_root,
         variables={"target": target.value},
     )
     translated = rewrite_paths_for_target(rendered, target=target)
+    if target is Target.CODEX:
+        translated = strip_frontmatter_fields(
+            translated,
+            fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
+        )
     _write_text(destination, translated)
     shutil.copymode(source_file, destination)
     _fan_out_shared_references(
         source_file,
         destination,
         shared_root=shared_root,
-        rendered_source=source_file.read_text(encoding="utf-8"),
+        raw_source=raw_text,
     )
 
 
@@ -674,11 +677,11 @@ def _fan_out_shared_references(
     destination: Path,
     *,
     shared_root: Path,
-    rendered_source: str,
+    raw_source: str,
 ) -> None:
     if SKILLS_SUBDIR_NAME not in source_file.parts:
         return
-    for directive in parse_directives(rendered_source):
+    for directive in parse_directives(raw_source):
         if not isinstance(directive, IncludeDirective):
             continue
         include_path = _resolve_under_root(shared_root, directive.path)

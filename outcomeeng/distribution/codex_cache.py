@@ -5,14 +5,10 @@ against the set of versions published to the plugin's manifest within the
 configured window (default ten days). Versions inside the window become
 either the real current directory or a symlink pointing at it; versions outside
 the window are removed; plugins absent from the working tree have their cache
-directory pruned in full.
-
-Per
-``spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md``:
-the preservation set is derived from git history, not from the pre-upgrade
-cache snapshot. A single bypassed recipe invocation has no permanent effect --
-the next invocation reconstructs the symlink set from the same authoritative
-source.
+directory pruned in full. The preservation set is derived from git history,
+not from the pre-upgrade cache snapshot. A single bypassed recipe invocation
+has no permanent effect -- the next invocation reconstructs the symlink set
+from the same authoritative source.
 
 Usage::
 
@@ -41,12 +37,7 @@ type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
 
 class PluginHistory(Protocol):
-    """Source-of-truth for which versions to preserve.
-
-    Production implementations walk git history of each plugin's manifest within
-    the configured window, per
-    ``spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md``.
-    """
+    """Source-of-truth for which versions to preserve."""
 
     def working_tree_plugins(self) -> frozenset[str]: ...
 

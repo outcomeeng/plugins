@@ -1,6 +1,5 @@
 ---
 description: Author a spec tree artifact (product, ADR, PDR, enabler, outcome)
-argument-hint: [artifact type or description]
 ---
 
 <objective>
