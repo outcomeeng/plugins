@@ -26,11 +26,7 @@ check-skills:
 
 # Regenerate committed runtime plugin trees
 build-skills:
-    # --no-cache forces uv to build the outcomeeng-plugins wheel from this
-    # worktree's own source. The package version is static (0.1.0), so the uv
-    # build cache keys collide across worktrees sitting at different commits;
-    # without --no-cache a concurrent build elsewhere can install a wheel from
-    # another commit's source, producing a dist that mismatches this src.
+    # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
