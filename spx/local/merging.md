@@ -2,9 +2,9 @@
 
 Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository. Marketplace-specific overrides to the base merge flow.
 
-## Merge authority
+## Production-relevance recognition
 
-This repository follows the gate-green-autonomous default for both promotion and merge from `/standardizing-merging` `<pr_authority_gate>`. When the gate's predicates hold for the applicable action (closure gate passed, required checks terminal-green, current-head three-severity review with no `BLOCKING` or `DEBT`, five-minute settle window elapsed, branch hygiene including upstream-safety, no production-class markers, plus the merge-only predicates for merge), the agent runs the action's command immediately using the command in `## Merge command` below — no separate explicit human instruction is required for promotion or merge.
+This repository declares **no** production-relevance recognition mechanism: every change is treated as not production-relevant, so `PRODUCTION_READINESS` holds by default and `MERGE_READINESS` holding is sufficient authority to merge autonomously. The marketplace ships methodology and plugin sources; a merge to `main` publishes the next marketplace version, which the post-merge sync step picks up — no per-PR human merge approval is required.
 
 ## Merge command
 
@@ -18,13 +18,13 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 `--delete-branch` is omitted because `gh pr merge` fails its local-cleanup phase under multi-worktree checkouts when `main` is already checked out in another worktree (the merge succeeds on the remote, but the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'`). Delete the remote branch separately with `git push origin --delete <branch>`, then verify with `gh pr view`.
 
-## Closure gate
+## Deterministic verification
 
-The marketplace's closure gate is `just check`. Run it before any push that approaches ready or merge; it is the project-specific closure-gate predicate of `/standardizing-merging` `<pr_authority_gate>` for both promotion-time and merge-time evaluation.
+The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/standardizing-merging` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push and before any `--force-with-lease` push that follows a base-sync rebase.
 
 ## Mention-reviewer trigger phrase
 
-`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` per `/standardizing-merging` `<pr_authority_gate>` reviewer-skipped-by-design exception.
+`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` per `/standardizing-merging` `<authority_gates>` reviewer-skipped-by-design exception.
 
 ## Post-merge
 

@@ -2,11 +2,11 @@
 
 ## 1. Reviewer-skipped-by-design exception lacks an eval-backed scenario (FOLLOW-UP)
 
-The reviewer-skipped-by-design exception — `/standardizing-merging` `<pr_authority_gate>`, `/managing-pr` Step 7, the `MENTION_REVIEW_NEEDED` action token — was added without a `merging.md` scenario assertion exercising the skip path, and without a corresponding eval.
+The reviewer-skipped-by-design exception — `/standardizing-merging` `<authority_gates>`, `/managing-pr` Step 8, the `MENTION_REVIEW_NEEDED` action token — has no `merging.md` scenario assertion exercising the skip path and no dedicated eval.
 
-The node's other gate scenarios (`authority-gate-green`, `authority-gate-production`, `overlay-human-promotion`, `overlay-human-merge`, `authority-gate-hygiene`) each carry an `[eval]` link. A scenario for the skip path would fit that pattern:
+The node's gate scenarios (`review-readiness`, `merge-readiness`, `production-readiness`, `terminal-green`, `merge-command-overlay-precedence`) each carry an `[eval]` link. A scenario for the skip path would fit that pattern:
 
-> Given `spec-tree-review / spec-tree-review` reports `conclusion: skipped` with cause "PR head differs from main" and no current-head three-severity review exists, when the managing flow evaluates the PR authority gate, then it posts `<trigger-phrase> review` as a PR-level comment and emits `MENTION_REVIEW_NEEDED:<trigger-phrase>`.
+> Given the CI `spec-tree-review` reports `conclusion: skipped` with cause "PR head differs from main" and no current-head review exists, when the managing flow evaluates `MERGE_READINESS`, then it posts `<trigger-phrase> review` as a PR-level comment and emits `MENTION_REVIEW_NEEDED:<trigger-phrase>`.
 
 Required handling when an eval-coverage sweep happens:
 
@@ -14,6 +14,16 @@ Required handling when an eval-coverage sweep happens:
 - Create `evals/reviewer-skipped/` with `eval.toml`, `cases.jsonl`, `prompt.md` per the cross-skill eval pattern.
 - Run the eval to populate `history.jsonl`.
 
-Not a retag of the `spx/15-agent-pr-authority.pdr.md` MUST rules: those rules are "the skill declares X" structural assertions, `[review]` per `spx/15-spec-coverage.adr.md` and consistent with every other MUST rule in that PDR. The follow-up is the enabler-side scenario + eval, not a PDR evidence-tag change.
+Not a retag of the `spx/15-agent-pr-authority.pdr.md` MUST rules: those are "the skill declares X" structural assertions, `[review]` per `spx/15-spec-coverage.adr.md`. The follow-up is the enabler-side scenario + eval, not a PDR evidence-tag change.
 
-Deferred from the PR that folded in the reviewer-skipped exception — adding a new eval directory plus a paid eval run is additional scope beyond that PR's realignment-and-integration deliverable.
+## 2. The five gate evals are authored but unrun (FOLLOW-UP)
+
+The node's five `[eval]` directories — `review-readiness`, `merge-readiness`, `production-readiness`, `terminal-green`, `merge-command-overlay-precedence` — each carry `eval.toml`, `cases.jsonl`, and `prompt.md`, so every `merging.md` `[eval]` link resolves. None has been run: no `history.jsonl` exists, matching the node's prior state (the two pre-existing evals were also authored-but-unrun).
+
+Required handling when an eval-run budget window opens:
+
+- Run all five through the `outcomeeng-evals` CLI as a single deliberate, load-checked batch.
+- Restore any unrelated `git diff` noise the local appends produce before committing.
+- Confirm each suite meets its `threshold` (`0.85`); tune cases or prompts if a gate's classification proves non-deterministic under pass@k.
+
+Deferred deliberately: replaying graded cases through `claude --print` spends API budget beyond this change's spec/skill/doc cascade deliverable.

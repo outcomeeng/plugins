@@ -2,7 +2,7 @@
 
 PROVIDES a verification skill that produces a structured judgment-style review of working changes — a `review-result.json` machine-readable result plus a `review.md` human-readable surface — against an explicit base ref, persisted through thread-store and validated by a Python policy module whose CLI is the arbiter
 SO THAT developers reviewing their own changes before opening a PR and CI reviewing a branch's diff against its base ref
-CAN obtain a deterministically-validated review (structured findings plus acknowledgements) — the reviewer emits findings, and each consumer applies its own policy by severity
+CAN obtain a deterministically-validated review (structured findings plus acknowledgements) — the reviewer emits findings, and each consumer applies its own policy (by validity and phase per `spx/15-agent-pr-authority.pdr.md`, never by severity)
 
 ## Assertions
 
@@ -36,7 +36,7 @@ CAN obtain a deterministically-validated review (structured findings plus acknow
 ### Compliance
 
 - ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical review-result schema lives in one Python module ([test](tests/test_review_result.scenario.l1.py))
-- NEVER: the review-result schema carries a `decision` or verdict field — a review produces findings only; each consumer (the local pre-push gate, CI, the author) applies its own policy by severity, and the reviewer never decides ([test](tests/test_review_result.scenario.l1.py))
+- NEVER: the review-result schema carries a `decision` or verdict field — a review produces findings only; each consumer (the `REVIEW_READINESS` local gate, the `MERGE_READINESS` CI review, the author) applies its own policy by validity and phase per `spx/15-agent-pr-authority.pdr.md` — never by severity — and the reviewer never decides ([test](tests/test_review_result.scenario.l1.py))
 - ALWAYS: `validate_review_result.py` accepts JSON on stdin or via `--file` and pipes it through `review_result.parse_json` — the CLI is the arbiter the wrapper agent invokes to validate every result it emits ([test](tests/test_validate_review_result.scenario.l1.py))
 - ALWAYS: every script under `plugins/spec-tree/skills/reviewing-changes/scripts/` performs every filesystem effect through `thread_store` — no script calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any other direct filesystem-write primitive ([test](tests/test_reviewing_changes.compliance.l1.py))
 - ALWAYS: the swappable review prompt template lives at `plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` and the skill prose loads it via `${CLAUDE_SKILL_DIR}/references/review-prompt.md` ([test](tests/test_reviewing_changes.compliance.l1.py))

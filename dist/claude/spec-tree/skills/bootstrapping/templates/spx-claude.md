@@ -127,11 +127,11 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### Before pushing a PR branch → `/opening-pr` (with local review gate)
+### Before opening a PR → `/opening-pr` (`REVIEW_READINESS` gate)
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch passes through the local review gate at `/opening-pr` Step 3 before push. The gate invokes the `changes-reviewer` agent on the working diff and reads the resulting `review-result.json`. The agent runs in an isolated context so the verdict is not biased by what the operator's main agent has been doing. When the agent is not installed, fall back to the `/review-changes` slash command — both invoke the same `reviewing-changes` skill chain. It stops the push on any finding with `severity == "blocking"` or `severity == "debt"` — the reviewer emits findings only (no decision/verdict), so the gate keys purely on finding severity. `follow_up` findings are fixed in-PR unless the fix would widen the PR substantively, in which case the deferral is recorded in the relevant node's `ISSUES.md` or `PLAN.md`.
+Every change destined for the default branch passes through the `REVIEW_READINESS` gate at `/opening-pr` before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. `/opening-pr` invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. The agent acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
 
 ---
 

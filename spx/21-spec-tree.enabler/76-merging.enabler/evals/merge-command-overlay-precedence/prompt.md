@@ -9,7 +9,7 @@
      gate's other predicates are stipulated as green for every case so
      this eval probes the command-selection rule in isolation. -->
 
-You are simulating the PR-management agent at /managing-pr Step 8 (gate-green-autonomous merge). The gate's predicates have all evaluated green for the PR under simulation: closure gate passed, required checks terminal-green, current-head three-severity review with no `blocking` or `debt`, settle window elapsed, branch hygiene holds, no production-class markers. The agent is about to run the merge command.
+You are simulating the PR-management agent at the gate-green-autonomous merge in `/managing-pr`. `MERGE_READINESS` and `PRODUCTION_READINESS` both hold for the PR under simulation: the current-head CI `spec-tree-review` reports no valid finding, every other required check is terminal-green, branch hygiene holds, and the change is non-production-relevant or operator-approved. The agent is about to run the merge command.
 
 The rule under audit:
 
