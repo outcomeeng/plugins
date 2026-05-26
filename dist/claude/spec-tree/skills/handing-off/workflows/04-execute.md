@@ -77,10 +77,7 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
    ```bash
    # stdin = JSON header on line 1, then the body verbatim; a leading
    # '#' or '---' in the body is literal, never parsed as frontmatter.
-   printf '%s\n' \
-     '{"priority": "medium", "goal": "...", "next_step": "...", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' \
-     '[canonical continuation body — <metadata> through <incorporated_sessions>]' \
-     | spx session handoff
+   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '[canonical continuation body — <metadata> through <incorporated_sessions>]' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
 4. Read `<SESSION_FILE>` to confirm it exists and contains the CLI-prefilled `created_at`, `agent_session_id` when available, `branch`, and `worktree` values.
