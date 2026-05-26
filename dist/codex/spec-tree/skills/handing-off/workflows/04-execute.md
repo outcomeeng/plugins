@@ -75,12 +75,12 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`; omit `result`) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---` and prefills `created_at`, `agent_session_id`, `branch`, and `worktree` itself.
    ```bash
-   {
-     printf '%s\n' '{"priority":"medium","goal":"...","next_step":"...","specs":[],"files":[]}'
-     cat << 'EOF'
-   [canonical continuation body — <metadata> through <incorporated_sessions>]
-   EOF
-   } | spx session handoff
+   # stdin = JSON header on line 1, then the body verbatim; a leading
+   # '#' or '---' in the body is literal, never parsed as frontmatter.
+   printf '%s\n' \
+     '{"priority":"medium","goal":"...","next_step":"...","specs":[],"files":[]}' \
+     "${body}" \
+     | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
 4. Read `<SESSION_FILE>` to confirm it exists and contains the CLI-prefilled `created_at`, `agent_session_id` when available, `branch`, and `worktree` values.
