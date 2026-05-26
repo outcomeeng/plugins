@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-JUSTFILE = Path("Justfile")
+JUSTFILE = Path("justfile")
 LEFTHOOK = Path("lefthook.yml")
 CLAUDE_MARKETPLACE = Path(".claude-plugin/marketplace.json")
 CODEX_MARKETPLACE = Path(".agents/plugins/marketplace.json")
