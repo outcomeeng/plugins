@@ -8,14 +8,9 @@ Scenarios
 - Given a JSON document missing a required key,
   ``validate_review_result.py`` exits non-zero with a structured error
   message naming the missing key.
-- Given a JSON document with an unknown ``decision``, ``severity``, or
-  ``concern`` value, ``validate_review_result.py`` exits non-zero with
-  a structured error message naming the unknown value and the allowed
-  set.
-- Given a JSON document where ``decision == "approve"`` and at least
-  one finding has ``severity == "blocking"``,
-  ``validate_review_result.py`` exits non-zero with a structured error
-  naming the offending finding identifiers.
+- Given a JSON document with an unknown ``severity`` or ``concern``
+  value, ``validate_review_result.py`` exits non-zero with a structured
+  error message naming the unknown value and the allowed set.
 
 Compliance (subset)
 - ``validate_review_result.py`` accepts JSON on stdin or via ``--file``
@@ -54,12 +49,12 @@ class TestConformingDocument:
 class TestMissingKeyRejection:
     """A document missing a required key exits non-zero and names the key."""
 
-    def test_missing_decision_key_exits_nonzero_naming_the_key(self) -> None:
+    def test_missing_summary_key_exits_nonzero_naming_the_key(self) -> None:
         document = make_review_result_dict()
-        del document["decision"]
+        del document["summary"]
         result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
         assert result.returncode != 0
-        assert "decision" in result.stderr
+        assert "summary" in result.stderr
 
     def test_missing_findings_key_exits_nonzero_naming_the_key(self) -> None:
         document = make_review_result_dict()
@@ -71,17 +66,6 @@ class TestMissingKeyRejection:
 
 class TestUnknownEnumValueRejection:
     """Unknown wire values exit non-zero with the value and allowed set."""
-
-    def test_unknown_decision_exits_nonzero_naming_value_and_allowed_set(
-        self,
-    ) -> None:
-        document = make_review_result_dict(decision="bogus-decision")
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
-        assert result.returncode != 0
-        assert "bogus-decision" in result.stderr
-        # One member of the allowed set, to assert the enumeration was
-        # surfaced rather than a bare "invalid decision" message.
-        assert "approve" in result.stderr
 
     def test_unknown_severity_exits_nonzero_naming_value_and_allowed_set(
         self,
@@ -120,28 +104,6 @@ class TestUnknownEnumValueRejection:
         assert result.returncode != 0
         assert "marketing" in result.stderr
         assert "consistency" in result.stderr
-
-
-class TestConsistencyInvariantRejection:
-    """``approve`` + ``blocking`` exits non-zero and names the offending IDs."""
-
-    def test_approve_with_blocking_exits_nonzero_naming_offending_finding_ids(
-        self,
-    ) -> None:
-        offending = {
-            "id": "F-042",
-            "concern": "consistency",
-            "severity": "blocking",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
-        document = make_review_result_dict(decision="approve", findings=[offending])
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
-        assert result.returncode != 0
-        assert "F-042" in result.stderr
 
 
 class TestMalformedJsonRejection:

@@ -1,4 +1,4 @@
-title = "decision-thresholds"
+title = "findings-direction"
 cases = "cases.jsonl"
 prompt = "prompt.md"
 threshold = 0.85

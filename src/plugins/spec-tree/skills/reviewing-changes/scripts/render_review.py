@@ -2,7 +2,7 @@
 
 Reads ``review-result.json`` from the thread store under the given
 slug, parses it through ``review_result.parse_json`` (which enforces
-the canonical schema and the consistency invariant), and writes a
+the canonical schema), and writes a
 markdown surface to stdout. The wrapper agent pipes the stdout payload
 into ``write_record.py`` to persist ``review.md``.
 

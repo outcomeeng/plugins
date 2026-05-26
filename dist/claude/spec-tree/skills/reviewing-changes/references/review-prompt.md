@@ -35,14 +35,6 @@ Every finding carries one `severity`:
 - `debt` — must-fix-eventually defect: the finding does not jeopardize the product if shipped but accumulates technical debt.
 - `follow_up` — out-of-scope finding: the finding does not jeopardize the product if shipped and addressing it requires wider refactoring or additional scope that would extend the blast-radius of this PR.
 
-## Decision
-
-Emit one of three decisions on the document:
-
-- `approve` — no `blocking` finding is present. The arbiter rejects an `approve` decision combined with any `blocking` finding.
-- `request_changes` — at least one `blocking` finding is present. The author must address every blocking finding before the changeset can be merged.
-- `comment` — no findings at all. Acknowledgements may still be present.
-
 ## Label asymmetry by severity
 
 The render templates apply different labels per severity. Populate the `message` and `action` fields so the rendered output matches:
@@ -60,14 +52,13 @@ Emit at least one acknowledgement when the changeset makes a positive change —
 
 ## No findings
 
-When the changeset has no `blocking` or `debt` findings, emit `decision: "approve"` (or `decision: "comment"` if there are no findings at all). NEVER invent lower-priority findings to prove the review happened.
+When the changeset has no `blocking` or `debt` findings, say so plainly — the document carries the findings you do see (or an empty `findings` array) plus any acknowledgements. The reviewer emits no decision or verdict; each consumer applies its own policy by severity. NEVER invent lower-priority findings to prove the review happened.
 
 ## Output shape
 
 Emit exactly one JSON document conforming to the canonical schema. Required keys:
 
 - `schema_version` — the integer schema version (the policy module declares the current value as a module constant).
-- `decision` — one of `"approve"`, `"request_changes"`, `"comment"`.
 - `summary` — a free-form paragraph the renderer surfaces at the top of `review.md`.
 - `findings` — an array of finding objects. Each finding carries `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`.
 - `acknowledgements` — an array of strings (may be empty).
@@ -77,7 +68,7 @@ Findings must use the wire values declared by the policy module:
 - `concern` ∈ `consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`.
 - `severity` ∈ `blocking`, `debt`, `follow_up`.
 
-Assign each finding a stable identifier of the form `F-NNN` so the arbiter's error messages name the offender unambiguously when the consistency invariant fires.
+Assign each finding a stable identifier of the form `F-NNN` so it can be referenced unambiguously.
 
 Do not embed the diff, the prompt, or any other side data inside the JSON document. The document is the structured judgment only.
 

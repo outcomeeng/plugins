@@ -50,7 +50,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 Two artifacts under the thread-store backend's storage paths (default `.spx/reviews/<branch-slug>/`):
 
-- `review-result.json` — structured result (decision, findings, acknowledgements).
+- `review-result.json` — structured result (findings, acknowledgements).
 - `review.md` — rendered prose plus findings table.
 
 The skill writes both. The `.spx/` root is gitignored.

@@ -10,8 +10,6 @@ Scenarios
   round-trip a ``ReviewResult`` instance without loss.
 
 Mappings
-- ``Decision`` enum members map to the wire values ``approve``,
-  ``request_changes``, ``comment``.
 - ``Severity`` enum members map to the wire values ``blocking``,
   ``debt``, ``follow_up``.
 - ``Concern`` enum members map to exactly the six wire values
@@ -20,10 +18,9 @@ Mappings
 
 Compliance (subset)
 - The policy module declares ``SCHEMA_VERSION``, frozen ``Finding`` and
-  ``ReviewResult`` dataclasses, the ``Decision`` / ``Severity`` /
-  ``Concern`` enums.
-
-Consistency-invariant exhaustion lives in the property file.
+  ``ReviewResult`` dataclasses, the ``Severity`` / ``Concern`` enums.
+- The schema carries no ``decision``/verdict field — the reviewer emits
+  findings only.
 """
 
 from __future__ import annotations
@@ -49,11 +46,13 @@ class TestModuleSurface:
         assert isinstance(review_result.SCHEMA_VERSION, int)
         assert review_result.SCHEMA_VERSION >= 1
 
-    def test_decision_severity_concern_enums_exist(self) -> None:
+    def test_severity_and_concern_enums_exist_and_no_decision(self) -> None:
         review_result = load_review_result_module()
-        assert hasattr(review_result, "Decision")
         assert hasattr(review_result, "Severity")
         assert hasattr(review_result, "Concern")
+        # The reviewer emits findings only — there is no decision/verdict
+        # enum on the schema.
+        assert not hasattr(review_result, "Decision")
 
     def test_finding_and_review_result_are_frozen_dataclasses(self) -> None:
         review_result = load_review_result_module()
@@ -68,16 +67,6 @@ class TestModuleSurface:
     def test_validation_error_subclass_of_exception(self) -> None:
         review_result = load_review_result_module()
         assert issubclass(review_result.ReviewResultValidationError, Exception)
-
-
-class TestDecisionMapping:
-    """``Decision`` members map to the wire values ``approve``,
-    ``request_changes``, ``comment``."""
-
-    def test_decision_members_map_to_wire_values(self) -> None:
-        review_result = load_review_result_module()
-        wire_values = {member.value for member in review_result.Decision}
-        assert wire_values == {"approve", "request_changes", "comment"}
 
 
 class TestSeverityMapping:
@@ -115,21 +104,11 @@ class TestParseJsonConforming:
         payload = json.dumps(make_review_result_dict())
         result = review_result.parse_json(payload)
         assert isinstance(result, review_result.ReviewResult)
-        assert result.decision == review_result.Decision("request_changes")
 
-    def test_parse_json_accepts_approve_with_no_blocking(self) -> None:
+    def test_parse_json_accepts_empty_findings(self) -> None:
         review_result = load_review_result_module()
-        # Approve with a follow_up-only finding is the canonical
-        # "approve with minor notes" shape.
-        payload = json.dumps(make_review_result_dict(decision="approve"))
+        payload = json.dumps(make_review_result_dict(findings=[]))
         result = review_result.parse_json(payload)
-        assert result.decision == review_result.Decision("approve")
-
-    def test_parse_json_accepts_comment_with_no_findings(self) -> None:
-        review_result = load_review_result_module()
-        payload = json.dumps(make_review_result_dict(decision="comment", findings=[]))
-        result = review_result.parse_json(payload)
-        assert result.decision == review_result.Decision("comment")
         assert result.findings == ()
 
 
@@ -140,20 +119,11 @@ class TestParseJsonRejection:
     def test_missing_required_key_raises(self) -> None:
         review_result = load_review_result_module()
         document = make_review_result_dict()
-        del document["decision"]
+        del document["summary"]
         payload = json.dumps(document)
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
-        assert "decision" in str(excinfo.value)
-
-    def test_unknown_decision_raises_with_value_and_allowed_set(self) -> None:
-        review_result = load_review_result_module()
-        payload = json.dumps(make_review_result_dict(decision="bogus-decision"))
-        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
-            review_result.parse_json(payload)
-        message = str(excinfo.value)
-        assert "bogus-decision" in message
-        assert "approve" in message  # part of the allowed set
+        assert "summary" in str(excinfo.value)
 
     def test_unknown_severity_raises_with_value_and_allowed_set(self) -> None:
         review_result = load_review_result_module()
@@ -192,28 +162,6 @@ class TestParseJsonRejection:
         message = str(excinfo.value)
         assert "marketing" in message
         assert "consistency" in message  # part of the allowed set
-
-    def test_approve_with_blocking_raises_consistency_invariant(self) -> None:
-        review_result = load_review_result_module()
-        offending_finding = {
-            "id": "F-001",
-            "concern": "consistency",
-            "severity": "blocking",
-            "file": "x.py",
-            "line": 1,
-            "rule": FIXTURE_RULE_CITATION,
-            "message": "m",
-            "action": "a",
-        }
-        payload = json.dumps(
-            make_review_result_dict(decision="approve", findings=[offending_finding])
-        )
-        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
-            review_result.parse_json(payload)
-        message = str(excinfo.value)
-        # The error must name the offending finding identifier so the
-        # wrapper agent can correlate.
-        assert "F-001" in message
 
     def test_malformed_json_raises(self) -> None:
         review_result = load_review_result_module()
