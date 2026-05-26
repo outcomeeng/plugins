@@ -106,11 +106,14 @@ class ChangeProbe(Protocol):
 def sync(
     base_ref: str | None,
     *,
-    runner: StepRunner,
-    tool_probe: ToolProbe,
-    change_probe: ChangeProbe,
+    runner: StepRunner | None = None,
+    tool_probe: ToolProbe | None = None,
+    change_probe: ChangeProbe | None = None,
 ) -> int:
     """Run the marketplace sync orchestration. Returns the process exit code."""
+    runner = runner or _real_runner
+    tool_probe = tool_probe or _real_tool_probe
+    change_probe = change_probe or _real_change_probe
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)

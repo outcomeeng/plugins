@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.distribution.build import IMPLEMENTED, Target, build
+from outcomeeng.distribution.build import IMPLEMENTED, PLUGINS_DIR_NAME, Target, build
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
@@ -35,5 +35,5 @@ def test_dist_files_trace_to_source_ancestor(tmp_path: Path) -> None:
     reader = DistTreeReader(tmp_path)
     for target in Target:
         for relative_path in reader.list_all_files(target):
-            source_path = builder.src_root / "plugins" / relative_path
+            source_path = builder.src_root / PLUGINS_DIR_NAME / relative_path
             assert source_path.is_file()
