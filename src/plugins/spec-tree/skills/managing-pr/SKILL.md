@@ -110,7 +110,7 @@ gh api graphql --silent \
   -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
   -F id=<review-thread-node-id>
 
-# Merge (gate-green-autonomous default; per /standardizing-merging <authority_gates> + Merge command)
+# Merge (when MERGE_READINESS and PRODUCTION_READINESS hold; per /standardizing-merging <authority_gates> + Merge command)
 gh pr merge <pr-number> --rebase --delete-branch
 ```
 
