@@ -13,6 +13,11 @@ pre-commit:
       glob: "*.json"
       run: uv run python -m outcomeeng.validation.plugins .
       priority: 10
+    build-skills:
+      glob: "*.{md,json,toml,py}"
+      run: just build-skills && git diff --exit-code dist
+      stage_fixed: true
+      priority: 20
     dprint:
       glob: "*.{md,python,ts,js,json,jsonc}"
       run: dprint fmt {staged_files}

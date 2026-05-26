@@ -30,10 +30,10 @@ import sys
 # Tree surgery that changes the enabler's depth must update this index.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[5]
 THREAD_STORE_SCRIPTS_DIR = (
-    REPO_ROOT / "plugins" / "spec-tree" / "skills" / "thread-store" / "scripts"
+    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "thread-store" / "scripts"
 )
-SPEC_TREE_SKILLS_DIR = REPO_ROOT / "plugins" / "spec-tree" / "skills"
-SPEC_TREE_AGENTS_DIR = REPO_ROOT / "plugins" / "spec-tree" / "agents"
+SPEC_TREE_SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
+SPEC_TREE_AGENTS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents"
 
 # Names of modules that ship alongside ``thread_store.py`` and are
 # imported by sibling scripts via bare names (sys.path[0] resolution).

@@ -4,9 +4,9 @@
 
 The spec-tree plugin now specifies `.spx/sessions/$CLAUDE_SESSION_ID/` (or `$CODEX_THREAD_ID/` under Codex) as the authoritative accumulator for every session an agent has claimed during a runtime. The marketplace side is in place after commit `ad7d696`:
 
-- `plugins/spec-tree/bin/session-start` no longer mkdirs the per-runtime directory. It is created lazily on first claim.
-- `plugins/spec-tree/skills/handing-off/references/scope-resolution.md` reads the filesystem as primary source of truth and cross-checks against `<SESSION_SCOPE>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers.
-- `plugins/spec-tree/skills/picking-up/SKILL.md` documents the dual accumulator (filesystem symlink + marker).
+- `src/plugins/spec-tree/bin/session-start` no longer mkdirs the per-runtime directory. It is created lazily on first claim.
+- `src/plugins/spec-tree/skills/handing-off/references/scope-resolution.md` reads the filesystem as primary source of truth and cross-checks against `<SESSION_SCOPE>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers.
+- `src/plugins/spec-tree/skills/picking-up/SKILL.md` documents the dual accumulator (filesystem symlink + marker).
 
 The corresponding `spx` CLI changes have not landed. Until they do, the filesystem source is empty on every runtime, the algorithm falls through to marker-based scope recovery, and context compaction still risks dropping scope — the exact failure mode this work eliminates.
 
@@ -92,6 +92,6 @@ Nothing else to change here. The plugin-side contract is already merged. If the 
 ## Pointers
 
 - Marketplace commit implementing the plugin-side contract: `ad7d696`
-- Authoritative algorithm: [`plugins/spec-tree/skills/handing-off/references/scope-resolution.md`](../../../plugins/spec-tree/skills/handing-off/references/scope-resolution.md)
-- SessionStart hook (lazy-create expectation): [`plugins/spec-tree/bin/session-start`](../../../plugins/spec-tree/bin/session-start)
+- Authoritative algorithm: [`src/plugins/spec-tree/skills/handing-off/references/scope-resolution.md`](../../../src/plugins/spec-tree/skills/handing-off/references/scope-resolution.md)
+- SessionStart hook (lazy-create expectation): [`src/plugins/spec-tree/bin/session-start`](../../../src/plugins/spec-tree/bin/session-start)
 - Current spx session command handlers (paths observed during plan drafting; confirm on entry): `src/commands/session/pickup.ts`, `src/commands/session/archive.ts`, `src/domains/session/index.ts`

@@ -1,0 +1,87 @@
+---
+name: understanding
+description: ALWAYS invoke this skill before any spec-tree work to load methodology. NEVER create, read, or modify spec tree files without loading this foundation first.
+allowed-tools: Read, Glob, Grep
+---
+
+<objective>
+
+Load the Spec Tree methodology into the conversation so all subsequent skills operate from a shared foundation. This is a foundation skill. It is loaded once before any work involving spec tree happens in the session. It is invoked *again* after every compaction. This skill emits a marker that other skills check before starting work.
+
+</objective>
+
+<principles>
+
+1. **TRUTH FLOWS DOWN** — Decisions (ADR: `{slug}.adr.md`/PDR: `{slug}.pdr.md`) decide. Specs (`{slug}.md`) declare in alignment with decisions. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never change a decision to match a spec. Never change a spec to match tests. Never change tests to match code. Read `references/durable-map.md`.
+2. **FOUNDATION, NOT PRODUCT CONTEXT** — This skill loads the foundation of the Spec Tree methodology; it does not load product-specific artifacts. Use `/contextualizing` for target-specific context injection.
+3. **LOAD ONCE** — Check for `<SPEC_TREE_FOUNDATION>` marker before loading. If present, skip.
+4. **SPECS ARE DECLARATIONS** — The Spec Tree is a durable, declarative map. Nothing moves, nothing closes. Specs declare product truth.
+5. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
+6. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertions derive from PDRs/ADRs, not from code or tests.
+7. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
+8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
+9. **ESCAPE HATCHES COORDINATE, SPECS DECLARE** — PLAN.md and ISSUES.md are node-local coordination files inside the tree. They are committed to git so future sessions read them on context load, but they do not declare product truth, architecture, product decisions, assertions, or evidence. `/contextualizing` reads them automatically; conformance checks ignore them. Session files under `.spx/sessions/` are the only spec-tree artifacts not committed to git — `spx session` shares them across worktrees.
+10. **FULL PATHS ONLY** — Every node, ADR, and PDR reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
+11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
+12. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger. Safe fixes happen immediately. Unresolved entries either block for operator judgment or are written to the correct artifact: product truth in specs/ADRs/PDRs, workflow rules in methodology, and future-session coordination in PLAN.md or ISSUES.md. Read `references/imperfection-protocol.md`.
+
+</principles>
+
+<stop_triggers>
+
+About to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decomposing`; this foundation only covers the context-loading meaning of existing order.
+
+About to load context for an existing target and explain why lower-index siblings are read -> read `references/ordering-rules.md`.
+
+</stop_triggers>
+
+<workflow>
+
+1. Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If present, skip — already loaded.
+2. Read core references (always loaded):
+   - `references/durable-map.md` — truth hierarchy, declarative model, atemporal voice, node states
+   - `references/node-types.md` — enabler vs outcome, directory structure
+   - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
+   - `references/ordering-rules.md` — context-loading meaning of existing numeric prefixes and sibling number scope
+   - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, closing protocol
+3. Note operational references (loaded on demand by other skills):
+   - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
+   - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
+   - PLAN.md / ISSUES.md inside node directories — node-local coordination artifacts for pending plans and known issues, committed to git, not spec truth (used by `/contextualizing`, `/handing-off`)
+   - `spx/local/*.md` — product-specific overlays for `/coding-*`, `/architecting-*`, and `/testing-*` skills (enumerated by `/contextualizing`)
+4. Note template and example locations (read only when authoring):
+   - `templates/product/product-name.product.md`
+   - `templates/decisions/decision-name.adr.md`
+   - `templates/decisions/decision-name.pdr.md`
+   - `templates/nodes/enabler-name.md`
+   - `templates/nodes/outcome-name.md`
+   - `examples/` — concrete filled specs (read when you need to see what a completed spec looks like)
+5. Emit the `<SPEC_TREE_FOUNDATION>` marker:
+
+```text
+<SPEC_TREE_FOUNDATION>
+Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol
+Operational references available: what-goes-where, excluded-nodes
+Templates available: product, adr, pdr, enabler, outcome
+Examples available in: examples/
+</SPEC_TREE_FOUNDATION>
+```
+
+</workflow>
+
+<success_criteria>
+
+- [ ] Five core reference files read and understood
+- [ ] Operational reference, template, and example locations known
+- [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
+- [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
+- [ ] Methodology loaded: enabler vs outcome distinction, three-part hypothesis structure
+- [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
+- [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
+- [ ] Methodology loaded: existing lower-index siblings are read as constraining context; same-index and higher-index siblings are listed but not read as target constraints
+- [ ] Methodology loaded: all node, ADR, and PDR references use full paths from `spx/`
+- [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are node-local coordination artifacts committed to git, not spec truth; session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git
+- [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per product without modifying the shared marketplace
+- [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
+
+</success_criteria>

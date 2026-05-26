@@ -8,11 +8,11 @@ This decision governs the source of truth for which plugin-version paths the mar
 
 **Business impact:** Codex resolves plugin paths from `~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`. A `marketplace upgrade` removes plugin directories whose versions differ from the latest published manifest. An in-flight Codex conversation that loaded skills under a removed path loses those references mid-session — every subsequent skill invocation against that version fails. The marketplace owns the contract that keeps recently-published paths resolvable so day-to-day developer sessions survive marketplace refreshes.
 
-**Technical constraints:** The marketplace publishes plugin versions by committing `plugins/<plugin>/.claude-plugin/plugin.json` and `plugins/<plugin>/.codex-plugin/plugin.json` (in lockstep, per `spx/13-plugin-and-runtime-conventions.adr.md`) to the published branch. The Codex marketplace clone in `~/.codex/.tmp/marketplaces/<marketplace>/` tracks that branch and publishes only the latest committed version per plugin. The plugin cache directory contains, at any moment, the latest published version as a real directory plus any compatibility paths the marketplace recipe creates. The recipe `just push-marketplace` is the only sanctioned invocation surface for cache mutation.
+**Technical constraints:** The marketplace publishes plugin versions by committing `src/plugins/<plugin>/.claude-plugin/plugin.json` and `src/plugins/<plugin>/.codex-plugin/plugin.json` (in lockstep, per `spx/13-plugin-and-runtime-conventions.adr.md`) plus generated runtime output under `dist/` to the published branch. The Codex marketplace clone in `~/.codex/.tmp/marketplaces/<marketplace>/` tracks that branch and publishes only the latest committed version per plugin. The plugin cache directory contains, at any moment, the latest published version as a real directory plus any compatibility paths the marketplace recipe creates. The recipe `just push-marketplace` is the only sanctioned invocation surface for cache mutation.
 
 ## Decision
 
-The preservation set is the union of plugin-version pairs that have appeared in `plugins/<plugin>/.claude-plugin/plugin.json` on the published branch within the last ten days, derived from `git log` of that manifest.
+The preservation set is the union of plugin-version pairs that have appeared in `src/plugins/<plugin>/.claude-plugin/plugin.json` on the published branch within the last ten days, derived from `git log` of that manifest.
 
 ## Rationale
 
@@ -28,13 +28,13 @@ Two alternatives were rejected. The first — pin Codex resolution to the workin
 
 ## Trade-offs accepted
 
-| Trade-off                                                                                                      | Mitigation / reasoning                                                                                                                                                                                         |
-| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The recipe runs `git log` per plugin manifest on every invocation                                              | Git invocations remain bounded by the plugin count; the recipe already shells out to `git`, `claude`, and `codex` per push, so the added cost is small and identical across pushes                             |
-| Conversations older than ten days that reference an older plugin version break                                 | Ten days covers a working week plus weekend margin; conversations that survive longer belong to the runtime's session lifecycle, not the marketplace's preservation contract                                   |
-| Git history must be available on the local working tree when the recipe runs                                   | The recipe is documented as running inside the marketplace repository's working tree; CI configurations and developer machines satisfy this constraint by construction                                         |
-| Renames to manifest files (e.g., relocating `plugins/<plugin>/`) lose their history without `git log --follow` | The git walker uses `--follow` and treats discontinuities as boundaries that limit but do not corrupt the preservation set; structural renames are rare and explicit                                           |
-| A plugin removed from the marketplace continues to receive symlinks for ten days under its last known target   | The pruner discards the directory entirely once no version remains in the window; ten-day persistence after removal is consistent with the in-flight-conversation rationale that motivates preservation at all |
+| Trade-off                                                                                                          | Mitigation / reasoning                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The recipe runs `git log` per plugin manifest on every invocation                                                  | Git invocations remain bounded by the plugin count; the recipe already shells out to `git`, `claude`, and `codex` per push, so the added cost is small and identical across pushes                             |
+| Conversations older than ten days that reference an older plugin version break                                     | Ten days covers a working week plus weekend margin; conversations that survive longer belong to the runtime's session lifecycle, not the marketplace's preservation contract                                   |
+| Git history must be available on the local working tree when the recipe runs                                       | The recipe is documented as running inside the marketplace repository's working tree; CI configurations and developer machines satisfy this constraint by construction                                         |
+| Renames to manifest files (e.g., relocating `src/plugins/<plugin>/`) lose their history without `git log --follow` | The git walker uses `--follow` and treats discontinuities as boundaries that limit but do not corrupt the preservation set; structural renames are rare and explicit                                           |
+| A plugin removed from the marketplace continues to receive symlinks for ten days under its last known target       | The pruner discards the directory entirely once no version remains in the window; ten-day persistence after removal is consistent with the in-flight-conversation rationale that motivates preservation at all |
 
 ## Invariants
 
@@ -46,7 +46,7 @@ Two alternatives were rejected. The first — pin Codex resolution to the workin
 
 ### Recognized by
 
-The marketplace recipe `just push-marketplace` invokes the cache-preservation script. The script accepts a callable that returns, for each plugin in the working tree, the set of versions published to the manifest within the configured window. The default callable wraps `git log` against `plugins/<plugin>/.claude-plugin/plugin.json`. The script's cache-restoration loop computes the symlink set from the callable's output, not from the BEFORE-snapshot delta. Tests substitute the callable with explicit Protocol implementations.
+The marketplace recipe `just push-marketplace` invokes the cache-preservation script. The script accepts a callable that returns, for each plugin in the working tree, the set of versions published to the manifest within the configured window. The default callable wraps `git log` against `src/plugins/<plugin>/.claude-plugin/plugin.json`. The script's cache-restoration loop computes the symlink set from the callable's output, not from the BEFORE-snapshot delta. Tests substitute the callable with explicit Protocol implementations.
 
 ### MUST
 

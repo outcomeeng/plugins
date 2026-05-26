@@ -5,7 +5,7 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. Without a single
   source, every test file walks ``__file__.parents[...]`` to find
-  ``plugins/spec-tree/skills/auditing/scripts``.
+  ``src/plugins/spec-tree/skills/auditing/scripts``.
 - ``JSON_BLOCK_BEGIN`` / ``JSON_BLOCK_END``. The HTML-comment delimiters used
   by ``markdown+json`` are defined in ``verdict.py`` (the production module).
   Importing them here means tests cannot disagree with the producer/consumer
@@ -30,6 +30,7 @@ from types import ModuleType
 # ``outcomeeng_testing/harnesses/verdict_toolchain.py``.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[2]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"
@@ -49,9 +50,10 @@ def load_verdict_module() -> ModuleType:
     """Load ``verdict.py`` as a module and cache it under ``sys.modules``.
 
     The verdict module is not importable as a package — it lives under
-    ``plugins/`` (a runtime-substituted plugin directory) and the marketplace
-    deliberately ships every script under ``scripts/`` as a bare module that
-    ``python3 path/to/script.py`` invocations resolve via ``sys.path[0]``.
+    ``src/plugins/`` (the authored plugin source directory) and the
+    marketplace deliberately ships every script under ``scripts/`` as a bare
+    module that ``python3 path/to/script.py`` invocations resolve via
+    ``sys.path[0]``.
     Tests that need to introspect the dataclasses, constants, or rollup logic
     load it through ``importlib`` instead of a regular import.
 

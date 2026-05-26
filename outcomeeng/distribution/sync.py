@@ -27,7 +27,12 @@ from typing import Protocol
 
 REQUIRED_TOOLS: tuple[str, ...] = ("claude", "codex", "uv")
 
-DISTRIBUTION_PATHS: tuple[str, ...] = ("plugins", ".claude-plugin", ".agents/plugins")
+DISTRIBUTION_PATHS: tuple[str, ...] = (
+    "src",
+    "dist",
+    ".claude-plugin",
+    ".agents/plugins",
+)
 
 
 @dataclass(frozen=True)
@@ -52,6 +57,17 @@ STEPS: tuple[SyncStep, ...] = (
             "-m",
             "outcomeeng.distribution.codex_cache",
             "outcomeeng",
+        ),
+    ),
+    SyncStep(
+        name="codex_agent_install",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.distribution.agents",
+            "install",
         ),
     ),
     SyncStep(
@@ -90,11 +106,14 @@ class ChangeProbe(Protocol):
 def sync(
     base_ref: str | None,
     *,
-    runner: StepRunner,
-    tool_probe: ToolProbe,
-    change_probe: ChangeProbe,
+    runner: StepRunner | None = None,
+    tool_probe: ToolProbe | None = None,
+    change_probe: ChangeProbe | None = None,
 ) -> int:
     """Run the marketplace sync orchestration. Returns the process exit code."""
+    runner = runner or _real_runner
+    tool_probe = tool_probe or _real_tool_probe
+    change_probe = change_probe or _real_change_probe
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
@@ -132,13 +151,12 @@ def _real_tool_probe(name: str) -> bool:
 
 
 def _real_change_probe(base_ref: str) -> bool:
-    result = subprocess.run(
+    tracked_result = subprocess.run(
         [
             "git",
             "diff",
             "--name-only",
             base_ref,
-            "HEAD",
             "--",
             *DISTRIBUTION_PATHS,
         ],
@@ -146,7 +164,22 @@ def _real_change_probe(base_ref: str) -> bool:
         text=True,
         check=True,
     )
-    return bool(result.stdout.strip())
+    if tracked_result.stdout.strip():
+        return True
+    untracked_result = subprocess.run(
+        [
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            *DISTRIBUTION_PATHS,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return bool(untracked_result.stdout.strip())
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -162,7 +195,7 @@ def _build_parser() -> argparse.ArgumentParser:
         nargs="?",
         default="",
         help=(
-            "Optional git ref to compare against HEAD. "
+            "Optional git ref to compare against the working tree. "
             "When omitted, all sync steps run unconditionally."
         ),
     )

@@ -15,6 +15,7 @@ from types import ModuleType
 # Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[6]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"

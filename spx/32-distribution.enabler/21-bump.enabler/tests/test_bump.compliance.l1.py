@@ -455,10 +455,12 @@ def test_auto_detection_never_writes_a_major_bump_through_the_orchestrator() -> 
 
     # Throw the kitchen sink of minor-triggering patterns at it.
     changes = (
-        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/skills/new/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/commands/new-command.md"),
-        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/agents/new-agent.md"),
-        ChangedPath(FileStatus.ADDED, f"plugins/{plugin}/.codex-plugin/plugin.json"),
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/skills/new/SKILL.md"),
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/commands/new-command.md"),
+        ChangedPath(FileStatus.ADDED, f"src/plugins/{plugin}/agents/new-agent.md"),
+        ChangedPath(
+            FileStatus.ADDED, f"src/plugins/{plugin}/.codex-plugin/plugin.json"
+        ),
     )
 
     change_probe = ScriptedChangeProbe(changed={plugin: changes})

@@ -2,7 +2,7 @@
 
 Covers the path-prefix allow-list compliance assertion in `bump.md`:
 
-    ALWAYS: changes are detected only under `plugins/{name}/**` — any
+    ALWAYS: changes are detected only under `src/plugins/{name}/**` — any
     file change inside that prefix counts as a distribution-surface
     change for plugin `{name}`, and no path outside that prefix
     triggers any bump.
@@ -19,7 +19,7 @@ from __future__ import annotations
 from hypothesis import given
 from hypothesis import strategies as st
 
-from outcomeeng.distribution.bump import PLUGINS_DIR, changed_plugins_from_diff
+from outcomeeng.distribution.bump import SOURCE_PLUGINS_DIR, changed_plugins_from_diff
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
     plugin_names,
@@ -27,14 +27,14 @@ from outcomeeng_testing.generators.bump import (
 )
 
 
-_PREFIX: str = f"{PLUGINS_DIR}/"
+_PREFIX: str = f"{SOURCE_PLUGINS_DIR}/"
 
 
 def _expected_plugins(paths: list[str]) -> frozenset[str]:
     """Independent oracle: derive the expected plugin set from the spec rule.
 
     A path contributes plugin name `n` to the output iff it begins with
-    `plugins/` followed by a non-empty `n` that ends at the next `/` or
+    `src/plugins/` followed by a non-empty `n` that ends at the next `/` or
     end-of-string. Restated here as a `startswith`/`find` walk so the
     oracle's algorithm differs from the implementation's `split`-based
     approach — a mutation in either path is detectable.
@@ -57,10 +57,10 @@ def test_any_path_under_a_plugin_directory_extracts_that_plugin(
     subpath: str,
 ) -> None:
     """For every non-empty `plugin` segment and any nested subpath, the path
-    `plugins/{plugin}/{subpath}` contributes exactly `{plugin}` and nothing
-    else — the allow-list claims the entire `plugins/{name}/**` subtree.
+    `src/plugins/{plugin}/{subpath}` contributes exactly `{plugin}` and nothing
+    else — the allow-list claims the entire `src/plugins/{name}/**` subtree.
     """
-    path = f"{PLUGINS_DIR}/{plugin}/{subpath}"
+    path = f"{SOURCE_PLUGINS_DIR}/{plugin}/{subpath}"
     assert changed_plugins_from_diff([path]) == frozenset({plugin})
 
 

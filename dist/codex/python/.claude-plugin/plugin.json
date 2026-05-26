@@ -1,0 +1,11 @@
+{
+  "name": "python",
+  "version": "0.18.0",
+  "description": "Python development workflow with testing, architecture, and coding skills",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": ["python", "testing", "code-review", "architecture", "automation"]
+}

@@ -55,8 +55,8 @@ def _make_marketplace(tmp_path: Path) -> Path:
 
 
 def _make_plugin(tmp_path: Path, name: str) -> Path:
-    """Create a plugin directory under tmp_path/plugins/<name>/."""
-    plugin_dir = tmp_path / "plugins" / name
+    """Create a plugin directory under tmp_path/src/plugins/<name>/."""
+    plugin_dir = tmp_path / "src" / "plugins" / name
     manifest_dir = plugin_dir / ".claude-plugin"
     manifest_dir.mkdir(parents=True)
     (manifest_dir / "plugin.json").write_text(
@@ -199,7 +199,7 @@ def test_sync_returns_no_errors_when_both_catalogs_match(tmp_path: Path) -> None
 def test_sync_reports_catalog_entry_without_plugin_directory(tmp_path: Path) -> None:
     _make_claude_catalog(tmp_path, registered=["ghost"])
     _make_codex_catalog(tmp_path, registered=["ghost"])
-    # No plugins/ghost/ directory
+    # No src/plugins/ghost/ directory
 
     errors = check_catalog_sync(tmp_path)
 

@@ -50,7 +50,7 @@ def _create_skill(
 def test_collect_skills_returns_union(plugin_skills: dict[str, list[str]]) -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        plugins_dir = tmp_path / "plugins"
+        plugins_dir = tmp_path / "dist" / "claude"
 
         expected_dirs: set[str] = set()
         for plugin_name, skill_names in plugin_skills.items():

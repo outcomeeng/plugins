@@ -11,7 +11,7 @@ from outcomeeng.spec_tree_structure import (
 )
 
 MARKETPLACE_ROOT_SENTINEL_FILE = "pyproject.toml"
-MARKETPLACE_ROOT_REQUIRED_DIRECTORY = Path("plugins/spec-tree")
+MARKETPLACE_ROOT_REQUIRED_DIRECTORY = Path("src/plugins/spec-tree")
 
 
 class MarketplaceRootNotFoundError(RuntimeError):

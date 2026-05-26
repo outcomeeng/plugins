@@ -12,6 +12,7 @@ from types import ModuleType
 # parents[2] = repo root: outcomeeng_testing/harnesses/<file>
 SCRIPTS_DIR: Path = (
     Path(__file__).resolve().parents[2]
+    / "src"
     / "plugins"
     / "work"
     / "skills"

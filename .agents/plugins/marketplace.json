@@ -8,7 +8,7 @@
       "name": "develop",
       "source": {
         "source": "local",
-        "path": "./plugins/develop"
+        "path": "./dist/codex/develop"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -20,7 +20,7 @@
       "name": "frontend",
       "source": {
         "source": "local",
-        "path": "./plugins/frontend"
+        "path": "./dist/codex/frontend"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -32,7 +32,7 @@
       "name": "hdl",
       "source": {
         "source": "local",
-        "path": "./plugins/hdl"
+        "path": "./dist/codex/hdl"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -44,7 +44,7 @@
       "name": "prose",
       "source": {
         "source": "local",
-        "path": "./plugins/prose"
+        "path": "./dist/codex/prose"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -56,7 +56,7 @@
       "name": "python",
       "source": {
         "source": "local",
-        "path": "./plugins/python"
+        "path": "./dist/codex/python"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -68,7 +68,7 @@
       "name": "rust",
       "source": {
         "source": "local",
-        "path": "./plugins/rust"
+        "path": "./dist/codex/rust"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -80,7 +80,7 @@
       "name": "spec-tree",
       "source": {
         "source": "local",
-        "path": "./plugins/spec-tree"
+        "path": "./dist/codex/spec-tree"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -92,7 +92,7 @@
       "name": "typescript",
       "source": {
         "source": "local",
-        "path": "./plugins/typescript"
+        "path": "./dist/codex/typescript"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -104,7 +104,7 @@
       "name": "work",
       "source": {
         "source": "local",
-        "path": "./plugins/work"
+        "path": "./dist/codex/work"
       },
       "policy": {
         "installation": "AVAILABLE",

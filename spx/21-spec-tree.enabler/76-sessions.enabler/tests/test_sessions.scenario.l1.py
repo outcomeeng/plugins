@@ -25,7 +25,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-BIN_DIR = REPO_ROOT / "plugins" / "spec-tree" / "bin"
+BIN_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "bin"
 POST_COMPACT = BIN_DIR / "post-compact"
 SESSION_RESUME = BIN_DIR / "session-resume"
 

@@ -1,11 +1,11 @@
 """Discover and validate all marketplace and plugin manifests.
 
-Finds the marketplace root (.claude-plugin/marketplace.json) and all plugin
-directories (plugins/*/.claude-plugin/plugin.json), then runs
+Finds the marketplace root (.claude-plugin/marketplace.json) and all built
+Claude plugin directories (dist/claude/*/.claude-plugin/plugin.json), then runs
 ``claude plugin validate`` on each.
 
 Also checks:
-  - Every plugin directory is registered in all marketplace catalogs:
+  - Every authored plugin directory is registered in all marketplace catalogs:
       - .claude-plugin/marketplace.json  (Claude Code)
       - .agents/plugins/marketplace.json (Codex)
   - For plugins with both .claude-plugin/plugin.json and
@@ -36,6 +36,8 @@ CATALOGS: dict[str, str] = {
     "claude": ".claude-plugin/marketplace.json",
     "codex": ".agents/plugins/marketplace.json",
 }
+SOURCE_PLUGINS_DIR = Path("src") / "plugins"
+CLAUDE_DIST_PLUGINS_DIR = Path("dist") / "claude"
 
 
 def discover_targets(root: Path) -> list[Path]:
@@ -50,10 +52,12 @@ def discover_targets(root: Path) -> list[Path]:
     if (root / ".claude-plugin" / "marketplace.json").is_file():
         targets.append(root)
 
-    # Plugin directories
-    plugins_dir = root / "plugins"
-    if plugins_dir.is_dir():
-        for child in sorted(plugins_dir.iterdir()):
+    # Built Claude plugin directories are the install targets.
+    plugin_candidates = root / CLAUDE_DIST_PLUGINS_DIR
+    if not plugin_candidates.is_dir():
+        plugin_candidates = root / SOURCE_PLUGINS_DIR
+    if plugin_candidates.is_dir():
+        for child in sorted(plugin_candidates.iterdir()):
             if child.is_dir() and (child / ".claude-plugin" / "plugin.json").is_file():
                 targets.append(child)
 
@@ -69,11 +73,11 @@ def _catalog_plugin_names(path: Path) -> set[str]:
 def check_catalog_sync(root: Path) -> list[str]:
     """Report plugins missing from any marketplace catalog.
 
-    Compares the set of plugin directories under ``plugins/`` against each
+    Compares the set of plugin directories under ``src/plugins/`` against each
     catalog listed in CATALOGS.  Returns a list of human-readable error
     strings; empty means everything is in sync.
     """
-    plugins_dir = root / "plugins"
+    plugins_dir = root / SOURCE_PLUGINS_DIR
     plugin_dirs: set[str] = (
         {
             child.name
@@ -95,7 +99,7 @@ def check_catalog_sync(root: Path) -> list[str]:
             errors.append(f"{name} not in {surface} catalog ({rel_path})")
         for name in sorted(registered - plugin_dirs):
             errors.append(
-                f"{name} in {surface} catalog but has no plugins/{name}/ directory"
+                f"{name} in {surface} catalog but has no src/plugins/{name}/ directory"
             )
 
     return errors
@@ -104,14 +108,14 @@ def check_catalog_sync(root: Path) -> list[str]:
 def check_manifest_parity(root: Path) -> list[str]:
     """Report plugin directories whose Claude and Codex manifests disagree on version.
 
-    For each plugin under ``plugins/`` that ships both
+    For each plugin under ``src/plugins/`` that ships both
     ``.claude-plugin/plugin.json`` and ``.codex-plugin/plugin.json``, asserts
     that the ``version`` field matches across the two manifests. Plugins that
     ship only the Claude manifest are skipped — Codex coverage is optional.
 
     Returns a list of human-readable error strings; empty means parity holds.
     """
-    plugins_dir = root / "plugins"
+    plugins_dir = root / SOURCE_PLUGINS_DIR
     if not plugins_dir.is_dir():
         return []
 

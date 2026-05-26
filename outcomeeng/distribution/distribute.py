@@ -1,7 +1,7 @@
 """Distribute skills from the monorepo to downstream repos.
 
-Reads distribution.yml for the mapping of downstream repos
-to source plugins, then copies skill directories to each repo.
+Reads distribution.yml for the mapping of downstream repos to built Claude
+plugins, then copies skill directories to each repo.
 
 Usage::
 
@@ -28,6 +28,7 @@ DISTRIBUTION_CONFIG = MONOREPO_ROOT / "scripts" / "distribution.yml"
 README_TEMPLATE = MONOREPO_ROOT / "scripts" / "templates" / "README.md.tpl"
 LICENSE_FILE = MONOREPO_ROOT / "LICENSE"
 MARKETPLACE_REPO = "plugins"
+CLAUDE_DIST_RELATIVE = Path("dist") / "claude"
 
 # Directories inside a plugin that are NOT distributed (Claude-specific)
 SKIP_DIRS = {"commands", "agents", ".claude-plugin"}
@@ -55,7 +56,7 @@ def collect_skills(plugins: list[str]) -> list[dict[str, Any]]:
     """Collect all skill directories from the given plugins."""
     skills = []
     for plugin_name in plugins:
-        skills_dir = MONOREPO_ROOT / "plugins" / plugin_name / "skills"
+        skills_dir = MONOREPO_ROOT / CLAUDE_DIST_RELATIVE / plugin_name / "skills"
         if not skills_dir.is_dir():
             print(f"  Warning: {skills_dir} does not exist, skipping")
             continue

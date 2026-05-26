@@ -42,6 +42,7 @@ from outcomeeng_testing.harnesses.verdict_toolchain import load_verdict_module
 # Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[4]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"
@@ -67,7 +68,7 @@ SAMPLE_LAST_RUN_AT = "2026-05-11T15:35:12Z"
 
 
 def _load_audit_orchestrator() -> ModuleType:
-    """Load plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
+    """Load src/plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
 
     The module ships inside the spec-tree plugin's scripts/ directory; importlib
     loads it by absolute path so this test does not depend on package layout.

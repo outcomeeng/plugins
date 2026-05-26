@@ -2,7 +2,7 @@
 
 After ``just push-marketplace`` runs, checks that:
 
-1. Each plugin's current version (from ``plugins/*/.claude-plugin/plugin.json``)
+1. Each plugin's current version (from ``src/plugins/*/.claude-plugin/plugin.json``)
    exists as a real directory in the Claude Code plugin cache.
 2. Each plugin's current version exists as a real directory in the Codex plugin
    cache (for plugins present there).
@@ -34,6 +34,8 @@ from pathlib import Path
 DEFAULT_MARKETPLACE = "outcomeeng"
 DEFAULT_MAX_AGE_DAYS = 10
 SECONDS_PER_DAY = 24 * 60 * 60
+SOURCE_PLUGINS_DIR = Path("src") / "plugins"
+CLAUDE_DIST_PLUGINS_DIR = Path("dist") / "claude"
 
 
 def claude_cache_root() -> Path:
@@ -60,16 +62,23 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
     invalid JSON, or a manifest whose top-level shape is not a dict.
     Callers fall back to strict validation when None is returned.
     """
-    manifest = (
-        codex_marketplace_clone_root(marketplace)
-        / "plugins"
+    clone_root = codex_marketplace_clone_root(marketplace)
+    candidates = (
+        clone_root
+        / CLAUDE_DIST_PLUGINS_DIR
         / plugin
         / ".claude-plugin"
-        / "plugin.json"
+        / "plugin.json",
+        clone_root / "plugins" / plugin / ".claude-plugin" / "plugin.json",
     )
-    try:
-        data = json.loads(manifest.read_text())
-    except (json.JSONDecodeError, OSError):
+    data: object | None = None
+    for manifest in candidates:
+        try:
+            data = json.loads(manifest.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        break
+    if data is None:
         return None
     if not isinstance(data, dict):
         return None
@@ -94,9 +103,9 @@ def is_strictly_ahead(working_tree: str, published: str) -> bool:
 
 
 def current_versions(repo_root: Path) -> dict[str, str]:
-    """Map plugin name → version from each plugins/*/.claude-plugin/plugin.json."""
+    """Map plugin name → version from each src/plugins/*/.claude-plugin/plugin.json."""
     versions: dict[str, str] = {}
-    plugins_dir = repo_root / "plugins"
+    plugins_dir = repo_root / SOURCE_PLUGINS_DIR
     if not plugins_dir.is_dir():
         return versions
     for child in sorted(plugins_dir.iterdir()):
@@ -260,7 +269,7 @@ def validate(
     versions = current_versions(resolved_root)
     if not versions:
         return ValidationResult(
-            errors=[f"No plugins found under {resolved_root / 'plugins'}"]
+            errors=[f"No plugins found under {resolved_root / SOURCE_PLUGINS_DIR}"]
         )
 
     errors: list[str] = []

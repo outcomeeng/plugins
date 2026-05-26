@@ -3,13 +3,13 @@
 Provides domain-shaped input construction for manifest text, manifest
 relative paths, resolution of inert manifest fixtures, and Hypothesis
 strategies for diff-path domains. Generators emit canonical-form JSON
-and `plugins/{name}/...` paths so test files do not duplicate the
+and `src/plugins/{name}/...` paths so test files do not duplicate the
 construction logic; the fixture resolver returns absolute paths into
 `outcomeeng_testing/fixtures/bump/` so tests can read real-shaped
 manifest payloads by path; the path strategies vary, compose, and
 shrink across the change-detection input space.
 
-All vocabulary (`PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST`) comes
+All vocabulary (`SOURCE_PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST`) comes
 from the source module `outcomeeng.distribution.bump`.
 """
 
@@ -23,7 +23,7 @@ from hypothesis import strategies as st
 
 from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
-    PLUGINS_DIR,
+    SOURCE_PLUGINS_DIR,
     ChangedPath,
     FileStatus,
 )
@@ -33,7 +33,7 @@ _FIXTURES_ROOT: Path = Path(outcomeeng_testing.__file__).parent / "fixtures" / "
 
 def manifest_relpath(plugin: str, manifest: str) -> str:
     """Return the repository-relative manifest path for `plugin`/`manifest`."""
-    return f"{PLUGINS_DIR}/{plugin}/{manifest}"
+    return f"{SOURCE_PLUGINS_DIR}/{plugin}/{manifest}"
 
 
 def manifest_text(name: str, version: str) -> str:
@@ -70,7 +70,7 @@ def minor_change(plugin: str, *, slug: str = "new-skill") -> tuple[ChangedPath, 
     return (
         ChangedPath(
             status=FileStatus.ADDED,
-            path=f"{PLUGINS_DIR}/{plugin}/skills/{slug}/SKILL.md",
+            path=f"{SOURCE_PLUGINS_DIR}/{plugin}/skills/{slug}/SKILL.md",
         ),
     )
 
@@ -101,7 +101,7 @@ def relative_subpaths() -> st.SearchStrategy[str]:
     """Non-empty relative subpaths to nest under a plugin directory.
 
     May contain `/`, enabling deep nesting like `skills/x/SKILL.md`.
-    Empty subpath is excluded so the resulting `plugins/<name>/<subpath>`
+    Empty subpath is excluded so the resulting `src/plugins/<name>/<subpath>`
     is always a real file path, not a directory.
     """
     return st.text(
@@ -114,8 +114,8 @@ def arbitrary_diff_paths() -> st.SearchStrategy[str]:
     """Arbitrary text representing diff paths — including pathological cases.
 
     Covers any string a `git diff --name-only` line might carry: paths
-    outside `plugins/`, paths with empty segments (`plugins//foo`),
-    paths that equal the prefix without a name (`plugins/`, `plugins`),
+    outside `src/plugins/`, paths with empty segments (`src/plugins//foo`),
+    paths that equal the prefix without a name (`src/plugins/`, `src/plugins`),
     and paths under the prefix with valid plugin names.
     """
     return st.text(alphabet=st.characters(blacklist_characters=("\x00",)))

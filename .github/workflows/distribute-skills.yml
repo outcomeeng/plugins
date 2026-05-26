@@ -5,9 +5,9 @@ on:
     branches: [main]
     paths:
       - ".claude-plugin/**"
-      - "plugins/*/skills/**"
-      - "plugins/*/.claude-plugin/**"
-      - "plugins/*/.codex-plugin/**"
+      - ".agents/plugins/**"
+      - "src/plugins/**"
+      - "dist/claude/**"
       - "scripts/distribution.yml"
       - "outcomeeng/distribution/distribute.py"
       - ".github/workflows/distribute-skills.yml"
@@ -29,7 +29,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: pip install pyyaml

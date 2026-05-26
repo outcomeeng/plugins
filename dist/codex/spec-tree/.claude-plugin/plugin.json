@@ -1,0 +1,21 @@
+{
+  "name": "spec-tree",
+  "version": "0.47.0",
+  "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, session management, and TDD flows driven by specs",
+  "author": {
+    "name": "Simon Heimlicher"
+  },
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "spec-tree",
+    "outcome-engineering",
+    "enabler",
+    "outcome",
+    "deterministic-context",
+    "spx",
+    "commit",
+    "handoff",
+    "spec-as-source"
+  ]
+}

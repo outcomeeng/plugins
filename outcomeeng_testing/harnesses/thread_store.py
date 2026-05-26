@@ -5,9 +5,9 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
-  ``plugins/spec-tree/skills/thread-store/scripts``.
+  ``src/plugins/spec-tree/skills/thread-store/scripts``.
 - An importlib loader for the ``thread_store`` facade module. The module
-  is shipped under ``plugins/`` (a runtime-substituted plugin directory)
+  is shipped under ``src/plugins/`` (the authored plugin source directory)
   and is not importable as a package; tests that need to introspect the
   facade load it through ``importlib`` instead.
 - ``run_script``. A thin ``subprocess.run`` wrapper with the defaults
@@ -44,6 +44,7 @@ from types import ModuleType
 # ``outcomeeng_testing/harnesses/thread_store.py``.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[2]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"
@@ -63,6 +64,7 @@ LIST_RECORDS_SCRIPT = SCRIPTS_DIR / "list_records.py"
 
 AUDIT_ORCHESTRATOR_MODULE_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"
@@ -75,11 +77,11 @@ AUDIT_ORCHESTRATOR_MODULE_PATH = (
 def _load_module(module_name: str, module_path: pathlib.Path) -> ModuleType:
     """Load ``module_path`` as ``module_name`` and cache it under ``sys.modules``.
 
-    The thread-store scripts ship under ``plugins/`` (a runtime-substituted
-    plugin directory) and the marketplace ships every script under
-    ``scripts/`` as a bare module that ``python3 path/to/script.py``
-    invocations resolve via ``sys.path[0]``. Tests load these modules
-    through ``importlib`` instead of a regular import.
+    The thread-store scripts ship under ``src/plugins/`` (the authored plugin
+    source directory) and the marketplace ships every script under
+    ``scripts/`` as a bare module that ``python3 path/to/script.py`` invocations
+    resolve via ``sys.path[0]``. Tests load these modules through ``importlib``
+    instead of a regular import.
 
     Returns the already-loaded module on subsequent calls so the importlib
     loader runs at most once per test session for a given module name.

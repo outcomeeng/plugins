@@ -4,7 +4,7 @@ PROVIDES the skill distribution pipeline that copies skills from the monorepo to
 SO THAT users who install individual plugins via GitHub
 CAN receive the same skill content as marketplace users
 
-The `outcomeeng.distribution.distribute` module reads `distribution.yml` for the mapping of downstream repos to source plugins, collects skills from each plugin, and copies them to the target repositories.
+The `outcomeeng.distribution.distribute` module reads `distribution.yml` for the mapping of downstream repos to built Claude plugins under `dist/claude/`, collects skills from each plugin, and copies them to the target repositories.
 
 ## Assertions
 
@@ -25,3 +25,5 @@ The `outcomeeng.distribution.distribute` module reads `distribution.yml` for the
 
 - NEVER: distribute agent or command files — only skill directories are copied to downstream repos ([review])
 - ALWAYS: preserve `.git/` directory when clearing target repo contents ([review])
+- ALWAYS: the distribution workflow triggers from the committed Claude runtime tree and source plugin changes — retired `plugins/` source paths never gate distribution ([test](tests/test_distribution_workflow.compliance.l1.py))
+- ALWAYS: the distribution workflow runs on the Python version declared by `pyproject.toml` — CI uses the same interpreter contract as the project metadata ([test](tests/test_distribution_workflow.compliance.l1.py))

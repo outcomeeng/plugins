@@ -23,6 +23,7 @@ from hypothesis import strategies as st
 # Tree surgery that changes the enabler's depth must update this index.
 SCRIPTS_DIR = (
     pathlib.Path(__file__).resolve().parents[4]
+    / "src"
     / "plugins"
     / "spec-tree"
     / "skills"
@@ -42,7 +43,7 @@ _file_strategy = st.tuples(
 
 
 def _load_audit_orchestrator() -> ModuleType:
-    """Load plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
+    """Load src/plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
 
     The module ships inside the spec-tree plugin's scripts/ directory rather
     than the outcomeeng Python package; importlib.util loads it by absolute

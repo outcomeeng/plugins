@@ -24,7 +24,7 @@ PUBLISHED_VERSION = "0.1.0"
 
 
 def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
-    manifest = repo_root / "plugins" / plugin / ".claude-plugin" / "plugin.json"
+    manifest = repo_root / "src" / "plugins" / plugin / ".claude-plugin" / "plugin.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
@@ -127,6 +127,52 @@ def test_main_exits_zero_when_working_tree_ahead_of_marketplace_clone(
     """End-to-end through main(): when the working tree advances past the marketplace
     clone, the script exits zero and writes a warning to stderr naming the plugin and
     both versions."""
+    home = tmp_path / "home"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.chdir(repo)
+
+    _write_manifest(repo, PLUGIN_NAME, WORKING_TREE_VERSION)
+    codex_cache = home / ".codex" / "plugins" / "cache"
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    clone_manifest = (
+        home
+        / ".codex"
+        / ".tmp"
+        / "marketplaces"
+        / MARKETPLACE_NAME
+        / "dist"
+        / "claude"
+        / PLUGIN_NAME
+        / ".claude-plugin"
+        / "plugin.json"
+    )
+    clone_manifest.parent.mkdir(parents=True)
+    clone_manifest.write_text(
+        json.dumps({"name": PLUGIN_NAME, "version": PUBLISHED_VERSION})
+    )
+
+    exit_code = validate_install.main([MARKETPLACE_NAME])
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert PLUGIN_NAME in captured.err
+    assert WORKING_TREE_VERSION in captured.err
+    assert PUBLISHED_VERSION in captured.err
+    assert "warning:" in captured.err
+
+
+def test_main_reads_legacy_plugins_marketplace_clone_during_layout_migration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """When the installed Codex marketplace clone is still on the pre-dist layout,
+    validate_install reads `plugins/<plugin>/.claude-plugin/plugin.json` and keeps
+    feature-branch lag as a warning rather than an error.
+    """
     home = tmp_path / "home"
     repo = tmp_path / "repo"
     repo.mkdir()
