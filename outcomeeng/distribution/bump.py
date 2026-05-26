@@ -79,12 +79,14 @@ class FileStatus(StrEnum):
 class ChangedPath:
     """One repository-relative path changed since `base_ref` with its status.
 
-    For renames, `path` is the destination path (the path that exists in
-    the working tree after the rename).
+    For renames and paired add/delete source-tree migrations, `path` is the
+    destination path in the working tree and `old_path` is the source path
+    that exists at `base_ref`.
     """
 
     status: FileStatus
     path: str
+    old_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -269,8 +271,8 @@ def bump(
         plugin_already_bumped = False
         for record in records:
             working_tree_version = _version_from_manifest_text(record.content)
-            base_ref_content = _base_manifest_content(
-                content_probe, base_ref, record.path
+            base_ref_content = _base_manifest_content_for_record(
+                content_probe, base_ref, record.path, plugin_changes
             )
             if base_ref_content is not None:
                 base_ref_version = _version_from_manifest_text(base_ref_content)
@@ -341,23 +343,19 @@ def _version_from_manifest_text(content: str) -> Version:
     return Version.parse(data["version"])
 
 
-def _base_manifest_content(
-    content_probe: ContentProbe, base_ref: str, path: str
+def _base_manifest_content_for_record(
+    content_probe: ContentProbe,
+    base_ref: str,
+    path: str,
+    changes: Iterable[ChangedPath],
 ) -> str | None:
     content = content_probe(base_ref, path)
     if content is not None:
         return content
-    legacy_path = _legacy_plugin_path(path)
-    if legacy_path == path:
-        return None
-    return content_probe(base_ref, legacy_path)
-
-
-def _legacy_plugin_path(path: str) -> str:
-    prefix = f"{SOURCE_PLUGINS_DIR}/"
-    if not path.startswith(prefix):
-        return path
-    return f"plugins/{path.removeprefix(prefix)}"
+    for change in changes:
+        if change.path == path and change.old_path is not None:
+            return content_probe(base_ref, change.old_path)
+    return None
 
 
 def _replace_version(content: str, new_version: str) -> str:
@@ -378,10 +376,18 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
         check=True,
     )
     changes: dict[str, list[ChangedPath]] = {}
-    for line in result.stdout.splitlines():
-        change = _parse_diff_line(line)
-        if change is None:
-            continue
+    parsed_changes = tuple(
+        change
+        for line in result.stdout.splitlines()
+        if (change := _parse_diff_line(line)) is not None
+    )
+    base_source_paths = frozenset(
+        change.path for change in parsed_changes if change.status is FileStatus.DELETED
+    ) | frozenset(
+        change.old_path for change in parsed_changes if change.old_path is not None
+    )
+    for parsed_change in parsed_changes:
+        change = _with_base_source_path(parsed_change, base_source_paths)
         parts = change.path.split("/")
         source_parts = SOURCE_PLUGINS_DIR.split("/")
         if (
@@ -392,6 +398,28 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
             continue
         changes.setdefault(parts[len(source_parts)], []).append(change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
+
+
+def _with_base_source_path(
+    change: ChangedPath, base_source_paths: frozenset[str]
+) -> ChangedPath:
+    if change.status is not FileStatus.ADDED or change.old_path is not None:
+        return change
+    base_source_path = _base_source_path_for_added_src_path(change.path)
+    if base_source_path is None or base_source_path not in base_source_paths:
+        return change
+    return ChangedPath(
+        status=change.status,
+        path=change.path,
+        old_path=base_source_path,
+    )
+
+
+def _base_source_path_for_added_src_path(path: str) -> str | None:
+    prefix = f"{SOURCE_PLUGINS_DIR}/"
+    if not path.startswith(prefix):
+        return None
+    return f"plugins/{path.removeprefix(prefix)}"
 
 
 def _parse_diff_line(line: str) -> ChangedPath | None:
@@ -409,7 +437,7 @@ def _parse_diff_line(line: str) -> ChangedPath | None:
     if status is FileStatus.RENAMED:
         if len(fields) < 3:
             return None
-        return ChangedPath(status=status, path=fields[2])
+        return ChangedPath(status=status, path=fields[2], old_path=fields[1])
     if len(fields) < 2:
         return None
     return ChangedPath(status=status, path=fields[1])

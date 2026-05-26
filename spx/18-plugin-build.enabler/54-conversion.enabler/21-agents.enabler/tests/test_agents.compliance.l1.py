@@ -5,7 +5,9 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from outcomeeng.distribution.agents import install_agents
+import pytest
+
+from outcomeeng.distribution.agents import AgentConversionError, install_agents
 
 PLUGIN_NAME = "sample"
 AGENT_NAME = "guarded-writer"
@@ -65,3 +67,14 @@ def test_generated_toml_stays_outside_codex_plugin_manifest_content(
 
     assert not tuple(codex_root.rglob("*.toml"))
     assert "agents" not in manifest_path.read_text(encoding="utf-8")
+
+
+def test_invalid_generated_manifest_uses_converter_error(tmp_path: Path) -> None:
+    source_root = tmp_path / "dist" / "claude"
+    target_root = tmp_path / "codex-agents"
+    target_root.mkdir()
+    manifest_path = target_root / ".outcomeeng-generated-agents.json"
+    manifest_path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(AgentConversionError, match="invalid generated-agent manifest"):
+        install_agents(source_root, target_root)

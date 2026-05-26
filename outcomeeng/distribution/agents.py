@@ -310,7 +310,10 @@ def _build_parser() -> argparse.ArgumentParser:
 def _read_generated_manifest(path: Path) -> frozenset[str]:
     if not path.is_file():
         return frozenset()
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise AgentConversionError(f"invalid generated-agent manifest: {path}") from exc
     generated = data.get("generated", [])
     if not isinstance(generated, list) or not all(
         isinstance(item, str) for item in generated

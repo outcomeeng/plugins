@@ -511,8 +511,6 @@ def _render_directives(
     shared_root: Path | None,
     include_stack: tuple[Path, ...],
 ) -> str:
-    parse_directives(template)
-
     def replace(match: re.Match[str]) -> str:
         body = " ".join(match.group(1).split())
         body_match = _DIRECTIVE_BODY_RE.match(body)
