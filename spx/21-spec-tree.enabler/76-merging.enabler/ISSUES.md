@@ -25,5 +25,6 @@ Required handling when an eval-run budget window opens:
 - Run all five through the `outcomeeng-evals` CLI as a single deliberate, load-checked batch.
 - Restore any unrelated `git diff` noise the local appends produce before committing.
 - Confirm each suite meets its `threshold` (`0.85`); tune cases or prompts if a gate's classification proves non-deterministic under pass@k.
+- Complete the `terminal-green` eval's state-space coverage: it exercises `SUCCESS`, `PENDING`, `FAILURE`, the check-run `COMPLETED` conclusions `SUCCESS`/`FAILURE`/`SKIPPED`/`NEUTRAL`, plus absent and `IN_PROGRESS`, but not the status-context `state == ERROR` branch nor the check-run `QUEUED` (non-terminal) and `CANCELLED`/`TIMED_OUT`/`ACTION_REQUIRED` (terminal-not-success) conclusions named in `spx/15-agent-pr-authority.pdr.md`. Add those cases and run them. (Deferred FOLLOW-UP from the PR #80 spec-tree review on head `d3cf4aa`.)
 
 Deferred deliberately: replaying graded cases through `claude --print` spends API budget beyond this change's spec/skill/doc cascade deliverable.
