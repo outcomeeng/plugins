@@ -64,7 +64,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `agent`                    | No          | Subagent type to use when `context: fork` is set (`Explore`, `Plan`, `general-purpose`, or a custom agent). Defaults to `general-purpose`.                                                                                        |
 | `hooks`                    | No          | Hooks scoped to this skill's lifecycle. See the Claude Code hooks reference for shape.                                                                                                                                            |
 | `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                                  |
-| `shell`                    | No          | `bash` (default) or `powershell` for inline `` !`command` `` and `` ```! `` blocks. PowerShell requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                                      |
+| `shell`                    | No          | `bash` (default) or `powershell` for the skill's inline and fenced command-injection blocks. The `powershell` value requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                 |
 
 **Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately:
 
