@@ -127,7 +127,7 @@ For each test case, name the source. REJECT against the missing source when:
 - The case's value is a runner-tuning literal at test scope — the harness that owns the resource owns the timeout, retry count, or polling interval.
 - The case's input or expected output is hand-picked by the author with no source the audit can name — REJECT, the case is a tautology regardless of where it sits lexically.
 
-When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it. Source shape is improvable per `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/21-source-testability.enabler/source-testability.md`.
+When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it.
 
 Pass only when every case is traceable to a source independent of the author and every value lives in its proper home.
 </source_ownership_audit>

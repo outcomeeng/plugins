@@ -17,7 +17,7 @@ Rust test guidance follows this standard when:
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
 - property assertions use meaningful `proptest` or `quickcheck` properties
 - compile-time claims use compile-fail evidence
-- shared harnesses, generators, and fixtures live in a separate workspace-member crate (test-infrastructure production code), per `spx/15-test-infrastructure.pdr.md`
+- shared harnesses, generators, and fixtures live in a separate workspace-member crate (test-infrastructure production code), per the product's `test-infrastructure` PDR
 - coverage claims are measured with the repository's real coverage tool or recorded as unavailable
 
 </success_criteria>
@@ -212,7 +212,7 @@ Consumers depend on the workspace-member crate via `[dev-dependencies]` and impo
 
 **4. Fixture files**
 
-Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `product-testing/` workspace-member crate under `product-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. See `spx/15-test-infrastructure.pdr.md` for the cross-language rule.
+Use fixture files for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response, a document the parser must handle. Fixture files live in the `product-testing/` workspace-member crate under `product-testing/fixtures/` and are read from disk by path — never compiled in or imported as modules. This is the cross-language test-infrastructure rule.
 
 Strings and numbers are never valid fixtures. A string literal representing a domain value belongs in the production module or a generator, not a static file.
 

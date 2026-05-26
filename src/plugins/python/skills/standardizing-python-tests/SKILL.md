@@ -9,7 +9,7 @@ allowed-tools: Read
 <objective>
 Define Python-specific test standards loaded by `/testing-python`, `/coding-python`, `/architecting-python`, and `/auditing-python-tests`.
 
-Read `/testing` first when deciding what evidence to create. Read `/standardizing-python` before this reference when writing or reviewing Python test code. These standards implement `spx/15-test-infrastructure.pdr.md` and `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/python-tests.md`.
+Read `/testing` first when deciding what evidence to create. Read `/standardizing-python` before this reference when writing or reviewing Python test code. These standards implement the product's `test-infrastructure` PDR and Python test standards.
 </objective>
 
 <core_model>
@@ -82,7 +82,7 @@ Where the *values* the cases use live:
 
 **Artifacts are downstream of Python.** A YAML, HCL, bash, JSON schema, or IaC template file is not a legitimate source-of-truth. A Python module either renders the artifact or consumes it; that module owns the artifact's vocabulary. A test that hand-copies an artifact field name has invented the case — the production-owning module is the source, even if it has to be created first.
 
-**Missing source-of-truth modules.** When no Python module owns a needed value today, the missing module is the architectural defect, not the test. Create the source-of-truth module first; the test imports from it. Source shape is improvable per `spx/43-python.enabler/25-python-standards.enabler/25-python-tests.enabler/21-source-testability.enabler/source-testability.md`.
+**Missing source-of-truth modules.** When no Python module owns a needed value today, the missing module is the architectural defect, not the test. Create the source-of-truth module first; the test imports from it.
 
 Allowed source-owned value:
 

@@ -200,7 +200,7 @@ Reject with an `oracle` finding when the expected value is derived from the modu
 <step name="harness_chain">
 Trace every helper or harness import:
 
-- imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per `spx/15-test-infrastructure.pdr.md`
+- imports from the `product_testing` workspace-member crate (e.g., `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*`) — the canonical home per the product's `test-infrastructure` PDR
 - non-canonical legacy locations that must be flagged as misplaced infrastructure: `super::tests`, `crate::test_support`, `tests/support.rs`, `tests/support/`, `#[cfg(test)] mod` helper modules inside a product crate
 - helper functions inside `spx/.../tests/` — these are misplaced infrastructure unless they serve a single test file
 - binary harnesses built around `assert_cmd::Command::cargo_bin(...)`

@@ -403,7 +403,7 @@ Strings and numbers are never valid fixtures by themselves. A string literal tha
 </test_data_policy>
 
 <test_infrastructure>
-Test infrastructure (harnesses, generators, inert fixtures) is production code governed by `spx/15-test-infrastructure.pdr.md`. In TypeScript, it lives in a `testing/` directory at the product root, path-mapped to `@testing/` via `tsconfig.json` and `vitest.config.ts`. The PDR mandates the three category subdirectories: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`. This `testing/` directory is sibling to product code (`src/` or product root), never inside `spx/` and never inside any `tests/` directory; the corresponding spec-tree nodes live at `<root>/<NN>-infrastructure.enabler/<NN>-testing.enabler/<NN>-{generators|fixtures|harnesses}.enabler/`.
+Test infrastructure (harnesses, generators, inert fixtures) is production code governed by the product's `test-infrastructure` PDR. In TypeScript, it lives in a `testing/` directory at the product root, path-mapped to `@testing/` via `tsconfig.json` and `vitest.config.ts`. The PDR mandates the three category subdirectories: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`. This `testing/` directory is sibling to product code (`src/` or product root), never inside `spx/` and never inside any `tests/` directory; the corresponding spec-tree nodes live at `<root>/<NN>-infrastructure.enabler/<NN>-testing.enabler/<NN>-{generators|fixtures|harnesses}.enabler/`.
 
 ```text
 testing/

@@ -193,15 +193,15 @@ When you complete ADR creation, provide:
 
 ### ADRs Written
 
-| ADR                                                         | Scope          | Decision Summary                 |
-| ----------------------------------------------------------- | -------------- | -------------------------------- |
-| [Type Safety](spx/21-type-safety.adr.md)                    | Product        | Use strict TS, Zod at boundaries |
-| [CLI Structure](spx/32-cli.enabler/21-cli-structure.adr.md) | 32-cli enabler | Commander.js with subcommands    |
+| ADR                                | Scope   | Decision Summary            |
+| ---------------------------------- | ------- | --------------------------- |
+| [{ADR Name}]({path to ADR})        | {scope} | {one-line decision summary} |
+| [{Second ADR Name}]({path to ADR}) | {scope} | {one-line decision summary} |
 
 ### Key Constraints
 
-1. {constraint from [Type Safety](spx/21-type-safety.adr.md)}
-2. {constraint from [CLI Structure](spx/32-cli.enabler/21-cli-structure.adr.md)}
+1. {constraint from [{ADR Name}]({path to ADR})}
+2. {constraint from [{Second ADR Name}]({path to ADR})}
 ```
 
 </output_format>
