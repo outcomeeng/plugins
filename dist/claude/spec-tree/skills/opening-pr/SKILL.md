@@ -7,20 +7,20 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening flow. One-shot, linear: pre-flight → topology → local review gate → push → open draft → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
+The opening flow. One-shot, linear: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
 After loading this skill, check whether `spx/local/opening-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
 
-The overlay MUST NOT: fold promotion into `gh pr create`, skip the closure gate before promotion, skip or weaken the local review gate, override the always-draft mandate, or weaken the upstream-safety check.
+The overlay MUST NOT: skip or weaken the deterministic-verification or local-review predicates of `REVIEW_READINESS`, open the PR before `REVIEW_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Project-specific draft-lifecycle refinements (additional explicit-instruction signal forms; keep-ready rules across follow-up pushes) live in `spx/local/merging.md` instead, so /managing-pr and /opening-pr see the same rules.
+Project-specific refinements (the deterministic-verification command; production-relevance recognition; the merge command) live in `spx/local/merging.md` instead, so /managing-pr and /opening-pr see the same rules.
 </project_specialization>
 
 <the_opening_flow>
 
-Walk these steps in order. Every step is a routine workflow operation — schedule, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
+Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
 **Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary) and /committing-changes (commit type/scope classification for the title) via the Skill tool.
 
@@ -28,17 +28,17 @@ Walk these steps in order. Every step is a routine workflow operation — schedu
 
 **Step 2 — Classify topology.** Run /standardizing-merging `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
 
-**Step 3 — Local review gate.** Run the changes-reviewer agent (preferred) on the working diff before push. The agent runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed — both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store.
+**Step 3 — Evaluate `REVIEW_READINESS`.** Per /standardizing-merging `<authority_gates>`, the PR opens ready only when `REVIEW_READINESS` holds — both predicates below.
 
-Apply the acceptance criterion to the resulting `review-result.json`. The gate is **severity-based**: the reviewer emits findings only (no decision/verdict), so the gate reads each finding's `severity` from the `findings` array directly.
+*(a) Deterministic verification.* Run the project's full validation-and-testing command (named in `spx/local/merging.md`, for example `just check` / `pnpm test`). It must report success; fix failures and re-run until green.
 
-- Any finding with `severity == "blocking"` or `severity == "debt"` → STOP. Fix every such finding, commit via /committing-changes, re-invoke the reviewer, and repeat until the `findings` array contains no `blocking` and no `debt` entry.
-- Findings with `severity == "follow_up"` → fix the ones whose remediation stays within the PR's intended scope. Defer only those whose fix would widen scope substantively; record deferred items in the relevant node's `ISSUES.md` or `PLAN.md` (per /standardizing-merging `<review_classification>`) before pushing.
-- `findings` array contains no `blocking` and no `debt` entry → proceed to Step 4. The severity check is the gate; the result carries no decision field.
+*(b) Local review to convergence.* Run the changes-reviewer agent (preferred) on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed; both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store. The reviewer emits findings only (no decision/verdict); process them by **validity and phase** per /standardizing-merging `<review_classification>` — this is the before-open phase:
 
-The local review gate is stricter than the remote merge gate. The remote gate (per /standardizing-merging `<pr_authority_gate>`) allows `follow_up` findings tracked elsewhere and stops on `blocking` / `debt` only. The local pre-push pass aims for the remote review to surface nothing — every finding fixable in this PR's scope is fixed before push, and only widening-scope `follow_up` items survive to remote.
+- **Validate each finding** against its cited rule, the product-local / language / spec-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
+- **Apply every valid finding that belongs.** Fix it, commit via /committing-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
+- **Converged** when the working diff carries no unapplied valid finding that belongs. Severity never decides; validity and the before-open phase do.
 
-The iteration loop accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` before the next reviewer invocation so the predicates stay current.
+The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` and re-run deterministic verification so both predicates stay current. `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no valid finding.
 
 **Step 4 — Push.** Use the explicit destination ref form from /standardizing-merging `<push_semantics>`:
 
@@ -49,11 +49,10 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md / AGENTS.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — Open the draft PR.** Pipe the curated body to gh on stdin via `--body-file -`:
+**Step 5 — Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `REVIEW_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 gh pr create \
-  --draft \
   --title "<commit-subject under 70 chars per /committing-changes>" \
   --body-file - \
   --head "$(git branch --show-current)" <<'EOF'
@@ -77,7 +76,7 @@ EOF
 
 Flag rationale:
 
-- `--draft` — mandatory on every PR open per /standardizing-merging `<pr_authority_gate>`. Promotion is the managing flow's concern.
+- No `--draft` — the PR opens ready per /standardizing-merging `<authority_gates>`; `REVIEW_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI `spec-tree-review`) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
 - `--title` and `--body-file -` — explicit title plus body-from-stdin; matches /committing-changes conventions without writing to disk.
 - `--head` — the feature branch; prevents gh from prompting for fork/push targets.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
@@ -159,11 +158,11 @@ The opening flow has succeeded when:
 
 - /standardizing-merging and /committing-changes are loaded before the flow begins.
 - /standardizing-merging `<branch_hygiene>` and `<branch_topology>` gates pass before push.
-- The local review gate ran on the diff that will be pushed and `review-result.json` contains no `blocking` or `debt` findings; any `follow_up` items either fixed in-PR or recorded in the relevant node's `ISSUES.md` / `PLAN.md` with widening-scope as the deferral rationale.
+- `REVIEW_READINESS` held before the PR opened: deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /standardizing-merging `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
-- PR is opened as draft (`gh pr create --draft`).
+- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
 - First heartbeat is scheduled per /standardizing-merging `<heartbeat>`.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /standardizing-merging.

@@ -29,7 +29,7 @@ A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six 
 
 ## Open items
 
-1. **(Resolved by the reviewer-only change.)** This item tracked approve/comment calibration at trivial diffs. The review-result schema no longer carries a decision or verdict field — the reviewer emits findings only, and each consumer applies its own policy by severity — so the approve/comment boundary no longer exists.
+1. **(Resolved by the reviewer-only change.)** This item tracked approve/comment calibration at trivial diffs. The review-result schema no longer carries a decision or verdict field — the reviewer emits findings only, and each consumer applies its own policy (by validity and phase, never by severity) — so the approve/comment boundary no longer exists.
 
 2. **The skill hallucinates absence in own-diff live run.** Pre-PR-#43 dogfood produced false-positive findings claiming files "do not exist" that clearly did. The `judgment-grounding` eval probes this pattern across 4 cases and passed under the prior vocabulary. Worth re-confirming under the new vocabulary; if the failure reproduces under the live agent on subsequent diffs, the prompt may need an explicit "verify the file exists before claiming absence" instruction.
 

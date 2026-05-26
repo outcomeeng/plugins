@@ -2,7 +2,7 @@
 
 This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are copy-and-pin templates from `outcomeeng/gh-actions/examples/caller-workflows/` with the `@main` ref replaced by a pinned commit SHA:
 
-1. **`spec-tree.yml`** — `@claude` mention handler. Wraps the generic `claude.yml` reusable with `use_project_plugins: true` so the methodology skills declared in `.claude/settings.json` (`/contextualizing`, `/authoring`, `/decomposing`, etc.) are installed for every mention.
+1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable with `use_project_plugins: true` so the methodology skills declared in `.claude/settings.json` (`/contextualizing`, `/authoring`, `/decomposing`, etc.) are installed for every mention.
 2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the generic `claude-code-review.yml` reusable with the `REVIEW.md`-aware prompt and the `Bash(sed:*),Bash(grep:*),Bash(head:*)` allowlist extension the prompt's diff-chunking patterns rely on.
 
 A separate `distribute-skills.yml` workflow handles plugin distribution and is unrelated to the Claude callers.
@@ -38,7 +38,7 @@ jobs:
 
 `spec-tree-review.yml` deliberately does not expose `custom_prompt` — the prompt is baked in. Call `outcomeeng/gh-actions/.github/workflows/claude-code-review.yml` directly when full prompt control is needed.
 
-`spec-tree.yml` (the @-mention caller) accepts `trigger_phrase` (default `@claude`), `concurrency_cancel`, `claude_args`, and `use_project_plugins` (defaults to `true`). See the inline comments in each workflow file for the full set and their trade-offs.
+`spec-tree.yml` (the @-mention caller) accepts `trigger_phrase` (default `@spec-tree`), `concurrency_cancel`, `claude_args`, and `use_project_plugins` (defaults to `true`). See the inline comments in each workflow file for the full set and their trade-offs.
 
 ### Pinning
 

@@ -175,6 +175,16 @@ so bumps produce minimal diffs.
 Only paths under `src/plugins/<name>/**` count as distribution-surface changes; edits
 to `spx/`, `AGENTS.md`, tests, or other top-level files do not trigger a bump.
 
+### Regenerating the runtime trees
+
+The installed plugin trees under `dist/claude/` and `dist/codex/` are generated from `src/plugins/`. After editing anything under `src/plugins/`, rebuild them:
+
+```bash
+just build-skills   # uv run python -m outcomeeng.distribution.build src dist
+```
+
+The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/`, so each `src/plugins/` change and its regenerated `dist/` commit together. Never hand-edit `dist/`.
+
 ## Plugins
 
 Skills are available in both Claude Code and Codex. Commands and agents are Claude Code-only. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.
@@ -309,7 +319,7 @@ Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomp
 | Skill   | `/refocusing`                 | Running ad hoc commands, writing debug scripts, or writing code without a spec                                                                                                                                                                                                                                                               |
 | Skill   | `/reviewing-changes`          | The wrapper agent reviews the working changes on a branch against a base ref                                                                                                                                                                                                                                                                 |
 | Skill   | `/reviewing-pr`               | Asked by the user to invoke the PR review skill                                                                                                                                                                                                                                                                                              |
-| Skill   | `/standardizing-merging`      | Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, PR authority gate, three-severity review classification, three review surfaces, action tokens, and repo-local overlay topics                                                                                                                  |
+| Skill   | `/standardizing-merging`      | Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, the three PR-authority gates (review / merge / production readiness), review classification, three review surfaces, action tokens, and repo-local overlay topics                                                                              |
 | Skill   | `/testing`                    | Writing tests or when learning the testing approach                                                                                                                                                                                                                                                                                          |
 | Skill   | `/thread-store`               | Persisting or retrieving branch-scoped verification records                                                                                                                                                                                                                                                                                  |
 | Skill   | `/understanding`              | Any spec-tree work to load methodology                                                                                                                                                                                                                                                                                                       |

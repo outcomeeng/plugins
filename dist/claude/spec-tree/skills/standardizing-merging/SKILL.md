@@ -2,7 +2,7 @@
 name: standardizing-merging
 user-invocable: false
 description: >-
-  Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, PR authority gate, three-severity review classification, three review surfaces, action tokens, and repo-local overlay topics.
+  Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, the three PR-authority gates (review / merge / production readiness), review classification, three review surfaces, action tokens, and repo-local overlay topics.
   Loaded by /opening-pr and /managing-pr.
 allowed-tools: Read
 ---
@@ -19,18 +19,15 @@ This is a reference skill. /opening-pr and /managing-pr load this vocabulary aut
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization. Topics the overlay MAY refine:
 
 - Extra pre-flight checks beyond `<branch_hygiene>`.
-- The project-specific closure gate command.
+- The project's full deterministic-verification command (validation and testing) that `REVIEW_READINESS` runs.
 - Push command overrides — the explicit destination ref form must be preserved.
-- **Draft-promotion authority** — whether `gh pr ready` runs autonomously when the PR authority gate is green (the gate-green-autonomous default in `<pr_authority_gate>`) or requires explicit human instruction.
-- **Merge authority** — whether `gh pr merge` runs autonomously when the PR authority gate is green (the gate-green-autonomous default in `<pr_authority_gate>`) or requires explicit human instruction.
-- **Production-class recognition** — the mechanism by which the project classifies a PR as production-class (label, branch prefix, file pattern, manifest declaration). Production-class PRs bypass gate-green-autonomous authority for both actions.
-- Keep-ready signal forms — project-specific rules for keeping a PR ready across follow-up pushes when the closure gate has just re-passed.
+- **Production-relevance recognition** — the mechanism by which the project classifies a change as production-relevant (label, branch prefix, file pattern, manifest declaration). A production-relevant change reaches `MERGE_READINESS` autonomously but executes only after explicit operator approval (`PRODUCTION_READINESS`). A project that wants a human in the loop for every merge declares every change production-relevant; a project that wants none declares no mechanism.
 - **Merge command** — rebase merge with inline branch deletion (`gh pr merge <pr-number> --rebase --delete-branch`) is the universal default; the merge flow runs it unless the overlay opts in to a different command. The overlay may opt in to merge commit (`--merge`) or squash (`--squash`); merge commits and squashes are not the agent's choice to make from the gate alone. The overlay should document its rationale for human reviewers of the overlay change itself, but rationale is not a runtime predicate the agent enforces — the overlay's declaration is the agent's signal. The overlay may also opt out of inline branch deletion and into a separate `git push origin --delete <branch>` after `gh pr merge` to avoid multi-worktree cleanup failures.
-- **Mention-reviewer trigger phrase** — the leading phrase the agent posts as a PR-level comment to fire the mention-triggered reviewer when the auto-review job reports `conclusion: skipped` (see `<pr_authority_gate>` reviewer-skipped-by-design exception). The full comment body is `<trigger-phrase> review`; the `review` suffix is the keyword the mention reviewer matches on. Default: `@claude` (the upstream reviewer action's default `trigger_phrase`). Each consuming project that configures a non-default `trigger_phrase` in its reviewer caller workflow declares the matching phrase here.
+- **Mention-reviewer trigger phrase** — the leading phrase the agent posts as a PR-level comment to fire the mention-triggered reviewer when the auto-review job reports `conclusion: skipped` (see `<authority_gates>` reviewer-skipped-by-design exception). The full comment body is `<trigger-phrase> review`; the `review` suffix is the keyword the mention reviewer matches on. Default: `@spec-tree` (the upstream reviewer action's default `trigger_phrase`). Each consuming project that configures a non-default `trigger_phrase` in its reviewer caller workflow declares the matching phrase here.
 
-If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. **Absence of a production-class recognition mechanism means the project has not opted in to production-class gating — every PR is treated as non-production-class.** The other gate predicates (clean current-head bot review, required checks terminal-green, branch hygiene, commit-age) still apply, so a non-blocking bot review on the current head remains a prerequisite for autonomous merge. Repos that need a production-class hold must declare the recognition mechanism in the overlay.
+If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. **Absence of a production-relevance recognition mechanism means every change is treated as not production-relevant**, so `PRODUCTION_READINESS` holds and the merge executes on `MERGE_READINESS` alone. The other `MERGE_READINESS` predicates (current-head CI review with no valid finding, every other required check terminal-green, branch hygiene, PR-state) still apply.
 
-The overlay cannot override the always-draft mandate — `gh pr create --draft` is mandatory on every PR open. Promotion to ready remains a separate `gh pr ready` command; the overlay's draft-promotion-authority topic governs who authorizes the promotion (gate evaluation versus explicit human instruction), not whether the promotion command runs separately.
+The overlay cannot override the open-ready mandate — once `REVIEW_READINESS` holds the PR is created `ready_for_review`. There is no draft phase and no gated draft-to-ready promotion; a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges.
 </repo_local_overlay>
 
 <branch_hygiene>
@@ -75,10 +72,10 @@ The `exit 1` inside the upstream-safety check is a STOP for the calling flow.
 
 Every PR branch is one of two shapes:
 
-| Shape   | Meaning                                                                               | Required handling                                                                                         |
-| ------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Peer    | Targets the repository default branch and contains only its own review payload.       | Create from the current default branch. Refuse stale sibling merge commits.                               |
-| Stacked | Intentionally depends on another unmerged branch and targets that branch as its base. | Name the dependency in the PR body. Keep draft until the base merges, then reconstruct onto default base. |
+| Shape   | Meaning                                                                               | Required handling                                                                                                        |
+| ------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Peer    | Targets the repository default branch and contains only its own review payload.       | Create from the current default branch. Refuse stale sibling merge commits.                                              |
+| Stacked | Intentionally depends on another unmerged branch and targets that branch as its base. | Name the dependency in the PR body. Keep draft until the base merges, then reconstruct onto default base and open ready. |
 
 **Peer-gate** (all must hold): `origin/${base}` is an ancestor of `HEAD`; the commit list contains only the intended payload; the changed file list matches the PR scope; no merge commits from sibling work.
 
@@ -108,7 +105,7 @@ git log --oneline "origin/${base_branch}..HEAD"
 git diff --name-only "origin/${base_branch}...HEAD"
 ```
 
-**Post-merge reconstruction.** Once the stack base merges, re-invoke /opening-pr (or rebase manually) to re-target the PR at the default branch and re-classify as peer. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
+**Post-merge reconstruction.** Once the stack base merges, re-invoke /opening-pr (or rebase manually) to re-target the PR at the default branch, re-classify as peer, and open it ready. GitHub auto-retargets the PR base on the API side, but the local branch must still be rebased onto the updated default and the manifest version re-evaluated against the new base.
 
 </branch_topology>
 
@@ -144,48 +141,50 @@ git fetch origin "${base}"
 git merge-base --is-ancestor "origin/${base}" HEAD || git rebase "origin/${base}"
 ```
 
-Resolve textual conflicts by editing the conflict markers out, then `git rebase --continue`. The rebased tree is a fresh integration — this branch replayed on newly merged work — that no prior closure-gate run covered: the consuming flow MUST run the project's local closure gate against the rebased tree before the `--force-with-lease` push from `<push_semantics>`, and MUST fix any closure-gate failure in the same pass before pushing.
+Resolve textual conflicts by editing the conflict markers out, then `git rebase --continue`. The rebased tree is a fresh integration — this branch replayed on newly merged work — that no prior deterministic-verification run covered: the consuming flow MUST run the project's full deterministic-verification command against the rebased tree before the `--force-with-lease` push from `<push_semantics>`, and MUST fix any failure in the same pass before pushing.
 
 A rebase that cannot be resolved autonomously — semantic conflicts, ambiguous overlapping edits — emits `SYNC_BASE` from `<action_tokens>` and waits for the operator; the heartbeat re-fires.
 
 </base_sync>
 
-<pr_authority_gate>
+<authority_gates>
 
-A pull request's draft/ready state is a cost signal to CI and a readiness signal to reviewers. CI typically gates expensive verification behind `ready_for_review` while bot reviewers and lightweight checks run on every push regardless. Two transitions matter:
+The PR lifecycle has three gates, evaluated in order, from `spx/15-agent-pr-authority.pdr.md`. A **gate** is a named authorization over one lifecycle step, decided from defined predicates; a **predicate** is a condition a gate reads — predicates are never themselves gates. `/opening-pr` evaluates `REVIEW_READINESS`; `/managing-pr` evaluates `MERGE_READINESS` and `PRODUCTION_READINESS`.
 
-- **Promotion** (draft → ready): fires expensive CI.
-- **Merge**: publishes the change to the base branch.
+**`REVIEW_READINESS`** authorizes opening the PR. It holds when both predicates hold:
 
-Both transitions are gated by the **PR authority gate**, evaluated at the moment each action becomes applicable. Promotion-time evaluation reads draft-phase predicates; merge-time evaluation reads ready-phase predicates after CI converges.
+- **deterministic verification passes** — the project's full validation-and-testing command (named in `spx/local/merging.md`) reports success; and
+- **the local review has converged** — `reviewing-changes` (via the `changes-reviewer` agent or `/review-changes`), iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped.
 
-**Predicates** (all must hold for the applicable action):
+The moment `REVIEW_READINESS` holds, the PR is created `ready_for_review` — never draft (a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges). There is no draft phase and no gated promotion; opening ready fires every CI review at once (reviewers that wait for ready, such as Codex, alongside the CI `spec-tree-review`).
 
-- The project's local closure gate has been run against the latest pushed commit and passed. The author runs the local closure gate before each push that approaches ready or merge; CI runs validation on the resulting commit. The closure gate asserts the work is worth CI budget.
-- All required checks on the PR's `statusCheckRollup` are terminal-green for the current head. Any queued, in-progress, pending, failing, cancelled, timed-out, missing, or ambiguous required check blocks authority.
-- At least one current-head three-severity review on an inspected surface (see `<review_inspection>`) has no unresolved `BLOCKING` or `DEBT`.
-- The latest pushed commit is at least five minutes old at evaluation time, so review automation has time to respond without shell polling.
-- `<branch_hygiene>` passes, including the upstream-safety check.
-- **For merge only:** PR state is `OPEN`, `isDraft` is false, the inspected head SHA matches the branch head fetched from origin, and the PR branch is rebased onto current `origin/<base>` or is a fast-forward descendant.
-- The PR carries no project-declared production-class markers (per the overlay's production-class recognition mechanism).
+**`MERGE_READINESS`** authorizes merge. It holds when all predicates hold, every one decidable from observable PR state:
 
-**Per-action authority model** (set independently per action in `spx/local/merging.md`):
+- the current-head CI `spec-tree-review` reports **no valid finding** (validity per `<review_classification>`; an unbacked finding is dropped, a valid finding is unresolved work the agent fixes before merge);
+- every other required check on `statusCheckRollup` is **terminal-green** (defined below);
+- `<branch_hygiene>` passes, including the upstream-safety check;
+- PR state is `OPEN`, `isDraft` is false, the inspected head SHA matches the branch head fetched from origin, and the branch is rebased onto current `origin/<base>` or is a fast-forward descendant.
 
-- **Gate-green-autonomous (default).** Gate-green is sufficient authority — the consuming flow runs the action's command (`gh pr ready` for promotion, the project's merge command for merge) without a separate explicit human instruction.
-- **Overlay-requires-human.** Gate-green is necessary but not sufficient. The consuming flow emits the corresponding action token from `<action_tokens>` and waits for the operator's explicit instruction.
+`MERGE_READINESS` carries no time-based settle: a clean review arriving two minutes after open makes the gate hold two minutes after open.
 
-**Reviewer-skipped-by-design (self-modifying-PR exception).** When `spec-tree-review / spec-tree-review` reports `conclusion: skipped` with cause "PR head differs from main" (GitHub Actions' identical-workflow-content gate), the review predicate is unmet. Post one PR-level comment containing exactly `<trigger-phrase> review` (e.g., `@claude review`) to fire the mention reviewer (which has no identical-content gate), emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, and on the next heartbeat treat that workflow's posted findings as the current-head three-severity review.
+**`PRODUCTION_READINESS`** permits the merge to execute. It holds when **either** the change is not production-relevant (per the overlay's production-relevance recognition mechanism) **or** the operator has explicitly approved the merge. The agent computes and pursues `MERGE_READINESS` identically for every PR; it executes the merge only when `PRODUCTION_READINESS` also holds. When the overlay declares no recognition mechanism, every change is non-production-relevant and the merge executes on `MERGE_READINESS` alone; a production-relevant change without approval keeps the merge withheld and the flow emits `AWAIT_APPROVAL` from `<action_tokens>`.
 
-**Post-ready follow-up rule.** GitHub does not auto-revert state on push. Default: `gh pr ready --undo <pr-number>` before any follow-up push; iterate while draft; the gate re-evaluates after the next push under the same authority model. The overlay's keep-ready signal forms may permit keeping the PR ready when the closure gate has just re-passed immediately before the follow-up push — in that case the follow-up push re-fires expensive CI exactly once with a fresh gate-passed signal.
+**terminal-green.** A required check in `statusCheckRollup` is a check run (`status` reaches `COMPLETED`, then a `conclusion`) or a status context (`state`). It is **terminal-green** only when terminal — `status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}` — AND successful — `conclusion == SUCCESS`, or `state == SUCCESS`. A check that is non-terminal (`QUEUED` / `IN_PROGRESS` / `PENDING` / `EXPECTED`), terminal-but-not-success (`FAILURE` / `CANCELLED` / `TIMED_OUT` / `SKIPPED` / `NEUTRAL` / `ACTION_REQUIRED` / `ERROR`), or absent from the rollup is not terminal-green and blocks `MERGE_READINESS`.
 
-</pr_authority_gate>
+**Acting on findings (validity and phase, never severity).** The agent acts on each finding by **validity** — whether it holds against its cited rule, product-local / language / spec-tree governance, and the PDR/ADR decisions; read those fresh and drop a finding they do not support — and by **phase**: before open (`REVIEW_READINESS`) apply every valid finding that belongs and split out of the changeset any whose fix is too large to belong — the split work leaves the diff and is captured in `ISSUES.md` / `PLAN.md`; on the open PR (`MERGE_READINESS`) fix every valid finding the CI review surfaces and re-push, with no deferral. Severity is the reviewer's reporting label; it never decides whether the agent acts on a finding, and the reviewer never decides whether the change merges.
+
+**Reviewer-skipped-by-design (self-modifying-PR exception).** When `spec-tree-review / spec-tree-review` reports `conclusion: skipped` with cause "PR head differs from main" (GitHub Actions' identical-workflow-content gate), no current-head review exists for `MERGE_READINESS`. Post one PR-level comment containing exactly `<trigger-phrase> review` (e.g., `@spec-tree review`) to fire the mention reviewer (which has no identical-content gate), emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, and on the next heartbeat treat that workflow's posted findings as the current-head review. This applies to that skip cause only — not path-filter, branch-filter, or manual skips.
+
+**Follow-up pushes.** The PR is ready from open; a follow-up push — fixing a valid CI finding, or a `<base_sync>` rebase — pushes to the ready PR and re-fires CI. There is no draft toggle and no `gh pr ready` step in the loop.
+
+</authority_gates>
 
 <heartbeat>
 
 Waiting for CI runs, reviews, or check completion happens through the runtime timer, never in-shell. The consuming flow schedules the next inspection through the timer after opening a PR and after every follow-up push.
 
 - **Claude Code:** `ScheduleWakeup` for a single delayed re-check or `/loop` for recurring re-inspection. Pass a continuation prompt that re-enters /managing-pr.
-- **Codex:** thread automation. The runtime may start a new thread, so the prompt names the repository, PR number, branch, and the next repository-governed action. Cadence is minute-based (typically every five minutes). The prompt instructs Codex to inspect checks and all three review surfaces on each wake, report only material changes, and stop the heartbeat when the PR is merged, closed, or has no remaining repository-governed action.
+- **Codex:** thread automation. The runtime may start a new thread, so the prompt names the repository, PR number, branch, and the next repository-governed action. Cadence is minute-based (typically every 3 minutes). The prompt instructs Codex to inspect checks and all three review surfaces on each wake, report only material changes, and stop the heartbeat when the PR is merged, closed, or has no remaining repository-governed action.
 
 **One heartbeat per PR.** Whichever flow first needs a heartbeat creates it; the other refreshes the same heartbeat rather than creating a second one.
 
@@ -218,13 +217,15 @@ Every review finding — whether produced by a reviewer (outgoing feedback) or t
 
 The canonical specification for this taxonomy is `REVIEW.template.md` at the repository root. Consumer repos fork it to `REVIEW.md` to activate repo-local overrides; absent a fork, this skill's defaults apply. The taxonomy below mirrors the template's defaults.
 
-**Severity** (one of three):
+**Severity** (one of three — the reviewer's reporting label for the finding's merge-safety nature):
 
-| Severity    | Receiver action       | Use when                                                                                                                                                    |
-| ----------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BLOCKING`  | Fix in this PR        | Merge-safety defect: if deployed, the changeset would create a deterministic issue or pose a risk.                                                          |
-| `DEBT`      | Fix in this PR        | Must-fix-eventually defect: does not jeopardize the product if shipped but accumulates technical debt.                                                      |
-| `FOLLOW-UP` | Track outside this PR | Out-of-scope finding: does not jeopardize the product if shipped and fixing it would require wider refactoring or scope that extends the PR's blast-radius. |
+| Severity    | Use when                                                                                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING`  | Merge-safety defect: if deployed, the changeset would create a deterministic issue or pose a risk.                                                          |
+| `DEBT`      | Must-fix-eventually defect: does not jeopardize the product if shipped but accumulates technical debt.                                                      |
+| `FOLLOW-UP` | Out-of-scope finding: does not jeopardize the product if shipped and fixing it would require wider refactoring or scope that extends the PR's blast-radius. |
+
+**Handling is by validity and phase, never by severity.** Severity classifies the finding's nature for the reader; it is not a routing key. The consumer of a review validates each finding against its cited rule and the governing decisions, drops any the citation does not support, and acts on the rest by phase per `<authority_gates>`: before open (`REVIEW_READINESS`), apply every valid finding that belongs and split out of the changeset any whose fix is too large to belong; on the open PR (`MERGE_READINESS`), fix every valid finding the CI review surfaces, with no deferral. A `BLOCKING` label does not force an action the citation does not support, and a `FOLLOW-UP` label does not exempt a valid in-scope finding — validity and phase decide, and the reviewer never decides whether the change merges.
 
 **Category** (one of six), grouped by three axes:
 
@@ -278,22 +279,18 @@ Track under: <ISSUES.md file or product-specific issue tracker>
 
 <action_tokens>
 
-The managing flow emits exactly one of these tokens per heartbeat pass when no autonomous action fires. An autonomous fire (promotion under gate-green-autonomous; merge under gate-green-autonomous) runs the command directly and does not emit a token. A routine `<base_sync>` rebase likewise runs directly and emits no token of its own; only a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE`.
+The managing flow emits exactly one of these tokens per heartbeat pass when no autonomous action fires. An autonomous fire — the merge under `MERGE_READINESS ∧ PRODUCTION_READINESS` — runs the command directly and does not emit a token. A routine `<base_sync>` rebase likewise runs directly and emits no token of its own; only a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE`.
 
-| Token                                    | Emitted when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WAIT_FOR_CHECKS`                        | Required checks are running, queued, pending, or skipped-required; heartbeat will re-fire.                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| `WAIT_FOR_REVIEW`                        | Checks green; no current-head three-severity review yet on any inspected surface.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `WAIT_FOR_REVIEW_WINDOW`                 | Checks and review present, but five minutes have not elapsed since the latest push.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `FIX_BLOCKING:<item>`                    | At least one `BLOCKING` item remains.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `FIX_DEBT:<item>`                        | At least one `DEBT` item remains. Like `BLOCKING`, requires fix-in-this-PR; the separate token preserves the severity distinction for triage.                                                                                                                                                                                                                                                                                                                                                                          |
-| `MARK_READY`                             | Promotion-time predicates pass under overlay-requires-human draft-promotion authority; awaiting the operator's explicit promotion instruction.                                                                                                                                                                                                                                                                                                                                                                         |
-| `AWAIT_MERGE_INSTRUCTION`                | Merge predicates pass under overlay-requires-human merge authority; awaiting the operator's explicit merge instruction.                                                                                                                                                                                                                                                                                                                                                                                                |
-| `MENTION_REVIEW_NEEDED:<trigger-phrase>` | Auto-review job intentionally skipped (e.g., the PR modifies the reviewer's own workflow file, triggering the GitHub Actions "head differs from main" security skip). Post one PR-level comment containing exactly `<trigger-phrase> review` to fire the mention-triggered reviewer (which has no identical-content gate); reschedule the heartbeat to await its findings. The `review` suffix is the keyword the mention reviewer matches on — posting only the trigger phrase without it does not fire the reviewer. |
-| `PRODUCTION_HOLD:<reason>`               | PR is project-recognized as production-class; autonomous authority is withheld for both actions regardless of other predicates and overlay topics.                                                                                                                                                                                                                                                                                                                                                                     |
-| `MERGE_BLOCKED:<reason>`                 | Merge gate failed for a concrete reason not covered by another token.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `SYNC_BASE`                              | A rebase onto the advanced base per `<base_sync>` hit a conflict that cannot be resolved autonomously; awaiting operator resolution. The heartbeat re-fires.                                                                                                                                                                                                                                                                                                                                                           |
-| `POST_MERGE_VERIFY`                      | PR merged; run post-merge verification per the project's Git workflow.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Token                                    | Emitted when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WAIT_FOR_CHECKS`                        | A required check is non-terminal (running, queued, pending); not yet terminal-green. The heartbeat re-fires.                                                                                                                                                                                                                                                                                                                                                                                        |
+| `WAIT_FOR_REVIEW`                        | Every other required check is terminal-green, but no current-head CI `spec-tree-review` has landed yet on any inspected surface.                                                                                                                                                                                                                                                                                                                                                                    |
+| `FIX_FINDING:<item>`                     | The current-head CI review reports a valid finding (the agent judged it backed by its cited rule and governance). The agent fixes it and re-pushes; `<item>` carries the finding for triage, and its severity label is reporting only — validity and phase, not severity, drive the fix.                                                                                                                                                                                                            |
+| `AWAIT_APPROVAL:<reason>`                | `MERGE_READINESS` holds but the change is production-relevant and the operator has not approved; `PRODUCTION_READINESS` withholds the merge pending explicit approval.                                                                                                                                                                                                                                                                                                                              |
+| `MENTION_REVIEW_NEEDED:<trigger-phrase>` | The CI `spec-tree-review` reports `conclusion: skipped` with cause "PR head differs from main" (the PR modifies the reviewer's own workflow file). Post one PR-level comment containing exactly `<trigger-phrase> review` to fire the mention-triggered reviewer (which has no identical-content gate); reschedule the heartbeat to await its findings. The `review` suffix is the keyword the mention reviewer matches on — posting only the trigger phrase without it does not fire the reviewer. |
+| `MERGE_BLOCKED:<reason>`                 | `MERGE_READINESS` fails for a concrete reason not covered by another token (for example a failed or absent required check, or a PR-state predicate).                                                                                                                                                                                                                                                                                                                                                |
+| `SYNC_BASE`                              | A rebase onto the advanced base per `<base_sync>` hit a conflict that cannot be resolved autonomously; awaiting operator resolution. The heartbeat re-fires.                                                                                                                                                                                                                                                                                                                                        |
+| `POST_MERGE_VERIFY`                      | PR merged; run post-merge verification per the project's Git workflow.                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 </action_tokens>
 
@@ -311,11 +308,11 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - `<branch_topology>` is classified before every push, with the matching gate passing.
 - Every push uses the explicit destination ref form from `<push_semantics>`.
 - A managing-flow pass that finds the branch behind `origin/<base>` rebases it per `<base_sync>` before driving the work queue.
-- PRs are opened as draft; promotion runs only when `<pr_authority_gate>` authorizes it under the project's draft-promotion-authority overlay.
+- The PR opens `ready_for_review` once `REVIEW_READINESS` holds — deterministic verification passes and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - Waiting for CI, review, or checks is delegated to the runtime timer per `<heartbeat>`.
 - All three surfaces in `<review_inspection>` are inspected after every push.
-- Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label.
-- Merge runs only when the merge predicates of `<pr_authority_gate>` hold under the project's merge-authority overlay.
+- Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
+- Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no valid finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
 - Merge runs via rebase merge with inline branch deletion (`gh pr merge --rebase --delete-branch`) unless the overlay declares a different command — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; the agent does not enforce it), not the agent's choice from the gate alone.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`.
 - No `<self_reference>` violation appears in any artifact.

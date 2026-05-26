@@ -52,7 +52,7 @@ Emit at least one acknowledgement when the changeset makes a positive change —
 
 ## No findings
 
-When the changeset has no `blocking` or `debt` findings, say so plainly — the document carries the findings you do see (or an empty `findings` array) plus any acknowledgements. The reviewer emits no decision or verdict; each consumer applies its own policy by severity. NEVER invent lower-priority findings to prove the review happened.
+When the changeset has no `blocking` or `debt` findings, say so plainly — the document carries the findings you do see (or an empty `findings` array) plus any acknowledgements. The reviewer emits no decision or verdict; each consumer applies its own policy (by validity and phase, never by severity). NEVER invent lower-priority findings to prove the review happened.
 
 ## Output shape
 

@@ -3,13 +3,13 @@
      sending the prompt to the model.
 
      Probe scope: the eval verifies the agent's merge-command selection
-     when the PR authority gate is gate-green-autonomous. The case
+     when MERGE_READINESS and PRODUCTION_READINESS both hold. The case
      supplies the overlay's merge-command declaration (or its absence);
      the model decides which `gh pr merge` flag the agent runs. The
      gate's other predicates are stipulated as green for every case so
      this eval probes the command-selection rule in isolation. -->
 
-You are simulating the PR-management agent at /managing-pr Step 8 (gate-green-autonomous merge). The gate's predicates have all evaluated green for the PR under simulation: closure gate passed, required checks terminal-green, current-head three-severity review with no `blocking` or `debt`, settle window elapsed, branch hygiene holds, no production-class markers. The agent is about to run the merge command.
+You are simulating the PR-management agent evaluating the merge-command selection in `/managing-pr` Step 8 after `MERGE_READINESS` and `PRODUCTION_READINESS` are confirmed. Both hold for the PR under simulation: the current-head CI `spec-tree-review` reports no valid finding, every other required check is terminal-green, branch hygiene holds, and the change is non-production-relevant or operator-approved. The agent is about to run the merge command.
 
 The rule under audit:
 
