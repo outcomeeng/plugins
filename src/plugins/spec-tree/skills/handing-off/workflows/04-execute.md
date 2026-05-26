@@ -72,19 +72,19 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 
 **Path C — new handoff (one handoff, no artifact)**:
 
-1. Compose the canonical continuation content using `references/session-format.md`. Include non-empty `goal` and `next_step`; omit `result`.
-2. Pipe that content to `spx session handoff`. Do not run `spx session handoff` with empty stdin.
+1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`; omit `result`) and the markdown body.
+2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---` and prefills `created_at`, `agent_session_id`, `branch`, and `worktree` itself.
    ```bash
-   cat << 'EOF' | spx session handoff
-   [canonical continuation content]
-   EOF
+   # stdin = JSON header on line 1, then the body verbatim; a leading
+   # '#' or '---' in the body is literal, never parsed as frontmatter.
+   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '[canonical continuation body — <metadata> through <incorporated_sessions>]' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
 4. Read `<SESSION_FILE>` to confirm it exists and contains the CLI-prefilled `created_at`, `agent_session_id` when available, `branch`, and `worktree` values.
 
 **Content of the canonical continuation (B and C):**
 
-- Frontmatter — `priority`, `goal`, `next_step`, optional `specs`, optional `files`, and the prefilled context fields
+- Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `branch`, `worktree`)
 - `<nodes>` and `<skills>` — from `<perspective_starting_point>` and `<perspective_skills>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, escape hatches created
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context

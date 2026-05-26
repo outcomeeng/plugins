@@ -26,7 +26,8 @@ check-skills:
 
 # Regenerate committed runtime plugin trees
 build-skills:
-    uv run python -m outcomeeng.distribution.build src dist
+    # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
+    uv run --no-cache python -m outcomeeng.distribution.build src dist
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
 docs:

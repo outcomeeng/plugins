@@ -1,15 +1,21 @@
 <template>
-For Path C (new handoff), pipe this content to `spx session handoff`; the command writes `<SESSION_FILE>` and prefills `created_at`, `agent_session_id`, `branch`, and `worktree`.
+The handoff content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
 
-For Path B (rewrite in place), write this content to the existing artifact file and preserve the artifact's existing `created_at`, `agent_session_id`, `branch`, and `worktree` values.
+**Path C (new handoff)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, `branch`, and `worktree`. The JSON header carries only the caller-supplied fields:
+
+```text
+{"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
+```
+
+**Path B (rewrite in place)** writes the stored-file format directly to the existing artifact, preserving its existing `created_at`, `agent_session_id`, `branch`, and `worktree` values. The stored format is YAML frontmatter followed by the body:
 
 ```text
 ---
-created_at: [prefilled by spx session handoff; preserve on rewrite]
-agent_session_id: [prefilled by spx session handoff when available; preserve on rewrite]
+created_at: [preserve on rewrite]
+agent_session_id: [preserve on rewrite]
 priority: medium
-branch: [prefilled by spx session handoff; preserve on rewrite]
-worktree: [prefilled by spx session handoff; preserve on rewrite]
+branch: [preserve on rewrite]
+worktree: [preserve on rewrite]
 goal: [Why this continuation exists]
 next_step: [The first concrete action for pickup]
 specs:
@@ -17,6 +23,11 @@ specs:
 files:
   - src/{path-to-file}
 ---
+```
+
+**Body (both paths)** — for Path C this is the content piped after the JSON header; for Path B it follows the YAML frontmatter above:
+
+```text
 <metadata>
   timestamp: [UTC timestamp]
   product: [Product name from cwd]
@@ -86,6 +97,7 @@ Only include information that CANNOT be derived from the spec tree or git histor
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
 - **`goal`**: Required, non-empty continuation objective. Use one sentence that identifies the user-visible outcome, not a generic handoff phrase.
 - **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
+- **Path C JSON header**: Carries only the caller-supplied fields — `priority`, `goal`, `next_step`, optional `specs`, optional `files`. Do not put `created_at`, `agent_session_id`, `branch`, or `worktree` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
 - **`branch`**: Prefilled by `spx session handoff` from git context. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
 - **`worktree`**: Prefilled by `spx session handoff` as a path relative to the Git common-dir parent. Preserve the value as written; empty string means the main checkout. Do not write absolute paths.
 - **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `branch` + `worktree` identify the session context.
