@@ -175,6 +175,16 @@ so bumps produce minimal diffs.
 Only paths under `src/plugins/<name>/**` count as distribution-surface changes; edits
 to `spx/`, `AGENTS.md`, tests, or other top-level files do not trigger a bump.
 
+### Regenerating the runtime trees
+
+The installed plugin trees under `dist/claude/` and `dist/codex/` are generated from `src/plugins/`. After editing anything under `src/plugins/`, rebuild them:
+
+```bash
+just build-skills   # uv run python -m outcomeeng.distribution.build src dist
+```
+
+The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/`, so each `src/plugins/` change and its regenerated `dist/` commit together. Never hand-edit `dist/`.
+
 ## Plugins
 
 Skills are available in both Claude Code and Codex. Commands and agents are Claude Code-only. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.

@@ -301,6 +301,14 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 
 ### After Adding/Modifying Commands or Skills
 
+Everything under `src/plugins/` is authored source; the installed trees under `dist/claude/` and `dist/codex/` are generated. After any `src/plugins/` edit, regenerate them so the two match:
+
+```bash
+just build-skills   # uv run python -m outcomeeng.distribution.build src dist
+```
+
+The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
+
 Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/committing-changes` then `/open-pr`.
 
 **When adding a new plugin**, register it in **both** marketplace catalogs:
@@ -315,7 +323,7 @@ Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/
 ### Top-level layout
 
 - `src/plugins/` — authored skills, agents, commands, manifests, and templates. One subdirectory per plugin.
-- `dist/claude/`, `dist/codex/` — generated runtime plugin trees shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
+- `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
 - `spx/` — this product's spec tree (durable map). See [`spx/CLAUDE.md`](spx/CLAUDE.md). Per-node `local/` holds product-specific skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).

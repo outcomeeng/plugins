@@ -41,7 +41,7 @@ If the conclusion is `skipped` **with cause "PR head differs from main"** and no
 
 Reviewer-skipped-by-design exception steps:
 
-1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@claude` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
+1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@spec-tree` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
 2. Post one PR-level comment with body exactly `<trigger-phrase> review` via `gh pr comment <pr-number>`.
 3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, refresh the heartbeat, and exit Step 8. The mention-triggered reviewer's posted findings become the current-head three-severity review the next heartbeat reads.
 
