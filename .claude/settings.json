@@ -8,13 +8,6 @@
     "spec-tree@outcomeeng": true
   },
   "extraKnownMarketplaces": {
-    "outcomeeng": {
-      "source": {
-        "source": "github",
-        "repo": "outcomeeng/plugins",
-        "ref": "main"
-      }
-    },
     "taches-cc-resources": {
       "source": {
         "source": "github",
