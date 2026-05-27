@@ -294,7 +294,7 @@ You can also edit subagent files directly:
 <reference>
 **Core references**:
 
-**Subagent usage and configuration**: [references/subagents.md](references/subagents.md)
+**Subagent usage and configuration**: [${SKILL_DIR}/references/subagents.md](references/subagents.md)
 
 - File format and configuration
 - Skill injection (`skills:` field for preloading skill content)
@@ -303,7 +303,7 @@ You can also edit subagent files directly:
 - Prompt caching optimization
 - Complete examples
 
-**Writing effective prompts**: [references/writing-subagent-prompts.md](references/writing-subagent-prompts.md)
+**Writing effective prompts**: [${SKILL_DIR}/references/writing-subagent-prompts.md](references/writing-subagent-prompts.md)
 
 - Core principles and XML structure
 - Description field optimization for routing
@@ -313,35 +313,35 @@ You can also edit subagent files directly:
 
 **Advanced topics**:
 
-**Evaluation and testing**: [references/evaluation-and-testing.md](references/evaluation-and-testing.md)
+**Evaluation and testing**: [${SKILL_DIR}/references/evaluation-and-testing.md](references/evaluation-and-testing.md)
 
 - Evaluation metrics (task completion, tool correctness, robustness)
 - Testing strategies (offline, simulation, online monitoring)
 - Evaluation-driven development
 - G-Eval for custom criteria
 
-**Error handling and recovery**: [references/error-handling-and-recovery.md](references/error-handling-and-recovery.md)
+**Error handling and recovery**: [${SKILL_DIR}/references/error-handling-and-recovery.md](references/error-handling-and-recovery.md)
 
 - Common failure modes and causes
 - Recovery strategies (graceful degradation, retry, circuit breakers)
 - Structured communication and observability
 - Anti-patterns to avoid
 
-**Context management**: [references/context-management.md](references/context-management.md)
+**Context management**: [${SKILL_DIR}/references/context-management.md](references/context-management.md)
 
 - Memory architecture (STM, LTM, working memory)
 - Context strategies (summarization, sliding window, scratchpads)
 - Managing long-running tasks
 - Prompt caching interaction
 
-**Orchestration patterns**: [references/orchestration-patterns.md](references/orchestration-patterns.md)
+**Orchestration patterns**: [${SKILL_DIR}/references/orchestration-patterns.md](references/orchestration-patterns.md)
 
 - Sequential, parallel, hierarchical, coordinator patterns
 - Sonnet + Haiku orchestration for cost/performance
 - Multi-agent coordination
 - Pattern selection guidance
 
-**Debugging and troubleshooting**: [references/debugging-agents.md](references/debugging-agents.md)
+**Debugging and troubleshooting**: [${SKILL_DIR}/references/debugging-agents.md](references/debugging-agents.md)
 
 - Logging, tracing, and correlation IDs
 - Common failure types (hallucinations, format errors, tool misuse)

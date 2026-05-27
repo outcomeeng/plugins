@@ -144,7 +144,7 @@ Each finding's `rule` carries the violation pattern (e.g., `phantom-section`, `t
 </what_to_avoid>
 
 <example_review>
-Read `references/example-audit.md` for a complete REJECTED review showing all concern types: SaaS `l2` violation, mocking language, missing testability in Compliance, and temporal voice violations.
+Read `${SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing all concern types: SaaS `l2` violation, mocking language, missing testability in Compliance, and temporal voice violations.
 </example_review>
 
 <success_criteria>

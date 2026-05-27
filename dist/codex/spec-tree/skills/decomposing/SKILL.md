@@ -20,9 +20,9 @@ Accept exactly one target:
 
 Read before composing:
 
-- `../understanding/references/node-types.md` — enabler/outcome structure and nesting rules
-- `../understanding/templates/nodes/enabler-name.md`
-- `../understanding/templates/nodes/outcome-name.md`
+- `${SKILL_DIR}/../understanding/references/node-types.md` — enabler/outcome structure and nesting rules
+- `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
+- `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
 - `/interviewing` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
 
 </quick_start>
@@ -221,7 +221,7 @@ For each child node:
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
 3. Create `tests/`.
-4. Use the enabler or outcome template from `../understanding/templates/nodes/`.
+4. Use the enabler or outcome template from `${SKILL_DIR}/../understanding/templates/nodes/`.
 5. Add redistributed assertions or placeholder review assertions only when the child is intentionally declared without test evidence yet.
 
 Revise the parent spec so it summarizes the child structure without narrating the refactor. Remove moved assertions and keep cross-cutting assertions.

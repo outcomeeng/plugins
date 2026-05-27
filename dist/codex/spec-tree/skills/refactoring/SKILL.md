@@ -15,8 +15,8 @@ Apply structural changes to the Spec Tree: move nodes between parents, re-scope 
 
 References and workflows:
 
-- `../understanding/references/what-goes-where.md` — content taxonomy (what belongs where)
-- `../understanding/references/node-types.md` — enabler vs outcome
+- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — content taxonomy (what belongs where)
+- `${SKILL_DIR}/../understanding/references/node-types.md` — enabler vs outcome
 - `/decomposing` — structural composition, shared enabler extraction, consolidation boundaries, ordering evidence, and index assignment
 
 </quick_start>
@@ -181,7 +181,7 @@ After applying any operation:
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
-- [ ] No content misplacement (per `../understanding/references/what-goes-where.md`)
+- [ ] No content misplacement (per `${SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
 </step>
 

@@ -33,27 +33,27 @@ What would you like to do?
 
 <routing>
 
-| Response                                 | Workflow                                                                                                  |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| 1, "create", "new", "build"              | `workflows/create-new-skill.md`                                                                           |
-| 2, "audit", "improve", "review", "check" | `workflows/audit-skill.md`                                                                                |
-| 3, "add workflow"                        | `workflows/add-workflow.md`                                                                               |
-| 3, "add reference"                       | `workflows/add-reference.md`                                                                              |
-| 3, "upgrade to router"                   | `workflows/upgrade-to-router.md`                                                                          |
-| 4, "patterns", "understand", "help"      | Read `/standardizing-skills` for structure; then `references/reusability-patterns.md` for domain patterns |
+| Response                                 | Workflow                                                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 1, "create", "new", "build"              | `${SKILL_DIR}/workflows/create-new-skill.md`                                                                           |
+| 2, "audit", "improve", "review", "check" | `${SKILL_DIR}/workflows/audit-skill.md`                                                                                |
+| 3, "add workflow"                        | `${SKILL_DIR}/workflows/add-workflow.md`                                                                               |
+| 3, "add reference"                       | `${SKILL_DIR}/workflows/add-reference.md`                                                                              |
+| 3, "upgrade to router"                   | `${SKILL_DIR}/workflows/upgrade-to-router.md`                                                                          |
+| 4, "patterns", "understand", "help"      | Read `/standardizing-skills` for structure; then `${SKILL_DIR}/references/reusability-patterns.md` for domain patterns |
 
 **Intent-based routing** (if user provides clear context):
 
-- "verify content is current" → `workflows/verify-skill.md`
-- "audit this skill" → `workflows/audit-skill.md`
-- "create skill for X" → `workflows/create-new-skill.md`
+- "verify content is current" → `${SKILL_DIR}/workflows/verify-skill.md`
+- "audit this skill" → `${SKILL_DIR}/workflows/audit-skill.md`
+- "create skill for X" → `${SKILL_DIR}/workflows/create-new-skill.md`
 
 **After reading the workflow, follow it exactly.**
 
 </routing>
 
 <reference_index>
-All in `references/`:
+All in `${SKILL_DIR}/references/`:
 
 | File                      | Purpose                                                          |
 | ------------------------- | ---------------------------------------------------------------- |
@@ -66,7 +66,7 @@ Standards live in `/standardizing-skills`. These references cover authoring work
 </reference_index>
 
 <workflows_index>
-All in `workflows/`:
+All in `${SKILL_DIR}/workflows/`:
 
 | Workflow               | Purpose                                |
 | ---------------------- | -------------------------------------- |
@@ -80,7 +80,7 @@ All in `workflows/`:
 </workflows_index>
 
 <templates_index>
-All in `templates/`:
+All in `${SKILL_DIR}/templates/`:
 
 | Template              | Purpose                       |
 | --------------------- | ----------------------------- |
@@ -95,7 +95,7 @@ All in `templates/`:
 </templates_index>
 
 <scripts_index>
-All in `scripts/`:
+All in `${SKILL_DIR}/scripts/`:
 
 | Script              | Purpose                              |
 | ------------------- | ------------------------------------ |

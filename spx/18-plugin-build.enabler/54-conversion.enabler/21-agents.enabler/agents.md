@@ -19,6 +19,6 @@ CAN exercise wrapper-agent behavior in Codex while the marketplace plugin manife
 
 ### Compliance
 
-- ALWAYS: converted agents include manual-review guidance for Claude Code fields whose Codex semantics are prompt guidance rather than hard runtime boundaries - `tools`, `disallowedTools`, and `skills` do not enforce Codex permissions or skill preloading ([test](tests/test_agents.compliance.l1.py))
+- ALWAYS: converted agents include manual-review guidance for Claude Code fields whose Codex semantics are prompt guidance rather than hard execution boundaries - `tools`, `disallowedTools`, and `skills` do not enforce Codex permissions or skill preloading ([test](tests/test_agents.compliance.l1.py))
 - NEVER: agent installation claims or overwrites pre-existing Codex agent files unless they were recorded in the generated-agent manifest - user-owned files remain outside generated ownership even when their content matches generated output ([test](tests/test_agents.compliance.l1.py))
 - NEVER: agent conversion writes generated agents into published Codex plugin manifest content - custom agents install through local Codex configuration such as `.codex/agents/` or `~/.codex/agents/` ([test](tests/test_agents.compliance.l1.py))

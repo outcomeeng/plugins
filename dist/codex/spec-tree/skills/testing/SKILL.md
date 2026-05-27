@@ -9,7 +9,7 @@ Write tests driven by spec-tree assertions. This skill applies the canonical tes
 
 <prerequisite>
 
-**PREREQUISITE**: Read `references/methodology.md` before writing any test.
+**PREREQUISITE**: Read `${SKILL_DIR}/references/methodology.md` before writing any test.
 
 That local reference contains:
 
@@ -97,7 +97,7 @@ Report the evidence gap summary before proceeding.
 
 **Step 4: Route each assertion through the methodology**
 
-For each assertion that needs a test, apply the 5-stage router from `references/methodology.md`:
+For each assertion that needs a test, apply the 5-stage router from `${SKILL_DIR}/references/methodology.md`:
 
 1. **Stage 1** — What evidence does this assertion demand?
 2. **Stage 2** — At what execution level does that evidence live? Respect ADRs/PDRs loaded from tree context.
@@ -116,12 +116,12 @@ For each assertion needing a new test:
 1. Determine test pattern from assertion type (Step 2 table).
 2. Determine execution level from methodology routing (Step 4).
 3. Create the test file in the spec node's `tests/` directory.
-4. Name the file using the canonical model in `references/methodology.md`.
+4. Name the file using the canonical model in `${SKILL_DIR}/references/methodology.md`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
 Delegate language-specific structure to `/testing-python` or `/testing-rust` or `/testing-typescript`.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. See `../understanding/references/excluded-nodes.md`.
+**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. See `${SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 
 </step>
 
