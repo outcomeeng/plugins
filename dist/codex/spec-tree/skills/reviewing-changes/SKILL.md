@@ -9,7 +9,7 @@ Compute the diff against the resolved base ref, apply the judgment-style review 
 
 <api_surface>
 
-Four entry points under `scripts/` and one swappable prompt under `references/`:
+Four entry points under `${SKILL_DIR}/scripts/` and one swappable prompt under `${SKILL_DIR}/references/`:
 
 | Entry point                                       | Effect                                                                                                                                                                                                                               |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -19,7 +19,7 @@ Four entry points under `scripts/` and one swappable prompt under `references/`:
 | `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                                                                                                        |
 | `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into the agent's context                                                                                                                                                    |
 
-This skill uses the thread-store CLIs at `../thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; the agent omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` → git current branch).
+This skill uses the thread-store CLIs at `${SKILL_DIR}/../thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; the agent omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` → git current branch).
 
 </api_surface>
 
@@ -30,7 +30,7 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 1. **Compute the diff** against the resolved base ref:
 
    ```bash
-   python3 "scripts/compute_diff.py"
+   python3 "${SKILL_DIR}/scripts/compute_diff.py"
    ```
 
    On non-zero exit, read the stderr message — the script names every source it tried (env, optional `changes.json` field, git symbolic-ref) so the operator can populate one.
@@ -38,7 +38,7 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 2. **Load the judgment-style prompt** into the agent's context:
 
    ```text
-   Read references/review-prompt.md
+   Read ${SKILL_DIR}/references/review-prompt.md
    ```
 
 3. **Apply the prompt** to the diff plus any repository conventions you have already loaded; emit one `review-result.json` document conforming to the schema declared in `scripts/review_result.py`.
@@ -46,7 +46,7 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 4. **Validate** the JSON through the arbiter. Pipe the emitted JSON in on stdin:
 
    ```bash
-   echo "$REVIEW_RESULT_JSON" | python3 "scripts/validate_review_result.py"
+   echo "$REVIEW_RESULT_JSON" | python3 "${SKILL_DIR}/scripts/validate_review_result.py"
    ```
 
    On non-zero exit, read the stderr message verbatim, repair the JSON (fix the missing key or the unknown enum value), and re-emit. **Do not** hand-check the JSON in agent prose — the arbiter is the single source of validity.
@@ -54,14 +54,14 @@ The wrapper agent drives the chain top-to-bottom. Every filesystem effect routes
 5. **Persist** the validated `review-result.json`:
 
    ```bash
-   echo "$REVIEW_RESULT_JSON" | python3 "../thread-store/scripts/write_record.py" --name review-result.json
+   echo "$REVIEW_RESULT_JSON" | python3 "${SKILL_DIR}/../thread-store/scripts/write_record.py" --name review-result.json
    ```
 
 6. **Render** the human-readable surface and persist it:
 
    ```bash
-   python3 "scripts/render_review.py" \
-     | python3 "../thread-store/scripts/write_record.py" --name review.md
+   python3 "${SKILL_DIR}/scripts/render_review.py" \
+     | python3 "${SKILL_DIR}/../thread-store/scripts/write_record.py" --name review.md
    ```
 
 `render_review.py` re-parses `review-result.json` through `review_result.parse_json` before emitting; an invalid result fails the render with a non-zero exit before any markdown is produced.
@@ -82,9 +82,9 @@ Schema validation — required keys, enum membership, the path-style `rule` cita
 
 <constraints>
 
-- Stdlib-only Python under `scripts/`. No third-party packages, no `outcomeeng_*` imports, no dependency on `uv` at runtime.
+- Stdlib-only Python under `${SKILL_DIR}/scripts/`. No third-party packages, no `outcomeeng_*` imports, no dependency on `uv` at runtime.
 - Every filesystem effect routes through the `thread_store` facade — no direct `open()`, `pathlib.Path.write_*`, or `os.remove` against the thread-store backend's storage paths. `compute_diff.py` shells out to `git diff` via `subprocess.run`; that is the only `subprocess` call permitted in the script set.
-- The judgment-style review prompt lives only at `references/review-prompt.md`. It is never embedded inside this SKILL.md or any `.py` file under `scripts/`.
+- The judgment-style review prompt lives only at `${SKILL_DIR}/references/review-prompt.md`. It is never embedded inside this SKILL.md or any `.py` file under `scripts/`.
 - Frozen dataclasses (`Finding`, `ReviewResult`) cross the parse → validate → render boundary. Any attempt to mutate one between steps raises `FrozenInstanceError`.
 
 </constraints>

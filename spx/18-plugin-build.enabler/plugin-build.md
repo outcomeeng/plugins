@@ -1,14 +1,14 @@
 # Plugin Build
 
-PROVIDES single-source authoring of plugin files with deterministic per-runtime emission for Claude Code and Codex
+PROVIDES Claude Code-authored plugin files with deterministic compatibility emission for Codex
 SO THAT plugin authors and the marketplace
-CAN maintain skills, commands, and agents as one canonical source while delivering runtime-specific outputs each agent runtime consumes.
+CAN maintain skills, commands, and agents as one canonical source while delivering coding-agent-specific outputs.
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed runtime artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))
+- ALWAYS: every committed file under `dist/` traces to a `src/` ancestor through the build — every committed generated artifact is a build product ([test](tests/test_plugin_build.compliance.l1.py))
 
 ### Properties
 

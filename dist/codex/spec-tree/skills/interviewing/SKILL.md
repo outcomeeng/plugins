@@ -85,7 +85,7 @@ Coverage-based completion — never end by question count or elapsed time:
 
 After the interview completes, offer an interactive HTML preview for visual review:
 
-1. Read `references/preview-template.md` for the complete HTML template
+1. Read `${SKILL_DIR}/references/preview-template.md` for the complete HTML template
 2. Map each coverage area to a styled section card
 3. Every block-level content element gets `class="commentable"` with a unique `data-id="{sectionIndex}-{elementIndex}"`
 4. Render any decisions log as a collapsible table (collapsed by default)
@@ -138,14 +138,14 @@ If no input: ask "What would you like to interview about?"
 
 | Response                                    | Action                                             |
 | ------------------------------------------- | -------------------------------------------------- |
-| File path or requirement text               | Read `workflows/direct-interview.md`               |
+| File path or requirement text               | Read `${SKILL_DIR}/workflows/direct-interview.md`  |
 | "resume" or references a previous interview | Check for `.interview-state.json`, resume if found |
 | Input maps to a spec-tree skill             | Suggest that skill instead                         |
 
 </routing>
 
 <reference_index>
-All in `references/`:
+All in `${SKILL_DIR}/references/`:
 
 | File                | Purpose                                                                       |
 | ------------------- | ----------------------------------------------------------------------------- |
@@ -154,7 +154,7 @@ All in `references/`:
 </reference_index>
 
 <workflows_index>
-All in `workflows/`:
+All in `${SKILL_DIR}/workflows/`:
 
 | Workflow            | Purpose                                                              |
 | ------------------- | -------------------------------------------------------------------- |

@@ -138,7 +138,7 @@ Each finding's `rule` field carries the violation pattern (e.g., `phantom-sectio
 </what_to_avoid>
 
 <example_review>
-Read `references/example-audit.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in Compliance, mocking language, and temporal voice violations.
+Read `${SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in Compliance, mocking language, and temporal voice violations.
 </example_review>
 
 <success_criteria>

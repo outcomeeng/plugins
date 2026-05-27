@@ -115,17 +115,17 @@ After `/testing` chooses the evidence and level, implement it with these TypeScr
 </router_mapping>
 
 <l1_patterns>
-Pure computation and filesystem tests at `l1` use direct function calls, typed factories, and Node.js temp dirs. Read `references/l1-patterns.md` for full examples of each pattern.
+Pure computation and filesystem tests at `l1` use direct function calls, typed factories, and Node.js temp dirs. Read `${SKILL_DIR}/references/l1-patterns.md` for full examples of each pattern.
 </l1_patterns>
 
 <exception_implementations>
-When `/testing` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
+When `/testing` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `${SKILL_DIR}/references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
 
 Exception 5 (combinatorial cost: configurable fake with real-shaped behavior) is listed in `<router_mapping>` but does not yet have a TypeScript example.
 </exception_implementations>
 
 <l2_patterns>
-Use typed harness factories when tests require real infrastructure (Docker, browsers, product binaries). Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing. Read `references/l2-patterns.md` for the full harness factory pattern.
+Use typed harness factories when tests require real infrastructure (Docker, browsers, product binaries). Verify the binary is available at harness construction time, not inside each test. Throw with an installation hint so the developer knows immediately what is missing. Read `${SKILL_DIR}/references/l2-patterns.md` for the full harness factory pattern.
 </l2_patterns>
 
 <l3_patterns>
@@ -481,11 +481,11 @@ test("API returns flag-gated payload", async ({ context }) => {
 
 <reference_guides>
 
-| File                                      | When to read                                                  |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| `references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
-| `references/exception-implementations.md` | Implementing a Stage 5 exception from `/testing`              |
-| `references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
+| File                                                   | When to read                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------- |
+| `${SKILL_DIR}/references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
+| `${SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/testing`              |
+| `${SKILL_DIR}/references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
 
 </reference_guides>
 

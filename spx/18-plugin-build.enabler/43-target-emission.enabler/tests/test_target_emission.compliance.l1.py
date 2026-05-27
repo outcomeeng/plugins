@@ -1,4 +1,4 @@
-"""Compliance evidence for per-runtime target emission."""
+"""Compliance evidence for per-target emission."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import pytest
 from outcomeeng.distribution.build import (
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
+    CODEX_SKILL_DIR_TOKEN,
     COMMAND_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
     IMPLEMENTED,
@@ -39,6 +40,7 @@ COMMAND_NAME = "example-command"
 CLAUDE_ONLY_FIELD = CLAUDE_ONLY_FRONTMATTER_FIELDS[0]
 SKILL_RELATIVE_PATH = "references/guide.md"
 CLAUDE_SKILL_REFERENCE = f"{CLAUDE_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
+CODEX_SKILL_REFERENCE = f"{CODEX_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
 SOURCE_SKILL = (
     "---\n"
     "name: example-skill\n"
@@ -62,7 +64,7 @@ FRONTMATTER_WITH_ALL_CLAUDE_FIELDS = (
 )
 
 
-def test_every_source_file_emits_to_both_runtime_trees(tmp_path: Path) -> None:
+def test_every_source_file_emits_to_both_target_trees(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(
         PLUGIN_NAME,
@@ -88,7 +90,7 @@ def test_every_source_file_emits_to_both_runtime_trees(tmp_path: Path) -> None:
         )
 
 
-def test_runtime_trees_mirror_source_structure(tmp_path: Path) -> None:
+def test_target_trees_mirror_source_structure(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
 
@@ -115,7 +117,9 @@ def test_claude_output_preserves_skill_dir_token(tmp_path: Path) -> None:
     assert CLAUDE_SKILL_REFERENCE in body
 
 
-def test_codex_output_rewrites_skill_dir_token_to_relative_path(tmp_path: Path) -> None:
+def test_codex_output_rewrites_skill_dir_token_to_codex_token(
+    tmp_path: Path,
+) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
 
@@ -127,7 +131,7 @@ def test_codex_output_rewrites_skill_dir_token_to_relative_path(tmp_path: Path) 
         target=Target.CODEX,
     )
     assert CLAUDE_SKILL_DIR_TOKEN not in body
-    assert SKILL_RELATIVE_PATH in body
+    assert CODEX_SKILL_REFERENCE in body
 
 
 def test_codex_skill_frontmatter_strips_claude_only_fields(tmp_path: Path) -> None:
@@ -164,7 +168,7 @@ def test_codex_command_frontmatter_strips_claude_only_fields(tmp_path: Path) -> 
 
     reader = DistTreeReader(tmp_path)
     command_path = (
-        reader.runtime_root(Target.CODEX)
+        reader.target_root(Target.CODEX)
         / PLUGIN_NAME
         / COMMANDS_SUBDIR_NAME
         / f"{COMMAND_NAME}{COMMAND_FILE_SUFFIX}"
@@ -192,7 +196,7 @@ def test_frontmatter_strip_is_idempotent() -> None:
     assert once == twice
 
 
-def test_outputs_do_not_contain_runtime_cat_injection(tmp_path: Path) -> None:
+def test_outputs_do_not_contain_execution_time_cat_injection(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
     builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
 
@@ -201,7 +205,7 @@ def test_outputs_do_not_contain_runtime_cat_injection(tmp_path: Path) -> None:
     reader = DistTreeReader(tmp_path)
     for target in Target:
         for relative_path in reader.list_all_files(target):
-            body = (reader.runtime_root(target) / relative_path).read_text(
+            body = (reader.target_root(target) / relative_path).read_text(
                 encoding="utf-8"
             )
             assert "!`cat" not in body

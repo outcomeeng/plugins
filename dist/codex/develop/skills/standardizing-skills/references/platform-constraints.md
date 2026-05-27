@@ -24,7 +24,7 @@ name: demo
 
 ```markdown
 <example_review>
-Read `references/example-audit.md` for a complete example.
+Read `${SKILL_DIR}/references/example-audit.md` for a complete example.
 </example_review>
 ```
 

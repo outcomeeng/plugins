@@ -59,24 +59,24 @@ You can provide file paths, paste code, or point to a directory.
 <routing>
 After the user provides files, execute the review workflow:
 
-Read `references/systemverilog-idioms.md` first, then follow `workflows/systemverilog-review.md` exactly.
+Read `${SKILL_DIR}/references/systemverilog-idioms.md` first, then follow `${SKILL_DIR}/workflows/systemverilog-review.md` exactly.
 
-| User Provides   | Reference to Read                    | Additional Context                       |
-| --------------- | ------------------------------------ | ---------------------------------------- |
-| Design files    | `references/systemverilog-idioms.md` | Full review against all idiom categories |
-| Package files   | `references/systemverilog-idioms.md` | Focus on type discipline, naming         |
-| Interface files | `references/systemverilog-idioms.md` | Focus on modport, parameterization       |
-| Testbench files | `references/systemverilog-idioms.md` | Testbench-specific idioms apply          |
-| Mixed           | `references/systemverilog-idioms.md` | Review each file in its appropriate mode |
+| User Provides   | Reference to Read                                 | Additional Context                       |
+| --------------- | ------------------------------------------------- | ---------------------------------------- |
+| Design files    | `${SKILL_DIR}/references/systemverilog-idioms.md` | Full review against all idiom categories |
+| Package files   | `${SKILL_DIR}/references/systemverilog-idioms.md` | Focus on type discipline, naming         |
+| Interface files | `${SKILL_DIR}/references/systemverilog-idioms.md` | Focus on modport, parameterization       |
+| Testbench files | `${SKILL_DIR}/references/systemverilog-idioms.md` | Testbench-specific idioms apply          |
+| Mixed           | `${SKILL_DIR}/references/systemverilog-idioms.md` | Review each file in its appropriate mode |
 
 </routing>
 
 <reference_index>
 
-| File                                 | Purpose                                                        |
-| ------------------------------------ | -------------------------------------------------------------- |
-| `references/systemverilog-idioms.md` | Comprehensive idiomatic SystemVerilog IEEE 1800-2017 reference |
-| `workflows/systemverilog-review.md`  | Step-by-step review procedure with finding format              |
+| File                                              | Purpose                                                        |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| `${SKILL_DIR}/references/systemverilog-idioms.md` | Comprehensive idiomatic SystemVerilog IEEE 1800-2017 reference |
+| `${SKILL_DIR}/workflows/systemverilog-review.md`  | Step-by-step review procedure with finding format              |
 
 </reference_index>
 

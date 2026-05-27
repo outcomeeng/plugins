@@ -13,7 +13,7 @@ surface forms to stdout (or ``--output``):
                        internal calls.
 
 Portability: stdlib only. Invoked from skill content as
-``python3 "scripts/emit_verdict.py" ...`` — the skill
+``python3 "${SKILL_DIR}/scripts/emit_verdict.py" ...`` — the skill
 loader substitutes the path before the agent sees the command.
 """
 

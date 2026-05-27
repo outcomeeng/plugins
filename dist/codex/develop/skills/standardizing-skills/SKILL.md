@@ -45,7 +45,7 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 <frontmatter>
 
-Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about runtime behavior; read this section when it is about how this marketplace authors skills.
+Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
 
 | Field                      | Required    | Constraint                                                                                                                                                                                                                        |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -73,7 +73,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `disable-model-invocation: true` | Yes                        | **No**                         | Not in context         |
 | `user-invocable: false`          | **No**                     | Yes                            | Always                 |
 
-Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` at runtime.
+Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` during execution.
 
 ```yaml
 # Invoked skill (routing, workflow, creation)
@@ -377,7 +377,7 @@ Six skill types. Each has a distinct purpose and primary output.
 
 Reference skills hold shared domain knowledge that multiple skills need. They are **not** invoked directly — consuming skills reach them via `/skill-name` references in their text.
 
-**When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `.`.
+**When to create a reference skill.** Two or more skills in the same plugin need the same domain knowledge (standards, patterns, anti-patterns, conventions). Alternatives fail: duplicating the content creates maintenance drift, and putting it in one skill's `references/` directory makes it unreachable from the other skill's `${SKILL_DIR}`.
 
 **Required frontmatter:**
 
@@ -414,7 +414,7 @@ Before auditing, read `/standardizing-prose` for the complete catalog of anti-pa
 **Anti-patterns:**
 
 - Directive descriptions (`ALWAYS`/`NEVER`) — cause false activations.
-- Shared content buried in one skill's `references/` — `.` is isolated per skill.
+- Shared content buried in one skill's `references/` — `${SKILL_DIR}` is isolated per skill.
 - Same content duplicated across multiple `references/` — drifts.
 - Partial extraction: naming a new `standardizing-*` skill while leaving the meat in the builder's `references/` — the auditor keeps reading the old location and the rename becomes a lie.
 
@@ -426,19 +426,20 @@ Before auditing, read `/standardizing-prose` for the complete catalog of anti-pa
 
 **Referencing skill files from SKILL.md:**
 
-Use `.` to reference files within a skill. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
+Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable form) to reference files within skill source. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
+Do not write `SKILL_DIR` in source; the build emits that token for Codex output.
 
 ```markdown
-Read `references/example.md`
+Read `$` + `{CLAUDE_SKILL_DIR}/references/example.md`
 ```
 
-Do NOT define aliases, add troubleshooting sections, or explain what the variable is. The agent sees an absolute path, not the variable.
+Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
 
 **Variable scopes:**
 
 | Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
 | ----------------------- | -------------------------- | ---------------------------- | --------------------- |
-| `.`                     | Skill's SKILL.md directory | Yes                          | **No**                |
+| `CLAUDE_SKILL_DIR`      | Skill's SKILL.md directory | Yes                          | **No**                |
 | `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
 | `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
 | `$CLAUDE_PROJECT_DIR`   | Product working directory  | No                           | **Yes**               |
@@ -460,7 +461,7 @@ hooks:
 
 <platform_constraints>
 
-Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read `references/platform-constraints.md` before using multi-backtick fences or `!` command syntax.
+Two platform footguns affect skill authoring: dprint's `markup_fmt` handling of nested code fences, and Claude Code's bash-safety checker for `!` expansion. Read `${SKILL_DIR}/references/platform-constraints.md` before using multi-backtick fences or `!` command syntax.
 
 </platform_constraints>
 

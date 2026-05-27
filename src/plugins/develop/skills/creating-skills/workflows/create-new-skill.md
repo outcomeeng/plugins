@@ -146,7 +146,7 @@ Check:
 - [ ] SKILL.md under 500 lines
 - [ ] XML tags properly closed
 
-Run: `python3 scripts/quick_validate.py {skill-path}`
+Run: `python3 "${CLAUDE_SKILL_DIR}/scripts/quick_validate.py" {skill-path}`
 
 ## Step 10: Test
 

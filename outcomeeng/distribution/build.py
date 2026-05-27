@@ -1,6 +1,6 @@
 """Plugin build pipeline.
 
-Transforms src/ plugin source into committed runtime trees at dist/claude/
+Transforms src/ plugin source into committed target trees at dist/claude/
 and dist/codex/. The pipeline is decomposed into stages so each stage is
 independently testable.
 
@@ -103,10 +103,12 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (
     "argument-hint",
 )
 
-# The literal token Claude Code expands at runtime. Source files contain this
-# token verbatim; the build preserves it in dist/claude/ outputs and rewrites
-# any occurrence to a relative path in dist/codex/ outputs.
+# The literal token Claude Code expands during skill execution. Source files
+# contain this token verbatim; the build preserves it in dist/claude/ outputs
+# and rewrites any occurrence to Codex's skill-directory token in dist/codex/
+# outputs.
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
+CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 
 REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
@@ -131,7 +133,7 @@ _DIRECTIVE_BODY_RE: Final = re.compile(
 
 
 class Target(StrEnum):
-    """Output runtime target."""
+    """Generated output target."""
 
     CLAUDE = "claude"
     CODEX = "codex"
@@ -151,8 +153,8 @@ class IncludeDirective:
 class RequireSkillDirective:
     """Source representation: ``{!% require_skill 'plugin:skill-name' %!}``.
 
-    Expands to identical agent-runtime-neutral invocation text in both
-    targets. Replaces the runtime ``!` `cat`` injection that has no Codex
+    Expands to identical coding-agent-neutral invocation text in both
+    targets. Replaces the execution-time ``!` `cat`` injection that has no Codex
     equivalent.
     """
 
@@ -272,7 +274,7 @@ def expand_include(
 
 
 def expand_require_skill(directive: RequireSkillDirective) -> str:
-    """Return the agent-runtime-neutral invocation text for the named skill.
+    """Return the coding-agent-neutral invocation text for the named skill.
 
     Output is identical for both Claude Code and Codex targets — the text
     instructs the agent to invoke the named skill before proceeding.
@@ -322,16 +324,15 @@ def rewrite_paths_for_target(text: str, *, target: Target) -> str:
     """Apply target-specific path rewriting.
 
     For Target.CLAUDE: identity (CLAUDE_SKILL_DIR_TOKEN preserved verbatim).
-    For Target.CODEX: every occurrence of CLAUDE_SKILL_DIR_TOKEN/<rest> is
-    rewritten to a relative path under the consuming skill directory.
+    For Target.CODEX: every occurrence of CLAUDE_SKILL_DIR_TOKEN is rewritten
+    to Codex's skill-directory token.
 
     Idempotence: ``rewrite_paths_for_target(rewrite_paths_for_target(t, target=T), target=T) == rewrite_paths_for_target(t, target=T)``.
     """
     if target is Target.CLAUDE:
         return text
 
-    without_slash = text.replace(f"{CLAUDE_SKILL_DIR_TOKEN}/", "")
-    return without_slash.replace(CLAUDE_SKILL_DIR_TOKEN, ".")
+    return text.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
 
 
 def strip_frontmatter_fields(
@@ -437,10 +438,10 @@ def build(src_root: Path, dist_root: Path) -> None:
     plugins_root = src_root / PLUGINS_DIR_NAME
 
     for target in Target:
-        runtime_root = dist_root / target.value
-        if runtime_root.exists():
-            shutil.rmtree(runtime_root)
-        runtime_root.mkdir(parents=True, exist_ok=True)
+        target_root = dist_root / target.value
+        if target_root.exists():
+            shutil.rmtree(target_root)
+        target_root.mkdir(parents=True, exist_ok=True)
 
     for source_file in _iter_plugin_files(plugins_root):
         for target in Target:

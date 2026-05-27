@@ -53,9 +53,9 @@ During audits, prioritize evaluation of:
 **MANDATORY**: Read best practices FIRST, before auditing:
 
 1. Both skills are already injected above. Read the creating-commands reference files:
-   - `../creating-commands/references/arguments.md`
-   - `../creating-commands/references/patterns.md`
-   - `../creating-commands/references/tool-restrictions.md`
+   - `${SKILL_DIR}/../creating-commands/references/arguments.md`
+   - `${SKILL_DIR}/../creating-commands/references/patterns.md`
+   - `${SKILL_DIR}/../creating-commands/references/tool-restrictions.md`
 2. The standardizing-agent-prompts skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Handle edge cases:
    - If reference files are missing or unreadable, note in findings under "Configuration Issues" and proceed with available content

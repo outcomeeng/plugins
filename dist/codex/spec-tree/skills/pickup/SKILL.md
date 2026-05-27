@@ -150,7 +150,7 @@ The scope marker names every in-conversation pickup that Claude is responsible f
 
 Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the current pickup (checkpoints, markers, error messages).
 
-Once claimed, follow `workflows/pickup.md` to process the session.
+Once claimed, follow `${SKILL_DIR}/workflows/pickup.md` to process the session.
 
 </claim>
 

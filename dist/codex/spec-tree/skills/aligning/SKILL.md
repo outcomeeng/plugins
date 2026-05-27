@@ -34,17 +34,17 @@ Check Spec Tree files for conformance to templates, atemporal voice, and content
 
 **References (conformance rules):**
 
-- `../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `../understanding/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
-- `../understanding/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
+- `${SKILL_DIR}/../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
+- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${SKILL_DIR}/../understanding/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
 
-- `../understanding/templates/decisions/decision-name.adr.md` — required ADR sections
-- `../understanding/templates/decisions/decision-name.pdr.md` — required PDR sections
-- `../understanding/templates/product/product-name.product.md` — required product sections
-- `../understanding/templates/nodes/enabler-name.md` — required enabler sections
-- `../understanding/templates/nodes/outcome-name.md` — required outcome sections
+- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.adr.md` — required ADR sections
+- `${SKILL_DIR}/../understanding/templates/decisions/decision-name.pdr.md` — required PDR sections
+- `${SKILL_DIR}/../understanding/templates/product/product-name.product.md` — required product sections
+- `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md` — required enabler sections
+- `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md` — required outcome sections
 
 </required_references>
 

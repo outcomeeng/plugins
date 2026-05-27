@@ -61,7 +61,7 @@ Execute phases IN ORDER. Do not skip.
 
 Run the product's validation command. Catches everything linters handle: type annotations, naming, magic numbers, bare excepts, unused imports, security rules.
 
-If the product lacks its own linter configs, use the reference configs in `rules/`:
+If the product lacks its own linter configs, use the reference configs in `${SKILL_DIR}/rules/`:
 
 | File                | Purpose                                         |
 | ------------------- | ----------------------------------------------- |
@@ -142,7 +142,7 @@ Evaluate import structure using the same vocabulary as `/auditing-python-tests`:
 
 For stable locations (`product_testing.harnesses.*`, `product_testing.generators.*`, and inert fixture path providers), package imports are mandatory.
 
-See `references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
+See `${SKILL_DIR}/references/false-positive-handling.md` for application context when evaluating security and linter suppression comments.
 
 **Phase 4: ADR/PDR Compliance**
 
@@ -212,7 +212,7 @@ Each finding carries `file`, `line`, `rule` (the concern name from the verdict t
 </what_to_avoid>
 
 <example_review>
-Read `references/example-audit.md` for complete APPROVED and REJECTED examples showing all concern types.
+Read `${SKILL_DIR}/references/example-audit.md` for complete APPROVED and REJECTED examples showing all concern types.
 
 </example_review>
 

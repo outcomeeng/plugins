@@ -41,8 +41,8 @@ This ensures subagents follow proper structure, configuration, pure XML formatti
 **MANDATORY**: Read best practices FIRST, before auditing:
 
 1. Both skills are already injected above. Read the creating-subagents reference files:
-   - `../creating-subagents/references/subagents.md`
-   - `../creating-subagents/references/writing-subagent-prompts.md`
+   - `${SKILL_DIR}/../creating-subagents/references/subagents.md`
+   - `${SKILL_DIR}/../creating-subagents/references/writing-subagent-prompts.md`
 2. The standardizing-agent-prompts skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Before penalizing any missing section, search entire file for equivalent content under different tag names
 4. Read the subagent configuration file at `$ARGUMENTS`
