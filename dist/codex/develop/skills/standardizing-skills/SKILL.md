@@ -430,7 +430,7 @@ Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable 
 Do not write `SKILL_DIR` in source; the build emits that token for Codex output.
 
 ```markdown
-Read `$` + `{CLAUDE_SKILL_DIR}/references/example.md`
+Read `${CLAUDE_SKILL_DIR}/references/example.md`
 ```
 
 Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
@@ -439,7 +439,7 @@ Do NOT define aliases, add troubleshooting sections, or explain compatibility to
 
 | Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
 | ----------------------- | -------------------------- | ---------------------------- | --------------------- |
-| `CLAUDE_SKILL_DIR`      | Skill's SKILL.md directory | Yes                          | **No**                |
+| `${CLAUDE_SKILL_DIR}`   | Skill's SKILL.md directory | Yes                          | **No**                |
 | `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
 | `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
 | `$CLAUDE_PROJECT_DIR`   | Product working directory  | No                           | **Yes**               |

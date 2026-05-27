@@ -109,6 +109,8 @@ CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (
 # outputs.
 CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
+SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
+SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 
 REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
@@ -325,14 +327,37 @@ def rewrite_paths_for_target(text: str, *, target: Target) -> str:
 
     For Target.CLAUDE: identity (CLAUDE_SKILL_DIR_TOKEN preserved verbatim).
     For Target.CODEX: every occurrence of CLAUDE_SKILL_DIR_TOKEN is rewritten
-    to Codex's skill-directory token.
+    to Codex's skill-directory token unless the source line carries
+    SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE.
 
     Idempotence: ``rewrite_paths_for_target(rewrite_paths_for_target(t, target=T), target=T) == rewrite_paths_for_target(t, target=T)``.
     """
+    protected = _protect_skill_dir_rewrite_escapes(text)
     if target is Target.CLAUDE:
-        return text
+        return protected.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
 
-    return text.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
+    translated = protected.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
+    return translated.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
+
+
+def _protect_skill_dir_rewrite_escapes(text: str) -> str:
+    """Protect authoring-guidance uses of the Claude Code skill-dir token."""
+    protected_lines: list[str] = []
+    for line in text.splitlines(keepends=True):
+        if SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in line:
+            protected_lines.append(line)
+            continue
+        line_without_directive = line.replace(
+            f" {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}",
+            "",
+        ).replace(SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, "")
+        protected_lines.append(
+            line_without_directive.replace(
+                CLAUDE_SKILL_DIR_TOKEN,
+                SKILL_DIR_REWRITE_PLACEHOLDER,
+            )
+        )
+    return "".join(protected_lines)
 
 
 def strip_frontmatter_fields(
