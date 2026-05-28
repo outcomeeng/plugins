@@ -13,7 +13,7 @@ target base branch, normally `origin/main`. That version then stays fixed for
 the entire PR phase.
 
 Spec Tree files under `spx/`, including node-local `PLAN.md` and `ISSUES.md`
-escape hatches, do not bump marketplace plugin versions by themselves. They are
+coordination notes, do not bump marketplace plugin versions by themselves. They are
 product coordination and product truth, not plugin release artifacts. Root
 repository instructions such as `AGENTS.md`, local workflow overlays under
 `spx/local/`, validation config, tests, and generated repository docs also do not
@@ -55,7 +55,7 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
   distribution surface changed
 
 The marketplace sync wrapper follows the same boundary: `spx/`-only,
-escape-hatch-only, product-instruction-only, local-overlay-only, test-only, and
+coordination-note-only, product-instruction-only, local-overlay-only, test-only, and
 validation-config-only commits do not refresh local marketplace caches.
 
 ## Files to Update When Bumping Version
@@ -98,7 +98,7 @@ Only the version that will land on main matters. The correct workflow is:
 
 1. At branch start, compare the touched plugin's manifest version to the target
    base branch, normally `origin/main`.
-2. If the branch changes only `spx/`, escape hatches, repository instructions,
+2. If the branch changes only `spx/`, coordination notes, repository instructions,
    tests, validation config, or local overlays, do not bump any plugin version.
 3. If the branch changes a plugin distribution surface, choose the semantic
    version bump for the whole PR: MINOR for new items or major functional
@@ -148,19 +148,19 @@ git commit -m "docs({plugin-name}): address review feedback"
 
 ## Version Bump Examples
 
-| Change                                  | Old   | New   | Reason                             |
-| --------------------------------------- | ----- | ----- | ---------------------------------- |
-| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                |
-| Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR    |
-| Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch |
-| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                |
-| Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH          |
-| Add `/designing-frontend`               | 0.4.3 | 0.5.0 | New skill = MINOR                  |
-| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Escape hatch, no plugin surface    |
-| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Escape hatch, no plugin surface    |
-| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface       |
-| Edit `spx/local/committing-changes.md`  | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin  |
-| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin     |
+| Change                                  | Old   | New   | Reason                               |
+| --------------------------------------- | ----- | ----- | ------------------------------------ |
+| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                  |
+| Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR      |
+| Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch   |
+| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                  |
+| Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH            |
+| Add `/designing-frontend`               | 0.4.3 | 0.5.0 | New skill = MINOR                    |
+| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
+| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
+| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface         |
+| Edit `spx/local/committing-changes.md`  | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin    |
+| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin       |
 
 ## After Adding/Modifying Commands or Skills
 

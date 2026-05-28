@@ -1,6 +1,6 @@
 # PLAN — Commands cluster + shared mechanics refactor
 
-**Status:** deferred. This plan is an escape hatch to be executed in a fresh session. Delete this file when the work lands.
+**Status:** deferred. This plan is a coordination note to be executed in a fresh session. Delete this file when the work lands.
 
 ## Context
 

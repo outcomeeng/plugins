@@ -44,7 +44,7 @@ Spec-tree nodes worked on. The receiving Claude context should invoke
   - Status: [tests passing | partially implemented | spec only | architected | etc.]
   - Done: [What was accomplished on this node]
   - Remaining: [What's left — omit if captured in PLAN.md]
-  - Escape hatches: [PLAN.md written | ISSUES.md written | none]
+  - Coordination notes: [PLAN.md written | ISSUES.md written | none]
 
 </nodes>
 
@@ -69,7 +69,7 @@ What was captured durably during session closure.
 - Committed: [files committed during this session, including the final handoff commit]
 - Uncommitted: [files still dirty after the handoff commit — foreign changes only]
 - Insights: [what was written to CLAUDE.md, memory, or skills]
-- Escape hatches: [PLAN.md / ISSUES.md written and in which nodes]
+- Coordination notes: [PLAN.md / ISSUES.md written and in which nodes]
 
 </persisted>
 

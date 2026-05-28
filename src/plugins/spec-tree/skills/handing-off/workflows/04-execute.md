@@ -86,7 +86,7 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 
 - Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `branch`, `worktree`)
 - `<nodes>` and `<skills>` — from `<perspective_starting_point>` and `<perspective_skills>` in `02-reflect.md`
-- `<persisted>` — files committed above, insights written, escape hatches created
+- `<persisted>` — files committed above, insights written, coordination notes created
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context
 - `<incorporated_sessions>` — include ONLY when the in-scope set is non-empty; list each session id with its archive disposition
 

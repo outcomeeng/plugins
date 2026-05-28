@@ -2,7 +2,7 @@
 
 Deferred capture. Not yet authored. This node directory stakes the placement; the spec, the grounding PDR, and the understanding reference are authored in a later, separate change (distinct concern from the validity+phase review-gate change).
 
-**Placement note.** This file sits at the `spx/` root with a compound `<node>.pdr-PLAN.md` name because the node directory does not yet exist — `/contextualizing` and `/handoff` therefore do not index it as a node-local escape hatch. When the authoring pass creates the node, move this plan to the node-local `spx/14-verification.enabler/PLAN.md` (or the chosen index per the index-confirmation question below) and delete this root-level file, so the escape hatch follows the durable-map placement convention.
+**Placement note.** This file sits at the `spx/` root with a compound `<node>.pdr-PLAN.md` name because the node directory does not yet exist — `/contextualizing` and `/handoff` therefore do not index it as a node-local coordination note. When the authoring pass creates the node, move this plan to the node-local `spx/14-verification.enabler/PLAN.md` (or the chosen index per the index-confirmation question below) and delete this root-level file, so the coordination note follows the durable-map placement convention.
 
 ## Goal
 

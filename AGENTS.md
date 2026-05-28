@@ -206,7 +206,7 @@ The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering)
 | **Spec**    | Write tests (make verifiable) | Specified        |
 | **Apply**   | Write implementation code     | Passing          |
 
-Planning artifacts are ephemeral — `PLAN.md` and `ISSUES.md` are committed escape hatches that `/handoff` leaves in node directories. They carry deferred plans and known issues, not spec truth; `/contextualizing` reads them, conformance checks skip them, and they are removed once resolved.
+Planning artifacts are transient — `PLAN.md` and `ISSUES.md` are committed coordination notes that `/handoff` leaves in node directories. They are git-tracked only to carry coordination across sessions and go stale unless acted upon, so reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before it steers work; they never declare product truth. `/contextualizing` reads them, conformance checks skip them, and they are removed once resolved.
 
 ### Spec-tree navigation: declaration and inverse
 
@@ -226,7 +226,7 @@ implementation file
   → containing node directory under spx/
 ```
 
-`spx/` contains only specs, decision records, escape hatches, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
+`spx/` contains only specs, decision records, coordination notes, and `tests/` subdirectories. Implementation code lives outside `spx/` (in `src/plugins/`, `outcomeeng/`, generated `dist/`, etc.). The inverse navigation walks from an outside-`spx/` file in the diff, through the import graph into an inside-`spx/` test, then up to the spec assertion linking that test, then up to the containing node.
 
 If multiple implementation files in the diff resolve to multiple nodes, take their lowest common ancestor in the tree — `/contextualizing` on the LCA pulls constraining context for every descendant.
 
@@ -236,7 +236,7 @@ Per-language test conventions live in `spx/15-test-language.adr.md` (this produc
 
 ### Archiving a stale session without `/release`
 
-`/release` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, escape hatches, or methodology changes, run `spx session archive <session-id>` directly:
+`/release` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, coordination notes, or methodology changes, run `spx session archive <session-id>` directly:
 
 ```bash
 spx session archive 2026-04-01_10-44-24

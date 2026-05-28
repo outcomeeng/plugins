@@ -93,8 +93,8 @@ NN-slug.{enabler|outcome}/
 │       ├── prompt.md    # Prompt template
 │       ├── history.jsonl    # Append-only run summaries (committed)
 │       └── runs/        # Full transcripts (gitignored)
-├── PLAN.md              # Escape hatch: deferred plan (optional)
-├── ISSUES.md            # Escape hatch: known issues (optional)
+├── PLAN.md              # Coordination note: deferred plan (optional)
+├── ISSUES.md            # Coordination note: known issues (optional)
 └── NN-child.{enabler|outcome}/   # Nested child nodes (optional)
 ```
 

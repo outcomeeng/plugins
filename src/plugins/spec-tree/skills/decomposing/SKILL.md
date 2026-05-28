@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 
 <objective>
 
-Compose Spec Tree structure from a target node address, durable spec content, and node-local escape hatches. Handles top-level product-root composition (`spx/`) and child decomposition for existing nodes. Determines whether source material is complete, identifies concern boundaries, assigns enabler/outcome types, records ordering evidence, assigns sparse indices, redistributes assertions, and validates structural quality.
+Compose Spec Tree structure from a target node address, durable spec content, and node-local coordination notes. Handles top-level product-root composition (`spx/`) and child decomposition for existing nodes. Determines whether source material is complete, identifies concern boundaries, assigns enabler/outcome types, records ordering evidence, assigns sparse indices, redistributes assertions, and validates structural quality.
 
 </objective>
 
@@ -57,7 +57,7 @@ For both target modes, note root product scope, ancestor constraints, current as
 
 **Step 2: Assess whether composition is needed**
 
-For `spx/`, composition is needed when the product spec or root escape hatches name product scope that has no top-level children yet.
+For `spx/`, composition is needed when the product spec or root coordination notes name product scope that has no top-level children yet.
 
 For a node target, decompose when at least one trigger applies:
 
@@ -94,7 +94,7 @@ Each area is complete when:
 - **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has genuine outcome uncertainty.
 - **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
 - **Index Budget** — full-vs-partial composition horizon is known.
-- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale escape hatches, and known issues have a destination.
+- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale coordination notes, and known issues have a destination.
 
 If any area is incomplete or doubtful, invoke `/interviewing` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
 
@@ -104,7 +104,7 @@ If any area is incomplete or doubtful, invoke `/interviewing` before continuing.
 
 **Step 4: Identify concerns**
 
-Group assertions, product scope items, and escape-hatch intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
+Group assertions, product scope items, and coordination-note intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
 
 - Shares a common subject
 - Would be validated together
@@ -210,7 +210,7 @@ For node targets, move assertions from the parent spec into children:
 
 Count assertions before and after redistribution. The child assertions plus remaining parent assertions must equal the original assertion count.
 
-For `spx/`, write top-level children from product scope and root escape-hatch intent. Product-level assertions stay in the product spec unless they specify only one child concern.
+For `spx/`, write top-level children from product scope and root coordination-note intent. Product-level assertions stay in the product spec unless they specify only one child concern.
 
 </step>
 
@@ -300,7 +300,7 @@ How to avoid: When recording an ordering-evidence matrix, assertion move, issue,
 
 <anti_patterns>
 
-**Pre-shaped child lists.** User-provided child names or indices are intent, not structure. Build the model from the target spec and escape hatches.
+**Pre-shaped child lists.** User-provided child names or indices are intent, not structure. Build the model from the target spec and coordination notes.
 
 **Implementation-layer decomposition.** Children named only "frontend," "backend," or "database" are usually layers, not independently validated concerns.
 
@@ -319,7 +319,7 @@ How to avoid: When recording an ordering-evidence matrix, assertion move, issue,
 Decomposition is complete when:
 
 - [ ] Target is either `spx/` or a valid node address
-- [ ] Context loaded from product/root, target spec if any, existing tree, and escape hatches
+- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
 - [ ] Composition need assessed
 - [ ] Clarity gate completed or `/interviewing` used
 - [ ] Concern boundaries and node types assigned

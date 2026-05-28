@@ -20,7 +20,7 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 6. **ASSERTIONS SPECIFY OUTPUT** — Assertions specify what the software does, locally verifiable by automated tests or agent review. Assertions derive from PDRs/ADRs, not from code or tests.
 7. **DETERMINISTIC CONTEXT** — The tree structure defines what context an agent receives. No keyword search, no heuristics. This is handled by `/contextualizing`.
 8. **ATEMPORAL VOICE** — Specs state product truth. Never narrate history. Flag temporal language as a quality issue.
-9. **ESCAPE HATCHES COORDINATE, SPECS DECLARE** — PLAN.md and ISSUES.md are node-local coordination files inside the tree. They are committed to git so future sessions read them on context load, but they do not declare product truth, architecture, product decisions, assertions, or evidence. `/contextualizing` reads them automatically; conformance checks ignore them. Session files under `.spx/sessions/` are the only spec-tree artifacts not committed to git — `spx session` shares them across worktrees.
+9. **COORDINATION NOTES INFORM, SPECS DECLARE** — PLAN.md and ISSUES.md are node-local coordination notes inside the tree. They are committed to git for one reason: future sessions read them on context load. They go stale unless acted upon, so verify a coordination note before it steers work — reconcile it against the specs, decisions (ADR/PDR), assertions, tests, implementation, and the current user intent, then act only where it still holds. A coordination note never declares product truth, architecture, product decisions, assertions, or evidence. `/contextualizing` reads them automatically; conformance checks ignore them. Session files under `.spx/sessions/` are the only spec-tree artifacts not committed to git — `spx session` shares them across worktrees.
 10. **FULL PATHS ONLY** — Every node, ADR, and PDR reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
 11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
 12. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger. Safe fixes happen immediately. Unresolved entries either block for operator judgment or are written to the correct artifact: product truth in specs/ADRs/PDRs, workflow rules in methodology, and future-session coordination in PLAN.md or ISSUES.md. Read `references/imperfection-protocol.md`.
@@ -47,7 +47,7 @@ About to load context for an existing target and explain why lower-index sibling
 3. Note operational references (loaded on demand by other skills):
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
-   - PLAN.md / ISSUES.md inside node directories — node-local coordination artifacts for pending plans and known issues, committed to git, not spec truth (used by `/contextualizing`, `/handing-off`)
+   - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualizing`, `/handing-off`)
    - `spx/local/*.md` — product-specific overlays for `/coding-*`, `/architecting-*`, and `/testing-*` skills (enumerated by `/contextualizing`)
 4. Note template and example locations (read only when authoring):
    - `templates/product/product-name.product.md`
@@ -80,7 +80,7 @@ Examples available in: examples/
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
 - [ ] Methodology loaded: existing lower-index siblings are read as constraining context; same-index and higher-index siblings are listed but not read as target constraints
 - [ ] Methodology loaded: all node, ADR, and PDR references use full paths from `spx/`
-- [ ] Methodology loaded: escape hatches (PLAN.md, ISSUES.md) are node-local coordination artifacts committed to git, not spec truth; session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git
+- [ ] Methodology loaded: coordination notes (PLAN.md, ISSUES.md) are node-local, git-tracked only to carry coordination across sessions, stale-prone, verified and reconciled against specs/decisions/assertions/tests/implementation/user intent before use, and never spec truth; session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per product without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
 

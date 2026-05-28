@@ -115,14 +115,14 @@ Glob: "spx/{path-to-dir}/*-*.pdr.md"
 
 **Read EVERY file returned.** Verification: glob count must equal read count.
 
-**2c. Check for escape hatches in this directory**
+**2c. Check for coordination notes in this directory**
 
 ```bash
 Glob: "spx/{path-to-dir}/PLAN.md"
 Glob: "spx/{path-to-dir}/ISSUES.md"
 ```
 
-**If PLAN.md or ISSUES.md exist, read them.** These are non-durable escape hatches left by previous agents via `/handing-off`. Deferred plans or known issues in an ancestor node may constrain what can or should be done at the target.
+**If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous agents via `/handing-off`. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
 
 **2d. Read all lower-index siblings' specs**
 
@@ -162,12 +162,12 @@ Glob: "spx/{target-path}/*-*.{enabler,outcome}/"
 # Check for tests directory
 Glob: "spx/{target-path}/tests/*"
 
-# Check for escape hatches
+# Check for coordination notes
 Glob: "spx/{target-path}/PLAN.md"
 Glob: "spx/{target-path}/ISSUES.md"
 ```
 
-**If PLAN.md or ISSUES.md exist, read them.** These are non-durable escape hatches left by previous sessions via `/handoff`. They contain deferred plans or known issues that subsequent work must account for.
+**If PLAN.md or ISSUES.md exist, read them.** These are stale-prone coordination notes left by previous sessions via `/handoff`. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/testing`, `/auditing-tests`, or `/applying`.
 
@@ -202,7 +202,7 @@ Children: {count} ({list if any})
 Test links: {list from target spec, full paths resolved from target} | none
 Co-located tests: {count} listed | none
 Implementation: unknown unless already established by a prior workflow
-Escape hatches: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
+Coordination notes: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
 Local skill overlays: {comma-separated list from spx/local/} | none
 Lower-index siblings read: {list}
 Same-index siblings (independent): {list}
@@ -271,9 +271,9 @@ Context loading is complete when:
 - [ ] Children enumerated
 - [ ] Test links listed from the target spec and co-located test files listed without reading test bodies
 - [ ] Implementation state reported as unknown unless a prior workflow already established it
-- [ ] Escape hatches (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
+- [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
-- [ ] All node, ADR, PDR, test, and escape-hatch references in the manifest use full paths from `spx/`
+- [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)
 

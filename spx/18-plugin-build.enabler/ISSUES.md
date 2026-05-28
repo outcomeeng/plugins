@@ -1,6 +1,6 @@
 # ISSUES — plugin-build / post-restructure follow-ups
 
-Known issues left by the `src/plugins/` → `dist/` build restructure. Escape hatch; not spec truth.
+Known issues left by the `src/plugins/` → `dist/` build restructure. Coordination note; not spec truth.
 
 ## 1. `just build-skills` can emit a partial `dist/` with exit 0
 

@@ -31,7 +31,7 @@ Three rules govern a conversation's session scope:
 
 2. **Closure has exactly one acceptable end state.** Every in-scope session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
 
-3. **Quick-exit escape hatch.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
+3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/release` (alias for `/handing-off --no-session`) to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
    - Manually move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/` to return the session to the shared queue for another context. This is a file operation outside `spx session`.
 
@@ -187,7 +187,7 @@ How to avoid: Emit (or extend) `<SESSION_SCOPE ids="...">` on every pickup so th
 
 Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
 
-How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive an in-scope session. Permission flows from the three scope rules: scope grows only by user confirmation; closure ends with zero or one handoff; a quick-release escape hatch exists only within a few turns of pickup. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive an in-scope session. Permission flows from the three scope rules: scope grows only by user confirmation; closure ends with zero or one handoff; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
 
 </failure_modes>
 
