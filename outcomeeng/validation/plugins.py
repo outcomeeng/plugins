@@ -31,13 +31,14 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from outcomeeng.distribution.orchestration import (
+    CATALOG_PATHS,
+    CLAUDE_DIST_PLUGINS_DIR,
+    SOURCE_PLUGINS_DIR,
+)
+
 # Paths to both marketplace catalogs, relative to the repo root.
-CATALOGS: dict[str, str] = {
-    "claude": ".claude-plugin/marketplace.json",
-    "codex": ".agents/plugins/marketplace.json",
-}
-SOURCE_PLUGINS_DIR = Path("src") / "plugins"
-CLAUDE_DIST_PLUGINS_DIR = Path("dist") / "claude"
+CATALOGS = CATALOG_PATHS
 
 
 def discover_targets(root: Path) -> list[Path]:

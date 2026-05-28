@@ -2,43 +2,87 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-JUSTFILE = Path("justfile")
-LEFTHOOK = Path("lefthook.yml")
-CLAUDE_MARKETPLACE = Path(".claude-plugin/marketplace.json")
-CODEX_MARKETPLACE = Path(".agents/plugins/marketplace.json")
-BUILD_RECIPE = "build-skills"
-BUILD_MODULE = "outcomeeng.distribution.build"
-CLAUDE_PLUGIN_ROOT = "./dist/claude"
-CODEX_PLUGIN_ROOT = "./dist/codex"
+from outcomeeng.distribution.orchestration import (
+    BUILD_COMMAND_ARGV,
+    BUILD_RECIPE_NAME,
+    CLAUDE_MARKETPLACE_PATH,
+    CLAUDE_RUNTIME_ROOT,
+    CODEX_MARKETPLACE_PATH,
+    CODEX_RUNTIME_ROOT,
+    JUSTFILE_PATH,
+    LEFTHOOK_BUILD_COMMAND,
+    LEFTHOOK_PATH,
+    ORCHESTRATION_VALIDATION_ARGV,
+    claude_marketplace_plugin_root,
+    claude_marketplace_plugin_sources,
+    check_build_orchestration,
+    codex_marketplace_plugin_sources,
+    just_recipe_commands,
+    just_recipe_names,
+    lefthook_build_command,
+    load_json_document,
+    load_lefthook_config,
+    path_is_under_runtime_root,
+)
+from outcomeeng.validation._steps import STEPS
+from outcomeeng.validation.build_orchestration import (
+    main as validate_build_orchestration,
+)
+
+
+def test_repository_passes_the_build_orchestration_contract() -> None:
+    assert check_build_orchestration(Path(".")) == []
+
+
+def test_quality_gate_runs_the_build_orchestration_contract() -> None:
+    assert ORCHESTRATION_VALIDATION_ARGV in {step.argv for step in STEPS}
+    assert validate_build_orchestration(["."]) == 0
 
 
 def test_justfile_declares_build_skills_recipe() -> None:
-    justfile = JUSTFILE.read_text(encoding="utf-8")
+    justfile = JUSTFILE_PATH.read_text(encoding="utf-8")
+    commands = just_recipe_commands(justfile)
 
-    assert f"{BUILD_RECIPE}:" in justfile
-    assert BUILD_MODULE in justfile
+    assert just_recipe_names(justfile).count(BUILD_RECIPE_NAME) == 1
+    assert BUILD_COMMAND_ARGV in commands
 
 
 def test_lefthook_runs_build_and_checks_dist_drift() -> None:
-    lefthook = LEFTHOOK.read_text(encoding="utf-8")
+    config = load_lefthook_config(LEFTHOOK_PATH)
 
-    assert BUILD_RECIPE in lefthook
-    assert "git diff --exit-code dist" in lefthook
+    assert lefthook_build_command(config) == LEFTHOOK_BUILD_COMMAND
 
 
 def test_claude_marketplace_points_at_dist_claude() -> None:
-    data = json.loads(CLAUDE_MARKETPLACE.read_text(encoding="utf-8"))
+    data = load_json_document(CLAUDE_MARKETPLACE_PATH)
+    sources = claude_marketplace_plugin_sources(data)
 
-    assert data["metadata"]["pluginRoot"] == CLAUDE_PLUGIN_ROOT
-    for plugin in data["plugins"]:
-        assert plugin["source"].startswith(CLAUDE_PLUGIN_ROOT)
+    assert claude_marketplace_plugin_root(data) == CLAUDE_RUNTIME_ROOT
+    assert sources
+    assert all(
+        path_is_under_runtime_root(source, CLAUDE_RUNTIME_ROOT) for source in sources
+    )
+    assert not path_is_under_runtime_root(
+        f"{CLAUDE_RUNTIME_ROOT}-extra/develop", CLAUDE_RUNTIME_ROOT
+    )
+    assert not path_is_under_runtime_root(
+        f"{CLAUDE_RUNTIME_ROOT}/../codex/develop", CLAUDE_RUNTIME_ROOT
+    )
 
 
 def test_codex_marketplace_points_at_dist_codex() -> None:
-    data = json.loads(CODEX_MARKETPLACE.read_text(encoding="utf-8"))
+    data = load_json_document(CODEX_MARKETPLACE_PATH)
+    sources = codex_marketplace_plugin_sources(data)
 
-    for plugin in data["plugins"]:
-        assert plugin["source"]["path"].startswith(CODEX_PLUGIN_ROOT)
+    assert sources
+    assert all(
+        path_is_under_runtime_root(source, CODEX_RUNTIME_ROOT) for source in sources
+    )
+    assert not path_is_under_runtime_root(
+        f"{CODEX_RUNTIME_ROOT}-extra/develop", CODEX_RUNTIME_ROOT
+    )
+    assert not path_is_under_runtime_root(
+        f"{CODEX_RUNTIME_ROOT}/../claude/develop", CODEX_RUNTIME_ROOT
+    )
