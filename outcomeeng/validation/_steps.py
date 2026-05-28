@@ -14,6 +14,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.orchestration import (
+    BUILD_COMMAND_ARGV,
+    DIST_DIFF_ARGV,
+    ORCHESTRATION_VALIDATION_ARGV,
+)
 from outcomeeng.validation._model import Step
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -36,19 +41,9 @@ def _skill_files() -> tuple[str, ...]:
 
 
 STEPS: Final = (
-    Step(
-        label="build-skills",
-        argv=(
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "outcomeeng.distribution.build",
-            "src",
-            "dist",
-        ),
-    ),
-    Step(label="dist-diff", argv=("git", "diff", "--exit-code", "dist")),
+    Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
+    Step(label="dist-diff", argv=DIST_DIFF_ARGV),
+    Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=("dprint", "check")),
     Step(label="ruff", argv=("uv", "run", "ruff", "check", ".")),
     Step(
