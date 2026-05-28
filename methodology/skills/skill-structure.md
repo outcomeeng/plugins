@@ -12,7 +12,7 @@ Three methodology steps drive all work. Audit gates operate within each step. Se
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
 3. **Apply** — write implementation code that makes tests pass. Node becomes Passing.
 
-Planning is ephemeral — `PLAN.md` escape hatches left by `/handoff`, not durable artifacts.
+Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not durable artifacts.
 
 Within these steps:
 

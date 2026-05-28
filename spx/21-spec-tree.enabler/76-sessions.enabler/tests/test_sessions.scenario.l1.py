@@ -8,7 +8,7 @@ Assertions covered:
   1. spx session handoff creates a file in .spx/sessions/todo/ with the
      provided content (including the active node path).
   2. spx session pickup moves that file from todo/ to doing/.
-  3. Escape hatch content (PLAN.md / ISSUES.md excerpts) in the handoff
+  3. Coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
      payload survives into the session file unchanged.
   4. post-compact parses the compact summary from its JSON payload and emits
      <SPEC-TREE_RESUMED> with the active node (when present), plus
@@ -176,11 +176,11 @@ class TestPickupMovesToDoing:
 
 
 # ---------------------------------------------------------------------------
-# Assertion 3 — escape hatch content (PLAN.md / ISSUES.md) in session file
+# Assertion 3 — coordination-note content (PLAN.md / ISSUES.md) in session file
 # ---------------------------------------------------------------------------
 
 
-class TestEscapeHatchContentInSession:
+class TestCoordinationNoteContentInSession:
     def test_plan_md_excerpt_preserved(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
         plan_text = "## PLAN: Wire the spx CLI half of the session-scope accumulator"

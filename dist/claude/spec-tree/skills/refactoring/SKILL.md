@@ -115,7 +115,7 @@ Before applying changes, determine what will be affected:
 1. Create the node directory at the new location with an appropriate index.
 2. Move the spec file, renaming if the slug stays the same.
 3. Move the `tests/` directory and all test files.
-4. If PLAN.md or ISSUES.md exist in the source directory, move them to the new location — they are node-local escape hatches.
+4. If PLAN.md or ISSUES.md exist in the source directory, move them to the new location — they are node-local coordination notes.
 5. Move any child nodes recursively.
 6. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
 7. Remove the old directory.
@@ -175,7 +175,7 @@ After applying any operation:
 
 - [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
-- [ ] Escape hatch files (PLAN.md, ISSUES.md) moved with their node — they are node-local, not shared (do not need evidence links)
+- [ ] Coordination-note files (PLAN.md, ISSUES.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
 - [ ] Any new or changed index assignment came from `/decomposing`
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry

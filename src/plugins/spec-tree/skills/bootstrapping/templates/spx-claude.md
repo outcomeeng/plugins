@@ -23,14 +23,14 @@ spx/
   NN-{slug}.enabler/                   # Shared infrastructure
     {slug}.md                          # Spec file
     tests/                             # Co-located tests
-    PLAN.md                            # Escape hatch: deferred plan (optional)
-    ISSUES.md                          # Escape hatch: known issues (optional)
+    PLAN.md                            # Coordination note: deferred plan (optional)
+    ISSUES.md                          # Coordination note: known issues (optional)
     NN-{slug}.enabler/                 # Children: enablers only
   NN-{slug}.outcome/                   # Hypothesis + assertions
     {slug}.md                          # Spec file
     tests/                             # Co-located tests
-    PLAN.md                            # Escape hatch: deferred plan (optional)
-    ISSUES.md                          # Escape hatch: known issues (optional)
+    PLAN.md                            # Coordination note: deferred plan (optional)
+    ISSUES.md                          # Coordination note: known issues (optional)
     NN-{slug}.{enabler|outcome}/       # Children: enablers and outcomes
 ```
 
@@ -45,7 +45,7 @@ spx/
 5. **Deterministic context**: The tree path defines what context gets loaded for work on a target.
 6. **Decision records win by hierarchy**: If a spec contradicts an ADR or PDR in its ancestry, the spec is wrong. Rewrite the spec to align with the decision record before any implementation work.
 7. **Decision records updated in-place**: When a decision changes, update the ADR/PDR directly. No "superseded" workflow.
-8. **Escape hatches**: PLAN.md and ISSUES.md in node directories are committed coordination files created during development or left by `/handoff`. They contain deferred plans or known issues, not spec assertions or decisions. `/contextualizing` reads them automatically. Remove a resolved coordination note; for ISSUES.md entries, either delete the fixed entry or convert unresolved product work into a spec node. These files exist to make coordination visible and may be committed independently from implementation work when collaborators need the state immediately.
+8. **Coordination notes**: PLAN.md and ISSUES.md in node directories are committed coordination notes created during development or left by `/handoff`. They are committed to git only to carry coordination across sessions; they never hold spec assertions or decisions. They go stale unless acted upon, so verify a note before it steers work — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent. `/contextualizing` reads them automatically. Remove a resolved note; for ISSUES.md entries, either delete the fixed entry or convert unresolved product work into a spec node. These files exist to make coordination visible and may be committed independently from implementation work when collaborators need the state immediately.
 
 ---
 

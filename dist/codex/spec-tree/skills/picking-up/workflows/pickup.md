@@ -20,12 +20,12 @@ Show the recommended skill and TDD flow position.
 For each node in the `<nodes>` section:
 
 1. **Present status**: Show what was done and what remains.
-2. **Check for escape hatches**:
+2. **Check for coordination notes**:
    ```bash
    Glob: "spx/{node-path}/PLAN.md"
    Glob: "spx/{node-path}/ISSUES.md"
    ```
-   If found, read and present them — these contain important non-durable context the previous Claude context persisted as a hedge.
+   If found, read and present them — these carry stale-prone coordination the previous Claude context persisted as a hedge. Verify each against the current specs, decisions, tests, implementation, and user intent before acting on it; flag any item the durable layers have overtaken.
 
 **Step 4: Present persisted artifacts**
 
@@ -34,7 +34,7 @@ Show the `<persisted>` section:
 - What was committed (trust these are in place)
 - What is uncommitted (may need `/commit` before continuing)
 - What insights were written to CLAUDE.md/memory/skills
-- What escape hatches were written and where
+- What coordination notes were written and where
 
 **Step 5: Present coordination context**
 
@@ -68,7 +68,7 @@ If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume 
 Otherwise, use `AskUserQuestion` with exactly one question and 2-4 options. The options must come from the loaded context:
 
 - Include the recommended next action as the first option
-- Include "Review persisted artifacts first" only when persisted artifacts or escape hatches exist
+- Include "Review persisted artifacts first" only when persisted artifacts or coordination notes exist
 - Include "Re-check coordination claims first" only when coordination reports failing tests, bugs, or errors
 - Include "Take a different approach" only when the loaded context reveals a real alternative
 

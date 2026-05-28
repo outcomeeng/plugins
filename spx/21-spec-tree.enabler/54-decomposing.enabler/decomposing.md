@@ -1,6 +1,6 @@
 # Decomposing
 
-PROVIDES structured composition analysis from a target address, durable spec content, and node-local escape hatches
+PROVIDES structured composition analysis from a target address, durable spec content, and node-local coordination notes
 SO THAT all spec authors
 CAN compose top-level product children or split nodes into focused children with clear scope boundaries and explicit ordering evidence
 

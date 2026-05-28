@@ -41,7 +41,7 @@ Three rules govern a conversation's session scope:
 
 1. Scope grows only by user confirmation (via `/picking-up`).
 2. Closure has exactly one acceptable end state per in-scope session: archived after this workflow runs against it.
-3. Quick-release escape hatch via `/release` if the user confirms within a few turns of pickup.
+3. Quick-release shortcut via `/release` if the user confirms within a few turns of pickup.
 
 Permission to archive comes from completing this workflow against the in-scope set named in `<SESSION_SCOPE ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session handoff artifacts created by this conversation are workflow artifacts, not scope members.
 
@@ -52,16 +52,16 @@ Full algorithm in `references/scope-resolution.md`.
 <persistence_hierarchy>
 Persist to the HIGHEST applicable tier.
 
-| Tier | Where                                   | Durability   | When to use                                                                       |
-| ---- | --------------------------------------- | ------------ | --------------------------------------------------------------------------------- |
-| 1    | Spec tree (`spx/`)                      | Durable      | Spec amendments, test files, assertion updates                                    |
-| 2    | Methodology (skills, CLAUDE.md, memory) | Durable      | Reusable patterns, user preferences, coding gotchas                               |
-| 3    | Node-local (PLAN.md, ISSUES.md)         | Escape hatch | Remaining steps, known gaps — non-durable but discoverable via `/contextualizing` |
-| 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral    | Coordination only: node list, skill checklist, cross-cutting context              |
+| Tier | Where                                   | Durability  | When to use                                                                                                                                    |
+| ---- | --------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Spec tree (`spx/`)                      | Durable     | Spec amendments, test files, assertion updates                                                                                                 |
+| 2    | Methodology (skills, CLAUDE.md, memory) | Durable     | Reusable patterns, user preferences, coding gotchas                                                                                            |
+| 3    | Node-local (PLAN.md, ISSUES.md)         | Git-tracked | Remaining steps, known gaps — committed for cross-session coordination, stale-prone; reconcile before use, discoverable via `/contextualizing` |
+| 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral   | Coordination only: node list, skill checklist, cross-cutting context                                                                           |
 
-Tier 3 is an escape hatch, not a home. MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
+A Tier-3 coordination note holds remaining steps and known gaps, never product truth. MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
 
-Git commit is the final persistence operation, not a fifth tier. Session-owned spec edits, test edits, code edits, and escape hatches MUST be committed before session closure.
+Git commit is the final persistence operation, not a fifth tier. Session-owned spec edits, test edits, code edits, and coordination notes MUST be committed before session closure.
 
 </persistence_hierarchy>
 
@@ -97,7 +97,7 @@ A successful closure or handoff:
 - [ ] Existing PLAN.md and ISSUES.md checked for staleness — updated or removed if stale (workflow 02)
 - [ ] `<RESOLVED_SCOPE>` marker emitted into the conversation by workflow 02
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
-- [ ] Session-owned spec, test, code, and escape-hatch changes committed before closure (workflow 04)
+- [ ] Session-owned spec, test, code, and coordination-note changes committed before closure (workflow 04)
 - [ ] Committed vs uncommitted state recorded for each node (workflow 04)
 - [ ] Continuation need explicitly decided: session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)
 - [ ] Every session in the resolved scope archived after the canonical continuation is written, rewritten, or intentionally omitted (workflow 04)

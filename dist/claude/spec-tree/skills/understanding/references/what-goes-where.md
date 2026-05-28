@@ -140,19 +140,19 @@ Test harnesses (modules that mediate access to the system under test), test gene
 
 </enforcement>
 
-<escape_hatches>
+<coordination_notes>
 
-**Purpose:** Node-local coordination files. They preserve pending work and known issues for future context loading without becoming spec truth. Prefer amending specs or fixing issues directly when the correction is clear and safe. Both files are committed to git in the same change that creates or amends them — they are durable, git-tracked artifacts, not local scratch. Session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git; `spx session` shares them across worktrees.
+**Purpose:** Node-local coordination notes. They preserve pending work and known issues so a future session reads them on context load. Both files are committed to git for that one reason — git-tracking carries the coordination across sessions; it does not make the content product truth. They go stale unless acted upon, so treat a coordination note as a fallible input, never as authority: before it steers work, reconcile it against the node's spec, the governing ADRs/PDRs, the assertions, the tests, the implementation, and the current user intent, and act only where it still holds. Prefer amending specs or fixing issues directly when the correction is clear and safe. Session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git; `spx session` shares them across worktrees.
 
 **PLAN.md** — concrete remaining steps for a node. Written when work is interrupted or when an approved plan must persist beyond the current conversation. Commit it; remove completed items in subsequent commits.
 
 **ISSUES.md** — known issues that remain unresolved: spec gaps, implementation bugs, untestable assertions. Commit it; remove fixed items and add new ones in subsequent commits.
 
-**Verified by:** `/contextualizing` reads them automatically. `/pickup` checks for them.
+**Verified by:** Reconcile against the durable layers and current user intent before use. `/contextualizing` reads them automatically; `/pickup` checks for them.
 
 **Does NOT contain:** Spec content (→ spec file), architecture decisions (→ ADR), product decisions (→ PDR).
 
-</escape_hatches>
+</coordination_notes>
 
 <flow>
 

@@ -314,7 +314,7 @@ How to avoid: before authoring a second decision record at the same directory le
 
 **Failure 9: Authoring pre-decided decomposition structure**
 
-Claude received a broad request, drafted several child nodes with indices, and then treated `/decomposing` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and escape hatches.
+Claude received a broad request, drafted several child nodes with indices, and then treated `/decomposing` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and coordination notes.
 
 How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decomposing <node-address>`. The decomposition workflow owns child boundaries, node types, dependency edges, and index assignment.
 
@@ -340,7 +340,7 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Tagging testable MUST/NEVER rules with `[review]`.** `[review]` silences CI enforcement — any rule tagged `[review]` will not fail a build when violated. If a concrete automated test can falsify the rule, the tag is `[test]` and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they are never `[review]`. Reserve `[review]` for semantic constraints no automated check can falsify.
 
-**Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's escape hatches and delegates to `/decomposing <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
+**Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's coordination notes and delegates to `/decomposing <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
 </anti_patterns>
 
@@ -351,7 +351,7 @@ Authoring is complete when:
 - [ ] Artifact type determined (product, ADR, PDR, enabler, outcome)
 - [ ] Context loaded for placement (or bootstrap mode for empty tree)
 - [ ] Index and placement determined using ordering rules
-- [ ] Multi-sibling requests delegated to `/decomposing <node-address>` with intent captured in node-local escape hatches
+- [ ] Multi-sibling requests delegated to `/decomposing <node-address>` with intent captured in node-local coordination notes
 - [ ] Content gathered from user (genuine gaps only)
 - [ ] Template read and filled with atemporal voice
 - [ ] Validation checklist passes
