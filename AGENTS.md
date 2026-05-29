@@ -364,11 +364,12 @@ For pull-request work, the path is:
 6. **Sync.** Once a PR with plugin distribution changes merges, refresh your local marketplace install:
 
    ```bash
-   git switch main && git pull
+   git fetch origin main
+   git switch --detach origin/main   # detach, don't attach `main` — keeps it free across worktrees
    just sync-marketplace <previous-main-ref>
    ```
 
-   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, installs generated Codex agents, and runs `validate_install` and `check-installed`. It accepts an optional base ref; when the range from that ref to `HEAD` has no changes under `src/`, `dist/`, `.claude-plugin/`, or `.agents/plugins/`, it exits without refreshing the marketplace. It does not push or pull — do the `git pull` yourself first.
+   `just sync-marketplace` refreshes the local Claude marketplace cache, preserves the Codex cache compatibility symlinks, installs generated Codex agents, and runs `validate_install` and `check-installed`. It accepts an optional base ref; when the range from that ref to `HEAD` has no changes under `src/`, `dist/`, `.claude-plugin/`, or `.agents/plugins/`, it exits without refreshing the marketplace. It does not push or fetch — fetch and detach onto the merged `main` yourself first (above; `git switch main` would pin `main` to this worktree, see `spx/local/merging.md`).
 
 ### Publishing directly to `main`
 
@@ -398,7 +399,7 @@ While the change is still on your feature branch:
 3. Run `/reload-plugins`.
 4. Invoke the skill — first invocation after the reload reads the new content from the cache.
 
-The sync recipe propagates working-tree changes into the cache directories that `/reload-plugins` re-indexes. Without it the cache stays at the prior published state and reload re-reads the same bytes. After a PR merge or direct `main` publication that changes plugin distribution files, `git switch main && git pull && just sync-marketplace <previous-main-ref>` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
+The sync recipe propagates working-tree changes into the cache directories that `/reload-plugins` re-indexes. Without it the cache stays at the prior published state and reload re-reads the same bytes. After a PR merge or direct `main` publication that changes plugin distribution files, `git fetch origin main && git switch --detach origin/main && just sync-marketplace <previous-main-ref>` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
 
 ## Missing plugins or skills
 

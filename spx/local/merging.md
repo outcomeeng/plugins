@@ -28,4 +28,14 @@ The marketplace's full deterministic-verification command is `just check`. It is
 
 ## Post-merge
 
-After the merge lands on `main`, refresh the local marketplace install per the [CLAUDE.md sync step](../../CLAUDE.md): `git switch main && git pull && just sync-marketplace <previous-main-ref>`.
+After the merge lands on `main`, refresh the local marketplace install with `just sync-marketplace <previous-main-ref>` (the [CLAUDE.md sync step](../../CLAUDE.md)).
+
+Update the current worktree to the merged `main` by **detaching**, never by attaching the branch:
+
+```bash
+git fetch origin main
+git switch --detach origin/main
+just sync-marketplace <previous-main-ref>
+```
+
+This repository is a multi-worktree checkout where `main` is kept checked out in no worktree so every worktree can reach it. `git switch main` attaches `main` to the current worktree and pins it there — a later `git switch main` in another worktree then fails with `fatal: 'main' is already used by worktree at <path>`, the same multi-worktree cleanup failure the separate `git push origin --delete <branch>` above already avoids. The `--detach` form lands HEAD on the merged commit without claiming the branch. The CLAUDE.md sync step carries the same detach form; this overlay is the authoritative source for the multi-worktree rationale.
