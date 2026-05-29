@@ -172,3 +172,8 @@ def test_claude_cli_runner_bare_opt_in_includes_bare(
     # hooks, and auto-memory, and restricts auth to ANTHROPIC_API_KEY or
     # apiKeyHelper.
     assert "--bare" in argv, "opting into bare must pass --bare"
+    # The fixed flags remain present regardless of the bare opt-in.
+    assert "--print" in argv
+    assert "--no-session-persistence" in argv
+    assert argv[argv.index("--output-format") + 1] == "json"
+    assert argv[argv.index("--plugin-dir") + 1] == str(tmp_path)
