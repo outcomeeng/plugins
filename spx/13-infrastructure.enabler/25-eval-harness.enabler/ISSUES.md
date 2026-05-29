@@ -16,13 +16,17 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-A scheduled CI workflow that runs `outcomeeng-evals run --all` and posts results is not yet wired. The CLI's exit codes make this straightforward to add later. The runner invokes `claude --bare`, whose auth is strictly `ANTHROPIC_API_KEY` or an `apiKeyHelper` (never OAuth or keychain), so the workflow must export `ANTHROPIC_API_KEY` into the job environment; this is also why a developer can only run evals locally by exporting a key, not from an OAuth-only session.
+A scheduled CI workflow that runs `outcomeeng-evals run --all` and posts results is not yet wired. The CLI's exit codes make this straightforward to add later. The runner invokes `claude --print --output-format json …` by default (no `--bare`), so `claude` accepts any auth source it supports — `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, or `apiKeyHelper`. CI canonicalizes the run because its execution surface has no auto-discoverable `~/.claude/CLAUDE.md` or cwd `AGENTS.md` to contaminate the verdict, and supplies `CLAUDE_CODE_OAUTH_TOKEN` from `secrets.CLAUDE_CODE_OAUTH_TOKEN` — the same secret the existing `spec-tree` and `spec-tree-review` workflows already use. A developer who wants to validate locally runs from a clean discovery surface (no `~/.claude/CLAUDE.md`, no `AGENTS.md` in cwd); the `--bare` opt-in is programmatic only (`ClaudeCliRunner(..., bare=True)` with `ANTHROPIC_API_KEY` exported) and is not exposed by the `outcomeeng-evals run` CLI today — see the CLI `--bare` opt-in item below.
 
 Until CI owns the canonical appends, every developer-machine run appends a row to `history.jsonl`, which shows up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
 `append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). Acceptable for now; if CI ever runs the same eval concurrently, give `append_history_row` a file lock (`fcntl.flock` or a lockfile).
 
 When the eval CI workflow is wired, scope it to trusted triggers only — `push` to `main` or a `workflow_dispatch`/`schedule`, not an unrestricted `pull_request` from forks. `_subprocess_env` forwards the full job environment (including any job-level secrets) to the `claude` subprocess; an eval crafted in a fork PR could exfiltrate those secrets if the workflow ran with them in scope. Auth resolution requires the inherited env, so the mitigation is trigger scoping, not env filtering.
+
+## CLI `--bare` opt-in
+
+The runner exposes a `bare: bool = False` field, but `outcomeeng-evals run` has no `--bare` flag and `outcomeeng_evals/cli/wiring.py:build_claude_runner` never sets it. A developer who wants the opt-in must construct `ClaudeCliRunner(..., bare=True)` in Python directly. Add a `--bare` flag to `outcomeeng-evals run` (wired through `build_claude_runner`) so the opt-in the spec describes is reachable from the canonical entry point.
 
 ## Independent uv project for `outcomeeng_evals`
 

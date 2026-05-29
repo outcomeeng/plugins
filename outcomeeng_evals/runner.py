@@ -1,17 +1,18 @@
 """Model runners that produce assistant messages for an eval prompt.
 
-``ClaudeCliRunner`` shells out to ``claude --bare --print --output-format
-json``. ``--bare`` skips CLAUDE.md auto-discovery, hooks, and auto-memory
-so the eval grades the plugin-loaded skill alone rather than the ambient
-repo and user instruction stack — which otherwise leaks formatting and
-closing-protocol behavior into the verdict. Under ``--bare`` auth comes
-from ``ANTHROPIC_API_KEY`` or ``apiKeyHelper`` in the inherited
-environment, not OAuth, so the runner is meant for CI (or a developer
-shell that exports a key) rather than an OAuth-only session. Each call is
-a single bounded subprocess invocation; no polling, no streaming
-watchers. The runner strips ``CLAUDECODE`` from the inherited environment
-so nested invocations from inside a Claude Code session use the
-subprocess contract rather than the interactive guard.
+``ClaudeCliRunner`` shells out to ``claude --print --output-format json``
+by default. The default invocation lets ``claude`` auto-discover ambient
+``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md`` and accepts any auth
+source ``claude`` supports (``CLAUDE_CODE_OAUTH_TOKEN``,
+``ANTHROPIC_API_KEY``, ``apiKeyHelper``), so CI canonicalizes the run
+with its empty discovery surface and the ``CLAUDE_CODE_OAUTH_TOKEN`` job
+secret. Setting ``bare=True`` adds ``--bare`` to the invocation, which
+enforces discovery isolation but restricts auth to ``ANTHROPIC_API_KEY``
+or ``apiKeyHelper``. Each call is a single bounded subprocess invocation;
+no polling, no streaming watchers. The runner strips ``CLAUDECODE`` from
+the inherited environment so nested invocations from inside a Claude
+Code session use the subprocess contract rather than the interactive
+guard.
 
 Test fakes (stubs, recorders) live in ``outcomeeng_evals.testing.fakes``.
 """
@@ -68,18 +69,22 @@ class ClaudeCliRunner:
     binary: str = "claude"
     max_budget_usd: float | None = 0.50
     timeout_seconds: float = 120.0
+    bare: bool = False
 
     def run(self, prompt: str) -> RunResult:
-        argv = [
-            self.binary,
-            "--bare",
-            "--print",
-            "--output-format",
-            "json",
-            "--no-session-persistence",
-            "--plugin-dir",
-            str(self.plugin_dir),
-        ]
+        argv = [self.binary]
+        if self.bare:
+            argv.append("--bare")
+        argv.extend(
+            [
+                "--print",
+                "--output-format",
+                "json",
+                "--no-session-persistence",
+                "--plugin-dir",
+                str(self.plugin_dir),
+            ]
+        )
         if self.max_budget_usd is not None:
             argv.extend(["--max-budget-usd", f"{self.max_budget_usd:.4f}"])
         start = time.perf_counter()
@@ -109,22 +114,24 @@ class ClaudeCliRunner:
 def _subprocess_env() -> dict[str, str]:
     """Return a copy of the parent env with the Claude Code nesting guard removed.
 
-    The full parent environment is passed through deliberately: under
-    ``--bare``, ``claude`` resolves auth from ``ANTHROPIC_API_KEY`` or an
-    ``apiKeyHelper`` command found among the inherited variables, so
-    narrowing the env to an allow-list would break authentication. The
-    only key dropped is ``CLAUDECODE`` — leaving it set would make the
-    nested call take the interactive-guard path instead of the print-mode
-    subprocess contract. Do not narrow this in a future refactor.
+    The full parent environment is passed through deliberately: ``claude``
+    resolves auth from any source it supports
+    (``CLAUDE_CODE_OAUTH_TOKEN``, ``ANTHROPIC_API_KEY``, ``apiKeyHelper``,
+    or — without ``--bare`` — an OAuth login session) using values found
+    among the inherited variables, so narrowing the env to an allow-list
+    would break authentication. The only key dropped is ``CLAUDECODE`` —
+    leaving it set would make the nested call take the interactive-guard
+    path instead of the print-mode subprocess contract. Do not narrow
+    this in a future refactor.
 
-    In CI, the job supplies ``ANTHROPIC_API_KEY`` through the environment
-    and it reaches the subprocess by this same pass-through. Other
-    job-level secrets (deployment tokens, cloud credentials) are forwarded
-    too; that is acceptable — ``claude`` consumes only what it needs. The
-    env is not narrowed to an allow-list because the other ``--bare`` auth
-    path, an ``apiKeyHelper``, is an arbitrary command that may read
-    arbitrary inherited variables of its own, so an allow-list cannot
-    safely predict what authentication needs.
+    In CI, the job supplies ``CLAUDE_CODE_OAUTH_TOKEN`` through the
+    environment and it reaches the subprocess by this same pass-through.
+    Other job-level secrets (deployment tokens, cloud credentials) are
+    forwarded too; that is acceptable — ``claude`` consumes only what it
+    needs. The env is not narrowed to an allow-list because an
+    ``apiKeyHelper`` is an arbitrary command that may read arbitrary
+    inherited variables of its own, so an allow-list cannot safely
+    predict what authentication needs.
     """
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)
