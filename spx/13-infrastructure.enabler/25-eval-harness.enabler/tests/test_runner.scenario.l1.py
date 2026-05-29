@@ -141,7 +141,7 @@ def test_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit(
             runner.run("any prompt")
 
 
-def test_claude_cli_runner_invokes_bare_isolated_print_mode(
+def test_claude_cli_runner_default_invokes_without_bare(
     tmp_path: Path,
 ) -> None:
     runner = ClaudeCliRunner(plugin_dir=tmp_path)
@@ -149,12 +149,26 @@ def test_claude_cli_runner_invokes_bare_isolated_print_mode(
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
     assert argv[0] == runner.binary
-    # --bare strips CLAUDE.md auto-discovery, hooks, and auto-memory so the
-    # eval grades the plugin-loaded skill alone, not the ambient instruction
-    # stack; without it the verdict absorbs unrelated formatting and
-    # closing-protocol behavior from the surrounding repo and user memory.
-    assert "--bare" in argv, "the runner must isolate the eval call with --bare"
+    # The default invocation lets claude auto-discover ambient
+    # ~/.claude/CLAUDE.md and the cwd's AGENTS.md and accept any auth source
+    # claude supports (CLAUDE_CODE_OAUTH_TOKEN, ANTHROPIC_API_KEY,
+    # apiKeyHelper). CI canonicalizes the run with its empty discovery
+    # surface and the CLAUDE_CODE_OAUTH_TOKEN job secret.
+    assert "--bare" not in argv, "the default invocation must not pass --bare"
     assert "--print" in argv
     assert "--no-session-persistence" in argv
     assert argv[argv.index("--output-format") + 1] == "json"
     assert argv[argv.index("--plugin-dir") + 1] == str(tmp_path)
+
+
+def test_claude_cli_runner_bare_opt_in_includes_bare(
+    tmp_path: Path,
+) -> None:
+    runner = ClaudeCliRunner(plugin_dir=tmp_path, bare=True)
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    # --bare is opt-in: when set, claude skips CLAUDE.md auto-discovery,
+    # hooks, and auto-memory, and restricts auth to ANTHROPIC_API_KEY or
+    # apiKeyHelper.
+    assert "--bare" in argv, "opting into bare must pass --bare"
