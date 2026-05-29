@@ -168,6 +168,8 @@ def test_claude_cli_runner_bare_opt_in_includes_bare(
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
+    # The binary stays at argv[0] regardless of the bare opt-in.
+    assert argv[0] == runner.binary
     # --bare is opt-in: when set, claude skips CLAUDE.md auto-discovery,
     # hooks, and auto-memory, and restricts auth to ANTHROPIC_API_KEY or
     # apiKeyHelper.
