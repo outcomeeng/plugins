@@ -19,11 +19,8 @@ Live repository state for mode detection, read at invocation.
 **Working tree (empty = clean):**
 !`git status --porcelain || echo '(not a git repo)'`
 
-**Default base branch:**
-!`gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo '(unknown)'`
-
-**Commits ahead of base:**
-!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`
+**Commits ahead of base (default branch):**
+!`base=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name' 2>/dev/null || echo main); echo "base: ${base}"; git log --oneline "origin/${base}..HEAD" 2>/dev/null | head -10 || echo '(none)'`
 
 **Existing PR for this branch:**
 !`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
