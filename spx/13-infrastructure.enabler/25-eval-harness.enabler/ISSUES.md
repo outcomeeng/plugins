@@ -16,13 +16,31 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-A scheduled CI workflow that runs `outcomeeng-evals run --all` and posts results is not yet wired. The CLI's exit codes make this straightforward to add later. The runner invokes `claude --print --output-format json …` by default (no `--bare`), so `claude` accepts any auth source it supports — `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, or `apiKeyHelper`. CI canonicalizes the run because its execution surface has no auto-discoverable `~/.claude/CLAUDE.md` or cwd `AGENTS.md` to contaminate the verdict, and supplies `CLAUDE_CODE_OAUTH_TOKEN` from `secrets.CLAUDE_CODE_OAUTH_TOKEN` — the same secret the existing `spec-tree` and `spec-tree-review` workflows already use. A developer who wants to validate locally runs from a clean discovery surface (no `~/.claude/CLAUDE.md`, no `AGENTS.md` in cwd); the `--bare` opt-in is programmatic only (`ClaudeCliRunner(..., bare=True)` with `ANTHROPIC_API_KEY` exported) and is not exposed by the `outcomeeng-evals run` CLI today — see the CLI `--bare` opt-in item below.
+The CI workflow `.github/workflows/spec-tree-evals.yml` runs the eval suites: it discovers each `eval.toml` under the configured root and runs it through `outcomeeng-evals run` (the CLI has no `run --all`; the workflow loops over `discover` output), gating the job on each suite's exit code. It triggers on every `pull_request` touching the spec-tree plugin / its evals / the harness (gated by a collaborator-authorization job so untrusted PRs never receive the OAuth secret), on `push` to main, on a weekly `schedule`, and on `workflow_dispatch`. The runner invokes `claude --print --output-format json …` by default (no `--bare`), so `claude` accepts any auth source it supports — `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, or `apiKeyHelper`. CI canonicalizes the run because its execution surface has no auto-discoverable `~/.claude/CLAUDE.md` or cwd `AGENTS.md` to contaminate the verdict, and supplies `CLAUDE_CODE_OAUTH_TOKEN` from `secrets.CLAUDE_CODE_OAUTH_TOKEN` — the same secret the existing `spec-tree` and `spec-tree-review` workflows already use. A developer who wants to validate locally runs from a clean discovery surface (no `~/.claude/CLAUDE.md`, no `AGENTS.md` in cwd); the `--bare` opt-in is programmatic only (`ClaudeCliRunner(..., bare=True)` with `ANTHROPIC_API_KEY` exported) and is not exposed by the `outcomeeng-evals run` CLI today — see the CLI `--bare` opt-in item below.
 
-Until CI owns the canonical appends, every developer-machine run appends a row to `history.jsonl`, which shows up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
+CI owns the canonical appends on main: `spec-tree-evals.yml`'s commit-back step pushes them with `[skip ci]` via the `OUTCOMEENG_EVAL_STORE` PAT. Developer-machine runs still append local rows that show up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
-`append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). Acceptable for now; if CI ever runs the same eval concurrently, give `append_history_row` a file lock (`fcntl.flock` or a lockfile).
+`append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). `spec-tree-evals.yml` serializes its main/schedule runs (concurrency group per ref, `cancel-in-progress: false`), so the workflow's own runs don't interleave their appends. The file lock (`fcntl.flock` or a lockfile) is only needed if a developer runs the same eval while CI runs it, or if the workflow later fans out the same eval across a matrix.
 
 When the eval CI workflow is wired, scope it to trusted triggers only — `push` to `main` or a `workflow_dispatch`/`schedule`, not an unrestricted `pull_request` from forks. `_subprocess_env` forwards the full job environment (including any job-level secrets) to the `claude` subprocess; an eval crafted in a fork PR could exfiltrate those secrets if the workflow ran with them in scope. Auth resolution requires the inherited env, so the mitigation is trigger scoping, not env filtering.
+
+## TODO: confirm OUTCOMEENG_EVAL_STORE reaches this repo and bypasses protection
+
+`.github/workflows/spec-tree-evals.yml` commits the appended `history.jsonl`
+rows back to `main` using the org-level PAT secret `OUTCOMEENG_EVAL_STORE`
+rather than the built-in `GITHUB_TOKEN`, so the push keeps working once `main`
+is branch-protected (the built-in token cannot push to a protected branch).
+If the secret is not visible to this repo, the commit-back step skips with a
+warning and the eval gate still runs — so the gate stays unblocked, but no
+canonical `history.jsonl` baseline is recorded.
+
+Action required for commit-back to work on a protected `main`:
+
+- Ensure the org secret `OUTCOMEENG_EVAL_STORE` includes `outcomeeng/plugins`
+  in its repository-visibility scope (org → Secrets and variables → Actions →
+  the secret → Repository access).
+- When enabling branch protection on `main`, add the token's account to the
+  protection bypass-allowances so its push is not rejected.
 
 ## CLI `--bare` opt-in
 
