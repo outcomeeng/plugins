@@ -120,6 +120,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -127,6 +128,16 @@ jobs:
           # a commit on main or dispatch a run, and schedule runs on the repo.
           if [ "$EVENT" != "pull_request" ]; then
             echo "authorized=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Fork PRs do not receive secrets (GitHub withholds everything but
+          # GITHUB_TOKEN for `pull_request` from a fork), so the eval job would
+          # run without CLAUDE_CODE_OAUTH_TOKEN and fail at auth rather than
+          # skip. Skip them here — even a collaborator's fork branch — so only
+          # same-repo PRs, which do receive the secret, run the eval.
+          if [ "$PR_HEAD_REPO" != "$REPO" ]; then
+            echo "::notice::PR head '$PR_HEAD_REPO' is a fork of '$REPO'; skipping eval (fork PRs do not receive the OAuth secret)."
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [ -z "$PR_AUTHOR" ]; then
