@@ -1,6 +1,6 @@
 ---
 allowed-tools: Skill
-description: Open a draft PR for the current branch with curated title and body
+description: Open a ready PR for the current branch with curated title and body
 argument-hint: [scope-hint]
 ---
 
@@ -39,4 +39,4 @@ argument-hint: [scope-hint]
 Skill tool → { "skill": "spec-tree:opening-pr" }
 ```
 
-Do NOT proceed manually. The skill contains the PR-opening protocol — title and body conventions, the `gh pr create --draft` flow, and the handoff to `/managing-pr` for the post-creation review loop. Cross-cutting merge-flow standards (branch hygiene, branch topology, push semantics, draft lifecycle, heartbeat, three-surface review inspection) live in `/standardizing-merging`, which `opening-pr` loads automatically.
+Do NOT proceed manually. The skill contains the PR-opening protocol — title and body conventions, the `REVIEW_READINESS` gate and the `gh pr create` ready-open flow, and the handoff to `/managing-pr` for the post-creation review loop. Cross-cutting merge-flow standards (branch hygiene, branch topology, push semantics, the three authority gates, heartbeat, three-surface review inspection) live in `/standardizing-merging`, which `opening-pr` loads automatically.
