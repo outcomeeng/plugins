@@ -318,3 +318,20 @@ def test_cached_entries_orders_versions_numerically_not_lexicographically(
         "0.17.10",
         "0.17.12",
     ]
+
+
+def test_cached_entries_sorts_non_numeric_entries_after_numeric_versions(
+    tmp_path: Path,
+) -> None:
+    """A cache entry whose name does not parse as dotted integers (a stray
+    directory such as 'snapshot') sorts after every numeric version, so the
+    listing tolerates it rather than raising on the int() conversion."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.10.0", "0.9.0", "snapshot"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, current_version="0.10.0"
+    )
+
+    assert [entry.version for entry in entries] == ["0.9.0", "0.10.0", "snapshot"]
