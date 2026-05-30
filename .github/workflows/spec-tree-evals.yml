@@ -281,5 +281,11 @@ jobs:
           # a command line. [skip ci] stops the push from re-triggering this
           # workflow — a PAT push, unlike a GITHUB_TOKEN push, does fire events.
           git config --global url."https://x-access-token:${EVAL_STORE_TOKEN}@github.com/".insteadOf "https://github.com/"
-          git commit -m "chore(evals): record CI eval history [skip ci]"
+          git commit -m "ci(evals): record CI eval history [skip ci]"
+          # Rebase onto the current remote tip before pushing: a merge landing
+          # on main during the eval run advances origin, making a bare push
+          # non-fast-forward. The url.insteadOf rewrite above authenticates the
+          # fetch.
+          git fetch origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
