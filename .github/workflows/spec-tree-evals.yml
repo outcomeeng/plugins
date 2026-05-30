@@ -1,0 +1,285 @@
+# Spec Tree Evals — runs the `[eval]`-lane suites through the
+# `outcomeeng_evals` harness in CI.
+#
+# Why this is a direct-run job (not a thin caller of an
+# outcomeeng/gh-actions reusable like spec-tree.yml / spec-tree-review.yml):
+# the eval harness is THIS repo's own Python toolchain. It replays curated
+# cases through `claude --print --output-format json --plugin-dir <dir>` and
+# grades the structured verdict (see
+# spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md).
+# anthropics/claude-code-action runs a single event-driven claude turn and
+# posts a comment — it cannot replay-and-grade — so the harness drives
+# `claude` itself. The gh-actions review workflow is the reference for HOW to
+# launch claude in CI (install + CLAUDE_CODE_OAUTH_TOKEN auth), for the
+# minimum configurable surface, and for the authorize gate below — not for
+# the job shape.
+#
+# Triggers: every `pull_request` that touches the spec-tree plugin, its
+# evals, or the harness (path-filtered; the eval acts as a per-PR gate, like
+# spec-tree-review), plus `push` to main, a weekly `schedule`, and manual
+# `workflow_dispatch`. A change to the workflow file itself is not a trigger
+# path — validate workflow edits via `workflow_dispatch`. The OAuth secret
+# reaches the `claude` subprocess, so
+# every PR run is gated by the `authorize` job: only a PR whose author has
+# admin/maintain/write permission runs (fork/external PRs are skipped, and
+# GitHub withholds secrets from fork `pull_request` runs regardless). The
+# trust boundary matches spec-tree-review's: a PR editing an eval prompt.md
+# could otherwise instruct claude to exfiltrate the token, so only trusted
+# authors' PRs execute.
+#
+# Scope (v1): the five merging gate evals under
+# spx/21-spec-tree.enabler/76-merging.enabler/evals/, all of which load the
+# spec-tree plugin (dist/claude/spec-tree). Deferred to follow-ups:
+#   - the 4 reviewing-changes evals (also spec-tree) and the 1 typescript
+#     eval (dist/claude/typescript) — the latter needs a per-eval
+#     plugin-dir mapping the eval.toml does not yet declare;
+#   - a `--model` pin (the harness `run` CLI does not expose one yet — see
+#     the eval-harness ISSUES.md), so this job uses claude's default model.
+#
+# CI owns the canonical history.jsonl appends (eval-harness.md:28): only on
+# main (not on PR runs) the appended rows are committed back with [skip ci],
+# authenticated by the org secret OUTCOMEENG_EVAL_STORE (a PAT, so the push
+# survives main's upcoming branch protection — the built-in GITHUB_TOKEN
+# cannot push to a protected branch). Full transcripts under each eval's
+# runs/ directory are gitignored and never committed.
+
+name: Spec Tree Evals
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    # Scoped to PRs that can change eval outcomes — the spec-tree plugin under
+    # test, the eval definitions, or the harness — so unrelated PRs don't spend
+    # the LLM eval suites. A change to this workflow file itself is deliberately
+    # NOT a trigger path: validate workflow edits via workflow_dispatch rather
+    # than auto-running every suite on a workflow-only PR. NOTE: a path-filtered
+    # workflow is absent (not "skipped") on non-matching PRs, so do not mark it
+    # a required status check without a separate always-runs gate job.
+    paths:
+      - "spx/21-spec-tree.enabler/76-merging.enabler/evals/**"
+      - "src/plugins/spec-tree/**"
+      - "dist/claude/spec-tree/**"
+      - "outcomeeng_evals/**"
+  push:
+    branches: [main]
+    # Same scope as the PR filter — a change to this workflow file itself does
+    # not refresh the baseline; dispatch it when a workflow edit needs a run.
+    paths:
+      - "spx/21-spec-tree.enabler/76-merging.enabler/evals/**"
+      - "src/plugins/spec-tree/**"
+      - "dist/claude/spec-tree/**"
+      - "outcomeeng_evals/**"
+  schedule:
+    # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      evals_root:
+        description: "Directory tree to discover eval.toml files under."
+        type: string
+        default: spx/21-spec-tree.enabler/76-merging.enabler/evals
+      plugin_dir:
+        description: "Plugin directory loaded for every discovered eval (all v1 suites target the spec-tree plugin)."
+        type: string
+        default: dist/claude/spec-tree
+      workers:
+        description: "Parallel case workers per suite (1-16)."
+        type: string
+        default: "1"
+      max_budget_usd:
+        description: "Per-invocation budget passed to the Claude CLI."
+        type: string
+        default: "0.50"
+      timeout_seconds:
+        description: "Per-invocation timeout for the Claude subprocess."
+        type: string
+        default: "120"
+
+# Deny-all default; each job grants exactly what it needs.
+permissions: {}
+
+concurrency:
+  # Per-PR on pull_request (a new push cancels the prior PR run to save eval
+  # spend); per-ref otherwise, and never cancelled on main/schedule so a
+  # cancelled run cannot interrupt an in-flight history.jsonl append
+  # (append_history_row is not file-locked).
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      authorized: ${{ steps.check.outputs.authorized }}
+    steps:
+      - name: Check authorization
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Non-PR events are inherently trusted: only collaborators can land
+          # a commit on main or dispatch a run, and schedule runs on the repo.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Fork PRs do not receive secrets (GitHub withholds everything but
+          # GITHUB_TOKEN for `pull_request` from a fork), so the eval job would
+          # run without CLAUDE_CODE_OAUTH_TOKEN and fail at auth rather than
+          # skip. Skip them here — even a collaborator's fork branch — so only
+          # same-repo PRs, which do receive the secret, run the eval.
+          if [ "$PR_HEAD_REPO" != "$REPO" ]; then
+            echo "::notice::PR head '$PR_HEAD_REPO' is a fork of '$REPO'; skipping eval (fork PRs do not receive the OAuth secret)."
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$PR_AUTHOR" ]; then
+            echo "::notice::No PR author in the event payload; skipping eval."
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          perm=$(gh api "repos/$REPO/collaborators/$PR_AUTHOR/permission" --jq '.permission' 2>/dev/null || echo "none")
+          case "$perm" in
+            admin | maintain | write)
+              echo "PR author '$PR_AUTHOR' has '$perm' permission — eval authorized"
+              echo "authorized=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::notice::PR author '$PR_AUTHOR' has '$perm' permission; skipping eval (the OAuth secret is not exposed to untrusted PRs)."
+              echo "authorized=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+  evals:
+    needs: authorize
+    if: needs.authorize.outputs.authorized == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      # read only: checkout clones with GITHUB_TOKEN; the history commit-back
+      # pushes with the OUTCOMEENG_EVAL_STORE PAT, not GITHUB_TOKEN, so it
+      # survives main's upcoming branch protection.
+      contents: read
+    env:
+      # Auth for the `claude` subprocess the harness launches. Set as job env
+      # (never interpolated into a run: body). The harness reads it via the
+      # inherited environment per eval-harness.md:16.
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx/21-spec-tree.enabler/76-merging.enabler/evals' }}
+      PLUGIN_DIR: ${{ github.event.inputs.plugin_dir || 'dist/claude/spec-tree' }}
+      WORKERS: ${{ github.event.inputs.workers || '1' }}
+      MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.50' }}
+      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '120' }}
+      # Pinned tool versions. Renovate advances these via the customManager
+      # regex in renovate.json (the inline `# renovate:` annotations name the
+      # datasource and package for each).
+      CLAUDE_CLI_VERSION: "2.1.158" # renovate: datasource=npm depName=@anthropic-ai/claude-code
+      UV_VERSION: "0.11.17" # renovate: datasource=github-releases depName=astral-sh/uv
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Don't leave GITHUB_TOKEN creds in .git/config: the eval steps only
+          # read the tree, and the commit-back pushes with the PAT below (a
+          # persisted GITHUB_TOKEN extraheader would otherwise shadow the PAT
+          # on a same-repo push and fail once main is protected).
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: ${{ env.UV_VERSION }}
+
+      - name: Install pnpm
+        # Reads the pnpm version from package.json's `packageManager` field and
+        # installs it deterministically. Preferred over `corepack enable`, which
+        # can fail EACCES symlinking into a system bin dir on GitHub runners.
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
+      - name: Install Claude Code CLI
+        env:
+          # Repo standard is pnpm, never npm. The pnpm version is pinned by
+          # package.json's `packageManager` field (installed above). PNPM_HOME
+          # is the global bin dir the `claude` binary links into, added to PATH
+          # for the run step that subprocesses it (CLAUDE_BIN defaults to
+          # `claude`).
+          PNPM_HOME: ${{ github.workspace }}/.pnpm-global
+        run: |
+          set -euo pipefail
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm add -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+          echo "$PNPM_HOME" >> "$GITHUB_PATH"
+          claude --version
+
+      - name: Sync Python environment
+        run: |
+          set -euo pipefail
+          uv sync
+
+      - name: Run eval suites
+        run: |
+          set -euo pipefail
+          mapfile -t tomls < <(uv run outcomeeng-evals discover "$EVALS_ROOT")
+          if [ "${#tomls[@]}" -eq 0 ]; then
+            echo "::error::No eval.toml found under $EVALS_ROOT"
+            exit 1
+          fi
+          echo "Discovered ${#tomls[@]} eval suite(s):"
+          printf '  %s\n' "${tomls[@]}"
+
+          fail=0
+          for toml in "${tomls[@]}"; do
+            echo "::group::eval $toml"
+            # `run` exits non-zero when the suite is below its threshold; the
+            # `if !` captures that without tripping `set -e` so every suite
+            # runs and the job fails if any one did.
+            if ! uv run outcomeeng-evals run "$toml" \
+              --plugin-dir "$PLUGIN_DIR" \
+              --workers "$WORKERS" \
+              --max-budget-usd "$MAX_BUDGET_USD" \
+              --timeout-seconds "$TIMEOUT_SECONDS"; then
+              echo "::error::Eval suite below threshold or errored: $toml"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$fail"
+
+      - name: Commit history.jsonl appends
+        # Runs even when a suite fails (a failed run still records a history
+        # row), but only on main where the canonical baseline lives — never on
+        # PR runs (github.ref is refs/pull/<n>/merge there).
+        if: always() && github.ref == 'refs/heads/main'
+        env:
+          # Org-level PAT (contents:write) so the push survives main's branch
+          # protection — GITHUB_TOKEN cannot push to a protected branch. Read
+          # into env (never interpolated into the script body).
+          EVAL_STORE_TOKEN: ${{ secrets.OUTCOMEENG_EVAL_STORE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EVAL_STORE_TOKEN:-}" ]; then
+            echo "::warning::OUTCOMEENG_EVAL_STORE is not available to this repo — skipping history commit-back. Confirm the org secret's repository visibility includes this repo (see this node's ISSUES.md)."
+            exit 0
+          fi
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # Stage ONLY history.jsonl files — never the gitignored runs/
+          # transcripts, and nothing else the run might have touched.
+          git add -- ':(glob)spx/**/evals/**/history.jsonl' || true
+          if git diff --cached --quiet; then
+            echo "No history.jsonl changes to commit."
+            exit 0
+          fi
+          # Inject the PAT through url.insteadOf (same pattern as
+          # distribute-skills.yml) so the token lives in git config, never on
+          # a command line. [skip ci] stops the push from re-triggering this
+          # workflow — a PAT push, unlike a GITHUB_TOKEN push, does fire events.
+          git config --global url."https://x-access-token:${EVAL_STORE_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git commit -m "chore(evals): record CI eval history [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

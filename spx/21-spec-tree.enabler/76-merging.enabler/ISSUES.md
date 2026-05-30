@@ -24,7 +24,7 @@ The `terminal-green` case-space is complete: status-context `state == EXPECTED`,
 
 A local run against an OAuth developer session is not a faithful validation surface: the workstation's ambient instruction stack — `~/.claude/CLAUDE.md` plus an auto-discovered repo `AGENTS.md` — leaks formatting and closing-protocol behavior into the graded verdict (markdown-fenced JSON, `AskUserQuestion` calls) and inflates every call toward the per-case budget cap. CI is the canonical execution surface because its execution surface has no auto-discoverable instruction files; the `outcomeeng_evals` runner invokes `claude` without `--bare` by default (see `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`) and accepts the `CLAUDE_CODE_OAUTH_TOKEN` job secret that the existing `spec-tree` and `spec-tree-review` workflows already use.
 
-Required handling — runs belong in CI (the eval-harness node's own CI-integration item tracks wiring the workflow):
+Required handling — runs belong in CI, now wired as `.github/workflows/spec-tree-evals.yml` (every PR touching the plugin / evals / harness, plus push-to-main, schedule, and dispatch). This item stays open until the suites run green in CI and the canonical `history.jsonl` baseline is committed:
 
 - Run all five through the `outcomeeng-evals` CLI in the canonical CI execution surface (default invocation, no `--bare`, auth via `CLAUDE_CODE_OAUTH_TOKEN`).
 - Confirm each suite meets its `threshold` (`0.85`); tune cases or prompts if a gate's classification proves non-deterministic under pass@k.

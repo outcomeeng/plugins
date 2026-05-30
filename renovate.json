@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommitTypeAll(ci)",
+    ":dependencyDashboard"
+  ],
+  "timezone": "UTC",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10,
+  "packageRules": [
+    {
+      "description": "Group GitHub Actions and reusable-workflow updates. Digest pinning itself is enforced by the helpers:pinGitHubActionDigests preset above; this rule only adds the grouping.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Track the CLI tool versions pinned as env vars in the eval workflow. Each pinned line carries an inline `# renovate: datasource=... depName=...` annotation naming its source.",
+      "customType": "regex",
+      "managerFilePatterns": ["^\\.github/workflows/spec-tree-evals\\.yml$"],
+      "matchStrings": [
+        "\"(?<currentValue>[^\"]+)\" # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)"
+      ]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
+}
