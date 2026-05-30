@@ -14,7 +14,7 @@ The managing flow. Loop body that runs per heartbeat fire: inspect → classify 
 
 Walk these steps on every heartbeat fire. Routine steps — inspect, classify, rebase, push, refresh heartbeat — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds.
 
-**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary) and /committing-changes (commit format for any follow-up commits) via the Skill tool.
+**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary), /committing-changes (commit format for any follow-up commits), and /tracking-tasks (runtime tracking rules) via the Skill tool.
 
 **Step 1 — Identify the PR.**
 
@@ -32,7 +32,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 6 — Push follow-ups deliberately.** Validate via the narrowest meaningful check after each fix. Before any push, and before any push that follows a Step 4 rebase, run the project's full deterministic-verification command (named in `spx/local/merging.md` if defined) — a rebased branch carries a freshly integrated tree no prior run covered. Commit via /committing-changes. Re-run /standardizing-merging `<branch_hygiene>` before every push — hygiene applies on every push, not only at creation. Push via /standardizing-merging `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form. The PR is ready throughout — a follow-up push goes to the ready PR and re-fires CI; there is no draft toggle.
 
-**Step 7 — Refresh the heartbeat.** Per /standardizing-merging `<heartbeat>`, refresh the existing heartbeat. One heartbeat per PR.
+**Step 7 — Refresh the heartbeat.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, refresh the existing heartbeat. One heartbeat per PR.
 
 **Step 8 — Evaluate the merge gates and act.** Apply /standardizing-merging `<authority_gates>`: `MERGE_READINESS`, then `PRODUCTION_READINESS`.
 
@@ -44,7 +44,7 @@ Reviewer-skipped-by-design exception steps:
 
 1. Resolve the trigger phrase from `spx/local/merging.md`'s **Mention-reviewer trigger phrase** topic (defaulting to `@spec-tree` per /standardizing-merging `<repo_local_overlay>` when the overlay is silent).
 2. Post one PR-level comment with body exactly `<trigger-phrase> review` via `gh pr comment <pr-number>`.
-3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, refresh the heartbeat, and exit Step 8. The mention-triggered reviewer's posted findings become the current-head review the next heartbeat reads.
+3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, refresh the heartbeat through /tracking-tasks, and exit Step 8. The mention-triggered reviewer's posted findings become the current-head review the next heartbeat reads.
 
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
@@ -67,21 +67,21 @@ When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
   Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
 - **Production-relevant and not yet approved** → emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. The agent has already done the full `MERGE_READINESS` work; only execution waits.
 
-If `MERGE_READINESS` does not hold, emit exactly one token from /standardizing-merging `<action_tokens>` and rely on the heartbeat to re-fire.
+If `MERGE_READINESS` does not hold, emit exactly one token from /standardizing-merging `<action_tokens>` and rely on the /tracking-tasks heartbeat to re-fire.
 
-**Exit when:** the PR is merged, closed, or the gate emits a terminal token (`POST_MERGE_VERIFY`). Stop the heartbeat. Otherwise the next heartbeat fire re-enters Step 1.
+**Exit when:** the PR is merged, closed, or the gate emits a terminal token (`POST_MERGE_VERIFY`). Stop the heartbeat through /tracking-tasks. Otherwise the next heartbeat fire re-enters Step 1.
 
 </the_managing_flow>
 
 <commands_reference>
 
-For pre-flight, branch topology, push semantics, base sync, the authority gates, the heartbeat, review inspection, review classification, and the action token table, see /standardizing-merging. For commit selection, message format, and atomic-commit rules, see /committing-changes. Managing-flow-specific commands:
+For pre-flight, branch topology, push semantics, base sync, the authority gates, the PR-level heartbeat requirement, review inspection, review classification, and the action token table, see /standardizing-merging. For heartbeat payload and lifecycle rules, see /tracking-tasks. For commit selection, message format, and atomic-commit rules, see /committing-changes. Managing-flow-specific commands:
 
 ```bash
 # PR identity
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision
 
-# Checks (one-shot — NEVER --watch per /standardizing-merging <heartbeat>)
+# Checks (one-shot — NEVER --watch per /standardizing-merging <heartbeat> and /tracking-tasks)
 gh pr checks <pr-number>
 
 # Post a PR-level comment (top of the conversation)
@@ -120,7 +120,7 @@ gh pr merge <pr-number> --rebase --delete-branch
 
 The managing flow satisfies its contract when, at minimum:
 
-- /standardizing-merging and /committing-changes are loaded before any inspection or push.
+- /standardizing-merging, /committing-changes, and /tracking-tasks are loaded before any inspection, push, or heartbeat mutation.
 - Each pass inspects all three surfaces from /standardizing-merging `<review_inspection>`.
 - Each pass checks base drift in the same checkpoint as review inspection; a branch behind `origin/<base>` is rebased per /standardizing-merging `<base_sync>` before the queue is driven, regardless of whether a review has landed or carries findings.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
