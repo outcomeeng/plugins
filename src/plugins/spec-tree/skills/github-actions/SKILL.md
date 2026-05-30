@@ -2,7 +2,7 @@
 name: github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(uv run:*), Read, Grep, AskUserQuestion, ScheduleWakeup
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(uv run:*), Read, Grep, AskUserQuestion, ScheduleWakeup, Skill
 model: claude-haiku-4-5-20251001
 ---
 
@@ -112,8 +112,8 @@ gh run view "$RUN_ID" --job "$JOB_ID" --log
 
 If the run is still in progress (`status` ∈ {`queued`, `in_progress`, `waiting`, `requested`, `pending`}) and the user wants to know when it finishes, take one of:
 
-- Check once now with `gh run view "$RUN_ID" --json status,conclusion`, then schedule a re-check via `ScheduleWakeup` for the next turn.
-- Ask the user to ping back when the run completes.
+- Check once now with `gh run view "$RUN_ID" --json status,conclusion`, load `/tracking-tasks`, then schedule a runtime re-check for the next turn.
+- Ask the user to ping back when the run completes only when the runtime has no timer capability or the next action needs approval, credentials, or judgment.
 
 Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while !` loop. Either pattern fork-bombs the host across turns; the safety rules below prohibit both.
 
@@ -149,6 +149,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 - A failure triage request runs `gh run view --log-failed` first and surfaces failing job, failing step, and at least one error excerpt before any other log retrieval.
 - Auth-failure handling matches the TTY/non-TTY split: prompt-and-switch on TTY, manual remediation on non-TTY.
 - Conclusion field carries the literal value returned by `gh run view --json conclusion`, never a derivation.
+- In-progress run tracking loads `/tracking-tasks` before scheduling a runtime re-check.
 - No `gh run watch` invocation. No polling loops. No credential or workflow mutation outside an explicit user instruction.
 
 </success_criteria>

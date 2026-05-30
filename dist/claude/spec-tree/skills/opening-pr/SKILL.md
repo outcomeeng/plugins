@@ -22,7 +22,7 @@ Project-specific refinements (the deterministic-verification command; production
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
-**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary) and /committing-changes (commit type/scope classification for the title) via the Skill tool.
+**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary), /committing-changes (commit type/scope classification for the title), and /tracking-tasks (runtime tracking rules) via the Skill tool.
 
 **Step 1 — Pre-flight.** Run /standardizing-merging `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition.
 
@@ -86,7 +86,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Schedule the first heartbeat.** Per /standardizing-merging `<heartbeat>`, schedule the first review/check re-inspection through the runtime timer. Verify by capturing the URL or thread ID returned by the runtime tool; only fall back to explicit user confirmation when the runtime cannot create one directly.
+**Step 6 — Schedule the first heartbeat.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, schedule the first review/check re-inspection through the runtime timer. Verify by capturing the URL or thread ID returned by the runtime tool. Fall back to explicit user confirmation only when the runtime cannot create one directly.
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
@@ -156,14 +156,14 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 The opening flow has succeeded when:
 
-- /standardizing-merging and /committing-changes are loaded before the flow begins.
+- /standardizing-merging, /committing-changes, and /tracking-tasks are loaded before the flow begins.
 - /standardizing-merging `<branch_hygiene>` and `<branch_topology>` gates pass before push.
 - `REVIEW_READINESS` held before the PR opened: deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /standardizing-merging `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
 - The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- First heartbeat is scheduled per /standardizing-merging `<heartbeat>`.
+- First heartbeat is scheduled per /standardizing-merging `<heartbeat>` and /tracking-tasks.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /standardizing-merging.
 
