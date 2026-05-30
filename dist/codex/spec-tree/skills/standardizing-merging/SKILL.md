@@ -197,9 +197,9 @@ Both `REVIEW_READINESS` predicates are re-established before every push, not onl
 
 <heartbeat>
 
-Waiting for CI runs, reviews, or check completion happens through the runtime timer, never in-shell. The consuming flow schedules the next inspection through the timer after opening a PR and after every follow-up push.
-- **Claude Code:** `ScheduleWakeup` for a single delayed re-check or `/loop` for recurring re-inspection. Pass a continuation prompt that re-enters /managing-pr.
-- **Codex:** thread automation. The runtime may start a new thread, so the prompt names the repository, PR number, branch, and the next repository-governed action. Cadence is minute-based (typically every 3 minutes). The prompt instructs Codex to inspect checks and all three review surfaces on each wake, report only material changes, and stop the heartbeat when the PR is merged, closed, or has no remaining repository-governed action.
+Waiting for CI runs, reviews, or check completion happens through the runtime timer, never in-shell. The consuming flow loads `/tracking-tasks` before creating, refreshing, or deleting runtime tracking after opening a PR and after every follow-up push.
+
+`/tracking-tasks` owns runtime-specific payload shape, stale-context limits, lifecycle rules, failed-check handling, approval-boundary deletion, and timer-tool selection. This section owns only the PR-flow fact that PR waits use runtime tracking and re-enter /managing-pr.
 
 **One heartbeat per PR.** Whichever flow first needs a heartbeat creates it; the other refreshes the same heartbeat rather than creating a second one.
 
@@ -326,7 +326,7 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - The PR opens `ready_for_review` once `REVIEW_READINESS` holds — deterministic verification passes and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - Both `REVIEW_READINESS` predicates — deterministic verification and a converged local review — are re-established on the diff every push publishes: the opening push and every follow-up push, including after a `<base_sync>` rebase.
 - The local `reviewing-changes` gate is invoked per `<local_review_invocation>` — only the repository/worktree and diff range are passed, with no interpretive scope, severity pre-filter, or emphasis steering.
-- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and the skill `/tracking-tasks`.
+- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and using the skill `/tracking-tasks`.
 - All three surfaces in `<review_inspection>` are inspected after every push.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no valid finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.

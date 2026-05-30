@@ -327,7 +327,7 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - The PR opens `ready_for_review` once `REVIEW_READINESS` holds — deterministic verification passes and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - Both `REVIEW_READINESS` predicates — deterministic verification and a converged local review — are re-established on the diff every push publishes: the opening push and every follow-up push, including after a `<base_sync>` rebase.
 - The local `reviewing-changes` gate is invoked per `<local_review_invocation>` — only the repository/worktree and diff range are passed, with no interpretive scope, severity pre-filter, or emphasis steering.
-- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and the skill `/tracking-tasks`.
+- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and using the skill `/tracking-tasks`.
 - All three surfaces in `<review_inspection>` are inspected after every push.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no valid finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
