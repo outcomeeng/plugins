@@ -151,7 +151,7 @@ A rebase that cannot be resolved autonomously — semantic conflicts, ambiguous 
 
 The local `reviewing-changes` gate is the author-side, pre-push instance of the same reviewing kind the CI `spec-tree-review` runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
 
-- **Pass only the repository/worktree and the diff range.** `reviewing-changes` resolves the diff itself (`git diff <base_ref>..HEAD`); the caller supplies the repository/worktree and, only when it must be made explicit, the base ref. No file list, no changed-area summary, no "the important part is …".
+- **Pass only the repository/worktree and the diff range.** `reviewing-changes` resolves the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, where `head_ref` defaults to `HEAD`); the caller supplies the repository/worktree and, only when it must be made explicit, the base ref. No file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `FOLLOW-UP`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the `standardizing-*` skills) and the shared taxonomy itself.

@@ -3,7 +3,7 @@ description: Run reviewing-changes against the current branch's diff; print verd
 ---
 
 <objective>
-Run the reviewing-changes skill against the current branch's diff and surface the findings to the main agent. The reviewer emits findings only — it never decides. The main agent (or operator) decides what to do next: fix the `blocking` and `debt` findings before pushing; with none of those present, proceed to `/open-pr` or commit.
+Run the reviewing-changes skill against the current branch's diff and surface the findings to the main agent. The reviewer emits findings only — it never decides. The main agent (or operator) handles every finding by validity and phase per `spx/15-agent-pr-authority.pdr.md`, never by its severity label: validate each finding against its cited rule and drop the unbacked; fix every valid finding in the diff, or — before the PR opens — split out of the changeset any whose fix is too large to belong and record it in the owning node's `ISSUES.md` / `PLAN.md`.
 
 The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
 </objective>
@@ -32,8 +32,8 @@ Print, in this order:
 
 1. The absolute filesystem paths to `review-result.json` and `review.md` (under `.spx/reviews/<slug>/` on the local backend).
 2. A one-line finding count by render class: `BLOCKING: <n>, DEBT: <n>, FOLLOW-UP: <n>` (mapping is identity: render class equals uppercase severity, so `blocking → BLOCKING`, `debt → DEBT`, `follow_up → FOLLOW-UP`).
-3. If any `blocking` or `debt` finding is present: the full `review.md` content. The main agent reads it and decides which findings to fix first.
-4. Else: nothing more. The artifacts are on disk; the main agent can read them if it wants the full text.
+3. If the review carries any finding — of any severity — the full `review.md` content. The main agent reads it and handles every finding by validity and phase per `spx/15-agent-pr-authority.pdr.md`, never by severity: a `follow_up` finding is surfaced for tracking, not suppressed because no `blocking` or `debt` is present.
+4. Else (no findings at all): nothing more. The artifacts are on disk.
 
 </process>
 
@@ -42,6 +42,6 @@ Print, in this order:
 - The skill's chain ran end-to-end and persisted both `review-result.json` and `review.md`.
 - The slash command printed the two paths, the finding-count line, and (when applicable) the full `review.md`.
 - No `--slug` argument was passed to any thread-store CLI — the agent never names the thread address.
-- When a `blocking` or `debt` finding is present, the main agent sees the full verdict text without having to read it from disk.
+- When the review carries any finding, the main agent sees the full verdict text without having to read it from disk, so it can handle every finding by validity and phase.
 
 </success_criteria>
