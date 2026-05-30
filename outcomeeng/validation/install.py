@@ -86,6 +86,27 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
     return version if isinstance(version, str) else None
 
 
+def _parse_version(version: str) -> tuple[int, ...] | None:
+    """Parse a dotted version into integer components, or None when any component
+    is non-numeric (pre-release suffix, build metadata, malformed input)."""
+    try:
+        return tuple(int(part) for part in version.split("."))
+    except ValueError:
+        return None
+
+
+def _version_sort_key(version: str) -> tuple[int, tuple[int, ...], str]:
+    """Sort key that orders dotted-integer versions by their numeric components, so
+    `0.17.6` precedes `0.17.10` (a lexicographic sort reverses them). A version with
+    a non-numeric component sorts after every numeric version, ordered
+    lexicographically among such versions; the leading discriminator keeps the
+    numeric and non-numeric key shapes from being compared against each other."""
+    parsed = _parse_version(version)
+    if parsed is None:
+        return (1, (), version)
+    return (0, parsed, "")
+
+
 def is_strictly_ahead(working_tree: str, published: str) -> bool:
     """Return True when `working_tree` is a numerically higher semver than `published`.
 
@@ -94,10 +115,9 @@ def is_strictly_ahead(working_tree: str, published: str) -> bool:
     comparison undefined and returns False — the caller falls back to strict
     validation, which is the safe default.
     """
-    try:
-        wt = tuple(int(part) for part in working_tree.split("."))
-        pub = tuple(int(part) for part in published.split("."))
-    except ValueError:
+    wt = _parse_version(working_tree)
+    pub = _parse_version(published)
+    if wt is None or pub is None:
         return False
     return wt > pub
 
@@ -126,7 +146,7 @@ class CachedEntry:
 def cached_entries(
     cache_root: Path, marketplace: str, plugin: str, current_version: str
 ) -> list[CachedEntry]:
-    """Return all version directories for a plugin, sorted by version string."""
+    """Return all version directories for a plugin, ordered by numeric version."""
     plugin_dir = cache_root / marketplace / plugin
     if not plugin_dir.is_dir():
         return []
@@ -141,7 +161,7 @@ def cached_entries(
                 is_current=entry.name == current_version,
             )
         )
-    return sorted(entries, key=lambda e: e.version)
+    return sorted(entries, key=lambda e: _version_sort_key(e.version))
 
 
 def print_cache(
