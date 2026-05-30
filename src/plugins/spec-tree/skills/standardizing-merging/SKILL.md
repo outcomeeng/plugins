@@ -141,11 +141,26 @@ git fetch origin "${base}"
 git merge-base --is-ancestor "origin/${base}" HEAD || git rebase "origin/${base}"
 ```
 
-Resolve textual conflicts by editing the conflict markers out, then `git rebase --continue`. The rebased tree is a fresh integration — this branch replayed on newly merged work — that no prior deterministic-verification run covered: the consuming flow MUST run the project's full deterministic-verification command against the rebased tree before the `--force-with-lease` push from `<push_semantics>`, and MUST fix any failure in the same pass before pushing.
+Resolve textual conflicts by editing the conflict markers out, then `git rebase --continue`. The rebased tree is a fresh integration — this branch replayed on newly merged work — that no prior deterministic-verification run covered: the consuming flow MUST run the project's full deterministic-verification command against the rebased tree, and MUST re-establish the local `reviewing-changes` review per `<local_review_invocation>` on the rebased diff, before the `--force-with-lease` push from `<push_semantics>`, and MUST fix any failure or unaddressed valid finding in the same pass before pushing.
 
 A rebase that cannot be resolved autonomously — semantic conflicts, ambiguous overlapping edits — emits `SYNC_BASE` from `<action_tokens>` and waits for the operator; the heartbeat re-fires.
 
 </base_sync>
+
+<local_review_invocation>
+
+The local `reviewing-changes` gate is the author-side, pre-push instance of the same reviewing kind the CI `spec-tree-review` runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
+
+- **Pass only the repository/worktree and the diff range.** `reviewing-changes` resolves the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, where `head_ref` defaults to `HEAD`); the caller supplies the repository/worktree and, only when it must be made explicit, the base ref. No file list, no changed-area summary, no "the important part is …".
+- **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
+- **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `FOLLOW-UP`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
+- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the `standardizing-*` skills) and the shared taxonomy itself.
+
+Run it via the `changes-reviewer` agent — isolated context, so the verdict is not biased by what the operator's main agent has been doing — or the `/review-changes` command when the agent is not installed; both drive the same `reviewing-changes` skill chain. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
+
+This is the review predicate `REVIEW_READINESS` reads, and it runs before every push — the opening push (`/opening-pr`) and every follow-up push (`/managing-pr`), against the diff that push would publish. Narrowing the invocation diverges the local gate from the CI reviewer it parallels, so its convergence no longer means what `REVIEW_READINESS` claims it means.
+
+</local_review_invocation>
 
 <authority_gates>
 
@@ -154,9 +169,11 @@ The PR lifecycle has three gates, evaluated in order, from `spx/15-agent-pr-auth
 **`REVIEW_READINESS`** authorizes opening the PR. It holds when both predicates hold:
 
 - **deterministic verification passes** — the project's full validation-and-testing command (named in `spx/local/merging.md`) reports success; and
-- **the local review has converged** — `reviewing-changes` (via the `changes-reviewer` agent or `/review-changes`), iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped.
+- **the local review has converged** — `reviewing-changes` (via the `changes-reviewer` agent or `/review-changes`), invoked at parity per `<local_review_invocation>` and iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped.
 
 The moment `REVIEW_READINESS` holds, the PR is created `ready_for_review` — never draft (a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges). There is no draft phase and no gated promotion; opening ready fires every CI review at once (reviewers that wait for ready, such as Codex, alongside the CI `spec-tree-review`).
+
+Both `REVIEW_READINESS` predicates are re-established before every push, not only the opening push. A follow-up push that changes the diff — a fix for a CI finding, or a `<base_sync>` rebase — re-runs deterministic verification and the local review per `<local_review_invocation>` on the new diff before it is pushed. The local review before every push parallels the CI review that fires after every push: same class of gate, opposite sides of the push, so a follow-up diff never reaches CI without an author-side review first.
 
 **`MERGE_READINESS`** authorizes merge. It holds when all predicates hold, every one decidable from observable PR state:
 
@@ -308,7 +325,9 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - Every push uses the explicit destination ref form from `<push_semantics>`.
 - A managing-flow pass that finds the branch behind `origin/<base>` rebases it per `<base_sync>` before driving the work queue.
 - The PR opens `ready_for_review` once `REVIEW_READINESS` holds — deterministic verification passes and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
-- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and `/tracking-tasks`.
+- Both `REVIEW_READINESS` predicates — deterministic verification and a converged local review — are re-established on the diff every push publishes: the opening push and every follow-up push, including after a `<base_sync>` rebase.
+- The local `reviewing-changes` gate is invoked per `<local_review_invocation>` — only the repository/worktree and diff range are passed, with no interpretive scope, severity pre-filter, or emphasis steering.
+- Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and using the skill `/tracking-tasks`.
 - All three surfaces in `<review_inspection>` are inspected after every push.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no valid finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.

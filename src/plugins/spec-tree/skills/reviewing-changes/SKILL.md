@@ -12,13 +12,13 @@ Compute the diff against the resolved base ref, apply the judgment-style review 
 
 Four entry points under `${CLAUDE_SKILL_DIR}/scripts/` and one swappable prompt under `${CLAUDE_SKILL_DIR}/references/`:
 
-| Entry point                                       | Effect                                                                                                                                             |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/compute_diff.py`                         | Resolve current thread and `base_ref` (env → optional `changes.json` → git origin/HEAD), run `git diff <base_ref>..HEAD`, write the diff to stdout |
-| `scripts/validate_review_result.py [--file PATH]` | Pipe a review-result JSON document through `review_result.parse_json`; exit 0 on conformance                                                       |
-| `scripts/render_review.py`                        | Read `review-result.json` from the current thread, parse through the arbiter, write `review.md` content to stdout                                  |
-| `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                      |
-| `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into the agent's context                                                                  |
+| Entry point                                       | Effect                                                                                                                                                                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scripts/compute_diff.py`                         | Resolve current thread, `base_ref` (env → optional `changes.json` → git origin/HEAD) and `head_ref` (env → `changes.json` → default `HEAD`), run `git diff <base_ref>...<head_ref>` (three-dot merge-base), write the diff to stdout |
+| `scripts/validate_review_result.py [--file PATH]` | Pipe a review-result JSON document through `review_result.parse_json`; exit 0 on conformance                                                                                                                                         |
+| `scripts/render_review.py`                        | Read `review-result.json` from the current thread, parse through the arbiter, write `review.md` content to stdout                                                                                                                    |
+| `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                                                                                                        |
+| `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into the agent's context                                                                                                                                                    |
 
 This skill uses the thread-store CLIs at `${CLAUDE_SKILL_DIR}/../thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; the agent omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` → git current branch).
 
