@@ -293,3 +293,28 @@ def test_is_strictly_ahead_compares_dotted_integer_versions(
     compares strictly greater than published's. Non-numeric components yield False
     (callers fall back to strict validation)."""
     assert validate_install.is_strictly_ahead(working_tree, published) is expected
+
+
+def test_cached_entries_orders_versions_numerically_not_lexicographically(
+    tmp_path: Path,
+) -> None:
+    """cached_entries returns version directories ordered by parsed numeric
+    components, not by string comparison. A lexicographic sort places "0.17.6"
+    after "0.17.10"/"0.17.12" (because "6" > "1") and "0.10.0" before "0.9.0"
+    (because "1" < "9"); the numeric order is 0.9.0 < 0.10.0 < 0.17.6 < 0.17.10
+    < 0.17.12."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.17.10", "0.17.6", "0.17.12", "0.9.0", "0.10.0"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, current_version="0.17.12"
+    )
+
+    assert [entry.version for entry in entries] == [
+        "0.9.0",
+        "0.10.0",
+        "0.17.6",
+        "0.17.10",
+        "0.17.12",
+    ]
