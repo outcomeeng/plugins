@@ -165,9 +165,11 @@ jobs:
       WORKERS: ${{ github.event.inputs.workers || '1' }}
       MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.50' }}
       TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '120' }}
-      # Pinned tool versions. Advance deliberately (Renovate-trackable).
-      CLAUDE_CLI_VERSION: "2.1.158"
-      UV_VERSION: "0.11.17"
+      # Pinned tool versions. Renovate advances these via the customManager
+      # regex in renovate.json (the inline `# renovate:` annotations name the
+      # datasource and package for each).
+      CLAUDE_CLI_VERSION: "2.1.158" # renovate: datasource=npm depName=@anthropic-ai/claude-code
+      UV_VERSION: "0.11.17" # renovate: datasource=github-releases depName=astral-sh/uv
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -183,16 +185,22 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
 
+      - name: Install pnpm
+        # Reads the pnpm version from package.json's `packageManager` field and
+        # installs it deterministically. Preferred over `corepack enable`, which
+        # can fail EACCES symlinking into a system bin dir on GitHub runners.
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
       - name: Install Claude Code CLI
         env:
-          # Repo standard is pnpm, never npm. corepack activates the pnpm
-          # version pinned in package.json (packageManager); PNPM_HOME is the
-          # global bin dir the `claude` binary links into, added to PATH for
-          # the run step that subprocesses it (CLAUDE_BIN defaults to `claude`).
+          # Repo standard is pnpm, never npm. The pnpm version is pinned by
+          # package.json's `packageManager` field (installed above). PNPM_HOME
+          # is the global bin dir the `claude` binary links into, added to PATH
+          # for the run step that subprocesses it (CLAUDE_BIN defaults to
+          # `claude`).
           PNPM_HOME: ${{ github.workspace }}/.pnpm-global
         run: |
           set -euo pipefail
-          corepack enable
           export PATH="$PNPM_HOME:$PATH"
           pnpm add -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
           echo "$PNPM_HOME" >> "$GITHUB_PATH"
@@ -248,8 +256,8 @@ jobs:
             echo "::warning::OUTCOMEENG_EVAL_STORE is not available to this repo — skipping history commit-back. Confirm the org secret's repository visibility includes this repo (see this node's ISSUES.md)."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           # Stage ONLY history.jsonl files — never the gitignored runs/
           # transcripts, and nothing else the run might have touched.
           git add -- ':(glob)spx/**/evals/**/history.jsonl' || true
