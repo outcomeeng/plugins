@@ -205,16 +205,18 @@ jobs:
       - name: Install Claude Code CLI
         env:
           # Repo standard is pnpm, never npm. The pnpm version is pinned by
-          # package.json's `packageManager` field (installed above). PNPM_HOME
-          # is the global bin dir the `claude` binary links into, added to PATH
-          # for the run step that subprocesses it (CLAUDE_BIN defaults to
-          # `claude`).
+          # package.json's `packageManager` field (installed above). pnpm derives
+          # its global bin directory from PNPM_HOME as `$PNPM_HOME/bin` and
+          # refuses `pnpm add -g` unless that exact dir is on PATH, so PATH must
+          # carry `$PNPM_HOME/bin` (not `$PNPM_HOME`). That dir is also where the
+          # `claude` binary lands, so it is added to GITHUB_PATH for the later
+          # step that subprocesses it (CLAUDE_BIN defaults to `claude`).
           PNPM_HOME: ${{ github.workspace }}/.pnpm-global
         run: |
           set -euo pipefail
-          export PATH="$PNPM_HOME:$PATH"
+          export PATH="$PNPM_HOME/bin:$PATH"
           pnpm add -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
-          echo "$PNPM_HOME" >> "$GITHUB_PATH"
+          echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
           claude --version
 
       - name: Sync Python environment
