@@ -61,6 +61,12 @@ Until both land, CI omits `--bare` and runs under OAuth (functional, but not the
 
 The runner exposes `bare: bool | None = None`: `None` derives `--bare` from the inherited environment (`ANTHROPIC_API_KEY` present → pass `--bare`), `True` and `False` force the flag on or off regardless of env. The derivation covers the common case — a developer with `ANTHROPIC_API_KEY` exported gets isolation automatically — so the canonical entry point does not need a flag to make `--bare` reachable. The overrides remain useful for two narrow cases: (a) exercising the ambient-discovery code path under test even when `ANTHROPIC_API_KEY` happens to be set (`bare=False`), and (b) forcing isolation when the auth source is `apiKeyHelper` rather than the env-var form (`bare=True`). Add a `--bare` / `--no-bare` flag pair to `outcomeeng-evals run` (wired through `build_claude_runner`) so the two overrides are reachable from the canonical entry point; defer until either need surfaces in a real session.
 
+## FOLLOW-UP: cover the empty-auth-env path in `_effective_bare` tests
+
+The spec assertion at `eval-harness.md:16` names three OAuth-side auth sources under which `--bare` is omitted: `CLAUDE_CODE_OAUTH_TOKEN`, `apiKeyHelper`, and "an OAuth login session". The scenario tests in `tests/test_runner.scenario.l1.py` cover `CLAUDE_CODE_OAUTH_TOKEN` (`test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set`) and both explicit overrides, but the path where neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set in env — the "OAuth login session" or "no env-form auth" case — has no dedicated scenario. `_effective_bare` returns `False` in that case (correct: derivation only flips to `--bare` when `ANTHROPIC_API_KEY` is set), but the assertion mapping to the OAuth-login-session path is untested.
+
+Add a scenario test that monkeypatches both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` out of the env, runs `ClaudeCliRunner(plugin_dir=tmp_path)`, and asserts `--bare` is absent from the captured argv. Co-locate in `test_runner.scenario.l1.py` alongside the existing four derive/override cases.
+
 ## Independent uv project for `outcomeeng_evals`
 
 `outcomeeng_evals` builds from the single repo `pyproject.toml`. Split into an independent uv project only when it is published to PyPI or its dependency surfaces diverge from the marketplace's.
