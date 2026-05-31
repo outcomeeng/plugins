@@ -95,7 +95,7 @@ After emitting the checkpoint marker, report the result and the current session 
 **Invalid next steps:**
 
 - `spx session archive` — pickup never archives.
-- `spx session release` run directly without the `/release` skill — skips scope accounting; use `/release` (which runs `/handing-off --no-session`) for proper closure, or `spx session release <id>` only when the user explicitly wants a raw queue return without the closure protocol.
+- `spx session release` as a substitute for `/release` when closing a session — skips scope accounting, reflection, and archival; use `/release` (which runs `/handing-off --no-session`) for proper closure.
 - Creating a replacement handoff to justify closing the claimed session — no new session is permission to close an existing one.
 
 NEVER invoke `/applying`, author ADRs/tests/code, or edit files before this checkpoint completes.

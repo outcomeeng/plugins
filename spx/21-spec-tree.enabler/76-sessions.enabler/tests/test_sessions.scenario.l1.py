@@ -248,6 +248,33 @@ class TestReleaseMovesToTodo:
         content_in_todo = (sessions_dir / "todo" / f"{session_id}.md").read_text()
         assert content_in_doing == content_in_todo
 
+    def test_release_multiple_ids_in_single_invocation(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        ids = []
+        for i in range(2):
+            result = _handoff(
+                sessions_dir,
+                f"# Session {i}\n",
+                goal=f"Multi-release test session {i}",
+                next_step="Verify multi-ID release",
+            )
+            assert result.returncode == 0, result.stderr
+            sid = _parse_handoff_id(result.stdout)
+            pickup_result = _pickup(sessions_dir, sid)
+            assert pickup_result.returncode == 0, pickup_result.stderr
+            ids.append(sid)
+
+        release_result = subprocess.run(
+            ["spx", "session", "release", "--sessions-dir", str(sessions_dir)] + ids,
+            capture_output=True,
+            text=True,
+        )
+        assert release_result.returncode == 0, release_result.stderr
+
+        for sid in ids:
+            assert not (sessions_dir / "doing" / f"{sid}.md").exists()
+            assert (sessions_dir / "todo" / f"{sid}.md").exists()
+
 
 # ---------------------------------------------------------------------------
 # Assertion 4 — coordination-note content (PLAN.md / ISSUES.md) in session file
