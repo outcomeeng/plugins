@@ -1,15 +1,18 @@
 """Model runners that produce assistant messages for an eval prompt.
 
 ``ClaudeCliRunner`` shells out to ``claude --print --output-format json``
-and derives ``--bare`` from the inherited environment by default. When
-``ANTHROPIC_API_KEY`` is set the runner passes ``--bare`` — the auth
-source is ``--bare``-compatible, so discovery isolation from ambient
-``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md`` is taken. When only
-``CLAUDE_CODE_OAUTH_TOKEN`` (or ``apiKeyHelper``, or an OAuth login
-session) is available the runner omits ``--bare`` because ``--bare``
-would reject that auth source. Callers may force the flag on or off by
-passing ``bare=True`` or ``bare=False`` to the constructor; the default
-``bare=None`` is derivation.
+and derives ``--bare`` from the inherited environment by default.
+``--bare`` accepts auth only from ``ANTHROPIC_API_KEY`` or
+``apiKeyHelper`` (configured via ``--settings``); under ``--bare``,
+``claude`` never reads ``CLAUDE_CODE_OAUTH_TOKEN`` or an OAuth login
+session, and ambient ``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md``
+are not auto-discovered. When ``ANTHROPIC_API_KEY`` is set the runner
+passes ``--bare``; otherwise the runner omits ``--bare`` so OAuth or the
+user's existing auth path continues to work. The derivation only checks
+the env-var form, so a developer using ``apiKeyHelper`` must opt into
+isolation explicitly with ``bare=True``. Callers may force the flag on
+or off by passing ``bare=True`` or ``bare=False`` to the constructor;
+the default ``bare=None`` is derivation.
 
 A developer with ``ANTHROPIC_API_KEY`` exported gets isolation locally
 without further setup. CI currently forwards only
