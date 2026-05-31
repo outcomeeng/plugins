@@ -1,5 +1,5 @@
 """
-Scenario tests for 76-sessions.enabler (sessions.md assertions 1–4).
+Scenario tests for 76-sessions.enabler (sessions.md assertions 1–5).
 
 All tests run at L1 using real subprocesses, real filesystem I/O in pytest
 tmp_path directories, and no test doubles.
@@ -8,9 +8,11 @@ Assertions covered:
   1. spx session handoff creates a file in .spx/sessions/todo/ with the
      provided content (including the active node path).
   2. spx session pickup moves that file from todo/ to doing/.
-  3. Coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
+  3. spx session release moves one or more sessions from doing/ back to todo/
+     without modifying content.
+  4. Coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
      payload survives into the session file unchanged.
-  4. post-compact parses the compact summary from its JSON payload and emits
+  5. post-compact parses the compact summary from its JSON payload and emits
      <SPEC-TREE_RESUMED> with the active node (when present), plus
      /spec-tree:understanding and /spec-tree:contextualizing (conditional on
      <SPEC_TREE_FOUNDATION> at the start of a line in the pre-compact markers).
@@ -176,7 +178,75 @@ class TestPickupMovesToDoing:
 
 
 # ---------------------------------------------------------------------------
-# Assertion 3 — coordination-note content (PLAN.md / ISSUES.md) in session file
+# Assertion 3 — release moves session from doing/ back to todo/
+# ---------------------------------------------------------------------------
+
+
+def _release(sessions_dir: Path, session_id: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["spx", "session", "release", "--sessions-dir", str(sessions_dir), session_id],
+        capture_output=True,
+        text=True,
+    )
+
+
+class TestReleaseMovesToTodo:
+    def test_release_removes_from_doing(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        result = _handoff(
+            sessions_dir,
+            "# Session\n",
+            goal="Test release removes from doing",
+            next_step="Run release and check doing/",
+        )
+        assert result.returncode == 0, result.stderr
+        session_id = _parse_handoff_id(result.stdout)
+
+        pickup_result = _pickup(sessions_dir, session_id)
+        assert pickup_result.returncode == 0, pickup_result.stderr
+
+        release_result = _release(sessions_dir, session_id)
+        assert release_result.returncode == 0, release_result.stderr
+        assert not (sessions_dir / "doing" / f"{session_id}.md").exists()
+
+    def test_release_places_back_in_todo(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        result = _handoff(
+            sessions_dir,
+            "# Session\n",
+            goal="Test release places back in todo",
+            next_step="Run release and check todo/",
+        )
+        assert result.returncode == 0, result.stderr
+        session_id = _parse_handoff_id(result.stdout)
+
+        _pickup(sessions_dir, session_id)
+        _release(sessions_dir, session_id)
+
+        assert (sessions_dir / "todo" / f"{session_id}.md").exists()
+
+    def test_release_does_not_modify_content(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        body = "# Session with specific content\n\nKeep this intact."
+        result = _handoff(
+            sessions_dir,
+            body,
+            goal="Test release preserves content",
+            next_step="Compare content before and after release",
+        )
+        assert result.returncode == 0, result.stderr
+        session_id = _parse_handoff_id(result.stdout)
+
+        _pickup(sessions_dir, session_id)
+        content_in_doing = (sessions_dir / "doing" / f"{session_id}.md").read_text()
+
+        _release(sessions_dir, session_id)
+        content_in_todo = (sessions_dir / "todo" / f"{session_id}.md").read_text()
+        assert content_in_doing == content_in_todo
+
+
+# ---------------------------------------------------------------------------
+# Assertion 4 — coordination-note content (PLAN.md / ISSUES.md) in session file
 # ---------------------------------------------------------------------------
 
 

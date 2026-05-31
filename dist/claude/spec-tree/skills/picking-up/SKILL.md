@@ -33,7 +33,7 @@ Three rules govern a conversation's session scope:
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/release` (alias for `/handing-off --no-session`) to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
-   - Manually move the session file from `.spx/sessions/doing/` back to `.spx/sessions/todo/` to return the session to the shared queue for another context. This is a file operation outside `spx session`.
+   - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
 
    Neither action counts toward the closure workload for the in-scope set — the wrongly-claimed session leaves scope the moment the user confirms the quick exit.
 
@@ -56,11 +56,26 @@ spx session todo [--json]
 # List sessions by status (includes `todo` and `doing` by default)
 spx session list [--status todo|doing|archive] [--json]
 
-# Claim a session (move todo -> doing)
-spx session pickup [id] [--auto]
+# Claim one or more sessions (move todo -> doing)
+spx session pickup [ids...] [--auto]
 
 # Show session content
-spx session show <id>
+spx session show <id...>
+
+# Return claimed sessions to the todo queue (move doing -> todo)
+spx session release [ids...]
+
+# Create a handoff session (JSON header + body on stdin)
+spx session handoff
+
+# Move sessions to archive
+spx session archive <id...>
+
+# Remove old todo sessions, keeping the most recent N
+spx session prune [--keep <count>] [--dry-run]
+
+# Delete sessions permanently
+spx session delete <id...>
 ```
 
 Sessions are organized in `.spx/sessions/` in the **root worktree** (gitignored, sibling to `.git`):
