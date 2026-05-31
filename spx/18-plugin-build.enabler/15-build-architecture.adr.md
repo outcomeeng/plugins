@@ -87,6 +87,6 @@ The repository contains a `src/` tree as the only authored plugin source, plus `
 
 - Edit `dist/claude/` or `dist/codex/` by hand — the build is the only writer; manual edits desynchronize the source-output contract ([review])
 - Use `!` `cat ${CLAUDE_SKILL_DIR}/...` execution-time injection in built output — shared content reaches both coding-agent outputs via build-time fan-out ([review])
-- Emit `${CLAUDE_SKILL_DIR}` references into `dist/codex/` outputs — Codex output uses `${SKILL_DIR}` for skill-directory references ([review])
+- Emit unescaped `${CLAUDE_SKILL_DIR}` references into `dist/codex/` outputs — Codex output uses `${SKILL_DIR}` for executable skill-directory references; source lines carrying the skill-directory rewrite-escape directive are the explicit exception, so authoring-guidance content can teach the canonical Claude Code source token in both generated targets ([review])
 - Add separate ADRs for individual build concerns (template engine, source layout, output layout, orchestration) — these decisions are interdependent and belong in this single ADR ([review])
 - Distribute downstream-repo content from `plugins/` — `distribute_skills.py` reads from `dist/claude/`, the canonical home of Claude Code plugin content ([review])
