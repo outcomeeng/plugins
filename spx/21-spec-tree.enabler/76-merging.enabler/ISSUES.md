@@ -16,9 +16,9 @@ Required handling when an eval-coverage sweep happens:
 
 Not a retag of the `spx/15-agent-pr-authority.pdr.md` MUST rules: those are "the skill declares X" structural assertions, `[review]` per `spx/15-spec-coverage.adr.md`. The follow-up is the enabler-side scenario + eval, not a PDR evidence-tag change.
 
-## 2. The five gate evals are authored but unrun — runs deferred to CI (FOLLOW-UP)
+## 2. The five gate evals run in CI; the node is in `failing` state (FOLLOW-UP)
 
-The node's five `[eval]` directories — `review-readiness`, `merge-readiness`, `production-readiness`, `terminal-green`, `merge-command-overlay-precedence` — each carry `eval.toml`, `cases.jsonl`, and `prompt.md`, so every `merging.md` `[eval]` link resolves. None has a committed `history.jsonl`: the suites have not been validated against their `0.85` thresholds.
+The node's five `[eval]` directories — `review-readiness`, `merge-readiness`, `production-readiness`, `terminal-green`, `merge-command-overlay-precedence` — each carry `eval.toml`, `cases.jsonl`, and `prompt.md`, so every `merging.md` `[eval]` link resolves. The CI workflow now runs all five (first end-to-end execution on PR #95 head `ffb37b7`, run `26712350116`); every suite is below the `0.85` threshold — `review-readiness` at 20% (1/5), `terminal-green` at 13% (2/15), and similar across the rest. Most failing cases report `verdict is not a parseable JSON document` — claude returns prose or partial structure instead of the structured verdict the grader expects. A small number of cases do pass (e.g. `deterministic-failed-withholds`, `check-run-completed-success`), so the prompt is reachable but unreliable across the case set. Per `durable-map.md`'s node-state taxonomy, this is the `failing` state: spec, tests, and implementation (the eval prompts + grader contract) exist; the implementation is in violation of the spec assertions. The node is recorded in `spx/EXCLUDE` so `spx test passing` already skips it.
 
 The `terminal-green` case-space is complete: status-context `state == EXPECTED`, `PENDING`, `SUCCESS`, `ERROR`, `FAILURE` and every check-run conclusion the `terminal-green` definition in `spx/15-agent-pr-authority.pdr.md` names (15 cases).
 
