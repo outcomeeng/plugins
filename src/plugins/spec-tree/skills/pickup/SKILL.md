@@ -1,6 +1,7 @@
 ---
-name: picking-up
+name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
+argument-hint: "[--list] [--auto-continue]"
 allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 ---
 
@@ -19,7 +20,7 @@ After `/contextualizing`, stop at a post-context checkpoint before any new work 
 
 Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
 
-**Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handing-off` or `/release` workflow accounts for it explicitly.
+**Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handoff` workflow accounts for it explicitly.
 
 **⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualizing` has been invoked on the target node.**
 </objective>
@@ -27,12 +28,12 @@ Emit canonical pickup markers keyed by the claimed session id so later workflows
 <session_scope>
 Three rules govern a conversation's session scope:
 
-1. **Scope grows only by user confirmation.** A session enters scope when the user instructs Claude via `/picking-up`, or when the user confirms a suggested pickup. Nothing else extends scope.
+1. **Scope grows only by user confirmation.** A session enters scope when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else extends scope.
 
 2. **Closure has exactly one acceptable end state.** Every in-scope session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
-   - Invoke `/release` (alias for `/handing-off --no-session`) to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
+   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
    - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
 
    Neither action counts toward the closure workload for the in-scope set — the wrongly-claimed session leaves scope the moment the user confirms the quick exit.
@@ -42,7 +43,7 @@ Three rules govern a conversation's session scope:
 - Every successful `spx session pickup` adds that session id to the SESSION_SCOPE marker for this conversation. A later pickup does not replace earlier entries — scope is additive.
 - The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
 - A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any in-scope session.
-- Queue inspection alone is never permission. Archival comes from completing the handing-off workflow against the in-scope set named in SESSION_SCOPE.
+- Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the in-scope set named in SESSION_SCOPE.
 
 </session_scope>
 

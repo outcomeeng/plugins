@@ -59,7 +59,7 @@ The existence of any session is never permission to archive an in-scope session 
 <write_canonical_continuation>
 Every closure ends with **zero or one** handoff. Pick the path once and execute it. Zero is correct when no continuation reader exists.
 
-**Path A — `--no-session` (zero handoffs, a.k.a. `/release`)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — `--no-session` (zero handoffs)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 

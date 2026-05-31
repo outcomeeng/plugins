@@ -1,6 +1,8 @@
 ---
-name: handing-off
+name: handoff
 description: ALWAYS invoke when closing an in-scope spec-tree session, deciding whether to create a handoff, writing a handoff, or preparing continuation context. NEVER create a spec-tree handoff without this skill.
+argument-hint: "[--no-session] [--prune]"
+allowed-tools: Read, Edit, Write, Bash(spx:*), Bash(git:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
 ---
 
 <context>
@@ -12,6 +14,9 @@ description: ALWAYS invoke when closing an in-scope spec-tree session, deciding 
 
 **Current Branch:**
 !`git branch --show-current || echo "Not in a git repo"`
+
+**Current Sessions:**
+!`spx session list || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
 **Spec Tree:**
 !`ls spx/*.product.md 2>/dev/null || echo "No spec tree found"`
@@ -30,7 +35,7 @@ A handoff artifact exists for a future reader who must continue work. Create one
 
 When the work has reached the user-approved stopping state and all remaining issues already live in higher persistence tiers, omit the session file and close with `--no-session`. A session with no continuation reader creates queue noise and splits truth away from the durable map.
 
-Example of the omit case: a session lands a spec amendment, writes a `PLAN.md` entry for deferred CLI work, and commits both. Every continuation thread is persisted — the spec carries the new rule, `PLAN.md` carries the deferred work — so `/handoff --no-session` (or `/release`) closes correctly and no `.spx/sessions/todo/` file is created.
+Example of the omit case: a session lands a spec amendment, writes a `PLAN.md` entry for deferred CLI work, and commits both. Every continuation thread is persisted — the spec carries the new rule, `PLAN.md` carries the deferred work — so `/handoff --no-session` closes correctly and no `.spx/sessions/todo/` file is created.
 
 The artifact is not a retrospective, changelog, lessons-learned notebook, or duplicate of PLAN.md/ISSUES.md. Reusable lessons belong in methodology. Open issues belong in the owning spec tree node. Review and validation facts belong in commit/PR history unless a future reader needs them to resume.
 
@@ -39,9 +44,9 @@ The artifact is not a retrospective, changelog, lessons-learned notebook, or dup
 <session_scope_invariants>
 Three rules govern a conversation's session scope:
 
-1. Scope grows only by user confirmation (via `/picking-up`).
+1. Scope grows only by user confirmation (via `/pickup`).
 2. Closure has exactly one acceptable end state per in-scope session: archived after this workflow runs against it.
-3. Quick-release shortcut via `/release` if the user confirms within a few turns of pickup.
+3. Quick-release shortcut via `/handoff --no-session` if the user confirms within a few turns of pickup.
 
 Permission to archive comes from completing this workflow against the in-scope set named in `<SESSION_SCOPE ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session handoff artifacts created by this conversation are workflow artifacts, not scope members.
 
@@ -71,7 +76,7 @@ The `.spx/sessions/todo/` queue contains work for all active contexts across all
 </multi_agent_awareness>
 
 <arguments>
-- `--no-session` (= `/release`): persist all approved items, archive in-scope sessions, and skip handoff creation because no continuation reader exists. Putting a claimed session back in TODO is a separate manual operation (not currently supported by `spx session`).
+- `--no-session`: persist all approved items, archive in-scope sessions, and skip handoff creation because no continuation reader exists. Putting a claimed session back in TODO is a separate manual operation (not currently supported by `spx session`).
 - `--prune`: after writing the new handoff, delete archive sessions. Ignored under `--no-session`.
 
 Check `$ARGUMENTS` for these flags before starting workflow 01.
