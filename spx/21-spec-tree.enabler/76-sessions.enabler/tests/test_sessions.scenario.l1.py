@@ -220,9 +220,11 @@ class TestReleaseMovesToTodo:
         assert result.returncode == 0, result.stderr
         session_id = _parse_handoff_id(result.stdout)
 
-        _pickup(sessions_dir, session_id)
-        _release(sessions_dir, session_id)
+        pickup_result = _pickup(sessions_dir, session_id)
+        assert pickup_result.returncode == 0, pickup_result.stderr
 
+        release_result = _release(sessions_dir, session_id)
+        assert release_result.returncode == 0, release_result.stderr
         assert (sessions_dir / "todo" / f"{session_id}.md").exists()
 
     def test_release_does_not_modify_content(self, tmp_path):
@@ -237,10 +239,12 @@ class TestReleaseMovesToTodo:
         assert result.returncode == 0, result.stderr
         session_id = _parse_handoff_id(result.stdout)
 
-        _pickup(sessions_dir, session_id)
+        pickup_result = _pickup(sessions_dir, session_id)
+        assert pickup_result.returncode == 0, pickup_result.stderr
         content_in_doing = (sessions_dir / "doing" / f"{session_id}.md").read_text()
 
-        _release(sessions_dir, session_id)
+        release_result = _release(sessions_dir, session_id)
+        assert release_result.returncode == 0, release_result.stderr
         content_in_todo = (sessions_dir / "todo" / f"{session_id}.md").read_text()
         assert content_in_doing == content_in_todo
 
