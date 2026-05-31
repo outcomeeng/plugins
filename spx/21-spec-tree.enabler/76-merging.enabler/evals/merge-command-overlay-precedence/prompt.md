@@ -25,13 +25,9 @@ The overlay configuration the agent has loaded for this PR (JSON-encoded):
 {input_json}
 ```
 
-Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
+Verdict schema — two fields, both mandatory:
 
-```
-{
-  "merge_flag": "--rebase" | "--merge" | "--squash",
-  "source": "overlay" | "universal-default"
-}
-```
+- `merge_flag`: `"--rebase"`, `"--merge"`, or `"--squash"` — the flag passed to `gh pr merge`.
+- `source`: `"overlay"` (choice follows an overlay declaration) or `"universal-default"` (overlay is silent, falls back to rebase).
 
-`merge_flag` is the flag the agent passes to `gh pr merge <pr-number>`. `source` is `overlay` when the agent's choice follows an overlay declaration, or `universal-default` when the overlay is silent and the agent falls back to rebase. The coupling ensures the model identifies WHERE its choice came from rather than just emitting a flag — an `--merge` answer with `source: universal-default` is wrong because the universal default is rebase, not merge commit; an `--rebase` answer with `source: overlay` is wrong unless the overlay explicitly declares rebase.
+An `--merge` answer with `source: universal-default` is wrong because the universal default is rebase; an `--rebase` answer with `source: overlay` is wrong unless the overlay explicitly declares rebase.

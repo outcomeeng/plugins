@@ -117,6 +117,26 @@ def test_parse_verdict_returns_none_when_response_is_not_json() -> None:
     assert parse_verdict(_INVALID_JSON) is None
 
 
+def test_parse_verdict_strips_backtick_fence_without_language() -> None:
+    msg = '```\n{"terminal_green": true}\n```'
+    assert parse_verdict(msg) == {"terminal_green": True}
+
+
+def test_parse_verdict_strips_backtick_fence_with_json_language() -> None:
+    msg = '```json\n{"status": "approved"}\n```'
+    assert parse_verdict(msg) == {"status": "approved"}
+
+
+def test_parse_verdict_strips_fence_with_surrounding_whitespace() -> None:
+    msg = '  \n```json\n{"x": 1}\n```\n  '
+    assert parse_verdict(msg) == {"x": 1}
+
+
+def test_parse_verdict_returns_none_for_fence_with_invalid_json() -> None:
+    msg = "```json\nnot valid json\n```"
+    assert parse_verdict(msg) is None
+
+
 def test_is_subset_matches_dict_keys_recursively() -> None:
     assert is_subset({"status": "rejected"}, {"status": "rejected", "findings": []})
 

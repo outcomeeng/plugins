@@ -9,6 +9,7 @@ given eval is declared by that eval's prompt.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -24,16 +25,31 @@ class GradeResult:
     reasons: tuple[str, ...]
 
 
+_FENCE_RE = re.compile(
+    r"^\s*```(?:json)?\s*\n(.*?)\n\s*```\s*$",
+    re.DOTALL,
+)
+
+
 def parse_verdict(assistant_message: str) -> Any | None:
     """Return the parsed JSON verdict, or None if the message is not valid JSON.
 
     The verdict is the entire assistant response. Whitespace at the start
-    or end of the response is tolerated; anything else is a parse error.
+    or end of the response is tolerated. When the raw response is not valid
+    JSON, the parser strips a single markdown code fence wrapper and retries.
     """
+    text = assistant_message.strip()
     try:
-        return json.loads(assistant_message.strip())
+        return json.loads(text)
     except json.JSONDecodeError:
-        return None
+        pass
+    match = _FENCE_RE.match(text)
+    if match:
+        try:
+            return json.loads(match.group(1).strip())
+        except json.JSONDecodeError:
+            pass
+    return None
 
 
 def grade(case: Case, assistant_message: str) -> GradeResult:

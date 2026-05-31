@@ -16,7 +16,7 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-The CI workflow `.github/workflows/spec-tree-evals.yml` runs the eval suites: it discovers each `eval.toml` under the configured root and runs it through `outcomeeng-evals run` (the CLI has no `run --all`; the workflow loops over `discover` output), gating the job on each suite's exit code. It triggers on every `pull_request` touching the spec-tree plugin / its evals / the harness (gated by a collaborator-authorization job so untrusted PRs never receive the OAuth secret), on `push` to main, on a weekly `schedule`, and on `workflow_dispatch`. The runner invokes `claude --print --output-format json …` by default (no `--bare`), so `claude` accepts any auth source it supports — `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, or `apiKeyHelper`. CI canonicalizes the run because its execution surface has no auto-discoverable `~/.claude/CLAUDE.md` or cwd `AGENTS.md` to contaminate the verdict, and supplies `CLAUDE_CODE_OAUTH_TOKEN` from `secrets.CLAUDE_CODE_OAUTH_TOKEN` — the same secret the existing `spec-tree` and `spec-tree-review` workflows already use. A developer who wants to validate locally runs from a clean discovery surface (no `~/.claude/CLAUDE.md`, no `AGENTS.md` in cwd); the `--bare` opt-in is programmatic only (`ClaudeCliRunner(..., bare=True)` with `ANTHROPIC_API_KEY` exported) and is not exposed by the `outcomeeng-evals run` CLI today — see the CLI `--bare` opt-in item below.
+The CI workflow `.github/workflows/spec-tree-evals.yml` runs the eval suites: it discovers each `eval.toml` under the configured root and runs it through `outcomeeng-evals run` (the CLI has no `run --all`; the workflow loops over `discover` output), gating the job on each suite's exit code. It triggers on every `pull_request` touching the spec-tree plugin / its evals / the harness (gated by a collaborator-authorization job so untrusted PRs never receive secrets), on `push` to main, on a weekly `schedule`, and on `workflow_dispatch`. The runner derives `--bare` from the inherited environment by default per `eval-harness.md`: it passes `--bare` when `ANTHROPIC_API_KEY` is set (the only `--bare`-compatible auth source), otherwise it omits `--bare` so `CLAUDE_CODE_OAUTH_TOKEN` / `apiKeyHelper` / an OAuth login session is accepted. A developer with `ANTHROPIC_API_KEY` exported locally gets `--bare`-isolation from ambient `~/.claude/CLAUDE.md` and the cwd's `AGENTS.md` without further setup. For CI to take the isolated path, `secrets.ANTHROPIC_API_KEY` must be exposed to the job and forwarded into env — currently the workflow forwards only `CLAUDE_CODE_OAUTH_TOKEN`, so CI runs without `--bare` (which is correct for that auth source but does not provide isolation). See the workflow-env TODO below.
 
 CI owns the canonical appends on main: `spec-tree-evals.yml`'s commit-back step pushes them with `[skip ci]` via the `OUTCOMEENG_EVAL_STORE` PAT. Developer-machine runs still append local rows that show up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
@@ -46,9 +46,26 @@ Action required for commit-back to work on a protected `main`:
 - When enabling branch protection on `main`, add the token's account to the
   protection bypass-allowances so its push is not rejected.
 
-## CLI `--bare` opt-in
+## TODO: expose `ANTHROPIC_API_KEY` to the eval workflow so CI runs isolated
 
-The runner exposes a `bare: bool = False` field, but `outcomeeng-evals run` has no `--bare` flag and `outcomeeng_evals/cli/wiring.py:build_claude_runner` never sets it. A developer who wants the opt-in must construct `ClaudeCliRunner(..., bare=True)` in Python directly. Add a `--bare` flag to `outcomeeng-evals run` (wired through `build_claude_runner`) so the opt-in the spec describes is reachable from the canonical entry point.
+`spec-tree-evals.yml` currently forwards only `CLAUDE_CODE_OAUTH_TOKEN` into the `evals` job env. Under the runner's derive rule (`eval-harness.md`), that means CI runs without `--bare` — `claude` is invoked under the OAuth token (correct for that auth source) but ambient discovery is not suppressed at the CLI level. CI's runner image happens to have no `~/.claude/CLAUDE.md` or repo `AGENTS.md` in the standard locations, so the contamination surface is narrower than a developer's, but the CLI flag is the explicit defense and the workflow should take it.
+
+Action required:
+
+- Add `ANTHROPIC_API_KEY` to the repo's Actions secrets (org-scope or repo-scope; either is fine for this workflow).
+- In `spec-tree-evals.yml`, add `ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}` to the `evals` job's `env` block alongside the existing `CLAUDE_CODE_OAUTH_TOKEN`. The runner's derive rule then takes the `--bare` path on every CI invocation.
+
+Until both land, CI omits `--bare` and runs under OAuth (functional, but not the spec-canonical isolated surface).
+
+## CLI `--bare` / `--no-bare` overrides
+
+The runner exposes `bare: bool | None = None`: `None` derives `--bare` from the inherited environment (`ANTHROPIC_API_KEY` present → pass `--bare`), `True` and `False` force the flag on or off regardless of env. The derivation covers the common case — a developer with `ANTHROPIC_API_KEY` exported gets isolation automatically — so the canonical entry point does not need a flag to make `--bare` reachable. The overrides remain useful for two narrow cases: (a) exercising the ambient-discovery code path under test even when `ANTHROPIC_API_KEY` happens to be set (`bare=False`), and (b) forcing isolation when the auth source is `apiKeyHelper` rather than the env-var form (`bare=True`). Add a `--bare` / `--no-bare` flag pair to `outcomeeng-evals run` (wired through `build_claude_runner`) so the two overrides are reachable from the canonical entry point; defer until either need surfaces in a real session.
+
+## FOLLOW-UP: cover the empty-auth-env path in `_effective_bare` tests
+
+The spec assertion at `eval-harness.md:16` names three OAuth-side auth sources under which `--bare` is omitted: `CLAUDE_CODE_OAUTH_TOKEN`, `apiKeyHelper`, and "an OAuth login session". The scenario tests in `tests/test_runner.scenario.l1.py` cover `CLAUDE_CODE_OAUTH_TOKEN` (`test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set`) and both explicit overrides, but the path where neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set in env — the "OAuth login session" or "no env-form auth" case — has no dedicated scenario. `_effective_bare` returns `False` in that case (correct: derivation only flips to `--bare` when `ANTHROPIC_API_KEY` is set), but the assertion mapping to the OAuth-login-session path is untested.
+
+Add a scenario test that monkeypatches both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` out of the env, runs `ClaudeCliRunner(plugin_dir=tmp_path)`, and asserts `--bare` is absent from the captured argv. Co-locate in `test_runner.scenario.l1.py` alongside the existing four derive/override cases.
 
 ## Independent uv project for `outcomeeng_evals`
 

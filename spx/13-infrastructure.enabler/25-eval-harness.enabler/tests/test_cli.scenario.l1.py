@@ -9,10 +9,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from outcomeeng_evals.cli import main
-from outcomeeng_evals.cli.commands.run import MAX_WORKERS
+from outcomeeng_evals.cli.commands import run as run_module
+from outcomeeng_evals.cli.commands.run import MAX_WORKERS, _FORMAT_SUFFIX
+from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
 
 
 EXIT_SUCCESS = 0
@@ -127,3 +130,39 @@ def test_view_subcommand_requires_run_path_or_latest_flag() -> None:
     result = runner.invoke(main, ["view"])
 
     assert result.exit_code != EXIT_SUCCESS
+
+
+def test_run_command_appends_format_suffix_to_every_prompt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    eval_dir = tmp_path / "evals" / "rule"
+    eval_dir.mkdir(parents=True)
+    (eval_dir / "eval.toml").write_text(
+        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
+        encoding="utf-8",
+    )
+    (eval_dir / "cases.jsonl").write_text(
+        '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n',
+        encoding="utf-8",
+    )
+    (eval_dir / "prompt.md").write_text(
+        "Case {case_id}: {input_json}",
+        encoding="utf-8",
+    )
+    plugin_dir = tmp_path / "plugin"
+    plugin_dir.mkdir()
+
+    recorder = RecordingRunner(inner=StubModelRunner(response='{"ok": true}'))
+    monkeypatch.setattr(run_module, "build_claude_runner", lambda **_: recorder)
+
+    cli_runner = CliRunner()
+    cli_runner.invoke(
+        main,
+        ["run", str(eval_dir / "eval.toml"), "--plugin-dir", str(plugin_dir)],
+    )
+
+    assert len(recorder.transcripts) == 1
+    captured_prompt, _ = recorder.transcripts[0]
+    assert captured_prompt.endswith(_FORMAT_SUFFIX)
+    assert "Case alpha" in captured_prompt

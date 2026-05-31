@@ -141,41 +141,75 @@ def test_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit(
             runner.run("any prompt")
 
 
-def test_claude_cli_runner_default_invokes_without_bare(
-    tmp_path: Path,
+def test_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    # ANTHROPIC_API_KEY is the only --bare-compatible auth source claude
+    # accepts without ambient discovery. When it is set in the inherited
+    # env, the default-derive rule passes --bare so the run executes
+    # isolated from ~/.claude/CLAUDE.md and the cwd's AGENTS.md.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     runner = ClaudeCliRunner(plugin_dir=tmp_path)
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
     assert argv[0] == runner.binary
-    # The default invocation lets claude auto-discover ambient
-    # ~/.claude/CLAUDE.md and the cwd's AGENTS.md and accept any auth source
-    # claude supports (CLAUDE_CODE_OAUTH_TOKEN, ANTHROPIC_API_KEY,
-    # apiKeyHelper). CI canonicalizes the run with its empty discovery
-    # surface and the CLAUDE_CODE_OAUTH_TOKEN job secret.
-    assert "--bare" not in argv, "the default invocation must not pass --bare"
+    assert "--bare" in argv, "ANTHROPIC_API_KEY in env must trigger the derived --bare"
+    # The fixed flags remain present regardless of the derived --bare.
     assert "--print" in argv
     assert "--no-session-persistence" in argv
     assert argv[argv.index("--output-format") + 1] == "json"
     assert argv[argv.index("--plugin-dir") + 1] == str(tmp_path)
 
 
-def test_claude_cli_runner_bare_opt_in_includes_bare(
-    tmp_path: Path,
+def test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    # claude rejects --bare under CLAUDE_CODE_OAUTH_TOKEN (or an OAuth login
+    # session). When ANTHROPIC_API_KEY is absent the derive rule omits
+    # --bare so the OAuth token is accepted; passing it would make the run
+    # exit non-zero before grading.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-oauth-test")
+    runner = ClaudeCliRunner(plugin_dir=tmp_path)
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    assert "--bare" not in argv, (
+        "without ANTHROPIC_API_KEY the derive rule must omit --bare so the"
+        " OAuth auth source is accepted"
+    )
+
+
+def test_claude_cli_runner_forces_bare_when_override_is_true(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The bare=True override passes --bare regardless of env. Used by callers
+    # that genuinely want isolation and have arranged a --bare-compatible
+    # auth source out of band.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     runner = ClaudeCliRunner(plugin_dir=tmp_path, bare=True)
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
-    # The binary stays at argv[0] regardless of the bare opt-in.
-    assert argv[0] == runner.binary
-    # --bare is opt-in: when set, claude skips CLAUDE.md auto-discovery,
-    # hooks, and auto-memory, and restricts auth to ANTHROPIC_API_KEY or
-    # apiKeyHelper.
-    assert "--bare" in argv, "opting into bare must pass --bare"
-    # The fixed flags remain present regardless of the bare opt-in.
-    assert "--print" in argv
-    assert "--no-session-persistence" in argv
+    assert "--bare" in argv, "bare=True must force --bare regardless of env"
+
+
+def test_claude_cli_runner_forces_no_bare_when_override_is_false(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The bare=False override omits --bare regardless of env. Used by callers
+    # that explicitly want ambient discovery even when ANTHROPIC_API_KEY is
+    # set (e.g. exercising the auto-discover code path under test).
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    runner = ClaudeCliRunner(plugin_dir=tmp_path, bare=False)
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    assert "--bare" not in argv, (
+        "bare=False must suppress --bare even when ANTHROPIC_API_KEY is set"
+    )
     assert argv[argv.index("--output-format") + 1] == "json"
     assert argv[argv.index("--plugin-dir") + 1] == str(tmp_path)
