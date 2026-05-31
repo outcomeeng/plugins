@@ -107,9 +107,12 @@ def run_command(
 
 
 _FORMAT_SUFFIX = (
-    "\n\nYour entire response must be exactly one JSON object — no markdown"
-    " fences, no prose, no commentary. The grader runs json.loads() on the"
-    " raw response; anything other than valid JSON is a parse failure."
+    "\n\nYour entire response must be one JSON object — no prose, no"
+    " commentary. The grader tries json.loads() on the raw response; if"
+    " that fails it strips a single surrounding markdown code fence and"
+    " retries. Wrapping the JSON in a code fence is therefore tolerated"
+    " but unnecessary; prose anywhere outside the JSON object is a parse"
+    " failure."
 )
 
 
