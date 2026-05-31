@@ -3,7 +3,7 @@
 DistTreeReader provides query methods over a dist/{claude,codex}/ tree
 emitted by the build. Tests use it to assert what's present, what's
 absent, and what content was emitted, without manually constructing
-runtime path strings.
+target path strings.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class DistTreeReader:
     def dist_root(self) -> Path:
         return self.root / DIST_DIR_NAME
 
-    def runtime_root(self, target: Target) -> Path:
+    def target_root(self, target: Target) -> Path:
         return self.dist_root / target.value
 
     def is_skill_present(
@@ -54,26 +54,26 @@ class DistTreeReader:
         return self._skill_path(plugin, skill, target=target).read_text()
 
     def list_plugins(self, target: Target) -> tuple[str, ...]:
-        runtime_root = self.runtime_root(target)
-        if not runtime_root.is_dir():
+        target_root = self.target_root(target)
+        if not target_root.is_dir():
             return ()
-        return tuple(sorted(p.name for p in runtime_root.iterdir() if p.is_dir()))
+        return tuple(sorted(p.name for p in target_root.iterdir() if p.is_dir()))
 
     def list_skills(self, plugin: str, *, target: Target) -> tuple[str, ...]:
-        skills_root = self.runtime_root(target) / plugin / SKILLS_SUBDIR_NAME
+        skills_root = self.target_root(target) / plugin / SKILLS_SUBDIR_NAME
         if not skills_root.is_dir():
             return ()
         return tuple(sorted(s.name for s in skills_root.iterdir() if s.is_dir()))
 
     def list_all_files(self, target: Target) -> tuple[Path, ...]:
-        """Return every file under runtime_root(target), as paths relative to it."""
-        runtime_root = self.runtime_root(target)
-        if not runtime_root.is_dir():
+        """Return every file under target_root(target), as paths relative to it."""
+        target_root = self.target_root(target)
+        if not target_root.is_dir():
             return ()
         return tuple(
             sorted(
-                f.relative_to(runtime_root)
-                for f in runtime_root.rglob("*")
+                f.relative_to(target_root)
+                for f in target_root.rglob("*")
                 if f.is_file()
             )
         )
@@ -86,7 +86,7 @@ class DistTreeReader:
         target: Target,
     ) -> Path:
         return (
-            self.runtime_root(target)
+            self.target_root(target)
             / plugin
             / SKILLS_SUBDIR_NAME
             / skill

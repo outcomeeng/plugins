@@ -30,24 +30,19 @@ Gather context to ensure successful implementation:
 
 <available_scripts>
 
-| Script                    | Purpose     | Usage                              |
-| ------------------------- | ----------- | ---------------------------------- |
-| `scripts/{{script-1}}.py` | {{Purpose}} | `python3 {{script-1}}.py {{args}}` |
-| `scripts/{{script-2}}.py` | {{Purpose}} | `python3 {{script-2}}.py {{args}}` |
+| Script                    | Purpose     | Usage                                                            |
+| ------------------------- | ----------- | ---------------------------------------------------------------- |
+| `scripts/{{script-1}}.py` | {{Purpose}} | `python3 "${CLAUDE_SKILL_DIR}/scripts/{{script-1}}.py" {{args}}` |
+| `scripts/{{script-2}}.py` | {{Purpose}} | `python3 "${CLAUDE_SKILL_DIR}/scripts/{{script-2}}.py" {{args}}` |
 
 </available_scripts>
 
 <dependencies>
-**Runtime**:
-- Python 3.10+
-- {{Package 1}}
-- {{Package 2}}
+**Execution**:
 
-**Installation**:
-
-```bash
-pip install {{packages}}
-```
+- Python 3.11+
+- Stdlib-only helper scripts, unless dependencies are vendored inside the skill.
+- No on-the-fly package installation during normal skill use.
 
 </dependencies>
 

@@ -198,7 +198,7 @@ Determine whether a command needs arguments:
 
 - Omit `argument-hint` and don't reference `$ARGUMENTS`
 
-For detailed examples and patterns, see [references/arguments.md](references/arguments.md).
+For detailed examples and patterns, see [${SKILL_DIR}/references/arguments.md](references/arguments.md).
 
 </arguments_intelligence>
 
@@ -363,7 +363,7 @@ Analyze @ src/database/* for schema
 
 <common_patterns>
 
-Common command patterns with full examples are in [references/patterns.md](references/patterns.md):
+Common command patterns with full examples are in [${SKILL_DIR}/references/patterns.md](references/patterns.md):
 
 - **Simple analysis** — single operation, no state (e.g., security review)
 - **Git workflow** — state-dependent with `<context>` and `allowed-tools`
@@ -374,14 +374,14 @@ Common command patterns with full examples are in [references/patterns.md](refer
 
 <reference_guides>
 
-**Arguments reference**: [references/arguments.md](references/arguments.md)
+**Arguments reference**: [${SKILL_DIR}/references/arguments.md](references/arguments.md)
 
 - $ARGUMENTS variable
 - Positional arguments ($1, $2, $3)
 - Parsing strategies
 - Examples from official docs
 
-**Patterns reference**: [references/patterns.md](references/patterns.md)
+**Patterns reference**: [${SKILL_DIR}/references/patterns.md](references/patterns.md)
 
 - Git workflows
 - Code analysis
@@ -389,7 +389,7 @@ Common command patterns with full examples are in [references/patterns.md](refer
 - Security reviews
 - Examples from official docs
 
-**Tool restrictions**: [references/tool-restrictions.md](references/tool-restrictions.md)
+**Tool restrictions**: [${SKILL_DIR}/references/tool-restrictions.md](references/tool-restrictions.md)
 
 - Bash command patterns
 - Security best practices

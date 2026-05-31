@@ -42,7 +42,7 @@ If the skill reports a lock-held halt, surface the lock holder identity and the 
 <constraints>
 
 - Read-only over source code and tests. The only on-disk writes are inside `.spx/audits/` and `<state-file>.lock`, both performed by the `/auditing` skill through its CLI — never by this agent directly.
-- Invoke nothing in the `/auditing` skill's `scripts/` directory by a path of your own. The skill resolves `.` and runs every CLI subcommand from inside its own prose; this agent has no business constructing a path expression.
+- Invoke nothing in the `/auditing` skill's `scripts/` directory by a path of your own. The skill resolves `${SKILL_DIR}` and runs every CLI subcommand from inside its own prose; this agent has no business constructing a path expression.
 - Run at most one audit per invocation. The lock contract assumes one writer at a time on a given branch's state file; multiplying audit runs inside a single agent invocation undermines the contract and produces noisy state transitions.
 - Do not post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job.
 - Contain zero language-specific tokens. Language detection and per-language behaviour live in the `auditing-{lang}*` skills the `/auditing` skill dispatches to.

@@ -87,7 +87,7 @@ def test_standard_jinja_syntax_passes_through_rendering(tmp_path: Path) -> None:
     assert rendered == STANDARD_JINJA_TEXT
 
 
-def test_require_skill_expands_to_runtime_neutral_guidance() -> None:
+def test_require_skill_expands_to_coding_agent_neutral_guidance() -> None:
     rendered = expand_require_skill(RequireSkillDirective(SKILL_REF))
 
     assert rendered == REQUIRE_SKILL_TEXT_TEMPLATE.format(skill_ref=SKILL_REF)

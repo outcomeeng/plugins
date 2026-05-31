@@ -3,7 +3,7 @@
 ## FOLLOW-UP [evidence]: require_skill target-equivalence assertion is implicit
 
 The compliance assertion says `{!% require_skill 'plugin:skill' %!}` expands to
-identical agent-runtime-neutral invocation text in both targets. Current tests
+identical coding-agent-neutral invocation text in both targets. Current tests
 verify that the directive expands and that the rendered text names the required
 skill, but they do not explicitly compare Claude-target and Codex-target output
 bytes for the same source input.

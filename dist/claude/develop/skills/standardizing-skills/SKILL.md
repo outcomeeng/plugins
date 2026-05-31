@@ -46,7 +46,7 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 <frontmatter>
 
-Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about runtime behavior; read this section when it is about how this marketplace authors skills.
+Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported fields lives in the Claude Code docs at <https://code.claude.com/docs/en/skills#frontmatter-reference>. Read the docs page when a question is about execution behavior; read this section when it is about how this marketplace authors skills.
 
 | Field                      | Required    | Constraint                                                                                                                                                                                                                        |
 | -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -74,7 +74,7 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `disable-model-invocation: true` | Yes                        | **No**                         | Not in context         |
 | `user-invocable: false`          | **No**                     | Yes                            | Always                 |
 
-Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` at runtime.
+Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` during execution.
 
 ```yaml
 # Invoked skill (routing, workflow, creation)
@@ -427,13 +427,14 @@ Before auditing, read `/standardizing-prose` for the complete catalog of anti-pa
 
 **Referencing skill files from SKILL.md:**
 
-Use `${CLAUDE_SKILL_DIR}` to reference files within a skill. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
+Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable form) to reference files within skill source. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
+Do not write `SKILL_DIR` in source; the build emits that token for Codex output.
 
 ```markdown
 Read `${CLAUDE_SKILL_DIR}/references/example.md`
 ```
 
-Do NOT define aliases, add troubleshooting sections, or explain what the variable is. The agent sees an absolute path, not the variable.
+Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
 
 **Variable scopes:**
 

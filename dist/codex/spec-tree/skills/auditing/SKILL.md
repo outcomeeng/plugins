@@ -15,8 +15,8 @@ Read-only over the audited code. The stateful mode writes only under the gitigno
 
 <determinism_contract>
 
-1. **Frozen scope.** The file list captured in Phase 0 is the scope for the rest of the run; later phases never expand it. The scope hash from `scripts/audit_orchestrator.py::compute_scope_hash` identifies this exact scope and travels in the wrapper verdict's metadata.
-2. **Canonical verdict shape.** Every verdict conforms to the schema in `scripts/verdict.py`. The orchestrator's wrapper has three rows (`automated-gates`, `test-execution`, `determinism-contract`); per-language children have their own rows owned by the dispatched skill. Row names are never invented inline.
+1. **Frozen scope.** The file list captured in Phase 0 is the scope for the rest of the run; later phases never expand it. The scope hash from `${SKILL_DIR}/scripts/audit_orchestrator.py::compute_scope_hash` identifies this exact scope and travels in the wrapper verdict's metadata.
+2. **Canonical verdict shape.** Every verdict conforms to the schema in `${SKILL_DIR}/scripts/verdict.py`. The orchestrator's wrapper has three rows (`automated-gates`, `test-execution`, `determinism-contract`); per-language children have their own rows owned by the dispatched skill. Row names are never invented inline.
 3. **Frozen finding catalog.** Findings are only created from violations of the rules the dispatched `auditing-{lang}*` skills already enforce. Style preferences, taste-based critiques, and "could be cleaner" observations are NEVER findings.
 
 If any mechanism cannot be applied, halt and report the obstacle — do not silently substitute a looser audit.
@@ -57,14 +57,14 @@ If any of the three dispatched skills is missing for the target language, halt b
 
 1. **Determine scope.** The caller provides one of:
    - An explicit file or directory list — use as-is.
-   - A git ref or diff range (`HEAD`, `main..HEAD`, a branch name) — invoke `expand_diff_range(<range>, repo=Path('.'))` from `scripts/audit_orchestrator.py` to enumerate the files in the range.
-   - No scope — invoke `uncommitted_scope(repo=Path('.'))` from `scripts/audit_orchestrator.py` to enumerate uncommitted, staged, **and untracked** changes (a fresh file added but not yet `git add`-ed is in scope). If the helper returns an empty list, halt with `no scope detected`. `expand_diff_range("HEAD", ...)` is **not** equivalent — it omits untracked files.
+   - A git ref or diff range (`HEAD`, `main..HEAD`, a branch name) — invoke `expand_diff_range(<range>, repo=Path('.'))` from `${SKILL_DIR}/scripts/audit_orchestrator.py` to enumerate the files in the range.
+   - No scope — invoke `uncommitted_scope(repo=Path('.'))` from `${SKILL_DIR}/scripts/audit_orchestrator.py` to enumerate uncommitted, staged, **and untracked** changes (a fresh file added but not yet `git add`-ed is in scope). If the helper returns an empty list, halt with `no scope detected`. `expand_diff_range("HEAD", ...)` is **not** equivalent — it omits untracked files.
 
 2. **Materialize the file list.** Filter to existing files. Sort lexicographically. This sorted list is the **frozen scope** for this run.
 
 3. **Partition by language.** Group files by extension into per-language partitions. The remainder of the protocol runs once per partition; per-partition verdicts are aggregated in Phase 6 into one wrapper verdict whose `children` array carries them. If any partition's `auditing-{lang}*` trio is missing, halt now with `missing required skill: auditing-{lang}-{kind}` before any phase runs.
 
-4. **Compute the scope hash.** Invoke `compute_scope_hash` from `scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scope_hash`.
+4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scope_hash`.
 
 5. **Read project config.** `CLAUDE.md`, `AGENTS.md`, and any language-native configuration the dispatched `auditing-{lang}` skill expects. Identify the canonical validation command and the canonical test command for the project (the precedence convention in marketplace projects: `CLAUDE.md`/`AGENTS.md` → `justfile`/`Makefile` → language-native config; closer to repo root wins). If neither is discoverable from project files, halt — do not guess.
 
@@ -106,10 +106,10 @@ Dispatch to `auditing-{lang}-architecture`. Findings populate row 5. If no ADRs 
 
 <phase number="6" name="emit">
 
-For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator's stdout pipes directly into `emit_verdict.py`, which renders the wrapper to the requested surface form (`markdown`, `markdown+json`, or `json-only`; default `markdown+json` for PR-comment delivery). The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
+For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator's stdout pipes directly into `emit_verdict.py`, which renders the wrapper to the requested surface form (`markdown`, `markdown+json`, or `json-only`; default `markdown+json` for PR-comment delivery). The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
 
 ```bash
-CHILDREN_DIR=$(python3 "scripts/pass_results.py" mkdir)
+CHILDREN_DIR=$(python3 "${SKILL_DIR}/scripts/pass_results.py" mkdir)
 # Caller owns cleanup unconditionally: the trap fires whether the
 # aggregator pipeline succeeds, an earlier dispatched skill halted, or
 # the shell is interrupted. A plain `rm -rf` at the end of the block
@@ -126,7 +126,7 @@ trap 'rm -rf "$CHILDREN_DIR"' EXIT
 # exited non-zero (Phase 1 → automated-gates, Phase 2 → test-execution)
 # or UNKNOWN when Phase 0 halted before producing a frozen scope
 # (determinism-contract).
-python3 "scripts/aggregate_verdicts.py" \
+python3 "${SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --directory "$CHILDREN_DIR" \
   --row automated-gates=PASS \
   --row test-execution=PASS \
@@ -135,7 +135,7 @@ python3 "scripts/aggregate_verdicts.py" \
   --target <scope-target> \
   --metadata branch=<branch-name> \
   --metadata scope_hash=<scope-hash> \
-| python3 "scripts/emit_verdict.py" \
+| python3 "${SKILL_DIR}/scripts/emit_verdict.py" \
   --format "${AUDIT_FORMAT:-markdown+json}"
 ```
 
@@ -147,7 +147,7 @@ The orchestrator does not write the verdict to disk — the caller delivers it. 
 
 <verdict_format>
 
-The canonical schema is declared in `scripts/verdict.py` (`Status`, `Severity`, `Finding`, `Row`, `Verdict` dataclasses). The orchestrator's wrapper verdict has this shape:
+The canonical schema is declared in `${SKILL_DIR}/scripts/verdict.py` (`Status`, `Severity`, `Finding`, `Row`, `Verdict` dataclasses). The orchestrator's wrapper verdict has this shape:
 
 ```json
 {
@@ -177,7 +177,7 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 
 <failure_modes>
 
-**Improvised scope hashing.** Claude computes the scope hash in-prose (e.g., concatenating paths and contents in some ad hoc framing) instead of calling `compute_scope_hash` from `scripts/audit_orchestrator.py`. Distinct file lists then collide on the same hash because the framing is ambiguous. The helper module is the boundary; never reproduce its logic inline.
+**Improvised scope hashing.** Claude computes the scope hash in-prose (e.g., concatenating paths and contents in some ad hoc framing) instead of calling `compute_scope_hash` from `${SKILL_DIR}/scripts/audit_orchestrator.py`. Distinct file lists then collide on the same hash because the framing is ambiguous. The helper module is the boundary; never reproduce its logic inline.
 
 **Scope drift mid-run.** Files added or removed between Phase 0 and Phase 5 yield inconsistent reads — one phase sees a file the next phase doesn't. The "frozen scope" invariant exists to prevent this: Phase 0 captures the file list once; later phases never re-enumerate. If a phase needs a file not in the frozen scope, halt and report; do not silently expand scope.
 
@@ -202,10 +202,10 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 1. **Resolve the branch and the state path.** `LANG` is the partition language identifier from Phase 0 step 3 (`python`, `typescript`, `rust`, …). The block assumes `LANG` is set in the agent's environment — one invocation per partition with `LANG` set accordingly.
 
    ```bash
-   BRANCH=$(python3 "scripts/audit_orchestrator.py" current-branch)
-   BASE=$(python3 "scripts/audit_orchestrator.py" base-ref)
+   BRANCH=$(python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" current-branch)
+   BASE=$(python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" base-ref)
    STATE_DIR=".spx/audits/${LANG}"
-   SLUG=$(python3 "scripts/audit_orchestrator.py" \
+   SLUG=$(python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" \
      branch-slug --branch "$BRANCH" --state-dir "$STATE_DIR")
    STATE_FILE="$STATE_DIR/${SLUG}.md"
    LOCK_FILE="${STATE_FILE}.lock"
@@ -214,7 +214,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 2. **Acquire the lock before any state read or write.** A fresh held lock means another run is in progress on this branch — halt the audit and report the lock holder so the caller can decide whether to wait or abort.
 
    ```bash
-   python3 "scripts/audit_orchestrator.py" acquire-lock \
+   python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" acquire-lock \
      --path "$LOCK_FILE" || exit 1
    ```
 
@@ -223,7 +223,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 3. **Run the audit (stateless Phases 0–6).** Phase 6 writes per-language verdict JSON files into the scratch directory `$CHILDREN_DIR` defined inside the Phase 6 `<phase number="6">` block above. Read this partition's verdict back into a shell variable with `read_verdict.py`:
 
    ```bash
-   FINDINGS_JSON=$(python3 "scripts/read_verdict.py" \
+   FINDINGS_JSON=$(python3 "${SKILL_DIR}/scripts/read_verdict.py" \
      --file "$CHILDREN_DIR/${LANG}.json" --field findings)
    ```
 
@@ -233,7 +233,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
    CURRENT_SHA=$(git rev-parse HEAD)
    NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
    printf '%s' "$FINDINGS_JSON" | \
-     python3 "scripts/audit_orchestrator.py" state-transition \
+     python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" state-transition \
        --state-file "$STATE_FILE" \
        --branch "$BRANCH" \
        --current-sha "$CURRENT_SHA" \
@@ -246,7 +246,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 5. **Release the lock and render the emitted output.** Run `release-lock` as the final step of the clean-exit path; the call is idempotent so re-running is safe.
 
    ```bash
-   python3 "scripts/audit_orchestrator.py" release-lock \
+   python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" release-lock \
      --path "$LOCK_FILE"
    ```
 
@@ -274,7 +274,7 @@ PRIOR_RAW=$(gh -R "$REPO" pr view "$PR_NUMBER" --json comments --jq \
 if [ -z "$PRIOR_RAW" ] || [ "$PRIOR_RAW" = "null" ]; then
   printf '{"prior": null}\n'
 else
-  PRIOR_JSON=$(printf '%s' "$PRIOR_RAW" | python3 "scripts/read_verdict.py")
+  PRIOR_JSON=$(printf '%s' "$PRIOR_RAW" | python3 "${SKILL_DIR}/scripts/read_verdict.py")
   printf '{"prior": %s}\n' "$PRIOR_JSON"
 fi
 ```
@@ -288,10 +288,10 @@ PRIOR_FILE=$(mktemp)
 printf '%s' "$PRIOR_VERDICT_JSON" > "$PRIOR_FILE"
 # Run Phases 0–6 as documented above; capture the wrapper verdict JSON in $WRAPPER_JSON.
 ENRICHED_JSON=$(printf '%s' "$WRAPPER_JSON" | \
-  python3 "scripts/audit_orchestrator.py" verdict-diff \
+  python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" verdict-diff \
     --prior "$PRIOR_FILE")
 rm -f "$PRIOR_FILE"
-printf '%s' "$ENRICHED_JSON" | python3 "scripts/emit_verdict.py" \
+printf '%s' "$ENRICHED_JSON" | python3 "${SKILL_DIR}/scripts/emit_verdict.py" \
   --format "${AUDIT_FORMAT:-markdown+json}"
 ```
 

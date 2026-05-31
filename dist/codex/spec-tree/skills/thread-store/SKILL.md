@@ -9,7 +9,7 @@ Mediate persistence of branch-scoped records produced by spec-tree skills (revie
 
 <api_surface>
 
-Four CRUD CLIs sit under `scripts/`:
+Four CRUD CLIs sit under `${SKILL_DIR}/scripts/`:
 
 | CLI                | Effect                                       |
 | ------------------ | -------------------------------------------- |
@@ -30,7 +30,7 @@ The active backend resolves from `SPX_VERIFY_BACKEND`. Default `local` selects t
 
 <slug_derivation>
 
-Slug derivation re-exports the canonical helper from `../auditing/scripts/audit_orchestrator.py`. The slug:
+Slug derivation re-exports the canonical helper from `${SKILL_DIR}/../auditing/scripts/audit_orchestrator.py`. The slug:
 
 - replaces `/` in the branch name with `__`
 - substitutes a whole-segment `.` / `..` value with a distinct token
@@ -44,10 +44,10 @@ Slug derivation re-exports the canonical helper from `../auditing/scripts/audit_
 Direct invocation from a wrapper agent:
 
 ```bash
-python3 "scripts/write_record.py" --slug "$SLUG" --name result.json < "$PAYLOAD_FILE"
-python3 "scripts/read_record.py" --slug "$SLUG" --name result.json
-python3 "scripts/list_records.py" --slug "$SLUG"
-python3 "scripts/delete_record.py" --slug "$SLUG" --name result.json
+python3 "${SKILL_DIR}/scripts/write_record.py" --slug "$SLUG" --name result.json < "$PAYLOAD_FILE"
+python3 "${SKILL_DIR}/scripts/read_record.py" --slug "$SLUG" --name result.json
+python3 "${SKILL_DIR}/scripts/list_records.py" --slug "$SLUG"
+python3 "${SKILL_DIR}/scripts/delete_record.py" --slug "$SLUG" --name result.json
 ```
 
 Skill authors instruct the wrapper agent to invoke these commands rather than implementing the I/O inline.
@@ -57,7 +57,7 @@ Skill authors instruct the wrapper agent to invoke these commands rather than im
 <constraints>
 
 - Scripts run against `python3` only — stdlib, no third-party imports
-- Every script under `scripts/` dispatches through the `thread_store` facade; concrete backend modules are never imported directly by skill code
+- Every script under `${SKILL_DIR}/scripts/` dispatches through the `thread_store` facade; concrete backend modules are never imported directly by skill code
 - Writes are atomic via temp-file plus `os.replace`; a crash mid-write leaves the prior payload intact
 
 </constraints>

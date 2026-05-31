@@ -32,7 +32,7 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 4. **Extract.** Unzip the deck into a temporary working directory **outside any git repository** (e.g. under `/tmp`). Never extract into the deck's own folder.
 
-5. **Apply approved fixes.** Edit the extracted XML part by part, following `references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
+5. **Apply approved fixes.** Edit the extracted XML part by part, following `${SKILL_DIR}/references/audit-and-fix.md`. Handle one dimension at a time, and track every changed part.
 
 6. **Repackage and verify.** Run `pptx_repack.py` with the original deck, the working directory, and an output path. It rebuilds the package preserving every untouched part's content and the original member order, then verifies (see `<repackaging>`). Do not hand-roll the repackage.
 
@@ -76,10 +76,10 @@ NEVER repackage by extracting everything and re-zipping with default tooling —
 <scripts>
 Both scripts are standard-library Python 3.11+ — no third-party dependencies, no install step.
 
-| Script                   | Purpose                                                                                        | Usage                                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `scripts/pptx_audit.py`  | Read-only six-dimension audit; prints a findings report. `--json` for machine-readable output. | `python3 "scripts/pptx_audit.py" <deck.pptx>`                           |
-| `scripts/pptx_repack.py` | Content-surgical repackage of a working directory back into a `.pptx`, with verification.      | `python3 "scripts/pptx_repack.py" <original.pptx> <workdir> <out.pptx>` |
+| Script                   | Purpose                                                                                        | Usage                                                                                |
+| ------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `scripts/pptx_audit.py`  | Read-only six-dimension audit; prints a findings report. `--json` for machine-readable output. | `python3 "${SKILL_DIR}/scripts/pptx_audit.py" <deck.pptx>`                           |
+| `scripts/pptx_repack.py` | Content-surgical repackage of a working directory back into a `.pptx`, with verification.      | `python3 "${SKILL_DIR}/scripts/pptx_repack.py" <original.pptx> <workdir> <out.pptx>` |
 
 The audit script never writes. The repack script writes only its named output file.
 </scripts>

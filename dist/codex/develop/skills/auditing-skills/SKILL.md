@@ -48,7 +48,7 @@ During audits, prioritize evaluation of:
 1. Read `/standardizing-skills` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/standardizing-skills.md` at the repository root and read it if it exists.
 2. Read `/standardizing-agent-prompts` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
-4. Read `references/xml-structure-examples.md` and `references/operational-effectiveness-examples.md` for annotated violation examples.
+4. Read `${SKILL_DIR}/references/xml-structure-examples.md` and `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples.
 5. Handle edge cases:
    - If `/standardizing-skills` or `/standardizing-agent-prompts` is unreadable, note under "Configuration Issues" and proceed with available content.
    - If YAML frontmatter is malformed, flag as critical issue.
@@ -230,11 +230,11 @@ Reference files in the `references/` directory should also use pure XML structur
 </reference_file_guidance>
 
 <xml_structure_examples>
-Read `references/xml-structure-examples.md` for annotated examples of each violation type.
+Read `${SKILL_DIR}/references/xml-structure-examples.md` for annotated examples of each violation type.
 </xml_structure_examples>
 
 <operational_effectiveness_examples>
-Read `references/operational-effectiveness-examples.md` for annotated examples of each issue type.
+Read `${SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated examples of each issue type.
 </operational_effectiveness_examples>
 
 <output_format>

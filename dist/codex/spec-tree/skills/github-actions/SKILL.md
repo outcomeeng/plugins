@@ -18,7 +18,7 @@ Investigate GitHub Actions workflow runs from inside an agent session — status
 Resolve repository identity, host, and gh authentication state in one call. The helper parses `git remote get-url origin`, extracts `owner_repo` and `host`, probes repo access with the active gh account, lists available authenticated accounts, and reports whether the session is TTY-attached:
 
 ```bash
-uv run python "scripts/gh_access.py"
+uv run python "${SKILL_DIR}/scripts/gh_access.py"
 ```
 
 The output is a JSON object with these fields:
@@ -124,7 +124,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 
 - NEVER invoke `gh run watch`. Unreaped subprocess trees from `gh run watch` exhaust the workstation when the harness fails to reap them across turns.
 - NEVER write `until <check>; do sleep N; done` or `while ! <check>; do sleep N; done`. Per-iteration process trees from these constructs accumulate until the host is exhausted.
-- NEVER call any state-changing `gh` subcommand without an explicit user instruction in the same turn. The user answering an `AskUserQuestion` is explicit instruction. The full list — also enforced programmatically by `scripts/mutation_gate.py` — is `gh auth login`, `gh auth switch`, `gh auth refresh`, `gh auth logout`, `gh run rerun`, `gh run cancel`, `gh run delete`, `gh workflow run`, `gh workflow enable`, and `gh workflow disable`.
+- NEVER call any state-changing `gh` subcommand without an explicit user instruction in the same turn. The user answering an `AskUserQuestion` is explicit instruction. The full list — also enforced programmatically by `${SKILL_DIR}/scripts/mutation_gate.py` — is `gh auth login`, `gh auth switch`, `gh auth refresh`, `gh auth logout`, `gh run rerun`, `gh run cancel`, `gh run delete`, `gh workflow run`, `gh workflow enable`, and `gh workflow disable`.
 - NEVER report a conclusion other than the literal value returned by `gh run view --json conclusion`. Derived states ("looks failed", "probably passing") are prohibited.
 - NEVER ship shell scripts in this skill's `scripts/` directory. Helpers are Python.
 
