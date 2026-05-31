@@ -234,15 +234,15 @@ An implementation file in the diff that no test imports has no governing spec as
 
 Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `standardizing-<lang>-tests` skill. In a consumer repo, the consumer's spec tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
 
-### Archiving a stale session without `/release`
+### Archiving a stale session without `/handoff --no-session`
 
-`/release` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, coordination notes, or methodology changes, run `spx session archive <session-id>` directly:
+`/handoff --no-session` runs the full reflection-and-persistence protocol before archiving. When pickup loads a session whose declared scope has already landed (verified by reading the session file and `git log`), and the conversation produced no new insights, coordination notes, or methodology changes, run `spx session archive <session-id>` directly:
 
 ```bash
 spx session archive 2026-04-01_10-44-24
 ```
 
-The shortcut is valid only when the agent has already inspected the session content and confirmed that reflection would surface nothing. For any session where the agent did meaningful work this conversation, run `/release` so reflection actually happens.
+The shortcut is valid only when the agent has already inspected the session content and confirmed that reflection would surface nothing. For any session where the agent did meaningful work this conversation, run `/handoff --no-session` so reflection actually happens.
 
 ## When to Dispatch Agents vs Invoke Skills
 

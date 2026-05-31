@@ -59,7 +59,7 @@ The existence of any session is never permission to archive an in-scope session 
 <write_canonical_continuation>
 Every closure ends with **zero or one** handoff. Pick the path once and execute it. Zero is correct when no continuation reader exists.
 
-**Path A — `--no-session` (zero handoffs, a.k.a. `/release`)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — `--no-session` (zero handoffs)**: skip to `<archive_scope>`. All in-scope sessions are archived; no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 
@@ -129,7 +129,7 @@ NEVER delete todo or doing sessions. `--prune` only affects archive.
 <confirm>
 State:
 
-- Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "released (no handoff)"
+- Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (--no-session)"
 - Session-owned work was committed before closure
 - Every session id archived from the resolved scope (and any artifact NOT rewritten in place)
 
@@ -141,7 +141,7 @@ State:
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
 - Exactly zero or one canonical continuation created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
-- Continuation path executed via Path A (release), Path B (rewrite in place), or Path C (new handoff).
+- Continuation path executed via Path A (--no-session), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the in-scope set is non-empty.
 - Every in-scope session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
