@@ -216,9 +216,9 @@ Claude Code session handoffs are stored in `.spx/sessions/` (separate from the s
 └── archive/       # Completed sessions
 ```
 
-Use `/handoff` to create, `/pickup` to claim.
+Use `/handoff` to create, `/pickup` to claim, `spx session release` to return a claimed session to the queue.
 
-Session files use structured YAML frontmatter:
+Session files use structured YAML frontmatter (rendered by the CLI from JSON input):
 
 ```yaml
 ---
@@ -231,7 +231,9 @@ specs:
   - spx/36-session.enabler/session.md
 files:
   - src/commands/session/handoff.ts
+created_at: 2026-05-30T14:22:00.000Z
+agent_session_id: abc123-def456
 ---
 ```
 
-`spx session handoff` prefills `created_at`, `agent_session_id` when available, `branch`, and `worktree`. The handoff must provide non-empty `goal` and `next_step`. Before archiving a claimed session, add a non-empty `result` to that session's frontmatter.
+`spx session handoff` reads a JSON header on the first line of stdin followed by the body bytes. It prefills `created_at`, `agent_session_id` when available, `branch`, and `worktree`. The handoff must provide non-empty `goal` and `next_step`. Before archiving a claimed session, add a non-empty `result` to that session's frontmatter.
