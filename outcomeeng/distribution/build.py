@@ -330,7 +330,13 @@ def rewrite_paths_for_target(text: str, *, target: Target) -> str:
     to Codex's skill-directory token unless the source line carries
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE.
 
-    Idempotence: ``rewrite_paths_for_target(rewrite_paths_for_target(t, target=T), target=T) == rewrite_paths_for_target(t, target=T)``.
+    Idempotence holds for Target.CLAUDE and for any text under Target.CODEX
+    that contains no SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE. Escaped content
+    under Target.CODEX is intentionally non-idempotent: the first pass strips
+    the directive and preserves CLAUDE_SKILL_DIR_TOKEN, while a second pass —
+    seeing no directive — would rewrite that surviving token to
+    CODEX_SKILL_DIR_TOKEN. This is safe because the build processes src/
+    exclusively and never re-processes dist/ output.
     """
     protected = _protect_skill_dir_rewrite_escapes(text)
     if target is Target.CLAUDE:
