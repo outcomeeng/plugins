@@ -78,7 +78,7 @@ def run_command(
     result = run_suite(
         cases_path=definition.cases_path,
         runner=runner,
-        build_prompt=lambda case: _render_prompt(template, case),
+        build_prompt=lambda case: _render_prompt(template, case) + _FORMAT_SUFFIX,
         trials_per_case=definition.trials,
         suite_threshold=definition.threshold,
         workers=workers,
@@ -104,6 +104,13 @@ def run_command(
     click.echo(f"JSON: {html_path.with_suffix('.json')}")
     ctx = click.get_current_context()
     ctx.exit(0 if result.passed else 1)
+
+
+_FORMAT_SUFFIX = (
+    "\n\nYour entire response must be exactly one JSON object — no markdown"
+    " fences, no prose, no commentary. The grader runs json.loads() on the"
+    " raw response; anything other than valid JSON is a parse failure."
+)
 
 
 # An identifier-shaped ``{token}`` — what a placeholder typo looks like

@@ -26,13 +26,9 @@ The gate-state input (JSON-encoded):
 {input_json}
 ```
 
-Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
+Verdict schema — two fields, both mandatory:
 
-```
-{
-  "open_decision": "OPEN_READY" | "WITHHOLD",
-  "blocking_predicate": "deterministic-verification" | "local-review" | "none"
-}
-```
+- `open_decision`: `"OPEN_READY"` (gate holds, PR opens ready) or `"WITHHOLD"` (gate fails, PR stays unopened).
+- `blocking_predicate`: `"deterministic-verification"`, `"local-review"`, or `"none"`.
 
-`open_decision` reports the gate verdict: `OPEN_READY` opens the PR `ready_for_review`; `WITHHOLD` keeps it unopened. `blocking_predicate` reports which predicate drove a withhold (`deterministic-verification` or `local-review`), or `none` when the gate holds. The grader checks both together — `OPEN_READY` paired with `none` is correct when both predicates hold; `WITHHOLD` paired with `none` is wrong, because the gate withholds only on a named failing predicate. The coupling ensures the model identifies WHY the gate withheld rather than guessing the verdict.
+The grader checks both together — `OPEN_READY` paired with `none` is correct when both predicates hold; `WITHHOLD` paired with `none` is wrong, because the gate withholds only on a named failing predicate.

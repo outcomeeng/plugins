@@ -28,13 +28,9 @@ The gate-state input (JSON-encoded):
 {input_json}
 ```
 
-Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
+Verdict schema — two fields, both mandatory:
 
-```
-{
-  "merge_readiness": "HOLD" | "WITHHOLD",
-  "blocking_predicate": "review-valid-finding" | "check-not-terminal-green" | "branch-hygiene" | "none"
-}
-```
+- `merge_readiness`: `"HOLD"` (merge predicates satisfied) or `"WITHHOLD"` (at least one unmet).
+- `blocking_predicate`: `"review-valid-finding"`, `"check-not-terminal-green"`, `"branch-hygiene"`, or `"none"`.
 
-`merge_readiness` reports the gate verdict: `HOLD` means the merge predicates are satisfied; `WITHHOLD` means at least one is unmet. `blocking_predicate` reports which predicate drove a withhold, or `none` when the gate holds. The grader checks both together — `HOLD` paired with `none` is correct when no valid finding remains, every other check is terminal-green, and branch hygiene plus PR state hold; `WITHHOLD` paired with `none` is wrong, because the gate withholds only on a named failing predicate. The coupling ensures the model identifies WHY the gate withheld rather than guessing the verdict.
+The grader checks both together — `HOLD` paired with `none` is correct when all predicates hold; `WITHHOLD` paired with `none` is wrong, because the gate withholds only on a named failing predicate.

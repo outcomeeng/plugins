@@ -26,13 +26,9 @@ The single required check (JSON-encoded):
 {input_json}
 ```
 
-Your **entire response** must be exactly one JSON document — no prose, no markdown fences, no commentary before or after — in this exact shape:
+Verdict schema — two fields, both mandatory:
 
-```
-{
-  "terminal_green": true | false,
-  "classification": "terminal-green" | "not-terminal" | "terminal-not-success" | "absent"
-}
-```
+- `terminal_green`: `true` only for the `terminal-green` classification, `false` for the other three.
+- `classification`: one of `"terminal-green"`, `"not-terminal"`, `"terminal-not-success"`, `"absent"`.
 
-`terminal_green` is `true` only for the `terminal-green` classification and `false` for the other three. The grader checks both together — `terminal_green: true` must pair with `classification: "terminal-green"`, and `terminal_green: false` must pair with one of the blocking classifications. The coupling ensures the model names WHY a check does or does not satisfy the predicate rather than emitting a bare boolean.
+The grader checks both together — `terminal_green: true` must pair with `classification: "terminal-green"`, and `terminal_green: false` must pair with one of the blocking classifications.
