@@ -22,7 +22,7 @@ Remaining before this plan is resolved:
 Deferred follow-ups (tracked in `ISSUES.md`, out of scope for the first cut):
 the 4 reviewing-changes evals and the 1 typescript eval (per-eval plugin-dir
 mapping the `eval.toml` does not yet declare), a CLI `--model` pin, the CLI
-`--bare` opt-in, and the `just eval-run` recipe naming.
+`--bare` / `--no-bare` CLI overrides (the env-derive default makes the common case automatic; the CLI overrides are deferred until either case surfaces), and the `just eval-run` recipe naming.
 
 ## References
 

@@ -1,18 +1,24 @@
 """Model runners that produce assistant messages for an eval prompt.
 
 ``ClaudeCliRunner`` shells out to ``claude --print --output-format json``
-by default. The default invocation lets ``claude`` auto-discover ambient
-``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md`` and accepts any auth
-source ``claude`` supports (``CLAUDE_CODE_OAUTH_TOKEN``,
-``ANTHROPIC_API_KEY``, ``apiKeyHelper``), so CI canonicalizes the run
-with its empty discovery surface and the ``CLAUDE_CODE_OAUTH_TOKEN`` job
-secret. Setting ``bare=True`` adds ``--bare`` to the invocation, which
-enforces discovery isolation but restricts auth to ``ANTHROPIC_API_KEY``
-or ``apiKeyHelper``. Each call is a single bounded subprocess invocation;
-no polling, no streaming watchers. The runner strips ``CLAUDECODE`` from
-the inherited environment so nested invocations from inside a Claude
-Code session use the subprocess contract rather than the interactive
-guard.
+and derives ``--bare`` from the inherited environment by default. When
+``ANTHROPIC_API_KEY`` is set the runner passes ``--bare`` — the auth
+source is ``--bare``-compatible, so discovery isolation from ambient
+``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md`` is taken. When only
+``CLAUDE_CODE_OAUTH_TOKEN`` (or ``apiKeyHelper``, or an OAuth login
+session) is available the runner omits ``--bare`` because ``--bare``
+would reject that auth source. Callers may force the flag on or off by
+passing ``bare=True`` or ``bare=False`` to the constructor; the default
+``bare=None`` is derivation.
+
+CI sets ``ANTHROPIC_API_KEY`` from the job secret so its eval
+invocations run isolated. A developer with ``ANTHROPIC_API_KEY``
+exported gets the same isolation locally without further setup.
+
+Each call is a single bounded subprocess invocation; no polling, no
+streaming watchers. The runner strips ``CLAUDECODE`` from the inherited
+environment so nested invocations from inside a Claude Code session use
+the subprocess contract rather than the interactive guard.
 
 Test fakes (stubs, recorders) live in ``outcomeeng_evals.testing.fakes``.
 """
@@ -69,11 +75,11 @@ class ClaudeCliRunner:
     binary: str = "claude"
     max_budget_usd: float | None = 0.50
     timeout_seconds: float = 120.0
-    bare: bool = False
+    bare: bool | None = None
 
     def run(self, prompt: str) -> RunResult:
         argv = [self.binary]
-        if self.bare:
+        if self._effective_bare():
             argv.append("--bare")
         argv.extend(
             [
@@ -110,6 +116,21 @@ class ClaudeCliRunner:
             metadata=_metadata_from_envelope(envelope, wall_clock_ms),
         )
 
+    def _effective_bare(self) -> bool:
+        """Return True iff ``--bare`` should be added to the argv.
+
+        ``bare=True`` or ``bare=False`` is an explicit caller override.
+        ``bare=None`` (the default) derives from the inherited environment:
+        ``--bare`` only when ``ANTHROPIC_API_KEY`` is set, because that is
+        the only ``--bare``-compatible auth source ``claude`` accepts
+        without ambient discovery. Under OAuth (``CLAUDE_CODE_OAUTH_TOKEN``
+        or an OAuth login session), ``--bare`` would reject the auth and
+        the call would fail before grading.
+        """
+        if self.bare is not None:
+            return self.bare
+        return "ANTHROPIC_API_KEY" in os.environ
+
 
 def _subprocess_env() -> dict[str, str]:
     """Return a copy of the parent env with the Claude Code nesting guard removed.
@@ -124,11 +145,14 @@ def _subprocess_env() -> dict[str, str]:
     path instead of the print-mode subprocess contract. Do not narrow
     this in a future refactor.
 
-    In CI, the job supplies ``CLAUDE_CODE_OAUTH_TOKEN`` through the
-    environment and it reaches the subprocess by this same pass-through.
-    Other job-level secrets (deployment tokens, cloud credentials) are
-    forwarded too; that is acceptable — ``claude`` consumes only what it
-    needs. The env is not narrowed to an allow-list because an
+    In CI, the job supplies ``ANTHROPIC_API_KEY`` (and may also supply
+    ``CLAUDE_CODE_OAUTH_TOKEN``) through the environment and both reach
+    the subprocess by this same pass-through. ``ANTHROPIC_API_KEY``
+    triggers the derived ``--bare`` in ``ClaudeCliRunner._effective_bare``,
+    so the CI run executes isolated from ambient discovery. Other
+    job-level secrets (deployment tokens, cloud credentials) are
+    forwarded too; that is acceptable — ``claude`` consumes only what
+    it needs. The env is not narrowed to an allow-list because an
     ``apiKeyHelper`` is an arbitrary command that may read arbitrary
     inherited variables of its own, so an allow-list cannot safely
     predict what authentication needs.
