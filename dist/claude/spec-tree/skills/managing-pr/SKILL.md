@@ -19,7 +19,7 @@ Walk these steps on every heartbeat fire. Routine steps — inspect, classify, r
 **Step 1 — Identify the PR.**
 
 ```bash
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision
+gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 ```
 
 **Step 2 — Inspect three surfaces and check base drift.** Run /standardizing-merging `<review_inspection>` queries. Compare timestamps against the most recent push; entries after that push are re-reviews of the latest state. In the same checkpoint, fetch `origin/<base>` and determine whether the branch is behind it — review state and base drift are read together so the rebase can proceed during the wait for reviews, not only after they land.
@@ -86,7 +86,7 @@ For pre-flight, branch topology, push semantics, base sync, the authority gates,
 
 ```bash
 # PR identity
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision
+gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 
 # Checks (one-shot — NEVER --watch per /standardizing-merging <heartbeat> and /tracking-tasks)
 gh pr checks <pr-number>

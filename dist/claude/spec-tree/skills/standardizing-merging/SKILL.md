@@ -168,7 +168,7 @@ The PR lifecycle has three gates, evaluated in order, from `spx/15-agent-pr-auth
 
 **`REVIEW_READINESS`** authorizes opening the PR. It holds when both predicates hold:
 
-- **deterministic verification passes** — the project's full validation-and-testing command (named in `spx/local/merging.md`) reports success; and
+- **deterministic verification passes** — the project's full validation-and-testing command (named in `spx/local/merging.md`) reports success. A failing test in the suite means this predicate does not hold, including a TDD-red opener authored intentionally ahead of an implementation slice. The remedy is either land the implementation in the same PR so the test passes, or add the owning node to the project's spec-tree EXCLUDE mechanism (for example `spx/EXCLUDE`) so the test runner skips the node until implementation arrives. See `references/excluded-nodes.md` in `/understanding`. Per-line suppression (`# noqa`, `# type: ignore`, `@pytest.mark.skipif`, `@pytest.mark.xfail`, equivalents in other languages) does not satisfy this predicate because those suppressions are scattered and invisible to the spec-tree status surface; and
 - **the local review has converged** — `reviewing-changes` (via the `changes-reviewer` agent or `/review-changes`), invoked at parity per `<local_review_invocation>` and iterated to convergence, leaves no valid finding unaddressed: each is fixed in the diff, or split out of the changeset and captured in the owning node's `ISSUES.md` / `PLAN.md`. An unbacked finding is dropped.
 
 The moment `REVIEW_READINESS` holds, the PR is created `ready_for_review` — never draft (a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges). There is no draft phase and no gated promotion; opening ready fires every CI review at once (reviewers that wait for ready, such as Codex, alongside the CI `spec-tree-review`).
@@ -222,6 +222,8 @@ gh pr view <pr-number> --json reviews,comments \
 gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
   --jq '.[] | {author: .user.login, path, line, createdAt: .created_at, excerpt: .body[0:160]}'
 ```
+
+**NEVER drop `comments` from the `gh pr view --json` argument list.** The `comments` field carries PR-level issue comments — a distinct surface from `reviews` (formal review submissions) and from `gh api repos/<owner>/<repo>/pulls/<n>/comments` (review-thread comments tied to specific lines). Dropping `comments` to "trim the JSON" silently loses that third surface; a valid `BLOCKING` or `DEBT` finding posted there is invisible to the inspection, and `MERGE_READINESS` evaluates against a partial view. Whatever field list a calling flow constructs — it may add `statusCheckRollup`, `headRefOid`, `baseRefName`, `mergeable`, `mergeStateStatus`, or others for the merge-state predicates — `comments` MUST appear in it on every heartbeat. Construct the field list explicitly per heartbeat; do not omit fields from an abbreviated re-creation between turns.
 
 Compare timestamps against the most recent push. Entries after that push are re-reviews of the latest state — read them in full.
 
@@ -293,6 +295,18 @@ Track under: <ISSUES.md file or product-specific issue tracker>
 
 </review_classification>
 
+<auditor_verdicts>
+
+Local auditor agents — `spec-tree:test-evidence-auditor`, `spec-tree:pdr-auditor`, `spec-tree:auditor`, and the auditor agent that matches each installed language plugin (for example `<language>:<language>-code-auditor`, `<language>:<language>-test-auditor`, `<language>:<language>-architecture-auditor`, plus any language-specific specialized auditor that plugin declares) — emit structured findings for the slice they inspect.
+
+**Verdict handling.** A `REJECTED` overall verdict, an `UNKNOWN` overall verdict, a `FAIL` row, an `UNKNOWN` row, or a `REJECT` finding is in-slice unresolved work, identical in handling to a valid `BLOCKING` or `DEBT` finding in `<review_classification>`: fix the bug or resolve the audit uncertainty, re-run the auditor, repeat until clean. `APPROVED` means the auditor found nothing in scope. "Capture in `ISSUES.md`" is NOT an option for rejected or unknown in-slice audit work on a slice currently under review — `ISSUES.md` is for items genuinely outside the slice (a known gap in an unrelated module, a tracking note for future enablement), never for in-slice bugs or audit uncertainty the auditor surfaced.
+
+**Why auditor verdicts are authoritative.** Auditor agents invoke the same auditing skills the operator would invoke directly; each verdict is the auditing skill's structured output for its specific concern, not a separate discretionary decision. CI green and reviewer-bot approval do not erase an auditor REJECT because auditing and reviewing inspect different concerns: test evidence, PDR quality, architectural fitness, or language-specific code quality.
+
+**Loop semantics.** When an invoked workflow surfaces auditor verdicts while preparing or repairing a PR, handle every `REJECTED` or `UNKNOWN` overall verdict, `FAIL` or `UNKNOWN` row, and `REJECT` finding as in-slice work under `<review_classification>`: fix it or resolve the audit uncertainty, re-run the auditor, and repeat until no rejected or unknown in-slice audit work remains. `APPROVED` means the auditor found nothing in its scope. Auditor findings do not add a fourth PR-lifecycle gate and do not change the `MERGE_READINESS` predicate set in `<authority_gates>`.
+
+</auditor_verdicts>
+
 <action_tokens>
 
 The managing flow emits exactly one of these tokens per heartbeat pass when no autonomous action fires. An autonomous fire — the merge under `MERGE_READINESS ∧ PRODUCTION_READINESS` — runs the command directly and does not emit a token. A routine `<base_sync>` rebase likewise runs directly and emits no token of its own; only a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE`.
@@ -328,8 +342,9 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - Both `REVIEW_READINESS` predicates — deterministic verification and a converged local review — are re-established on the diff every push publishes: the opening push and every follow-up push, including after a `<base_sync>` rebase.
 - The local `reviewing-changes` gate is invoked per `<local_review_invocation>` — only the repository/worktree and diff range are passed, with no interpretive scope, severity pre-filter, or emphasis steering.
 - Waiting for CI, review, or checks is delegated to runtime tracking per `<heartbeat>` and using the skill `/tracking-tasks`.
-- All three surfaces in `<review_inspection>` are inspected after every push.
+- All three surfaces in `<review_inspection>` are inspected after every push, with `comments` always present in the `gh pr view --json` field list.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
+- Every auditor verdict from a local auditor agent (per `<auditor_verdicts>`) is handled as an in-slice finding; `REJECTED` or `UNKNOWN` overall verdicts, `FAIL` or `UNKNOWN` rows, and `REJECT` findings are fixed or resolved in the slice, not deferred to `ISSUES.md`.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no valid finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
 - Merge runs via rebase merge with inline branch deletion (`gh pr merge --rebase --delete-branch`) unless the overlay declares a different command — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; the agent does not enforce it), not the agent's choice from the gate alone.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`.
