@@ -21,7 +21,7 @@ A PDR missing any property is a declaration that nothing enforces — the produc
 
 ## Content Classification Model
 
-The `/auditing-product-decisions` skill in the spec-tree plugin classifies every statement in the PDR:
+The `/audit-pdr` skill in the spec-tree plugin classifies every statement in the PDR:
 
 | Content type                | Belongs in      | Finding if in PDR                        |
 | --------------------------- | --------------- | ---------------------------------------- |
@@ -54,12 +54,13 @@ Downstream: no spec assertion references this rule ✗ — unenforced
 
 ### Scenarios
 
-- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/auditing-product-decisions`, then the verdict is REJECT with finding category "architecture content" ([test](tests/test_pdr_auditing.scenario.l1.py))
+- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture content" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR with product invariants that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable invariant" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR with compliance rules that no spec in the governed subtree references, when audited, then the verdict is REJECT with finding category "unenforced rule" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal voice" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency violation" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR where all six properties hold, when audited, then the verdict is APPROVED ([test](tests/test_pdr_auditing.scenario.l1.py))
+- Given a PDR whose `property`-floor compliance rule resolves only to a `scenario` spec assertion, when audited by `/audit-pdr`, then the verdict is REJECT with finding category "insufficient-evidence-mode" ([eval](evals/mode-floor/eval.toml))
 
 ### Properties
 
@@ -67,7 +68,7 @@ Downstream: no spec assertion references this rule ✗ — unenforced
 
 ### Conformance
 
-- The `/auditing-product-decisions` skill invokes `/contextualizing` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.conformance.l1.py))
+- The `/audit-pdr` skill invokes `/contextualizing` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.conformance.l1.py))
 
 ### Compliance
 
@@ -75,4 +76,5 @@ Downstream: no spec assertion references this rule ✗ — unenforced
 - ALWAYS: search the governed subtree for spec assertions referencing each compliance rule — unenforced rules are the PDR equivalent of tautological tests ([review])
 - ALWAYS: verify product invariants are observable from the user's perspective, not from the implementation's perspective ([review])
 - NEVER: approve a PDR whose compliance rules have zero downstream assertions — a declaration that nothing enforces is not a product decision ([review])
+- NEVER: approve a PDR whose downstream spec assertion carries evidence below the rule's declared mode — a scenario test under a property-floor rule is a finding, not a judgment call ([review])
 - NEVER: approve temporal language in any section — Context, Decision, Rationale, Trade-offs, Compliance all state product truth ([review])
