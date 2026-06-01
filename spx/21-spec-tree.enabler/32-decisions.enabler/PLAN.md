@@ -68,11 +68,12 @@ Evidence for the assertions that govern `audit-adr` / `audit-pdr`'s own behavior
 
 1. `spec-tree:understanding`
 2. `spec-tree:contextualizing` on `spx/21-spec-tree.enabler/32-decisions.enabler`
-3. `spec-tree:authoring` for the new adr-auditing node, the `pdr-auditing.md` mode-floor assertion, and the `decisions.md` lifecycle assertion
-4. `develop:creating-skills` for `audit-adr`; `develop:standardizing-skills` for the `audit-pdr` rename (after the repo-local naming overlay lands)
-5. `develop:creating-subagents` for the two wrapper agents
-6. `audit-pdr` (the renamed skill) to self-audit the amended decision specs
-7. `spec-tree:committing-changes`
+3. Create `spx/local/standardizing-skills.md` (Change 6) authorizing imperative form for standalone audit skills in this marketplace — prerequisite for the step 5 rename so `/auditing-skills` does not flag `audit-adr` / `audit-pdr`
+4. `spec-tree:authoring` for the new adr-auditing node, the `pdr-auditing.md` mode-floor assertion, and the `decisions.md` lifecycle assertion
+5. `develop:creating-skills` for `audit-adr`; `develop:standardizing-skills` for the `audit-pdr` rename (after the step 3 naming overlay lands)
+6. `develop:creating-subagents` for the two wrapper agents
+7. `audit-pdr` (the renamed skill) to self-audit the amended decision specs
+8. `spec-tree:committing-changes`
 
 ## Audit gates
 

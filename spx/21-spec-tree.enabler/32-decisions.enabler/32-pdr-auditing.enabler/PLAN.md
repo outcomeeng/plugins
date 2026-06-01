@@ -39,7 +39,7 @@ The existing downstream-flow assertions verify each compliance rule resolves to 
 1. `spec-tree:understanding`
 2. `spec-tree:contextualizing` on `spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler`
 3. `spec-tree:authoring` for the mode-floor assertion
-4. `develop:standardizing-skills` for the rename (after the repo-local naming overlay lands)
+4. `develop:standardizing-skills` for the rename — only after the repo-local naming overlay `spx/local/standardizing-skills.md` lands (created in the parent plan `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` step 3; complete that step first)
 5. `develop:creating-subagents` for the renamed agent
 6. `audit-pdr` (the renamed skill) to self-audit `pdr-auditing.md`
 7. `spec-tree:committing-changes`
