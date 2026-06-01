@@ -12,7 +12,7 @@ This node governs the PDR audit. The rename to `audit-pdr` and the new mode-floo
 
 ### 2. Update this node's references to the old skill name
 
-`pdr-auditing.md` names `/auditing-product-decisions` in the Content Classification prose (line 24), three scenario assertions (lines 57–62), and the conformance assertion (line 70). Update each to `/audit-pdr`. Update the same references inside `tests/test_pdr_auditing.*.py` bodies.
+`pdr-auditing.md` names `/auditing-product-decisions` in the Content Classification prose (line 24), one scenario assertion (line 57), and the conformance assertion (line 70). The other scenarios (lines 58–62) use the `when audited` shorthand and carry no skill-name reference. Update the three explicit occurrences to `/audit-pdr`, and the same references inside `tests/test_pdr_auditing.*.py` bodies.
 
 ### 3. Add the mode-floor downstream-sufficiency assertion
 

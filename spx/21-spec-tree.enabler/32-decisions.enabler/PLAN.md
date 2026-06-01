@@ -54,7 +54,7 @@ Evidence for the assertions that govern `audit-adr` / `audit-pdr`'s own behavior
 ## Files
 
 - new node: `spx/21-spec-tree.enabler/32-decisions.enabler/NN-adr-auditing.enabler/` (spec + `tests/`) via `/authoring`
-- update: `spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/pdr-auditing.md` — `/auditing-product-decisions` → `/audit-pdr` (assertions at lines 24, 57–62, 70) + mode-floor assertion
+- update: `spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/pdr-auditing.md` — `/auditing-product-decisions` → `/audit-pdr` (prose at line 24, scenario at line 57, conformance at line 70) + mode-floor assertion
 - update: `spx/21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler/tests/` — `/auditing-product-decisions` references inside the test bodies
 - new: `src/plugins/spec-tree/skills/audit-adr/` (SKILL.md, references, `scripts/` arbiter as needed)
 - rename: `src/plugins/spec-tree/skills/auditing-product-decisions/` → `audit-pdr/`
