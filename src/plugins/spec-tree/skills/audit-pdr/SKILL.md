@@ -1,6 +1,7 @@
 ---
 name: audit-pdr
 description: Use when asked by the user to invoke the PDR audit skill
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 <objective>
