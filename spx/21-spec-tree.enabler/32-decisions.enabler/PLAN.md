@@ -39,7 +39,7 @@ Add assertions to `decisions.md`:
 - ALWAYS: the decision-record audit verifies each rule resolves to a downstream spec assertion whose evidence meets or exceeds the declared mode (extends the existing downstream-flow assertion from presence to sufficiency).
 - Existence + conformance assertions for `audit-adr` and `audit-pdr`.
 
-Open question for review: assertions about `audit-adr` / `audit-pdr` LLM behavior may require `[eval]` evidence per `spx/15-spec-coverage.adr.md` rather than `[review]`. Resolve during authoring; do not pre-create a speculative child node.
+Evidence mode by assertion class, per `spx/15-spec-coverage.adr.md` (not an open choice): assertions about `audit-adr` / `audit-pdr` LLM judgment behavior take `[eval]` — the skills emit structured verdicts, so the ADR mandates eval evidence over `[review]`; structural-conformance assertions (verdict-schema validity, JSON emission) take `[test]`; design or intent assertions take `[review]`. Resolve the eval-case file paths during `/authoring`; do not pre-create a speculative child node.
 
 ## Files
 
