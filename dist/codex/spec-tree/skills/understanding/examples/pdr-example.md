@@ -38,10 +38,10 @@ All CLI commands execute successfully without network access or API keys.
 
 ### MUST
 
-- Present the OSS tier as the full core toolchain — users can do all individual work without paying
-- Document all CLI features in the open-source documentation
+- Present the OSS tier as the full core toolchain — users can do all individual work without paying ([compliance])
+- Document all CLI features in the open-source documentation ([conformance])
 
 ### NEVER
 
-- Gate CLI functionality behind authentication — breaks trust positioning
-- Reference commercial-only features in CLI help text — creates confusion about what's available
+- Gate CLI functionality behind authentication — breaks trust positioning ([property])
+- Reference commercial-only features in CLI help text — creates confusion about what's available ([compliance])

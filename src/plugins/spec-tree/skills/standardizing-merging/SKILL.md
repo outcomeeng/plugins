@@ -297,7 +297,7 @@ Track under: <ISSUES.md file or product-specific issue tracker>
 
 <auditor_verdicts>
 
-Local auditor agents — `spec-tree:test-evidence-auditor`, `spec-tree:pdr-auditor`, `spec-tree:auditor`, and the auditor agent that matches each installed language plugin (for example `<language>:<language>-code-auditor`, `<language>:<language>-test-auditor`, `<language>:<language>-architecture-auditor`, plus any language-specific specialized auditor that plugin declares) — emit structured findings for the slice they inspect.
+Local auditor agents — `spec-tree:test-evidence-auditor`, `spec-tree:audit-adr`, `spec-tree:audit-pdr`, `spec-tree:auditor`, and the auditor agent that matches each installed language plugin (for example `<language>:<language>-code-auditor`, `<language>:<language>-test-auditor`, `<language>:<language>-architecture-auditor`, plus any language-specific specialized auditor that plugin declares) — emit structured findings for the slice they inspect.
 
 **Verdict handling.** A `REJECTED` overall verdict, an `UNKNOWN` overall verdict, a `FAIL` row, an `UNKNOWN` row, or a `REJECT` finding is in-slice unresolved work, identical in handling to a valid `BLOCKING` or `DEBT` finding in `<review_classification>`: fix the bug or resolve the audit uncertainty, re-run the auditor, repeat until clean. `APPROVED` means the auditor found nothing in scope. "Capture in `ISSUES.md`" is NOT an option for rejected or unknown in-slice audit work on a slice currently under review — `ISSUES.md` is for items genuinely outside the slice (a known gap in an unrelated module, a tracking note for future enablement), never for in-slice bugs or audit uncertainty the auditor surfaced.
 

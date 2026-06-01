@@ -38,10 +38,10 @@ Status values appear only in CLI output and computed data structures, never in c
 
 ### MUST
 
-- Compute status fresh on every invocation — ensures accuracy
-- Use only test pass/fail as input — no other signals
+- Compute status fresh on every invocation — ensures accuracy ([property])
+- Use only test pass/fail as input — no other signals ([mapping])
 
 ### NEVER
 
-- Store status in any committed file — prevents drift
-- Allow manual status override — defeats the derivation principle
+- Store status in any committed file — prevents drift ([compliance])
+- Allow manual status override — defeats the derivation principle ([scenario])

@@ -1,11 +1,12 @@
 ---
-name: auditing-product-decisions
+name: audit-pdr
 description: Use when asked by the user to invoke the PDR audit skill
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 <objective>
 
-Audit whether a PDR establishes enforceable product decisions that flow into spec assertions. Six properties must hold — content classification, invariant quality, compliance quality, atemporal voice, consistency, downstream flow — checked in strict order. A PDR missing any property is a declaration that nothing enforces.
+Audit whether a PDR establishes enforceable product decisions that flow into spec assertions. Six properties must hold — content classification, invariant quality, per-rule mode validity, atemporal voice, consistency, downstream sufficiency — checked in strict order. A PDR missing any property is a declaration that nothing enforces.
 
 Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
 
@@ -16,7 +17,7 @@ Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evi
 **PREREQUISITE**: Invoke `/contextualizing` on the PDR's parent directory.
 
 1. Read the PDR under audit
-2. Check six properties in order: content → invariants → compliance → voice → consistency → downstream
+2. Check six properties in order: content → invariants → mode validity → voice → consistency → downstream sufficiency
 3. First property failure = REJECT (skip remaining properties)
 4. All six properties hold = APPROVED
 
@@ -110,15 +111,14 @@ For each product invariant:
 
 <step name="audit_compliance">
 
-**Step 3c: Compliance quality**
+**Step 3c: Per-rule mode validity**
 
 For each MUST/NEVER rule:
 
-1. Is it verifiable by product review, automated test, or automated enforcement?
-2. Does it have a `([review])` or `([test](...))` tag?
-3. Is it specific enough that two reviewers would agree on pass/fail?
+1. Does it carry exactly one per-rule evidence-mode tag naming one of `scenario`, `mapping`, `conformance`, `property`, `compliance`? The tag is the claim-shape mode chosen via `/testing`, not a bare mechanism (`([review])`/`([test])`/`([eval])`). Do not re-derive the mode — only validate the tag.
+2. Is the rule specific enough that two reviewers would agree on pass/fail?
 
-**Unverifiable or untagged compliance rule → REJECT — "unverifiable rule."**
+**A rule with no mode tag, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -156,9 +156,9 @@ Compare the PDR against:
 
 <step name="audit_downstream">
 
-**Step 3f: Downstream flow**
+**Step 3f: Downstream flow and mode-floor sufficiency**
 
-For each compliance rule in the PDR, search the governed subtree for spec assertions that reference or implement the rule.
+For each compliance rule in the PDR, search the governed subtree for the spec assertion(s) that enforce it, then compare each enforcing assertion's evidence against the rule's declared mode.
 
 ```bash
 # Find specs in the governed subtree
@@ -171,19 +171,23 @@ Grep: pattern matching the PDR's MUST/NEVER rule text or PDR filename
 Report flow status for each rule:
 
 ```text
-MUST: "all pages load in under 2 seconds" ([review])
-→ Referenced by: spx/.../21-performance.outcome assertions ✓
+MUST: "search results appear within 500ms" ([property])
+→ property assertion in spx/.../21-performance.outcome ✓ (meets the floor)
 
-NEVER: "expose internal IDs in URLs" ([test](tests/url-safety.compliance.l1.test.ts))
-→ Referenced by: spx/.../21-url-safety.outcome assertions ✓
+NEVER: "expose internal IDs in URLs" ([scenario])
+→ scenario assertion in spx/.../21-url-safety.outcome ✓ (meets the floor)
 
-NEVER: "use branded terminology in error messages" ([review])
-→ Referenced by: (none) ✗ — unenforced
+MUST: "reject every unsupported export format" ([property])
+→ only a scenario assertion in spx/.../32-export.outcome ✗ — below the property floor
 ```
 
-**Any compliance rule with zero downstream assertions → REJECT — "unenforced rule."**
+| Outcome                                                                        | Finding                      |
+| ------------------------------------------------------------------------------ | ---------------------------- |
+| No downstream assertion                                                        | "unenforced-rule"            |
+| Downstream evidence below the declared mode (e.g. `scenario` under `property`) | "insufficient-evidence-mode" |
+| Downstream evidence at or above the declared mode                              | PASS                         |
 
-A compliance rule — whether tagged `[review]` or `[test]` — still needs a downstream spec assertion. The tag means "this is how it's verified" — but if no spec declares the behavior, there's nothing to verify against.
+**Any rule unenforced or under-enforced → REJECT.** Presence alone is insufficient: a `property`-floor rule enforced only by a `scenario` assertion is a finding, not a judgment call.
 
 </step>
 
@@ -206,22 +210,22 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 ```json
 {
   "schema_version": 1,
-  "skill": "auditing-product-decisions",
+  "skill": "audit-pdr",
   "target": "<pdr-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "invariant-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "compliance-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "downstream-flow", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "downstream-sufficiency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `unenforced-rule`, `temporal-language`); the `message` field carries the one-line detail. Unenforced declarations enumerate each compliance rule that has no downstream spec assertion as one finding under `downstream-flow`.
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `unenforced-rule`, `insufficient-evidence-mode`, `temporal-language`); the `message` field carries the one-line detail. The `downstream-sufficiency` row enumerates each compliance rule with no downstream spec assertion (`unenforced-rule`) or whose downstream evidence falls below the declared mode (`insufficient-evidence-mode`).
 
 </verdict_format>
 
@@ -255,10 +259,10 @@ Audit is complete when:
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
 - [ ] Invariant quality: each invariant checked for observability and falsifiability
-- [ ] Compliance quality: each rule checked for verifiability and tagging
+- [ ] Per-rule mode validity: each rule's evidence-mode tag validated against the five modes
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
-- [ ] Downstream flow: each compliance rule searched in governed subtree
+- [ ] Downstream sufficiency: each rule's enforcing assertion checked at or above the declared mode
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 

@@ -57,7 +57,7 @@ If gate fails, re-run `/understanding` and `/contextualizing` before continuing.
 
 **GATE 1**: Before writing tests, verify:
 - [ ] Architecture audit (`/auditing-<lang>-architecture`) returns APPROVED for every ADR touched
-- [ ] PDR audit (`/auditing-product-decisions`) returns APPROVED if a PDR governs this subtree
+- [ ] PDR audit (`/audit-pdr`) returns APPROVED if a PDR governs this subtree
 If a higher-layer artifact rejects, fix it before descending — the spec depends on the decision, not the other way around.
 
 4. Write tests driven by spec assertions (`/testing`).

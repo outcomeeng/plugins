@@ -217,6 +217,15 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 `@given` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
 </property_based_testing>
 
+<boundary_validation>
+An assertion that a field, parser, or constructor rejects values outside a predicate routes by the shape of the invalid set, not by a hand-picked bag of bad inputs.
+
+- Open or infinite invalid space — arbitrary strings, identifiers, timestamps, keys, generated names — is a `property` claim. The evidence is a Hypothesis strategy generating values outside the valid predicate (for example `st.text().filter(lambda s: not s.isidentifier())`), asserting rejection across the generated domain.
+- Closed, source-owned invalid set — enum variants, a defined protocol set, registry members — is a `mapping` claim. The evidence parameterizes over every source-owned invalid member, imported from the owning module, never hand-copied.
+
+A `property`-floor rejection rule is not satisfied by a finite parametrize over a hand-picked subset of an open space. Mode selection is `/testing`'s authority (see the boundary-validation router in `/testing`'s methodology); this standard teaches only the Python expression of that router's output.
+</boundary_validation>
+
 <anti_patterns>
 Reject or rewrite these patterns:
 
@@ -226,6 +235,7 @@ Reject or rewrite these patterns:
 - Framework mocks replacing the dependency under test
 - Property claims implemented only with examples
 - Hand-picked test cases — the author chose the input because it "seemed reasonable to exercise the code"; every future run confirms the author's understanding rather than the spec assertion
+- `INVALID_*_INPUTS` / `INVALID_*_CASES` tuples, or any module- or class-scope bag of invalid values — a hand-picked set standing in for the invalid domain. Remedy by domain: an open or infinite invalid space (arbitrary strings, identifiers, timestamps, keys, generated names) takes a Hypothesis strategy generating values *outside* the valid predicate; a closed, source-owned invalid set (enum variants, a defined protocol set, registry members) imports the source enum or registry rather than hand-copying members
 - Source-owned values copied into local constants
 - Test-file-local constants for values the production module owns
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer

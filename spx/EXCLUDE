@@ -7,6 +7,7 @@
 13-infrastructure.enabler/21-test-infrastructure.enabler/21-python-code-quality.enabler
 21-spec-tree.enabler/18-context-loading.enabler
 21-spec-tree.enabler/21-templates.enabler
+21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler
 21-spec-tree.enabler/32-decisions.enabler/32-pdr-auditing.enabler
 21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler
 21-spec-tree.enabler/43-update-spx.enabler
