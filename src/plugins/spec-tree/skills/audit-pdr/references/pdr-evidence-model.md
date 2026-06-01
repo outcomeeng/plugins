@@ -81,7 +81,7 @@ Product invariants are guarantees users can rely on. They must be:
 Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 
 1. **Verifiability** — can a reviewer, test, or lint rule determine pass/fail?
-2. **Tagging** — `([review])` for human/agent review, `([test](...))` for automated verification (including tests that exercise a lint rule)
+2. **Mode tag** — exactly one per-rule evidence-mode tag naming one of `scenario`, `mapping`, `conformance`, `property`, `compliance`, chosen via `/testing` from the rule's claim shape — never a bare mechanism (`([review])`/`([test])`/`([eval])`)
 3. **Specificity** — two independent reviewers would agree on the verdict
 
 **Good compliance rules:**
@@ -89,13 +89,13 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 ```markdown
 ### MUST
 
-- All text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([review])
-- Export files conform to RFC 4180 CSV format ([test](tests/test_export.compliance.l1.py))
+- All text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([property])
+- Export files conform to RFC 4180 CSV format ([conformance])
 
 ### NEVER
 
-- Expose internal database IDs in user-facing URLs ([test](tests/test_url_safety.compliance.l1.py))
-- Display raw error messages from backend services to users ([review])
+- Expose internal database IDs in user-facing URLs ([property])
+- Display raw error messages from backend services to users ([compliance])
 ```
 
 **Bad compliance rules:**
@@ -115,21 +115,22 @@ Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
 
 **Fixing bad rules:**
 
-- "Follow accessibility best practices" → "Meet WCAG 2.1 Level AA for all interactive components ([review])"
-- "Be fast" → "API responses return within 200ms at p95 under normal load ([test](tests/test_performance.compliance.l3.py))"
+- "Follow accessibility best practices" → "Meet WCAG 2.1 Level AA for all interactive components ([compliance])"
+- "Be fast" → "API responses return within 200ms at p95 under normal load ([property])"
 
 </compliance_quality>
 
 <downstream_flow>
 
-The critical property. A compliance rule that no spec assertion references is an unenforced declaration.
+The critical property. A compliance rule needs both presence (some spec assertion enforces it) and sufficiency (that assertion's evidence meets or exceeds the rule's declared mode). A rule with no enforcing assertion is `unenforced-rule`; a rule whose downstream evidence falls below its declared mode is `insufficient-evidence-mode`.
 
 **Verification procedure:**
 
-1. List every MUST/NEVER rule in the PDR
+1. List every MUST/NEVER rule in the PDR with its declared mode
 2. Determine the governed subtree (all specs below the PDR's location in the tree)
-3. For each rule, search the subtree for assertions that implement or reference it
-4. Report flow status
+3. For each rule, search the subtree for assertions that enforce it
+4. Compare each enforcing assertion's evidence against the rule's declared mode
+5. Report flow status: unenforced, insufficient-evidence-mode, or sufficient
 
 **What counts as "referenced":**
 
