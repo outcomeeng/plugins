@@ -34,14 +34,16 @@ Only include if this decision establishes algebraic properties. Omit the section
 
 Only include subsections that apply. Omit empty subsections.
 
+Each MUST/NEVER rule carries a single evidence-mode tag `([{mode}])` — one of `scenario`, `mapping`, `conformance`, `property`, or `compliance` — chosen by routing the rule's claim shape through `/testing`. The mode is the minimum evidence the downstream spec assertion that enforces the rule must carry; it is a claim-shape classification, not a test reference, so it carries no path.
+
 ### Recognized by
 
 {Observable patterns indicating code is compliant with this decision}
 
 ### MUST
 
-- {rule} — {why this follows from the decision} ([review])
+- {rule} — {why this follows from the decision} ([{mode}])
 
 ### NEVER
 
-- {prohibition} — {why this violates the decision} ([review])
+- {prohibition} — {why this violates the decision} ([{mode}])
