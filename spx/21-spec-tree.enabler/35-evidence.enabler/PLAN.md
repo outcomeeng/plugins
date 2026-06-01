@@ -45,6 +45,7 @@ No agent hand-picks a mode. The decision-record author runs `/testing` on each c
 
 - `spx validation markdown` for the methodology + spec edits.
 - Re-run `spec-tree:auditing-tests` reasoning against a sample assertion to confirm the router yields the expected mode.
+- `just check` — the methodology and `SKILL.md` edits regenerate `dist/`, so the `dist-diff` gate must run.
 
 ## Related plans
 

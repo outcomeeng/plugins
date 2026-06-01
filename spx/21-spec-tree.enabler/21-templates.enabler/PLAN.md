@@ -39,6 +39,7 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 
 - PDR/ADR-template structural check via `spx validation markdown`
 - The decision-record audits (`audit-adr` / `audit-pdr`, see `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md`) read this tag — keep the two changes consistent.
+- `just check` — the template and example edits regenerate `dist/`, so the `dist-diff` gate must run.
 
 ## Related plans
 
