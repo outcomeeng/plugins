@@ -98,9 +98,9 @@ Nothing else to change here. The plugin-side contract is already merged. If the 
 
 ---
 
-# PLAN: Spec and test alignment for SPX PR #92 branch-prefill behavior
+## PLAN: Spec and test alignment for SPX PR #92 branch-prefill behavior
 
-## Why this plan exists
+## Why SPX PR #92 alignment exists
 
 SPX PR #92 revised `spx session handoff` to be worktree-aware. The old behaviour (reject all detached HEAD) has been replaced by a four-case model that this node's spec does not yet declare. 11 tests fail against the updated CLI because the test helper calls `spx session handoff` without setting up the required git context.
 
@@ -243,7 +243,7 @@ just check
 
 All 11 previously failing tests must pass. No new failures.
 
-## Pointers
+## SPX PR #92 pointers
 
 - SPX PR #92: worktree-aware branch prefill, `SessionDetachedHeadError` / `SessionWorktreeBaseError`
 - Failing tests: `spx/21-spec-tree.enabler/76-sessions.enabler/tests/test_sessions.scenario.l1.py` (11 failures, all `SessionDetachedHeadError`)
