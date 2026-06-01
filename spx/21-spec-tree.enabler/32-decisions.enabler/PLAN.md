@@ -39,7 +39,7 @@ Add assertions to `decisions.md`:
 - ALWAYS: the decision-record audit verifies each rule resolves to a downstream spec assertion whose evidence meets or exceeds the declared mode (extends the existing downstream-flow assertion from presence to sufficiency).
 - Existence + conformance assertions for `audit-adr` and `audit-pdr`.
 
-Evidence mode by assertion class, per `spx/15-spec-coverage.adr.md` (not an open choice): assertions about `audit-adr` / `audit-pdr` LLM judgment behavior take `[eval]` — the skills emit structured verdicts, so the ADR mandates eval evidence over `[review]`; structural-conformance assertions (verdict-schema validity, JSON emission) take `[test]`; design or intent assertions take `[review]`. Resolve the eval-case file paths during `/authoring`; do not pre-create a speculative child node.
+Evidence for the assertions in `decisions.md` that govern `audit-adr` / `audit-pdr`'s own behavior follows the **mechanism** axis (`[test]` / `[review]` / `[eval]`) — distinct from the per-rule **mode** tag those audits read in a decision record (see `spx/21-spec-tree.enabler/21-templates.enabler/PLAN.md`; `[eval]` is never a per-rule mode tag). Per `spx/15-spec-coverage.adr.md` (not an open choice): assertions about the audits' LLM judgment behavior carry the `[eval]` mechanism — the skills emit structured verdicts, so the ADR mandates eval over `[review]`; structural-conformance assertions (verdict-schema validity, JSON emission) carry `[test]`; design or intent assertions carry `[review]`. Resolve the eval-case file paths during `/authoring`; do not pre-create a speculative child node.
 
 ## Files
 

@@ -13,6 +13,7 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 - The mode is the **minimum**. The spec node enforcing the rule carries at least that mode and may add more (more cases, deeper levels, a second mode).
 - The mode is chosen by invoking `/testing` against the rule's claim shape — never hand-picked. The template instructs the author to route through `/testing`.
 - The mode tag is a claim-shape classification, not a test reference: it carries no path, so it does not violate the `what-goes-where` rule that decision records contain no `[test](path)` links. The path lives on the downstream spec assertion.
+- Mode and mechanism are distinct axes. The per-rule tag is one of the five **modes** above. The evidence **mechanism** (`[test]` / `[review]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule mode. The five-mode set is therefore complete; a rule whose downstream enforcement runs through the eval lane still carries a mode tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
 
 ## Files
 
