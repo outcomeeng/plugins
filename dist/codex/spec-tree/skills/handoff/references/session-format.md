@@ -73,9 +73,39 @@ What was captured durably during session closure.
 
 </persisted>
 
+<state_at_handoff>
+OPTIONAL. Observable external-infrastructure state the next pickup needs and
+cannot re-derive from the spec tree, PLAN.md/ISSUES.md, or git history. Include
+only what the next agent would otherwise re-discover through a live-system query
+(a CI, container, or cluster CLI, for example). Omit this section entirely when
+every fact the next agent needs already lives in the repository.
+
+- [Live identifiers and their last-observed state — PR / run / image / job ids with status or conclusion]
+- [In-flight workflows or deployments that bear on the first action]
+- [Inventory or baseline counts the next agent compares against]
+- [What to re-confirm with one read-only command before acting]
+
+Guide the next pickup from this state in prose. Do not encode the first action as
+fixed if-then branches — the next agent decides freely from the observed state.
+
+</state_at_handoff>
+
+<constraints>
+OPTIONAL. Normative rules that hold for this continuation regardless of what the
+next agent observes. Scope them to this session's work — a rule that always holds
+belongs in methodology or CLAUDE.md, not repeated in a per-handoff file. Omit this
+section when there are none.
+
+- NEVER [action] — [reason]
+
+</constraints>
+
 <coordination>
-Cross-cutting context that doesn't belong to any single node.
-Only include information that CANNOT be derived from the spec tree or git history.
+Cross-cutting context that is neither observable external state (that goes in
+<state_at_handoff>) nor a normative rule (that goes in <constraints>): why this
+handoff exists, dependencies between the nodes worked on, environment notes, open
+questions. Include only what cannot be reconstructed from the spec tree or git
+history.
 
 - [Why the session ended]
 - [Dependencies between nodes being worked on]
@@ -107,7 +137,9 @@ Only include information that CANNOT be derived from the spec tree or git histor
 - **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
-- **`<coordination>`**: Thin. Only cross-cutting context that cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
+- **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next agent cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next agent needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
+- **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or CLAUDE.md, not a per-handoff file.
+- **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
 - **`<incorporated_sessions>`**: Include ONLY when the in-scope set resolved by `<resolve_session_scope>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.
 
 </field_guidance>

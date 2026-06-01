@@ -31,13 +31,19 @@ The four-workflow sequence enforces persist-then-commit-then-continuation discip
 </objective>
 
 <artifact_purpose>
-A handoff artifact exists for a future reader who must continue work. Create one only when unresolved in-scope work remains, a claimed session needs canonical continuation context, or the user explicitly asks for a continuation record.
+A handoff artifact initializes the next agent, who starts from zero — no prior conversation, no live memory of what was tried. It is a thin pointer: it names the anchored nodes, the skills to invoke, and the first action, so the user does not have to re-point the agent at everything the repository already holds. The next agent re-derives detail from the spec tree, not from the session file.
 
-When the work has reached the user-approved stopping state and all remaining issues already live in higher persistence tiers, omit the session file and close with `--no-session`. A session with no continuation reader creates queue noise and splits truth away from the durable map.
+Three situations, only the last two produce a file:
 
-Example of the omit case: a session lands a spec amendment, writes a `PLAN.md` entry for deferred CLI work, and commits both. Every continuation thread is persisted — the spec carries the new rule, `PLAN.md` carries the deferred work — so `/handoff --no-session` closes correctly and no `.spx/sessions/todo/` file is created.
+- **Compaction within an ongoing session** — no handoff file. The compact summary carries the state and the same agent continues.
+- **Initialization handoff** — every fact the next agent needs lives in the repository. The file carries pointers (nodes, skills, next action) plus the coordination that cannot be reconstructed from the spec tree or git history.
+- **Initialization handoff with external state** — the same pointer document plus an optional `<state_at_handoff>` section recording observable infrastructure state the next agent cannot re-derive from the repository (live PR/run/image ids and their status, deployed inventories, in-flight workflows). The authoring agent guides the next pickup from that state in prose.
 
-The artifact is not a retrospective, changelog, lessons-learned notebook, or duplicate of PLAN.md/ISSUES.md. Reusable lessons belong in methodology. Open issues belong in the owning spec tree node. Review and validation facts belong in commit/PR history unless a future reader needs them to resume.
+Self-contained is not retrospective. Do not duplicate PLAN.md/ISSUES.md (loads via `/contextualizing`), do not summarize spec content (the next agent reads it directly), do not log session activity (commit messages carry that). Self-contained means carrying the pointers and the external state the next agent would otherwise re-discover.
+
+Create a handoff only when unresolved in-scope work remains, a claimed session needs canonical continuation context, or the user explicitly asks for one. When the work has reached the user-approved stopping state and every remaining issue already lives in a higher persistence tier, omit the session file and close with `--no-session` — a session with no continuation reader is queue noise that splits truth away from the durable map.
+
+Example of the omit case: a session lands a spec amendment, writes a `PLAN.md` entry for deferred CLI work, and commits both. Every continuation thread is persisted, so `/handoff --no-session` closes correctly and no `.spx/sessions/todo/` file is created.
 
 </artifact_purpose>
 
@@ -62,7 +68,7 @@ Persist to the HIGHEST applicable tier.
 | 1    | Spec tree (`spx/`)                      | Durable     | Spec amendments, test files, assertion updates                                                                                                 |
 | 2    | Methodology (skills, CLAUDE.md, memory) | Durable     | Reusable patterns, user preferences, coding gotchas                                                                                            |
 | 3    | Node-local (PLAN.md, ISSUES.md)         | Git-tracked | Remaining steps, known gaps — committed for cross-session coordination, stale-prone; reconcile before use, discoverable via `/contextualizing` |
-| 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral   | Coordination only: node list, skill checklist, cross-cutting context                                                                           |
+| 4    | Session file (`.spx/sessions/todo/`)    | Ephemeral   | Coordination only: node list, skill checklist, external-infrastructure state, cross-cutting context                                            |
 
 A Tier-3 coordination note holds remaining steps and known gaps, never product truth. MUST use `AskUserQuestion` before writing PLAN.md or ISSUES.md.
 
@@ -98,7 +104,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 A successful closure or handoff:
 
 - [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All four perspectives worked through (workflow 02)
+- [ ] All five perspectives worked through (workflow 02)
 - [ ] Existing PLAN.md and ISSUES.md checked for staleness — updated or removed if stale (workflow 02)
 - [ ] `<RESOLVED_SCOPE>` marker emitted into the conversation by workflow 02
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)

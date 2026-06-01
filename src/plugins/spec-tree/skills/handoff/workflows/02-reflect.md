@@ -1,7 +1,7 @@
 <objective>
-Work through four perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
+Work through five perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
 
-Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, session scope.
+Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, session scope.
 
 </objective>
 
@@ -57,6 +57,13 @@ Identify exactly where the next Claude context picks up:
 
 </perspective_next_context>
 
+<perspective_external_state>
+Identify external-infrastructure state the next agent cannot re-derive from the spec tree, PLAN.md/ISSUES.md, or git history: live PR, run, image, or job identifiers and their status; in-flight workflows or deployments; inventory or baseline counts. When such state exists and bears on the next agent's first action, capture it for the session file's `<state_at_handoff>` section so the next pickup skips the re-discovery, and note what one read-only command re-confirms it. When every fact the next agent needs already lives in the repository, this perspective produces nothing and the handoff stays a thin pointer.
+
+Guide the next pickup from the state in prose. Do not pre-compute fixed if-then branches — the next agent decides freely from what it observes.
+
+</perspective_external_state>
+
 <perspective_session_scope>
 Resolve which sessions are in this conversation's scope and locate any mid-session handoff artifact to reconcile.
 
@@ -79,7 +86,7 @@ A handoff replaces incorporated context. The existence of any session is not, by
 
 <success_criteria>
 
-- All four perspectives completed internally before proceeding to workflow 03.
+- All five perspectives completed internally before proceeding to workflow 03.
 - `<RESOLVED_SCOPE>` marker emitted into the conversation.
 - Stale PLAN.md or ISSUES.md items identified for proposal in workflow 03 (or fixed inline if safe).
 
