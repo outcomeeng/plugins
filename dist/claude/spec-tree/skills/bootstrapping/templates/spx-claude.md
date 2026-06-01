@@ -141,21 +141,22 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 **Delete rows that don't apply to your product.**
 
-| User Says...             | Skill                               | Agent                             |
-| ------------------------ | ----------------------------------- | --------------------------------- |
-| "Implement this outcome" | `/contextualizing`                  | —                                 |
-| "Create an outcome"      | `/authoring`                        | —                                 |
-| "Add an ADR"             | `/authoring`                        | —                                 |
-| "This node is too big"   | `/decomposing`                      | —                                 |
-| "Move this under that"   | `/refactoring`                      | —                                 |
-| "Check these specs"      | `/aligning`                         | —                                 |
-| "Write tests for this"   | `/testing`                          | —                                 |
-| "Start the TDD flow"     | `/applying`                         | `applier`                         |
-| "Audit this PDR"         | `/auditing-product-decisions`       | `pdr-auditor`                     |
-| "Audit test evidence"    | `/auditing-tests`                   | `test-evidence-auditor`           |
-| "Audit this code"        | `/auditing-{language}`              | `{language}-code-auditor`         |
-| "Audit this ADR"         | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
-| "Audit these tests"      | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
+| User Says...                | Skill                               | Agent                             |
+| --------------------------- | ----------------------------------- | --------------------------------- |
+| "Implement this outcome"    | `/contextualizing`                  | —                                 |
+| "Create an outcome"         | `/authoring`                        | —                                 |
+| "Add an ADR"                | `/authoring`                        | —                                 |
+| "This node is too big"      | `/decomposing`                      | —                                 |
+| "Move this under that"      | `/refactoring`                      | —                                 |
+| "Check these specs"         | `/aligning`                         | —                                 |
+| "Write tests for this"      | `/testing`                          | —                                 |
+| "Start the TDD flow"        | `/applying`                         | `applier`                         |
+| "Audit this PDR"            | `/audit-pdr`                        | `audit-pdr`                       |
+| "Audit this ADR"            | `/audit-adr`                        | `audit-adr`                       |
+| "Audit test evidence"       | `/auditing-tests`                   | `test-evidence-auditor`           |
+| "Audit this code"           | `/auditing-{language}`              | `{language}-code-auditor`         |
+| "Audit ADRs for {language}" | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
+| "Audit these tests"         | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
 
 ---
 

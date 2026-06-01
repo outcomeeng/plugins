@@ -137,10 +137,11 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Check these specs"      | `/aligning`                     | —                             |
 | "Write tests for this"   | `/testing`                      | —                             |
 | "Start the TDD flow"     | `/applying`                     | `applier`                     |
-| "Audit this PDR"         | `/auditing-product-decisions`   | `pdr-auditor`                 |
+| "Audit this PDR"         | `/audit-pdr`                    | `audit-pdr`                   |
+| "Audit this ADR"         | `/audit-adr`                    | `audit-adr`                   |
 | "Audit test evidence"    | `/auditing-tests`               | `test-evidence-auditor`       |
 | "Audit this code"        | `/auditing-python`              | `python-code-auditor`         |
-| "Audit this ADR"         | `/auditing-python-architecture` | `python-architecture-auditor` |
+| "Audit ADRs for Python"  | `/auditing-python-architecture` | `python-architecture-auditor` |
 | "Audit these tests"      | `/auditing-python-tests`        | `python-test-auditor`         |
 
 ---

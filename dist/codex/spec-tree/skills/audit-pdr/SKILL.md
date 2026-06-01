@@ -1,5 +1,5 @@
 ---
-name: auditing-product-decisions
+name: audit-pdr
 description: Use when asked by the user to invoke the PDR audit skill
 ---
 
@@ -7,7 +7,7 @@ description: Use when asked by the user to invoke the PDR audit skill
 
 Audit whether a PDR establishes enforceable product decisions that flow into spec assertions. Six properties must hold — content classification, invariant quality, compliance quality, atemporal voice, consistency, downstream flow — checked in strict order. A PDR missing any property is a declaration that nothing enforces.
 
-Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
+Read the evidence model before auditing: `${SKILL_DIR}/references/pdr-evidence-model.md`
 
 </objective>
 
@@ -206,7 +206,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 ```json
 {
   "schema_version": 1,
-  "skill": "auditing-product-decisions",
+  "skill": "audit-pdr",
   "target": "<pdr-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [

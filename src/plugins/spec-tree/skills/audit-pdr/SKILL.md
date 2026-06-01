@@ -1,5 +1,5 @@
 ---
-name: auditing-product-decisions
+name: audit-pdr
 description: Use when asked by the user to invoke the PDR audit skill
 ---
 
@@ -206,7 +206,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 ```json
 {
   "schema_version": 1,
-  "skill": "auditing-product-decisions",
+  "skill": "audit-pdr",
   "target": "<pdr-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
