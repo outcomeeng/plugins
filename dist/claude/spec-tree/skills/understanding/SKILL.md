@@ -24,6 +24,7 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 10. **FULL PATHS ONLY** — Every node, ADR, and PDR reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
 11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, and testing skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant language skill.
 12. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger. Safe fixes happen immediately. Unresolved entries either block for operator judgment or are written to the correct artifact: product truth in specs/ADRs/PDRs, workflow rules in methodology, and future-session coordination in PLAN.md or ISSUES.md. Read `references/imperfection-protocol.md`.
+13. **VERIFICATION TYPES** — Five verification types establish a node's standing: validation, testing, reviewing, auditing, evaluating. Two orthogonal axes describe each — verdict mode (deterministic or agentic) and purpose (conformance or correctness). Three types back the evidence lanes an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing; validation and reviewing are gates that back no lane. Read `references/verification-kinds.md`.
 
 </principles>
 
@@ -44,6 +45,7 @@ About to load context for an existing target and explain why lower-index sibling
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
    - `references/ordering-rules.md` — context-loading meaning of existing numeric prefixes and sibling number scope
    - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, closing protocol
+   - `references/verification-kinds.md` — the five verification types, verdict mode, purpose, evidence lanes
 3. Note operational references (loaded on demand by other skills):
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
@@ -60,7 +62,7 @@ About to load context for an existing target and explain why lower-index sibling
 
 ```text
 <SPEC_TREE_FOUNDATION>
-Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol
+Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol, verification-kinds
 Operational references available: what-goes-where, excluded-nodes
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
@@ -71,7 +73,7 @@ Examples available in: examples/
 
 <success_criteria>
 
-- [ ] Five core reference files read and understood
+- [ ] Six core reference files read and understood
 - [ ] Operational reference, template, and example locations known
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
@@ -83,5 +85,6 @@ Examples available in: examples/
 - [ ] Methodology loaded: coordination notes (PLAN.md, ISSUES.md) are node-local, git-tracked only to carry coordination across sessions, stale-prone, verified and reconciled against specs/decisions/assertions/tests/implementation/user intent before use, and never spec truth; session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per product without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
+- [ ] Methodology loaded: five verification types (validation, testing, reviewing, auditing, evaluating) across verdict mode (deterministic/agentic) and purpose (conformance/correctness); three back evidence lanes (`[test]`, `[eval]`, `[audit]`)
 
 </success_criteria>

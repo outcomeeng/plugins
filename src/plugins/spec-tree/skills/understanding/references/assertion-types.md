@@ -135,13 +135,16 @@ Only include headings for assertion types that apply. Each evidence type lives i
 
 <evidence_mechanisms>
 
-Every assertion links to one of three evidence mechanisms:
+Every assertion links to one evidence mechanism — one of the lanes that back assertions, each backed by a verification type (`references/verification-kinds.md`):
 
-| Mechanism  | Tag                      | Who decides                   | What it proves                                                                                         | Verified by |
-| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
-| **Test**   | `([test](path/to/test))` | Automated test                | "The code does X" — exercises behavior with real coupling                                              | Test runner |
-| **Review** | `([review])`             | Human or agent judgment       | "The design follows principle W" — semantic constraint no tool can verify                              | Audit skill |
-| **Eval**   | `([eval](path/to/eval))` | Eval runner over golden cases | "The skill identifies X" — graded cases verify LLM-driven behavior under a structural verdict contract | Eval runner |
+| Mechanism  | Tag                      | Who decides                   | What it proves                                                                                         | Verified by    |
+| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ | -------------- |
+| **Test**   | `([test](path/to/test))` | Automated test                | "The code does X" — exercises behavior with real coupling                                              | Test runner    |
+| **Review** | `([review])`             | Human or agent judgment       | "The design follows principle W" — semantic constraint no tool can verify                              | Audit skill    |
+| **Eval**   | `([eval](path/to/eval))` | Eval runner over golden cases | "The skill identifies X" — graded cases verify LLM-driven behavior under a structural verdict contract | Eval runner    |
+| **Audit**  | `([audit])`              | An auditing skill's checklist | "The artifact conforms to standard W" — agentic judgment over a fixed checklist                        | Auditing skill |
+
+`([audit])` is the lane backed by the auditing type; `([review])` is its legacy tag and migrates to `([audit])` — both resolve during migration. Reviewing — open-ended principal-level judgment — is a gate, not an assertion lane. The lane↔type mapping is declared in `references/verification-kinds.md`.
 
 **Test** is the default for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
 

@@ -13,9 +13,9 @@ This conformance is an architecture migration that applies to the whole audit-sk
 
 ## Mode-tag migration for existing decision records (deferred)
 
-The per-rule-evidence-mode feature declares (in `decisions.md`) that every decision-record compliance rule names one of `scenario`, `mapping`, `conformance`, `property`, `compliance`, and the ADR/PDR templates require the tag. The marketplace's own existing ADRs and PDRs still carry bare `([review])` mechanism tags on their Compliance MUST/NEVER rules, so `/audit-adr` and `/audit-pdr` deterministically REJECT them at the mode-validity step (`invalid-mode-tag`) until each rule is migrated.
+`decisions.md` declares that every decision-record rule sits under `## Verification`, grouped by verdict mode into `### Audit`, `### Eval`, and `### Testing` — a `Testing` rule carries a `/testing`-routed claim-shape mode (`scenario`/`mapping`/`conformance`/`property`/`compliance`), and an `Audit` or `Eval` rule carries `[audit]` or `[eval]`. The marketplace's own existing ADRs and PDRs still carry bare `([review])` tags under a `## Compliance` section, so `/audit-adr` and `/audit-pdr` deterministically REJECT them at the mode-validity step (`invalid-mode-tag`) until each is migrated to the `## Verification` structure.
 
-Records to migrate — for each rule, route the claim shape through `/testing` to pick its mode, then replace the bare mechanism tag:
+Records to migrate — move each `## Compliance` section to `## Verification`, place each rule under the subsection matching its verdict mode, and replace the bare `([review])` tag: a `### Testing` rule routes its claim shape through `/testing`; a rule governing a Spec Tree skill, agent, or decision goes under `### Audit` (`[audit]`) or `### Eval` (`[eval]`):
 
 - `spx/13-plugin-and-runtime-conventions.adr.md`
 - `spx/15-spec-coverage.adr.md`
@@ -23,7 +23,6 @@ Records to migrate — for each rule, route the claim shape through `/testing` t
 - `spx/15-audit-verdict-format.pdr.md`
 - `spx/15-test-infrastructure.pdr.md`
 - `spx/15-agent-pr-authority.pdr.md`
-- `spx/16-evidence-execution-lanes.adr.md`
 - `spx/21-spec-tree.enabler/17-auditing.adr.md`
 - `spx/18-plugin-build.enabler/15-build-architecture.adr.md`
 - `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`
