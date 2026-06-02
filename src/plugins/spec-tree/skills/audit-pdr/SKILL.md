@@ -123,7 +123,7 @@ Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `#
    A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
 2. Is the rule specific enough that two reviewers would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
