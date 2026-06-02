@@ -1,6 +1,6 @@
 # {Decision Name}
 
-{The decision, stated directly as permanent truth in 1-3 sentences — what product behavior it governs and what it decides. State user-observable behavior, not implementation. No "This PDR governs..."preamble.}
+{The decision, stated directly as permanent truth in 1-3 sentences — what product behavior it governs and what it decides. State user-observable behavior, not implementation. No "This PDR governs..." preamble.}
 
 ## Rationale
 
@@ -10,9 +10,9 @@
 
 {Ordered list — no more than 3 items; omit section if it would be redundant with the decision.}
 
-1. {First observable observable property a product implementing this decision must exhibit}
-2. {Second observable observable property a product implementing this decision must exhibit}
-3. {Third observable observable property a product implementing this decision must exhibit}
+1. {First observable property a product implementing this decision must exhibit}
+2. {Second observable property a product implementing this decision must exhibit}
+3. {Third observable property a product implementing this decision must exhibit}
 
 ## Verification
 

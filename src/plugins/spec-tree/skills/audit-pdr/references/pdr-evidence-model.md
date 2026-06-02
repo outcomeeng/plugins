@@ -2,7 +2,7 @@
 
 Detailed evidence model for PDR auditing. Read this before auditing any PDR.
 
-Six properties define PDR evidence: content classification, invariant quality, compliance quality, atemporal voice, consistency, downstream flow. This reference provides detailed definitions, boundary cases, and concrete examples for each.
+Five properties define PDR evidence: content classification, property quality, compliance quality, atemporal voice, consistency. This reference provides detailed definitions, boundary cases, and concrete examples for each.
 
 </overview>
 
@@ -42,25 +42,25 @@ PDRs govern observable product behavior. Every statement must pass the user test
 
 </content_classification>
 
-<invariant_quality>
+<property_quality>
 
-Product invariants are guarantees users can rely on. They must be:
+Product properties are guarantees users can rely on. They must be:
 
-1. **Observable** — a user can perceive whether the invariant holds
+1. **Observable** — a user can perceive whether the property holds
 2. **Falsifiable** — you can describe a scenario where it's violated
-3. **Stable** — the invariant holds across all contexts, not just happy paths
+3. **Stable** — the property holds across all contexts, not just happy paths
 
-**Good invariants:**
+**Good properties:**
 
-| Invariant                                  | Observable                    | Falsifiable                         | Stable                 |
+| Property                                   | Observable                    | Falsifiable                         | Stable                 |
 | ------------------------------------------ | ----------------------------- | ----------------------------------- | ---------------------- |
 | "All pages load in under 2 seconds"        | User times page load          | Load a page, measure > 2s           | Applies to all pages   |
 | "Theme selection persists across sessions" | User returns, sees same theme | Change theme, close browser, reopen | Applies always         |
 | "Uploaded files never exceed stated limit" | User gets rejection           | Upload 11MB to 10MB limit           | Applies to all uploads |
 
-**Bad invariants:**
+**Bad properties:**
 
-| Invariant                         | Problem                                  |
+| Property                          | Problem                                  |
 | --------------------------------- | ---------------------------------------- |
 | "Good user experience"            | Not falsifiable — what counts as "good"? |
 | "Database connections are pooled" | Not user-observable                      |
@@ -68,20 +68,20 @@ Product invariants are guarantees users can rely on. They must be:
 | "The system is scalable"          | Not falsifiable without a threshold      |
 | "Fast response times"             | Not falsifiable — how fast is "fast"?    |
 
-**Fixing bad invariants:**
+**Fixing bad properties:**
 
 - "Good user experience" → "Core user flows complete in under 3 clicks"
 - "The system is scalable" → "The system handles 500 concurrent users without degradation"
 - "Fast response times" → "API responses return within 200ms at p95"
 
-</invariant_quality>
+</property_quality>
 
 <compliance_quality>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Audit`, `### Eval`, and `### Testing` by verdict mode. Each rule needs:
+Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verdict mode. Each rule needs:
 
-1. **Verifiability** — can an auditing skill, an eval, or a test determine pass/fail?
-2. **Tag matching its subsection** — under `### Testing`, a `/testing`-routed claim-shape mode (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Audit`, `([audit])`; under `### Eval`, `([eval])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
+1. **Verifiability** — can a test, an eval, or an auditing skill determine pass/fail?
+2. **Tag matching its subsection** — under `### Testing`, a `/testing`-routed claim-shape mode (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
 3. **Specificity** — two independent reviewers would agree on the verdict
 
 **Good compliance rules:**
@@ -122,50 +122,3 @@ Verification rules are the enforceable part of a PDR, grouped under `## Verifica
 - "Be fast" → "API responses return within 200ms at p95 under normal load ([property])"
 
 </compliance_quality>
-
-<downstream_flow>
-
-The critical property. A compliance rule needs both presence (some spec assertion enforces it) and sufficiency (that assertion's evidence meets or exceeds the rule's declared mode). A rule with no enforcing assertion is `unenforced-rule`; a rule whose downstream evidence falls below its declared mode is `insufficient-evidence-mode`.
-
-**Verification procedure:**
-
-1. List every MUST/NEVER rule in the PDR with its declared mode
-2. Determine the governed subtree (all specs below the PDR's location in the tree)
-3. For each rule, search the subtree for assertions that enforce it
-4. Compare each enforcing assertion's evidence against the rule's declared mode
-5. Report flow status: unenforced, insufficient-evidence-mode, or sufficient
-
-**What counts as "referenced":**
-
-- A spec assertion that directly tests the behavior the rule requires
-- A spec assertion whose `[test]` link verifies the rule
-- An `[audit]` or `[eval]` assertion enforcing the rule from a spec in the governed subtree
-
-**What does NOT count:**
-
-- A spec that mentions the same concept but doesn't assert it
-- A test that happens to cover the behavior but isn't linked from an assertion
-- Another PDR that restates the same rule (that's duplication, not enforcement)
-
-**Example audit output:**
-
-```text
-PDR: 15-dark-first-design.adr.md (treating as PDR for product invariants)
-
-Rule 1: "MUST: all text/background pairs maintain ΔL ≥ 0.80"
-→ spx/.../21-token-contract.enabler assertions: foreground/background ΔL ≥ 0.80 ✓
-
-Rule 2: "NEVER: use hardcoded hex/rgb values in component styles"
-→ spx/.../: no assertion references this ✗
-→ Finding: unenforced rule — declare an assertion or remove the rule
-
-Rule 3: "MUST: default to dark theme when no preference detected"
-→ spx/.../: no assertion references this ✗
-→ Finding: unenforced rule
-```
-
-**Why this matters:**
-
-Unenforced rules create false confidence. Stakeholders read the PDR and believe the product guarantees certain behaviors. But no spec declares it, no test verifies it, and no review checks it. The guarantee exists only on paper. This is the PDR equivalent of a tautological test — it looks like evidence but provides none.
-
-</downstream_flow>

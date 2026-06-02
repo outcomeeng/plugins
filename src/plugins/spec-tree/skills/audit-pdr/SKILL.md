@@ -6,15 +6,13 @@ allowed-tools: Read, Grep, Glob, Bash
 
 <objective>
 
-Audit a PDR for its consistency, clarity and strict conformance to the PDR evidence model, which establishes enforceable product decisions that flow into spec assertions.
+Audit a PDR for its consistency, clarity, and strict conformance to the PDR evidence model.
 
 </objective>
 
 <prerequisites>
 
-**ALL PREREQUISITES MUST BE COMPLETED BEFORE CONDUCTING THE AUDIT**
-
-2. Familiarize yourself with the PDR evidence model by reading this file completely from beginning to end: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
+Read the PDR evidence model completely before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
 
 </prerequisites>
 
@@ -23,10 +21,6 @@ Audit a PDR for its consistency, clarity and strict conformance to the PDR evide
 **PRODUCT BEHAVIOR, NOT ARCHITECTURE.**
 
 PDRs govern what the product does, behavior that its users experience. "Sessions expire after 1 hour" is product behavior. "Sessions use JWT with 1-hour TTL" is architecture. If the content describes HOW something is built rather than WHAT users observe, it belongs in an ADR.
-
-**DOWNSTREAM FLOW IS MANDATORY.**
-
-A compliance rule that no spec assertion references is an unenforced declaration. The product equivalent of a test with no coupling. Search the governed subtree — if no assertion implements the rule, REJECT.
 
 **ATEMPORAL VOICE.**
 
@@ -44,7 +38,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
-Invoke `/contextualizing` on the directory containing the PDR. This loads:
+Invoke `/contextualizing` on the directory containing the PDR.
 
 Do not proceed if you do not see the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
 
@@ -102,7 +96,7 @@ For each product property:
 
 **Step 5: Per-rule verification mode validity**
 
-Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `### Testing` subsections by verification mode. For each rule:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
    - under `### Testing` → a `/testing`-routed evidence mode: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
@@ -112,7 +106,7 @@ Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `#
    A bare mechanism tag (`([audit])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not propose the correct mode — only validate the tag against its subsection.
 2. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-verification-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -181,7 +175,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `unenforced-rule`, `insufficient-evidence-mode`, `temporal-language`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `temporal-language`); the `message` field carries the one-line detail.
 
 </verdict_format>
 
@@ -189,13 +183,13 @@ Each finding's `rule` field carries the violation pattern (e.g., `architecture-c
 
 **Failure 1: Approved a PDR full of architecture decisions**
 
-Reviewer saw a well-structured PDR with Purpose, Decision, Compliance sections. Approved. The Decision section said "The system uses PostgreSQL with row-level locking for concurrent session management." That's an architecture decision, not a product decision. Users don't care about PostgreSQL or row-level locking — they care that concurrent sessions work.
+Claude saw a well-structured PDR with a clear decision statement and a Verification section, and approved it. The decision statement said "The system uses PostgreSQL with row-level locking for concurrent session management." That is an architecture decision, not a product decision. Users don't care about PostgreSQL or row-level locking — they care that concurrent sessions work.
 
 How to avoid: Step 3 classifies every statement. "Would a user be able to determine this?" is the test.
 
 **Failure 2: Accepted non-observable properties**
 
-Reviewer saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
+Claude saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
 
 How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
 
