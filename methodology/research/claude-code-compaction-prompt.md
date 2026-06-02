@@ -10,7 +10,7 @@ The `compactPrompt` field in `~/.claude/settings.json` (user-scope) or `.claude/
 
 ### Base-prompt constraint
 
-Claude Code's base summarization prompt forces nine numbered sections (see "Base compaction prompt" below). Sections 7 (Pending Tasks), 8 (Current Work), and 9 (Optional Next Step) include imperative framing that `compactPrompt` cannot remove or rewrite. The marketplace accepts these forced sections as residual; the SessionStart-on-compact hook directive (emitted by `plugins/spec-tree/bin/session-resume`) is the durable correction mechanism, deliberately constructed to be more specific and mechanical than the base prompt's softer "optional" framing.
+Claude Code's base summarization prompt forces nine numbered sections (see "Base compaction prompt" below). Sections 7 (Pending Tasks), 8 (Current Work), and 9 (Optional Next Step) include imperative framing that `compactPrompt` cannot remove or rewrite. The marketplace accepts these forced sections as residual; the PostCompact hook directive (emitted by `plugins/spec-tree/bin/post-compact`) is the durable correction mechanism, deliberately constructed to be more specific and mechanical than the base prompt's softer "optional" framing.
 
 ### Current spec-tree compact instructions (`compactPrompt` value)
 

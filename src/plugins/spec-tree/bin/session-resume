@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Retired. Compact summary re-anchoring now happens in the PostCompact hook
-# (post-compact), which runs in the same session immediately after compaction.
-# SessionStart no longer injects compact summaries — new sessions start clean.
-exit 0
