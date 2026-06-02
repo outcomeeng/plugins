@@ -73,6 +73,16 @@ _SEVERITY_TO_TEMPLATE = {
     "follow_up": "finding-followup.md",
 }
 
+# Severity wire value → census-marker template filename. Emitted in place
+# of a severity's findings when that bucket is empty, so every severity is
+# reported uniformly (the reviewer states the census; the consumer judges
+# which present findings block the merge, by validity and phase).
+_SEVERITY_TO_EMPTY = {
+    "blocking": "none-blocking.md",
+    "debt": "none-debt.md",
+    "follow_up": "none-followup.md",
+}
+
 
 def _load_template(name: str) -> string.Template:
     """Load and return a ``string.Template`` for the named render template.
@@ -126,16 +136,20 @@ def _render_markdown(result: "object") -> str:
     Loads per-section templates from ``references/render/``, partitions
     findings by severity, substitutes placeholders via stdlib
     ``string.Template``, and assembles the body in severity order
-    (BLOCKING → DEBT → FOLLOW-UP → acknowledgements). When no BLOCKING
-    finding is present, the no-blockers template stands in for the
-    BLOCKING section. Label asymmetry by severity lives in the templates:
-    blocking/debt render ``message``/``action`` as Evidence/Required;
-    follow_up renders them as Issue/Track-under.
+    (BLOCKING → DEBT → FOLLOW-UP → acknowledgements). Every severity is
+    reported uniformly: a bucket with findings renders them, an empty
+    bucket renders its ``none-<severity>.md`` census marker — no severity
+    is privileged and the render states a census, never a merge verdict.
+    Label asymmetry by severity lives in the templates: blocking/debt
+    render ``message``/``action`` as Evidence/Required; follow_up renders
+    them as Issue/Track-under.
     """
     document_tpl = _load_template("document.md")
-    no_blockers_text = _load_static("no-blockers.md")
     severity_templates = {
         sev: _load_template(name) for sev, name in _SEVERITY_TO_TEMPLATE.items()
+    }
+    empty_markers = {
+        sev: _load_static(name) for sev, name in _SEVERITY_TO_EMPTY.items()
     }
     acks_tpl = _load_template("acknowledgements.md")
 
@@ -145,17 +159,14 @@ def _render_markdown(result: "object") -> str:
         bucket.sort(key=lambda f: (str(f.concern), f.id))  # type: ignore[attr-defined]
 
     body_parts: list[str] = []
-    if buckets["blocking"]:
-        body_parts.extend(
-            _render_finding(severity_templates["blocking"], f)
-            for f in buckets["blocking"]
-        )
-    else:
-        body_parts.append(no_blockers_text)
-
-    for severity in ("debt", "follow_up"):
-        for finding in buckets[severity]:
-            body_parts.append(_render_finding(severity_templates[severity], finding))
+    for severity in ("blocking", "debt", "follow_up"):
+        bucket = buckets[severity]
+        if bucket:
+            body_parts.extend(
+                _render_finding(severity_templates[severity], f) for f in bucket
+            )
+        else:
+            body_parts.append(empty_markers[severity])
 
     acknowledgements = list(result.acknowledgements)  # type: ignore[attr-defined]
     if acknowledgements:

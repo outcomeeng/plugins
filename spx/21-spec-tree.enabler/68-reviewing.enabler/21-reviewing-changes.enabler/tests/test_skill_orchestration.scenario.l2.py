@@ -196,18 +196,7 @@ class TestSkillOrchestrationChain:
         assert write_rr.returncode == 0, write_rr.stderr
 
         # 8. render_review.py reads the review-result and writes review.md.
-        render_result = subprocess.run(  # noqa: S603 — script path is from the harness
-            [
-                sys.executable,
-                str(RENDER_REVIEW_SCRIPT),
-                "--slug",
-                slug,
-            ],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        render_result = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
         assert render_result.returncode == 0, render_result.stderr
         rendered_markdown = render_result.stdout
 
@@ -249,16 +238,20 @@ class TestSkillOrchestrationChain:
         rendered = read_md.stdout
         # Three-class render shape (matches the REVIEW.template.md
         # taxonomy): the default fixture has one follow_up-severity
-        # finding and no blocking. Render should emit the no-blockers
-        # line and a FOLLOW-UP heading.
+        # finding and no blocking or debt. Render reports every severity
+        # uniformly — empty BLOCKING and DEBT buckets as `none` census
+        # markers, the follow_up finding as a FOLLOW-UP heading.
         # The legacy class labels NEEDS-ANSWER and NOTE are not in the
         # current three-severity taxonomy and must not appear in any
         # rendered output.
         assert "## Change Review" in rendered, (
             "review.md must carry the Change Review title from document.md template"
         )
-        assert "No BLOCKING items." in rendered, (
-            "no-blockers.md content must appear when no blocking findings are present"
+        assert "BLOCKING: none" in rendered, (
+            "empty BLOCKING bucket must render its none-blocking.md census marker"
+        )
+        assert "DEBT: none" in rendered, (
+            "empty DEBT bucket must render its none-debt.md census marker"
         )
         assert "### FOLLOW-UP [standards]:" in rendered, (
             "follow_up-severity finding must render as FOLLOW-UP via finding-followup.md"
@@ -284,6 +277,43 @@ class TestSkillOrchestrationChain:
         assert "| Severity |" not in rendered, (
             "legacy findings table must not appear in the rendered markdown"
         )
+
+    def test_render_emits_census_marker_for_every_empty_severity(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        # A fully-clean review (no findings) leaves all three severity
+        # buckets empty, so render reports each uniformly as its
+        # `<SEVERITY>: none` census marker — privileging no severity. This
+        # covers the none-followup.md path the default fixture, which
+        # carries a follow_up finding, leaves unexercised.
+        store_root = tmp_path / "store"
+        store_root.mkdir()
+        env = _make_env_for_temp_store(store_root, cwd=tmp_path)
+        slug = load_branch_slug_module().branch_slug("feature/clean")
+
+        clean_payload = json.dumps(make_review_result_dict(findings=[]))
+        arbiter = run_script(
+            VALIDATE_REVIEW_RESULT_SCRIPT, stdin=clean_payload, env=env
+        )
+        assert arbiter.returncode == 0, arbiter.stderr
+        write_rr = run_script(
+            WRITE_RECORD_SCRIPT,
+            "--slug",
+            slug,
+            "--name",
+            "review-result.json",
+            stdin=clean_payload,
+            env=env,
+        )
+        assert write_rr.returncode == 0, write_rr.stderr
+
+        render = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
+        assert render.returncode == 0, render.stderr
+        rendered = render.stdout
+        for marker in ("BLOCKING: none", "DEBT: none", "FOLLOW-UP: none"):
+            assert marker in rendered, (
+                f"empty severity bucket must render its census marker {marker!r}"
+            )
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:

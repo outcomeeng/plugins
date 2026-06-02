@@ -24,14 +24,6 @@ The `terminal-green` case-space remains complete: status-context `state == EXPEC
 
 The canonical `history.jsonl` baseline commits on the post-merge run on `main` — the workflow's `Commit history.jsonl appends` step is gated to `refs/heads/main` per `.github/workflows/spec-tree-evals.yml`, so PR runs collect run artifacts but do not commit them. The OAuth developer-session contamination caveat — workstation ambient instructions leaking into the verdict — is a developer-machine concern only; CI runs on a clean runner image, so the result above is the faithful validation surface even before `ANTHROPIC_API_KEY` joins the job env (tracked in the eval-harness `ISSUES.md`) and the workflow gains the `--bare` defense.
 
-## 3. The local reviewing-changes no-findings renderer omits the no-DEBT signal (FOLLOW-UP)
+## 3. The local reviewing-changes no-findings render (RESOLVED)
 
-The `MERGE_READINESS` clean-review predicate reads a review as clean when it reports no unresolved `BLOCKING` or `DEBT` finding per the reviewer's no-`BLOCKING`-or-`DEBT` convention (`REVIEW.template.md`: "post a one-line comment saying so" when there are no `BLOCKING` or `DEBT` findings). The CI `spec-tree-review` honors that convention — it posts `No BLOCKING or DEBT findings.`. The local `reviewing-changes` renderer's no-findings template (`src/plugins/spec-tree/skills/reviewing-changes/references/render/no-blockers.md`, emitted by `render_review.py` when no finding is present) still reads `No BLOCKING items.`, omitting the explicit no-`DEBT` signal.
-
-This does not affect `MERGE_READINESS` — that predicate reads the CI review, which already carries the no-`DEBT` signal — so it is not a merge blocker for this PR. It is a parity-of-presentation gap that belongs to the reviewing-changes node, not this merge-flow node.
-
-Required handling (owning node `spx/21-spec-tree.enabler/68-reviewing.enabler/`):
-
-- Align `no-blockers.md` to the `REVIEW.template.md` convention (`No BLOCKING or DEBT findings.`).
-- Re-check the per-severity finding templates (`finding-blocking.md`, `finding-debt.md`, `finding-followup.md`) and any reviewing-node assertion that pins the no-findings wording.
-- Rebuild `dist` and re-run the reviewing node's evidence.
+**Resolved** in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`. The local `reviewing-changes` renderer now reports a uniform per-severity census: each empty severity bucket renders its `none-<severity>.md` marker (`BLOCKING: none` / `DEBT: none` / `FOLLOW-UP: none`), and the single blocking-only `no-blockers.md` was replaced by `none-blocking.md` / `none-debt.md` / `none-followup.md`. This separates the reviewer's mechanical census from the consumer's merge judgment, superseding the originally-prescribed single-line alignment of `no-blockers.md` to `"No BLOCKING or DEBT findings."` (the earlier framing of `no-blockers.md` as a "no findings" message was imprecise — it was the BLOCKING-section empty-state; the census model reports every severity uniformly). Format parity between the local render and the GH CI `spec-tree-review` workflow's clean-review message lives in `outcomeeng/gh-actions` and is a separate concern if pursued.
