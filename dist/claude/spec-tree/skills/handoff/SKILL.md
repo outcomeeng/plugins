@@ -82,7 +82,7 @@ The `.spx/sessions/todo/` queue contains work for all active contexts across all
 </multi_agent_awareness>
 
 <arguments>
-- `--no-session`: persist all approved items, archive in-scope sessions, and skip handoff creation because no continuation reader exists. Putting a claimed session back in TODO is a separate manual operation (not currently supported by `spx session`).
+- `--no-session`: persist all approved items, archive in-scope sessions, and skip handoff creation because no continuation reader exists. To return a wrongly-claimed session to the TODO queue without archiving it, run `spx session release <id>`.
 - `--prune`: after writing the new handoff, delete archive sessions. Ignored under `--no-session`.
 
 Check `$ARGUMENTS` for these flags before starting workflow 01.

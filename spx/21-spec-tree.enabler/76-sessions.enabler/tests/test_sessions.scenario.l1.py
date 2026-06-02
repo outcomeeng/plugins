@@ -1,21 +1,28 @@
 """
-Scenario tests for 76-sessions.enabler (sessions.md assertions 1–5).
+Scenario tests for 76-sessions.enabler (sessions.md scenario assertions).
 
-All tests run at L1 using real subprocesses, real filesystem I/O in pytest
-tmp_path directories, and no test doubles.
+All tests run at L1 using the real `spx` binary, the real `post-compact` hook,
+real git repositories, and real filesystem I/O in pytest tmp_path directories,
+with no test doubles.
+
+`spx session handoff` only creates a session from a git work context it accepts
+(see `outcomeeng_testing.harnesses.git_context`). Every test that invokes a
+session subcommand therefore runs the subprocess with `cwd` set to a
+provisioned, accepted context, so the outcome does not depend on the runner's
+ambient git state.
 
 Assertions covered:
-  1. spx session handoff creates a file in .spx/sessions/todo/ with the
-     provided content (including the active node path).
-  2. spx session pickup moves that file from todo/ to doing/.
-  3. spx session release moves one or more sessions from doing/ back to todo/
-     without modifying content.
-  4. Coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
-     payload survives into the session file unchanged.
-  5. post-compact parses the compact summary from its JSON payload and emits
-     <SPEC-TREE_RESUMED> with the active node (when present), plus
-     /spec-tree:understanding and /spec-tree:contextualizing (conditional on
-     <SPEC_TREE_FOUNDATION> at the start of a line in the pre-compact markers).
+  - handoff creates a session file in .spx/sessions/todo/ carrying the active
+    node path (and the rest of the handoff body).
+  - pickup moves that file from todo/ to doing/ and emits its content to stdout.
+  - release moves one or more sessions from doing/ back to todo/ without
+    modifying content.
+  - coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
+    payload survives into the session file unchanged.
+  - post-compact parses the compact summary from its JSON payload and emits
+    <SPEC-TREE_RESUMED> with the active node (when present), plus
+    /spec-tree:understanding and /spec-tree:contextualizing (conditional on a
+    line-start <SPEC_TREE_FOUNDATION> marker in the pre-compact markers).
 """
 
 import json
@@ -25,11 +32,12 @@ import subprocess
 import textwrap
 from pathlib import Path
 
+from outcomeeng_testing.harnesses.git_context import accepted_git_context
+
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 BIN_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "bin"
 POST_COMPACT = BIN_DIR / "post-compact"
-SESSION_RESUME = BIN_DIR / "session-resume"
 
 
 # ---------------------------------------------------------------------------
@@ -41,27 +49,33 @@ def _handoff(
     sessions_dir: Path,
     body: str,
     *,
+    cwd: Path,
     priority: str = "medium",
     goal: str = "Verify handoff behavior",
     next_step: str = "Inspect the session file",
 ) -> subprocess.CompletedProcess:
     # spx session handoff takes the JSON-prefix wire format: a single JSON
     # object of caller-supplied fields on the first line, then the body bytes
-    # verbatim.
+    # verbatim. It is run from an spx-accepted git context (cwd) so the result
+    # does not depend on the runner's ambient git state.
     header = json.dumps({"priority": priority, "goal": goal, "next_step": next_step})
     return subprocess.run(
         ["spx", "session", "handoff", "--sessions-dir", str(sessions_dir)],
         input=f"{header}\n{body}",
         capture_output=True,
         text=True,
+        cwd=str(cwd),
     )
 
 
-def _pickup(sessions_dir: Path, session_id: str) -> subprocess.CompletedProcess:
+def _pickup(
+    sessions_dir: Path, session_id: str, *, cwd: Path
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["spx", "session", "pickup", "--sessions-dir", str(sessions_dir), session_id],
         capture_output=True,
         text=True,
+        cwd=str(cwd),
     )
 
 
@@ -93,34 +107,38 @@ def _parse_handoff_id(stdout: str) -> str:
 
 class TestHandoffCreatesTodoSession:
     def test_file_appears_in_todo(self, tmp_path):
-        result = _handoff(
-            tmp_path / "sessions",
-            textwrap.dedent("""\
-                # Test session
+        with accepted_git_context() as repo:
+            result = _handoff(
+                tmp_path / "sessions",
+                textwrap.dedent("""\
+                    # Test session
 
-                Active node: spx/21-spec-tree.enabler/76-sessions.enabler/
-            """),
-            goal="Verify handoff writes a file to todo/",
-            next_step="Inspect the todo directory listing",
-        )
-        assert result.returncode == 0, result.stderr
-        todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
-        assert len(todo_files) == 1
+                    Active node: spx/21-spec-tree.enabler/76-sessions.enabler/
+                """),
+                cwd=repo,
+                goal="Verify handoff writes a file to todo/",
+                next_step="Inspect the todo directory listing",
+            )
+            assert result.returncode == 0, result.stderr
+            todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
+            assert len(todo_files) == 1
 
     def test_session_file_contains_active_node_path(self, tmp_path):
         active_node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
-        result = _handoff(
-            tmp_path / "sessions",
-            textwrap.dedent(f"""\
-                Active node: {active_node}
-            """),
-            goal="Verify active node path survives the handoff write",
-            next_step="Read the todo session file and assert path presence",
-        )
-        assert result.returncode == 0, result.stderr
-        todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
-        assert todo_files
-        assert active_node in todo_files[0].read_text()
+        with accepted_git_context() as repo:
+            result = _handoff(
+                tmp_path / "sessions",
+                textwrap.dedent(f"""\
+                    Active node: {active_node}
+                """),
+                cwd=repo,
+                goal="Verify active node path survives the handoff write",
+                next_step="Read the todo session file and assert path presence",
+            )
+            assert result.returncode == 0, result.stderr
+            todo_files = list((tmp_path / "sessions" / "todo").glob("*.md"))
+            assert todo_files
+            assert active_node in todo_files[0].read_text()
 
 
 # ---------------------------------------------------------------------------
@@ -131,50 +149,57 @@ class TestHandoffCreatesTodoSession:
 class TestPickupMovesToDoing:
     def test_pickup_removes_from_todo(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
-        result = _handoff(
-            sessions_dir,
-            "# Session\n",
-            goal="Move a session out of todo",
-            next_step="Confirm the file no longer exists in todo",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                "# Session\n",
+                cwd=repo,
+                goal="Move a session out of todo",
+                next_step="Confirm the file no longer exists in todo",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        _pickup(sessions_dir, session_id)
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
 
-        assert not (sessions_dir / "todo" / f"{session_id}.md").exists()
+            assert not (sessions_dir / "todo" / f"{session_id}.md").exists()
 
     def test_pickup_places_in_doing(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
-        result = _handoff(
-            sessions_dir,
-            "# Session\n",
-            goal="Move a session into doing",
-            next_step="Confirm the file exists in doing",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                "# Session\n",
+                cwd=repo,
+                goal="Move a session into doing",
+                next_step="Confirm the file exists in doing",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        pickup_result = _pickup(sessions_dir, session_id)
-        assert pickup_result.returncode == 0, pickup_result.stderr
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
 
-        assert (sessions_dir / "doing" / f"{session_id}.md").exists()
+            assert (sessions_dir / "doing" / f"{session_id}.md").exists()
 
     def test_pickup_emits_session_content_to_stdout(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
         body = "Active node: spx/21-spec-tree.enabler/76-sessions.enabler/"
-        result = _handoff(
-            sessions_dir,
-            f"{body}\n",
-            goal="Surface session content during pickup",
-            next_step="Read pickup stdout and assert body presence",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                f"{body}\n",
+                cwd=repo,
+                goal="Surface session content during pickup",
+                next_step="Read pickup stdout and assert body presence",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        pickup_result = _pickup(sessions_dir, session_id)
-        assert pickup_result.returncode == 0, pickup_result.stderr
-        assert body in pickup_result.stdout
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
+            assert body in pickup_result.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -182,98 +207,111 @@ class TestPickupMovesToDoing:
 # ---------------------------------------------------------------------------
 
 
-def _release(sessions_dir: Path, session_id: str) -> subprocess.CompletedProcess:
+def _release(
+    sessions_dir: Path, session_id: str, *, cwd: Path
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         ["spx", "session", "release", "--sessions-dir", str(sessions_dir), session_id],
         capture_output=True,
         text=True,
+        cwd=str(cwd),
     )
 
 
 class TestReleaseMovesToTodo:
     def test_release_removes_from_doing(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
-        result = _handoff(
-            sessions_dir,
-            "# Session\n",
-            goal="Test release removes from doing",
-            next_step="Run release and check doing/",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                "# Session\n",
+                cwd=repo,
+                goal="Test release removes from doing",
+                next_step="Run release and check doing/",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        pickup_result = _pickup(sessions_dir, session_id)
-        assert pickup_result.returncode == 0, pickup_result.stderr
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
 
-        release_result = _release(sessions_dir, session_id)
-        assert release_result.returncode == 0, release_result.stderr
-        assert not (sessions_dir / "doing" / f"{session_id}.md").exists()
+            release_result = _release(sessions_dir, session_id, cwd=repo)
+            assert release_result.returncode == 0, release_result.stderr
+            assert not (sessions_dir / "doing" / f"{session_id}.md").exists()
 
     def test_release_places_back_in_todo(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
-        result = _handoff(
-            sessions_dir,
-            "# Session\n",
-            goal="Test release places back in todo",
-            next_step="Run release and check todo/",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                "# Session\n",
+                cwd=repo,
+                goal="Test release places back in todo",
+                next_step="Run release and check todo/",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        pickup_result = _pickup(sessions_dir, session_id)
-        assert pickup_result.returncode == 0, pickup_result.stderr
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
 
-        release_result = _release(sessions_dir, session_id)
-        assert release_result.returncode == 0, release_result.stderr
-        assert (sessions_dir / "todo" / f"{session_id}.md").exists()
+            release_result = _release(sessions_dir, session_id, cwd=repo)
+            assert release_result.returncode == 0, release_result.stderr
+            assert (sessions_dir / "todo" / f"{session_id}.md").exists()
 
     def test_release_does_not_modify_content(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
         body = "# Session with specific content\n\nKeep this intact."
-        result = _handoff(
-            sessions_dir,
-            body,
-            goal="Test release preserves content",
-            next_step="Compare content before and after release",
-        )
-        assert result.returncode == 0, result.stderr
-        session_id = _parse_handoff_id(result.stdout)
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                body,
+                cwd=repo,
+                goal="Test release preserves content",
+                next_step="Compare content before and after release",
+            )
+            assert result.returncode == 0, result.stderr
+            session_id = _parse_handoff_id(result.stdout)
 
-        pickup_result = _pickup(sessions_dir, session_id)
-        assert pickup_result.returncode == 0, pickup_result.stderr
-        content_in_doing = (sessions_dir / "doing" / f"{session_id}.md").read_text()
+            pickup_result = _pickup(sessions_dir, session_id, cwd=repo)
+            assert pickup_result.returncode == 0, pickup_result.stderr
+            content_in_doing = (sessions_dir / "doing" / f"{session_id}.md").read_text()
 
-        release_result = _release(sessions_dir, session_id)
-        assert release_result.returncode == 0, release_result.stderr
-        content_in_todo = (sessions_dir / "todo" / f"{session_id}.md").read_text()
-        assert content_in_doing == content_in_todo
+            release_result = _release(sessions_dir, session_id, cwd=repo)
+            assert release_result.returncode == 0, release_result.stderr
+            content_in_todo = (sessions_dir / "todo" / f"{session_id}.md").read_text()
+            assert content_in_doing == content_in_todo
 
     def test_release_multiple_ids_in_single_invocation(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
-        ids = []
-        for i in range(2):
-            result = _handoff(
-                sessions_dir,
-                f"# Session {i}\n",
-                goal=f"Multi-release test session {i}",
-                next_step="Verify multi-ID release",
+        with accepted_git_context() as repo:
+            ids = []
+            for i in range(2):
+                result = _handoff(
+                    sessions_dir,
+                    f"# Session {i}\n",
+                    cwd=repo,
+                    goal=f"Multi-release test session {i}",
+                    next_step="Verify multi-ID release",
+                )
+                assert result.returncode == 0, result.stderr
+                sid = _parse_handoff_id(result.stdout)
+                pickup_result = _pickup(sessions_dir, sid, cwd=repo)
+                assert pickup_result.returncode == 0, pickup_result.stderr
+                ids.append(sid)
+
+            release_result = subprocess.run(
+                ["spx", "session", "release", "--sessions-dir", str(sessions_dir)]
+                + ids,
+                capture_output=True,
+                text=True,
+                cwd=str(repo),
             )
-            assert result.returncode == 0, result.stderr
-            sid = _parse_handoff_id(result.stdout)
-            pickup_result = _pickup(sessions_dir, sid)
-            assert pickup_result.returncode == 0, pickup_result.stderr
-            ids.append(sid)
+            assert release_result.returncode == 0, release_result.stderr
 
-        release_result = subprocess.run(
-            ["spx", "session", "release", "--sessions-dir", str(sessions_dir)] + ids,
-            capture_output=True,
-            text=True,
-        )
-        assert release_result.returncode == 0, release_result.stderr
-
-        for sid in ids:
-            assert not (sessions_dir / "doing" / f"{sid}.md").exists()
-            assert (sessions_dir / "todo" / f"{sid}.md").exists()
+            for sid in ids:
+                assert not (sessions_dir / "doing" / f"{sid}.md").exists()
+                assert (sessions_dir / "todo" / f"{sid}.md").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -285,38 +323,42 @@ class TestCoordinationNoteContentInSession:
     def test_plan_md_excerpt_preserved(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
         plan_text = "## PLAN: Wire the spx CLI half of the session-scope accumulator"
-        result = _handoff(
-            sessions_dir,
-            textwrap.dedent(f"""\
-                # Session with PLAN.md
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                textwrap.dedent(f"""\
+                    # Session with PLAN.md
 
-                {plan_text}
-            """),
-            goal="Preserve PLAN.md excerpt through handoff",
-            next_step="Read the todo session file and assert excerpt presence",
-        )
-        assert result.returncode == 0, result.stderr
-        todo_files = list((sessions_dir / "todo").glob("*.md"))
-        assert todo_files
-        assert plan_text in todo_files[0].read_text()
+                    {plan_text}
+                """),
+                cwd=repo,
+                goal="Preserve PLAN.md excerpt through handoff",
+                next_step="Read the todo session file and assert excerpt presence",
+            )
+            assert result.returncode == 0, result.stderr
+            todo_files = list((sessions_dir / "todo").glob("*.md"))
+            assert todo_files
+            assert plan_text in todo_files[0].read_text()
 
     def test_issues_md_excerpt_preserved(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
         issues_text = "## 12. Repo-wide evidence links still contain legacy test naming"
-        result = _handoff(
-            sessions_dir,
-            textwrap.dedent(f"""\
-                # Session with ISSUES.md
+        with accepted_git_context() as repo:
+            result = _handoff(
+                sessions_dir,
+                textwrap.dedent(f"""\
+                    # Session with ISSUES.md
 
-                {issues_text}
-            """),
-            goal="Preserve ISSUES.md excerpt through handoff",
-            next_step="Read the todo session file and assert excerpt presence",
-        )
-        assert result.returncode == 0, result.stderr
-        todo_files = list((sessions_dir / "todo").glob("*.md"))
-        assert todo_files
-        assert issues_text in todo_files[0].read_text()
+                    {issues_text}
+                """),
+                cwd=repo,
+                goal="Preserve ISSUES.md excerpt through handoff",
+                next_step="Read the todo session file and assert excerpt presence",
+            )
+            assert result.returncode == 0, result.stderr
+            todo_files = list((sessions_dir / "todo").glob("*.md"))
+            assert todo_files
+            assert issues_text in todo_files[0].read_text()
 
 
 # ---------------------------------------------------------------------------
@@ -418,8 +460,3 @@ class TestPostCompactEmitsReanchoringDirective:
         result = _post_compact(tmp_path, "sess-e", summary_with_indented_marker)
         assert result.returncode == 0, result.stderr
         assert "/spec-tree:understanding" not in result.stdout
-
-
-# ---------------------------------------------------------------------------
-# session-resume is retired — no tests needed
-# ---------------------------------------------------------------------------
