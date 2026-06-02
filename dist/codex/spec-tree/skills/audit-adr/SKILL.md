@@ -99,7 +99,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECT.
+Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 </step>
 

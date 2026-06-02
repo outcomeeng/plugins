@@ -18,7 +18,7 @@ Language-specific ADR concerns — testability-in-Compliance (dependency injecti
 
 ## Per-rule Mode Validity Model
 
-Each Compliance rule carries an evidence-mode tag chosen from the rule's claim shape via `/testing` (see `spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md`). The audit checks the tag is present and names one of the five modes; it does not re-derive the mode (mode selection is `/testing`'s authority). A missing tag, a tag naming a non-mode (e.g. a bare mechanism `[review]`/`[test]`/`[eval]`), or more than one tag is a finding.
+Each Compliance rule carries an evidence-mode tag chosen from the rule's claim shape via `/testing` (see `spx/21-spec-tree.enabler/35-evidence.enabler/evidence.md`). The audit checks the tag is present and matches its subsection; it does not re-derive the mode (mode selection is `/testing`'s authority). A missing tag, a bare mechanism tag (`[review]`/`[test]`), a tag that disagrees with its subsection, or more than one tag is a finding.
 
 ## Assertions
 

@@ -55,4 +55,6 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([review])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([review])
+- ALWAYS: validate each verification rule's mode tag against its subsection without re-deriving the mode — mode selection is `/testing`'s authority ([review])
+- ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([review])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([review])
