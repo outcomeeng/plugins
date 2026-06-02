@@ -176,7 +176,7 @@ Both `REVIEW_READINESS` predicates are re-established before every push, not onl
 
 **`MERGE_READINESS`** authorizes merge. It holds when all predicates hold, every one decidable from observable PR state:
 
-- a clean current-head CI review exists — the reviewing-kind output for the current head, read from the surfaces in `<review_inspection>`, complete and valid, that either explicitly states it has **no findings** or has had **every** finding individually assessed and dropped as resting on a non-existent or unsupported rule (validity per `<review_classification>`; a valid finding is unresolved work the agent fixes before merge). The absence of a current-head review is never clean — it is `WAIT_FOR_REVIEW`;
+- a clean current-head CI review exists — the reviewing-kind output for the current head, read from the surfaces in `<review_inspection>`, complete and valid, that reports **no unresolved `BLOCKING` or `DEBT` finding** — stated directly per the reviewer's no-`BLOCKING`-or-`DEBT` convention, or with **every** such finding individually assessed and dropped as unbacked; `FOLLOW-UP` findings are tracked, never blocking (validity per `<review_classification>`; a valid `BLOCKING`/`DEBT` finding is unresolved work the agent fixes before merge). The absence of a current-head review is never clean — it is `WAIT_FOR_REVIEW`;
 - every other required check on `statusCheckRollup` is **terminal-green** (defined below);
 - `<branch_hygiene>` passes, including the upstream-safety check;
 - PR state is `OPEN`, `isDraft` is false, the inspected head SHA matches the branch head fetched from origin, and the branch is rebased onto current `origin/<base>` or is a fast-forward descendant.

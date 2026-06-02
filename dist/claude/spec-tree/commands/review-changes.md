@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, Skill
 <objective>
 Run the reviewing-changes skill against the current branch's diff and surface the findings to the main agent. The reviewer emits findings only — it never decides. The main agent (or operator) handles every finding by validity and phase per `spx/15-agent-pr-authority.pdr.md`, never by its severity label: validate each finding against its cited rule and drop the unbacked; fix every valid finding in the diff, or — before the PR opens — split out of the changeset any whose fix is too large to belong and record it in the owning node's `ISSUES.md` / `PLAN.md`.
 
-The slash command is the smallest local equivalent of the GH `spec-tree-review` workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
+The slash command is the smallest local equivalent of the CI review workflow — same three-severity verdict shape (`### BLOCKING` / `### DEBT` / `### FOLLOW-UP`), no PR open required, no CI roundtrip.
 </objective>
 
 <process>

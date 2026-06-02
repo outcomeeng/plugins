@@ -80,7 +80,7 @@ def _load_template(name: str) -> string.Template:
     Templates live under ``references/render/`` — one markdown file per
     render section. Substituted via stdlib ``string.Template`` so the
     rendered shape is data, not f-string concatenation. The GH-hosted
-    ``spec-tree-review`` workflow can consume the same files.
+    CI review workflow can consume the same files.
     """
     return string.Template((RENDER_DIR / name).read_text(encoding="utf-8"))
 
