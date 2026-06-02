@@ -78,24 +78,27 @@ Product invariants are guarantees users can rely on. They must be:
 
 <compliance_quality>
 
-Compliance rules are the enforceable part of a PDR. Each MUST/NEVER rule needs:
+Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Audit`, `### Eval`, and `### Testing` by verdict mode. Each rule needs:
 
-1. **Verifiability** — can a reviewer, test, or lint rule determine pass/fail?
-2. **Mode tag** — exactly one per-rule evidence-mode tag naming one of `scenario`, `mapping`, `conformance`, `property`, `compliance`, chosen via `/testing` from the rule's claim shape — never a bare mechanism (`([review])`/`([test])`/`([eval])`)
+1. **Verifiability** — can an auditing skill, an eval, or a test determine pass/fail?
+2. **Tag matching its subsection** — under `### Testing`, a `/testing`-routed claim-shape mode (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Audit`, `([audit])`; under `### Eval`, `([eval])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
 3. **Specificity** — two independent reviewers would agree on the verdict
 
 **Good compliance rules:**
 
 ```markdown
-### MUST
+## Verification
 
-- All text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([property])
-- Export files conform to RFC 4180 CSV format ([conformance])
+### Testing
 
-### NEVER
+- ALWAYS: all text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([property])
+- ALWAYS: export files conform to RFC 4180 CSV format ([conformance])
+- NEVER: expose internal database IDs in user-facing URLs ([property])
+- NEVER: display raw error messages from backend services to users ([compliance])
 
-- Expose internal database IDs in user-facing URLs ([property])
-- Display raw error messages from backend services to users ([compliance])
+### Audit
+
+- ALWAYS: every theme variant is selectable from the settings surface ([audit])
 ```
 
 **Bad compliance rules:**
@@ -136,7 +139,7 @@ The critical property. A compliance rule needs both presence (some spec assertio
 
 - A spec assertion that directly tests the behavior the rule requires
 - A spec assertion whose `[test]` link verifies the rule
-- A `[review]` reference pointing back to the PDR
+- An `[audit]` or `[eval]` assertion enforcing the rule from a spec in the governed subtree
 
 **What does NOT count:**
 

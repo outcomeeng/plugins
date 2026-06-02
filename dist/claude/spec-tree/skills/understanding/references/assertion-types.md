@@ -1,5 +1,5 @@
 <overview>
-Every assertion in a node spec must be one of five structured types. The first four default to `[test]` evidence. Compliance assertions choose between `[test]` and `[review]` depending on whether the constraint can be verified by an automated test or requires human judgment.
+Every assertion in a node spec must be one of five structured types. The first four default to `[test]` evidence. Compliance assertions choose between `[test]` and `[audit]` depending on whether the constraint can be verified by an automated test or requires agent judgment (`[review]` is the legacy form of `[audit]`, accepted during migration).
 
 | Type            | Quantifier                      | Test strategy         | Use when                                      |
 | --------------- | ------------------------------- | --------------------- | --------------------------------------------- |
@@ -90,7 +90,7 @@ A compliance assertion states a rule the node's output must always or never exhi
 - NEVER: reference XiperHLS — deferred by `spx/15-product-offering.pdr.md` ([test](tests/open-source.compliance.l1.test.{ext}))
 ```
 
-**Test strategy:** Review (`[review]`) for semantic constraints requiring human or agent judgment. Test (`[test]`) when the constraint is automatable — including tests that exercise a lint rule against violating fixtures (see `<evidence_mechanisms>`). Eval (`[eval]`) when the constraint governs LLM-driven behavior — a skill's audit verdict, generated content classification, or rule recognition — and the producing skill emits a structurally validatable verdict whose shape the eval declares.
+**Test strategy:** Audit (`[audit]`) for semantic constraints requiring agent judgment (`[review]` is the legacy form). Test (`[test]`) when the constraint is automatable — including tests that exercise a lint rule against violating fixtures (see `<evidence_mechanisms>`). Eval (`[eval]`) when the constraint governs LLM-driven behavior — a skill's audit verdict, generated content classification, or rule recognition — and the producing skill emits a structurally validatable verdict whose shape the eval declares.
 
 **When to use:** PDR/ADR compliance rules, semantic constraints that can't be falsified by regex, behavioral boundaries that define what the node must not do.
 
@@ -135,21 +135,24 @@ Only include headings for assertion types that apply. Each evidence type lives i
 
 <evidence_mechanisms>
 
-Every assertion links to one of three evidence mechanisms:
+Every assertion links to one evidence mechanism — one of the lanes that back assertions, each backed by a verification type (`references/verification-kinds.md`):
 
-| Mechanism  | Tag                      | Who decides                   | What it proves                                                                                         | Verified by |
-| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
-| **Test**   | `([test](path/to/test))` | Automated test                | "The code does X" — exercises behavior with real coupling                                              | Test runner |
-| **Review** | `([review])`             | Human or agent judgment       | "The design follows principle W" — semantic constraint no tool can verify                              | Audit skill |
-| **Eval**   | `([eval](path/to/eval))` | Eval runner over golden cases | "The skill identifies X" — graded cases verify LLM-driven behavior under a structural verdict contract | Eval runner |
+| Mechanism  | Tag                      | Who decides                   | What it proves                                                                                         | Verified by    |
+| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ | -------------- |
+| **Test**   | `([test](path/to/test))` | Automated test                | "The code does X" — exercises behavior with real coupling                                              | Test runner    |
+| **Review** | `([review])`             | Human or agent judgment       | "The design follows principle W" — semantic constraint no tool can verify                              | Audit skill    |
+| **Eval**   | `([eval](path/to/eval))` | Eval runner over golden cases | "The skill identifies X" — graded cases verify LLM-driven behavior under a structural verdict contract | Eval runner    |
+| **Audit**  | `([audit])`              | An auditing skill's checklist | "The artifact conforms to standard W" — agentic judgment over a fixed checklist                        | Auditing skill |
+
+`([audit])` is the lane backed by the auditing type; `([review])` is its legacy tag and migrates to `([audit])` — both resolve during migration. Reviewing — open-ended principal-level judgment — is a gate, not an assertion lane. The lane↔type mapping is declared in `references/verification-kinds.md`.
 
 **Test** is the default for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
 
 For structural constraints enforced by a lint rule, the `[test]` evidence is a test that exercises the rule against violating fixtures and asserts the violation is detected. The rule's presence in the validation pipeline is a separate operational concern — confirmed by the pipeline running green on the codebase — not by the spec assertion itself.
 
-**Review** is for semantic constraints that no automated check can verify — "the design follows this principle", "the API feels intuitive", "the copy matches brand voice". A review tag is valid evidence at the time of review; it does not re-verify itself as the code changes.
+**Audit** (`[audit]`; `[review]` is its legacy form) is for semantic constraints that no automated check can verify — "the design follows this principle", "the API feels intuitive", "the copy matches brand voice". An audit tag is valid evidence at the time of the audit; it does not re-verify itself as the code changes.
 
-**Eval** is for behavior that depends on LLM outputs but emits a structurally validatable verdict. The `[eval]` link points at an `eval.toml` definition file inside a per-eval directory; the directory carries the case data (`cases.jsonl`), the prompt template (`prompt.md`), and an append-only `history.jsonl` of run summaries. The dedicated eval runner replays the case set through the producing skill, parses the structured verdict against the per-eval expected fields declared in each case, and scores each case against those fields. Non-determinism is bounded by pass@k and threshold gating. Use `[eval]` when `[test]` cannot exercise LLM behavior directly but the producing skill's output has a parseable contract; prefer `[test]` when behavior is deterministic; fall back to `[review]` when no structural verdict exists.
+**Eval** is for behavior that depends on LLM outputs but emits a structurally validatable verdict. The `[eval]` link points at an `eval.toml` definition file inside a per-eval directory; the directory carries the case data (`cases.jsonl`), the prompt template (`prompt.md`), and an append-only `history.jsonl` of run summaries. The dedicated eval runner replays the case set through the producing skill, parses the structured verdict against the per-eval expected fields declared in each case, and scores each case against those fields. Non-determinism is bounded by pass@k and threshold gating. Use `[eval]` when `[test]` cannot exercise LLM behavior directly but the producing skill's output has a parseable contract; prefer `[test]` when behavior is deterministic; fall back to `[audit]` when no structural verdict exists.
 
 Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. The runner's CLI (declared per-project, e.g. `outcomeeng-evals`) consumes the `eval.toml`, resolves sibling paths, and writes results next to it.
 

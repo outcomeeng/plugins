@@ -53,6 +53,6 @@ These cannot be worked around inside the harness. Eval design must accommodate t
 - PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/`
 - Eval-harness contract: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
-- Evidence-execution-lanes ADR: `spx/16-evidence-execution-lanes.adr.md`
+- Verification PDR (taxonomy + lanes): `spx/14-verification.pdr.md`
 - Verdict-format PDR (JSON, not XSD): `spx/15-audit-verdict-format.pdr.md`
 - Precedent eval (the only existing one before PR #43): `spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/evals/shared-constant-bag/`

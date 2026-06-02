@@ -31,7 +31,7 @@ An ADR's content is architecture — technology choices, data structures, implem
 
 **MODE VALIDITY IS PRESENCE, NOT RE-DERIVATION.**
 
-Each Compliance MUST/NEVER rule carries one evidence-mode tag naming one of the five claim shapes (scenario, mapping, conformance, property, compliance). Verify the tag is present and names a real mode. NEVER re-derive the mode — mode selection is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`/`[eval]`) in place of a mode, or more than one tag is a finding.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → a claim shape (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Audit` → `[audit]`; `### Eval` → `[eval]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's claim shape — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of a mode, a tag disagreeing with its subsection, or more than one tag is a finding.
 
 **DOWNSTREAM SUFFICIENCY, NOT MERE PRESENCE.**
 
@@ -63,7 +63,7 @@ Do not proceed without the `<SPEC_TREE_CONTEXT>` marker.
 
 **Step 2: Read the ADR**
 
-Read the ADR under audit. Identify its sections: Purpose, Context, Decision, Rationale, Trade-offs, Invariants (optional), Compliance.
+Read the ADR under audit. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification.
 
 </step>
 
@@ -71,9 +71,9 @@ Read the ADR under audit. Identify its sections: Purpose, Context, Decision, Rat
 
 **Step 3a: Section structure**
 
-Verify the required sections are present: Purpose, Context, Decision, Rationale, Trade-offs, Compliance. Invariants appears only when the decision establishes algebraic properties.
+Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
-**Any required section missing → REJECT — "missing-section."**
+**No decision statement, or no Verification section → REJECT — "missing-section."**
 
 </step>
 
@@ -97,9 +97,9 @@ Check EVERY section for temporal language.
 
 **Step 3c: Per-rule mode validity**
 
-For each Compliance MUST/NEVER rule, verify it carries exactly one evidence-mode tag naming one of `scenario`, `mapping`, `conformance`, `property`, `compliance`. Do not re-derive the mode — only validate the tag.
+Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `### Testing`. For each rule, verify it carries exactly one tag matching its subsection: `### Testing` → one of `scenario`/`mapping`/`conformance`/`property`/`compliance`; `### Audit` → `([audit])`; `### Eval` → `([eval])`. Do not re-derive the mode — only validate the tag against its subsection.
 
-**A rule with no mode tag, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -163,7 +163,7 @@ Audit is complete when:
 - [ ] ADR read — all sections identified
 - [ ] Section structure: required sections present
 - [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule mode validity: each Compliance rule's mode tag validated against the five modes
+- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Audit → `[audit]`, Eval → `[eval]`, Testing → one of the five claim-shape modes)
 - [ ] Downstream sufficiency: each rule's enforcing assertion checked at or above the declared mode
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail

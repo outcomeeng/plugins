@@ -8,6 +8,6 @@ CAN govern architecture and product behavior through enforceable, auditable deci
 
 ### Compliance
 
-- ALWAYS: verify that compliance rules in decision records flow into spec assertions somewhere in the governed subtree ([review])
-- ALWAYS: every decision-record compliance rule declares a single evidence mode — one of scenario, mapping, conformance, property, compliance — chosen via /testing from the rule's claim shape ([review])
-- NEVER: approve a decision record whose constraints have zero downstream enforcement ([review])
+- ALWAYS: a decision record's rules flow into spec assertions that enforce them somewhere in the governed subtree ([audit])
+- ALWAYS: a decision record groups its rules under `## Verification` by verdict mode — `### Audit`, `### Eval`, `### Testing`; a `Testing` rule carries a `/testing`-routed claim-shape mode (scenario, mapping, conformance, property, compliance), and an `### Audit` or `### Eval` rule carries `[audit]` or `[eval]` for subjects — Spec Tree decisions, specs, skills, agents — that admit no deterministic test ([audit])
+- NEVER: approve a decision record whose rules have zero downstream enforcement ([audit])

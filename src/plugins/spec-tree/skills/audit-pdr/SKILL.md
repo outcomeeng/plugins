@@ -65,9 +65,9 @@ Do not proceed without `<SPEC_TREE_CONTEXT>` marker.
 
 **Step 2: Read the PDR**
 
-Read the PDR under audit. Identify all sections: Purpose, Context, Decision, Rationale, Trade-offs, Product invariants, Compliance.
+Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product invariants, and Verification.
 
-Note any missing sections — a PDR without a Compliance section has no enforceable rules.
+Note any missing sections — a PDR without a Verification section has no enforceable rules.
 
 </step>
 
@@ -113,12 +113,17 @@ For each product invariant:
 
 **Step 3c: Per-rule mode validity**
 
-For each MUST/NEVER rule:
+Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `### Testing` subsections by verdict mode. For each rule:
 
-1. Does it carry exactly one per-rule evidence-mode tag naming one of `scenario`, `mapping`, `conformance`, `property`, `compliance`? The tag is the claim-shape mode chosen via `/testing`, not a bare mechanism (`([review])`/`([test])`/`([eval])`). Do not re-derive the mode — only validate the tag.
+1. The rule carries exactly one tag, and the tag matches its subsection:
+   - under `### Testing` → a `/testing`-routed claim-shape mode: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval;
+   - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract.
+
+   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
 2. Is the rule specific enough that two reviewers would agree on pass/fail?
 
-**A rule with no mode tag, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -259,7 +264,7 @@ Audit is complete when:
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
 - [ ] Invariant quality: each invariant checked for observability and falsifiability
-- [ ] Per-rule mode validity: each rule's evidence-mode tag validated against the five modes
+- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Audit → `[audit]`, Eval → `[eval]`, Testing → one of the five claim-shape modes)
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
 - [ ] Downstream sufficiency: each rule's enforcing assertion checked at or above the declared mode

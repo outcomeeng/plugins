@@ -1,49 +1,36 @@
 # {Decision Name}
 
-## Purpose
-
-{1-3 sentences: what product behavior this decision governs. State as permanent truth — "This decision governs [scope]" — not as a gap to fill.}
-
-## Context
-
-**Business impact:** {How this decision affects business goals or user outcomes}
-
-**Technical constraints:** {Systems, dependencies, or technical realities that shape this decision}
-
-## Decision
-
-{Primary decision in one sentence.}
+{The decision, stated directly as permanent truth in 1-3 sentences — what product behavior it governs and what it decides. State user-observable behavior, not implementation. No "Purpose" heading, no preamble.}
 
 ## Rationale
 
-{Coherent argument for why this is right for users. Include alternatives considered and why they were rejected.}
-
-## Trade-offs accepted
-
-| Trade-off         | Mitigation / reasoning                      |
-| ----------------- | ------------------------------------------- |
-| {what's given up} | {why it's acceptable or how it's mitigated} |
+{Brief — why this is right for users. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.}
 
 ## Product invariants
 
-Only include if this decision establishes observable user-facing guarantees. Omit the section if none apply.
+{Omit if none. Observable user-facing guarantees users can rely on.}
 
-- {observable user-facing behavior} — {why users can rely on this}
+## Verification
 
-## Compliance
+Each rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection naming how it is verified. Include only the subsections that apply.
 
-Only include subsections that apply. Omit empty subsections.
+### Audit
 
-Each MUST/NEVER rule carries a single evidence-mode tag `([{mode}])` — one of `scenario`, `mapping`, `conformance`, `property`, or `compliance` — chosen by routing the rule's claim shape through `/testing`. The mode is the minimum evidence the downstream spec assertion that enforces the rule must carry; it is a claim-shape classification, not a test reference, so it carries no path.
+Verified by an auditing skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.
 
-### Recognized by
+- ALWAYS: {rule} ([audit])
+- NEVER: {prohibition} ([audit])
 
-{Observable product behavior indicating compliance with this decision}
+### Eval
 
-### MUST
+Verified by graded LLM behavior over curated cases — the subject is a skill, agent, or classifier whose output has a parseable contract.
 
-- {product behavior rule} — {why this follows from the decision} ([{mode}])
+- ALWAYS: {rule} ([eval])
+- NEVER: {prohibition} ([eval])
 
-### NEVER
+### Testing
 
-- {prohibited product behavior} — {why this violates the decision} ([{mode}])
+Verified by a deterministic test. Each rule carries its claim-shape mode — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
+
+- ALWAYS: {rule} ([{mode}])
+- NEVER: {prohibition} ([{mode}])
