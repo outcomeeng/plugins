@@ -14,6 +14,10 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - Given one or more session documents in `.spx/sessions/doing/`, when `spx session release` runs with their IDs, then each session is moved back to `.spx/sessions/todo/` without modifying its content ([test](tests/test_sessions.scenario.l1.py))
 - Given coordination-note content is included in the session payload, when the session document is created, then that content appears verbatim in the stored session file ([test](tests/test_sessions.scenario.l1.py))
 - Given `/compact` runs mid-session, when the PostCompact hook fires, then the hook parses the compact summary from its JSON payload, emits `<SPEC-TREE_RESUMED active-node="spx/..."/>` (or `<SPEC-TREE_RESUMED/>` when no node was active), and emits `/spec-tree:understanding` and `/spec-tree:contextualizing` on the active node when the foundation marker was active pre-compact ([test](tests/test_sessions.scenario.l1.py))
+- Given a root worktree checked out on a named branch, when `spx session handoff` runs, then it creates the session and records `git_ref` as the branch name ([test](tests/test_sessions.scenario.l1.py))
+- Given a root worktree with a detached HEAD, when `spx session handoff` runs, then it creates the session and records `git_ref` as the HEAD commit SHA ([test](tests/test_sessions.scenario.l1.py))
+- Given a linked worktree with a clean tree detached at the `origin/<default-branch>` tip, when `spx session handoff` runs, then it creates the session and records `git_ref` as that tip commit SHA ([test](tests/test_sessions.scenario.l1.py))
+- Given a linked worktree in any other state — on a named branch, or detached away from the `origin/<default-branch>` tip — when `spx session handoff` runs, then it is refused with `SessionHandoffBaseError` ([test](tests/test_sessions.scenario.l1.py))
 
 ### Conformance
 
@@ -21,7 +25,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Compliance
 
-- ALWAYS: `spx session handoff` reads a JSON header object on the first line of stdin followed by the body bytes — YAML frontmatter is never piped to the command; the CLI renders YAML frontmatter itself from the JSON fields and prefills `created_at`, `agent_session_id`, `branch`, and `worktree` ([review])
+- ALWAYS: `spx session handoff` reads a JSON header object on the first line of stdin followed by the body bytes — YAML frontmatter is never piped to the command; the CLI renders YAML frontmatter itself from the JSON fields and prefills `created_at`, `agent_session_id`, and `git_ref` ([review])
+- ALWAYS: from a linked (pool) worktree, `/handoff` invokes `spx session handoff` only after detaching the worktree to the `origin/<default-branch>` tip — the CLI refuses a linked worktree in any other state — and leaves the worktree detached afterward so the released work branch stays unoccupied for another worktree or agent to claim; the committed branch ref carries the work forward, not the worktree checkout ([review])
 - ALWAYS: the `/handoff` skill reads PLAN.md and ISSUES.md from the active node directory and includes their content in the session payload — coordination-note content must not be silently omitted ([review])
 - ALWAYS: store sessions in `.spx/sessions/` — session state is operational, not part of the durable map ([review])
 - NEVER: include session state in committed files — sessions are ephemeral conversation artifacts ([review])

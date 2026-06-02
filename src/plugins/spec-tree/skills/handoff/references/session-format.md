@@ -1,21 +1,20 @@
 <template>
 The handoff content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
 
-**Path C (new handoff)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, `branch`, and `worktree`. The JSON header carries only the caller-supplied fields:
+**Path C (new handoff)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, and `git_ref`. The JSON header carries only the caller-supplied fields:
 
 ```text
 {"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
 ```
 
-**Path B (rewrite in place)** writes the stored-file format directly to the existing artifact, preserving its existing `created_at`, `agent_session_id`, `branch`, and `worktree` values. The stored format is YAML frontmatter followed by the body:
+**Path B (rewrite in place)** writes the stored-file format directly to the existing artifact, preserving its existing `created_at`, `agent_session_id`, and `git_ref` values. The stored format is YAML frontmatter followed by the body:
 
 ```text
 ---
 created_at: [preserve on rewrite]
 agent_session_id: [preserve on rewrite]
 priority: medium
-branch: [preserve on rewrite]
-worktree: [preserve on rewrite]
+git_ref: [preserve on rewrite]
 goal: [Why this continuation exists]
 next_step: [The first concrete action for pickup]
 specs:
@@ -31,9 +30,8 @@ files:
 <metadata>
   timestamp: [UTC timestamp]
   product: [Product name from cwd]
-  git_branch: [Current branch]
+  git_ref: [value from frontmatter git_ref]
   git_status: [clean | dirty]
-  worktree: [Relative worktree value from frontmatter; empty string means main checkout]
 </metadata>
 
 <nodes>
@@ -127,10 +125,9 @@ history.
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
 - **`goal`**: Required, non-empty continuation objective. Use one sentence that identifies the user-visible outcome, not a generic handoff phrase.
 - **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
-- **Path C JSON header**: Carries only the caller-supplied fields — `priority`, `goal`, `next_step`, optional `specs`, optional `files`. Do not put `created_at`, `agent_session_id`, `branch`, or `worktree` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
-- **`branch`**: Prefilled by `spx session handoff` from git context. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
-- **`worktree`**: Prefilled by `spx session handoff` as a path relative to the Git common-dir parent. Preserve the value as written; empty string means the main checkout. Do not write absolute paths.
-- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `branch` + `worktree` identify the session context.
+- **Path C JSON header**: Carries only the caller-supplied fields — `priority`, `goal`, `next_step`, optional `specs`, optional `files`. Do not put `created_at`, `agent_session_id`, or `git_ref` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
+- **`git_ref`**: Prefilled by `spx session handoff` from git context — the branch name for a main checkout on a branch, or a commit SHA for a detached or linked-worktree handoff. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
+- **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `git_ref` identify the session context.
 - **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
 - **`result`**: Omit from new todo continuations. Add a non-empty `result` only to sessions being archived from `doing/` or abandoned mid-session artifacts before running `spx session archive`.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.

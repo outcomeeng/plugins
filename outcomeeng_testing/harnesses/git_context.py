@@ -29,6 +29,7 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -59,4 +60,95 @@ def accepted_git_context() -> Iterator[Path]:
         yield repo
 
 
-__all__ = ["accepted_git_context"]
+def _git_out(repo: Path, *args: str) -> str:
+    """Run ``git -C repo args`` and return stripped stdout, raising on failure."""
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+@dataclass
+class HandoffGitEnv:
+    """A repo with an ``origin`` remote plus helpers to reach each handoff state.
+
+    ``root`` is a root checkout on ``default_branch`` whose HEAD sits one commit
+    ahead of the ``origin/<default>`` tip, so a worktree detached at HEAD is off
+    the tip. The ``linked_*`` helpers add linked worktrees in specific states;
+    ``detach_root`` detaches the root checkout. Tests pass the yielded paths as
+    the subprocess ``cwd`` and compare the recorded ``git_ref`` against the
+    accepted contexts' expected values.
+    """
+
+    root: Path
+    default_branch: str
+    origin_tip: str
+
+    def head_sha(self) -> str:
+        """Return the full SHA at the root checkout's current HEAD."""
+        return _git_out(self.root, "rev-parse", "HEAD")
+
+    def detach_root(self) -> None:
+        """Detach the root checkout at its current HEAD (one commit past the tip)."""
+        _git(self.root, "switch", "--detach", self.head_sha())
+
+    def linked_at_origin_tip(self) -> Path:
+        """Add a linked worktree detached at the ``origin/<default>`` tip."""
+        worktree = self.root.parent / "wt-at-tip"
+        _git(self.root, "worktree", "add", "--detach", str(worktree), self.origin_tip)
+        return worktree
+
+    def linked_on_branch(self, name: str = "feature") -> Path:
+        """Add a linked worktree checked out on a new named branch."""
+        worktree = self.root.parent / f"wt-{name}"
+        _git(self.root, "worktree", "add", str(worktree), "-b", name)
+        return worktree
+
+    def linked_detached_off_tip(self) -> Path:
+        """Add a linked worktree detached at HEAD (one commit past the tip)."""
+        worktree = self.root.parent / "wt-off-tip"
+        _git(self.root, "worktree", "add", "--detach", str(worktree), self.head_sha())
+        return worktree
+
+
+@contextmanager
+def handoff_git_env() -> Iterator[HandoffGitEnv]:
+    """Yield a :class:`HandoffGitEnv` backed by a throwaway repo with a remote.
+
+    The root checkout is on ``main`` with ``origin/HEAD`` resolved and a second
+    commit so HEAD is ahead of the ``origin/main`` tip. The whole tree is removed
+    on exit; read-only git objects that resist cleanup are ignored so teardown
+    never fails the run. Provisions the linked-worktree and detached states the
+    worktree-state scenario tests need beyond the simple accepted context above.
+    """
+    with TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        base = Path(tmp)
+        remote = base / "remote.git"
+        root = base / "repo"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", "-b", "main", str(remote)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", "main", str(root)],
+            check=True,
+            capture_output=True,
+        )
+        _git(root, "config", "user.email", "test@example.invalid")
+        _git(root, "config", "user.name", "Spec Tree Test")
+        _git(root, "config", "commit.gpgsign", "false")
+        (root / "README.md").write_text("seed\n", encoding="utf-8")
+        _git(root, "add", "README.md")
+        _git(root, "commit", "-m", "seed")
+        _git(root, "remote", "add", "origin", str(remote))
+        _git(root, "push", "--quiet", "-u", "origin", "main")
+        _git(root, "remote", "set-head", "origin", "-a")
+        origin_tip = _git_out(root, "rev-parse", "origin/main")
+        _git(root, "commit", "--allow-empty", "-m", "ahead of origin tip")
+        yield HandoffGitEnv(root=root, default_branch="main", origin_tip=origin_tip)
+
+
+__all__ = ["HandoffGitEnv", "accepted_git_context", "handoff_git_env"]

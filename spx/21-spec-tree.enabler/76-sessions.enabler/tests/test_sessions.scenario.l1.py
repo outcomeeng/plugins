@@ -32,7 +32,10 @@ import subprocess
 import textwrap
 from pathlib import Path
 
-from outcomeeng_testing.harnesses.git_context import accepted_git_context
+from outcomeeng_testing.harnesses.git_context import (
+    accepted_git_context,
+    handoff_git_env,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -97,6 +100,18 @@ def _post_compact(
 def _parse_handoff_id(stdout: str) -> str:
     m = re.search(r"<HANDOFF_ID>(.+?)</HANDOFF_ID>", stdout)
     assert m, f"no <HANDOFF_ID> in: {stdout}"
+    return m.group(1)
+
+
+def _parse_session_file(stdout: str) -> Path:
+    m = re.search(r"<SESSION_FILE>(.+?)</SESSION_FILE>", stdout)
+    assert m, f"no <SESSION_FILE> in: {stdout}"
+    return Path(m.group(1))
+
+
+def _read_git_ref(session_file: Path) -> str:
+    m = re.search(r'"git_ref":\s*"([^"]*)"', session_file.read_text())
+    assert m, f"no git_ref in frontmatter of {session_file}"
     return m.group(1)
 
 
@@ -359,6 +374,55 @@ class TestCoordinationNoteContentInSession:
             todo_files = list((sessions_dir / "todo").glob("*.md"))
             assert todo_files
             assert issues_text in todo_files[0].read_text()
+
+
+# ---------------------------------------------------------------------------
+# Worktree-state assertions — git_ref derivation and linked-worktree refusal
+# ---------------------------------------------------------------------------
+
+
+class TestHandoffGitContext:
+    def test_root_checkout_on_branch_records_branch_name(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            result = _handoff(sessions_dir, "# Session\n", cwd=env.root)
+            assert result.returncode == 0, result.stderr
+            git_ref = _read_git_ref(_parse_session_file(result.stdout))
+            assert git_ref == env.default_branch
+
+    def test_root_checkout_detached_head_records_head_sha(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            env.detach_root()
+            result = _handoff(sessions_dir, "# Session\n", cwd=env.root)
+            assert result.returncode == 0, result.stderr
+            git_ref = _read_git_ref(_parse_session_file(result.stdout))
+            assert git_ref == env.head_sha()
+
+    def test_linked_worktree_at_origin_tip_records_tip_sha(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            worktree = env.linked_at_origin_tip()
+            result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
+            assert result.returncode == 0, result.stderr
+            git_ref = _read_git_ref(_parse_session_file(result.stdout))
+            assert git_ref == env.origin_tip
+
+    def test_linked_worktree_on_branch_is_refused(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            worktree = env.linked_on_branch()
+            result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
+            assert result.returncode != 0
+            assert "SessionHandoffBaseError" in result.stderr
+
+    def test_linked_worktree_detached_off_tip_is_refused(self, tmp_path):
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            worktree = env.linked_detached_off_tip()
+            result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
+            assert result.returncode != 0
+            assert "SessionHandoffBaseError" in result.stderr
 
 
 # ---------------------------------------------------------------------------
