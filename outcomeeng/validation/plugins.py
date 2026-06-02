@@ -25,11 +25,15 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
+import signal
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import IO, Final
 
 from outcomeeng.distribution.orchestration import (
     CATALOG_PATHS,
@@ -155,9 +159,68 @@ def check_manifest_parity(root: Path) -> list[str]:
     return errors
 
 
-def run_validate(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    """Run a validation command. Thin wrapper for testability."""
-    return subprocess.run(cmd, capture_output=True, text=True)
+# Wall-clock bound for a single `claude plugin validate` invocation. Tests import this
+# constant rather than restating the value.
+VALIDATE_TIMEOUT_SECONDS: Final = 60.0
+
+# Conventional exit code for a process the runner had to terminate on timeout.
+_TIMEOUT_RETURNCODE: Final = 124
+
+
+def run_validate(
+    cmd: list[str], *, timeout: float = VALIDATE_TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess[str]:
+    """Run a validation command with a bounded, capture-safe wait.
+
+    Output is captured to temporary files rather than inherited pipes: a short-lived
+    descendant of the validated process can hold a pipe's write end open after the
+    process itself has exited, and a pipe-draining read would then block on EOF without
+    bound. Writing to files makes the wait depend only on the invoked process exiting.
+    The child runs in its own process group with stdin detached; if it does not exit
+    within ``timeout`` the whole group is signalled with SIGKILL — the one signal a child
+    cannot ignore — and a non-zero result naming the command is returned.
+    """
+    with (
+        tempfile.TemporaryFile() as out,
+        tempfile.TemporaryFile() as err,
+    ):
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=out,
+            stderr=err,
+            start_new_session=True,
+        )
+        try:
+            returncode = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_process_group(proc)
+            proc.wait()
+            stdout, stderr = _read_captures(out, err)
+            note = f"timed out after {timeout}s: {' '.join(cmd)}"
+            stderr = f"{stderr}\n{note}".strip()
+            return subprocess.CompletedProcess(cmd, _TIMEOUT_RETURNCODE, stdout, stderr)
+        stdout, stderr = _read_captures(out, err)
+        return subprocess.CompletedProcess(cmd, returncode, stdout, stderr)
+
+
+def _kill_process_group(proc: subprocess.Popen[bytes]) -> None:
+    """SIGKILL the process group led by ``proc`` (created with start_new_session)."""
+    try:
+        pgid = os.getpgid(proc.pid)
+    except ProcessLookupError:
+        return
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+
+
+def _read_captures(out: IO[bytes], err: IO[bytes]) -> tuple[str, str]:
+    """Rewind and decode the captured stdout and stderr temp files."""
+    out.seek(0)
+    err.seek(0)
+    return out.read().decode(errors="replace"), err.read().decode(errors="replace")
 
 
 def main(
