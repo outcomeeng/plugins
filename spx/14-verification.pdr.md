@@ -5,7 +5,7 @@ This product adopts the verification taxonomy declared in the `/understanding` f
 Grounding for this product:
 
 - The agentic types, auditing and reviewing, are LLM-driven; their skills are themselves validated by evals in this repository through `outcomeeng_evals`.
-- Path-bearing evidence links resolve through this repository's validator `outcomeeng/validation/eval_links.py` — `[test]` to a pytest collectable, `[eval]` to an `eval.toml`. The `[audit]` lane coexists with the legacy `[review]` tag during migration; `[review]` is dropped once every assertion carrying it reclassifies to `[audit]` or to a reviewing gate.
+- Each path-bearing evidence link resolves to its target: a `[test]` link to a pytest collectable, an `[eval]` link to an `eval.toml`. The `[audit]` lane is pathless.
 
 ## Verification
 
