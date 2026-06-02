@@ -1,0 +1,5 @@
+# pnpm 11 requires an explicit per-dependency build decision (strictDepBuilds
+# defaults to true). esbuild ships its binary via the @esbuild/<platform>
+# optional dependency, so it needs no postinstall of its own — keep it unbuilt.
+allowBuilds:
+  esbuild: false
