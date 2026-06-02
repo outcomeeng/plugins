@@ -16,3 +16,20 @@ Required handling when a test-evidence sweep happens on this node:
 - Retag the assertion from `[review]` to `[test](tests/test_reviewing_changes.compliance.l1.py)`.
 
 Split out of the parity-contract change (PR `feat/local-review-parity`) because it adds a new test class beyond that change's blast-radius.
+
+## 2. Local review may resolve its base from a stale local ref, not `origin/<base>`
+
+During the `fix/sessions-test-hermeticity` work, the `changes-reviewer` agent (driving the `reviewing-changes` skill) twice surfaced findings about code **already merged to `main`** — verification-taxonomy (#103) and merging-review (#104) changes that were not part of the changeset under review. The reviewer was invoked with base `origin/main`, yet its diff included those merged commits.
+
+The symptom correlated with the local `main` ref being stale: `main` pointed at `e880a61` while `origin/main` had advanced past #103/#104. Force-updating `git branch -f main origin/main` before each review made the false findings disappear. This points at a candidate defect: the diff base appears to resolve from the local `main` branch ref (or a merge-base computed against it) rather than from `origin/<base>` or the explicitly-passed base ref. In a multi-worktree checkout — where `main` is intentionally kept unattached and can lag `origin/main` — that reviews a superset diff and yields false findings against already-merged work.
+
+Required handling (investigate before fixing):
+
+- Invoke `/understanding` then `/contextualizing spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`.
+- Inspect how `reviewing-changes` computes its diff base (the `git diff <base>...<head>` resolution and any merge-base step).
+- Confirm whether it dereferences a local branch ref (e.g., `main`) or uses `origin/<base>` (fetched) and the explicit base the caller passes.
+- If it keys off a local ref, resolve the base against `origin/<base>` (fetch first) or honor the caller-passed base verbatim, so a stale local ref cannot widen the reviewed diff. Add evidence that a stale local `main` does not change the reviewed diff.
+
+Until then, agents running the local review in this multi-worktree repo keep `main` synced (`git branch -f main origin/main`) before invoking the reviewer.
+
+Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
