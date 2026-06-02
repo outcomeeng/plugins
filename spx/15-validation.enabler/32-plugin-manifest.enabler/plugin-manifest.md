@@ -16,6 +16,8 @@ CAN commit manifest files that the installed Claude Code CLI will accept without
 - Given a plugin with both manifests but mismatched `version` fields, when validated, then the script exits non-zero and the error names the plugin and both versions ([test](tests/test_plugin_manifest.scenario.l1.py))
 - Given a plugin with only `.claude-plugin/plugin.json` (no Codex manifest), when validated, then the manifest parity check is not applied — Codex coverage is optional ([test](tests/test_plugin_manifest.scenario.l1.py))
 - Given a plugin with both manifests but one or both lack a `version` field, when validated, then the script exits non-zero and reports the missing field ([test](tests/test_plugin_manifest.scenario.l1.py))
+- Given a `claude plugin validate` invocation that does not return within the configured timeout, when validated, then the runner terminates the invocation's process group and reports the target as failed, naming the timed-out command — bounded per `spx/15-validation.enabler/21-subprocess-execution.adr.md` ([test](tests/test_plugin_manifest.scenario.l1.py))
+- Given a `claude plugin validate` invocation that exits after spawning a descendant that keeps its output stream open, when validated, then the runner returns as soon as the invocation exits rather than blocking on the descendant — per `spx/15-validation.enabler/21-subprocess-execution.adr.md` ([test](tests/test_plugin_manifest.scenario.l1.py))
 
 ### Properties
 
@@ -24,3 +26,4 @@ CAN commit manifest files that the installed Claude Code CLI will accept without
 ### Compliance
 
 - NEVER: allow plugin manifest version drift between `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` — drift breaks marketplace cache preservation and `validate_install` ([test](tests/test_plugin_manifest.scenario.l1.py))
+- NEVER: the manifest-validation runner makes an unbounded capturing subprocess call — capture without a timeout, or any wait on pipe EOF — per `spx/15-validation.enabler/21-subprocess-execution.adr.md` ([audit])

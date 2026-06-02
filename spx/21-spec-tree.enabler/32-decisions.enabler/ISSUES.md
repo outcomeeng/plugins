@@ -27,7 +27,7 @@ Records to migrate — move each `## Compliance` section to `## Verification`, p
 - `spx/18-plugin-build.enabler/15-build-architecture.adr.md`
 - `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`
 - `spx/15-validation.enabler/32-skill-frontmatter.enabler/15-frontmatter-validation.adr.md`
-- `spx/15-validation.enabler/65-gate.enabler/15-process-injection.adr.md`
+- `spx/15-validation.enabler/21-subprocess-execution.adr.md`
 - `spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`
 - `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md`
 - `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`

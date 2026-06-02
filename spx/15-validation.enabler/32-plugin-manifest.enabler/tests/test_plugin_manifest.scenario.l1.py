@@ -11,16 +11,32 @@ Level 2 by the pre-commit hook itself.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
 from outcomeeng.validation.plugins import (
+    VALIDATE_TIMEOUT_SECONDS,
     check_catalog_sync,
     check_manifest_parity,
     discover_targets,
     main,
+    run_validate,
+)
+from outcomeeng_testing.harnesses.capturing_runner import (
+    DESCENDANT_SLEEP_SECONDS,
+    PROMPT_RETURN_CEILING_SECONDS,
+    TEST_TIMEOUT_SECONDS,
+    child_exiting_with_lingering_descendant,
+    never_returning_child,
+)
+
+requires_fork = pytest.mark.skipif(
+    not hasattr(os, "fork"),
+    reason="POSIX-only: the capturing-runner harness uses os.fork and process-group signalling",
 )
 
 
@@ -351,3 +367,41 @@ def test_main_exits_nonzero_on_parity_drift(
     captured = capsys.readouterr()
     assert "alpha" in captured.err
     assert "manifest parity" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# Scenario: an invocation that never returns is bounded, group-killed, and named
+# ---------------------------------------------------------------------------
+
+
+@requires_fork
+def test_runner_times_out_terminates_group_and_names_command() -> None:
+    with never_returning_child() as child:
+        start = time.monotonic()
+        result = run_validate(list(child.command), timeout=TEST_TIMEOUT_SECONDS)
+        elapsed = time.monotonic() - start
+
+        assert result.returncode != 0
+        assert result.args == list(child.command)
+        assert "timed out" in result.stderr
+        assert child.command[0] in result.stderr
+        assert elapsed < DESCENDANT_SLEEP_SECONDS
+        assert child.descendant_alive() is False
+
+
+# ---------------------------------------------------------------------------
+# Scenario: an invocation that exits is not blocked by a lingering descendant
+# ---------------------------------------------------------------------------
+
+
+@requires_fork
+def test_runner_returns_when_invocation_exits_not_when_descendant_exits() -> None:
+    with child_exiting_with_lingering_descendant() as child:
+        start = time.monotonic()
+        result = run_validate(list(child.command), timeout=VALIDATE_TIMEOUT_SECONDS)
+        elapsed = time.monotonic() - start
+
+        assert result.returncode == 0
+        assert result.stdout == "done"
+        assert elapsed < PROMPT_RETURN_CEILING_SECONDS
+        assert child.descendant_alive() is True
