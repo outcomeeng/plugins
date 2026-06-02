@@ -40,21 +40,21 @@ The bracket after the severity names the category: one of `consistency`, `securi
 Label asymmetry by severity is intentional: `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`; `FOLLOW-UP` requires only a tracking commitment elsewhere and uses `Reference:` + `Issue:` + `Track under:`.
 
 ```text
-### BLOCKING [consistency]: path/to/file.py:42
+### BLOCKING [consistency]: path/to/file:42
 Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
 Evidence: <quote the diff or behavior and explain the disagreement between layers>.
 Required: <concrete change>.
 ```
 
 ```text
-### DEBT [standards]: path/to/file.py:97
+### DEBT [standards]: path/to/file:97
 Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
 Evidence: <quote the diff or behavior and explain how it violates the standard>.
 Required: <concrete change>.
 ```
 
 ```text
-### FOLLOW-UP [architecture]: `path/to/foo.compliance.test.ts`
+### FOLLOW-UP [architecture]: path/to/file
 Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
 Issue: <what is missing or worthy of improvement>.
 Track under: <ISSUES.md file or product-specific issue tracker>.

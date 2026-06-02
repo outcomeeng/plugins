@@ -24,7 +24,7 @@ The marketplace's full deterministic-verification command is `just check`. It is
 
 ## Mention-reviewer trigger phrase
 
-`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` per `/standardizing-merging` `<authority_gates>` reviewer-skipped-by-design exception.
+`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate), per `/standardizing-merging` `<authority_gates>` reviewer-skipped-by-design exception. Any other skip cause (path filter, branch filter, manual skip) emits `WAIT_FOR_REVIEW` and does not post the trigger phrase.
 
 ## Post-merge
 
