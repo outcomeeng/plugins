@@ -351,7 +351,9 @@ REQUIRED_RENDER_TEMPLATES = (
     "finding-blocking.md",
     "finding-debt.md",
     "finding-followup.md",
-    "no-blockers.md",
+    "none-blocking.md",
+    "none-debt.md",
+    "none-followup.md",
     "acknowledgements.md",
 )
 
@@ -360,7 +362,7 @@ class TestRenderTemplatesAreDataFiles:
     """Render templates live under ``references/render/`` as standalone files.
 
     The rendered ``review.md`` shape (three-severity headings,
-    no-blockers phrasing, finding body shape) is the externally
+    per-severity ``none`` census markers, finding body shape) is the externally
     observable verdict format. Two surfaces consume it (the local verification skill
     and the GH ``spec-tree-review`` workflow); both must read from the
     same source.
