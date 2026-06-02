@@ -81,7 +81,7 @@ Alternatives rejected:
 - `REVIEW_READINESS` holds from deterministic verification plus a converged local review; the PR opens `ready_for_review` the moment it holds, and draft state is not a gating mechanism.
 - The two conditions `REVIEW_READINESS` reads — deterministic verification and a converged local `reviewing-changes` review — hold against the diff every push publishes, opening and follow-up alike; the local reviewer is invoked at parity with the CI reviewer, the caller passing only the repository/worktree and the diff range, with no interpretive scope, severity pre-filter, or instruction on what to emphasize.
 - `MERGE_READINESS` and `PRODUCTION_READINESS` are decidable from observable PR state: an independent reader inspecting the same PR with the same overlay reaches the same verdict. `MERGE_READINESS` carries no time-based settle.
-- The agent acts on a review finding by its validity and the current phase, never by its severity label; the reviewer never decides whether the change merges.
+- The agent acts on a review finding by its validity, the current phase, and its scope, never by its severity label; a `FOLLOW-UP` is non-blocking because it is genuinely out of scope, not because of its label, and the reviewer never decides whether the change merges.
 - Production-relevance is project-declared; the agent executes a production-relevant merge only after explicit operator approval, and carries no built-in rule that could silently authorize one.
 
 ## Compliance
@@ -103,7 +103,7 @@ Alternatives rejected:
 
 ### NEVER
 
-- Gate any of the three gates on a review finding's severity label: validity and phase decide whether the agent acts on a finding; the reviewer never decides whether the change merges ([review])
+- Gate any of the three gates on a review finding's severity label: validity, phase, and scope decide whether the agent acts on a finding — a `FOLLOW-UP` is non-blocking because it is genuinely out of scope, not because of its label; the reviewer never decides whether the change merges ([review])
 - Narrow the local `reviewing-changes` invocation with caller-supplied interpretive scope, a severity pre-filter, or an instruction on what to emphasize — the caller passes only the repository/worktree and the diff range; narrowing diverges the local gate from the CI reviewer it parallels ([review])
 - Push to the PR — opening or follow-up — without re-establishing the local `reviewing-changes` review and deterministic verification on the diff being pushed; a follow-up fix or a base-sync rebase changes the diff and re-runs both before the push ([review])
 - Use a time-based settle window as a `MERGE_READINESS` predicate: the gate reads the review-landed and terminal-green events directly, not the age of the latest push ([review])
