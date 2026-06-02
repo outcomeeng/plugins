@@ -37,7 +37,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 - **Apply every valid finding that belongs.** Fix it, commit via /committing-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
 - **Converged** when the working diff carries no unapplied valid finding that belongs. Severity never decides; validity and the before-open phase do.
 
-The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` and re-run deterministic verification so both predicates stay current. `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no valid finding.
+The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>`, re-run deterministic verification, and re-run the local review — both `REVIEW_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes both (the joint fixpoint of /managing-pr Step 6: a verification-driven fix is a diff the review has not seen, and a review-driven fix is a tree verification has not covered). `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no valid finding.
 
 **Step 4 — Push.** Use the explicit destination ref form from /standardizing-merging `<push_semantics>`:
 
@@ -153,7 +153,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 <failure_modes>
 
-**Opened a PR gated on an earlier tree.** Claude established `REVIEW_READINESS`, then committed review-driven fixes during the convergence loop, and opened the PR without re-running deterministic verification and the local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>` and deterministic verification, and treat `REVIEW_READINESS` as holding only when both predicates pass on the exact tree the push publishes (Step 3b).
+**Opened a PR gated on an earlier tree.** Claude established `REVIEW_READINESS`, then committed review-driven fixes during the convergence loop, and opened the PR without re-running deterministic verification and the local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /standardizing-merging `<branch_hygiene>`, deterministic verification, AND the local review, treating `REVIEW_READINESS` as holding only when both predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3b).
 
 </failure_modes>
 

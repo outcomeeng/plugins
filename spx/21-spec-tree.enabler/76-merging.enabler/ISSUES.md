@@ -23,15 +23,3 @@ All five eval suites — `review-readiness`, `merge-readiness`, `production-read
 The `terminal-green` case-space remains complete: status-context `state == EXPECTED`, `PENDING`, `SUCCESS`, `ERROR`, `FAILURE` and every check-run conclusion the `terminal-green` definition in `spx/15-agent-pr-authority.pdr.md` names (15 cases).
 
 The canonical `history.jsonl` baseline commits on the post-merge run on `main` — the workflow's `Commit history.jsonl appends` step is gated to `refs/heads/main` per `.github/workflows/spec-tree-evals.yml`, so PR runs collect run artifacts but do not commit them. The OAuth developer-session contamination caveat — workstation ambient instructions leaking into the verdict — is a developer-machine concern only; CI runs on a clean runner image, so the result above is the faithful validation surface even before `ANTHROPIC_API_KEY` joins the job env (tracked in the eval-harness `ISSUES.md`) and the workflow gains the `--bare` defense.
-
-## 3. `opening-pr` Step 3 iteration omits the joint-fixpoint loop (FOLLOW-UP)
-
-`/opening-pr` Step 3b's iteration instruction says "after every iteration that commits, re-run `<branch_hygiene>` and re-run deterministic verification so both predicates stay current" — it does not state that a verification-driven fix must also re-run the local review (and that a review-driven fix must re-run verification). `/managing-pr` Step 6 spells out this joint-fixpoint loop explicitly: "Any fix in either sub-step mutates the tree, so loop … re-run both predicates after every commit until a single tree passes deterministic verification and carries no unaddressed valid finding." An agent following `/opening-pr` alone could push a tree whose local-review predicate was established before the last verification-driven fix. The `<failure_modes>` section added to `opening-pr` in `fix/merging-review-by-shape` mirrors the same omission.
-
-Required handling:
-
-- Extend `/opening-pr` Step 3's iteration instruction to match the joint-fixpoint loop principle from `/managing-pr` Step 6 — re-run BOTH `REVIEW_READINESS` predicates after every commit until one tree passes both, and push only that tree.
-- Update the `opening-pr` `<failure_modes>` entry to name both predicates explicitly.
-- Rebuild `dist/` after editing `src/`.
-
-Surfaced by the local `changes-reviewer` on `fix/merging-review-by-shape`. Out of scope for that PR (the merge-review-predicate reframe); this is a pre-existing completeness gap in `opening-pr`'s iteration semantics.
