@@ -14,8 +14,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-# Two ``parents`` hops land at the repository root: this file lives at
-# ``outcomeeng_testing/harnesses/skill_surface.py``.
+# ``parents[2]`` reaches the repository root from
+# ``outcomeeng_testing/harnesses/skill_surface.py`` (harnesses ->
+# outcomeeng_testing -> repo root).
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
