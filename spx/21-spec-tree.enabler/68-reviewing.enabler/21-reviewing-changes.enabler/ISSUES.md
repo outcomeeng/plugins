@@ -33,3 +33,16 @@ Required handling (investigate before fixing):
 Until then, agents running the local review in this multi-worktree repo keep `main` synced (`git branch -f main origin/main`) before invoking the reviewer.
 
 Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
+
+## 3. Local census markers diverge from the GH CI clean-review message (FOLLOW-UP)
+
+The local `reviewing-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` / `FOLLOW-UP: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
+
+This does not block its originating PR: the divergence is in the GH workflow (another repository), outside this repo's blast-radius, and no `MERGE_READINESS` predicate reads the local render — the gate reads the CI review surface.
+
+Required handling (cross-repo, when pursued):
+
+- Decide the canonical clean-review representation (per-severity census vs composite line) and align both surfaces — the local `render_review.py` templates here and the `spec-tree-review` workflow in `outcomeeng/gh-actions`.
+- Any clean-review detection that reads both surfaces recognizes both forms until they converge.
+
+Surfaced during the `fix/reviewing-no-findings-convention` change review (PR #108).

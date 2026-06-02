@@ -196,18 +196,7 @@ class TestSkillOrchestrationChain:
         assert write_rr.returncode == 0, write_rr.stderr
 
         # 8. render_review.py reads the review-result and writes review.md.
-        render_result = subprocess.run(  # noqa: S603 — script path is from the harness
-            [
-                sys.executable,
-                str(RENDER_REVIEW_SCRIPT),
-                "--slug",
-                slug,
-            ],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        render_result = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
         assert render_result.returncode == 0, render_result.stderr
         rendered_markdown = render_result.stdout
 
@@ -318,13 +307,7 @@ class TestSkillOrchestrationChain:
         )
         assert write_rr.returncode == 0, write_rr.stderr
 
-        render = subprocess.run(  # noqa: S603 — script path is from the harness
-            [sys.executable, str(RENDER_REVIEW_SCRIPT), "--slug", slug],
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        render = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
         assert render.returncode == 0, render.stderr
         rendered = render.stdout
         for marker in ("BLOCKING: none", "DEBT: none", "FOLLOW-UP: none"):
