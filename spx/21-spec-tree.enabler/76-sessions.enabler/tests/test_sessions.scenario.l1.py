@@ -110,7 +110,13 @@ def _parse_session_file(stdout: str) -> Path:
 
 
 def _read_git_ref(session_file: Path) -> str:
-    m = re.search(r'"git_ref":\s*"([^"]*)"', session_file.read_text())
+    # Match the git_ref frontmatter line whether the serializer quotes the key
+    # and value (current spx output) or emits them bare.
+    m = re.search(
+        r'^\s*"?git_ref"?:\s*"?([^"\n]+?)"?\s*$',
+        session_file.read_text(),
+        re.MULTILINE,
+    )
     assert m, f"no git_ref in frontmatter of {session_file}"
     return m.group(1)
 

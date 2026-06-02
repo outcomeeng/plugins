@@ -99,7 +99,7 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    ```bash
    spx session todo --json
    ```
-2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, `branch`, and `worktree` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
+2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
 3. Present options with `AskUserQuestion`:
    ```json
    {
