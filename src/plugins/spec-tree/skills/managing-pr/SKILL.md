@@ -56,7 +56,7 @@ Reviewer-skipped-by-design exception steps:
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 - A clean current-head CI review exists — present, complete and valid, and either explicitly stating it has no findings or with every finding individually assessed and dropped as unbacked (a valid finding is fixed in Step 5 — if one remains this pass, emit `FIX_FINDING:<item>`); the absence of a current-head review is `WAIT_FOR_REVIEW`, never clean.
-- Every other required check is terminal-green per /standardizing-merging `<authority_gates>`. If a required check is non-terminal, emit `WAIT_FOR_CHECKS`; if no current-head review has landed yet, emit `WAIT_FOR_REVIEW`; if a required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
+- Every other required check is terminal-green per /standardizing-merging `<authority_gates>`. If no current-head review has landed yet, emit `WAIT_FOR_REVIEW` (review-absence takes precedence); else if a required check is non-terminal, emit `WAIT_FOR_CHECKS`; if a required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
 
 When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
 
