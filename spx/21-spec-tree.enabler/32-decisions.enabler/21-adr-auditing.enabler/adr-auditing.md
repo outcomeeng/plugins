@@ -12,7 +12,7 @@ Evidence requires three properties checked in order:
 
 1. **Section structure** — the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present; Rationale and Invariants are optional, Invariants only when the decision establishes algebraic properties
 2. **Atemporal voice** — the ADR states architecture truth, never history
-3. **Per-rule mode validity** — every Compliance MUST/NEVER rule carries exactly one evidence-mode tag naming one of the five claim shapes (scenario, mapping, conformance, property, compliance)
+3. **Per-rule mode validity** — every rule under `## Verification` carries exactly one tag valid for its subsection: `### Testing` rules carry one of the five claim shapes (scenario, mapping, conformance, property, compliance), `### Eval` rules carry `[eval]`, and `### Audit` rules carry `[audit]`
 
 Language-specific ADR concerns — testability-in-Compliance (dependency injection, no-mocking), execution-level accuracy — are out of scope here and stay in `auditing-{lang}-architecture`.
 
@@ -32,5 +32,5 @@ Each Compliance rule carries an evidence-mode tag chosen from the rule's claim s
 ### Compliance
 
 - ALWAYS: check the three properties in order — structure, voice, mode validity — and stop at the first failure ([review])
-- ALWAYS: validate each Compliance rule's mode tag against the five modes without re-deriving the mode — mode selection is `/testing`'s authority ([review])
+- ALWAYS: validate each rule's tag against its subsection without re-deriving the mode — mode selection is `/testing`'s authority ([review])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([review])
