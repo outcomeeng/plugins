@@ -6,7 +6,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 <objective>
 
-Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model. Three properties must hold — section structure, atemporal voice, per-rule mode validity — checked in strict order. An ADR failing any property is a malformed architecture decision.
+Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
 Language-specific ADR concerns — testability-in-Compliance (dependency injection, no-mocking), execution-level accuracy — stay in `/auditing-{lang}-architecture`, not here.
 
@@ -82,15 +82,13 @@ Check EVERY section for temporal language:
 
 **Step 5: Per-rule mode validity**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule, the tag is valid for its subsection:
 
-1. The rule carries exactly one tag, and the tag is valid for its subsection:
-   - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-   - under `### Eval` → `([eval])`;
-   - under `### Audit` → `([audit])`.
+- under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+- under `### Eval` → `([eval])`;
+- under `### Audit` → `([audit])`.
 
-   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
-2. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
+A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
