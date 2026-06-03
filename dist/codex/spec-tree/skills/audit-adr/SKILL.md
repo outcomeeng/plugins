@@ -27,7 +27,7 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECTED`. No middle ground.
+`APPROVED` or `REJECT`. No middle ground.
 
 </essential_principles>
 

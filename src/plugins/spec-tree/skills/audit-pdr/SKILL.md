@@ -28,7 +28,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECTED`. No middle ground.
+`APPROVED` or `REJECT`. No middle ground.
 
 </essential_principles>
 
