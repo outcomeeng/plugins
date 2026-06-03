@@ -8,8 +8,8 @@ Developers adopt tools that solve their immediate problem without friction, and 
 
 ## Product properties
 
-- The CLI toolchain is always fully functional without authentication or license keys.
-- Every feature documented in the open-source docs works without a commercial account.
+1. The CLI toolchain is always fully functional without authentication or license keys.
+2. Every feature documented in the open-source docs works without a commercial account.
 
 ## Verification
 
