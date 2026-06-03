@@ -6,10 +6,10 @@ The open-source tier includes the complete CLI toolchain — spec authoring, tre
 
 Developers adopt tools that solve their immediate problem without friction, and a complete CLI creates bottom-up demand within organizations. A free tier that feels incomplete sends developers to alternatives instead of upgrading. Rejected alternatives: freemium with feature gates (creates resentment) and open-core with a plugin architecture (complexity without a clear value boundary).
 
-## Product invariants
+## Product properties
 
-- The CLI toolchain is always fully functional without authentication or license keys.
-- Every feature documented in the open-source docs works without a commercial account.
+1. The CLI toolchain is always fully functional without authentication or license keys.
+2. Every feature documented in the open-source docs works without a commercial account.
 
 ## Verification
 

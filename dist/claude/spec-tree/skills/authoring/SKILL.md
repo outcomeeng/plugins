@@ -118,7 +118,7 @@ Before drafting, gather what's needed for the artifact type:
 
 - What product behavior does this govern?
 - What is the decision?
-- What product invariants does this establish?
+- What product properties does this establish?
 
 **Enabler:**
 

@@ -1,47 +1,34 @@
 ---
 name: audit-pdr
-description: Use when asked by the user to invoke the PDR audit skill
+description: ALWAYS use when auditing a PDR or after making changes to a PDR
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
 <objective>
 
-Audit whether a PDR establishes enforceable product decisions that flow into spec assertions. Six properties must hold — content classification, invariant quality, per-rule mode validity, atemporal voice, consistency, downstream sufficiency — checked in strict order. A PDR missing any property is a declaration that nothing enforces.
-
-Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
+Audit a PDR for its consistency, clarity, and strict conformance to the PDR evidence model.
 
 </objective>
 
-<quick_start>
+<prerequisites>
 
-**PREREQUISITE**: Invoke `/contextualizing` on the PDR's parent directory.
+Read the PDR evidence model completely before auditing: `${CLAUDE_SKILL_DIR}/references/pdr-evidence-model.md`
 
-1. Read the PDR under audit
-2. Check six properties in order: content → invariants → mode validity → voice → consistency → downstream sufficiency
-3. First property failure = REJECT (skip remaining properties)
-4. All six properties hold = APPROVED
-
-**Content classification is the gate.** If a PDR is full of architecture content, it's an ADR in disguise. No further analysis.
-
-</quick_start>
+</prerequisites>
 
 <essential_principles>
 
 **PRODUCT BEHAVIOR, NOT ARCHITECTURE.**
 
-PDRs govern what users experience. "Sessions expire after 1 hour" is product behavior. "Sessions use JWT with 1-hour TTL" is architecture. If the content describes HOW something is built rather than WHAT users observe, it belongs in an ADR.
-
-**DOWNSTREAM FLOW IS MANDATORY.**
-
-A compliance rule that no spec assertion references is an unenforced declaration. The product equivalent of a test with no coupling. Search the governed subtree — if no assertion implements the rule, REJECT.
+PDRs govern what the product does, behavior that its users experience. "Sessions expire after 1 hour" is product behavior. "Sessions use JWT with 1-hour TTL" is architecture. If the content describes HOW something is built rather than WHAT users observe, it belongs in an ADR.
 
 **ATEMPORAL VOICE.**
 
-Same standard as ADR review. PDRs state product truth. "Users can rely on X" — not "We decided to add X because Y was broken."
+PDRs state atemporal product truth without historical context. No references to past behavior or events.
 
 **BINARY VERDICT.**
 
-APPROVED or REJECT. No middle ground.
+`APPROVED` or `REJECT`. No middle ground.
 
 </essential_principles>
 
@@ -51,13 +38,9 @@ APPROVED or REJECT. No middle ground.
 
 **Step 1: Load context**
 
-Invoke `/contextualizing` on the directory containing the PDR. This loads:
+Invoke `/contextualizing` on the directory containing the PDR.
 
-- The product spec (PDR must be consistent with product scope)
-- Ancestor PDRs (PDR must not contradict them)
-- Sibling ADRs (to verify content isn't misplaced)
-
-Do not proceed without `<SPEC_TREE_CONTEXT>` marker.
+Do not proceed if you do not see the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
 
 </step>
 
@@ -65,26 +48,26 @@ Do not proceed without `<SPEC_TREE_CONTEXT>` marker.
 
 **Step 2: Read the PDR**
 
-Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product invariants, and Verification.
+Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
 
-Note any missing sections — a PDR without a Verification section has no enforceable rules.
+Note any missing sections — a PDR without a Verification section is unenforceable.
 
 </step>
 
 <step name="audit_content">
 
-**Step 3a: Content classification**
+**Step 3: Content classification**
 
 Read every statement in the PDR. Classify each:
 
-| Content type                | Belongs in      | Finding if in PDR                    |
-| --------------------------- | --------------- | ------------------------------------ |
-| Observable product behavior | PDR             | Correct                              |
-| User-facing guarantee       | PDR (invariant) | Correct                              |
-| Technology choice           | ADR             | REJECT — architecture                |
-| Implementation approach     | ADR or code     | REJECT — implementation              |
-| Data structure or schema    | ADR             | REJECT — architecture                |
-| Performance implementation  | ADR             | REJECT (performance guarantee = PDR) |
+| Content type                       | Belongs in     | Finding if in PDR                    |
+| ---------------------------------- | -------------- | ------------------------------------ |
+| Observable product behavior        | PDR            | Correct                              |
+| Observable non-functional property | PDR (property) | Correct                              |
+| Technology choice                  | ADR            | REJECT — architecture                |
+| Implementation approach            | ADR or code    | REJECT — implementation              |
+| Data structure or schema           | ADR            | REJECT — architecture                |
+| Performance implementation         | ADR            | REJECT (performance guarantee = PDR) |
 
 **Any architecture or implementation content → REJECT — "architecture content in PDR."**
 
@@ -92,11 +75,11 @@ The test: "Would a user care about this statement?" If the answer is no, it prob
 
 </step>
 
-<step name="audit_invariants">
+<step name="audit_properties">
 
-**Step 3b: Invariant quality**
+**Step 4: Property quality**
 
-For each product invariant:
+For each product property:
 
 1. Is it observable from the user's perspective?
    - "Pages load in under 2 seconds" → observable ✓
@@ -105,23 +88,23 @@ For each product invariant:
    - "Good user experience" → unfalsifiable ✗
    - "Search returns results in under 500ms" → falsifiable ✓
 
-**Non-observable or unfalsifiable invariant → REJECT — "non-observable invariant."**
+**Non-observable or unfalsifiable property → REJECT — "non-observable property."**
 
 </step>
 
-<step name="audit_compliance">
+<step name="audit_verification">
 
-**Step 3c: Per-rule mode validity**
+**Step 5: Per-rule verification mode validity**
 
-Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `### Testing` subsections by verdict mode. For each rule:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule:
 
-1. The rule carries exactly one tag, and the tag matches its subsection:
-   - under `### Testing` → a `/testing`-routed claim-shape mode: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-   - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval;
-   - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract.
+1. The rule carries exactly one tag, and the tag is valid for its subsection:
+   - under `### Testing` → a `/testing`-routed evidence mode: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
+   - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
-   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
-2. Is the rule specific enough that two reviewers would agree on pass/fail?
+   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not propose the correct mode — only validate the tag against its subsection.
+2. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
@@ -129,16 +112,16 @@ Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `#
 
 <step name="audit_voice">
 
-**Step 3d: Atemporal voice**
+**Step 6: Atemporal voice**
 
 Check EVERY section for temporal language:
 
-| Temporal (REJECT)                     | Atemporal (correct)                 |
-| ------------------------------------- | ----------------------------------- |
-| "We discovered that users need X"     | "Users rely on X"                   |
-| "Currently the product does X"        | "The product does X"                |
-| "After customer feedback, we decided" | "This decision governs X"           |
-| "The existing implementation lacks"   | (omit — PDR doesn't reference code) |
+| Temporal (REJECT)                     | Atemporal (correct)                                |
+| ------------------------------------- | -------------------------------------------------- |
+| "We discovered that users ask for X"  | "Users value X"                                    |
+| "Currently the product does X"        | "The product does X"                               |
+| "After customer feedback, we decided" | "The product does X to meet customer expectations" |
+| "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
 **Any temporal language in any section → REJECT — "temporal voice."**
 
@@ -146,7 +129,7 @@ Check EVERY section for temporal language:
 
 <step name="audit_consistency">
 
-**Step 3e: Consistency**
+**Step 7: Consistency**
 
 Compare the PDR against:
 
@@ -159,48 +142,11 @@ Compare the PDR against:
 
 </step>
 
-<step name="audit_downstream">
-
-**Step 3f: Downstream flow and mode-floor sufficiency**
-
-For each compliance rule in the PDR, search the governed subtree for the spec assertion(s) that enforce it, then compare each enforcing assertion's evidence against the rule's declared mode.
-
-```bash
-# Find specs in the governed subtree
-Glob: "spx/{pdr-scope}/**/*.md"
-
-# Search for references to this PDR's compliance rules
-Grep: pattern matching the PDR's MUST/NEVER rule text or PDR filename
-```
-
-Report flow status for each rule:
-
-```text
-MUST: "search results appear within 500ms" ([property])
-→ property assertion in spx/.../21-performance.outcome ✓ (meets the floor)
-
-NEVER: "expose internal IDs in URLs" ([scenario])
-→ scenario assertion in spx/.../21-url-safety.outcome ✓ (meets the floor)
-
-MUST: "reject every unsupported export format" ([property])
-→ only a scenario assertion in spx/.../32-export.outcome ✗ — below the property floor
-```
-
-| Outcome                                                                        | Finding                      |
-| ------------------------------------------------------------------------------ | ---------------------------- |
-| No downstream assertion                                                        | "unenforced-rule"            |
-| Downstream evidence below the declared mode (e.g. `scenario` under `property`) | "insufficient-evidence-mode" |
-| Downstream evidence at or above the declared mode                              | PASS                         |
-
-**Any rule unenforced or under-enforced → REJECT.** Presence alone is insufficient: a `property`-floor rule enforced only by a `scenario` assertion is a finding, not a judgment call.
-
-</step>
-
 <step name="verdict">
 
-**Step 4: Issue verdict**
+**Step 8: Issue verdict**
 
-Scan all findings. If any property fails: REJECT.
+Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 </step>
 
@@ -216,21 +162,20 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 {
   "schema_version": 1,
   "skill": "audit-pdr",
-  "target": "<pdr-path>",
+  "target": "<pdr-file-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "invariant-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "property-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "downstream-sufficiency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `unenforced-rule`, `insufficient-evidence-mode`, `temporal-language`); the `message` field carries the one-line detail. The `downstream-sufficiency` row enumerates each compliance rule with no downstream spec assertion (`unenforced-rule`) or whose downstream evidence falls below the declared mode (`insufficient-evidence-mode`).
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `temporal-language`); the `message` field carries the one-line detail.
 
 </verdict_format>
 
@@ -238,21 +183,15 @@ Each finding's `rule` field carries the violation pattern (e.g., `architecture-c
 
 **Failure 1: Approved a PDR full of architecture decisions**
 
-Reviewer saw a well-structured PDR with Purpose, Decision, Compliance sections. Approved. The Decision section said "The system uses PostgreSQL with row-level locking for concurrent session management." That's an architecture decision, not a product decision. Users don't care about PostgreSQL or row-level locking — they care that concurrent sessions work.
+Claude saw a well-structured PDR with a clear decision statement and a Verification section, and approved it. The decision statement said "The system uses PostgreSQL with row-level locking for concurrent session management." That is an architecture decision, not a product decision. Users don't care about PostgreSQL or row-level locking — they care that concurrent sessions work.
 
-How to avoid: Step 3a classifies every statement. "Would a user care?" is the test.
+How to avoid: Step 3 classifies every statement. "Would a user be able to determine this?" is the test.
 
-**Failure 2: Approved unenforced compliance rules**
+**Failure 2: Accepted non-observable properties**
 
-Reviewer checked the PDR's Compliance section — well-written MUST/NEVER rules with `[review]` tags. Approved. No spec in the entire subtree referenced these rules. The product could violate every rule and no test, enforcement, or review would catch it.
+Claude saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
 
-How to avoid: Step 3f searches the governed subtree. Zero downstream assertions = unenforced = REJECT.
-
-**Failure 3: Accepted non-observable invariants**
-
-Reviewer saw "Product invariants: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
-
-How to avoid: Step 3b asks "Is this observable from the user's perspective?"
+How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
 
 </failure_modes>
 
@@ -263,11 +202,10 @@ Audit is complete when:
 - [ ] `/contextualizing` invoked — `<SPEC_TREE_CONTEXT>` marker present
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
-- [ ] Invariant quality: each invariant checked for observability and falsifiability
-- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Audit → `[audit]`, Eval → `[eval]`, Testing → one of the five claim-shape modes)
+- [ ] Property quality: each property checked for observability and falsifiability
+- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence modes, Eval → `[eval]`, Audit → `[audit]`)
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
-- [ ] Downstream sufficiency: each rule's enforcing assertion checked at or above the declared mode
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 

@@ -5,7 +5,7 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | Artifact type           | Purpose                                  | Contains                                     | Verified by                                         |
 | ----------------------- | ---------------------------------------- | -------------------------------------------- | --------------------------------------------------- |
 | **ADR**                 | GOVERNS how (architecture)               | Decisions, rationale, invariants             | ADR audit                                           |
-| **PDR**                 | GOVERNS what (product)                   | Decisions, product invariants                | PDR audit                                           |
+| **PDR**                 | GOVERNS what (product)                   | Decisions, product properties                | PDR audit                                           |
 | **Enabler spec**        | DESCRIBES infrastructure                 | What it provides, assertions                 | Tests                                               |
 | **Outcome spec**        | DESCRIBES hypothesis                     | Outcome belief, assertions                   | Tests                                               |
 | **Test**                | PROVES assertions                        | Typed assertion files                        | Test runner                                         |
@@ -47,7 +47,7 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 - Decision — the chosen approach in one sentence
 - Rationale — why this is right for users
 - Trade-offs accepted — what was given up and why
-- Product invariants — observable behaviors users can always rely on
+- Product properties — observable behaviors users can always rely on
 - Compliance — product behavior validation criteria (MUST / NEVER rules)
 
 **Does NOT contain:** Outcomes, assertions, test references, or implementation code.

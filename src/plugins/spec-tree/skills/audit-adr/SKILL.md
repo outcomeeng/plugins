@@ -1,41 +1,26 @@
 ---
 name: audit-adr
-description: Use when asked by the user to invoke the ADR audit skill
+description: ALWAYS use when auditing an ADR or after making changes to an ADR
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
 <objective>
 
-Audit whether an ADR declares a well-formed architecture decision whose compliance rules carry valid per-rule evidence modes and flow into spec assertions with sufficient evidence. Four properties must hold — section structure, atemporal voice, per-rule mode validity, downstream sufficiency — checked in strict order. An ADR failing any property is a malformed or unenforced architecture decision.
+Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
 Language-specific ADR concerns — testability-in-Compliance (dependency injection, no-mocking), execution-level accuracy — stay in `/auditing-{lang}-architecture`, not here.
 
 </objective>
 
-<quick_start>
-
-**PREREQUISITE**: Invoke `/contextualizing` on the ADR's parent directory.
-
-1. Read the ADR under audit
-2. Check four properties in order: structure → voice → mode validity → downstream sufficiency
-3. First property failure = REJECT (skip remaining properties)
-4. All four properties hold = APPROVED
-
-</quick_start>
-
 <essential_principles>
 
 **ARCHITECTURE BY DEFINITION.**
 
-An ADR's content is architecture — technology choices, data structures, implementation approaches. NEVER classify ADR content as product-behavior-versus-architecture; that classification is the PDR audit's concern. Audit the ADR's form and enforcement, not whether its content belongs elsewhere.
+An ADR's content is architecture — technology choices, data structures, implementation approaches. NEVER classify ADR content as product-behavior-versus-architecture; that classification is the PDR audit's concern. Audit the ADR's form, not whether its content belongs elsewhere.
 
 **MODE VALIDITY IS PRESENCE, NOT RE-DERIVATION.**
 
-Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → a claim shape (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Audit` → `[audit]`; `### Eval` → `[eval]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's claim shape — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of a mode, a tag disagreeing with its subsection, or more than one tag is a finding.
-
-**DOWNSTREAM SUFFICIENCY, NOT MERE PRESENCE.**
-
-A compliance rule's downstream spec assertion must carry evidence at or above the rule's declared mode. A `property`-floor rule enforced only by a `scenario` assertion is a finding — sufficiency, not presence, is the bar.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → a claim shape (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Eval` → `[eval]`; `### Audit` → `[audit]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's claim shape — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of a mode, a tag disagreeing with its subsection, or more than one tag is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -43,7 +28,7 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **BINARY VERDICT.**
 
-APPROVED or REJECT. No middle ground.
+`APPROVED` or `REJECT`. No middle ground.
 
 </essential_principles>
 
@@ -53,9 +38,9 @@ APPROVED or REJECT. No middle ground.
 
 **Step 1: Load context**
 
-Invoke `/contextualizing` on the directory containing the ADR. This loads the product spec, ancestor decisions, and lower-index siblings that constrain the ADR.
+Invoke `/contextualizing` on the directory containing the ADR.
 
-Do not proceed without the `<SPEC_TREE_CONTEXT>` marker.
+Do not proceed if you do not see the `<SPEC_TREE_CONTEXT>` marker for the ADR directory.
 
 </step>
 
@@ -69,7 +54,7 @@ Read the ADR under audit. Identify its sections: the opening decision statement,
 
 <step name="audit_structure">
 
-**Step 3a: Section structure**
+**Step 3: Section structure**
 
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
@@ -79,9 +64,9 @@ Verify the decision is stated in the opening (no "Purpose" preamble) and a `## V
 
 <step name="audit_voice">
 
-**Step 3b: Atemporal voice**
+**Step 4: Atemporal voice**
 
-Check EVERY section for temporal language.
+Check EVERY section for temporal language:
 
 | Temporal (REJECT)                     | Atemporal (correct)             |
 | ------------------------------------- | ------------------------------- |
@@ -95,33 +80,23 @@ Check EVERY section for temporal language.
 
 <step name="audit_mode_validity">
 
-**Step 3c: Per-rule mode validity**
+**Step 5: Per-rule mode validity**
 
-Rules live under `## Verification`, grouped into `### Audit`, `### Eval`, and `### Testing`. For each rule, verify it carries exactly one tag matching its subsection: `### Testing` → one of `scenario`/`mapping`/`conformance`/`property`/`compliance`; `### Audit` → `([audit])`; `### Eval` → `([eval])`. Do not re-derive the mode — only validate the tag against its subsection.
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule, the tag is valid for its subsection:
+
+- under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+- under `### Eval` → `([eval])`;
+- under `### Audit` → `([audit])`.
+
+A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
-<step name="audit_downstream_sufficiency">
-
-**Step 3d: Downstream sufficiency**
-
-For each Compliance rule, search the governed subtree for the spec assertion(s) enforcing it. Compare each enforcing assertion's evidence against the rule's declared mode.
-
-| Outcome                                                                        | Finding                      |
-| ------------------------------------------------------------------------------ | ---------------------------- |
-| No downstream assertion                                                        | "unenforced-rule"            |
-| Downstream evidence below the declared mode (e.g. `scenario` under `property`) | "insufficient-evidence-mode" |
-| Downstream evidence at or above the declared mode                              | PASS                         |
-
-**Any rule unenforced or under-enforced → REJECT.**
-
-</step>
-
 <step name="verdict">
 
-**Step 4: Issue verdict**
+**Step 6: Issue verdict**
 
 Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
@@ -139,21 +114,36 @@ The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `
 {
   "schema_version": 1,
   "skill": "audit-adr",
-  "target": "<adr-path>",
+  "target": "<adr-file-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "downstream-sufficiency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-mode-tag`, `unenforced-rule`, `insufficient-evidence-mode`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-mode-tag`); the `message` field carries the one-line detail.
 
 </verdict_format>
+
+<failure_modes>
+
+**Failure 1: Imported the PDR content gate into an ADR audit**
+
+Claude flagged "uses PostgreSQL with row-level locking" as architecture content that does not belong — in an ADR. An ADR's content is architecture by definition; there is no product-versus-architecture classification to run. The PDR audit's content gate has no place here.
+
+How to avoid: The ADR audit checks form — structure, voice, mode validity. Content classification is the PDR audit's concern only.
+
+**Failure 2: Re-derived a Testing rule's mode**
+
+Claude saw a `### Testing` rule tagged `([scenario])`, judged it should be `[property]` because the rule read like an invariant, and rejected it. Mode selection is `/testing`'s authority, exercised when the rule is authored. The audit validates that a tag is present and names one of the five modes — it does not second-guess the choice.
+
+How to avoid: Step 5 validates tag presence and subsection agreement only. A present, valid mode tag passes regardless of which mode the auditor would have picked.
+
+</failure_modes>
 
 <success_criteria>
 
@@ -161,10 +151,9 @@ Audit is complete when:
 
 - [ ] `/contextualizing` invoked — `<SPEC_TREE_CONTEXT>` marker present
 - [ ] ADR read — all sections identified
-- [ ] Section structure: required sections present
+- [ ] Section structure: decision stated in the opening and `## Verification` present
 - [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Audit → `[audit]`, Eval → `[eval]`, Testing → one of the five claim-shape modes)
-- [ ] Downstream sufficiency: each rule's enforcing assertion checked at or above the declared mode
+- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Testing → one of the five claim-shape modes, Eval → `[eval]`, Audit → `[audit]`)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 
