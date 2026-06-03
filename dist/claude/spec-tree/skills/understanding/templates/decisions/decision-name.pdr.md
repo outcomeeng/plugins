@@ -20,10 +20,10 @@
 
 ### Testing
 
-{Verified by a deterministic test. Each rule carries its evidence mode — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`. Do not include test files; these belong to the specs implementing this PDR.}
+{Verified by a deterministic test. Each rule carries its evidence type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`. Do not include test files; these belong to the specs implementing this PDR.}
 
-- ALWAYS: {rule} ([{evidence mode}])
-- NEVER: {prohibition} ([{evidence mode}])
+- ALWAYS: {rule} ([{evidence type}])
+- NEVER: {prohibition} ([{evidence type}])
 
 ### Eval
 

@@ -78,10 +78,10 @@ Product properties are guarantees users can rely on. They must be:
 
 <compliance_quality>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verdict mode. Each rule needs:
+Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule needs:
 
 1. **Verifiability** — can a test, an eval, or an auditing skill determine pass/fail?
-2. **Tag matching its subsection** — under `### Testing`, a `/testing`-routed claim-shape mode (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
+2. **Tag matching its subsection** — under `### Testing`, a `/testing`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
 3. **Specificity** — two independent reviewers would agree on the verdict
 
 **Good compliance rules:**

@@ -16,7 +16,7 @@ That local reference contains:
 
 - non-negotiable testing rules and evidence standards
 - the pre-test questions and the evidence trap
-- the separation between evidence mode, execution level, and runner
+- the separation between evidence type, execution level, and runner
 - the 4-part progression
 - the 5-stage router with stop conditions
 - the 5 factors, the 7 exception cases, and key examples

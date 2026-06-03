@@ -94,19 +94,19 @@ For each product property:
 
 <step name="audit_verification">
 
-**Step 5: Per-rule verification mode validity**
+**Step 5: Per-rule verification tag validity**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
-   - under `### Testing` → a `/testing`-routed evidence mode: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Testing` → a `/testing`-routed evidence type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
    - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
-   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not propose the correct mode — only validate the tag against its subsection.
+   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not propose the correct evidence type — only validate the tag against its subsection.
 2. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -203,7 +203,7 @@ Audit is complete when:
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
 - [ ] Property quality: each property checked for observability and falsifiability
-- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence modes, Eval → `[eval]`, Audit → `[audit]`)
+- [ ] Per-rule tag validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`)
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
 - [ ] Verdict issued: APPROVED or REJECT

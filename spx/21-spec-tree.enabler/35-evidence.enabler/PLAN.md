@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The `/testing` skill owns evidence-mode selection. Two additions close the gap where an agent infers the mode from an ADR's section name (`## Compliance` → `.compliance.l1.py`) instead of the claim's shape, and make `/testing` the single authority both the decision-record author and the test author route through.
+The `/testing` skill owns evidence-type selection. Two additions close the gap where an agent infers the evidence type from an ADR's section name (`## Compliance` → `.compliance.l1.py`) instead of the claim's shape, and make `/testing` the single authority both the decision-record author and the test author route through.
 
 ## Changes
 
@@ -15,17 +15,17 @@ An assertion that rejects values outside a predicate routes by the structure of 
 
 One rule yields one mode. A `property`-floor rule is not satisfied by a finite mapping over a hand-picked subset.
 
-### 2. Evidence mode comes from the claim shape, not the ADR/PDR section name
+### 2. Evidence type comes from the claim shape, not the ADR/PDR section name
 
-A MUST/NEVER rule living in a decision record's `## Compliance` section does not imply `compliance` evidence. `/testing` classifies the claim. This is the authority the decision-record templates defer to — the per-rule `([mode])` is `/testing`'s recorded output, not an inference from the section heading.
+A MUST/NEVER rule living in a decision record's `## Compliance` section does not imply `compliance` evidence. `/testing` classifies the claim. This is the authority the decision-record templates defer to — the per-rule `([evidence type])` is `/testing`'s recorded output, not an inference from the section heading.
 
 ### 3. `/testing` is the mandatory router for mode selection
 
-No agent hand-picks a mode. The decision-record author runs `/testing` on each compliance rule to record its `([mode])`; the test author runs `/testing` on each spec assertion to pick concrete evidence at or above the floor.
+No agent hand-picks an evidence type. The decision-record author runs `/testing` on each compliance rule to record its `([evidence type])`; the test author runs `/testing` on each spec assertion to pick concrete evidence at or above the floor.
 
 ## Spec impact
 
-`evidence.md` may gain an assertion that `/testing` is the single authority for evidence-mode selection, derived from claim shape rather than the section a rule appears in. Author through `/authoring` if added.
+`evidence.md` may gain an assertion that `/testing` is the single authority for evidence-type selection, derived from claim shape rather than the section a rule appears in. Author through `/authoring` if added.
 
 ## Files
 

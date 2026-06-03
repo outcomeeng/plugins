@@ -18,9 +18,9 @@ Language-specific ADR concerns — testability-in-Compliance (dependency injecti
 
 An ADR's content is architecture — technology choices, data structures, implementation approaches. NEVER classify ADR content as product-behavior-versus-architecture; that classification is the PDR audit's concern. Audit the ADR's form, not whether its content belongs elsewhere.
 
-**MODE VALIDITY IS PRESENCE, NOT RE-DERIVATION.**
+**TAG VALIDITY IS PRESENCE, NOT RE-DERIVATION.**
 
-Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → a claim shape (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Eval` → `[eval]`; `### Audit` → `[audit]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's claim shape — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of a mode, a tag disagreeing with its subsection, or more than one tag is a finding.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Eval` → `[eval]`; `### Audit` → `[audit]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's evidence type — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of an evidence type, a tag disagreeing with its subsection, or more than one tag is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -78,19 +78,19 @@ Check EVERY section for temporal language:
 
 </step>
 
-<step name="audit_mode_validity">
+<step name="audit_tag_validity">
 
-**Step 5: Per-rule mode validity**
+**Step 5: Per-rule tag validity**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification mode. For each rule, the tag is valid for its subsection:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule, the tag is valid for its subsection:
 
 - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
 - under `### Eval` → `([eval])`;
 - under `### Audit` → `([audit])`.
 
-A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the mode — only validate the tag against its subsection.
+A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the evidence type — only validate the tag against its subsection.
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of a mode, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag."**
 
 </step>
 
@@ -135,13 +135,13 @@ Each finding's `rule` field carries the violation pattern (`missing-section`, `t
 
 Claude flagged "uses PostgreSQL with row-level locking" as architecture content that does not belong — in an ADR. An ADR's content is architecture by definition; there is no product-versus-architecture classification to run. The PDR audit's content gate has no place here.
 
-How to avoid: The ADR audit checks form — structure, voice, mode validity. Content classification is the PDR audit's concern only.
+How to avoid: The ADR audit checks form — structure, voice, tag validity. Content classification is the PDR audit's concern only.
 
-**Failure 2: Re-derived a Testing rule's mode**
+**Failure 2: Re-derived a Testing rule's evidence type**
 
-Claude saw a `### Testing` rule tagged `([scenario])`, judged it should be `[property]` because the rule read like an invariant, and rejected it. Mode selection is `/testing`'s authority, exercised when the rule is authored. The audit validates that a tag is present and names one of the five modes — it does not second-guess the choice.
+Claude saw a `### Testing` rule tagged `([scenario])`, judged it should be `[property]` because the rule read like an invariant, and rejected it. Evidence-type selection is `/testing`'s authority, exercised when the rule is authored. The audit validates that a tag is present and names one of the five evidence types — it does not second-guess the choice.
 
-How to avoid: Step 5 validates tag presence and subsection agreement only. A present, valid mode tag passes regardless of which mode the auditor would have picked.
+How to avoid: Step 5 validates tag presence and subsection agreement only. A present, valid evidence-type tag passes regardless of which evidence type the auditor would have picked.
 
 </failure_modes>
 
@@ -153,7 +153,7 @@ Audit is complete when:
 - [ ] ADR read — all sections identified
 - [ ] Section structure: decision stated in the opening and `## Verification` present
 - [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule mode validity: each rule's tag validated against its Verification subsection (Testing → one of the five claim-shape modes, Eval → `[eval]`, Audit → `[audit]`)
+- [ ] Per-rule tag validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 
