@@ -30,7 +30,7 @@ Verified by graded LLM behavior over curated cases — the subject is a skill, a
 
 ### Testing
 
-Verified by a deterministic test. Each rule carries its claim-shape mode — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
+Verified by a deterministic test. Each rule carries its evidence type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
 
-- ALWAYS: {rule} ([{mode}])
-- NEVER: {prohibition} ([{mode}])
+- ALWAYS: {rule} ([{evidence type}])
+- NEVER: {prohibition} ([{evidence type}])
