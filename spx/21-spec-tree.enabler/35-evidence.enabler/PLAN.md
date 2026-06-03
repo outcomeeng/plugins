@@ -13,13 +13,13 @@ An assertion that rejects values outside a predicate routes by the structure of 
 - open or infinite — strings, IDs, timestamps, keys, generated names → `property` (Hypothesis strategy over values outside the predicate)
 - closed and finite, source-owned — enum variants, a defined protocol set, registry members → `mapping` (parameterized over every source-owned invalid member)
 
-One rule yields one mode. A `property`-floor rule is not satisfied by a finite mapping over a hand-picked subset.
+One rule yields one evidence type. A `property`-floor rule is not satisfied by a finite mapping over a hand-picked subset.
 
 ### 2. Evidence type comes from the claim shape, not the ADR/PDR section name
 
 A MUST/NEVER rule living in a decision record's `## Compliance` section does not imply `compliance` evidence. `/testing` classifies the claim. This is the authority the decision-record templates defer to — the per-rule `([evidence type])` is `/testing`'s recorded output, not an inference from the section heading.
 
-### 3. `/testing` is the mandatory router for mode selection
+### 3. `/testing` is the mandatory router for evidence-type selection
 
 No agent hand-picks an evidence type. The decision-record author runs `/testing` on each compliance rule to record its `([evidence type])`; the test author runs `/testing` on each spec assertion to pick concrete evidence at or above the floor.
 
@@ -44,7 +44,7 @@ No agent hand-picks an evidence type. The decision-record author runs `/testing`
 ## Audit gates
 
 - `spx validation markdown` for the methodology + spec edits.
-- Re-run `spec-tree:auditing-tests` reasoning against a sample assertion to confirm the router yields the expected mode.
+- Re-run `spec-tree:auditing-tests` reasoning against a sample assertion to confirm the router yields the expected evidence type.
 - `just check` — the methodology and `SKILL.md` edits regenerate `dist/`, so the `dist-diff` gate must run.
 
 ## Related plans

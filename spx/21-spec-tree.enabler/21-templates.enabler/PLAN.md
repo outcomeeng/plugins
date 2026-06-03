@@ -43,5 +43,5 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 
 ## Related plans
 
-- `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the audits that enforce the mode floor
-- `spx/21-spec-tree.enabler/35-evidence.enabler/PLAN.md` — the `/testing` router that picks the mode
+- `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the audits that enforce the evidence-type floor
+- `spx/21-spec-tree.enabler/35-evidence.enabler/PLAN.md` — the `/testing` router that picks the evidence type

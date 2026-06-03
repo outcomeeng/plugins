@@ -15,7 +15,7 @@ This conformance is an architecture migration that applies to the whole audit-sk
 
 `decisions.md` declares that every decision-record rule sits under `## Verification`, grouped by verification type into `### Testing`, `### Eval`, and `### Audit` — a `### Testing` rule carries a `/testing`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`), an `### Eval` rule carries `[eval]`, and an `### Audit` rule carries `[audit]`. The marketplace's own existing ADRs and PDRs still carry bare `([review])` tags under a `## Compliance` section, so `/audit-adr` and `/audit-pdr` deterministically REJECT them at the tag-validity step (`invalid-mode-tag`) until each is migrated to the `## Verification` structure.
 
-Records to migrate — move each `## Compliance` section to `## Verification`, place each rule under the subsection matching its verdict mode, and replace the bare `([review])` tag: a `### Testing` rule routes its claim shape through `/testing`; a rule governing a Spec Tree skill, agent, or decision goes under `### Audit` (`[audit]`) or `### Eval` (`[eval]`):
+Records to migrate — move each `## Compliance` section to `## Verification`, place each rule under the subsection matching its verification type, and replace the bare `([review])` tag: a `### Testing` rule routes its claim shape through `/testing`; a rule governing a Spec Tree skill, agent, or decision goes under `### Audit` (`[audit]`) or `### Eval` (`[eval]`):
 
 - `spx/13-plugin-and-runtime-conventions.adr.md`
 - `spx/15-spec-coverage.adr.md`
@@ -36,7 +36,7 @@ This is a repo-wide reconciliation triggered by the new declaration — too larg
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
 
-`/architecting-python`, `/architecting-typescript`, and their `standardizing-*-architecture` references teach the pre-`## Verification` ADR layout — `Purpose` / `Context` / `Decision` / `Compliance` with bare `([review])` tags. An ADR authored through them is then deterministically REJECTED by `/audit-adr` at the mode-validity step, the same gap the record migration above closes for existing files.
+`/architecting-python`, `/architecting-typescript`, and their `standardizing-*-architecture` references teach the pre-`## Verification` ADR layout — `Purpose` / `Context` / `Decision` / `Compliance` with bare `([review])` tags. An ADR authored through them is then deterministically REJECTED by `/audit-adr` at the tag-validity step, the same gap the record migration above closes for existing files.
 
 Update the language architecting and `standardizing-*-architecture` skills to teach the `## Verification` structure (`### Testing` / `### Eval` / `### Audit` with per-rule evidence-type tags) as part of the same migration. These skill edits are plugin-distribution changes carrying their own version bump, so they travel with the record migration rather than a feature PR.
 
