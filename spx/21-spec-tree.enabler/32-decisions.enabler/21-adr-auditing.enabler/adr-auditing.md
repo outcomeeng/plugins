@@ -31,6 +31,6 @@ Each Compliance rule carries an evidence-mode tag chosen from the rule's claim s
 
 ### Compliance
 
-- ALWAYS: check the three properties in order — structure, voice, mode validity — and stop at the first failure ([review])
+- ALWAYS: check structure, voice, and mode validity in order ([review])
 - ALWAYS: validate each rule's tag against its subsection without re-deriving the mode — mode selection is `/testing`'s authority ([review])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([review])

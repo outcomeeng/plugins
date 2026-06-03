@@ -32,10 +32,10 @@ Records to migrate — move each `## Compliance` section to `## Verification`, p
 - `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md`
 - `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`
 
-This is a repo-wide reconciliation triggered by the new declaration — too large to belong in the feature PR. Migrate the records as its own change; the declaration leads and the records follow.
+This is a repo-wide reconciliation triggered by the new declaration — too large to belong in the feature PR. Migrate the records as its own change; the declaration leads and the records follow. The PDR files in this list (`15-audit-verdict-format.pdr.md`, `15-test-infrastructure.pdr.md`, `15-agent-pr-authority.pdr.md`, `21-compact-continuity.pdr.md`) also carry `## Product invariants` headings; rename each to `## Product properties` during the same migration to match the PDR template and `/audit-pdr`.
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
 
 `/architecting-python`, `/architecting-typescript`, and their `standardizing-*-architecture` references teach the pre-`## Verification` ADR layout — `Purpose` / `Context` / `Decision` / `Compliance` with bare `([review])` tags. An ADR authored through them is then deterministically REJECTED by `/audit-adr` at the mode-validity step, the same gap the record migration above closes for existing files.
 
-Update the language architecting and `standardizing-*-architecture` skills to teach the `## Verification` structure (`### Audit` / `### Eval` / `### Testing` with per-rule mode tags) as part of the same migration. These skill edits are plugin-distribution changes carrying their own version bump, so they travel with the record migration rather than a feature PR.
+Update the language architecting and `standardizing-*-architecture` skills to teach the `## Verification` structure (`### Testing` / `### Eval` / `### Audit` with per-rule mode tags) as part of the same migration. These skill edits are plugin-distribution changes carrying their own version bump, so they travel with the record migration rather than a feature PR.
