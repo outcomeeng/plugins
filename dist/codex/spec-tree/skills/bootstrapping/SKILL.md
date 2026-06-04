@@ -93,11 +93,12 @@ Wait for user confirmation before creating files.
 
 1. Create `spx/` directory if it doesn't exist.
 
-2. Write `spx/{product-name}.product.md` using the template from `${SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill in:
+2. Write `spx/{product-name}.product.md` using the template from `${SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill every section from the interview — leave no `{placeholder}` unresolved:
    - Product name
    - Why this product exists
+   - Consumers and jobs, Surfaces, and Actors and sidedness — from the product-dimension coverage areas
    - Three-part hypothesis (output → outcome → impact)
-   - Scope
+   - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
 3. Write `spx/CLAUDE.md` from the template at `${SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
