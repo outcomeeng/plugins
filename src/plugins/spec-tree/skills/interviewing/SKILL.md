@@ -31,6 +31,8 @@ Before asking ANY questions:
 
 Use an Explore agent for codebase research. Summarize findings as a structured brief and share it with the user before the first question.
 
+**Structure caveat — existing code informs content, not structure.** Pre-analysis tells you what the code *is* and how it is *filed* — packages, modules, directories, files. That is the implementation: the lowest layer. It informs vocabulary, constraints, and open decisions. It must never become the structure of the artifact you are about to create. Do not let the code's module or file layout dictate spec-tree node boundaries or document sections. Separate "how the code is organized" from "what the product does for its consumers" — only the latter drives structure.
+
 When modifying an existing document, read it first. The coverage map starts from the document's existing sections — the interview focuses on deltas, not re-covering settled content.
 
 **Questioning Protocol**

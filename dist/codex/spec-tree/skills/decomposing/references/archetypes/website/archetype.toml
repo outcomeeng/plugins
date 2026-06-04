@@ -1,0 +1,42 @@
+schema_version = 1
+slug = "website"
+title = "Content / marketing website"
+summary = "A public website that converts and engages many anonymous visitors, with bets on measurable visitor behavior over a rendering + measurement substrate."
+
+source_product = "xiperlabs.com"
+source_repo = "xiperinc/xiperlabs.com"
+
+[recognition]
+# Mechanical signals the router reads from a new product's product.md.
+user_plurality = "many-anonymous" # public visitors, not a few known users
+behavior_measurability = "measurable" # conversion / traffic / adoption observable in analytics
+primary_surface = ["web"]
+decomposition_driver = "content-pages-and-conversion-bets"
+governance_weight = "medium"
+deployment_model = "static-hosted"
+
+[outcome_topology]
+has_outcomes = true
+reason = "Many anonymous visitors whose behavior change (convert, return, adopt, apply) is measurable via the analytics substrate. The bets are outcomes; the rendering machinery is the enabler substrate beneath them."
+# Structural correlate: an outcome-bearing website carries a measurement substrate
+# (analytics-platform) that the outcome bets read from. No measurement substrate => reconsider
+# whether the product actually has measurable bets.
+measurement_substrate = "analytics-platform"
+
+[index_convention]
+# Per-directory bands. At every level enablers (substrate) sort below outcomes (bets).
+decisions = "15-20"
+enablers = "21-50"
+outcomes = "51-79"
+max = 79
+
+[concerns]
+# Enabler substrate every website seeds, plus the bets. conversion + discovery are the near-universal
+# bets; adoption + branding are gated on whether the site serves those goals.
+core_enablers = ["infrastructure", "environment", "design-system", "analytics-platform", "site", "page"]
+core_outcomes = ["conversion", "discovery"]
+optional_outcomes = ["adoption", "branding"]
+
+[concerns.gates]
+adoption = "the site drives evaluation/adoption of a product through docs, showcases, or examples"
+branding = "the site carries brand / company / careers content to build credibility or attract talent"
