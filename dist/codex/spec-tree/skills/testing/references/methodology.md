@@ -324,4 +324,4 @@ Examples:
 - `test_seeded_generators.property.l1.py`
 - `session_token.scenario.l1.rs`
 - `login_flow.scenario.l3.tokio.rs`
-- `context-bar.property.l1_test.go`
+- `context_bar.property.l1_test.go`
