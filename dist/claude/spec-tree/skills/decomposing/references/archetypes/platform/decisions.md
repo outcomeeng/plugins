@@ -1,7 +1,7 @@
 # Platform archetype — decision topics
 
 Decisions a self-hosted multi-tenant platform typically needs, as **prompts to confirm or prune**
-against the new product's hypothesis. For this archetype the decisions are the *load-bearing* spine —
+against the new product's hypothesis. For this archetype the decisions are the *governing* spine —
 tenancy, isolation, and autonomy are cross-cutting policies every node honors, so they live as root
 decisions rather than nodes. Derived from the decision records in the source product (leoherd).
 
