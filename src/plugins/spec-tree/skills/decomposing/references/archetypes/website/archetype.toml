@@ -31,11 +31,20 @@ outcomes = "51-79"
 max = 79
 
 [concerns]
-# Enabler substrate every website seeds, plus the bets. conversion + discovery are the near-universal
-# bets; adoption + branding are gated on whether the site serves those goals.
-core_enablers = ["infrastructure", "environment", "design-system", "analytics-platform", "site", "page"]
-core_outcomes = ["conversion", "discovery"]
-optional_outcomes = ["adoption", "branding"]
+# Concerns every website seeds (core) plus signal-gated ones (optional). Uniform `core`/`optional`
+# key space across all archetypes; the enabler/outcome kind of each concern lives in seed-tree.json,
+# so this list is kind-agnostic. conversion + discovery are the near-universal bets.
+core = [
+  "infrastructure",
+  "environment",
+  "design-system",
+  "analytics-platform",
+  "site",
+  "page",
+  "conversion",
+  "discovery",
+]
+optional = ["adoption", "branding"]
 
 [concerns.gates]
 adoption = "the site drives evaluation/adoption of a product through docs, showcases, or examples"
