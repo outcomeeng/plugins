@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Interview — Prototype</title>
+    <style>
+    :root {
+      --bg: #0a0f1c;
+      --panel: #111827;
+      --card: #1a2236;
+      --line: #243049;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #00d4aa;
+      --accent-bg: rgba(0, 212, 170, 0.12);
+      --enabler: #60a5fa;
+      --outcome: #f59e0b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, sans-serif;
+    }
+    header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    #status {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    #status.live::before {
+      content: "● ";
+      color: var(--accent);
+    }
+    #status.off::before {
+      content: "● ";
+      color: #ef4444;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    section h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .q {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .q.current {
+      border-color: var(--accent);
+    }
+    .q .text {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .q .opt {
+      display: inline-block;
+      margin: 3px 6px 3px 0;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .q .opt:hover {
+      border-color: var(--accent);
+    }
+    .q .choice {
+      color: var(--accent);
+      font-size: 13px;
+    }
+    .q.settled {
+      opacity: 0.7;
+    }
+    ul.tree, ul.tree ul {
+      list-style: none;
+      margin: 0;
+      padding-left: 18px;
+    }
+    ul.tree {
+      padding-left: 0;
+    }
+    li.node > .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: 6px;
+    }
+    li.node > .row:hover {
+      background: var(--card);
+    }
+    li.node.drop-into > .row {
+      outline: 1px dashed var(--accent);
+    }
+    li.node.drop-before > .row {
+      box-shadow: 0 -2px 0 0 var(--accent);
+    }
+    li.node.drop-after > .row {
+      box-shadow: 0 2px 0 0 var(--accent);
+    }
+    ul.tree.root-drop {
+      outline: 1px dashed var(--accent);
+      outline-offset: 4px;
+    }
+    .kind {
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .kind.enabler {
+      color: var(--enabler);
+      background: rgba(96, 165, 250, 0.12);
+    }
+    .kind.outcome {
+      color: var(--outcome);
+      background: rgba(245, 158, 11, 0.12);
+    }
+    .title {
+      flex: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .title:focus {
+      outline: 1px solid var(--accent);
+      background: var(--bg);
+    }
+    .row button {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 5px;
+    }
+    .row button:hover {
+      color: var(--accent);
+    }
+    .toolbar {
+      margin-top: 12px;
+    }
+    .toolbar button {
+      background: var(--accent-bg);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Live Interview</h1>
+      <span id="rev"></span>
+      <span id="status" class="off">connecting…</span>
+    </header>
+    <main>
+      <section id="questions-panel">
+        <h2>Questions</h2>
+        <div id="current"></div>
+        <h2 style="margin-top: 18px">Planned</h2>
+        <div id="planned"></div>
+        <h2 style="margin-top: 18px">Settled</h2>
+        <div id="settled"></div>
+      </section>
+      <section id="tree-panel">
+        <h2>Spec Tree</h2>
+        <ul class="tree" id="tree"></ul>
+        <div class="toolbar">
+          <button onclick="addNode(null, 'enabler')">+ Root enabler</button>
+          <button onclick="addNode(null, 'outcome')">+ Root outcome</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+    const TOKEN = new URLSearchParams(location.search).get("token") || "";
+    let rev = -1;
+    let state = {
+      questions: { planned: [], current: null, settled: [] },
+      tree: [],
+    };
+    let dragId = null;
+
+    const CACHE_KEY = "live-interview-cache";
+    function loadCache() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+        if (cached && cached.rev > rev) {
+          rev = cached.rev;
+          state = cached.state;
+        }
+      } catch (_) {}
+    }
+
+    function persist() {
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, state }));
+      } catch (_) {}
+    }
+
+    // --- Sending interactions -------------------------------------------------
+
+    async function send(event) {
+      event.baseRev = rev;
+      const res = await fetch(`/event?token=${TOKEN}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(event),
+      });
+      const data = await res.json();
+      if (data.ok) rev = data.rev;
+      // SSE delivers the authoritative state
+      else await refetch(); // conflict: resync from the server
+    }
+
+    async function refetch() {
+      const res = await fetch(`/state?token=${TOKEN}`);
+      const data = await res.json();
+      rev = data.rev;
+      state = data.state;
+      render();
+      persist();
+    }
+
+    function answer(qid, choice) {
+      send({ type: "answer", questionId: qid, choice });
+    }
+    function renameNode(id, title) {
+      send({ type: "tree_rename", nodeId: id, title });
+    }
+    function removeNode(id) {
+      send({ type: "tree_remove", nodeId: id });
+    }
+    function addNode(parentId, kind) {
+      send({ type: "tree_add", parentId, kind, title: "New " + kind });
+    }
+    function moveNode(id, newParentId, newIndex) {
+      send({ type: "tree_move", nodeId: id, newParentId, newIndex });
+    }
+
+    // --- Rendering ------------------------------------------------------------
+
+    function qCard(q, cls) {
+      const div = document.createElement("div");
+      div.className = "q " + cls;
+      const text = document.createElement("div");
+      text.className = "text";
+      text.textContent = q.text;
+      div.appendChild(text);
+      if (q.choice != null) {
+        const c = document.createElement("div");
+        c.className = "choice";
+        c.textContent = "→ " + q.choice;
+        div.appendChild(c);
+      } else {
+        (q.options || []).forEach((opt) => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = opt;
+          b.onclick = () => answer(q.id, opt);
+          div.appendChild(b);
+        });
+      }
+      return div;
+    }
+
+    // Find a node's parent id and index among its siblings (null parent = root).
+    function locate(id, nodes, parentId) {
+      nodes = nodes || state.tree;
+      parentId = parentId === undefined ? null : parentId;
+      for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].id === id) return { parentId, index: i };
+        const hit = locate(id, nodes[i].children || [], nodes[i].id);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    // Translate a drop zone (before/into/after a target) into a move event.
+    function dropRelative(dragId, targetId, zone) {
+      if (zone === "into") {
+        moveNode(dragId, targetId, 0);
+        return;
+      }
+      const t = locate(targetId);
+      const d = locate(dragId);
+      if (!t) return;
+      let idx = t.index + (zone === "after" ? 1 : 0);
+      // Removing the dragged node first shifts later indices in the same list.
+      if (d && d.parentId === t.parentId && d.index < idx) idx -= 1;
+      moveNode(dragId, t.parentId, idx);
+    }
+
+    function nodeLi(node) {
+      const li = document.createElement("li");
+      li.className = "node";
+      li.draggable = true;
+      li.dataset.id = node.id;
+
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const kind = document.createElement("span");
+      kind.className = "kind " + node.kind;
+      kind.textContent = node.kind[0];
+      row.appendChild(kind);
+
+      const title = document.createElement("span");
+      title.className = "title";
+      title.contentEditable = "true";
+      title.textContent = node.title;
+      title.onblur = () => {
+        if (title.textContent !== node.title) renameNode(node.id, title.textContent);
+      };
+      title.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          title.blur();
+        }
+      };
+      row.appendChild(title);
+
+      const addBtn = document.createElement("button");
+      addBtn.textContent = "+";
+      addBtn.title = "add child enabler";
+      addBtn.onclick = () => addNode(node.id, "enabler");
+      row.appendChild(addBtn);
+
+      const del = document.createElement("button");
+      del.textContent = "✕";
+      del.title = "remove";
+      del.onclick = () => removeNode(node.id);
+      row.appendChild(del);
+
+      li.appendChild(row);
+
+      const clearZones = () => li.classList.remove("drop-before", "drop-into", "drop-after");
+
+      li.ondragstart = (e) => {
+        dragId = node.id;
+        e.stopPropagation();
+      };
+      li.ondragover = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Top third inserts before as a sibling, bottom third after, middle nests.
+        const r = row.getBoundingClientRect();
+        const y = e.clientY - r.top;
+        const zone = y < r.height * 0.3
+          ? "before"
+          : y > r.height * 0.7
+          ? "after"
+          : "into";
+        li.dataset.zone = zone;
+        clearZones();
+        li.classList.add("drop-" + zone);
+      };
+      li.ondragleave = clearZones;
+      li.ondrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const zone = li.dataset.zone || "into";
+        clearZones();
+        if (dragId && dragId !== node.id) dropRelative(dragId, node.id, zone);
+        dragId = null;
+      };
+
+      if (node.children && node.children.length) {
+        const ul = document.createElement("ul");
+        node.children.forEach((c) => ul.appendChild(nodeLi(c)));
+        li.appendChild(ul);
+      }
+      return li;
+    }
+
+    function render() {
+      document.getElementById("rev").textContent = "rev " + rev;
+      const q = state.questions;
+      const cur = document.getElementById("current");
+      cur.innerHTML = "";
+      if (q.current) cur.appendChild(qCard(q.current, "current"));
+      const pl = document.getElementById("planned");
+      pl.innerHTML = "";
+      (q.planned || []).forEach((x) => pl.appendChild(qCard(x, "planned")));
+      const se = document.getElementById("settled");
+      se.innerHTML = "";
+      (q.settled || []).forEach((x) => se.appendChild(qCard(x, "settled")));
+
+      const tree = document.getElementById("tree");
+      tree.innerHTML = "";
+      (state.tree || []).forEach((n) => tree.appendChild(nodeLi(n)));
+    }
+
+    // --- SSE: agent-side updates push here ------------------------------------
+
+    function connect() {
+      const es = new EventSource(`/events?token=${TOKEN}&since=${rev}`);
+      const status = document.getElementById("status");
+      es.onopen = () => {
+        status.className = "live";
+        status.textContent = "live";
+      };
+      es.onerror = () => {
+        status.className = "off";
+        status.textContent = "reconnecting…";
+      };
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.rev > rev) {
+          rev = data.rev;
+          state = data.state;
+          render();
+          persist();
+        }
+      };
+    }
+
+    // Dropping on the root list's empty area appends at the end of the roots.
+    function setupRootDrop() {
+      const tree = document.getElementById("tree");
+      tree.addEventListener("dragover", (e) => {
+        if (e.target === tree) {
+          e.preventDefault();
+          tree.classList.add("root-drop");
+        }
+      });
+      tree.addEventListener("dragleave", (e) => {
+        if (e.target === tree) tree.classList.remove("root-drop");
+      });
+      tree.addEventListener("drop", (e) => {
+        if (e.target !== tree) return; // a node li handled it (stopPropagation)
+        e.preventDefault();
+        tree.classList.remove("root-drop");
+        if (dragId) {
+          moveNode(dragId, null, (state.tree || []).length);
+          dragId = null;
+        }
+      });
+    }
+
+    async function boot() {
+      loadCache(); // optimistic paint from last session
+      render();
+      await refetch(); // authoritative state from the server
+      setupRootDrop();
+      connect(); // then stream agent-side updates
+    }
+
+    boot();
+    </script>
+  </body>
+</html>
