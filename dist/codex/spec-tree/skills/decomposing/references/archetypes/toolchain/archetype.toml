@@ -1,0 +1,45 @@
+schema_version = 1
+slug = "toolchain"
+title = "Developer toolchain"
+summary = "A developer tool that transforms authored source into an artifact, optionally round-tripping hand-edits back to source."
+
+# Derived from an authored reference tree. The vendored snapshot under example/ is the
+# pattern-match reference; this manifest is the machine-readable recognition + topology.
+source_product = "xideck"
+source_repo = "xiperinc/xideck"
+
+[recognition]
+# Mechanical signals the router reads from a new product's product.md
+# (Consumers / Surfaces / Actors / hypothesis). A product matches this archetype when
+# its signals align with these values.
+user_plurality = "few-known" # author(s) + agent, not many anonymous users
+behavior_measurability = "determined" # output fully specified by the transform; no behavior bet
+primary_surface = ["cli", "library", "file-output"]
+decomposition_driver = "transformation-pipeline"
+governance_weight = "medium"
+deployment_model = "local-dev-tool"
+
+[outcome_topology]
+has_outcomes = false
+reason = "Determined transform (source -> artifact); users are the author + agent. No measurable multi-user behavior change to bet on, so every node is an enabler."
+
+[index_convention]
+# Bands per directory number-space. Seeds use irregular gaps on purpose: a real tree grows
+# in passes, so siblings rarely share a step and never form a uniform 10/20/30 pattern.
+decisions = "15-20"
+enablers = "21-50"
+outcomes = "51-79"
+max = 79
+
+[concerns]
+# Every toolchain seeds the core spine. Optional concerns are gated on product signals so a
+# headless CLI transformer is not forced to carry a vocabulary or an authoring UI.
+core = ["infrastructure", "transform-pipeline"]
+optional = ["domain-vocabulary", "source-format", "asset-library", "authoring-loop", "reconciliation"]
+
+[concerns.gates]
+domain-vocabulary = "the source composes from a reusable component/primitive vocabulary"
+source-format = "authored source has its own grammar that parses and serializes (round-trips)"
+asset-library = "the product catalogs authored artifacts/content as first-class entries"
+authoring-loop = "authors need a live iteration/preview surface before producing the artifact"
+reconciliation = "hand-edits to the produced artifact must flow back into source"

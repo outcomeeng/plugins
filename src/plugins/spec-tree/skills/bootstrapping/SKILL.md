@@ -1,7 +1,7 @@
 ---
 name: bootstrapping
 description: ALWAYS invoke this skill when setting up a new spec tree or when /authoring detects an empty spx/ directory. NEVER create a spec tree from scratch without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
@@ -37,30 +37,29 @@ If a product spec already exists, this is not a bootstrap. Redirect to `/authori
 
 If `spx/` doesn't exist or contains no product spec, proceed.
 
+Also detect **brownfield**: a product already implemented in code while `spx/` is absent or empty (source packages, a README describing shipped behavior, a working CLI or service). Brownfield bootstrap is valid — note it, because it changes how Step 2 gathers top-level intent (see the brownfield guard).
+
 </step>
 
 <step name="interview">
 
 **Step 2: Interview the user**
 
-Use `AskUserQuestion` to gather product understanding. Adapt based on what's already known from the conversation.
+Invoke `/interviewing` and apply its methodology (one question at a time, `AskUserQuestion`, coverage display before each question, pushback) with the product-bootstrap coverage areas below as the interview plan. `/interviewing` supplies the technique; bootstrapping supplies the coverage areas — do not fork the interview. Take the areas in order, each constraining the next:
 
-**Round 1 — Product identity:**
+1. **Consumers** — who consumes this product? Name distinct personas, not a single "user".
+2. **Job-to-be-done** — what job does each consumer hire the product for?
+3. **Surfaces** — through which surfaces is it consumed (web UI, CLI, API, library, embedded, file output, …)?
+4. **Actors & sidedness** — one party or several (two-sided / multi-party marketplace, admin vs end-user, producer vs consumer)? Name each actor and what they exchange.
+5. **Constraints** — hard requirements, compliance, platforms, dependencies.
+6. **Success signals** — the behavior change and business value the product bets on (the three-part hypothesis).
+7. **Top-level intent** — the major capabilities the product should eventually contain; which are known now, which deferred, and what open issues composition should account for.
 
-- "What does this product do?" (one sentence)
-- "Who is it for?" (target user)
+Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping — `/decomposing spx/` owns structure.
 
-**Round 2 — Product hypothesis:**
+**Brownfield guard — existing code present.** When Step 1 found an implemented codebase, derive top-level intent from the product dimensions above — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout. Pre-analysis of existing code informs vocabulary, constraints, and open decisions; it does not set the partition. Candidate areas named after code components (`config`, `model`, `parser`, `layout`, …) repeat the implementation's filing in the tree and invert the truth hierarchy. `/decomposing` enforces the same rule — "decompose by user-facing concern, not implementation layer" — so apply it here and code-shaped intent never reaches it.
 
-- "What change in user behavior do you expect?" (outcome)
-- "What business value does that produce?" (impact)
-
-**Round 3 — Top-level intent:**
-
-- "What major areas, capabilities, or concerns should the product eventually contain?"
-- "Which areas are known now, which are deferred, and what open issues should composition account for?"
-
-Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping.
+Skip questions the conversation already answers.
 
 </step>
 
@@ -95,11 +94,12 @@ Wait for user confirmation before creating files.
 
 1. Create `spx/` directory if it doesn't exist.
 
-2. Write `spx/{product-name}.product.md` using the template from `${CLAUDE_SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill in:
+2. Write `spx/{product-name}.product.md` using the template from `${CLAUDE_SKILL_DIR}/../understanding/templates/product/product-name.product.md`. Fill every section from the interview — leave no `{placeholder}` unresolved:
    - Product name
    - Why this product exists
+   - Consumers and jobs, Surfaces, and Actors and sidedness — from the product-dimension coverage areas
    - Three-part hypothesis (output → outcome → impact)
-   - Scope
+   - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
 3. Write `spx/CLAUDE.md` from the template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
@@ -160,14 +160,21 @@ Claude created only the product spec and guide, then discarded the user's candid
 
 How to avoid: Write candidate areas, constraints, examples, and unresolved questions to `spx/PLAN.md` before invoking `/decomposing spx/`.
 
+**Failure 4: Mirroring the implementation's module layout into top-level intent**
+
+Bootstrapping ran over an existing codebase. Claude read the packages and named the candidate top-level areas after them (`config`, `model`, `format`, `layout`, …), so the tree's shape mirrored how the code happened to be filed. Package boundaries are the lowest layer (Code); letting them shape the highest layer (the tree) inverts the truth hierarchy, and `/decomposing spx/` inherits the contamination through `PLAN.md`.
+
+How to avoid: In brownfield, derive top-level intent from consumers, jobs, surfaces, and actors — the product dimensions from Step 2 — not from the module or file layout. Pre-analysis of the code informs vocabulary and constraints, never the partition. Express every candidate area as a user-facing capability; if an area is named after a code component, re-derive it.
+
 </failure_modes>
 
 <success_criteria>
 
 Bootstrapping is complete when:
 
-- [ ] Existing tree checked (no overwrite of existing product spec)
-- [ ] User interviewed for product identity, hypothesis, scope, and top-level intent
+- [ ] Existing tree checked (no overwrite of existing product spec); brownfield (existing code) detected if present
+- [ ] User interviewed across consumers, jobs, surfaces, actors/sidedness, constraints, success signals, and top-level intent
+- [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
 - [ ] `spx/CLAUDE.md` created from template with product name
