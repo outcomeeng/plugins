@@ -46,3 +46,52 @@ Required handling (cross-repo, when pursued):
 - Any clean-review detection that reads both surfaces recognizes both forms until they converge.
 
 Surfaced during the `fix/reviewing-no-findings-convention` change review (PR #108).
+
+## 4. Reviewer cites phantom rules it recalls instead of reading from the repo
+
+The review prompt lets the reviewer emit `standards` findings against rules
+that do not exist in the repository under review. On `outcomeeng/spx` PR #109
+the reviewer posted a `debt` / `standards` finding whose `Reference:` quoted
+`CLAUDE.md` as saying *"Never write multi-paragraph docstrings or multi-line
+comment blocks — one short line max."* No such rule exists in that repository's
+`CLAUDE.md`. The rule leaked from the underlying coding agent's own system
+prompt / global instructions (or is an outright hallucination), and the
+reviewer attributed it to the repository's `CLAUDE.md`.
+
+The current guard does not catch this. `references/review-prompt.md` defines
+the `standards` concern as "adherence to `CLAUDE.md` and the rules declared in
+standardizing-\* skills" (Category section), and the `## Rule citation` section
+already forbids "Inventing a citation that does not name a real rule in the
+loaded context." But an agent that *recalls* a comment-length rule from its own
+system prompt believes the rule is real and present in `CLAUDE.md` — from its
+vantage it is not inventing a citation, so the existing prohibition does not
+fire. The gap: the prompt never requires the reviewer to confirm the cited rule
+by reading it back out of a file that actually exists in the repository under
+review.
+
+Required handling (fix in the canonical prompt, then propagate to the built
+plugins and any restating workflow):
+
+- Edit `src/plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md`
+  `## Rule citation` section to add a strongly worded rule: a finding may cite a
+  rule ONLY when the reviewer has located and read that exact text in a file
+  that exists in the repository under review (`CLAUDE.md`, `AGENTS.md`, a loaded
+  standardizing-\* skill, or a governance doc on disk). The reviewer MUST NOT
+  cite any rule it recalls from its own system prompt, the user/global
+  `CLAUDE.md`, prior sessions, or training, and MUST discard rather than report
+  such a rule.
+- Name comment-length and docstring-length rules as the known failure mode:
+  never emit a finding about comment or docstring length unless that constraint
+  is present verbatim in the repository's own `CLAUDE.md` or a loaded skill.
+- When a candidate standard cannot be located in a repository file, the finding
+  is dropped, not downgraded.
+- Add evidence: a compliance test asserting `review-prompt.md` carries the
+  read-it-from-the-repo citation rule, in the style of the existing
+  `tests/test_reviewing_changes.compliance.l1.py` prompt-content checks.
+
+The `outcomeeng/gh-actions` `spec-tree-review.yml` workflow carries a baked-in
+restatement of this prompt; that copy needs the same hardening once the
+canonical prompt is fixed, per the cross-reference recorded in that repo's
+`spx/54-verification-gates.enabler`.
+
+Surfaced from the Spec Tree reviewer run on `outcomeeng/spx` PR #109.
