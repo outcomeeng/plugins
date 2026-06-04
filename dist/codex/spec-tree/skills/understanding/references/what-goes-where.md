@@ -117,6 +117,7 @@ Test harnesses (modules that mediate access to the system under test), test gene
 | **TypeScript** | `testing/` at project root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                     |
 | **Python**     | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/` — `<package>` is the product's Python package name                                                                                                                            |
 | **Rust**       | A workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
+| **Go**         | `internal/testinfra/` (package `testinfra` — not `testing`, which collides with the standard library): `internal/testinfra/harnesses/`, `internal/testinfra/generators/`, `internal/testinfra/fixtures/`, imported as `<module>/internal/testinfra/...`                                            |
 
 **The term is "infrastructure", not "support".** "Test support", "test helpers", "test utilities", and "test tools" are anti-terms — they connote ungoverned utility code, the opposite of what these artifacts are.
 

@@ -21,6 +21,7 @@ Accept exactly one target:
 Read before composing:
 
 - `${SKILL_DIR}/../understanding/references/node-types.md` — enabler/outcome structure and nesting rules
+- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — artifact content taxonomy and the mandatory test-infrastructure tree shape (`<test_infrastructure>`)
 - `${SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
 - `${SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
 - `/interviewing` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
@@ -39,6 +40,7 @@ If the target is `spx/`:
 2. Read `spx/CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
+5. The test-infrastructure baseline is mandatory, not discretionary. Per `what-goes-where.md` `<test_infrastructure>`, every tree has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and grandchildren `generators`, `fixtures`, `harnesses`, governed by `spx/15-test-infrastructure.pdr.md`. Compose this baseline when it is absent; use the normative slugs exactly — do not invent alternatives such as `test-infrastructure` or `test-support`.
 
 If the target is a node address:
 

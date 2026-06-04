@@ -97,18 +97,28 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 </write_canonical_continuation>
 
 <release_work_branch>
-`spx session handoff` (Path C) requires an allowed git state, and the requirement differs by worktree kind:
+A handoff RELEASES the work branch. The committed branch ref — not any checkout — carries the work forward, so after the handoff the releasing context steps off the branch and leaves it unoccupied for the next worktree or agent to claim via `/pickup`. This holds for every checkout kind; only the git mechanics differ. It is a post-handoff hygiene rule, not a worktree-only concern.
 
-- **Main checkout on a named branch** — already allowed; the CLI records the branch name. No detach, and this section's release rule does not apply.
-- **Linked (pool) worktree** — allowed only as a clean tree detached at the `origin/<default-branch>` tip; the CLI records that base SHA and REFUSES a linked worktree in any other state.
+**Pre-handoff CLI precondition.** `spx session handoff` (Path C) requires an allowed git state before it will record the handoff, and that precondition differs by checkout kind:
 
-When the session's committed work sits on a feature branch checked out in a linked worktree, detach the worktree to `origin/<default-branch>` before invoking the handoff. The commits persist on the branch ref in the shared `.git`, so detaching loses nothing:
+- **Main checkout on a named branch** — already allowed; the CLI records the branch name. No pre-handoff detach is needed.
+- **Linked (pool) worktree** — allowed only as a clean tree detached at the `origin/<default-branch>` tip; the CLI records that base SHA and REFUSES a linked worktree in any other state. When the committed work sits on a feature branch checked out in a linked worktree, detach to `origin/<default-branch>` before invoking the handoff. The commits persist on the branch ref in the shared `.git`, so detaching loses nothing:
 
-```bash
-git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
-```
+  ```bash
+  git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
+  ```
 
-After the handoff is written, LEAVE the linked worktree detached at `origin/<default-branch>`. A handoff RELEASES the work branch: it must stay unoccupied so another worktree or agent can check it out. NEVER re-check-out the handed-off branch "to return to where you were" — git refuses to check out a branch already checked out in another worktree, and re-occupying it re-locks the branch and strands the queued continuation for every other context. The committed branch ref, not the worktree checkout, carries the work forward.
+**Post-handoff step-off.** After the handoff is written, step off the released branch. The form follows the checkout kind:
+
+- **Main checkout** — switch back to the base branch (the repository's default branch) so the feature branch is unoccupied:
+
+  ```bash
+  git switch "$(basename "$(git symbolic-ref --short refs/remotes/origin/HEAD)")"   # e.g. main
+  ```
+
+- **Linked (pool) worktree** — LEAVE it detached at the `origin/<default-branch>` tip.
+
+NEVER re-check-out the handed-off branch "to return to where you were." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.
 </release_work_branch>
 
 <archive_scope>
@@ -151,7 +161,7 @@ State:
 - Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (--no-session)"
 - Session-owned work was committed before closure
 - Every session id archived from the resolved scope (and any artifact NOT rewritten in place)
-- Worktree state: a linked worktree detached to reach the allowed handoff state is left detached at the `origin/<default-branch>` tip; the handed-off branch is unoccupied
+- Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
 
 </confirm>
 
@@ -166,6 +176,6 @@ State:
 - Every in-scope session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
 - Confirmation output names the continuation path and the archived ids.
-- A linked worktree detached to invoke handoff is left detached at the `origin/<default-branch>` tip — the handed-off branch is not re-checked-out.
+- The releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.
 
 </success_criteria>
