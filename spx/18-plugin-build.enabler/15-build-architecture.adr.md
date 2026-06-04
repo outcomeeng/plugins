@@ -43,7 +43,7 @@ Shared content (code standards, test standards, agent-prompt conventions, and si
 
 ### Build orchestration
 
-`just build-skills` runs the build manually. The lefthook pre-commit hook invokes the same recipe and fails the commit when the build produces any change to `dist/`. CI runs `just build-skills && git diff --exit-code dist/` to verify in-sync output.
+`just build-skills` runs the build manually. The lefthook pre-commit hook invokes the same recipe and fails the commit when the build produces any change to `dist/`. CI runs `just build-skills` and then the dist-diff drift reporter, which lists the drifting `dist/` paths and remediation and exits non-zero when the generated trees are out of sync.
 
 ## Rationale
 
