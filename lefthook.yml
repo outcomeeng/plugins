@@ -15,7 +15,7 @@ pre-commit:
       priority: 10
     build-skills:
       glob: "*.{md,json,toml,py}"
-      run: just build-skills && git diff --exit-code dist
+      run: just build-skills && uv run python -m outcomeeng.distribution.dist_diff
       stage_fixed: true
       priority: 20
     dprint:

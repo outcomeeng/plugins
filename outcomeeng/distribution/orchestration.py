@@ -30,7 +30,8 @@ BUILD_COMMAND_ARGV: Final = (
     SOURCE_ROOT_NAME,
     DIST_ROOT_NAME,
 )
-DIST_DIFF_ARGV: Final = ("git", "diff", "--exit-code", DIST_ROOT_NAME)
+DIST_DIFF_MODULE_NAME: Final = "outcomeeng.distribution.dist_diff"
+DIST_DIFF_ARGV: Final = ("uv", "run", "python", "-m", DIST_DIFF_MODULE_NAME)
 ORCHESTRATION_VALIDATION_ARGV: Final = (
     "uv",
     "run",
