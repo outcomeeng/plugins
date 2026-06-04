@@ -17,7 +17,15 @@ from outcomeeng_testing.harnesses.dist_drift import dist_drift_repo
 
 
 def _carries_unified_diff(report: str) -> bool:
-    """Return whether the report contains raw unified-diff markers."""
+    """Return whether the report contains raw unified-diff markers.
+
+    Two independent guards catch a regression that dumps a raw ``git diff``:
+    hunk headers (``@@``) and diff body lines (a raw added or removed line
+    starts with ``+`` or ``-``). The reporter's own entries are ``name-status``
+    lines that start with a status letter and are indented, so a well-formed
+    report trips neither guard — the ``startswith`` branch fires only on raw,
+    unindented diff body content.
+    """
     return "@@" in report or any(
         line.startswith(("+", "-")) for line in report.splitlines()
     )
