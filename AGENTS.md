@@ -308,7 +308,7 @@ Everything under `src/plugins/` is authored source; the installed trees under `d
 just build-skills   # uv run python -m outcomeeng.distribution.build src dist
 ```
 
-The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
+The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Because the hook regenerates `dist/` at commit time, an uncommitted working tree that has `src/plugins/` edits but no matching `dist/` change is the **expected** mid-edit state — never report it as a defect, a review finding, or a merge blocker (for example "the generated trees have not been rebuilt" or "`dist/` is out of sync"). Only a `src/`↔`dist/` divergence that survives into a commit is a problem, and the hook prevents that. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
 
 Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/committing-changes` then `/open-pr`.
 
