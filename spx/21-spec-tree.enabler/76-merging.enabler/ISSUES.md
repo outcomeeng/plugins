@@ -39,3 +39,17 @@ This is the deferred "declare in the spec" path: the change shipped as skill pro
 - Run the eval to populate `history.jsonl`.
 
 Same shape as item 1: an enabler-side assertion + eval, not a `spx/15-agent-pr-authority.pdr.md` evidence-tag change.
+
+## 5. Worktree-safe branch-deletion default lacks eval coverage for the deletion mechanism (FOLLOW-UP)
+
+The `merging.md` merge-command scenario declares two observable branch-deletion behaviors: the overlay-silent default runs the worktree-safe deletion sequence (`gh pr merge --rebase` without `--delete-branch`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately), and an overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects. The `merge-command-overlay-precedence` eval verifies only the merge-strategy flag and its source (`merge_flag` ∈ {`--rebase`, `--merge`, `--squash`}, `source` ∈ {`overlay`, `universal-default`}); no case exercises whether the agent runs the worktree-safe deletion sequence versus inline `--delete-branch`.
+
+Same shape as items 1 and 4: a behavior declared in the spec and shipped as skill prose, awaiting eval coverage in an eval-coverage sweep. The merge-flag concern and the deletion-mechanism concern are distinct, so the coverage belongs in its own eval rather than overloading `merge-command-overlay-precedence`.
+
+Required handling when an eval-coverage sweep happens:
+
+- Add a scenario assertion to `merging.md` (or extend the existing merge-command scenario) declaring the deletion-mechanism choice as a separately observable behavior.
+- Create `evals/merge-cleanup-deletion/` (`eval.toml`, `cases.jsonl`, `prompt.md`) with a verdict schema carrying a deletion-mechanism field, exercising the overlay-silent worktree-safe path and the single-worktree inline opt-in.
+- Run the eval to populate `history.jsonl`.
+
+Surfaced by the local `reviewing-changes` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
