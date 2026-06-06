@@ -122,7 +122,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 <failure_handling>
 
 - Queued, in-progress, and pending states: report material changes, refresh the heartbeat, and continue on the next wake-up.
-- Failed, cancelled, or timed-out checks: fetch failed logs once, classify the failed layer, and keep the work active unless the next step requires operator approval, credentials, or judgment.
+- Failed, cancelled, or timed-out checks: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md` (never into the prompt), and keep the work active unless the next step requires operator approval, credentials, or judgment.
 - Review feedback: fix safe local issues, run the governed local review and validation loop, push, then refresh tracking for current-head checks and review.
 - High host load: record the load condition, schedule the next load-aware checkpoint, and avoid starting heavy validation.
 - Missing approval: stop the work item at the approval boundary, delete heartbeat tracking, and ask with the identifiers, effect, and non-effect required by the owning workflow.
