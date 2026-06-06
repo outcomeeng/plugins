@@ -28,7 +28,7 @@ plugin source tree.
 
 ## Migrate remaining product-level decisions to the audit evidence model
 
-`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section split into `### Testing` / `### Eval` / `### Audit` subsections, each rule carrying a valid evidence tag (`([audit])` for agent-judgment rules). The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
+`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section that groups rules by verification type under `### Testing` / `### Eval` / `### Audit` subsections, each decision carrying only the subsections its rules need — both of these use `### Audit` alone, every rule tagged `([audit])` for agent judgment. The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
 
 **Resolution shape**: a coordinated pass migrating each remaining decision to the `## Verification` structure — mapping `[review]` to `[audit]`, or to `[test]` / `[eval]` where a deterministic test or graded eval applies — so the decision set converges on one schema. Audit gate: `/audit-pdr` (PDRs) and `/audit-adr` (ADRs) run clean on each migrated file.
 
