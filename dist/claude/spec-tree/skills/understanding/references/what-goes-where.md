@@ -108,7 +108,7 @@ Each file imports the module under test — directly or through a test-infrastru
 
 Test harnesses (modules that mediate access to the system under test), test generators (factories producing valid inputs), and inert fixtures (captured payloads, recorded transcripts, sample documents) are **production code**. They implement behavior, carry their own spec assertions in the spec tree, and pass the same audits as any other production module. They differ from product code only in purpose: they enable test assertions rather than deliver product value.
 
-**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`. See `spx/15-test-infrastructure.pdr.md`.
+**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`.
 
 **Implementation location (normative per language):** A sibling directory to product code, outside `spx/` and outside any `tests/` directory:
 
@@ -117,6 +117,7 @@ Test harnesses (modules that mediate access to the system under test), test gene
 | **TypeScript** | `testing/` at project root, path-mapped to `@testing/`: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`                                                                                                                                                                     |
 | **Python**     | `<package>_testing/`: `<package>_testing/harnesses/`, `<package>_testing/generators/`, `<package>_testing/fixtures/` — `<package>` is the product's Python package name                                                                                                                            |
 | **Rust**       | A workspace-member crate at `<product>-testing/` (Cargo package `<product>-testing`, Rust import path `<product>_testing`), declared as a `[dev-dependencies]` entry of consumers; modules `<product>_testing::harnesses::*`, `<product>_testing::generators::*`, `<product>_testing::fixtures::*` |
+| **Go**         | `internal/testinfra/` (package `testinfra` — not `testing`, which collides with the standard library): `internal/testinfra/harnesses/`, `internal/testinfra/generators/`, `internal/testinfra/fixtures/`, imported as `<module>/internal/testinfra/...`                                            |
 
 **The term is "infrastructure", not "support".** "Test support", "test helpers", "test utilities", and "test tools" are anti-terms — they connote ungoverned utility code, the opposite of what these artifacts are.
 

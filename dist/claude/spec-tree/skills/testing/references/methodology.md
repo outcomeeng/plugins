@@ -295,6 +295,7 @@ Canonical filename model:
 - TypeScript and JavaScript: `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Python: `test_<subject>.<evidence>.<level>[.<runner>].py`
 - Rust: `<subject>.<evidence>.<level>[.<runner>].rs`
+- Go: `<subject>.<evidence>.<level>[.<runner>]_test.go` (Go recognizes a test file only by the `_test.go` suffix, so the test marker is the suffix, not a `.test.` segment)
 
 Canonical evidence tokens:
 
@@ -323,3 +324,4 @@ Examples:
 - `test_seeded_generators.property.l1.py`
 - `session_token.scenario.l1.rs`
 - `login_flow.scenario.l3.tokio.rs`
+- `context_bar.property.l1_test.go`

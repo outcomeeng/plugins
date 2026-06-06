@@ -26,6 +26,35 @@ plugin source tree.
 
 **Resolution evidence**: `spx validation markdown` passes.
 
+## Migrate remaining product-level decisions to the audit evidence model
+
+`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section split into `### Testing` / `### Eval` / `### Audit` subsections, each rule carrying a valid evidence tag (`([audit])` for agent-judgment rules). The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
+
+**Resolution shape**: a coordinated pass migrating each remaining decision to the `## Verification` structure — mapping `[review]` to `[audit]`, or to `[test]` / `[eval]` where a deterministic test or graded eval applies — so the decision set converges on one schema. Audit gate: `/audit-pdr` (PDRs) and `/audit-adr` (ADRs) run clean on each migrated file.
+
+## Govern Go test conventions before a Go language plugin ships
+
+The methodology documents Go's test-infrastructure home (`internal/testinfra/`) in `spx/15-test-infrastructure.pdr.md` and Go test-file naming (`<subject>.<evidence>.<level>[.<runner>]_test.go`) in the testing and understanding skill references. No decision governs Go test-runner selection (`go test`), subtest conventions, `t.Helper()` policy, or the per-language `[test]` runner the way `spx/15-test-language.adr.md` does for this product's own pytest suite — and that ADR does not mention Go.
+
+**Resolution shape**: before a Go language plugin ships, author the governing decision(s) for Go test conventions and reconcile them with the test-infrastructure home already documented here. The package-name constraint (`internal/testinfra/` is package `testinfra`, never `testing`) is already stated in `spx/15-test-infrastructure.pdr.md`, but its audit assertions cover the normative path generically — add a Go-specific audit assertion verifying the package name as part of this work.
+
 ## `just check` does not run ruff or `spx validation markdown` (RESOLVED)
 
 `spx/15-validation.enabler/65-check-pipeline.enabler/` declares a signal-safe Python orchestrator at `outcomeeng/scripts/check.py` that replaces the prior bash heredoc. The new step list includes `fmt-check → ruff → manifests → skills → docs-check → markdown → pytest`, so the two previously-missing checks now run on every `just check`. The lint and format entry above remains in scope for a separate `chore(repo): ruff --fix + ruff format` PR if the current branch does not resolve it directly.
+
+## Shipped skill content cites marketplace-internal decision paths
+
+`AGENTS.md` "Two audiences, two design surfaces" requires authored skill content under `src/plugins/` to render into portable plugin output: "never a marketplace-internal node path, never a PDR or ADR specific to this product." Several shipped skill, command, and template bodies cite this marketplace's own decision files by `spx/<NN>-<slug>.{pdr,adr}.md` path — a consumer agent reading them in another repository hits a path that does not exist there or maps to unrelated content at the same index. (Spec assertions inside `spx/**` that cite a governing decision by full path are correct and out of scope here — the rule governs shipped skill bodies, not the spec tree.)
+
+Genuine instances (real marketplace decisions cited as authority in shipped content):
+
+- `src/plugins/spec-tree/commands/review-changes.md` (two citations of `spx/15-agent-pr-authority.pdr.md`).
+- `src/plugins/spec-tree/skills/auditing/SKILL.md` (`spx/15-audit-verdict-format.pdr.md`; and `spx/13-plugin-and-runtime-conventions.adr.md` inside a comment example).
+- `src/plugins/spec-tree/skills/decomposing/references/archetypes/website/seed-tree.json`, `.../toolchain/seed-tree.json`, and `.../toolchain/example/xideck.md` (provenance notes citing `15-test-infrastructure.pdr.md`).
+- `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md` (`spx/14-verification.pdr.md`, framed "in this marketplace").
+
+Not violations — leave as-is: fictional example paths used to illustrate format (`spx/15-product-offering.pdr.md` in `assertion-types.md`; `spx/15-api-contract.adr.md`, `spx/22-cache-policy.adr.md`, `spx/15-build.adr.md` in `authoring/SKILL.md`; `spx/15-auth-strategy.adr.md` and peers in `spx-claude.md:85`), and the archetype `leoherd`/`xiperlabs`/`xideck` `source` annotations that intentionally name the external products each archetype was distilled from.
+
+The `/decomposing` step 5 baseline guidance is already portable — it depends on `what-goes-where.md` `<test_infrastructure>`, not on the PDR path — so it needs no sweep change. The archetype seed-tree provenance notes are the remaining `decomposing/` instances; they are unchanged in this PR and resolve in the future sweep described below, not here.
+
+**Resolution shape**: a `fix(spec-tree)` sweep that, per instance, either reframes the citation as a portable concept (the methodology owns the rule; the skill states it without the product path) or marks it as an explicit illustrative example. Validate each genuine instance against the two-audiences rule before editing — some may warrant an "e.g., in this marketplace" framing rather than removal. Audit gate: `just check-skills` and `just docs-check` after the sweep; re-grep `src/plugins/` for `spx/[0-9]{2}-…\.(pdr|adr)\.md` and confirm every remaining hit is an illustrative or external-product reference.
