@@ -1,13 +1,13 @@
 <overview>
-Every assertion in a node spec must be one of five structured types. The first four default to `[test]` evidence. Compliance assertions choose between `[test]` and `[audit]` depending on whether the constraint can be verified by an automated test or requires agent judgment (`[review]` is the legacy form of `[audit]`, accepted during migration).
+Every assertion in a node spec must be one of five structured types. The first four default to `[test]` evidence. Compliance assertions choose among `[test]`, `[eval]`, and `[audit]` — `[test]` when an automated test verifies the constraint, `[eval]` when it governs LLM-driven behavior that emits a parseable structured verdict, and `[audit]` when it needs agent judgment with no structural verdict to score (`[review]` is the legacy spelling of `[audit]`, accepted during migration).
 
-| Type            | Quantifier                      | Test strategy         | Use when                                      |
-| --------------- | ------------------------------- | --------------------- | --------------------------------------------- |
-| **Scenario**    | There exists (this case works)  | Example-based         | Specific user journey or interaction          |
-| **Mapping**     | For all over a finite set       | Parameterized         | Input-output correspondence over known values |
-| **Conformance** | External oracle                 | Tool validation       | Must match an external standard or schema     |
-| **Property**    | For all over a type/value space | Property-based        | Invariant that must hold for all valid inputs |
-| **Compliance**  | ALWAYS/NEVER behavioral rules   | Review, test, or eval | Constraints from decisions, semantic rules    |
+| Type            | Quantifier                      | Test strategy        | Use when                                      |
+| --------------- | ------------------------------- | -------------------- | --------------------------------------------- |
+| **Scenario**    | There exists (this case works)  | Example-based        | Specific user journey or interaction          |
+| **Mapping**     | For all over a finite set       | Parameterized        | Input-output correspondence over known values |
+| **Conformance** | External oracle                 | Tool validation      | Must match an external standard or schema     |
+| **Property**    | For all over a type/value space | Property-based       | Invariant that must hold for all valid inputs |
+| **Compliance**  | ALWAYS/NEVER behavioral rules   | Test, eval, or audit | Constraints from decisions, semantic rules    |
 
 </overview>
 
@@ -86,7 +86,7 @@ A property assertion states something that must be true for all valid inputs, no
 A compliance assertion states a rule the node's output must always or never exhibit. Some trace back to a PDR or ADR decision; others are intrinsic to the node itself.
 
 ```markdown
-- ALWAYS: page presents the OSS tier as the full core toolchain — `spx/15-product-offering.pdr.md` positions open-source as complete ([review])
+- ALWAYS: page presents the OSS tier as the full core toolchain — `spx/15-product-offering.pdr.md` positions open-source as complete ([audit])
 - NEVER: reference XiperHLS — deferred by `spx/15-product-offering.pdr.md` ([test](tests/open-source.compliance.l1.test.{ext}))
 ```
 
@@ -107,6 +107,20 @@ A compliance assertion states a rule the node's output must always or never exhi
 When in doubt, start with **Scenario**. Promote to **Mapping** when you discover the domain is finite. Promote to **Property** when you realize the assertion should hold universally. Use **Compliance** when the constraint is about what the node must always or never do.
 
 </choosing_type>
+
+<choosing_mechanism>
+
+After choosing the assertion type, choose its evidence lane:
+
+1. Is the behavior a deterministic function of inputs an automated test can drive? → **`[test]`**
+2. Is the behavior LLM-driven, and does the producer emit a parseable structured verdict a runner scores against expected fields under a pass threshold? → **`[eval]`**
+3. Is it an irreducible semantic constraint a model must judge, with no structural verdict to score? → **`[audit]`**
+
+Prefer `[test]` when behavior is deterministic. Reach for `[eval]` only when `[test]` cannot exercise the behavior but the producer's output has a parseable contract. Fall back to `[audit]` when no structural verdict exists.
+
+The tag `[review]` is the legacy spelling of `[audit]`, not the `reviewing` verification type. `reviewing` is an open-ended gate that backs no assertion lane (see `references/verification-kinds.md`); read `[review]` on an assertion as `[audit]`.
+
+</choosing_mechanism>
 
 <mixing_types>
 
@@ -137,14 +151,13 @@ Only include headings for assertion types that apply. Each evidence type lives i
 
 Every assertion links to one evidence mechanism — one of the lanes that back assertions, each backed by a verification type (`references/verification-kinds.md`):
 
-| Mechanism  | Tag                      | Who decides                   | What it proves                                                                                         | Verified by    |
-| ---------- | ------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ | -------------- |
-| **Test**   | `([test](path/to/test))` | Automated test                | "The code does X" — exercises behavior with real coupling                                              | Test runner    |
-| **Review** | `([review])`             | Human or agent judgment       | "The design follows principle W" — semantic constraint no tool can verify                              | Audit skill    |
-| **Eval**   | `([eval](path/to/eval))` | Eval runner over golden cases | "The skill identifies X" — graded cases verify LLM-driven behavior under a structural verdict contract | Eval runner    |
-| **Audit**  | `([audit])`              | An auditing skill's checklist | "The artifact conforms to standard W" — agentic judgment over a fixed checklist                        | Auditing skill |
+| Lane      | Tag                      | Verdict mode  | Verified by    | What it proves                                                                                                                        |
+| --------- | ------------------------ | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Test**  | `([test](path/to/test))` | deterministic | test runner    | "The code does X" — an automated test drives behavior that is a deterministic function of its inputs                                  |
+| **Eval**  | `([eval](path/to/eval))` | deterministic | eval runner    | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
+| **Audit** | `([audit])`              | agentic       | auditing skill | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
 
-`([audit])` is the lane backed by the auditing type; `([review])` is its legacy tag and migrates to `([audit])` — both resolve during migration. Reviewing — open-ended principal-level judgment — is a gate, not an assertion lane. The lane↔type mapping is declared in `references/verification-kinds.md`.
+The `[eval]` verdict is deterministic even though an LLM produces the output: the runner scores the parsed verdict against expected fields, so no model judges the result. `([review])` is the legacy spelling of the `([audit])` lane and migrates to it — both resolve during migration. The tag `[review]` is NOT the `reviewing` verification type: `reviewing` is an open-ended, principal-level gate that backs no assertion lane. The lane↔type mapping is declared in `references/verification-kinds.md`.
 
 **Test** is the default for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
 

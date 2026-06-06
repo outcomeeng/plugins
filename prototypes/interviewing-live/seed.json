@@ -1,0 +1,62 @@
+{
+  "rev": 0,
+  "questions": {
+    "planned": [
+      {
+        "id": "q2",
+        "text": "What node type does this interview primarily produce?",
+        "options": ["enabler", "outcome", "both"],
+        "choice": null
+      },
+      {
+        "id": "q3",
+        "text": "Where should the tree-editing surface live?",
+        "options": ["interviewing (generic)", "calling spec-tree skill"],
+        "choice": null
+      }
+    ],
+    "current": {
+      "id": "q1",
+      "text": "Which surface should drive the live interview?",
+      "options": ["spec tree", "flat coverage map"],
+      "choice": null
+    },
+    "settled": []
+  },
+  "tree": [
+    {
+      "id": "n1",
+      "slug": "interviewing",
+      "kind": "enabler",
+      "order": 10,
+      "title": "Live interviewing",
+      "children": [
+        {
+          "id": "n2",
+          "slug": "transport",
+          "kind": "enabler",
+          "order": 10,
+          "title": "Real-time transport",
+          "children": []
+        },
+        {
+          "id": "n3",
+          "slug": "state-core",
+          "kind": "enabler",
+          "order": 20,
+          "title": "State + conflict core",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "n4",
+      "slug": "tree-editing",
+      "kind": "outcome",
+      "order": 20,
+      "title": "Browser tree editing",
+      "children": []
+    }
+  ],
+  "updatedAt": null
+}

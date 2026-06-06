@@ -47,7 +47,7 @@ About to load context for an existing target and explain why lower-index sibling
    - `references/imperfection-protocol.md` — per-turn ledger, no-origin-distinction rule, closing protocol
    - `references/verification-kinds.md` — the five verification types, verdict mode, purpose, evidence lanes
 3. Note operational references (loaded on demand by other skills):
-   - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy (used by `/aligning`)
+   - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and the mandatory test-infrastructure tree shape (used by `/aligning`, `/decomposing`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/authoring`, `/testing`)
    - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualizing`, `/handoff`)
    - `spx/local/*.md` — product-specific overlays for `/coding-*`, `/architecting-*`, and `/testing-*` skills (enumerated by `/contextualizing`)

@@ -113,6 +113,7 @@ NN-slug.{enabler|outcome}/
 - Naming follows the product's language convention, e.g.:
   - TypeScript: `slug.scenario.l1.test.ts`, `slug.property.l1.test.ts`, `slug.conformance.l2.test.ts`
   - Python: `test_slug.scenario.l1.py`, `test_slug.property.l1.py`, `test_slug.conformance.l2.py`
+  - Go: `slug.scenario.l1_test.go`, `slug.property.l1_test.go`, `slug.conformance.l2_test.go`
 - An optional runner token sits between level and the test extension when a non-default runner applies (e.g., `slug.scenario.l2.playwright.test.ts`)
 - Verified by `[test]` evidence
 
@@ -123,6 +124,6 @@ NN-slug.{enabler|outcome}/
 - The `runs/` subdirectory holds full transcripts and is gitignored
 - Verified by `[eval]` evidence (the dedicated eval runner)
 
-Assertions specify output, verified by `[test]`, `[eval]`, or `[review]` per `<evidence_mechanisms>` in `assertion-types.md`.
+Assertions specify output, verified by `[test]`, `[eval]`, or `[audit]` per `<evidence_mechanisms>` in `assertion-types.md`.
 
 </common_structure>

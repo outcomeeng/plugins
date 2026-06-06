@@ -48,13 +48,13 @@ This loads:
 
 Parse the target spec node. Extract all typed assertions and their test links:
 
-| Type            | Pattern in spec                                    | Test strategy   |
-| --------------- | -------------------------------------------------- | --------------- |
-| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based   |
-| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized   |
-| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation |
-| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based  |
-| **Compliance**  | `ALWAYS/NEVER: {rule} ([review]/[test])`           | Review or test  |
+| Type            | Pattern in spec                                    | Test strategy        |
+| --------------- | -------------------------------------------------- | -------------------- |
+| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based        |
+| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized        |
+| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation      |
+| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based       |
+| **Compliance**  | `ALWAYS/NEVER: {rule} ([audit]/[test]/[eval])`     | Audit, test, or eval |
 
 Record each assertion with:
 
@@ -71,12 +71,12 @@ Record each assertion with:
 
 For each assertion:
 
-| Status            | Condition                               | Action                                     |
-| ----------------- | --------------------------------------- | ------------------------------------------ |
-| **Covered**       | Test link exists and resolves to a file | Verify in Step 4                           |
-| **Missing link**  | No `([test])` or `([review])` tag       | Must add evidence link                     |
-| **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
-| **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
+| Status            | Condition                                     | Action                                     |
+| ----------------- | --------------------------------------------- | ------------------------------------------ |
+| **Covered**       | Test link exists and resolves to a file       | Verify in Step 4                           |
+| **Missing link**  | No `([test])`, `([eval])`, or `([audit])` tag | Must add evidence link                     |
+| **Broken link**   | Link present but file doesn't exist           | Must create test file                      |
+| **No assertions** | Spec has no typed assertions                  | Spec needs work first — do not write tests |
 
 **Legacy filename check:** For every **Covered** link above, verify the filename encodes evidence type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
@@ -130,7 +130,7 @@ Delegate language-specific structure to `/testing-python` or `/testing-rust` or 
 
 **Step 6: Update spec assertion links**
 
-After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification, or `[review]` for human judgment.
+After creating test files, update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. Every assertion must link to evidence: `[test]` for automated verification, `[eval]` for LLM-driven behavior that emits a parseable structured verdict, or `[audit]` for semantic constraints requiring agent judgment (`[review]` is the legacy spelling of `[audit]`).
 
 </step>
 
