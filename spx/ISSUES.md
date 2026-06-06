@@ -26,11 +26,14 @@ plugin source tree.
 
 **Resolution evidence**: `spx validation markdown` passes.
 
-## Migrate remaining product-level decisions to the audit evidence model
+## Migrate the remaining decision records to the lean decision template
 
-`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section that groups rules by verification type under `### Testing` / `### Eval` / `### Audit` subsections, each decision carrying only the subsections its rules need — both of these use `### Audit` alone, every rule tagged `([audit])` for agent judgment. The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
+The product-level decisions at the tree root (`spx/13-plugin-and-runtime-conventions.adr.md`, `spx/14-verification.pdr.md`, `spx/15-spec-coverage.adr.md`, `spx/15-agent-pr-authority.pdr.md`, `spx/15-audit-verdict-format.pdr.md`, `spx/15-test-language.adr.md`) are migrated to the `## Verification` structure (`### Testing` / `### Eval` / `### Audit` with per-rule evidence-type or `([audit])` tags) under the lean decision template. Two decision records still carry legacy structure:
 
-**Resolution shape**: a coordinated pass migrating each remaining decision to the `## Verification` structure — mapping `[review]` to `[audit]`, or to `[test]` / `[eval]` where a deterministic test or graded eval applies — so the decision set converges on one schema. Audit gate: `/audit-pdr` (PDRs) and `/audit-adr` (ADRs) run clean on each migrated file.
+- `spx/15-test-infrastructure.pdr.md` — hybrid: it has the `## Verification` / `### Audit` section but retains the pre-lean headings `## Purpose`, `## Context`, `## Trade-offs accepted`, and `## Product invariants`. The lean template states the decision directly in the opening (no `## Purpose` / `## Context` / `## Trade-offs accepted`) and names the properties section `## Product properties`.
+- `spx/21-spec-tree.enabler/16-verification.enabler/21-thread-store.enabler/21-backend-abstraction.adr.md` — fully legacy: `## Purpose` / `## Context` / `## Trade-offs accepted` / `## Compliance` (`### Recognized by` / `### MUST` / `### NEVER`) with bare `([review])` tags.
+
+**Resolution shape**: migrate both to the lean `## Verification` structure — strip `## Purpose` / `## Context` / `## Trade-offs accepted` and fold their content into the opening decision statement and `## Rationale`, rename `## Product invariants` to `## Product properties`, and map `([review])` to `([audit])` (or `[test]` / `[eval]` where a deterministic test or graded eval applies). Audit gate: `/audit-adr` (ADR) and `/audit-pdr` (PDR) run clean on each.
 
 ## Govern Go test conventions before a Go language plugin ships
 
