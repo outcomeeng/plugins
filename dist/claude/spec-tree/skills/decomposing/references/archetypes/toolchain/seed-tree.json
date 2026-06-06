@@ -36,7 +36,7 @@
           "slug": "testing",
           "kind": "enabler",
           "status": "proposed",
-          "note": "normalized to the normative test-infrastructure subtree (15-test-infrastructure.pdr.md)",
+          "note": "normalized to the normative test-infrastructure subtree",
           "source_slug": "test-infrastructure",
           "children": [
             { "index": 21, "slug": "generators", "kind": "enabler", "status": "proposed" },

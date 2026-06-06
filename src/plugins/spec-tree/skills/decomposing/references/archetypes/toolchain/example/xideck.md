@@ -48,7 +48,7 @@ deck-reconciliation   -> diff-classifier | duplicate-of-detection | orphan-shape
   `emission` → `emit`, `lint-and-verification` → `verify`, `shape-record` → `ir-contract`,
   `deck-reconciliation` → `reconciliation`.
 - Conforms `test-infrastructure` to the normative `testing → {generators, fixtures, harnesses}`
-  subtree (`spx/15-test-infrastructure.pdr.md`).
+  subtree.
 - Marks `design-system`/`source-format`/`asset-library`/`authoring-loop`/`reconciliation` as optional
   concerns gated on product signals, so a headless transformer takes only the core spine.
 

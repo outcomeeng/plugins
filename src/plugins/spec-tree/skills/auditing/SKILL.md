@@ -116,9 +116,9 @@ CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
 # the shell is interrupted. A plain `rm -rf` at the end of the block
 # would leak $CHILDREN_DIR on every non-happy exit path — exactly the
 # scenario the marketplace's persistent-/tmp environments (CI runners
-# reused across jobs, developer workstations) are vulnerable to. See
-# spx/13-plugin-and-runtime-conventions.adr.md for the marketplace-wide
-# scratch-storage rules.
+# reused across jobs, developer workstations) are vulnerable to. Caller-owned
+# cleanup of a unique-per-invocation scratch dir is the portable
+# scratch-storage rule every plugin follows.
 trap 'rm -rf "$CHILDREN_DIR"' EXIT
 
 # Dispatched skills emit their per-partition verdict JSON to
@@ -263,7 +263,7 @@ The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, disp
 
 <verdict_thread_orchestration>
 
-CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself (the durable cross-CI-run surface declared in `spx/15-audit-verdict-format.pdr.md`) — the skill writes nothing to `.spx/` in either mode.
+CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself — the durable cross-CI-run surface for an audit verdict — the skill writes nothing to `.spx/` in either mode.
 
 The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a calling agent's wording drifts; loud failure surfaces the drift on the next CI run.
 

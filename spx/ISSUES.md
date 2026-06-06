@@ -28,7 +28,7 @@ plugin source tree.
 
 ## Migrate remaining product-level decisions to the audit evidence model
 
-`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section split into `### Testing` / `### Eval` / `### Audit` subsections, each rule carrying a valid evidence tag (`([audit])` for agent-judgment rules). The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
+`spx/14-verification.pdr.md` and `spx/15-test-infrastructure.pdr.md` use the current evidence model: a `## Verification` section that groups rules by verification type under `### Testing` / `### Eval` / `### Audit` subsections, each decision carrying only the subsections its rules need — both of these use `### Audit` alone, every rule tagged `([audit])` for agent judgment. The remaining product-level decisions still carry the legacy `## Compliance` / `### MUST` / `### NEVER` shape with bare `([review])` mechanism tags, which `assertion-types.md` accepts only during migration and `/audit-pdr` rejects as `invalid-mode-tag`.
 
 **Resolution shape**: a coordinated pass migrating each remaining decision to the `## Verification` structure — mapping `[review]` to `[audit]`, or to `[test]` / `[eval]` where a deterministic test or graded eval applies — so the decision set converges on one schema. Audit gate: `/audit-pdr` (PDRs) and `/audit-adr` (ADRs) run clean on each migrated file.
 
@@ -42,19 +42,15 @@ The methodology documents Go's test-infrastructure home (`internal/testinfra/`) 
 
 `spx/15-validation.enabler/65-check-pipeline.enabler/` declares a signal-safe Python orchestrator at `outcomeeng/scripts/check.py` that replaces the prior bash heredoc. The new step list includes `fmt-check → ruff → manifests → skills → docs-check → markdown → pytest`, so the two previously-missing checks now run on every `just check`. The lint and format entry above remains in scope for a separate `chore(repo): ruff --fix + ruff format` PR if the current branch does not resolve it directly.
 
-## Shipped skill content cites marketplace-internal decision paths
+## Shipped skill content cites marketplace-internal decision paths (RESOLVED)
 
-`AGENTS.md` "Two audiences, two design surfaces" requires authored skill content under `src/plugins/` to render into portable plugin output: "never a marketplace-internal node path, never a PDR or ADR specific to this product." Several shipped skill, command, and template bodies cite this marketplace's own decision files by `spx/<NN>-<slug>.{pdr,adr}.md` path — a consumer agent reading them in another repository hits a path that does not exist there or maps to unrelated content at the same index. (Spec assertions inside `spx/**` that cite a governing decision by full path are correct and out of scope here — the rule governs shipped skill bodies, not the spec tree.)
+`AGENTS.md` "Two audiences, two design surfaces" requires authored skill content under `src/plugins/` to render into portable plugin output: "never a marketplace-internal node path, never a PDR or ADR specific to this product." The shipped skill, command, and template bodies that cited this marketplace's own decision files by `spx/<NN>-<slug>.{pdr,adr}.md` path are reframed to state the rule portably — pointing to the governing skill, or stating it inline — without the product path:
 
-Genuine instances (real marketplace decisions cited as authority in shipped content):
+- `src/plugins/spec-tree/commands/review-changes.md` — the two `spx/15-agent-pr-authority.pdr.md` citations now point to the `standardizing-merging` skill.
+- `src/plugins/spec-tree/skills/auditing/SKILL.md` — the `spx/15-audit-verdict-format.pdr.md` reference and the `spx/13-plugin-and-runtime-conventions.adr.md` comment now state the rule inline.
+- `src/plugins/spec-tree/skills/decomposing/references/archetypes/{website,toolchain}/seed-tree.json` and `toolchain/example/xideck.md` — provenance notes name "the normative test-infrastructure subtree" without the PDR path.
+- `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md` — the per-project evidence-lane sentence drops the "e.g., `spx/14-verification.pdr.md` in this marketplace" example.
 
-- `src/plugins/spec-tree/commands/review-changes.md` (two citations of `spx/15-agent-pr-authority.pdr.md`).
-- `src/plugins/spec-tree/skills/auditing/SKILL.md` (`spx/15-audit-verdict-format.pdr.md`; and `spx/13-plugin-and-runtime-conventions.adr.md` inside a comment example).
-- `src/plugins/spec-tree/skills/decomposing/references/archetypes/website/seed-tree.json`, `.../toolchain/seed-tree.json`, and `.../toolchain/example/xideck.md` (provenance notes citing `15-test-infrastructure.pdr.md`).
-- `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md` (`spx/14-verification.pdr.md`, framed "in this marketplace").
+Left as-is (not violations): fictional example paths illustrating format (`spx/15-product-offering.pdr.md`; `spx/15-api-contract.adr.md`, `spx/22-cache-policy.adr.md`, `spx/15-build.adr.md`; the `spx/15-auth-strategy.adr.md` numeric-prefix illustration in `spx-claude.md`), and the archetype `leoherd`/`xiperlabs`/`xideck` `source` annotations that intentionally name the external products each archetype was distilled from. Spec assertions inside `spx/**` that cite a governing decision by full path are correct and out of scope — the rule governs shipped skill bodies, not the spec tree.
 
-Not violations — leave as-is: fictional example paths used to illustrate format (`spx/15-product-offering.pdr.md` in `assertion-types.md`; `spx/15-api-contract.adr.md`, `spx/22-cache-policy.adr.md`, `spx/15-build.adr.md` in `authoring/SKILL.md`; `spx/15-auth-strategy.adr.md` and peers in `spx-claude.md:85`), and the archetype `leoherd`/`xiperlabs`/`xideck` `source` annotations that intentionally name the external products each archetype was distilled from.
-
-The `/decomposing` step 5 baseline guidance is already portable — it depends on `what-goes-where.md` `<test_infrastructure>`, not on the PDR path — so it needs no sweep change. The archetype seed-tree provenance notes are the remaining `decomposing/` instances; they are unchanged in this PR and resolve in the future sweep described below, not here.
-
-**Resolution shape**: a `fix(spec-tree)` sweep that, per instance, either reframes the citation as a portable concept (the methodology owns the rule; the skill states it without the product path) or marks it as an explicit illustrative example. Validate each genuine instance against the two-audiences rule before editing — some may warrant an "e.g., in this marketplace" framing rather than removal. Audit gate: `just check-skills` and `just docs-check` after the sweep; re-grep `src/plugins/` for `spx/[0-9]{2}-…\.(pdr|adr)\.md` and confirm every remaining hit is an illustrative or external-product reference.
+**Resolution evidence**: `grep -rnE "spx/[0-9]{2}-[a-z-]+\.(pdr|adr)\.md" src/plugins/` returns only illustrative and external-product references; `just check-skills` and `just docs-check` pass.
