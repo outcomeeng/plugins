@@ -39,45 +39,17 @@ This is the deferred "declare in the spec" path: the change shipped as skill pro
 - Run the eval to populate `history.jsonl`.
 
 Same shape as item 1: an enabler-side assertion + eval, not a `spx/15-agent-pr-authority.pdr.md` evidence-tag change.
-In the outcomeeng/plugins repo, change the spec-tree PR skills so the default post-merge branch deletion is done manually (a separate, worktree-safe
-delete) instead of inline gh pr merge --delete-branch.
 
-Motivation. gh pr merge <pr> --rebase --delete-branch, run from the worktree that is on the branch being merged, makes gh move that worktree to the base
-branch as part of deleting the local branch. In a multi-worktree checkout where the base (e.g. main) is checked out in another worktree, that switch fails
-with fatal: 'main' is already used by worktree at … — the merge completes on GitHub but the branch is left undeleted and the flow ends in an error state.
-The manual sequence below is worktree-safe and works identically in single- and multi-worktree setups.
+## 5. Worktree-safe branch-deletion default lacks eval coverage for the deletion mechanism (FOLLOW-UP)
 
-New default merge + cleanup sequence (replaces the inline --delete-branch default):
+The `merging.md` merge-command scenario declares two observable branch-deletion behaviors: the overlay-silent default runs the worktree-safe deletion sequence (`gh pr merge --rebase` without `--delete-branch`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately), and an overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects. The `merge-command-overlay-precedence` eval verifies only the merge-strategy flag and its source (`merge_flag` ∈ {`--rebase`, `--merge`, `--squash`}, `source` ∈ {`overlay`, `universal-default`}); no case exercises whether the agent runs the worktree-safe deletion sequence versus inline `--delete-branch`.
 
-# merge only — NO --delete-branch (it triggers gh's switch-to-base, which fails
+Same shape as items 1 and 4: a behavior declared in the spec and shipped as skill prose, awaiting eval coverage in an eval-coverage sweep. The merge-flag concern and the deletion-mechanism concern are distinct, so the coverage belongs in its own eval rather than overloading `merge-command-overlay-precedence`.
 
-# when the base is checked out in another worktree)
+Required handling when an eval-coverage sweep happens:
 
-gh pr merge <pr-number> --rebase
-git fetch origin <base>
-git switch --detach "origin/<base>" # step THIS worktree off the merged branch onto the new base tip
-git branch -D <branch> # delete the now-unoccupied local branch (tolerate "not found")
+- Add a scenario assertion to `merging.md` (or extend the existing merge-command scenario) declaring the deletion-mechanism choice as a separately observable behavior.
+- Create `evals/merge-cleanup-deletion/` (`eval.toml`, `cases.jsonl`, `prompt.md`) with a verdict schema carrying a deletion-mechanism field, exercising the overlay-silent worktree-safe path and the single-worktree inline opt-in.
+- Run the eval to populate `history.jsonl`.
 
-# delete the remote branch unless the repo already auto-deleted it
-
-git ls-remote --exit-code --heads origin <branch> >/dev/null 2>&1 && git push origin --delete <branch>
-git status --porcelain
-
-Order matters: do not detach before gh pr merge — gh fails with "could not determine current branch" from a detached HEAD even with an explicit PR number.
-Merge while the branch is still checked out, then detach, then delete.
-
-Where to change it:
-
-1. standardizing-merging (the shared reference both PR flows load — it owns the default). Update every place the inline --delete-branch default appears:
-   the <authority_gates> "Merge command" default and its overlay-silent code block, the <repo_local_overlay> "Merge command" topic, and any
-   <success_criteria> line naming the default. Flip the polarity: the worktree-safe manual deletion becomes the universal default; the overlay MAY opt into
-   inline gh pr merge --rebase --delete-branch for projects that are always single-worktree.
-2. managing-pr — Step 8 (the merge action) and <commands_reference> show gh pr merge --rebase --delete-branch; replace both with the sequence above.
-3. opening-pr — opens PRs and doesn't merge or delete, so it likely needs no change; grep it for --delete-branch and only touch it if it actually carries
-   merge/deletion guidance.
-
-Also add a failure-mode note to standardizing-merging (or managing-pr) documenting the 'main' is already used by worktree failure and why the default
-avoids it, so the rationale survives.
-
-Process. Edit the SOURCE skills under plugins/spec-tree/skills/… (not the built dist/…), preserve the existing XML section structure and atemporal voice,
-then rebuild dist/ and run the repo's validation (markdown + skill-structure) per its CLAUDE.md/AGENTS.md. Keep it one focused change.
+Surfaced by the local `reviewing-changes` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).

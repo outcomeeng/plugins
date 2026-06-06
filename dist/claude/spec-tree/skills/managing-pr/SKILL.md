@@ -60,14 +60,20 @@ Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge with remote-branch deletion — `gh pr merge <pr-number> --rebase --delete-branch` — per the Merge command topic in /standardizing-merging. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. The overlay also decides whether `--delete-branch` runs inline or as a separate `git push origin --delete <branch>` to avoid multi-worktree cleanup failures.
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase` without `--delete-branch`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
 
-  Overlay-silent default:
+  Overlay-silent default (per /standardizing-merging `<merge_cleanup>`):
 
   ```bash
-  gh pr merge <pr-number> --rebase --delete-branch
-  git fetch origin <base>
-  git switch --detach "origin/<base>"
+  base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
+  branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+  # merge only — no --delete-branch (gh would switch this worktree to "${base}",
+  # which fails when "${base}" is checked out in another worktree)
+  gh pr merge <pr-number> --rebase
+  git fetch origin "${base}"
+  git switch --detach "origin/${base}"   # step this worktree off the merged branch
+  git branch -D "${branch}" 2>/dev/null || true   # delete the local branch (tolerate "not found")
+  git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
   git status --porcelain
   ```
 
@@ -117,8 +123,16 @@ gh api graphql --silent \
   -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
   -F id=<review-thread-node-id>
 
-# Merge (when MERGE_READINESS and PRODUCTION_READINESS hold; per /standardizing-merging <authority_gates> + Merge command)
-gh pr merge <pr-number> --rebase --delete-branch
+# Merge (when MERGE_READINESS and PRODUCTION_READINESS hold; per /standardizing-merging <authority_gates> + <merge_cleanup>)
+# Overlay-silent universal default: rebase merge, then worktree-safe manual branch deletion.
+base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
+branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+gh pr merge <pr-number> --rebase                       # no --delete-branch (see <merge_cleanup>)
+git fetch origin "${base}"
+git switch --detach "origin/${base}"
+git branch -D "${branch}" 2>/dev/null || true
+git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
+git status --porcelain
 ```
 
 </commands_reference>

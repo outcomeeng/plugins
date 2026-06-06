@@ -14,7 +14,7 @@ You are simulating the PR-management agent evaluating the merge-command selectio
 The rule under audit:
 
 - The agent follows the overlay's declared merge command when one exists, regardless of whether the overlay carries a rationale string. Rationale is documentation for human reviewers of the overlay change itself; it is not a runtime predicate the agent enforces.
-- When the overlay is silent on the merge command, the universal default is rebase merge with inline branch deletion (`gh pr merge --rebase --delete-branch`).
+- When the overlay is silent on the merge command, the universal default is rebase merge (`gh pr merge --rebase`) followed by a worktree-safe manual branch deletion — the merge flag is `--rebase`, and the branch is deleted by a separate step rather than inline `--delete-branch`. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects.
 - The agent never selects a merge commit (`--merge`) or squash (`--squash`) command from the gate alone — those require the overlay to opt in.
 
 Case id: substituted by the harness.

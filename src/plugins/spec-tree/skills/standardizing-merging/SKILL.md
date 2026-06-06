@@ -22,7 +22,7 @@ When loaded inside a repository, check for `spx/local/merging.md` at the reposit
 - The project's full deterministic-verification command (validation and testing) that `REVIEW_READINESS` runs.
 - Push command overrides — the explicit destination ref form must be preserved.
 - **Production-relevance recognition** — the mechanism by which the project classifies a change as production-relevant (label, branch prefix, file pattern, manifest declaration). A production-relevant change reaches `MERGE_READINESS` autonomously but executes only after explicit operator approval (`PRODUCTION_READINESS`). A project that wants a human in the loop for every merge declares every change production-relevant; a project that wants none declares no mechanism.
-- **Merge command** — rebase merge with inline branch deletion (`gh pr merge <pr-number> --rebase --delete-branch`) is the universal default; the merge flow runs it unless the overlay opts in to a different command. The overlay may opt in to merge commit (`--merge`) or squash (`--squash`); merge commits and squashes are not the agent's choice to make from the gate alone. The overlay should document its rationale for human reviewers of the overlay change itself, but rationale is not a runtime predicate the agent enforces — the overlay's declaration is the agent's signal. The overlay may also opt out of inline branch deletion and into a separate `git push origin --delete <branch>` after `gh pr merge` to avoid multi-worktree cleanup failures.
+- **Merge command** — rebase merge followed by a worktree-safe manual branch deletion is the universal default; the merge flow runs it unless the overlay opts in to a different command. The merge runs without `--delete-branch` (`gh pr merge <pr-number> --rebase`), then this worktree detaches onto the refreshed base tip and the local and remote branches are deleted by separate commands — the sequence and its rationale are in `<merge_cleanup>`. The overlay may opt in to merge commit (`--merge`) or squash (`--squash`); merge commits and squashes are not the agent's choice to make from the gate alone. The overlay should document its rationale for human reviewers of the overlay change itself, but rationale is not a runtime predicate the agent enforces — the overlay's declaration is the agent's signal. The overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for projects that are always single-worktree, where `gh`'s post-merge switch-to-base never collides.
 - **Mention-reviewer trigger phrase** — the leading phrase the agent posts as a PR-level comment to fire the mention-triggered reviewer when the auto-review job reports `conclusion: skipped` (see `<authority_gates>` reviewer-skipped-by-design exception). The full comment body is `<trigger-phrase> review`; the `review` suffix is the keyword the mention reviewer matches on. Default: `@spec-tree` (the upstream reviewer action's default `trigger_phrase`). Each consuming project that configures a non-default `trigger_phrase` in its reviewer caller workflow declares the matching phrase here.
 
 If `spx/local/merging.md` is absent or silent on a topic, the defaults in this reference apply. **Absence of a production-relevance recognition mechanism means every change is treated as not production-relevant**, so `PRODUCTION_READINESS` holds and the merge executes on `MERGE_READINESS` alone. The other `MERGE_READINESS` predicates (current-head CI review with no unresolved valid `BLOCKING` or `DEBT` finding, every other required check terminal-green, branch hygiene, PR-state) still apply.
@@ -196,6 +196,31 @@ Both `REVIEW_READINESS` predicates are re-established before every push, not onl
 
 </authority_gates>
 
+<merge_cleanup>
+
+Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge, the agent merges and then deletes the branch. The universal default — used whenever the overlay declares no merge command — is rebase merge **without** `--delete-branch`, followed by a worktree-safe manual deletion:
+
+```bash
+base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
+branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+# merge only — no --delete-branch (gh would switch THIS worktree to "${base}" as its
+# local-cleanup phase, which fails when "${base}" is checked out in another worktree)
+gh pr merge <pr-number> --rebase
+git fetch origin "${base}"
+git switch --detach "origin/${base}"   # step this worktree off the merged branch onto the new base tip
+git branch -D "${branch}" 2>/dev/null || true   # delete the now-unoccupied local branch (tolerate "not found")
+git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
+git status --porcelain
+```
+
+Order matters: merge while the branch is still checked out — `gh pr merge` fails with "could not determine current branch" from a detached HEAD even with an explicit PR number — then detach this worktree, then delete the local branch, then delete the remote branch unless the host already auto-deleted it.
+
+**Why the default avoids inline `--delete-branch`.** `gh pr merge --delete-branch`, run from the worktree that is on the branch being merged, makes `gh` switch that worktree to the base branch as part of deleting the local branch. In a multi-worktree checkout where the base (for example `main`) is checked out in another worktree, that switch fails with `fatal: '<base>' is already used by worktree at <path>` — the merge completes on the host, but the local branch is left undeleted and the flow ends in an error state. The manual sequence above is worktree-safe and behaves identically in single- and multi-worktree checkouts. A project that is always single-worktree MAY opt the overlay into inline `gh pr merge --rebase --delete-branch` per `<repo_local_overlay>`.
+
+The merge flag follows the overlay when it declares one (`--merge` or `--squash`); `--rebase` is the universal default flag. The deletion steps after the merge are independent of which merge flag runs.
+
+</merge_cleanup>
+
 <heartbeat>
 
 Waiting for CI runs, reviews, or check completion happens through the runtime timer, never in-shell. The consuming flow loads `/tracking-tasks` before creating, refreshing, or deleting runtime tracking after opening a PR and after every follow-up push.
@@ -348,7 +373,7 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - Every finding is labeled with one of `BLOCKING` / `DEBT` / `FOLLOW-UP` — never a severity rank, never a legacy four-class label — and acted on by validity and phase, never by severity.
 - Every auditor verdict from a local auditor agent (per `<auditor_verdicts>`) is handled as an in-slice finding; `REJECTED` or `UNKNOWN` overall verdicts, `FAIL` or `UNKNOWN` rows, and `REJECT` findings are fixed or resolved in the slice, not deferred to `ISSUES.md`.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: the current-head CI review has no unresolved valid `BLOCKING` or `DEBT` finding, every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
-- Merge runs via rebase merge with inline branch deletion (`gh pr merge --rebase --delete-branch`) unless the overlay declares a different command — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; the agent does not enforce it), not the agent's choice from the gate alone.
+- Merge runs via rebase merge followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --rebase` without `--delete-branch`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; the agent does not enforce it), not the agent's choice from the gate alone.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`.
 - No `<self_reference>` violation appears in any artifact.
 
