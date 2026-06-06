@@ -30,6 +30,7 @@ import sys
 
 import pytest
 
+from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     RENDER_REVIEW_SCRIPT,
@@ -569,3 +570,50 @@ class TestComputeDiffHeadRefDerivation:
         assert result.returncode == 0, result.stderr
         assert "world" in result.stdout
         assert "SECONDARY.md" not in result.stdout
+
+
+@pytest.mark.skipif(
+    not COMPUTE_DIFF_SCRIPT.exists(),
+    reason="compute_diff.py is not yet present.",
+)
+class TestComputeDiffStaleLocalBase:
+    """A git-derived base scopes against origin/<base>, not a stale local ref.
+
+    Reproduces the multi-worktree staleness bug: the feature branch holds a
+    commit already merged into ``origin/main`` while the local ``main`` ref lags
+    behind it. With no ``changes.json`` and no ``SPX_VERIFY_BASE_REF``,
+    ``compute_diff`` auto-derives the base from ``origin/HEAD``; the derived base
+    must resolve to the remote-tracking ref ``origin/main`` so the already-merged
+    commit stays out of the diff. Diffing against the bare local ``main`` would
+    re-include it.
+    """
+
+    def _slug_for(self, branch: str) -> str:
+        return load_branch_slug_module().branch_slug(branch)
+
+    def test_git_derived_base_excludes_already_merged_commit(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        stale = build_stale_local_base_repo(repo)
+        store_root = tmp_path / "store"
+        store_root.mkdir()
+        env = _make_env_for_temp_store(store_root, cwd=stale.repo)
+        env.pop("SPX_VERIFY_BASE_REF", None)
+        slug = self._slug_for(stale.feature_branch)
+
+        result = subprocess.run(  # noqa: S603 — script path is from the harness
+            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
+            cwd=stale.repo,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        # The feature change is in scope; the already-merged commit is not —
+        # auto-derivation must scope against origin/<base>, not the stale local
+        # ref.
+        assert stale.feature_file in result.stdout
+        assert stale.merged_file not in result.stdout

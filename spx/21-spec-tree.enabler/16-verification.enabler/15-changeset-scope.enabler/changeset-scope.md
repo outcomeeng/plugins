@@ -1,0 +1,19 @@
+# Changeset Scope
+
+PROVIDES the canonical git-derived changeset primitives — branch identity, addressing slug, base-ref resolution, and merge-base diff scope
+SO THAT the auditing skill, the reviewing-changes skill, and the thread-store skill
+CAN derive every changeset's branch, slug, base ref, and changed-file set from one source rather than re-implementing or re-exporting git derivation across skills
+
+## Assertions
+
+### Scenarios
+
+- Given `refs/remotes/origin/HEAD` resolves, when `detect_base_ref` runs, then it returns the bare base branch name configured there ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given `refs/remotes/origin/HEAD` is unset, when `detect_base_ref` runs with `strict=True` it raises `BaseRefNotConfiguredError`, and with `strict=False` it returns `DEFAULT_BASE_REF` ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a bare base name, when `remote_tracking_ref` runs, then it composes the remote-tracking ref `origin/<base>`, and `branch_scope` diffs the three-dot range `origin/<base>...HEAD` returning the changed-file set since the merge base ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a local branch ref that lags its remote-tracking ref, when the changeset is scoped against `origin/<base>`, then the changed-file set excludes commits already merged into the base — a stale local ref does not widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
+
+### Compliance
+
+- ALWAYS: the changeset-derivation primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — resolve to one module, and the `branch_slug` re-export at `plugins/spec-tree/skills/thread-store/scripts/branch_slug.py` is identity-equal to the canonical symbol ([test](tests/test_changeset_scope.compliance.l1.py))
+- ALWAYS: every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through the shared `remote_tracking_ref` helper — `branch_scope` for the auditing surface and `compute_diff` for the reviewing surface — so a stale local branch ref cannot widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
