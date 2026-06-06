@@ -14,7 +14,7 @@ Evidence requires three properties checked in order:
 2. **Atemporal voice** — the ADR states architecture truth, never history
 3. **Per-rule tag validity and evidence-type fit** — every rule under `## Verification` carries exactly one tag valid for its subsection: `### Testing` rules carry one of the five evidence types (scenario, mapping, conformance, property, compliance), `### Eval` rules carry `[eval]`, and `### Audit` rules carry `[audit]`; and a `### Testing` rule's evidence type fits the claim's quantifier — a universal (ALWAYS/NEVER) is never `scenario`
 
-Language-specific ADR concerns — testability-in-Compliance (dependency injection, no-mocking), execution-level accuracy — are out of scope here and stay in `auditing-{lang}-architecture`.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are out of scope here and stay in `auditing-{lang}-architecture`.
 
 ## Per-rule Tag Validity Model
 
