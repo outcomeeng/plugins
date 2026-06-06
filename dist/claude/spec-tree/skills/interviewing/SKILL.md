@@ -177,7 +177,7 @@ How to avoid: Before each question, check the coverage map. If an area is at 3+ 
 
 User responds with "we'll figure it out later" or "just make it work for the common case." Claude records the non-answer and moves on. The resulting spec has holes that surface during implementation.
 
-How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user genuinely doesn't know, record it as an open decision with a `([review])` tag, not as a resolved assertion.
+How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user genuinely doesn't know, record it as an open decision with a `([audit])` tag, not as a resolved assertion.
 
 **Failure 3: Losing coverage state in long conversations**
 
