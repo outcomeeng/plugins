@@ -40,6 +40,7 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 - Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture content" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable property" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal voice" ([test](tests/test_pdr_auditing.scenario.l1.py))
+- Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the verdict is REJECT with finding category "evidence-type-mismatch" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency violation" ([test](tests/test_pdr_auditing.scenario.l1.py))
 - Given a PDR where all five properties hold, when audited, then the verdict is APPROVED ([test](tests/test_pdr_auditing.scenario.l1.py))
 
@@ -55,6 +56,6 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([review])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([review])
-- ALWAYS: validate each verification rule's tag against its subsection without re-deriving the evidence type — evidence-type selection is `/testing`'s authority ([review])
+- ALWAYS: verify each `### Testing` rule's evidence type fits the claim's quantifier per the `/testing` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([review])
 - ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([review])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([review])

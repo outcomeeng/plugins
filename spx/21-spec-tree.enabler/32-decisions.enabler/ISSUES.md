@@ -7,7 +7,7 @@
 - The wrapper agents use `tools: Read, Glob, Grep` and no `model:` field; `16-verification.enabler` requires `model: sonnet` and `tools: Bash, Read, Skill`.
 - No `scripts/` CLI arbiter module encodes the verification policy (schema conformance) for the wrapper agent to invoke; the verdict schema is described in skill prose.
 - No thread-store persistence of the machine-readable result + markdown surface.
-- The audit skills' LLM-judgment scenarios carry forward-referenced `[test]` in `pdr-auditing.md` and `[eval]` in `adr-auditing.md`; per `16-verification.enabler` the `[test]` ones should be `[eval]`, and the eval suites themselves are unbuilt (both `21-adr-auditing.enabler` and `32-pdr-auditing.enabler` are in `spx/EXCLUDE`).
+- The audit skills' LLM-judgment scenarios carry forward-referenced `[test]` in `pdr-auditing.md` and `[eval]` in `adr-auditing.md`; per `16-verification.enabler` the `[test]` ones should be `[eval]`, and the eval suites themselves are unbuilt (both `21-adr-auditing.enabler` and `32-pdr-auditing.enabler` are in `spx/EXCLUDE`). The specific unbuilt fixtures these scenarios reference — including the `evidence-type-mismatch` scenarios — are `evals/mode-validity/eval.toml` under `21-adr-auditing.enabler` and `tests/test_pdr_auditing.scenario.l1.py` under `32-pdr-auditing.enabler`; build them as part of this migration (the `evals/mode-validity/` directory and `invalid-mode-tag`/`invalid-tag` identifier rename are governed by the terminology-propagation entry below).
 
 This conformance is an architecture migration that applies to the whole audit-skill family, not just these two, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, reshape the audit agents to `model: sonnet` + `Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, audit-adr/audit-pdr run as read-only verdict producers in the established pre-conformance pattern.
 
@@ -16,6 +16,15 @@ This conformance is an architecture migration that applies to the whole audit-sk
 Thirteen records were migrated to the `## Verification` structure (`### Testing`/`### Eval`/`### Audit` with per-rule evidence-type or `[audit]` tags) and the lean decision template (decision stated in the opening; no `## Purpose`/`## Context`/`## Trade-offs accepted`/`### Recognized by`), under atemporal voice. `spx/15-test-infrastructure.pdr.md` — the fourteenth listed record — was already migrated to `## Verification`/`### Audit` (with Go-language support) on `origin/main` before this branch, so it is not part of this branch's diff. Functional code behavior routed to `### Testing` with the claim-shape evidence type (aligned to each implementing spec); architecture, dependency-injection, and skill/methodology/design rules routed to `### Audit`; `[eval]` deferred to the audit-eval-suite migration. The PDRs' `## Product invariants` headings were renamed to `## Product properties` (all items kept).
 
 **Resolution evidence**: `spx validation markdown` passes; the two exemplars (`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`) audited APPROVED via `/audit-adr` and `/audit-pdr`; the remaining 12 confirmed clean for temporal voice, bare `([review])`/`([test])` tags, double-tagged or untagged rule lines, and legacy section headings.
+
+## Re-audit migrated records for universal-claim evidence-type fit (deferred)
+
+The migration above predates the evidence-type-fit check that `/audit-adr` and `/audit-pdr` now enforce (a `### Testing` rule whose claim is universal — ALWAYS/NEVER/"for all"/"for every"/"no input" — is never `scenario`; mismatch is an `evidence-type-mismatch` REJECT). Two migrated records carry universal claims under `### Testing` tagged `([scenario])` that the new rule rejects:
+
+- `spx/21-spec-tree.enabler/17-auditing.adr.md` — 3 ALWAYS rules under `### Testing` tagged `[scenario]`.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md` — 6 ALWAYS rules under `### Testing` tagged `[scenario]`.
+
+These predate the new rule, so they are not regressions of this branch and sit outside its diff. Run a re-audit pass: route each universal claim through `/testing` (most are `compliance` — a structural rule every conformant implementation must always satisfy — or `property`) and retag, then confirm `/audit-adr` returns APPROVED. Audit gate: `/audit-adr` on both records clean.
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
 
