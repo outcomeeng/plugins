@@ -30,8 +30,8 @@ You are a **distinguished Python architect**. Your role is to translate technica
 
 **Standards are pre-loaded above.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
 
-- ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
-- Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
+- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - **BEFORE writing any ADR**, consult `/testing`, `/testing-python`, and `/standardizing-python-tests` for methodology and Python-specific test standards
 - Your decisions are non-negotiable for downstream skills
 - If an architectural assumption fails, downstream skills ABORT -- they do not improvise
@@ -462,31 +462,24 @@ If any of these assumptions fail, downstream skills must ABORT:
 
 ## Common ADR Patterns for Python
 
-These patterns show how testability constraints appear in the Compliance section. See `/standardizing-python-architecture` for the canonical ADR section structure.
+These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. See `/standardizing-python-architecture` for the canonical ADR section structure.
 
 ### Pattern: External Tool Integration
 
 When integrating with external CLI tools (rclone, rsync, etc.):
 
 ```markdown
-## Decision
+# External Tool Integration
 
 Use dependency injection for all external tool invocations.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Observable `runner` parameter typed as `CommandRunner` Protocol in all functions that invoke external tools.
-
-### MUST
-
-- All functions that call external tools accept a `runner` parameter implementing `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([review])
-- Default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([review])
-
-### NEVER
-
-- Direct `subprocess.run` without DI wrapper -- prevents isolated testing ([review])
+- ALWAYS: functions that call external tools accept a `runner` parameter implementing `CommandRunner` Protocol -- enables `l1` testing of command-building logic ([audit])
+- ALWAYS: default implementations use `subprocess`; tests inject controlled implementations -- no mocking ([audit])
+- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
 ```
 
 ### Pattern: Configuration Loading
@@ -494,25 +487,18 @@ Observable `runner` parameter typed as `CommandRunner` Protocol in all functions
 When defining configuration approach:
 
 ```markdown
-## Decision
+# Configuration Loading
 
 Use Pydantic or dataclass with validation for all configuration.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Pydantic model or validated dataclass accompanying every config file type. Validation at load time, not use time.
-
-### MUST
-
-- All config files have corresponding Pydantic models -- ensures type-safe, validated config ([review])
-- Config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([review])
-
-### NEVER
-
-- Unvalidated config access at use time -- defers errors to runtime ([review])
-- `Any` type annotations on config fields -- bypasses validation ([review])
+- ALWAYS: config files have corresponding Pydantic models -- ensures type-safe, validated config ([audit])
+- ALWAYS: config loading validates at load time with `.model_validate()` -- fail fast with descriptive errors ([audit])
+- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit])
+- NEVER: `Any` type annotations on config fields -- bypasses validation ([audit])
 ```
 
 ### Pattern: Test Infrastructure
@@ -520,25 +506,18 @@ Pydantic model or validated dataclass accompanying every config file type. Valid
 When product has co-located tests (specs/.../tests/) alongside regression tests:
 
 ```markdown
-## Decision
+# Test Infrastructure
 
 Test utilities are packaged as `{product}_testing/` and installed via editable install.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-`{product}_testing/` directory with importable fixtures and harnesses. `pyproject.toml` includes both packages.
-
-### MUST
-
-- Test utilities (fixtures, harnesses) live in `{product}_testing/`, NOT `tests/` -- importable as a package ([review])
-- `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([review])
-- pytest config uses `--import-mode=importlib` for multiple test directories ([review])
-
-### NEVER
-
-- Test utilities in `tests/` directory -- not importable by spec-tree co-located tests ([review])
+- ALWAYS: test utilities (fixtures, harnesses) live in `{product}_testing/`, NOT `tests/` -- importable as a package ([audit])
+- ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit])
+- ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit])
+- NEVER: test utilities in `tests/` directory -- not importable by spec-tree co-located tests ([audit])
 ```
 
 See `references/test-infrastructure-patterns.md` for full patterns.
@@ -548,25 +527,18 @@ See `references/test-infrastructure-patterns.md` for full patterns.
 When defining CLI architecture:
 
 ```markdown
-## Decision
+# CLI Structure
 
 Use click or argparse with subcommand pattern.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Separate module per command. Business logic delegated to runners, not in command handlers.
-
-### MUST
-
-- Each command is a separate module exporting a registration function -- enables isolated `l1` testing ([review])
-- Commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([review])
-
-### NEVER
-
-- Business logic in command handlers -- prevents isolated testing ([review])
-- Direct I/O in command modules without DI -- couples commands to environment ([review])
+- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit])
+- ALWAYS: commands delegate to runner functions that accept Protocol-typed DI parameters -- separates parsing from logic ([audit])
+- NEVER: business logic in command handlers -- prevents isolated testing ([audit])
+- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit])
 ```
 
 ---

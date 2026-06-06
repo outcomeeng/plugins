@@ -30,7 +30,7 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 **Review focus:**
 
 - Does ADR contradict any ancestor ADR/PDR decisions?
-- Does ADR Compliance section include testability constraints (DI, no mocking)?
+- Does the ADR's `## Verification` (`### Audit`) include testability constraints (DI, no mocking)?
 - Does ADR use only the authoritative sections (no phantom sections)?
 - Does ADR honor atemporal voice in ALL sections?
 - Does ADR document trade-offs and consequences?
@@ -44,9 +44,9 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 1. **Read `/standardizing-typescript-architecture`**, then `spx/local/typescript-architecture.md` if present, for canonical conventions
 2. **Verify an ADR exists.** If the module makes architectural decisions (module layout, library choice, DI patterns) without an ADR, the absence is the violation — REJECT immediately. Do not treat missing ADRs as N/A.
 3. **Read the ADR** completely
-4. **Check section structure** -- only authoritative sections allowed (Purpose, Context, Decision, Rationale, Trade-offs accepted, Invariants, Compliance). Flag phantom sections (Testing Strategy, Status, etc.)
+4. **Check section structure** -- only authoritative sections allowed (title + decision stated directly, Rationale, Invariants, Verification). Flag phantom sections (Purpose, Context, Trade-offs, Testing Strategy, Status, etc.)
 5. **Check EVERY section for temporal language** -- reject any reference to current code, existing files, or migration plans
-6. **Check Compliance section** -- must include testability constraints as MUST/NEVER rules; must NOT include level assignment tables
+6. **Check `## Verification`** -- must include testability constraints as ALWAYS/NEVER rules under `### Audit`; must NOT include level assignment tables
 7. **Check for mocking language** -- reject vi.mock(), jest.mock(), "mock at boundary" in any section
 8. **Identify all violations** and classify per concern
 9. **Output structured verdict** -- APPROVED or REJECTED with per-concern table
@@ -57,17 +57,17 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed linters but had a design flaw.** The auditor trusted the tooling output (Phase 1 equivalent) and skimmed the Compliance section. The ADR mandated DI for all external calls, but the Compliance rules were so vague ("use good practices") that they couldn't catch anything. A Compliance rule that cannot falsify non-conforming code is not a rule.
+**Approved code that passed linters but had a design flaw.** The auditor trusted the tooling output (Phase 1 equivalent) and skimmed the `## Verification` rules. The ADR mandated DI for all external calls, but the Verification rules were so vague ("use good practices") that they couldn't catch anything. A Verification rule that cannot falsify non-conforming code is not a rule.
 
 **Rejected an ADR for a false positive.** The auditor flagged a parameter in a DI interface as "dead code" because it wasn't used in the example. The parameter was required by a Protocol contract that other implementations relied on. Before flagging dead parameters in interfaces, check if the interface is implemented elsewhere.
 
 **Missed mocking hidden behind DI.** The ADR said "dependency injection" but described injecting `vi.fn()` as the controlled implementation. This is still mocking -- DI is the delivery mechanism, but `vi.fn()` is a mock. Correct DI injects a controlled *real* implementation (a simple function or object), not a mock framework spy.
 
-**Distracted by style while missing a logic flaw.** The auditor spent review time on naming conventions and formatting while a branch condition in the Compliance rules was inverted -- the MUST and NEVER were swapped. Comprehension (understanding what the ADR actually says) must come before style concerns.
+**Distracted by style while missing a logic flaw.** The auditor spent review time on naming conventions and formatting while a branch condition in the Verification rules was inverted -- the ALWAYS and NEVER were swapped. Comprehension (understanding what the ADR actually says) must come before style concerns.
 
 **Accepted temporal language because it was in the Rationale section.** The auditor assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z."
 
-**Flagged a phantom section but missed the real problem.** The auditor correctly rejected a Testing Strategy section but didn't check whether the Compliance section had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (in Compliance).
+**Flagged a phantom section but missed the real problem.** The auditor correctly rejected a Testing Strategy section but didn't check whether `## Verification` had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (under `### Audit`).
 
 </failure_modes>
 
@@ -77,13 +77,13 @@ All canonical conventions are in `/standardizing-typescript-architecture`. Read 
 
 **1. Section structure** -- Only authoritative sections from the ADR template. See `<adr_sections>` in `/standardizing-typescript-architecture` for the complete list. Flag any section not in that list.
 
-**2. Testability in Compliance** -- The Compliance section must include MUST/NEVER rules that enable appropriate testing. See `<testability_in_compliance>` in `/standardizing-typescript-architecture` for the correct pattern. Level assignment tables and Testing Strategy sections are violations.
+**2. Testability in Verification** -- The `## Verification` section must include ALWAYS/NEVER rules under `### Audit` that enable appropriate testing. See `<testability_in_verification>` in `/standardizing-typescript-architecture` for the correct pattern. Level assignment tables and Testing Strategy sections are violations.
 
 **3. Atemporal voice** -- ADRs state architectural truth in ALL sections. See `<atemporal_voice>` in `/standardizing-typescript-architecture` for temporal patterns to reject and rewrite examples.
 
 **4. Mocking prohibition** -- No mocking language anywhere in the ADR. See `<di_patterns>` in `/standardizing-typescript-architecture` for what to check and correct ADR language.
 
-**5. Level accuracy** -- When the Compliance section references testing levels, verify against `/testing` definitions. See `<level_context>` in `/standardizing-typescript-architecture`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
+**5. Level accuracy** -- When the `## Verification` rules reference testing levels, verify against `/testing` definitions. See `<level_context>` in `/standardizing-typescript-architecture`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
 
 **6. Anti-patterns** -- Check for content that does not belong in an ADR. See `<anti_patterns>` in `/standardizing-typescript-architecture` for the full table.
 
@@ -103,7 +103,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
     { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "testability-in-compliance", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "testability-in-verification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
@@ -125,21 +125,21 @@ Each finding's `rule` field carries the violation pattern (e.g., `phantom-sectio
 - Reference specific line numbers (they change) -- use section names or quoted text
 - Provide grep commands -- focus on principles, not tooling
 - Explain the same principle multiple times -- be concise
-- Approve an ADR just because it removed a phantom section -- check that testability constraints moved to Compliance
+- Approve an ADR just because it removed a phantom section -- check that testability constraints moved to `## Verification`
 
 **Do:**
 
-- Reference `/standardizing-typescript-architecture` section names (e.g., `<testability_in_compliance>`, `<atemporal_voice>`)
+- Reference `/standardizing-typescript-architecture` section names (e.g., `<testability_in_verification>`, `<atemporal_voice>`)
 - Reference `/testing` section names for level rules (e.g., "Stage 2 Five Factors")
 - Show correct architecture with code or markdown examples
 - Be direct about violations
-- Reject temporal language in ANY section -- Context, Decision, Rationale, Compliance
+- Reject temporal language in ANY section -- the decision statement, Rationale, Verification
 - Show the atemporal rewrite alongside each temporal violation
 
 </what_to_avoid>
 
 <example_review>
-Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in Compliance, mocking language, and temporal voice violations.
+Read `${CLAUDE_SKILL_DIR}/references/example-audit.md` for a complete REJECTED review showing all concern types: phantom Testing Strategy section, missing testability in `## Verification`, mocking language, and temporal voice violations.
 </example_review>
 
 <success_criteria>
@@ -147,8 +147,8 @@ Review is complete when:
 
 - [ ] Read `/standardizing-typescript-architecture` and `spx/local/typescript-architecture.md` (if present) before starting review
 - [ ] Checked section structure against authoritative ADR template
-- [ ] Checked ALL sections for temporal language -- Context, Decision, Rationale, Compliance
-- [ ] Verified Compliance section includes testability constraints (MUST/NEVER for DI, no mocking)
+- [ ] Checked ALL sections for temporal language -- the decision statement, Rationale, Verification
+- [ ] Verified `## Verification` includes testability constraints (ALWAYS/NEVER for DI, no mocking)
 - [ ] Verified no phantom sections (Testing Strategy, Status, etc.)
 - [ ] Verified no mocking language anywhere in ADR
 - [ ] Verified ADR never names files to delete or code to replace

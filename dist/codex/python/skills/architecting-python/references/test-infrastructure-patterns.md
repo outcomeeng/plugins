@@ -163,22 +163,19 @@ test-cov:
 
 ---
 
-## ADR Compliance: Test Infrastructure
+## ADR Verification: Test Infrastructure
 
-Every Python product ADR governing test infrastructure should express rules in Compliance:
+Every Python product ADR governing test infrastructure should express rules under `## Verification`:
 
 ````markdown
-## Compliance
+## Verification
 
-### MUST
+### Audit
 
-- Test utilities are packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/`
-- `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages
-- pytest uses `--import-mode=importlib` when co-located test files can share module names
-
-### NEVER
-
-- Tests mutate `sys.path` to import shared fixtures or harnesses
+- ALWAYS: test utilities are packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/` ([audit])
+- ALWAYS: `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages ([audit])
+- ALWAYS: pytest uses `--import-mode=importlib` when co-located test files can share module names ([audit])
+- NEVER: tests mutate `sys.path` to import shared fixtures or harnesses ([audit])
 
 ```toml
 [tool.pytest.ini_options]

@@ -10,8 +10,8 @@ allowed-tools: Read, Write, Glob, Grep
 <essential_principles>
 **Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists as the repo-local specialization.
 
-- ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
-- Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
+- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - No `any` without explicit justification in ADR
 - Design for dependency injection (NO MOCKING)
 - You produce ADRs (Architecture Decision Records), not implementation code
@@ -209,9 +209,9 @@ When you complete ADR creation, provide:
 <success_criteria>
 ADR is complete when:
 
-- [ ] Compliance section includes testability constraints (DI, no mocking) per `/standardizing-typescript-architecture`
+- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/standardizing-typescript-architecture`
 - [ ] All architectural choices documented
-- [ ] Compliance criteria defined with MUST/NEVER rules for verification
+- [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
 - [ ] No contradictions with existing ADRs
 - [ ] Type safety considerations addressed
 - [ ] Security boundaries identified
