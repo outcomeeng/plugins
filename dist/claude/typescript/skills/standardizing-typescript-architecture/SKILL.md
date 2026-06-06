@@ -166,7 +166,7 @@ The architect needs to understand testing levels to write effective Verification
 - Network dependencies and external services are `l3`
 - SaaS services jump `l1` to `l3` (no `l2`)
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "MUST accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "ALWAYS accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 
 </level_context>
 
