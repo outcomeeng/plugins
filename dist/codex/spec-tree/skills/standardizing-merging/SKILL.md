@@ -207,7 +207,7 @@ branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
 gh pr merge <pr-number> --rebase
 git fetch origin "${base}"
 git switch --detach "origin/${base}"   # step this worktree off the merged branch onto the new base tip
-git branch -D "${branch}"              # delete the now-unoccupied local branch (tolerate "not found")
+git branch -D "${branch}" 2>/dev/null || true   # delete the now-unoccupied local branch (tolerate "not found")
 git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
 git status --porcelain
 ```

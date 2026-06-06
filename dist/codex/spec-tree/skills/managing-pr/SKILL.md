@@ -71,7 +71,7 @@ When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
   gh pr merge <pr-number> --rebase
   git fetch origin "${base}"
   git switch --detach "origin/${base}"   # step this worktree off the merged branch
-  git branch -D "${branch}"              # delete the local branch (tolerate "not found")
+  git branch -D "${branch}" 2>/dev/null || true   # delete the local branch (tolerate "not found")
   git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
   git status --porcelain
   ```
@@ -129,7 +129,7 @@ branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
 gh pr merge <pr-number> --rebase                       # no --delete-branch (see <merge_cleanup>)
 git fetch origin "${base}"
 git switch --detach "origin/${base}"
-git branch -D "${branch}"
+git branch -D "${branch}" 2>/dev/null || true
 git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
 git status --porcelain
 ```
