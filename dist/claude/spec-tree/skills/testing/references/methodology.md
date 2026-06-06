@@ -103,17 +103,21 @@ Answer these questions before writing the test:
 2. If this test passes, what does that prove about the real system?
 3. What concrete failure would reach production without this test?
 
-Use the evidence type that matches the evidence:
+**Quantifier first.** Read whether the claim is universal or existential before anything else — it bounds the evidence type:
 
-- `scenario` for user-visible or workflow-visible behavior
-- `mapping` for deterministic input-output or request-action transforms
-- `conformance` for contracts and protocol boundaries
-- `property` for invariants across a large input space
-- `compliance` for rules, boundaries, and safety constraints
+- A **universal** claim holds over every case (ALWAYS / NEVER / "for all" / "for every" / "no input"). Its evidence is `mapping`, `conformance`, `compliance`, or `property` — never `scenario`. A scenario proves one case passes; it cannot establish a claim about every case.
+- An **existential** claim describes one specific interaction ("given this case, when …, then …"). Its evidence is `scenario`.
 
-The evidence type follows what the claim proves, not the heading it sits under. A rule in a decision record's `## Compliance` section is classified here by its claim shape — it does not inherit `compliance` evidence from the section title.
+Within the universal branch, pick by what the evidence proves:
 
-**Boundary-validation routing.** An assertion that rejects values outside a predicate routes by the structure of the invalid set:
+- `mapping` for a deterministic input-output transform over a finite, source-owned domain
+- `conformance` for a match against an external or internal contract or protocol
+- `compliance` for a rule exercised against violating cases (a real violating fixture or rule oracle)
+- `property` for an invariant across an open or infinite input space
+
+The evidence type follows what the claim proves, not the heading it sits under. A rule in a decision record's `## Compliance` section is classified here by its claim shape — it does not inherit `compliance` evidence from the section title, and an ALWAYS/NEVER rule is a universal, so it never takes `scenario`.
+
+**Boundary-validation routing (a universal special case).** An assertion that rejects values outside a predicate is universal; route it by the structure of the invalid set:
 
 - The invalid set is open or infinite — arbitrary strings, identifiers, timestamps, keys, generated names — so the evidence type is `property`. The evidence generates values from across the space outside the predicate.
 - The invalid set is closed, finite, and source-owned — enum variants, a defined protocol set, registry members — so the evidence type is `mapping`. The evidence parameterizes over every source-owned invalid member.

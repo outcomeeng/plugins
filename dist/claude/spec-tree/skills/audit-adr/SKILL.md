@@ -18,9 +18,9 @@ Language-specific ADR concerns — testability-in-Compliance (dependency injecti
 
 An ADR's content is architecture — technology choices, data structures, implementation approaches. NEVER classify ADR content as product-behavior-versus-architecture; that classification is the PDR audit's concern. Audit the ADR's form, not whether its content belongs elsewhere.
 
-**TAG VALIDITY IS PRESENCE, NOT RE-DERIVATION.**
+**EVIDENCE TYPE MUST MATCH THE CLAIM.**
 
-Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance) chosen via `/testing`; `### Eval` → `[eval]`; `### Audit` → `[audit]`. Verify the tag is present and agrees with its subsection. NEVER re-derive a Testing rule's evidence type — that is `/testing`'s authority. A missing tag, a bare mechanism tag (`[review]`/`[test]`) in place of an evidence type, a tag disagreeing with its subsection, or more than one tag is a finding.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance); `### Eval` → `[eval]`; `### Audit` → `[audit]`. `/testing` selects the type; this audit verifies the selection is correct against the claim's shape — an audit that accepts any present tag verifies nothing, and the evidence type is the assertion's whole worth. The decisive check is the quantifier: a universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction. A missing tag, a bare mechanism tag (`[review]`/`[test]`), a tag disagreeing with its subsection, more than one tag, or an evidence type the `/testing` router would not produce for the claim is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -80,17 +80,19 @@ Check EVERY section for temporal language:
 
 <step name="audit_tag_validity">
 
-**Step 5: Per-rule tag validity**
+**Step 5: Per-rule tag validity and evidence-type fit**
 
-Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule, the tag is valid for its subsection:
+Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule:
 
-- under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-- under `### Eval` → `([eval])`;
-- under `### Audit` → `([audit])`.
+1. The tag is valid for its subsection:
+   - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Eval` → `([eval])`;
+   - under `### Audit` → `([audit])`.
+2. Under `### Testing`, the evidence type fits the claim's shape per the `/testing` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 
-A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not re-derive the evidence type — only validate the tag against its subsection.
+A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subsection, a missing tag, more than one tag, or an evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) is invalid.
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape → REJECT — "evidence-type-mismatch."**
 
 </step>
 
@@ -125,7 +127,7 @@ The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-mode-tag`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-mode-tag`, `evidence-type-mismatch`); the `message` field carries the one-line detail.
 
 </verdict_format>
 
@@ -137,11 +139,11 @@ Claude flagged "uses PostgreSQL with row-level locking" as architecture content 
 
 How to avoid: The ADR audit checks form — structure, voice, tag validity. Content classification is the PDR audit's concern only.
 
-**Failure 2: Re-derived a Testing rule's evidence type**
+**Failure 2: Passed a universal rule tagged `scenario`**
 
-Claude saw a `### Testing` rule tagged `([scenario])`, judged it should be `[property]` because the rule read like an invariant, and rejected it. Evidence-type selection is `/testing`'s authority, exercised when the rule is authored. The audit validates that a tag is present and names one of the five evidence types — it does not second-guess the choice.
+Claude saw a `### Testing` rule — a universal ALWAYS/NEVER claim — tagged `([scenario])`, and passed it because a tag was present and named one of the five evidence types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 validates tag presence and subsection agreement only. A present, valid evidence-type tag passes regardless of which evidence type the auditor would have picked.
+How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `/testing` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/testing`'s to decide.
 
 </failure_modes>
 
@@ -153,7 +155,7 @@ Audit is complete when:
 - [ ] ADR read — all sections identified
 - [ ] Section structure: decision stated in the opening and `## Verification` present
 - [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule tag validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`)
+- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/testing` (a universal is never `scenario`)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 

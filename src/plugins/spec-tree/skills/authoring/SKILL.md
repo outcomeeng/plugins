@@ -47,8 +47,10 @@ If unclear which type, apply the decision table from `${CLAUDE_SKILL_DIR}/../und
 
 - Delivers user-facing value? → Outcome
 - Exists only to serve other nodes? → Enabler
-- Governs how things are built? → ADR
-- Governs what the product does? → PDR
+- Governs how the product is built (architecture, invisible to its users)? → ADR
+- Governs what the product does (behavior its users observe)? → PDR
+
+ADR vs PDR is decided by content only. A decision's reach — the nodes it constrains — is set by tree position and is identical for an ADR or a PDR at the same index, so "it holds tree-wide" or "it's foundational" never argues for PDR.
 
 </step>
 

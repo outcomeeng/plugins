@@ -98,13 +98,12 @@ A compliance assertion states a rule the node's output must always or never exhi
 
 <choosing_type>
 
-1. Is it a behavioral rule (ALWAYS/NEVER) from a decision or semantic constraint? → **Compliance**
-2. Can you enumerate all cases? → **Mapping**
-3. Is there an external reference to match? → **Conformance**
-4. Must it hold for all inputs (not just examples)? → **Property**
-5. Is it a specific interaction or journey? → **Scenario**
+Read the claim's quantifier first; it settles the type before the subject does.
 
-When in doubt, start with **Scenario**. Promote to **Mapping** when you discover the domain is finite. Promote to **Property** when you realize the assertion should hold universally. Use **Compliance** when the constraint is about what the node must always or never do.
+- **Universal** — the claim holds over every case (ALWAYS / NEVER / "for all" / "for every" / "no input"). Evidence is **Mapping** (finite, source-owned domain), **Conformance** (matches an external or internal contract), **Compliance** (a rule exercised against violating cases), or **Property** (open or infinite domain). A universal is **never a Scenario**: a scenario proves one case passes, which cannot establish a claim about every case.
+- **Existential** — the claim describes one specific interaction or journey ("given this case, when …, then …"). Evidence is **Scenario**.
+
+Within the universal branch, pick by domain shape: enumerable finite source-owned set → **Mapping**; external or internal contract → **Conformance**; a rule enforced by exercising violating cases → **Compliance**; open or infinite domain → **Property**. A behavioral rule (ALWAYS/NEVER) from a decision is a universal — it takes one of these four, never Scenario.
 
 </choosing_type>
 

@@ -103,10 +103,11 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
    - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
    - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
-   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid. Do not propose the correct evidence type — only validate the tag against its subsection.
-2. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
+   A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
+2. Under `### Testing`, the evidence type fits the claim's shape per the `/testing` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+3. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
 
 </step>
 
@@ -175,7 +176,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `temporal-language`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
 
 </verdict_format>
 
@@ -203,7 +204,7 @@ Audit is complete when:
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
 - [ ] Property quality: each property checked for observability and falsifiability
-- [ ] Per-rule tag validity: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`)
+- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/testing` (a universal is never `scenario`)
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
 - [ ] Verdict issued: APPROVED or REJECT

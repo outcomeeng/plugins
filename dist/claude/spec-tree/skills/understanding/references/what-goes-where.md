@@ -14,11 +14,13 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 | **PLAN.md**             | COORDINATES pending steps                | Concrete plan for a node                     | Any agent in the next session                       |
 | **ISSUES.md**           | COORDINATES known issues                 | Gaps, bugs, untestable specs                 | Any agent in the next session                       |
 
+ADR vs PDR is decided by content alone — ADR governs how the product is built (architecture, invisible to its users); PDR governs what the product does (behavior its users observe). A decision's **reach** — the nodes it constrains — is set by its tree position (directory and numeric prefix per `ordering-rules.md`) and is identical for an ADR or a PDR at the same index; reach never distinguishes the two, so "it holds tree-wide" or "it's foundational" is not a PDR argument. Because "user-observable" is relative to a product's users, the same concern can be a PDR in one product and an ADR in another: test-infrastructure layout is product behavior for a methodology whose users adopt the tree shape, and architecture for an application whose users never see it.
+
 </overview>
 
 <adr>
 
-**Purpose:** GOVERNS how things are built. Constrains architecture, not product behavior.
+**Purpose:** GOVERNS how the product is built — architecture and implementation structure, invisible to the product's users. Not product behavior.
 
 **Contains:**
 
@@ -38,7 +40,7 @@ Every artifact in the Spec Tree has a specific purpose. Content placed in the wr
 
 <pdr>
 
-**Purpose:** GOVERNS what the product does. Establishes product decisions that must hold across a subtree.
+**Purpose:** GOVERNS what the product does — behavior the product's users observe. Not how it is built.
 
 **Contains:**
 
@@ -108,7 +110,7 @@ Each file imports the module under test — directly or through a test-infrastru
 
 Test harnesses (modules that mediate access to the system under test), test generators (factories producing valid inputs), and inert fixtures (captured payloads, recorded transcripts, sample documents) are **production code**. They implement behavior, carry their own spec assertions in the spec tree, and pass the same audits as any other production module. They differ from product code only in purpose: they enable test assertions rather than deliver product value.
 
-**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`.
+**Spec-tree shape (mandatory, normative slugs):** Every spec tree governed by this methodology has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and three grandchildren with slugs `generators`, `fixtures`, `harnesses`. The mandate is the subtree shape itself, not a decision-record file of any particular name. A product that records its own test-infrastructure layout decision classifies it by content like any other decision — a layout invisible to the product's users is an ADR.
 
 **Implementation location (normative per language):** A sibling directory to product code, outside `spx/` and outside any `tests/` directory:
 
