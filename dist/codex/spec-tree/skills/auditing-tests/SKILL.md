@@ -73,7 +73,7 @@ Read the spec's Assertions section. For each assertion, extract:
 
 **Missing test file = finding.** Record it and continue to next assertion.
 
-**Compliance assertions with `[review]` tags** are verified by human/agent judgment, not by tests. Skip them in the test evidence audit.
+**Compliance assertions with `[audit]` tags** (or the legacy `[review]`) are verified by agent judgment, not by tests. Skip them in the test evidence audit.
 
 </step>
 

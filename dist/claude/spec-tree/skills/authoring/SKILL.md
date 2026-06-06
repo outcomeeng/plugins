@@ -154,7 +154,7 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templat
 **Assertion rules** (from `${CLAUDE_SKILL_DIR}/../understanding/references/assertion-types.md`):
 
 - Every outcome must have at least one assertion
-- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), or `([review])` for human judgment
+- Each assertion must link to evidence: `([test](tests/{slug}.{level}.test.{ext}))` for tests (including tests that exercise a lint rule), `([eval])` for graded LLM behavior, or `([audit])` for human judgment (`[review]` is the legacy spelling of `[audit]`)
 - Match assertion type to test strategy: Scenario → example-based, Property → property-based, etc.
 - Test targets don't need to exist yet — the link is a contract for what will be created
 
@@ -184,10 +184,10 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For outcomes: three-part hypothesis present (output → outcome → impact)
 - [ ] For enablers: enables statement describes what it provides
-- [ ] All assertions have evidence links: `[test]` or `[review]` (targets don't need to exist yet)
+- [ ] All assertions have evidence links: `[test]`, `[eval]`, or `[audit]` (targets don't need to exist yet)
 - [ ] Assertion types match test strategy
-- [ ] ADR/PDR compliance rules use MUST/NEVER format with `([review])` tags
-- [ ] Spec compliance assertions use the correct evidence tag: `[test]` for automated verification (including tests that exercise a lint rule), `[review]` for human judgment
+- [ ] ADR/PDR rules sit under `## Verification` (`### Testing` / `### Eval` / `### Audit`) in MUST/NEVER format, each carrying the tag its subsection requires (an evidence type under `### Testing`, `[eval]` under `### Eval`, `[audit]` under `### Audit`)
+- [ ] Spec compliance assertions use the correct evidence tag: `[test]` for automated verification (including tests that exercise a lint rule), `[eval]` for graded LLM behavior, `[audit]` for human judgment
 - [ ] Every `[test]` link that resolves to an existing file uses language-canonical naming with evidence ∈ {scenario, mapping, conformance, property, compliance} and level ∈ {l1, l2, l3} encoded in the filename (e.g., TypeScript `<subject>.<evidence>.<level>[.<runner>].test.ts`, Python `test_<subject>.<evidence>.<level>[.<runner>].py`, Rust `<subject>.<evidence>.<level>[.<runner>].rs`; legacy forms `*.unit.test.ts` / `*.integration.test.ts` / `*.e2e.test.ts`, `test_*.unit.py` / `test_*.integration.py` / `test_*.e2e.py`, and `*_test.rs` / `test_*.rs` with no evidence/level are forbidden) — if legacy naming is found, flag as imperfection and surface via AskUserQuestion before proceeding
 - [ ] No content misplacement (per `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md`)
 
@@ -263,9 +263,9 @@ How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to
 
 **Failure 2: Assertions placed in ADRs**
 
-Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the compliance rule: "ALWAYS: Uploaded files exceeding 10MB are rejected at the gateway. ([review])"
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
 
-How to avoid: ADRs govern with MUST/NEVER compliance rules verified by review. If you're writing Given/When/Then, you're writing a spec assertion, not a decision record.
+How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. If you're writing Given/When/Then, you're writing a spec assertion, not a decision record.
 
 **Failure 3: Wrong template used for node type**
 
@@ -300,11 +300,11 @@ A container name must describe what the container contains. If the name would ac
 
 How to avoid: read the proposed container name aloud and ask "what would I refuse to put in here?" If the honest answer is "nothing obvious," the name is junk-drawer. Rename it after the specific concern that justified creating the container (`session-retention`, not `advanced-operations`). When two concerns are independent, they get two containers — not a vague parent.
 
-**Failure 7: Testable MUST/NEVER tagged `[review]` instead of `[test]`**
+**Failure 7: Testable MUST/NEVER placed under `### Audit` instead of `### Testing`**
 
-Claude wrote PDR compliance rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state. ([review])" and "Running `install` twice for the same rule is a no-op the second time. ([review])". Both rules describe behaviors any level 1 test can falsify — write a test that simulates a crash between temp-write and rename, diff the resulting settings.json against the pre-state; run `install` twice and diff. An `[review]` tag on a rule an automated test can falsify is a rejection-worthy audit finding — it means the rule will not be enforced by CI and will silently regress.
+Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit])" and "Running `install` twice for the same rule is a no-op the second time ([audit])" under `### Audit`. Both rules describe behaviors any level 1 test can falsify — write a test that simulates a crash between temp-write and rename, diff the resulting settings.json against the pre-state; run `install` twice and diff. An `### Audit` rule an automated test can falsify is a rejection-worthy audit finding — it means the rule will not be enforced by CI and will silently regress.
 
-How to avoid: before writing `[review]`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, the tag is `[test]` — write it and link it. Reserve `[review]` for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[review]` tags there rot silently.
+How to avoid: before placing a rule under `### Audit`, answer the falsification question: "What test, run in finite time against real fixtures, would fail if this rule were broken?" If a concrete test exists or can be created with an appropriate test harness, the rule belongs under `### Testing` with the evidence type `/testing` routes — write it and link it from the implementing spec. Reserve `### Audit` (`[audit]`) for semantic constraints no automated check can falsify ("the design follows principle W", "the copy matches brand voice", "the mechanism is readable to a new contributor"). Inside enabler specs, the same rule applies with more teeth: enablers accumulate behavior the rest of the tree depends on, and `[audit]` tags there rot silently.
 
 **Failure 8: Over-multiplying decision records in small trees**
 
@@ -328,7 +328,7 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Creating outcomes without hypotheses.** Every outcome must express: output → outcome → impact. If you can't write the hypothesis, the scope may be wrong — it might be an enabler or need further clarification.
 
-**Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs have compliance rules (MUST/NEVER) verified by review, not by tests.
+**Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs carry MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection.
 
 **Bare node or decision references.** Never write `32-parser.enabler`, `15-build.adr.md`, or `PDR-21` as a reference. Use the full path from `spx/` so the file can be found.
 
@@ -338,7 +338,7 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
-**Tagging testable MUST/NEVER rules with `[review]`.** `[review]` silences CI enforcement — any rule tagged `[review]` will not fail a build when violated. If a concrete automated test can falsify the rule, the tag is `[test]` and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they are never `[review]`. Reserve `[review]` for semantic constraints no automated check can falsify.
+**Placing testable MUST/NEVER rules under `### Audit`.** An `[audit]` tag silences CI enforcement — any rule under `### Audit` will not fail a build when violated. If a concrete automated test can falsify the rule, it belongs under `### Testing` with the evidence type `/testing` routes, and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they never go under `### Audit`. Reserve `### Audit` for semantic constraints no automated check can falsify.
 
 **Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's coordination notes and delegates to `/decomposing <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
