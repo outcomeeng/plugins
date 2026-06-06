@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
-Language-specific ADR concerns — testability-in-Compliance (dependency injection, no-mocking), execution-level accuracy — stay in `/auditing-{lang}-architecture`, not here.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — stay in `/auditing-{lang}-architecture`, not here.
 
 </objective>
 
