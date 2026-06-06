@@ -27,3 +27,15 @@ The canonical `history.jsonl` baseline commits on the post-merge run on `main` â
 ## 3. The local reviewing-changes no-findings render (RESOLVED)
 
 **Resolved** in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`. The local `reviewing-changes` renderer now reports a uniform per-severity census: each empty severity bucket renders its `none-<severity>.md` marker (`BLOCKING: none` / `DEBT: none` / `FOLLOW-UP: none`), and the single blocking-only `no-blockers.md` was replaced by `none-blocking.md` / `none-debt.md` / `none-followup.md`. This separates the reviewer's mechanical census from the consumer's merge judgment, superseding the originally-prescribed single-line alignment of `no-blockers.md` to `"No BLOCKING or DEBT findings."` (the earlier framing of `no-blockers.md` as a "no findings" message was imprecise â€” it was the BLOCKING-section empty-state; the census model reports every severity uniformly). Format parity between the local render and the GH CI `spec-tree-review` workflow's clean-review message lives in `outcomeeng/gh-actions` and is a separate concern if pursued.
+
+## 4. Heartbeat continuation-prompt payload shape is skill prose, not a spec assertion (FOLLOW-UP)
+
+`/tracking-tasks` `<heartbeat_payload>` and `/standardizing-merging` `<heartbeat>` define the continuation prompt as exactly the skills to reload plus the pointers each skill handles, with the directive, finding assessments, and rationale reconstructed on wake-up from the durable artifacts. The constraint lives only as skill prose and a `/tracking-tasks` success-criterion; no `merging.md` assertion declares it and no eval verifies that a `/managing-pr` heartbeat prompt conforms to the two-item structure.
+
+This is the deferred "declare in the spec" path: the change shipped as skill prose only by operator decision. To govern and verify the behavior when an eval-coverage sweep happens:
+
+- Add a compliance assertion to `merging.md` declaring the heartbeat re-entry payload (skills + pointers, no reconstructable state), as the PR-flow instance of the `/tracking-tasks` rule.
+- Create `evals/heartbeat-payload/` (`eval.toml`, `cases.jsonl`, `prompt.md`) exercising whether a `/managing-pr` heartbeat prompt carries only the skill re-entry and the PR-number pointer, with the directive, finding assessments, and rationale reconstructed rather than restated.
+- Run the eval to populate `history.jsonl`.
+
+Same shape as item 1: an enabler-side assertion + eval, not a `spx/15-agent-pr-authority.pdr.md` evidence-tag change.
