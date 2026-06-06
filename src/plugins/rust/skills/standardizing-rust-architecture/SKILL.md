@@ -6,11 +6,11 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical ADR conventions for Rust projects, loaded after `/standardizing-rust`. Defines the allowed ADR sections, how Rust testability appears in Compliance rules, which dependency-injection patterns are acceptable, and which architectural claims belong in ADRs versus downstream testing work.
+Canonical ADR conventions for Rust projects, loaded after `/standardizing-rust`. Defines the allowed ADR sections, how Rust testability appears in Verification rules, which dependency-injection patterns are acceptable, and which architectural claims belong in ADRs versus downstream testing work.
 </objective>
 
 <success_criteria>
-Rust ADR guidance follows this standard when `/standardizing-rust` is loaded first, ADRs use only the authoritative sections, testability constraints live in Compliance, dependency seams are expressed in Rust terms, and test-level references match `/standardizing-rust-tests`.
+Rust ADR guidance follows this standard when `/standardizing-rust` is loaded first, ADRs use only the authoritative sections, testability constraints live in `## Verification`'s `### Audit` subsection, dependency seams are expressed in Rust terms, and test-level references match `/standardizing-rust-tests`.
 </success_criteria>
 
 <reference_note>
@@ -25,46 +25,36 @@ When evaluating test-level references in ADRs, also check for `spx/local/rust-te
 
 <adr_sections>
 
-The ADR template (from `/understanding`) defines exactly these sections:
+The ADR template (from `/understanding`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:
 
-1. **Purpose** -- What concern this decision governs. State as permanent truth.
-2. **Context** -- Business impact and technical constraints.
-3. **Decision** -- Primary decision in one sentence.
-4. **Rationale** -- Why this is right given the constraints. Alternatives considered and rejected.
-5. **Trade-offs accepted** -- Table: what is given up, why it is acceptable or mitigated.
-6. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-7. **Compliance** -- Observable patterns (Recognized by), rules (MUST), prohibitions (NEVER).
+1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
+2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
+3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Audit` (agent judgment, `([audit])`), `### Eval` (graded LLM behavior, `([eval])`), `### Testing` (deterministic test, `([{evidence type}])`). Include only the subsections that apply.
 
-**This is the complete list.** An ADR has no other sections. There is no "Testing Strategy" section, no "Status" field, no "Level Assignments" table. Testability constraints live in Compliance as MUST/NEVER rules.
+**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. Rust architecture rules — DI mandates, mocking prohibitions, unsafe boundaries — require agent judgment, so they live under `### Audit` with `([audit])`.
 
 **When an ADR is required:** Every module or boundary that makes architectural decisions -- module layout, trait seams, library choice, async runtime, DI patterns, persistence boundaries, unsafe boundaries -- requires an ADR. Missing ADRs are violations.
 
 </adr_sections>
 
-<testability_in_compliance>
+<testability_in_verification>
 
 ADRs do not assign testing levels. They establish constraints that make levels achievable. The `/testing` router and `/testing-rust` decide how assertions are verified once they combine spec assertions, architecture constraints, and product infrastructure.
 
-**The mechanism:** Compliance rules that mandate observable seams, explicit ownership and boundary types, DI, and the absence of mocking frameworks.
+**The mechanism:** Verification rules under `### Audit` that mandate observable seams, explicit ownership and boundary types, DI, and the absence of mocking frameworks.
 
-**Correct pattern -- testability as MUST/NEVER:**
+**Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
 ```markdown
-Compliance
+## Verification
 
-Recognized by
+### Audit
 
-Observable dependency parameters in all functions that invoke external tools.
-
-MUST
-
-- External tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([review])
-- Configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([review])
-
-NEVER
-
-- `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([review])
-- Direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([review])
+- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- enables isolated testing without framework mocks ([audit])
+- ALWAYS: configuration is parsed into typed structs at load time -- enables Level 1 verification of config logic ([audit])
+- NEVER: `mockall`, `faux`, or generated mocks as the primary testing strategy for architectural seams -- violates reality-based testing ([audit])
+- NEVER: direct `std::process::Command` construction in domain logic without an injected seam -- prevents isolated testing ([audit])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**
@@ -86,7 +76,7 @@ Escalation Rationale
 
 **Why:** Level assignments depend on spec assertions, local tooling, and the `/testing` analysis flow. The ADR cannot know those details at authoring time. The ADR's job is to establish constraints that make the right tests possible.
 
-</testability_in_compliance>
+</testability_in_verification>
 
 <atemporal_voice>
 
@@ -120,7 +110,7 @@ An ADR that references current code ("The current module uses X", "The file Y do
 
 <di_patterns>
 
-When an ADR mandates dependency injection, these are acceptable Rust patterns to reference in Compliance rules.
+When an ADR mandates dependency injection, these are acceptable Rust patterns to reference in `## Verification` `### Audit` rules.
 
 **Trait-based DI:**
 
@@ -156,12 +146,12 @@ where
 
 **ADR Compliance rule to code mapping:**
 
-| ADR Compliance rule                  | Code implements                                            |
-| ------------------------------------ | ---------------------------------------------------------- |
-| "MUST accept runner as parameter"    | `fn f<R: Runner>(deps: &R)` or `fn f(run: impl Fn(...))`   |
-| "MUST validate config at load time"  | `serde` + typed structs + constructor/`TryFrom` validation |
-| "NEVER use mock frameworks"          | hand-written trait impls or recorder structs in tests      |
-| "NEVER shell out without DI wrapper" | no bare `std::process::Command` in core logic              |
+| ADR Verification rule                 | Code implements                                            |
+| ------------------------------------- | ---------------------------------------------------------- |
+| "ALWAYS accept runner as parameter"   | `fn f<R: Runner>(deps: &R)` or `fn f(run: impl Fn(...))`   |
+| "ALWAYS validate config at load time" | `serde` + typed structs + constructor/`TryFrom` validation |
+| "NEVER use mock frameworks"           | hand-written trait impls or recorder structs in tests      |
+| "NEVER shell out without DI wrapper"  | no bare `std::process::Command` in core logic              |
 
 **Mocking prohibition in ADR language:**
 
@@ -177,7 +167,7 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 <level_context>
 
-The architect needs enough testing context to write effective Compliance rules. The auditor uses the same context to check whether those rules actually enable the right tests.
+The architect needs enough testing context to write effective Verification rules. The auditor uses the same context to check whether those rules actually enable the right tests.
 
 | Level | Name        | Rust Infrastructure                                     | When to Use                                             |
 | ----- | ----------- | ------------------------------------------------------- | ------------------------------------------------------- |
@@ -192,7 +182,7 @@ The architect needs enough testing context to write effective Compliance rules. 
 - External APIs, SaaS systems, browsers, and deployed environments are Level 3
 - Product overlays, especially `spx/local/rust-tests.md`, may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes constraints that determine what levels are achievable. "MUST accept a runner as parameter" makes Level 1 possible for command-building logic. "NEVER call external APIs from domain logic" preserves Level 1 for the domain and pushes the real remote boundary to Level 3 or to a repo-specific product decision.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes constraints that determine what levels are achievable. "ALWAYS accept a runner as parameter" makes Level 1 possible for command-building logic. "NEVER call external APIs from domain logic" preserves Level 1 for the domain and pushes the real remote boundary to Level 3 or to a repo-specific product decision.
 
 </level_context>
 
@@ -207,6 +197,5 @@ The architect needs enough testing context to write effective Compliance rules. 
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |
 | Implementation code           | ADRs constrain implementation, not provide it  | `/coding-rust`                     |
-| Test references `([test])`    | ADRs are verified by architecture review       | Spec assertions only               |
 
 </anti_patterns>

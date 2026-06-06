@@ -8,16 +8,16 @@ Invoke the `rust:standardizing-rust` skill before proceeding. If that skill is u
 Invoke the `rust:standardizing-rust-architecture` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as Compliance rules.
+Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>
-**Standards are pre-loaded above.** The first skill defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in Compliance rules, and what does not belong in an ADR.
+**Standards are pre-loaded above.** The first skill defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in `## Verification` `### Audit` rules, and what does not belong in an ADR.
 
 After reading those standards, check for `spx/local/rust.md` and `spx/local/rust-architecture.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
 
-- ADRs follow the authoritative template: Purpose, Context, Decision, Rationale, Trade-offs, Invariants, Compliance
-- Testability constraints go in the Compliance section as MUST/NEVER rules -- not in a separate Testing Strategy section
+- ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
+- Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - Prefer type-level invariants over runtime-only validation when the domain allows it
 - Design around ownership, borrowing, and resource lifetimes explicitly
 - Design for dependency injection (NO MOCKING)
@@ -44,7 +44,7 @@ If you're creating ADRs for a spec-tree work item (enabler/outcome), ensure comp
 
 - Must not contradict ancestor ADRs/PDRs (product → ancestor hierarchy)
 - Must reference relevant ancestor decisions
-- Must include testability constraints in Compliance (MUST/NEVER rules for DI, no mocking)
+- Must include testability constraints in `## Verification` (`### Audit` ALWAYS/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
 **If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
@@ -147,15 +147,12 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the authoritative template (from `/understanding`). Each ADR includes:
+Use the authoritative template (from `/understanding`). The ADR is decision-first:
 
-1. **Purpose**: What concern this decision governs
-2. **Context**: Business impact and technical constraints
-3. **Decision**: The specific choice in one sentence
-4. **Rationale**: Why this is right given constraints, alternatives rejected
-5. **Trade-offs accepted**: What is given up, why acceptable
-6. **Invariants** (optional): Algebraic properties for all governed code
-7. **Compliance**: Recognized by, MUST rules, NEVER rules -- including testability constraints
+1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
+2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
+3. **Invariants** (optional): Algebraic properties for all governed code
+4. **Verification**: ALWAYS/NEVER rules grouped under `### Audit` (`[audit]`), `### Eval` (`[eval]`), `### Testing` (`[{evidence type}]`); the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
 
 **Phase 4: Verify Consistency**
 
@@ -222,11 +219,11 @@ Key Constraints
 <success_criteria>
 ADR is complete when:
 
-- [ ] Compliance section includes testability constraints (DI, no mocking) per `/standardizing-rust-architecture`
+- [ ] Verification (`### Audit`) includes testability constraints (DI, no mocking) per `/standardizing-rust-architecture`
 - [ ] `/standardizing-rust` was loaded before `/standardizing-rust-architecture`
 - [ ] `/standardizing-rust-tests` was loaded before testing methodology was applied
 - [ ] All architectural choices documented
-- [ ] Compliance criteria defined with MUST/NEVER rules for verification
+- [ ] Verification rules defined as ALWAYS/NEVER guarantees and boundaries
 - [ ] No contradictions with existing ADRs
 - [ ] Ownership, type-system, and resource-lifecycle considerations addressed
 - [ ] Security boundaries identified
