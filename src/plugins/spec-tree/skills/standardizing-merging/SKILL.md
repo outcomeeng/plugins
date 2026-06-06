@@ -202,6 +202,8 @@ Waiting for CI runs, reviews, or check completion happens through the runtime ti
 
 `/tracking-tasks` owns runtime-specific payload shape, stale-context limits, lifecycle rules, failed-check handling, approval-boundary deletion, and timer-tool selection. This section owns only the PR-flow fact that PR waits use runtime tracking and re-enter /managing-pr.
 
+The re-entry prompt follows `/tracking-tasks` `<heartbeat_payload>`: it names the skill to reload and the pointer that skill handles — the PR number — as `/managing-pr <pr-number>`. From that pointer the managing flow resolves the branch, base, review state, and checks via `gh pr view`, and reconstructs the directive and finding classifications by re-reading the PR body, the commits, and the node's `PLAN.md` / `ISSUES.md`. The prompt never carries the directive, the finding classifications, or the merge-gate reasoning — those are reconstructed on wake-up, and anything a later fire must know is written to `PLAN.md` / `ISSUES.md`, never assumed to survive in conversation memory.
+
 **One heartbeat per PR.** Whichever flow first needs a heartbeat creates it; the other refreshes the same heartbeat rather than creating a second one.
 
 Forbidden in-shell waits: shell `sleep`, `gh pr checks --watch`, `gh run watch`, `until`/`while` polling. The Bash tool does not reliably reap subprocess trees across turns; fork-bomb-class accumulation results when these patterns are repeated.
