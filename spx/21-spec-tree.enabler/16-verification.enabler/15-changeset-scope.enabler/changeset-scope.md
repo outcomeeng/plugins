@@ -12,6 +12,8 @@ CAN derive every changeset's branch, slug, base ref, and changed-file set from o
 - Given `refs/remotes/origin/HEAD` is unset, when `detect_base_ref` runs with `strict=True` it raises `BaseRefNotConfiguredError`, and with `strict=False` it returns `DEFAULT_BASE_REF` ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a bare base name, when `remote_tracking_ref` runs, then it composes the remote-tracking ref `origin/<base>`, and `branch_scope` diffs the three-dot range `origin/<base>...HEAD` returning the changed-file set since the merge base ([test](tests/test_changeset_scope.scenario.l1.py))
 - Given a local branch ref that lags its remote-tracking ref, when the changeset is scoped against `origin/<base>`, then the changed-file set excludes commits already merged into the base — a stale local ref does not widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a checkout on a named branch, when `detect_current_branch` runs, then it returns that branch name; on a detached HEAD it raises `DetachedHeadError` rather than returning the `HEAD` placeholder ([test](tests/test_changeset_scope.scenario.l1.py))
+- Given a `state_dir` whose state file at the base-slug path records a different branch, when `branch_slug` runs, then it returns the base slug with the deterministic `--<sha8>` collision suffix; with no such state file it returns the bare base slug ([test](tests/test_changeset_scope.scenario.l1.py))
 
 ### Compliance
 

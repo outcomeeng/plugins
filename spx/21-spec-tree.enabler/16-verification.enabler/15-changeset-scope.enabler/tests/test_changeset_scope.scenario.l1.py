@@ -10,6 +10,11 @@ Covers the Scenario assertions in ``../changeset-scope.md``:
 - A local branch ref that lags its remote-tracking ref does not widen the
   scope: scoping against ``origin/<base>`` excludes commits already merged into
   the base, while scoping against the stale local ref re-includes them.
+- ``detect_current_branch`` returns the branch name on a named checkout and
+  raises ``DetachedHeadError`` on a detached HEAD.
+- ``branch_slug`` appends the deterministic ``--<sha8>`` suffix when the state
+  dir holds a state file (at the base-slug path) recording a different branch,
+  and returns the bare base slug otherwise.
 
 These are ``l1`` — direct in-process calls into ``changeset_scope`` against a
 synthetic git repository seeded under ``tmp_path``; git and temp dirs are
@@ -22,9 +27,13 @@ import pathlib
 
 import pytest
 from outcomeeng_testing.harnesses.changeset_scope import (
+    BASE_BRANCH,
+    FEATURE_BRANCH,
     build_repo_without_origin,
     build_stale_local_base_repo,
+    detach_head,
     load_changeset_scope_module,
+    write_branch_state_file,
 )
 
 
@@ -98,3 +107,45 @@ def test_stale_local_base_ref_does_not_widen_scope(tmp_path: pathlib.Path) -> No
         f"{stale.base_ref}...HEAD", repo=stale.repo
     )
     assert stale.merged_file in local_ref_scope
+
+
+def test_detect_current_branch_returns_name_then_raises_on_detached_head(
+    tmp_path: pathlib.Path,
+) -> None:
+    # Two arms make the test falsifying: a named checkout yields the branch
+    # name, and a detached HEAD raises rather than returning the "HEAD"
+    # placeholder that would collide across every detached-checkout invocation.
+    module = load_changeset_scope_module()
+    repo = _repo(tmp_path)
+    branch = build_repo_without_origin(repo)
+
+    assert module.detect_current_branch(repo) == branch
+
+    detach_head(repo)
+    with pytest.raises(module.DetachedHeadError):
+        module.detect_current_branch(repo)
+
+
+def test_branch_slug_disambiguates_on_state_dir_collision(
+    tmp_path: pathlib.Path,
+) -> None:
+    # branch_slug appends a deterministic --<sha8> suffix when the state dir
+    # already holds a state file (at the base-slug path) recording a different
+    # branch; with no such file it returns the bare base slug. Asserting both
+    # arms makes the test falsifying — it fails if the collision check is
+    # dropped, because the collided slug would then equal the base slug.
+    module = load_changeset_scope_module()
+    base_slug = module.branch_slug(FEATURE_BRANCH)
+
+    state_dir = tmp_path / "state"
+    write_branch_state_file(state_dir, base_slug, BASE_BRANCH)
+    collided = module.branch_slug(FEATURE_BRANCH, state_dir)
+
+    assert collided != base_slug
+    assert collided.startswith(f"{base_slug}--")
+    suffix = collided[len(base_slug) + len("--") :]
+    assert len(suffix) == module.BRANCH_SLUG_COLLISION_SUFFIX_LENGTH
+    # Deterministic: the same inputs land on the same slug across invocations.
+    assert module.branch_slug(FEATURE_BRANCH, state_dir) == collided
+    # No state file at the base-slug path → no disambiguation.
+    assert module.branch_slug(FEATURE_BRANCH, tmp_path / "empty") == base_slug
