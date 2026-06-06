@@ -167,3 +167,29 @@ def build_repo_without_origin(repo: pathlib.Path) -> str:
     _git(repo, "config", "commit.gpgsign", "false")
     _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
     return BASE_BRANCH
+
+
+def detach_head(repo: pathlib.Path) -> None:
+    """Put ``repo`` on a detached HEAD so ``detect_current_branch`` raises.
+
+    Resolves the current commit and checks it out by SHA, detaching HEAD
+    from the branch ref.
+    """
+    sha = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "--detach", sha)
+
+
+def write_branch_state_file(
+    state_dir: pathlib.Path, slug: str, branch: str
+) -> pathlib.Path:
+    """Write a state file at ``state_dir/<slug>.md`` recording ``branch``.
+
+    The file carries the YAML frontmatter ``branch_slug`` reads for
+    state-collision disambiguation: a ``branch:`` key fenced by
+    ``changeset_scope.FRONTMATTER_DELIMITER``. Returns the written path.
+    """
+    delimiter = load_changeset_scope_module().FRONTMATTER_DELIMITER
+    state_dir.mkdir(parents=True, exist_ok=True)
+    path = state_dir / f"{slug}.md"
+    path.write_text(f"{delimiter}\nbranch: {branch}\n{delimiter}\n", encoding="utf-8")
+    return path
