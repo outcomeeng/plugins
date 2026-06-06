@@ -17,14 +17,23 @@ Thirteen records were migrated to the `## Verification` structure (`### Testing`
 
 **Resolution evidence**: `spx validation markdown` passes; the two exemplars (`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`) audited APPROVED via `/audit-adr` and `/audit-pdr`; the remaining 12 confirmed clean for temporal voice, bare `([review])`/`([test])` tags, double-tagged or untagged rule lines, and legacy section headings.
 
-## Re-audit migrated records for universal-claim evidence-type fit (deferred)
+## Re-audit migrated records for universal-claim evidence-type fit (RESOLVED)
 
-The migration above predates the evidence-type-fit check that `/audit-adr` and `/audit-pdr` now enforce (a `### Testing` rule whose claim is universal — ALWAYS/NEVER/"for all"/"for every"/"no input" — is never `scenario`; mismatch is an `evidence-type-mismatch` REJECT). Two migrated records carry universal claims under `### Testing` tagged `([scenario])` that the new rule rejects:
+The migration predated the evidence-type-fit check that `/audit-adr` and `/audit-pdr` now enforce (a `### Testing` rule whose claim ranges over an open or large case-space is never `scenario`; a single concrete structural or behavioral fact may be `scenario`; mismatch is an `evidence-type-mismatch` REJECT). The re-audit pass ran `/audit-adr` on the two candidate records:
 
-- `spx/21-spec-tree.enabler/17-auditing.adr.md` — 3 ALWAYS rules under `### Testing` tagged `[scenario]`.
-- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md` — 6 ALWAYS rules under `### Testing` tagged `[scenario]`.
+- `spx/21-spec-tree.enabler/17-auditing.adr.md` — two genuine mismatches, retagged: the `save_state` / `RunLock` rule asserts lock release on "every context-manager exit path" (ranges over the exit-path set) → `[scenario]`→`[compliance]` (an ALWAYS safety rule exercised against violating cases — atomic-write crash, exception exit); the `compute_verdict_diff` rule asserts an identity-keying invariant ("excluding `id` and `severity`" must hold across all regenerated/re-severitied findings, an open domain) → `[scenario]`→`[property]`. The remaining `### Testing` rule — a regression reopening its original finding ID after one resolved-then-reopened cycle — is a single concrete interaction and stays valid `scenario`.
+- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md` — APPROVED as-is. Its six `[scenario]` rules each assert a single concrete structural or behavioral fact (one module's declared symbols, one schema's absent field, one script's behavior, the frozen-dataclass fact), not a ranged universal, and its eight `[compliance]` rules are correct. The earlier count of "9 mis-tagged across 2 records" over-applied the rule by reading every `ALWAYS:` prefix as a quantifier; the audit caveat (a single concrete fact may be `scenario`; do not relitigate a choice the router leaves open) corrects it to one real fix.
 
-These predate the new rule, so they are not regressions of this branch and sit outside its diff. Run a re-audit pass: route each universal claim through `/testing` (most are `compliance` — a structural rule every conformant implementation must always satisfy — or `property`) and retag, then confirm `/audit-adr` returns APPROVED. Audit gate: `/audit-adr` on both records clean.
+**Resolution evidence**: `/audit-adr` returns APPROVED on both records after the single `17-auditing.adr.md` retag.
+
+## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
+
+The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). Two of the three rules under `### Audit` in that ADR mirror assertions whose implementing lanes in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` are not `[audit]`:
+
+- ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
+- ADR "wrapper agent never hand-validates emitted JSON" (`[audit]`) mirrors spec line tagged `[eval](evals/wrapper-protocol/eval.toml)`.
+
+The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (Rust outstanding)
 

@@ -10,9 +10,9 @@ The orchestrator embeds no language-specific knowledge, following the working pr
 
 ### Testing
 
-- ALWAYS: `save_state` writes the state file atomically (`<state-file>.tmp` plus `os.replace`) and `RunLock` releases its lock on every context-manager exit path including exceptions ([scenario])
+- ALWAYS: `save_state` writes the state file atomically (`<state-file>.tmp` plus `os.replace`) and `RunLock` releases its lock on every context-manager exit path including exceptions ([compliance])
 - ALWAYS: a regression — the same `(file_line, root_cause)` returning after a resolved-then-reopened cycle — reopens the original finding ID and does not advance `next_finding_id` ([scenario])
-- ALWAYS: `compute_verdict_diff` keys finding identity on the tuple `(file, line, rule, message)`, excluding `id` and `severity` so a regenerated or re-severitied finding matches its prior counterpart by content ([scenario])
+- ALWAYS: `compute_verdict_diff` keys finding identity on the tuple `(file, line, rule, message)`, excluding `id` and `severity` so a regenerated or re-severitied finding matches its prior counterpart by content ([property])
 
 ### Audit
 
