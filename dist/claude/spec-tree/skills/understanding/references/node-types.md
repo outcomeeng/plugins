@@ -124,6 +124,6 @@ NN-slug.{enabler|outcome}/
 - The `runs/` subdirectory holds full transcripts and is gitignored
 - Verified by `[eval]` evidence (the dedicated eval runner)
 
-Assertions specify output, verified by `[test]`, `[eval]`, or `[review]` per `<evidence_mechanisms>` in `assertion-types.md`.
+Assertions specify output, verified by `[test]`, `[eval]`, or `[audit]` per `<evidence_mechanisms>` in `assertion-types.md`.
 
 </common_structure>

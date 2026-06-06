@@ -28,4 +28,4 @@ Only include assertion type headings that apply to this node.
 
 - ALWAYS: {observable behavior that holds} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
 - NEVER: {prohibited behavior} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- ALWAYS: {semantic constraint requiring judgment} — {why} ([review])
+- ALWAYS: {semantic constraint requiring judgment} — {why} ([audit])

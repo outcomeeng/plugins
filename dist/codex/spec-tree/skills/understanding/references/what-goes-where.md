@@ -162,8 +162,8 @@ Test harnesses (modules that mediate access to the system under test), test gene
                              │               "does it hold?"
 ADR/PDR ──governs──→ Spec ──┤
                              │
-                             └──[review]───→ Human/agent
-                                             "does the design follow W?"
+                             └──[audit]───→ Human/agent
+                                            "does the design follow W?"
 ```
 
 </flow>
@@ -179,7 +179,7 @@ ADR/PDR ──governs──→ Spec ──┤
 | Implementation detail    | Spec           | Code (not spec)                                                            |
 | "How to build it"        | Spec           | ADR or code                                                                |
 | "What users can rely on" | Spec           | PDR                                                                        |
-| Enforceable constraint   | `[review]`     | `[test]` on the lint rule                                                  |
+| Enforceable constraint   | `[audit]`      | `[test]` on the lint rule                                                  |
 | Cross-cutting invariant  | Child spec     | Ancestor spec                                                              |
 | Remaining work steps     | Session file   | PLAN.md in node                                                            |
 | Known unresolved issues  | Session file   | ISSUES.md in node                                                          |
