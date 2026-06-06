@@ -42,7 +42,7 @@ If the target is `spx/`:
 2. Read `spx/CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
-5. The test-infrastructure baseline is mandatory, not discretionary. Per `what-goes-where.md` `<test_infrastructure>`, every tree has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and grandchildren `generators`, `fixtures`, `harnesses`, governed by `spx/15-test-infrastructure.pdr.md`. Compose this baseline when it is absent; use the normative slugs exactly — do not invent alternatives such as `test-infrastructure` or `test-support`.
+5. The test-infrastructure baseline is mandatory, not discretionary. Per `what-goes-where.md` `<test_infrastructure>`, every tree has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and grandchildren `generators`, `fixtures`, `harnesses`. Compose this baseline when it is absent; use the normative slugs exactly — do not invent alternatives such as `test-infrastructure` or `test-support`.
 
 If the target is a node address:
 
