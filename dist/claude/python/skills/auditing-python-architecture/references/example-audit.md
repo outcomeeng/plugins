@@ -88,7 +88,7 @@ SaaS API (Trakt.tv) transport, which cannot run locally.
 2. Remove "Mock at boundary" language
 3. Add DI Protocol definitions under `## Verification`'s `### Audit` per `/standardizing-python-architecture`
 4. Document which exception case justifies any test doubles
-5. Rewrite Context section in atemporal voice -- remove all references to current code state
+5. Rewrite the decision statement in atemporal voice -- remove all references to current code state
 
 ---
 

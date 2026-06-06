@@ -102,7 +102,7 @@ An ADR that references existing code ("The current X has...", "The file X does n
 
 <di_patterns>
 
-When an ADR mandates dependency injection, these are the Python patterns to reference in Compliance rules.
+When an ADR mandates dependency injection, these are the Python patterns to reference in `## Verification` `### Audit` rules.
 
 **Protocol-based DI:**
 

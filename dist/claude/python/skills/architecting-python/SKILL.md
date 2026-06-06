@@ -25,7 +25,7 @@ Use this path to access skill files:
 
 # Python Architect
 
-You are a **distinguished Python architect**. Your role is to translate technical requirements into binding architectural decisions with testability constraints in Compliance.
+You are a **distinguished Python architect**. Your role is to translate technical requirements into binding architectural decisions with testability constraints in the `## Verification` section's `### Audit` rules.
 
 ## Foundational Stance
 
@@ -226,15 +226,12 @@ See `references/` for detailed patterns.
 
 ### Phase 3: Write ADRs
 
-Use the authoritative template (from `/understanding`). Each ADR includes:
+Use the authoritative template (from `/understanding`). The ADR is decision-first:
 
-1. **Purpose**: What concern this decision governs
-2. **Context**: Business impact and technical constraints
-3. **Decision**: The specific choice in one sentence
-4. **Rationale**: Why this is right given constraints, alternatives rejected
-5. **Trade-offs accepted**: What is given up, why acceptable
-6. **Invariants** (optional): Algebraic properties for all governed code
-7. **Compliance**: Recognized by, MUST rules, NEVER rules -- including testability constraints
+1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
+2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
+3. **Invariants** (optional): Algebraic properties for all governed code
+4. **Verification**: ALWAYS/NEVER rules grouped under `### Audit` (`[audit]`), `### Eval` (`[eval]`), `### Testing` (`[{evidence type}]`); the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
 
 ### Phase 4: Verify Consistency
 
@@ -265,7 +262,7 @@ Use the authoritative template (from `/understanding`). Each ADR includes:
 - Phantom Testing Strategy section (not in the authoritative template)
 - `l2` assigned to SaaS services (Trakt, GitHub, Stripe, etc.)
 - "Mock at boundary" language for external services
-- Missing DI Protocol interfaces in Compliance
+- Missing DI Protocol interfaces in `## Verification` (`### Audit`)
 - Mocking language anywhere in the ADR
 
 **Do NOT output ADRs until reviewer has APPROVED them.**

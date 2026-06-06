@@ -90,7 +90,7 @@ build logic, so command-building is verifiable at `l1`.
 1. Remove phantom "Testing Strategy" section entirely
 2. Add ALWAYS/NEVER testability rules under `## Verification`'s `### Audit` (DI, no mocking)
 3. Replace "mock at boundary" with DI interface approach
-4. Rewrite Context in atemporal voice -- no references to current code state
+4. Rewrite the decision statement in atemporal voice -- no references to current code state
 
 ---
 
