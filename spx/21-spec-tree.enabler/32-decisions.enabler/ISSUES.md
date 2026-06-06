@@ -26,11 +26,16 @@ The migration above predates the evidence-type-fit check that `/audit-adr` and `
 
 These predate the new rule, so they are not regressions of this branch and sit outside its diff. Run a re-audit pass: route each universal claim through `/testing` (most are `compliance` — a structural rule every conformant implementation must always satisfy — or `property`) and retag, then confirm `/audit-adr` returns APPROVED. Audit gate: `/audit-adr` on both records clean.
 
-## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
+## ADR-authoring skills still teach the pre-`## Verification` layout (Rust outstanding)
 
-`/architecting-python`, `/architecting-typescript`, and their `standardizing-*-architecture` references teach the pre-`## Verification` ADR layout — `Purpose` / `Context` / `Decision` / `Compliance` with bare `([review])` tags. An ADR authored through them is then deterministically REJECTED by `/audit-adr` at the tag-validity step, the same gap the record migration above closes for existing files.
+The TypeScript and Python ADR producer **and** validator skills now teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Audit` / `### Eval` / `### Testing`) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
 
-Update the language architecting and `standardizing-*-architecture` skills to teach the `## Verification` structure (`### Testing` / `### Eval` / `### Audit` with per-rule evidence-type tags) as part of the same migration. These skill edits are plugin-distribution changes carrying their own version bump, so they travel with the record migration rather than a feature PR.
+- `/architecting-typescript` (+ `references/adr-patterns.md`), `/standardizing-typescript-architecture`, `/auditing-typescript-architecture` (+ `references/example-audit.md`).
+- `/architecting-python` (+ `references/testability-patterns.md`, `references/test-infrastructure-patterns.md`), `/standardizing-python-architecture`, `/auditing-python-architecture` (+ `references/example-audit.md`).
+
+The original scope named only the producers; the validators were migrated in lockstep because `/auditing-*-architecture` enforces an ADR against the standardizing skill's section list and `## Compliance` shape — leaving them on the legacy layout would make the auditor deterministically REJECT correctly-authored ADRs.
+
+**Rust outstanding**: `/standardizing-rust-architecture` and `/auditing-rust-architecture` (plus the Rust `references/example-audit.md`) still carry the legacy `<testability_in_compliance>` tag, the `testability-in-compliance` verdict row, and the `## Compliance` / `([review])` structure. Migrate them the same way — decision-first + `## Verification` / `### Audit` / `([audit])` — when the Rust architecture surface is next touched. Audit gate: `just check-skills` after the sweep; re-grep `src/plugins/rust/` for `([review])` and `testability_in_compliance`.
 
 ## Evidence-type terminology not yet propagated to language plugins and verdict identifiers (deferred)
 
