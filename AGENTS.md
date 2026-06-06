@@ -385,22 +385,25 @@ Bare `git push origin main` skips the change-aware publish wrapper. For plugin d
 
 ⚠️ **NEVER run `claude plugin update`, `claude plugin marketplace update`, or `codex plugin marketplace upgrade` by hand.** These are the primitives that `just sync-marketplace` (and therefore `just push-marketplace`) already orchestrates in the right order. Running them manually risks the wrong product scope, steps out of order, or skipped post-install validation. Read the Justfile before any marketplace operation.
 
-### How the marketplace cache resolves to skill content
+### How skill content reaches a session
 
-`.claude-plugin/marketplace.json` declares each plugin with a relative `source: "./dist/claude/<name>"` path. The runtime resolves every install — pinned or unpinned — through the versioned cache directories under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`. Each `claude plugin marketplace upgrade` adds a new version directory; prior version directories persist alongside it. Per `spx/13-infrastructure.enabler/32-installation.enabler/21-claude-cache-preservation.pdr.md`, the marketplace sync recipe replaces prior version directories with symlinks to the current version, so any resolved version path lands on the same content.
+This repository registers the `outcomeeng` marketplace with Claude Code as a **Directory source** at the repo root — `claude plugin marketplace list` reports `Source: Directory (.../outcomeeng/plugins)`, and each plugin's `marketplace.json` entry uses a relative `source: "./dist/claude/<name>"`.
 
-The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked. `/reload-plugins` re-indexes the cache and re-reads SKILL.md from disk during registration; first invocations after the reload pick up the disk content. Skills already loaded into session memory keep their cached content for the rest of the session until compaction re-attaches from disk.
+**Claude** loads a plugin's skills from the source tree in place: a skill invocation reports its base directory as `<repo>/dist/claude/<plugin>/skills/<skill>/`, the `dist/claude/` of the checkout registered as the marketplace source — which in a multi-worktree setup may differ from the worktree you are editing in. When `claude plugin marketplace update outcomeeng` runs and a plugin's version has bumped, Claude repoints each running session from that source directory to a versioned snapshot under `~/.claude/plugins/cache/outcomeeng/<plugin>/<version>/`, so the session stays on one consistent version while the source `dist/` advances — the load path moves (source → cache) but the version a session sees does not change underneath it. A session can therefore show a source `dist/` path while the cache holds other versions; the snapshot it is pinned to, if any, is the one its last version-bumped update repointed it to.
+
+**Codex** resolves differently. `codex plugin marketplace upgrade` clones the marketplace from GitHub, copies each plugin's skills into `~/.codex/plugins/cache/<marketplace>/<plugin>/<version>/`, and removes the superseded version directory — which on its own strands any running Codex session still resolving through the deleted path. `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md` defines the scheme that prevents this: each plugin version published within the trailing ten-day window is kept as a symlink to the current version directory, so in-flight Codex sessions keep resolving.
+
+The Skill tool loads SKILL.md content into per-session memory the first time the skill is invoked and keeps it for the rest of the session, re-attaching it (truncated) after compaction. `/reload-plugins` re-indexes the marketplace and re-reads each SKILL.md from disk during registration — from the path the session resolves to, the source `dist/` or a pinned cache snapshot — so the first invocation after a reload picks up the current content.
 
 ### Smoke-testing skill changes
 
-While the change is still on your feature branch:
+Work in the checkout registered as the marketplace source (`claude plugin marketplace list` shows which directory that is):
 
-1. Edit the working-tree skill files.
-2. Commit, then run `just sync-marketplace` (or `just push-marketplace` if pushing at the same time).
-3. Run `/reload-plugins`.
-4. Invoke the skill — first invocation after the reload reads the new content from the cache.
+1. Edit `src/plugins/<plugin>/` and run `just build-skills` so the change lands in `dist/claude/<plugin>/`.
+2. Run `/reload-plugins`. For a Claude session serving from the source `dist/` — the usual case while developing — this re-reads the edited SKILL.md directly, so no version bump or sync is needed to smoke-test a Claude change in the source checkout.
+3. Invoke the skill — the first invocation after the reload loads the new content.
 
-The sync recipe propagates working-tree changes into the cache directories that `/reload-plugins` re-indexes. Without it the cache stays at the prior published state and reload re-reads the same bytes. After a PR merge or direct `main` publication that changes plugin distribution files, `git fetch origin main && git switch --detach origin/main && just sync-marketplace <previous-main-ref>` followed by `/reload-plugins` brings every layer current — working tree, marketplace catalog, per-session memory.
+`just sync-marketplace` is for the cross-runtime install state, not for serving a Claude edit in the source checkout. It runs `claude plugin marketplace update outcomeeng` (which, on a version bump, repoints running Claude sessions to the versioned cache snapshot) and the Codex cache-preservation step (`outcomeeng.distribution.codex_cache`, per `21-codex-cache-preservation.adr.md`), then `validate_install` and `check-installed`. After a PR merge or direct `main` publication that changes plugin distribution files, bring the source checkout to the merged state and refresh installs: `git fetch origin main && git switch --detach origin/main && just sync-marketplace <previous-main-ref>`, then `/reload-plugins`.
 
 ## Missing plugins or skills
 
