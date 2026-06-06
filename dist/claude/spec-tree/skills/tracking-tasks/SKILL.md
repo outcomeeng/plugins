@@ -76,11 +76,11 @@ NEVER copy these into a heartbeat:
 <lifecycle>
 Create tracking when active work is blocked only by time, pending checks, pending review, host load, external convergence, or a delayed repository-governed action.
 
-Refresh tracking when the work item gains a new commit, run id, PR number, blocker, approval boundary, failure classification, or next repository action.
+Refresh tracking on a new commit, run id, PR number, blocker, approval boundary, failure classification, or next repository action. Refreshing re-schedules the next fire and updates the pointer when the work-item id itself changes; it never writes the blocker, approval boundary, or failure classification into the prompt — that state is reconstructed on wake-up, and anything a later fire needs is written to a durable artifact.
 
 Keep tracking active when state is queued, in progress, pending, retry-after-classification, awaiting deterministic local repair, or waiting for external convergence.
 
-Convert tracking to a repair path when a failure is deterministic and can be fixed locally. The next heartbeat names the failed layer, the exact source of logs or feedback, and the next repair checkpoint.
+Convert tracking to a repair path when a failure is deterministic and can be fixed locally. The next fire re-sends the same skills-and-pointers prompt unchanged; the failed layer, the log source, and the next repair checkpoint are written to `PLAN.md` / `ISSUES.md` so the next fire reconstructs them from there.
 
 Delete tracking when the PR is merged and post-merge verification is green, the work item is closed, the task acceptance condition is met, or the only remaining step is operator approval and the owning workflow says to stop for approval.
 </lifecycle>
