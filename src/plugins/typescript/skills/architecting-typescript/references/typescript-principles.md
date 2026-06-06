@@ -73,7 +73,7 @@ await exec(`hugo --destination ${outputDir}`); // Shell interpolation
 ## Testability by Design
 
 - Design for dependency injection (NO MOCKING)
-- Define Compliance constraints that make the right evidence levels achievable
+- Define `## Verification` constraints that make the right evidence levels achievable
 - Pure functions enable `l1` testing
 - Design for the minimum level that provides confidence
 

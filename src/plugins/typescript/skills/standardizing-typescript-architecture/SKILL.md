@@ -8,7 +8,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical ADR conventions for TypeScript projects. Defines what sections an ADR has, how testability appears in Compliance rules, and TypeScript-specific DI patterns. Loaded by `/architecting-typescript` (to produce conformant ADRs) and `/auditing-typescript-architecture` (to validate them).
+Canonical ADR conventions for TypeScript projects. Defines what sections an ADR has, how testability appears in Verification rules, and TypeScript-specific DI patterns. Loaded by `/architecting-typescript` (to produce conformant ADRs) and `/auditing-typescript-architecture` (to validate them).
 </objective>
 
 <reference_note>
@@ -21,46 +21,36 @@ When another skill loads this reference inside a repository, it must also check 
 
 <adr_sections>
 
-The ADR template (from `/understanding`) defines exactly these sections:
+The ADR template (from `/understanding`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:
 
-1. **Purpose** -- What concern this decision governs. State as permanent truth.
-2. **Context** -- Business impact and technical constraints.
-3. **Decision** -- Primary decision in one sentence.
-4. **Rationale** -- Why this is right given the constraints. Alternatives considered and rejected.
-5. **Trade-offs accepted** -- Table: what is given up, why it is acceptable or mitigated.
-6. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-7. **Compliance** -- Observable patterns (Recognized by), rules (MUST), prohibitions (NEVER).
+1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
+2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
+3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Audit` (agent judgment, `([audit])`), `### Eval` (graded LLM behavior, `([eval])`), `### Testing` (deterministic test, `([{evidence type}])`). Include only the subsections that apply.
 
-**This is the complete list.** An ADR has no other sections. There is no "Testing Strategy" section, no "Status" field, no "Level Assignments" table. Testability constraints live in Compliance as MUST/NEVER rules.
+**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. TypeScript architecture rules — DI mandates, mocking prohibitions — require agent judgment, so they live under `### Audit` with `([audit])`.
 
 **When an ADR is required:** Every module that makes architectural decisions — module layout, library choice, DI patterns — requires an ADR. The absence of an ADR is itself a violation, not a reason to skip the audit.
 
 </adr_sections>
 
-<testability_in_compliance>
+<testability_in_verification>
 
 ADRs do not assign testing levels. They establish constraints that *make levels achievable*. The `/testing` skill assigns levels when it reads spec assertions alongside ADR constraints. This separation follows the truth hierarchy: ADR governs, spec declares, test verifies.
 
-**The mechanism:** Compliance rules that mandate DI, prohibit mocking, and require observable interfaces.
+**The mechanism:** Verification rules under `### Audit` that mandate DI, prohibit mocking, and require observable interfaces.
 
-**Correct pattern -- testability as MUST/NEVER:**
+**Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
 ```markdown
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Observable DI parameters in all functions that invoke external tools.
-
-### MUST
-
-- All external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([review])
-- Configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([review])
-
-### NEVER
-
-- `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([review])
-- Direct `child_process.exec/spawn` without DI wrapper -- prevents isolated testing ([review])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter -- enables isolated testing without mocking ([audit])
+- ALWAYS: configuration accepts typed inputs, not environment reads -- enables `l1` verification of config logic ([audit])
+- NEVER: `vi.mock()` or `jest.mock()` for any dependency -- violates reality principle ([audit])
+- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**
@@ -82,11 +72,11 @@ Observable DI parameters in all functions that invoke external tools.
 
 **Why:** Level assignments depend on the spec's assertions, the product's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
 
-</testability_in_compliance>
+</testability_in_verification>
 
 <atemporal_voice>
 
-ADRs state architectural truth. They NEVER narrate code history, current state, or migration plans. This is a REJECTION-level violation in ANY section -- Context, Decision, Rationale, Compliance, all of it. No section gets a pass.
+ADRs state architectural truth. They NEVER narrate code history, current state, or migration plans. This is a REJECTION-level violation in ANY section -- the decision statement, Rationale, Verification, all of it. No section gets a pass.
 
 An ADR that references existing code ("The current X has...", "The file X does not exist") is temporal -- it becomes stale the moment that code changes. Code that violates an ADR is discovered through code review and test coverage analysis against the ADR's invariants.
 
@@ -117,12 +107,12 @@ An ADR that references existing code ("The current X has...", "The file X does n
 
 <di_patterns>
 
-When an ADR mandates dependency injection, these are the TypeScript patterns to reference in Compliance rules.
+When an ADR mandates dependency injection, these are the TypeScript patterns to reference in `## Verification` `### Audit` rules.
 
 **Interface-based DI:**
 
 ```typescript
-// ADR Compliance: "MUST accept runner as parameter"
+// ADR Verification: "ALWAYS accept runner as parameter"
 interface BuildDependencies {
   run: (cmd: string[], opts?: ExecOptions) => Promise<ExecResult>;
   resolveVersion: (tool: string) => Promise<string>;
@@ -138,14 +128,14 @@ function buildSite(
 }
 ```
 
-**ADR Compliance rule to code mapping:**
+**ADR Verification rule to code mapping:**
 
-| ADR Compliance rule                  | Code implements                        |
-| ------------------------------------ | -------------------------------------- |
-| "MUST accept runner as parameter"    | `function f(deps: RunnerDeps)`         |
-| "MUST validate config at load time"  | Zod schema with `.parse()` at boundary |
-| "NEVER use vi.mock()"                | No mock imports in test files          |
-| "NEVER shell out without DI wrapper" | No bare `exec()` / `spawn()` calls     |
+| ADR Verification rule                 | Code implements                        |
+| ------------------------------------- | -------------------------------------- |
+| "ALWAYS accept runner as parameter"   | `function f(deps: RunnerDeps)`         |
+| "ALWAYS validate config at load time" | Zod schema with `.parse()` at boundary |
+| "NEVER use vi.mock()"                 | No mock imports in test files          |
+| "NEVER shell out without DI wrapper"  | No bare `exec()` / `spawn()` calls     |
 
 **Mocking prohibition in ADR language:**
 
@@ -161,7 +151,7 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 <level_context>
 
-The architect needs to understand testing levels to write effective Compliance rules. The auditor needs them to verify that Compliance rules enable the right levels. These definitions come from `/testing`.
+The architect needs to understand testing levels to write effective Verification rules. The auditor needs them to verify that Verification rules enable the right levels. These definitions come from `/testing`.
 
 | Level | TypeScript infrastructure               | When to use                                   |
 | ----- | --------------------------------------- | --------------------------------------------- |
@@ -176,7 +166,7 @@ The architect needs to understand testing levels to write effective Compliance r
 - Network dependencies and external services are `l3`
 - SaaS services jump `l1` to `l3` (no `l2`)
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "ALWAYS accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 
 </level_context>
 
@@ -191,6 +181,5 @@ The architect needs to understand testing levels to write effective Compliance r
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |
 | Implementation code           | ADRs constrain implementation, not provide it  | `/coding-typescript`               |
-| Test references `([test])`    | ADRs are verified by architecture review       | Spec assertions only               |
 
 </anti_patterns>

@@ -1,30 +1,23 @@
 # Common ADR Patterns for TypeScript
 
-These patterns show how testability constraints appear in the Compliance section. See `/standardizing-typescript-architecture` for the canonical ADR section structure.
+These patterns show how testability constraints appear under the `## Verification` section's `### Audit` subsection. See `/standardizing-typescript-architecture` for the canonical ADR section structure.
 
 ## Pattern: External Tool Integration
 
 When integrating with external tools (Hugo, Caddy, LHCI):
 
 ```markdown
-## Decision
+# External Tool Integration
 
 Use dependency injection for all external tool invocations.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Observable `deps` parameter in all functions that invoke external tools.
-
-### MUST
-
-- All functions that call external tools accept a `deps` parameter with a typed interface -- enables `l1` testing of command-building logic ([review])
-- Default implementations use real tools; tests inject controlled implementations -- no mocking ([review])
-
-### NEVER
-
-- Direct `child_process.exec/spawn` without DI wrapper -- prevents isolated testing ([review])
+- ALWAYS: functions that call external tools accept a `deps` parameter with a typed interface -- enables `l1` testing of command-building logic ([audit])
+- ALWAYS: default implementations use real tools; tests inject controlled implementations -- no mocking ([audit])
+- NEVER: direct `child_process.exec/spawn` without a DI wrapper -- prevents isolated testing ([audit])
 ```
 
 ## Pattern: Configuration Loading
@@ -32,25 +25,18 @@ Observable `deps` parameter in all functions that invoke external tools.
 When defining configuration approach:
 
 ```markdown
-## Decision
+# Configuration Loading
 
 Use Zod schemas for all configuration validation.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Zod schema accompanying every config file type. Validation at load time, not use time.
-
-### MUST
-
-- All config files have corresponding Zod schemas -- ensures type-safe, validated config ([review])
-- Config loading validates at load time with `.parse()` -- fail fast with descriptive errors ([review])
-
-### NEVER
-
-- Unvalidated config access at use time -- defers errors to runtime ([review])
-- `as` type assertions on config data -- bypasses validation ([review])
+- ALWAYS: config files have corresponding Zod schemas -- ensures type-safe, validated config ([audit])
+- ALWAYS: config loading validates at load time with `.parse()` -- fail fast with descriptive errors ([audit])
+- NEVER: unvalidated config access at use time -- defers errors to runtime ([audit])
+- NEVER: `as` type assertions on config data -- bypasses validation ([audit])
 ```
 
 ## Pattern: CLI Structure
@@ -58,25 +44,18 @@ Zod schema accompanying every config file type. Validation at load time, not use
 When defining CLI architecture:
 
 ```markdown
-## Decision
+# CLI Structure
 
 Use Commander.js with subcommand pattern.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Separate module per command. Business logic delegated to runners, not in command handlers.
-
-### MUST
-
-- Each command is a separate module exporting a registration function -- enables isolated `l1` testing ([review])
-- Commands delegate to runner functions that accept DI parameters -- separates parsing from logic ([review])
-
-### NEVER
-
-- Business logic in command handlers -- prevents isolated testing ([review])
-- Direct I/O in command modules without DI -- couples commands to environment ([review])
+- ALWAYS: each command is a separate module exporting a registration function -- enables isolated `l1` testing ([audit])
+- ALWAYS: commands delegate to runner functions that accept DI parameters -- separates parsing from logic ([audit])
+- NEVER: business logic in command handlers -- prevents isolated testing ([audit])
+- NEVER: direct I/O in command modules without DI -- couples commands to environment ([audit])
 ```
 
 ## Pattern: Error Handling
@@ -84,25 +63,18 @@ Separate module per command. Business logic delegated to runners, not in command
 When defining error handling approach:
 
 ```markdown
-## Decision
+# Error Handling
 
 Use typed error classes with structured error codes.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-All thrown errors extend `AppError`. Error codes are unique and documented.
-
-### MUST
-
-- All errors extend a base `AppError` class with structured error codes -- enables programmatic handling ([review])
-- Error messages are user-facing and actionable -- no raw stack traces in output ([review])
-
-### NEVER
-
-- Throwing plain `Error` or string literals -- loses structure ([review])
-- Swallowing errors without logging or re-throwing -- hides failures ([review])
+- ALWAYS: errors extend a base `AppError` class with structured error codes -- enables programmatic handling ([audit])
+- ALWAYS: error messages are user-facing and actionable -- no raw stack traces in output ([audit])
+- NEVER: throwing plain `Error` or string literals -- loses structure ([audit])
+- NEVER: swallowing errors without logging or re-throwing -- hides failures ([audit])
 ```
 
 ## Pattern: Async Operations
@@ -110,24 +82,17 @@ All thrown errors extend `AppError`. Error codes are unique and documented.
 When defining async patterns:
 
 ```markdown
-## Decision
+# Async Operations
 
 Use async/await with explicit error handling and timeouts.
 
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Explicit return types on all async functions. Timeouts configurable via DI.
-
-### MUST
-
-- All async functions have explicit return types -- prevents implicit `Promise<any>` ([review])
-- Timeouts are configurable via dependency injection -- enables `l1` testing of timeout logic ([review])
-- Errors are caught and converted to typed `AppError` subclasses -- structured propagation ([review])
-
-### NEVER
-
-- Unhandled promise rejections -- crashes process ([review])
-- Hardcoded timeout values -- prevents testing and configuration ([review])
+- ALWAYS: async functions have explicit return types -- prevents implicit `Promise<any>` ([audit])
+- ALWAYS: timeouts are configurable via dependency injection -- enables `l1` testing of timeout logic ([audit])
+- ALWAYS: errors are caught and converted to typed `AppError` subclasses -- structured propagation ([audit])
+- NEVER: unhandled promise rejections -- crashes process ([audit])
+- NEVER: hardcoded timeout values -- prevents testing and configuration ([audit])
 ```

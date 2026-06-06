@@ -397,23 +397,23 @@ def test_create_timestamp() -> None:
 
 ---
 
-## ADR Compliance Rules for Testability
+## ADR Verification Rules for Testability
 
-ADRs express testability through Compliance rules, not a separate Testing Strategy section:
+ADRs express testability through `### Audit` rules under `## Verification`, not a separate Testing Strategy section:
 
 ```markdown
-## Compliance
+## Invariants
 
-### MUST
+- Total is always the sum of line prices
 
-- Pure pricing rules live in functions that accept typed values and return typed results -- enables `l1` `mapping` and `property` evidence ([review])
-- Order persistence accepts a repository Protocol -- enables `l2` scenario evidence with the real database harness ([review])
-- Time-dependent behavior accepts a Clock Protocol -- enables deterministic `l1` evidence without patching globals ([review])
+## Verification
 
-### NEVER
+### Audit
 
-- `unittest.mock.patch` replaces repository, payment, or clock dependencies ([review])
-- Invariant: total is always sum of line prices
+- ALWAYS: pure pricing rules live in functions that accept typed values and return typed results -- enables `l1` `mapping` and `property` evidence ([audit])
+- ALWAYS: order persistence accepts a repository Protocol -- enables `l2` scenario evidence with the real database harness ([audit])
+- ALWAYS: time-dependent behavior accepts a Clock Protocol -- enables deterministic `l1` evidence without patching globals ([audit])
+- NEVER: `unittest.mock.patch` replaces repository, payment, or clock dependencies ([audit])
 ```
 
 ---

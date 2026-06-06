@@ -8,7 +8,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical ADR conventions for Python projects. Defines what sections an ADR has, how testability appears in Compliance rules, and Python-specific DI patterns using Protocols. Loaded by `/architecting-python` (to produce conformant ADRs) and `/auditing-python-architecture` (to validate them).
+Canonical ADR conventions for Python projects. Defines what sections an ADR has, how testability appears in Verification rules, and Python-specific DI patterns using Protocols. Loaded by `/architecting-python` (to produce conformant ADRs) and `/auditing-python-architecture` (to validate them).
 </objective>
 
 <reference_note>
@@ -17,46 +17,36 @@ This is a reference skill. The architect and auditor load these conventions auto
 
 <adr_sections>
 
-The ADR template (from `/understanding`) defines exactly these sections:
+The ADR template (from `/understanding`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:
 
-1. **Purpose** -- What concern this decision governs. State as permanent truth.
-2. **Context** -- Business impact and technical constraints.
-3. **Decision** -- Primary decision in one sentence.
-4. **Rationale** -- Why this is right given the constraints. Alternatives considered and rejected.
-5. **Trade-offs accepted** -- Table: what is given up, why it is acceptable or mitigated.
-6. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-7. **Compliance** -- Observable patterns (Recognized by), rules (MUST), prohibitions (NEVER).
+1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
+2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
+3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Audit` (agent judgment, `([audit])`), `### Eval` (graded LLM behavior, `([eval])`), `### Testing` (deterministic test, `([{evidence type}])`). Include only the subsections that apply.
 
-**This is the complete list.** An ADR has no other sections. There is no "Testing Strategy" section, no "Status" field, no "Level Assignments" table. Testability constraints live in Compliance as MUST/NEVER rules.
+**This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. Python architecture rules — DI mandates, mocking prohibitions — require agent judgment, so they live under `### Audit` with `([audit])`.
 
 **When an ADR is required:** Every module that makes architectural decisions — module layout, library choice, DI patterns — requires an ADR. The absence of an ADR is itself a violation, not a reason to skip the audit.
 
 </adr_sections>
 
-<testability_in_compliance>
+<testability_in_verification>
 
 ADRs do not assign testing levels. They establish constraints that *make levels achievable*. The `/testing` skill assigns levels when it reads spec assertions alongside ADR constraints. This separation follows the truth hierarchy: ADR governs, spec declares, test verifies.
 
-**The mechanism:** Compliance rules that mandate DI, prohibit mocking, and require observable Protocol interfaces.
+**The mechanism:** Verification rules under `### Audit` that mandate DI, prohibit mocking, and require observable Protocol interfaces.
 
-**Correct pattern -- testability as MUST/NEVER:**
+**Correct pattern -- testability as ALWAYS/NEVER under `### Audit`:**
 
 ```markdown
-## Compliance
+## Verification
 
-### Recognized by
+### Audit
 
-Observable Protocol parameters in all functions that invoke external tools or services.
-
-### MUST
-
-- All external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables isolated testing without mocking ([review])
-- Configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([review])
-
-### NEVER
-
-- `unittest.mock.patch` for any dependency -- violates reality principle ([review])
-- Direct `subprocess.run` without DI wrapper -- prevents isolated testing ([review])
+- ALWAYS: external tool invocations accept a dependency-injected runner parameter typed as a Protocol -- enables isolated testing without mocking ([audit])
+- ALWAYS: configuration accepts typed inputs via Pydantic models, not environment reads -- enables `l1` verification of config logic ([audit])
+- NEVER: `unittest.mock.patch` for any dependency -- violates reality principle ([audit])
+- NEVER: direct `subprocess.run` without a DI wrapper -- prevents isolated testing ([audit])
 ```
 
 **What this replaces -- the following does NOT belong in an ADR:**
@@ -78,11 +68,11 @@ Observable Protocol parameters in all functions that invoke external tools or se
 
 **Why:** Level assignments depend on the spec's assertions, the product's infrastructure, and the `/testing` skill's Five Factors analysis. The ADR cannot know these at authoring time. The ADR's job is to establish constraints (DI, no mocking) that make the right levels *possible*.
 
-</testability_in_compliance>
+</testability_in_verification>
 
 <atemporal_voice>
 
-ADRs state architectural truth. They NEVER narrate code history, current state, or migration plans. This is a REJECTION-level violation in ANY section -- Context, Decision, Rationale, Compliance, all of it. No section gets a pass.
+ADRs state architectural truth. They NEVER narrate code history, current state, or migration plans. This is a REJECTION-level violation in ANY section -- the decision statement, Rationale, Verification, all of it. No section gets a pass.
 
 An ADR that references existing code ("The current X has...", "The file X does not exist") is temporal -- it becomes stale the moment that code changes. Code that violates an ADR is discovered through code review and test coverage analysis against the ADR's invariants.
 
@@ -113,7 +103,7 @@ An ADR that references existing code ("The current X has...", "The file X does n
 
 <di_patterns>
 
-When an ADR mandates dependency injection, these are the Python patterns to reference in Compliance rules.
+When an ADR mandates dependency injection, these are the Python patterns to reference in `## Verification` `### Audit` rules.
 
 **Protocol-based DI:**
 
@@ -121,7 +111,7 @@ When an ADR mandates dependency injection, these are the Python patterns to refe
 from typing import Protocol
 
 
-# ADR Compliance: "MUST accept runner as parameter"
+# ADR Verification: "ALWAYS accept runner as parameter"
 class CommandRunner(Protocol):
     def run(self, cmd: list[str]) -> tuple[int, str, str]: ...
 
@@ -137,14 +127,14 @@ def sync_files(
     return SyncResult(success=returncode == 0)
 ```
 
-**ADR Compliance rule to code mapping:**
+**ADR Verification rule to code mapping:**
 
-| ADR Compliance rule                  | Code implements                                     |
-| ------------------------------------ | --------------------------------------------------- |
-| "MUST accept runner as parameter"    | `def f(runner: CommandRunner)`                      |
-| "MUST validate config at load time"  | Pydantic model with `.model_validate()` at boundary |
-| "NEVER use unittest.mock.patch"      | No mock imports in test files                       |
-| "NEVER shell out without DI wrapper" | No bare `subprocess.run()` calls                    |
+| ADR Verification rule                 | Code implements                                     |
+| ------------------------------------- | --------------------------------------------------- |
+| "ALWAYS accept runner as parameter"   | `def f(runner: CommandRunner)`                      |
+| "ALWAYS validate config at load time" | Pydantic model with `.model_validate()` at boundary |
+| "NEVER use unittest.mock.patch"       | No mock imports in test files                       |
+| "NEVER shell out without DI wrapper"  | No bare `subprocess.run()` calls                    |
 
 **Mocking prohibition in ADR language:**
 
@@ -160,7 +150,7 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 <level_context>
 
-The architect needs to understand testing levels to write effective Compliance rules. The auditor needs them to verify that Compliance rules enable the right levels. These definitions come from `/testing`.
+The architect needs to understand testing levels to write effective Verification rules. The auditor needs them to verify that Verification rules enable the right levels. These definitions come from `/testing`.
 
 | Level | Python infrastructure                                | When to use                           |
 | ----- | ---------------------------------------------------- | ------------------------------------- |
@@ -175,7 +165,7 @@ The architect needs to understand testing levels to write effective Compliance r
 - Network dependencies and external services are `l3`
 - SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`)
 
-**How levels relate to ADRs:** The ADR does not assign levels. It establishes Compliance rules that determine what levels are *achievable*. "MUST accept runner as Protocol parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
+**How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "ALWAYS accept runner as Protocol parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 
 </level_context>
 
@@ -190,7 +180,6 @@ The architect needs to understand testing levels to write effective Compliance r
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants    |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items              |
 | Implementation code           | ADRs constrain implementation, not provide it  | `/coding-python`                      |
-| Test references `([test])`    | ADRs are verified by architecture review       | Spec assertions only                  |
 | `src.*` import examples       | Ambiguous convention                           | Use `product.*` / `product_testing.*` |
 
 </anti_patterns>
