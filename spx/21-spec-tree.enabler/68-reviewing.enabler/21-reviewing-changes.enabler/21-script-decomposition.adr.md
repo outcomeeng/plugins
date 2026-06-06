@@ -10,15 +10,15 @@ A separate policy module from the CLI scripts because the canonical schema — e
 
 ### Testing
 
-- ALWAYS: the policy module `review_result.py` declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, the `Severity`/`Concern` enums, the `ReviewResultValidationError` exception, and the `parse_json` / `to_json_dict` / `from_json_dict` entry points ([scenario])
-- ALWAYS: the review-result schema carries no `decision`/verdict field — a review produces findings only, and each consumer applies its own policy by validity and phase ([scenario])
-- ALWAYS: `validate_review_result.py` invokes `review_result.parse_json` for validation — the arbiter does not re-implement schema knowledge ([scenario])
-- ALWAYS: `compute_diff.py` resolves the thread via `thread_store.current_slug()`, reads the optional `changes.json` override through the facade, resolves `base_ref` and `head_ref` through their precedence chains, and runs `git diff <base_ref>...<head_ref>` — no `base_ref` source means a non-zero exit naming all three sources ([scenario])
-- ALWAYS: `render_review.py` parses `review-result.json` through `review_result.parse_json` before emitting markdown, loads the per-section templates, partitions findings by render class, and exits non-zero on an invalid result before producing any surface ([scenario])
+- ALWAYS: the policy module `review_result.py` declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, the `Severity`/`Concern` enums, the `ReviewResultValidationError` exception, and the `parse_json` / `to_json_dict` / `from_json_dict` entry points ([compliance])
+- ALWAYS: the review-result schema carries no `decision`/verdict field — a review produces findings only, and each consumer applies its own policy by validity and phase ([compliance])
+- ALWAYS: `validate_review_result.py` invokes `review_result.parse_json` for validation — the arbiter does not re-implement schema knowledge ([compliance])
+- ALWAYS: `compute_diff.py` resolves the thread via `thread_store.current_slug()`, reads the optional `changes.json` override through the facade, resolves `base_ref` and `head_ref` through their precedence chains, and runs `git diff <base_ref>...<head_ref>` — no `base_ref` source means a non-zero exit naming all three sources ([compliance])
+- ALWAYS: `render_review.py` parses `review-result.json` through `review_result.parse_json` before emitting markdown, loads the per-section templates, partitions findings by render class, and exits non-zero on an invalid result before producing any surface ([compliance])
 - ALWAYS: the swappable review prompt at `references/review-prompt.md` is loaded by skill prose via `${CLAUDE_SKILL_DIR}/references/review-prompt.md` — the prompt is data the skill loads, never code ([compliance])
 - ALWAYS: the per-section render templates under `references/render/` are loaded by `render_review.py`, and every render-shape literal lives in a template file, never as a Python constant ([compliance])
 - ALWAYS: the wrapper agent at `plugins/spec-tree/agents/changes-reviewer.md` reaches the scripts only by invoking the skill — its prose contains no `${CLAUDE_SKILL_DIR}`, no `${CLAUDE_PLUGIN_ROOT}`, and no hard-coded path into `scripts/` ([compliance])
-- ALWAYS: frozen dataclasses are used for `Finding` and `ReviewResult` — instances are values that cannot be mutated between parse and validate ([scenario])
+- ALWAYS: frozen dataclasses are used for `Finding` and `ReviewResult` — instances are values that cannot be mutated between parse and validate ([compliance])
 - NEVER: a CLI script under `scripts/` calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any direct filesystem primitive against the thread-store backend's storage paths — every read and write routes through `thread_store` ([compliance])
 - NEVER: a second representation of the schema is authored — `review_result.py` is the canonical schema ([compliance])
 - NEVER: the review prompt is embedded inside `SKILL.md` or any `*.py` file — it is one standalone markdown file at the declared reference path ([compliance])

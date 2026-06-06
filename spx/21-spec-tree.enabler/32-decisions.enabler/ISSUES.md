@@ -17,14 +17,11 @@ Thirteen records were migrated to the `## Verification` structure (`### Testing`
 
 **Resolution evidence**: `spx validation markdown` passes; the two exemplars (`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`) audited APPROVED via `/audit-adr` and `/audit-pdr`; the remaining 12 confirmed clean for temporal voice, bare `([review])`/`([test])` tags, double-tagged or untagged rule lines, and legacy section headings.
 
-## Re-audit migrated records for universal-claim evidence-type fit (deferred)
+## Re-audit migrated records for universal-claim evidence-type fit (RESOLVED)
 
-The migration above predates the evidence-type-fit check that `/audit-adr` and `/audit-pdr` now enforce (a `### Testing` rule whose claim is universal — ALWAYS/NEVER/"for all"/"for every"/"no input" — is never `scenario`; mismatch is an `evidence-type-mismatch` REJECT). Two migrated records carry universal claims under `### Testing` tagged `([scenario])` that the new rule rejects:
+The nine universal `### Testing` rules that carried `([scenario])` were re-routed through `/testing` and retagged: in `spx/21-spec-tree.enabler/17-auditing.adr.md`, the atomic-write/lock-release rule to `[compliance]` and the regression-reopen/ID-monotonicity and content-identity invariants to `[property]`; in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`, all six structural and behavioral rules to `[compliance]`.
 
-- `spx/21-spec-tree.enabler/17-auditing.adr.md` — 3 ALWAYS rules under `### Testing` tagged `[scenario]`.
-- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md` — 6 ALWAYS rules under `### Testing` tagged `[scenario]`.
-
-These predate the new rule, so they are not regressions of this branch and sit outside its diff. Run a re-audit pass: route each universal claim through `/testing` (most are `compliance` — a structural rule every conformant implementation must always satisfy — or `property`) and retag, then confirm `/audit-adr` returns APPROVED. Audit gate: `/audit-adr` on both records clean.
+**Resolution evidence**: `/audit-adr` returns APPROVED on both records — the evidence-type-fit check passes because no universal claim is tagged `scenario`; `spx validation markdown` passes.
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
 
