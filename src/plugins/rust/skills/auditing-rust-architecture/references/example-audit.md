@@ -8,15 +8,15 @@ This is a complete REJECTED review showing the concern table and the level of de
 
 ## Verdict
 
-| # | Concern               | Status | Detail                                      |
-| - | --------------------- | ------ | ------------------------------------------- |
-| 1 | Section structure     | REJECT | Contains phantom "Testing Strategy" section |
-| 2 | Testability in Compl. | REJECT | Compliance omits DI and no-mocking rules    |
-| 3 | Atemporal voice       | REJECT | Context narrates present code state         |
-| 4 | Mocking prohibition   | REJECT | Decision prescribes `mockall` at the seam   |
-| 5 | Level accuracy        | PASS   | Level references are consistent             |
-| 6 | Anti-patterns         | REJECT | Level assignment table moved into ADR       |
-| 7 | Ancestor consistency  | PASS   | No contradiction with ancestor decisions    |
+| # | Concern               | Status | Detail                                         |
+| - | --------------------- | ------ | ---------------------------------------------- |
+| 1 | Section structure     | REJECT | Contains phantom "Testing Strategy" section    |
+| 2 | Testability in Verif. | REJECT | Verification omits DI and no-mocking rules     |
+| 3 | Atemporal voice       | REJECT | Decision statement narrates present code state |
+| 4 | Mocking prohibition   | REJECT | Decision prescribes `mockall` at the seam      |
+| 5 | Level accuracy        | PASS   | Level references are consistent                |
+| 6 | Anti-patterns         | REJECT | Level assignment table moved into ADR          |
+| 7 | Ancestor consistency  | PASS   | No contradiction with ancestor decisions       |
 
 ---
 
@@ -24,7 +24,7 @@ This is a complete REJECTED review showing the concern table and the level of de
 
 ### Mocking At The Boundary
 
-**Where:** Decision section, "Use `mockall` for all command runner tests"
+**Where:** decision statement, "Use `mockall` for all command runner tests"
 **Concern:** Mocking prohibition
 **Why this fails:** The ADR turns generated mocks into the intended seam. The Rust architecture standard requires dependency injection with real traits or function seams so tests preserve coupling to the boundary.
 
@@ -55,54 +55,51 @@ pub fn build_site<R: CommandRunner>(
 **Correct approach:**
 
 ```markdown
-## Compliance
+## Verification
 
-### MUST
+### Audit
 
-- External tool invocations accept an injected runner trait or function parameter -- preserves isolated verification of command logic ([review])
-
-### NEVER
-
-- `mockall`, `faux`, or generated mocks as the primary strategy for architectural seams ([review])
+- ALWAYS: external tool invocations accept an injected runner trait or function parameter -- preserves isolated verification of command logic ([audit])
+- NEVER: `mockall`, `faux`, or generated mocks as the primary strategy for architectural seams ([audit])
 ```
 
 ---
 
 ### Missing Testability Constraints
 
-**Where:** Compliance section
-**Concern:** Testability in Compliance
-**Why this fails:** The ADR governs build orchestration, but Compliance has no rules that force observable seams. Removing the phantom section is insufficient unless those constraints move into MUST and NEVER rules.
+**Where:** `## Verification`
+**Concern:** Testability in Verification
+**Why this fails:** The ADR governs build orchestration, but `## Verification` has no `### Audit` rules that force observable seams. Removing the phantom section is insufficient unless those constraints move into ALWAYS and NEVER rules under `### Audit`.
 
 ---
 
-### Temporal Context Language
+### Temporal Language In The Decision Statement
 
-**Where:** Context section, "The current `build.rs` wrapper shells out directly..."
+**Where:** decision statement, "The current `build.rs` wrapper shells out directly..."
 **Concern:** Atemporal voice
 **Why this fails:** The sentence describes a code snapshot that expires. An ADR states enduring architecture, not the condition of one file on one date.
 
 **Correct approach:**
 
 ```markdown
-**Technical constraints:** Build orchestration invokes external binaries. Injected runner seams isolate command construction from process execution.
+Build orchestration invokes external binaries through injected runner seams that isolate command construction from process execution.
 ```
 
 ---
 
 ## Required Changes
 
-1. Remove the Testing Strategy section and fold testability into Compliance
+1. Remove the Testing Strategy section and fold testability into `## Verification`'s `### Audit`
 2. Replace `mockall` language with injected trait or function seams
-3. Rewrite Context in atemporal voice
-4. Add MUST and NEVER rules that make the intended test shape observable
+3. Rewrite the decision statement in atemporal voice
+4. Add ALWAYS and NEVER rules under `### Audit` that make the intended test shape observable
 
 ---
 
 ## References
 
 - /standardizing-rust-architecture: `<adr_sections>`
-- /standardizing-rust-architecture: `<testability_in_compliance>`
+- /standardizing-rust-architecture: `<testability_in_verification>`
 - /standardizing-rust-architecture: `<atemporal_voice>`
 - /standardizing-rust-architecture: `<di_patterns>`
 

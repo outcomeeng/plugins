@@ -35,16 +35,17 @@ The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec 
 
 The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
 
-## ADR-authoring skills still teach the pre-`## Verification` layout (Rust outstanding)
+## ADR-authoring skills teach the decision-first `## Verification` layout (RESOLVED)
 
-The TypeScript and Python ADR producer **and** validator skills now teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Audit` / `### Eval` / `### Testing`) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
+The TypeScript, Python, and Rust ADR producer **and** validator skills all teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Audit` / `### Eval` / `### Testing`) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
 
 - `/architecting-typescript` (+ `references/adr-patterns.md`), `/standardizing-typescript-architecture`, `/auditing-typescript-architecture` (+ `references/example-audit.md`).
 - `/architecting-python` (+ `references/testability-patterns.md`, `references/test-infrastructure-patterns.md`), `/standardizing-python-architecture`, `/auditing-python-architecture` (+ `references/example-audit.md`).
+- `/architecting-rust` (+ `references/adr-patterns.md`), `/standardizing-rust-architecture`, `/auditing-rust-architecture` (+ `references/example-audit.md`).
 
-The original scope named only the producers; the validators were migrated in lockstep because `/auditing-*-architecture` enforces an ADR against the standardizing skill's section list and `## Compliance` shape — leaving them on the legacy layout would make the auditor deterministically REJECT correctly-authored ADRs.
+The producers and validators were migrated in lockstep per language because `/auditing-*-architecture` enforces an ADR against the standardizing skill's section list and shape — leaving a validator on the legacy layout would make the auditor deterministically REJECT correctly-authored ADRs.
 
-**Rust outstanding**: all three Rust architecture skills are still on the legacy layout — `/architecting-rust` (+ `references/adr-patterns.md`, which prescribes `Purpose, Context, … Compliance` and emits `## Compliance` / `### MUST` / `### NEVER` / `([review])` example ADRs), `/standardizing-rust-architecture` (the `<testability_in_compliance>` tag and `## Compliance` shape), and `/auditing-rust-architecture` (the `testability-in-compliance` verdict row, plus `references/example-audit.md`). Migrate all three the same way — decision-first + `## Verification` / `### Audit` / `([audit])` — when the Rust architecture surface is next touched. Audit gate: `just check-skills` after the sweep; re-grep `src/plugins/rust/` for `([review])` and `testability_in_compliance`.
+**Resolution evidence**: `grep -rnE "\(\[review\]\)|testability_in_compliance|## Compliance" src/plugins/{typescript,python,rust}/skills/*architect*` returns no hits; the `testability-in-verification` verdict row and `<testability_in_verification>` tag are consistent across all three languages.
 
 **Verdict-row-key coverage gap**: the `auditing-{lang}-architecture` skills declare their verdict-row keys (`section-structure`, `testability-in-verification`, `atemporal-voice`, …) as prose in the JSON output schema, with no conformance test or eval pinning the key names — a rename or revert (such as the `testability-in-compliance` → `testability-in-verification` rename above) would go undetected. This is the same class as the `[eval]`-migration candidates tracked in `spx/43-typescript.enabler/25-typescript-standards.enabler/ISSUES.md`; fold verdict-row-key assertions into that language-auditor eval work rather than testing one renamed key in isolation.
 
