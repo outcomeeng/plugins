@@ -256,6 +256,12 @@ Claude moved assertions between nodes and rewrote the source node's hypothesis t
 
 How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The spec tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
 
+**Failure 7: Blanket-re-pointed cited assertions to a generalized parent**
+
+Claude generalized a node into a new parent enabler with multiple children and re-pointed every assertion that cited an ADR/PDR onto the new parent. Some of those assertions held only for the original child's surface or capability, not for every child. An agentic review then surfaced them one per round — each as "the new sibling does not realize this now-universal invariant" — producing a long fix cascade (~10 rounds in one generalization: plan-level approval, per-integration behaviors, persistence, structural discovery, back-link suppression, mount mode), each round correcting one over-universalized assertion.
+
+How to avoid: Before re-pointing, classify each citing assertion. Universal — holds for every child of the generalized parent — cites the parent. Node-specific — holds only for the child with that surface or capability — cites the realizing child. Route each citation to parent or child by that classification; never blanket-re-point every citation to the new parent.
+
 </failure_modes>
 
 <anti_patterns>
@@ -271,6 +277,8 @@ How to avoid: When rewriting specs after structural changes, treat the rewrite a
 **Leaving empty nodes after re-scope.** If you move all assertions out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
 
 **Treating `spx/local/` as a node directory.** `spx/local/` holds skill overlays, not spec nodes. It has no enabler or outcome suffix and its files have no spec structure. Do not move, archive, or validate it as part of tree surgery.
+
+**Blanket-re-pointing cited assertions to a generalized parent.** When generalizing a node into a new parent enabler, an assertion that held only for the original child does not automatically hold for every child. Classify each citation universal vs node-specific and re-point it to the parent or the realizing child accordingly.
 
 </anti_patterns>
 
