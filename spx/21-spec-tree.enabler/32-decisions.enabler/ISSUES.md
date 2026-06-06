@@ -11,28 +11,11 @@
 
 This conformance is an architecture migration that applies to the whole audit-skill family, not just these two, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, reshape the audit agents to `model: sonnet` + `Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, audit-adr/audit-pdr run as read-only verdict producers in the established pre-conformance pattern.
 
-## Evidence-type-tag migration for existing decision records (deferred)
+## Evidence-type-tag migration for existing decision records (RESOLVED)
 
-`decisions.md` declares that every decision-record rule sits under `## Verification`, grouped by verification type into `### Testing`, `### Eval`, and `### Audit` — a `### Testing` rule carries a `/testing`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`), an `### Eval` rule carries `[eval]`, and an `### Audit` rule carries `[audit]`. The marketplace's own existing ADRs and PDRs still carry bare `([review])` tags under a `## Compliance` section, so `/audit-adr` and `/audit-pdr` deterministically REJECT them at the tag-validity step (`invalid-mode-tag`) until each is migrated to the `## Verification` structure.
+All 14 records were migrated to the `## Verification` structure (`### Testing`/`### Eval`/`### Audit` with per-rule evidence-type or `[audit]` tags) and the lean decision template (decision stated in the opening; no `## Purpose`/`## Context`/`## Trade-offs accepted`/`### Recognized by`), under atemporal voice. Functional code behavior routed to `### Testing` with the claim-shape evidence type (aligned to each implementing spec); architecture, dependency-injection, and skill/methodology/design rules routed to `### Audit`; `[eval]` deferred to the audit-eval-suite migration. The four PDRs' `## Product invariants` headings were renamed to `## Product properties` (all items kept).
 
-Records to migrate — move each `## Compliance` section to `## Verification`, place each rule under the subsection matching its verification type, and replace the bare `([review])` tag: a `### Testing` rule routes its claim shape through `/testing`; a rule governing a Spec Tree skill, agent, or decision goes under `### Audit` (`[audit]`) or `### Eval` (`[eval]`):
-
-- `spx/13-plugin-and-runtime-conventions.adr.md`
-- `spx/15-spec-coverage.adr.md`
-- `spx/15-test-language.adr.md`
-- `spx/15-audit-verdict-format.pdr.md`
-- `spx/15-test-infrastructure.pdr.md`
-- `spx/15-agent-pr-authority.pdr.md`
-- `spx/21-spec-tree.enabler/17-auditing.adr.md`
-- `spx/18-plugin-build.enabler/15-build-architecture.adr.md`
-- `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`
-- `spx/15-validation.enabler/32-skill-frontmatter.enabler/15-frontmatter-validation.adr.md`
-- `spx/15-validation.enabler/21-subprocess-execution.adr.md`
-- `spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`
-- `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md`
-- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`
-
-This is a repo-wide reconciliation triggered by the new declaration — too large to belong in the feature PR. Migrate the records as its own change; the declaration leads and the records follow. The PDR files in this list (`15-audit-verdict-format.pdr.md`, `15-test-infrastructure.pdr.md`, `15-agent-pr-authority.pdr.md`, `21-compact-continuity.pdr.md`) also carry `## Product invariants` headings; rename each to `## Product properties` during the same migration to match the PDR template and `/audit-pdr`.
+**Resolution evidence**: `spx validation markdown` passes; the two exemplars (`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`) audited APPROVED via `/audit-adr` and `/audit-pdr`; the remaining 12 confirmed clean for temporal voice, bare `([review])`/`([test])` tags, double-tagged or untagged rule lines, and legacy section headings.
 
 ## ADR-authoring skills still teach the pre-`## Verification` layout (deferred)
 

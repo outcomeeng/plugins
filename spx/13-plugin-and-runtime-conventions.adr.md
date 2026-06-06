@@ -1,62 +1,23 @@
 # Plugin Packaging and Execution Safety
 
-## Purpose
-
-This decision governs the packaging conventions and execution-safety boundaries that every marketplace plugin and skill conforms to. It covers manifest packaging, skill authoring conformance, helper-language uniformity, path-variable resolution, scratch-storage discipline, and limits on subprocess lifetime and polling behavior.
-
-## Context
-
-**Business impact:** The marketplace authors a Claude Code plugin source tree and emits Codex-compatible output from that source. Heterogeneous packaging or coding-agent patterns across plugins surface as silent failures — Codex cache drift after single-file version bumps, helpers whose paths fail outside the skill directory, shell scripts that work in bash and break in zsh, and `gh`/process invocations that fork-bomb the host workstation across turns.
-
-**Technical constraints:** Skill loaders expand the active coding agent's skill-directory token to the skill's installation path before tool execution; bash `$0` and `${0%/*}` do not resolve to that directory when the agent runs commands through the Bash tool. The Bash tool does not reliably reap subprocess trees spawned by long-lived watchers or by per-iteration polling loops, so fork-bomb-class accumulation occurs across turns even when each individual command appears short. The marketplace standardizes on Python via `uv` for helper code; shell scripts ship only as hook scripts (such as `SessionStart`) and not as plugin helpers. Hardcoded `/tmp/<fixed-name>/` paths in skill prose collide under concurrent runs (CI matrix builds, parallel audits, two developers on the same workstation), and tools that auto-cleanup their scratch dirs via atexit handlers behave inconsistently across coding agents — the marketplace requires explicit caller-owned cleanup instead.
-
-## Decision
-
-Every plugin ships dual manifests with version fields in lockstep, every skill conforms to `/standardizing-skills`, every helper under a skill's `scripts/` directory is Python, every path inside skill content resolves via `${CLAUDE_SKILL_DIR}`, every scratch directory comes from a unique-per-invocation source (`tempfile.mkdtemp` in Python, `mktemp -d` in shell, `tmp_path` in tests) with caller-owned cleanup, and no plugin code spawns long-lived subprocesses or implements polling waits. Skills prefer stdin/stdout pipes between scripts over intermediate files when fanout does not demand a directory.
+Every plugin ships dual manifests (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`) with version fields in lockstep, every skill conforms to `/standardizing-skills`, every helper under a skill's `scripts/` directory is Python, every path inside skill content resolves via `${CLAUDE_SKILL_DIR}`, every scratch directory comes from a unique-per-invocation source (`tempfile.mkdtemp`, `mktemp -d`, or a test fixture) with caller-owned cleanup, and no plugin code spawns long-lived subprocesses or implements polling waits. Skills prefer stdin/stdout pipes between scripts over intermediate files when fanout does not demand a directory.
 
 ## Rationale
 
-The dual-manifest invariant exists because the Codex marketplace cache resolves plugin versions independently of the Claude Code cache, and single-file version bumps cause Codex cache drift. Lockstep is the simplest mechanical guarantee.
+The dual-manifest lockstep exists because the Codex marketplace cache resolves plugin versions independently of the Claude Code cache, so a single-file version bump causes Codex cache drift; lockstep is the simplest mechanical guarantee. The `/standardizing-skills` conformance invariant holds because skill activation depends on directive descriptions, frontmatter discipline, and pure-XML structure — one non-conformant skill lowers the activation rate of the whole surface. Helpers are Python because the marketplace manages Python via `uv`, helpers cross the Codex and Claude Code surfaces unchanged, and shell portability consumes more author time than it saves; hook scripts remain shell because they are coding-agent contracts, not plugin code.
 
-The `/standardizing-skills` conformance invariant exists because skill activation depends on directive descriptions, frontmatter discipline, and pure-XML body structure; a single non-conformant skill in the marketplace lowers the activation rate of the entire surface and makes auditing inconsistent.
+`${CLAUDE_SKILL_DIR}` is the only path expression that resolves to the skill directory when the agent runs a command through the Bash tool — `$0`-derived expressions resolve to the calling shell. The execution-safety invariants exist because the Bash tool does not reliably reap subprocess trees across turns, so `gh run watch`, polling waits, and long-lived subprocesses accumulate into host exhaustion. The scratch-storage invariants exist because hardcoded `/tmp/<fixed-name>/` paths collide under concurrent runs and `atexit` cleanup behaves inconsistently across coding agents, so the orchestrator that creates a scratch directory owns its removal. Leaving these conventions implicit in `CLAUDE.md` and `/standardizing-skills` would force every node spec to restate them to make them testable, producing cross-cutting placement debt.
 
-The Python-only invariant for helpers exists because the marketplace manages Python via `pyproject.toml` and `uv`, helpers cross between Codex and Claude Code surfaces unchanged, and shell-script portability (`export -f`, `status` builtin in zsh, locale-dependent `sed`) consumes more author time than the helpers save. Shell scripts remain valid for hook contracts — `SessionStart` and similar — because hooks are coding-agent contracts, not plugin code.
+## Verification
 
-The `${CLAUDE_SKILL_DIR}` authoring invariant exists because helper-script path resolution via `$(dirname "$0")` or `${0%/*}` returns the calling shell's location, not the skill directory, when the agent runs the command through the Bash tool. The build emits each coding agent's native skill-directory token before execution; that is the only path expression that resolves correctly across generated outputs.
+### Audit
 
-The execution-safety invariants — no `gh run watch`, no polling waits, no long-lived subprocesses — exist because the Bash tool does not reliably reap subprocess trees across turns, and fork-bomb-class accumulation results when these patterns are repeated across an agent session. The marketplace's `<no_gh_run_watch>` and `<no_until_polling>` rules in `CLAUDE.md` are the agent-facing expression of this ADR; codifying them here anchors the rules in a decision record so node specs do not have to restate them.
-
-The scratch-storage invariants — unique-per-invocation directory sources plus caller-owned cleanup, and pipes over files when fanout does not demand a directory — exist because the alternative is the bug class this PR rediscovered three times across bot-review rounds: hardcoded `/tmp/audit-children/` (clobbers concurrent runs), then hardcoded `/tmp/audit-wrapper.json` (same bug, different line), then a Phase 6 example that wrote to one path and read from another (broken even single-threaded). The fix in every case is the same: never let a skill name a scratch path; always derive one from `tempfile.mkdtemp` (or the test framework's fixture). Caller-owned cleanup is required because atexit handlers in helper modules misbehave across coding agents — the orchestrator that creates the scratch dir is the one surface that always knows when its work is done. Pipes over files is required because every intermediate file is another place where two scripts can disagree about the path — the round-10 broken-example bug was precisely this.
-
-The alternative — leaving these conventions implicit in `CLAUDE.md` and `/standardizing-skills` references — was rejected because implicit conventions force node specs to restate the rules locally to make them testable, producing cross-cutting placement debt that grows with every new node.
-
-## Trade-offs accepted
-
-| Trade-off                                                                                                                | Mitigation / reasoning                                                                                                                                 |
-| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Dual manifests double the edit surface for version bumps                                                                 | Lockstep is mechanically enforceable by `just check`; the marketplace memory captures the drift failure mode to prevent regression                     |
-| Python-only helpers exclude familiar shell idioms                                                                        | The marketplace manages Python via `uv`; hook scripts (e.g., `SessionStart`) remain valid shell because they are not helpers                           |
-| Forbidding `gh run watch` removes a convenient monitoring command                                                        | One-shot `gh run view --json status,conclusion` plus `ScheduleWakeup` covers the same need without the unreaped-subprocess risk                        |
-| Forbidding polling waits removes a familiar pattern for waiting on processes, ports, or HTTP endpoints                   | Background commands with completion notifications, `Monitor`, or `ScheduleWakeup` cover the same need with bounded subprocess lifetimes                |
-| `${CLAUDE_SKILL_DIR}` resolution depends on the build emitting the coding agent's skill-directory token before execution | Source files use one authored token; built outputs use the native token for each coding agent, so helper authors do not need to know the absolute path |
-
-## Compliance
-
-### Recognized by
-
-A conformant plugin has both `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` with matching `version` fields. Its skills carry directive descriptions, pure-XML bodies with `<objective>` and `<success_criteria>` tags, and lowercase-hyphenated names matching their directories. Its helpers are Python files under `scripts/`. Its skill content references paths via `${CLAUDE_SKILL_DIR}`. Its scratch directories come from `tempfile.mkdtemp` / `mktemp -d` / pytest's `tmp_path` rather than hardcoded `/tmp/<fixed-name>/` paths, and the orchestrator that creates a scratch dir is the one that removes it. Its inter-script verdict transport uses stdin/stdout pipes unless fanout (one producer → N readers) demands a directory. Its helpers do not invoke `gh run watch`, do not include polling-wait constructs, and do not spawn watchers or persistent subprocess trees.
-
-### MUST
-
-- Each plugin ships `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` with `version` fields in lockstep — single-file bumps cause Codex cache drift, captured in the marketplace memory `feedback_manifest_bump_completeness` ([review])
-- Every skill conforms to `/standardizing-skills` — directive description without `when:` colon mid-sentence, lowercase-hyphenated name matching the directory, pure-XML body containing `<objective>` and `<success_criteria>`, restricted `allowed-tools` ([review])
-- Helpers under a skill's `scripts/` directory are Python (`*.py`) — the marketplace standardizes on Python via `uv`; shell scripts ship only as hook scripts (`SessionStart` and similar contract surfaces), never as plugin helpers ([review])
-- Paths in skill content (SKILL.md, references, helper invocations) resolve via `${CLAUDE_SKILL_DIR}` — bash `$0`-derived expressions do not resolve to the skill directory when the Bash tool runs the command ([review])
-- Scratch directories in skill content come from a unique-per-invocation source — `tempfile.mkdtemp` in Python helpers, `mktemp -d` (or a script wrapping `tempfile.mkdtemp` such as `pass_results.py mkdir`) in shell-only skill prose, pytest's `tmp_path` fixture in tests — never a hardcoded `/tmp/<fixed-name>/` path; the orchestrator that creates the directory removes it on every exit path (including failure), since helper modules do not register atexit handlers ([review])
-- Skills prefer stdin/stdout pipes between scripts (`producer | consumer`) over intermediate files; an intermediate file is only valid when fanout demands a directory (one producer's output read by N dispatched consumers) ([review])
-
-### NEVER
-
-- Invoke or document `gh run watch` as an actionable instruction or include it in a code fence — unreaped subprocess trees exhaust the host across turns; explicit prohibition language naming the command as forbidden remains permitted ([review])
-- Write polling waits in helpers — `while ... : time.sleep(N)` in Python, `until <check>; do sleep N; done` or `while ! <check>; do sleep N; done` in shell — per-iteration process trees accumulate until host resources are exhausted ([review])
-- Spawn subprocesses whose lifetime exceeds a single tool call's expected duration — persistent watchers, daemons, and streaming-log commands are forbidden inside helpers and skill instructions ([review])
+- ALWAYS: each plugin ships `.claude-plugin/plugin.json` and `.codex-plugin/plugin.json` with `version` fields in lockstep — a single-file bump causes Codex cache drift ([audit])
+- ALWAYS: every skill conforms to `/standardizing-skills` — directive description, lowercase-hyphenated name matching its directory, pure-XML body with `<objective>` and `<success_criteria>`, restricted `allowed-tools` ([audit])
+- ALWAYS: helpers under a skill's `scripts/` directory are Python — shell scripts ship only as hook contracts (`SessionStart` and similar), never as plugin helpers ([audit])
+- ALWAYS: paths in skill content resolve via `${CLAUDE_SKILL_DIR}` — `$0`-derived expressions do not resolve to the skill directory under the Bash tool ([audit])
+- ALWAYS: scratch directories come from a unique-per-invocation source, and the orchestrator that creates one removes it on every exit path including failure — helper modules register no `atexit` handlers ([audit])
+- ALWAYS: skills prefer stdin/stdout pipes between scripts over intermediate files; an intermediate file is valid only when fanout demands a directory ([audit])
+- NEVER: invoke or document `gh run watch` as an actionable instruction — unreaped subprocess trees exhaust the host across turns ([audit])
+- NEVER: write polling waits in helpers (`while … time.sleep(N)`, `until <check>; do sleep N; done`) — per-iteration process trees accumulate until host resources are exhausted ([audit])
+- NEVER: spawn subprocesses whose lifetime exceeds a single tool call — persistent watchers, daemons, and streaming-log commands are forbidden in helpers and skill instructions ([audit])
