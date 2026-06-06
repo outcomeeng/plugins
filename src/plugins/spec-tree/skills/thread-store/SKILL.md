@@ -31,7 +31,7 @@ The active backend resolves from `SPX_VERIFY_BACKEND`. Default `local` selects t
 
 <slug_derivation>
 
-Slug derivation re-exports the canonical helper from `${CLAUDE_SKILL_DIR}/../auditing/scripts/audit_orchestrator.py`. The slug:
+Slug derivation re-exports the canonical helper from `${CLAUDE_SKILL_DIR}/../changeset-scope/scripts/changeset_scope.py`. The slug:
 
 - replaces `/` in the branch name with `__`
 - substitutes a whole-segment `.` / `..` value with a distinct token

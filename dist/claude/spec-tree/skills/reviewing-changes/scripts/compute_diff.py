@@ -63,30 +63,30 @@ def _load_thread_store() -> ModuleType:
     return module
 
 
-def _load_branch_slug() -> ModuleType:
-    """Load the ``branch_slug`` re-export module via ``importlib``.
+def _load_changeset_scope() -> ModuleType:
+    """Load the ``changeset_scope`` module via ``importlib``.
 
-    The re-export lives at
-    ``plugins/spec-tree/skills/thread-store/scripts/branch_slug.py`` and
-    surfaces the canonical git helpers from ``audit_orchestrator``
-    (``detect_base_ref``, ``BaseRefNotConfiguredError``). Loading here
-    keeps the strict base-ref derivation a single source rather than a
-    private duplicate inside this script.
+    The canonical git-derivation home lives at
+    ``plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py``
+    and surfaces ``detect_base_ref``, ``remote_tracking_ref``, and
+    ``BaseRefNotConfiguredError``. Loading here keeps the strict base-ref
+    derivation and the remote-tracking composition a single source rather
+    than a private duplicate inside this script.
     """
-    cached = sys.modules.get("branch_slug")
+    cached = sys.modules.get("changeset_scope")
     if cached is not None:
         return cached
     path = (
         pathlib.Path(__file__).resolve().parent.parent.parent
-        / "thread-store"
+        / "changeset-scope"
         / "scripts"
-        / "branch_slug.py"
+        / "changeset_scope.py"
     )
-    spec = importlib.util.spec_from_file_location("branch_slug", path)
+    spec = importlib.util.spec_from_file_location("changeset_scope", path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load branch_slug from {path}")
+        raise RuntimeError(f"Cannot load changeset_scope from {path}")
     module = importlib.util.module_from_spec(spec)
-    sys.modules["branch_slug"] = module
+    sys.modules["changeset_scope"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -134,9 +134,11 @@ def _resolve_base_ref(changes: dict[str, object] | None) -> str:
     The error message names every source so the operator knows which to
     populate. No fallback to a literal default — silent fallbacks would
     let a diff compute against the wrong ref without surfacing it. The
-    strict git derivation delegates to ``audit_orchestrator.detect_base_ref(strict=True)``
-    via the ``branch_slug`` re-export so the symbolic-ref read lives in
-    one source.
+    strict git derivation delegates to ``changeset_scope.detect_base_ref(strict=True)``
+    so the symbolic-ref read lives in one source, then composes the
+    remote-tracking ref via ``changeset_scope.remote_tracking_ref`` so a
+    stale local branch ref cannot widen the diff. Env and ``changes.json``
+    values are used verbatim — the operator owns those.
     """
     env_value = os.environ.get(ENV_BASE_REF, "").strip()
     if env_value:
@@ -145,10 +147,10 @@ def _resolve_base_ref(changes: dict[str, object] | None) -> str:
         file_value = changes.get("base_ref")
         if isinstance(file_value, str) and file_value:
             return file_value
-    branch_slug = _load_branch_slug()
+    changeset_scope = _load_changeset_scope()
     try:
-        return str(branch_slug.detect_base_ref(pathlib.Path.cwd(), strict=True))
-    except branch_slug.BaseRefNotConfiguredError as exc:
+        bare_base = changeset_scope.detect_base_ref(pathlib.Path.cwd(), strict=True)
+    except changeset_scope.BaseRefNotConfiguredError as exc:
         raise RuntimeError(
             "cannot resolve base_ref from any source; tried: "
             f"{ENV_BASE_REF} env, {CHANGES_RECORD_NAME} 'base_ref' field, "
@@ -160,6 +162,7 @@ def _resolve_base_ref(changes: dict[str, object] | None) -> str:
             f"{ENV_BASE_REF} env, {CHANGES_RECORD_NAME} 'base_ref' field, "
             f"git symbolic-ref refs/remotes/origin/HEAD (git is not on PATH)"
         ) from exc
+    return str(changeset_scope.remote_tracking_ref(bare_base))
 
 
 def main(argv: list[str] | None = None) -> int:

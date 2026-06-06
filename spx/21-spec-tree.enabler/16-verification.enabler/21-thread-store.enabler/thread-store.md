@@ -1,6 +1,6 @@
 # Thread Store
 
-PROVIDES a stdlib-only Python package — the `thread_store` facade, the abstract `Backend` protocol, the filesystem-backend implementation, the branch-slug helper re-exported from the audit-orchestrator, a CRUD CLI surface, and the co-located test harness — that mediates persistence and retrieval of branch-scoped verification records
+PROVIDES a stdlib-only Python package — the `thread_store` facade, the abstract `Backend` protocol, the filesystem-backend implementation, the branch-slug helper re-exported from the changeset-scope skill, a CRUD CLI surface, and the co-located test harness — that mediates persistence and retrieval of branch-scoped verification records
 SO THAT verification skills and the thin wrapper agents that wrap them
 CAN persist and retrieve verification skill outputs (machine-readable JSON, human-readable markdown) against one CRUD contract, with one canonical slug derivation shared across verification skills, without knowing which backend stores the records
 
@@ -34,7 +34,7 @@ CAN persist and retrieve verification skill outputs (machine-readable JSON, huma
 
 - ALWAYS: a backend module conforms to the `Backend` protocol — `thread_path`, `write`, `read`, `delete`, `list` are all present with the declared signatures, and `thread_store.get_backend()` refuses to return a non-conforming backend ([test](tests/test_backend_protocol.compliance.l1.py))
 - ALWAYS: `thread_store.write` is atomic — the prior content of `<name>` is preserved if `write` is interrupted between the temp-write and the rename ([test](tests/test_thread_store.compliance.l1.py))
-- ALWAYS: `branch_slug` is the symbol re-exported from `plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py` — slug derivation lives in exactly one function source ([test](tests/test_thread_store.compliance.l1.py))
+- ALWAYS: `branch_slug` is the symbol re-exported from `plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py` — slug derivation lives in exactly one function source ([test](tests/test_thread_store.compliance.l1.py))
 - ALWAYS: every CRUD CLI under `plugins/spec-tree/skills/thread-store/scripts/` performs its filesystem effects through `thread_store.get_backend()` — no CLI calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any other direct filesystem primitive ([test](tests/test_cli.compliance.l1.py))
 - ALWAYS: the filesystem backend confines every write to its configured root — `<root>/<slug>/<name>` is the only target shape, and no path resolves outside `<root>` ([test](tests/test_thread_store.compliance.l1.py))
 - ALWAYS: the test harness at `outcomeeng_testing/harnesses/thread_store.py` exposes `make_changes_json(tmp_path, base_ref, **kw)`, `with_temp_local_store(tmp_path)`, `run_script(script, *args, stdin=None, env=None)`, and an importlib loader for the `thread_store` facade module — the factory writes a `changes.json` file with a `base_ref` field, the canonical override-file shape consumers see in production ([test](tests/test_thread_store.compliance.l1.py))

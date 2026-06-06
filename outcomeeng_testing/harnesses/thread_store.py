@@ -62,17 +62,6 @@ READ_RECORD_SCRIPT = SCRIPTS_DIR / "read_record.py"
 DELETE_RECORD_SCRIPT = SCRIPTS_DIR / "delete_record.py"
 LIST_RECORDS_SCRIPT = SCRIPTS_DIR / "list_records.py"
 
-AUDIT_ORCHESTRATOR_MODULE_PATH = (
-    pathlib.Path(__file__).resolve().parents[2]
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "auditing"
-    / "scripts"
-    / "audit_orchestrator.py"
-)
-
 
 def _load_module(module_name: str, module_path: pathlib.Path) -> ModuleType:
     """Load ``module_path`` as ``module_name`` and cache it under ``sys.modules``.
@@ -122,15 +111,6 @@ def load_fs_backend_module() -> ModuleType:
 
 def load_branch_slug_module() -> ModuleType:
     return _load_module("branch_slug", BRANCH_SLUG_MODULE_PATH)
-
-
-def load_audit_orchestrator_module() -> ModuleType:
-    """Load the canonical ``audit_orchestrator`` module.
-
-    Tests that verify the slug function is the same symbol the
-    re-exporting helper imports load both modules and compare identity.
-    """
-    return _load_module("audit_orchestrator", AUDIT_ORCHESTRATOR_MODULE_PATH)
 
 
 def run_script(

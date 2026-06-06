@@ -7,7 +7,7 @@ scenarios:
 - ``thread_store.write`` is atomic: an interruption between temp-write
   and rename leaves the prior content of the target intact.
 - ``branch_slug`` is the symbol re-exported from
-  ``plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py`` —
+  ``plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py`` —
   slug derivation has exactly one canonical implementation source.
 - The test harness at ``outcomeeng_testing/harnesses/thread_store.py``
   exposes the symbols the spec mandates.
@@ -23,8 +23,8 @@ import pathlib
 
 import pytest
 
+from outcomeeng_testing.harnesses.changeset_scope import load_changeset_scope_module
 from outcomeeng_testing.harnesses.thread_store import (
-    load_audit_orchestrator_module,
     load_branch_slug_module,
     load_fs_backend_module,
     load_thread_store_module,
@@ -70,14 +70,14 @@ class TestWriteAtomicity:
 class TestSlugSymbolIdentity:
     """``branch_slug`` has one canonical implementation source."""
 
-    def test_branch_slug_is_re_exported_from_audit_orchestrator(self) -> None:
+    def test_branch_slug_is_re_exported_from_changeset_scope(self) -> None:
         re_exported = load_branch_slug_module().branch_slug
-        canonical = load_audit_orchestrator_module().branch_slug
+        canonical = load_changeset_scope_module().branch_slug
         assert re_exported is canonical
 
-    def test_max_length_constant_matches_audit_orchestrator(self) -> None:
+    def test_max_length_constant_matches_changeset_scope(self) -> None:
         re_exported_const = load_branch_slug_module().BRANCH_SLUG_MAX_LENGTH
-        canonical_const = load_audit_orchestrator_module().BRANCH_SLUG_MAX_LENGTH
+        canonical_const = load_changeset_scope_module().BRANCH_SLUG_MAX_LENGTH
         assert re_exported_const == canonical_const
 
 
