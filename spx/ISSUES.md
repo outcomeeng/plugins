@@ -36,7 +36,7 @@ plugin source tree.
 
 The methodology documents Go's test-infrastructure home (`internal/testinfra/`) in `spx/15-test-infrastructure.pdr.md` and Go test-file naming (`<subject>.<evidence>.<level>[.<runner>]_test.go`) in the testing and understanding skill references. No decision governs Go test-runner selection (`go test`), subtest conventions, `t.Helper()` policy, or the per-language `[test]` runner the way `spx/15-test-language.adr.md` does for this product's own pytest suite — and that ADR does not mention Go.
 
-**Resolution shape**: before a Go language plugin ships, author the governing decision(s) for Go test conventions and reconcile them with the test-infrastructure home already documented here.
+**Resolution shape**: before a Go language plugin ships, author the governing decision(s) for Go test conventions and reconcile them with the test-infrastructure home already documented here. The package-name constraint (`internal/testinfra/` is package `testinfra`, never `testing`) is already stated in `spx/15-test-infrastructure.pdr.md`, but its audit assertions cover the normative path generically — add a Go-specific audit assertion verifying the package name as part of this work.
 
 ## `just check` does not run ruff or `spx validation markdown` (RESOLVED)
 
@@ -54,5 +54,7 @@ Genuine instances (real marketplace decisions cited as authority in shipped cont
 - `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md` (`spx/14-verification.pdr.md`, framed "in this marketplace").
 
 Not violations — leave as-is: fictional example paths used to illustrate format (`spx/15-product-offering.pdr.md` in `assertion-types.md`; `spx/15-api-contract.adr.md`, `spx/22-cache-policy.adr.md`, `spx/15-build.adr.md` in `authoring/SKILL.md`; `spx/15-auth-strategy.adr.md` and peers in `spx-claude.md:85`), and the archetype `leoherd`/`xiperlabs`/`xideck` `source` annotations that intentionally name the external products each archetype was distilled from.
+
+The `/decomposing` step 5 baseline guidance is already portable — it depends on `what-goes-where.md` `<test_infrastructure>`, not on the PDR path — so it needs no sweep change. The archetype seed-tree provenance notes are the remaining `decomposing/` instances; they are unchanged in this PR and resolve in the future sweep described below, not here.
 
 **Resolution shape**: a `fix(spec-tree)` sweep that, per instance, either reframes the citation as a portable concept (the methodology owns the rule; the skill states it without the product path) or marks it as an explicit illustrative example. Validate each genuine instance against the two-audiences rule before editing — some may warrant an "e.g., in this marketplace" framing rather than removal. Audit gate: `just check-skills` and `just docs-check` after the sweep; re-grep `src/plugins/` for `spx/[0-9]{2}-…\.(pdr|adr)\.md` and confirm every remaining hit is an illustrative or external-product reference.
