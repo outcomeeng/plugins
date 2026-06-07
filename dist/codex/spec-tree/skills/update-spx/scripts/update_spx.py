@@ -133,7 +133,10 @@ def render(template_text: str, config: GuideConfig, installed_version: str) -> s
         f"{PRODUCT_NAME_KEY}: {config.product_name}",
         f"{LANGUAGES_KEY}: [{', '.join(config.languages)}]",
     ]
-    return f"{_frontmatter_block(out_frontmatter)}\n{body}"
+    # `_split_frontmatter` uses `str.splitlines()`, which drops the template's
+    # trailing newline; normalize so the output always ends with exactly one.
+    rendered = f"{_frontmatter_block(out_frontmatter)}\n{body}"
+    return rendered.rstrip("\n") + "\n"
 
 
 def _edge_render(

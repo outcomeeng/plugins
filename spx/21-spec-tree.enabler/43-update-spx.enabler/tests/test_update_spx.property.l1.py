@@ -38,6 +38,17 @@ def test_render_output_version_equals_installed(
     assert module.parse_template_version(rendered) == installed_str
 
 
+@given(installed=_VERSION)
+def test_render_output_ends_with_single_newline(
+    installed: tuple[int, int, int],
+) -> None:
+    module = load_update_spx_module()
+    config = module.GuideConfig(product_name=PRODUCT_NAME, languages=TEMPLATE_LANGUAGES)
+    rendered = module.render(build_template("0.0.0"), config, _to_version(installed))
+    assert rendered.endswith("\n")
+    assert not rendered.endswith("\n\n")
+
+
 @given(left=_VERSION, right=_VERSION)
 def test_is_stale_matches_numeric_version_order(
     left: tuple[int, int, int], right: tuple[int, int, int]

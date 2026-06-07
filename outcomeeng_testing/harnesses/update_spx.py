@@ -98,3 +98,18 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
     if extra_section:
         parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
     return frontmatter + "\n".join(parts) + "\n"
+
+
+def write_template(
+    directory: pathlib.Path, version: str, *, extra_section: bool = False
+) -> pathlib.Path:
+    """Write ``build_template(...)`` into ``directory`` and return the file path.
+
+    Lets CLI-edge tests drive ``main([...])`` against a real template file under a
+    pytest ``tmp_path``; the harness owns the on-disk setup.
+    """
+    path = directory / "spx-claude.md"
+    path.write_text(
+        build_template(version, extra_section=extra_section), encoding="utf-8"
+    )
+    return path
