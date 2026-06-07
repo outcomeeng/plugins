@@ -90,6 +90,16 @@ def parse_config(text: str) -> GuideConfig:
     return GuideConfig(product_name=name, languages=languages)
 
 
+def has_config(text: str) -> bool:
+    """Whether a guide carries the render-model config (a ``product_name`` frontmatter key).
+
+    A guide predating the schema holds the product name in its body, not frontmatter;
+    re-rendering it from an empty config would discard the name and language sections.
+    """
+    frontmatter, _ = _split_frontmatter(text)
+    return _frontmatter_value(frontmatter, PRODUCT_NAME_KEY) is not None
+
+
 def _version_tuple(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
@@ -137,24 +147,6 @@ def render(template_text: str, config: GuideConfig, installed_version: str) -> s
     # trailing newline; normalize so the output always ends with exactly one.
     rendered = f"{_frontmatter_block(out_frontmatter)}\n{body}"
     return rendered.rstrip("\n") + "\n"
-
-
-def _edge_render(
-    template_text: str,
-    product_text: str | None,
-    installed_version: str,
-    cli_name: str | None,
-    cli_languages: tuple[str, ...] | None,
-) -> str:
-    """Build the config (from the existing guide, or from CLI inputs) and render."""
-    if product_text is not None:
-        config = parse_config(product_text)
-    else:
-        config = GuideConfig(
-            product_name=cli_name or PRODUCT_NAME_PLACEHOLDER,
-            languages=cli_languages or (),
-        )
-    return render(template_text, config, installed_version)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -214,9 +206,24 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     cli_languages = _parse_languages(args.languages) if args.languages else None
-    result = _edge_render(
-        template_text, product_text, installed, args.name, cli_languages
-    )
+    if product_text is None:
+        config = GuideConfig(
+            product_name=args.name or PRODUCT_NAME_PLACEHOLDER,
+            languages=cli_languages or (),
+        )
+    elif has_config(product_text):
+        config = parse_config(product_text)
+    elif args.name is not None:
+        # Migrate a guide that predates the config schema, using the supplied config.
+        config = GuideConfig(product_name=args.name, languages=cli_languages or ())
+    else:
+        print(
+            "error: guide predates the config schema (no product_name); "
+            "rerun with --name and --languages",
+            file=sys.stderr,
+        )
+        return 2
+    result = render(template_text, config, installed)
 
     if args.write and product_path is not None:
         product_path.write_text(result, encoding="utf-8")

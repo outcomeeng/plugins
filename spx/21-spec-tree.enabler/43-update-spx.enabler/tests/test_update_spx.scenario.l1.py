@@ -20,6 +20,7 @@ from outcomeeng_testing.harnesses.update_spx import (
     PRODUCT_NAME,
     build_template,
     load_update_spx_module,
+    write_pre_schema_guide,
     write_template,
 )
 
@@ -119,3 +120,35 @@ def test_cli_write_creates_guide(tmp_path: pathlib.Path) -> None:
     content = guide.read_text(encoding="utf-8")
     assert PRODUCT_NAME in content
     assert content.endswith("\n")
+
+
+def test_cli_update_of_pre_schema_guide_requires_name(tmp_path: pathlib.Path) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    guide = write_pre_schema_guide(tmp_path, OLD_VERSION, PRODUCT_NAME)
+
+    # A guide predating the config schema holds the name in its body; updating without
+    # a supplied name must refuse rather than silently discard it.
+    assert (
+        module.main(["--template", str(template), "--product", str(guide), "--write"])
+        == 2
+    )
+
+    # With a supplied name and languages, the update migrates the guide.
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--product",
+            str(guide),
+            "--name",
+            PRODUCT_NAME,
+            "--languages",
+            LANG_PRIMARY,
+            "--write",
+        ]
+    )
+    assert exit_code == 0
+    content = guide.read_text(encoding="utf-8")
+    assert PRODUCT_NAME in content
+    assert f"### {LANG_PRIMARY.capitalize()}" in content

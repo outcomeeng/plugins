@@ -11,6 +11,7 @@ CAN stay current with methodology changes without manual template tracking
 - Given a template carrying the `{product-name}` placeholder and language-conditional blocks, when the guide is scaffolded with a product name and an enabled-language set, then the rendered output substitutes the product name and contains exactly the enabled languages' blocks ([test](tests/test_update_spx.scenario.l1.py))
 - Given a guide whose config enables a language set and a newer template that adds a section, when the guide is updated, then the re-rendered guide contains the new section and still carries the config's product name and enabled languages ([test](tests/test_update_spx.scenario.l1.py))
 - Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide; `--write` without `--product` exits non-zero; and `--write` creates the guide file ([test](tests/test_update_spx.scenario.l1.py))
+- Given an update of a guide that predates the config schema (no `product_name` frontmatter), the update refuses without a supplied name rather than discarding the body-held name, and migrates when a name and languages are supplied ([test](tests/test_update_spx.scenario.l1.py))
 
 ### Mappings
 

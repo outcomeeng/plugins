@@ -113,3 +113,24 @@ def write_template(
         build_template(version, extra_section=extra_section), encoding="utf-8"
     )
     return path
+
+
+def write_pre_schema_guide(
+    directory: pathlib.Path, version: str, product_name: str
+) -> pathlib.Path:
+    """Write a guide predating the config schema: frontmatter has only version + source.
+
+    The product name lives in the body, not frontmatter — the pre-render-model shape an
+    update must not silently discard.
+    """
+    module = load_update_spx_module()
+    path = directory / "CLAUDE.md"
+    path.write_text(
+        f"{module.FRONTMATTER_DELIMITER}\n"
+        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
+        f"{module.TEMPLATE_SOURCE_KEY}: spec-tree\n"
+        f"{module.FRONTMATTER_DELIMITER}\n\n"
+        f"# spx/ Directory Guide\n\nThis guide is for the {product_name} product.\n",
+        encoding="utf-8",
+    )
+    return path
