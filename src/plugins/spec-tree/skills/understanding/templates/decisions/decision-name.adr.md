@@ -12,14 +12,14 @@
 
 ## Verification
 
-Each rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection naming how it is verified. Include only the subsections that apply.
+Each rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection naming how it is verified. Include only the subsections that apply. They are ordered by decreasing enforcement strength.
 
-### Audit
+### Testing
 
-Verified by an auditing skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.
+Verified by a deterministic test. Each rule carries its evidence type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
 
-- ALWAYS: {rule} ([audit])
-- NEVER: {prohibition} ([audit])
+- ALWAYS: {rule} ([{evidence type}])
+- NEVER: {prohibition} ([{evidence type}])
 
 ### Eval
 
@@ -28,9 +28,9 @@ Verified by graded LLM behavior over curated cases — the subject is a skill, a
 - ALWAYS: {rule} ([eval])
 - NEVER: {prohibition} ([eval])
 
-### Testing
+### Audit
 
-Verified by a deterministic test. Each rule carries its evidence type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
+Verified by an auditing skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.
 
-- ALWAYS: {rule} ([{evidence type}])
-- NEVER: {prohibition} ([{evidence type}])
+- ALWAYS: {rule} ([audit])
+- NEVER: {prohibition} ([audit])

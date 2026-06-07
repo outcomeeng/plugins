@@ -139,7 +139,7 @@ Use the authoritative template (from `/understanding`). The ADR is decision-firs
 1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
 2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision
 3. **Invariants** (optional): Algebraic properties for all governed code
-4. **Verification**: ALWAYS/NEVER rules grouped under `### Audit` (`[audit]`), `### Eval` (`[eval]`), `### Testing` (`[{evidence type}]`); the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
+4. **Verification**: ALWAYS/NEVER rules grouped under `### Testing` (`[{evidence type}]`), `### Eval` (`[eval]`), `### Audit` (`[audit]`), ordered by decreasing enforcement strength; the DI/mocking testability constraints are `### Audit` rules carrying `([audit])`
 
 **Phase 4: Verify Consistency**
 
