@@ -152,3 +152,10 @@ def test_cli_update_of_pre_schema_guide_requires_name(tmp_path: pathlib.Path) ->
     content = guide.read_text(encoding="utf-8")
     assert PRODUCT_NAME in content
     assert f"### {LANG_PRIMARY.capitalize()}" in content
+
+
+def test_is_stale_treats_a_malformed_version_as_stale() -> None:
+    module = load_update_spx_module()
+    # A non-numeric version segment must not crash the comparison.
+    assert module.is_stale("0.18.0-beta", NEW_VERSION) is True
+    assert module.is_stale(OLD_VERSION, "not-a-version") is True

@@ -54,13 +54,20 @@ def _split_frontmatter(text: str) -> tuple[list[str], str]:
     return [], text
 
 
+def _unquote(value: str) -> str:
+    """Strip exactly one matching pair of surrounding quotes, preserving inner quotes."""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
 def _frontmatter_value(frontmatter: list[str], key: str) -> str | None:
     """Return the value of ``key`` from frontmatter lines, or None."""
     prefix = f"{key}:"
     for line in frontmatter:
         stripped = line.strip()
         if stripped.startswith(prefix):
-            return stripped[len(prefix) :].strip().strip("\"'")
+            return _unquote(stripped[len(prefix) :].strip())
     return None
 
 
@@ -105,8 +112,15 @@ def _version_tuple(version: str) -> tuple[int, ...]:
 
 
 def is_stale(product_version: str, template_version: str) -> bool:
-    """Report whether the product version is numerically below the template version."""
-    return _version_tuple(product_version) < _version_tuple(template_version)
+    """Report whether the product version is numerically below the template version.
+
+    A version that is not dotted-numeric is treated as stale rather than crashing — an
+    update then normalizes it to the installed version.
+    """
+    try:
+        return _version_tuple(product_version) < _version_tuple(template_version)
+    except ValueError:
+        return True
 
 
 def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
@@ -140,7 +154,7 @@ def render(template_text: str, config: GuideConfig, installed_version: str) -> s
     out_frontmatter = [
         f'{TEMPLATE_VERSION_KEY}: "{installed_version}"',
         f"{TEMPLATE_SOURCE_KEY}: {source}",
-        f"{PRODUCT_NAME_KEY}: {config.product_name}",
+        f'{PRODUCT_NAME_KEY}: "{config.product_name}"',
         f"{LANGUAGES_KEY}: [{', '.join(config.languages)}]",
     ]
     # `_split_frontmatter` uses `str.splitlines()`, which drops the template's

@@ -55,3 +55,20 @@ def test_is_stale_matches_numeric_version_order(
 ) -> None:
     module = load_update_spx_module()
     assert module.is_stale(_to_version(left), _to_version(right)) is (left < right)
+
+
+_PRODUCT_NAME = st.text(
+    alphabet=st.characters(min_codepoint=0x20, max_codepoint=0x7E),
+    min_size=1,
+    max_size=60,
+)
+
+
+@given(name=_PRODUCT_NAME)
+def test_product_name_round_trips_through_render(name: str) -> None:
+    # Realistic product names — printable text including quotes, spaces, colons, and
+    # brackets — survive the render-then-parse round trip via the frontmatter.
+    module = load_update_spx_module()
+    config = module.GuideConfig(product_name=name, languages=())
+    rendered = module.render(build_template("0.18.0"), config, "0.18.0")
+    assert module.parse_config(rendered).product_name == name
