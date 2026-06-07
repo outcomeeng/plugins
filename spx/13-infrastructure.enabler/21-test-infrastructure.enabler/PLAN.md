@@ -32,11 +32,22 @@ Approved scope: Phases 1 + 2 + 3. CI fidelity: full `just check`.
   marketplace CI runs `just check` on `pull_request` and push-to-`main` as a
   required status check; a gate failure blocks merge
   (`[test](tests/test_ci_gate.compliance.l1.py)`).
-- Spec/apply (`/applying`): write `tests/test_test_infrastructure.compliance.l2.py`
-  (the gate runs every `STEPS` entry and exits 0 on a clean tree) and
-  `tests/test_ci_gate.compliance.l1.py` (parse `.github/workflows/check.yml`:
-  `on.pull_request`, push-to-`main`, and a `just check` invocation on Python
-  3.14 with uv + dprint + claude CLI installed). Implement `.github/workflows/check.yml`.
+- Re-home the pre-existing assertion (decided during Phase 1): the prior
+  assertion "`just check` runs all quality steps defined by child enablers and
+  exits 0 on a clean main branch" was redundant and ill-formed (the node's only
+  child, `21-python-code-quality.enabler`, does not define the build/manifest/
+  markdown steps), and a pytest asserting "`just check` exits 0" would recurse
+  because pytest is itself a gate step. Its truth is re-homed: STEPS composition
+  to `spx/15-validation.enabler/65-gate.enabler`, the static-analysis steps to
+  the `21-python-code-quality.enabler` child, and "the gate passes before
+  reaching `main`" to the new CI-gate assertion (carried operationally by the CI
+  workflow). The assertion and its planned `test_test_infrastructure.compliance.l2.py`
+  are therefore dropped, not deferred.
+- Spec/apply (`/applying`): write only `tests/test_ci_gate.compliance.l1.py`
+  (parse `.github/workflows/check.yml`: `on.pull_request`, push-to-`main`, a
+  `just check` / `uv run python -m outcomeeng.validation` invocation, the Python
+  version against `requires-python`, and no soft-passed step). Implement
+  `.github/workflows/check.yml`.
 - Remove the parent from `spx/EXCLUDE`.
 - Audit gates: `test-evidence-auditor`, `python-code-auditor`, `python-test-auditor`,
   `/aligning` on the spec.
