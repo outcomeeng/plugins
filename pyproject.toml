@@ -35,6 +35,20 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short --import-mode=importlib"
 pythonpath = ["."]
 
+[tool.ruff]
+# ruff owns Python formatting (`ruff format`) and linting (`ruff check`) for this
+# repo; dprint does not touch `.py`. outcomeeng/vendor/ holds vendored third-party
+# code kept as upstream ships it, so exclude it from both — mirrors the
+# [tool.mypy] exclude below and dprint's `outcomeeng/vendor/**` exclude.
+extend-exclude = ["outcomeeng/vendor/"]
+# Pin the formatter/linter below Python 3.14 so ruff applies no 3.14-only
+# restyling — notably PEP 758, which strips the parentheses from `except (A, B):`
+# (ruff otherwise infers 3.14 from `requires-python` and rewrites them). py313 is
+# the highest target that avoids PEP 758 while still accepting the 3.12+ syntax
+# this toolchain already uses (PEP 695 `type` aliases); a lower target such as
+# py311 would reject those pre-existing aliases.
+target-version = "py313"
+
 [tool.mypy]
 # outcomeeng/vendor/ holds vendored third-party code (e.g. Anthropic's
 # skill validator under outcomeeng/vendor/anthropics_skills/) that is not
