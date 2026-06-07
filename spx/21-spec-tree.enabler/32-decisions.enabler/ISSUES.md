@@ -11,21 +11,6 @@
 
 This conformance is an architecture migration that applies to the whole audit-skill family, not just these two, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, reshape the audit agents to `model: sonnet` + `Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, audit-adr/audit-pdr run as read-only verdict producers in the established pre-conformance pattern.
 
-## Evidence-type-tag migration for existing decision records (RESOLVED)
-
-Thirteen records were migrated to the `## Verification` structure (`### Testing`/`### Eval`/`### Audit` with per-rule evidence-type or `[audit]` tags) and the lean decision template (decision stated in the opening; no `## Purpose`/`## Context`/`## Trade-offs accepted`/`### Recognized by`), under atemporal voice. `spx/15-test-infrastructure.pdr.md` — the fourteenth listed record — was already migrated to `## Verification`/`### Audit` (with Go-language support) on `origin/main` before this branch, so it is not part of this branch's diff. Functional code behavior routed to `### Testing` with the claim-shape evidence type (aligned to each implementing spec); architecture, dependency-injection, and skill/methodology/design rules routed to `### Audit`; `[eval]` deferred to the audit-eval-suite migration. The PDRs' `## Product invariants` headings were renamed to `## Product properties` (all items kept).
-
-**Resolution evidence**: `spx validation markdown` passes; the two exemplars (`spx/32-distribution.enabler/21-bump.enabler/15-bump-shape.adr.md`, `spx/21-spec-tree.enabler/76-sessions.enabler/21-compact-continuity.pdr.md`) audited APPROVED via `/audit-adr` and `/audit-pdr`; the remaining 12 confirmed clean for temporal voice, bare `([review])`/`([test])` tags, double-tagged or untagged rule lines, and legacy section headings.
-
-## Re-audit migrated records for universal-claim evidence-type fit (RESOLVED)
-
-The migration predated the evidence-type-fit check that `/audit-adr` and `/audit-pdr` now enforce (a `### Testing` rule whose claim ranges over an open or large case-space is never `scenario`; a single concrete structural or behavioral fact may be `scenario`; mismatch is an `evidence-type-mismatch` REJECT). The re-audit pass ran `/audit-adr` on the two candidate records:
-
-- `spx/21-spec-tree.enabler/17-auditing.adr.md` — two genuine mismatches, retagged: the `save_state` / `RunLock` rule asserts lock release on "every context-manager exit path" (ranges over the exit-path set) → `[scenario]`→`[compliance]` (an ALWAYS safety rule exercised against violating cases — atomic-write crash, exception exit); the `compute_verdict_diff` rule asserts an identity-keying invariant ("excluding `id` and `severity`" must hold across all regenerated/re-severitied findings, an open domain) → `[scenario]`→`[property]`. The remaining `### Testing` rule — a regression reopening its original finding ID after one resolved-then-reopened cycle — is a single concrete interaction and stays valid `scenario`.
-- `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md` — APPROVED as-is. Its six `[scenario]` rules each assert a single concrete structural or behavioral fact (one module's declared symbols, one schema's absent field, one script's behavior, the frozen-dataclass fact), not a ranged universal, and its eight `[compliance]` rules are correct. The earlier count of "9 mis-tagged across 2 records" over-applied the rule by reading every `ALWAYS:` prefix as a quantifier; the audit caveat (a single concrete fact may be `scenario`; do not relitigate a choice the router leaves open) corrects it to one real fix.
-
-**Resolution evidence**: `/audit-adr` returns APPROVED on both records after the single `17-auditing.adr.md` retag.
-
 ## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
 
 The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec lane divergence (an observation, not a tag-validity finding — the audit-adr skill validates the tag against its subsection, not against the implementing spec's lane). Two of the three rules under `### Audit` in that ADR mirror assertions whose implementing lanes in `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` are not `[audit]`:
@@ -35,19 +20,9 @@ The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec 
 
 The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
 
-## ADR-authoring skills teach the decision-first `## Verification` layout (RESOLVED)
+## Verdict-row keys in `auditing-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 
-The TypeScript, Python, and Rust ADR producer **and** validator skills all teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Testing` / `### Eval` / `### Audit`, ordered by decreasing enforcement strength) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
-
-- `/architecting-typescript` (+ `references/adr-patterns.md`), `/standardizing-typescript-architecture`, `/auditing-typescript-architecture` (+ `references/example-audit.md`).
-- `/architecting-python` (+ `references/testability-patterns.md`, `references/test-infrastructure-patterns.md`), `/standardizing-python-architecture`, `/auditing-python-architecture` (+ `references/example-audit.md`).
-- `/architecting-rust` (+ `references/adr-patterns.md`), `/standardizing-rust-architecture`, `/auditing-rust-architecture` (+ `references/example-audit.md`).
-
-The producers and validators were migrated in lockstep per language because `/auditing-*-architecture` enforces an ADR against the standardizing skill's section list and shape — leaving a validator on the legacy layout would make the auditor deterministically REJECT correctly-authored ADRs.
-
-**Resolution evidence**: `grep -rnE "\(\[review\]\)|testability_in_compliance|## Compliance" src/plugins/{typescript,python,rust}/skills/*architect*` returns no hits; the `testability-in-verification` verdict row and `<testability_in_verification>` tag are consistent across all three languages.
-
-**Verdict-row-key coverage gap**: the `auditing-{lang}-architecture` skills declare their verdict-row keys (`section-structure`, `testability-in-verification`, `atemporal-voice`, …) as prose in the JSON output schema, with no conformance test or eval pinning the key names — a rename or revert (such as the `testability-in-compliance` → `testability-in-verification` rename above) would go undetected. This is the same class as the `[eval]`-migration candidates tracked in `spx/43-typescript.enabler/25-typescript-standards.enabler/ISSUES.md`; fold verdict-row-key assertions into that language-auditor eval work rather than testing one renamed key in isolation.
+The `auditing-{lang}-architecture` skills declare their verdict-row keys (`section-structure`, `testability-in-verification`, `atemporal-voice`, …) as prose in the JSON output schema, with no conformance test or eval pinning the key names — a rename or revert (such as a `testability-in-compliance` → `testability-in-verification` rename) would go undetected. This is the same class as the `[eval]`-migration candidates tracked in `spx/43-typescript.enabler/25-typescript-standards.enabler/ISSUES.md`; fold verdict-row-key assertions into that language-auditor eval work rather than testing one renamed key in isolation.
 
 ## Evidence-type terminology not yet propagated to language plugins and verdict identifiers (deferred)
 
