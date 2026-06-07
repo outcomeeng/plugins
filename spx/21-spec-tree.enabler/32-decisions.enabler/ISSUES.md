@@ -37,7 +37,7 @@ The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has
 
 ## ADR-authoring skills teach the decision-first `## Verification` layout (RESOLVED)
 
-The TypeScript, Python, and Rust ADR producer **and** validator skills all teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Audit` / `### Eval` / `### Testing`) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
+The TypeScript, Python, and Rust ADR producer **and** validator skills all teach the decision-first canonical layout — title + decision stated directly, Rationale, Invariants, `## Verification` (`### Testing` / `### Eval` / `### Audit`, ordered by decreasing enforcement strength) with per-rule evidence-type tags (`([audit])` for the DI/mocking architecture rules):
 
 - `/architecting-typescript` (+ `references/adr-patterns.md`), `/standardizing-typescript-architecture`, `/auditing-typescript-architecture` (+ `references/example-audit.md`).
 - `/architecting-python` (+ `references/testability-patterns.md`, `references/test-infrastructure-patterns.md`), `/standardizing-python-architecture`, `/auditing-python-architecture` (+ `references/example-audit.md`).
