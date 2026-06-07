@@ -194,11 +194,11 @@ def main(argv: list[str] | None = None) -> int:
             print("absent")
             return 0
         product_version = parse_template_version(product_text)
-        print(
-            "stale"
-            if product_version is None or is_stale(product_version, installed)
-            else "current"
-        )
+        version_stale = product_version is None or is_stale(product_version, installed)
+        languages_drifted = args.languages is not None and parse_languages(
+            product_text
+        ) != _parse_languages(args.languages)
+        print("stale" if version_stale or languages_drifted else "current")
         return 0
 
     if args.write and product_path is None:

@@ -84,6 +84,27 @@ def test_cli_check_reports_absent_stale_and_current(
     assert capsys.readouterr().out.strip() == "current"
 
 
+def test_cli_check_reports_language_drift(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    guide = tmp_path / "CLAUDE.md"
+    guide.write_text(
+        module.render(build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION),
+        encoding="utf-8",
+    )
+    base = ["--template", str(template), "--product", str(guide), "--check"]
+
+    # Supplied languages match the recorded set on a version-current guide -> current.
+    assert module.main([*base, "--languages", LANG_PRIMARY]) == 0
+    assert capsys.readouterr().out.strip() == "current"
+
+    # Supplied languages differ from the recorded set -> stale, despite the version match.
+    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
+    assert capsys.readouterr().out.strip() == "stale"
+
+
 def test_cli_write_without_product_exits_2(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, NEW_VERSION)

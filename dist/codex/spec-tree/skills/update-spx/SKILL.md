@@ -20,15 +20,15 @@ The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `s
 
 1. **Resolve the paths.** Template: `${SKILL_DIR}/../understanding/templates/spx-claude.md`. Guide: the product's spx-level guide (`spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file), referred to below as `<guide>`.
 
-2. **Detect status.** Run:
+2. **Determine the enabled languages.** Identify the languages the project uses — from `/understanding`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
+
+3. **Detect status.** Run, passing the determined languages so the check catches a language drift as well as a version gap:
 
    ```bash
-   python3 "${SKILL_DIR}/scripts/update_spx.py" --template "${SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --check
+   python3 "${SKILL_DIR}/scripts/update_spx.py" --template "${SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --languages <languages> --check
    ```
 
-   The output is one of `current`, `stale`, or `absent`.
-
-3. **Determine the enabled languages.** Identify the languages the project uses — from `/understanding`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. Pass it as a comma-separated `--languages` value; omitting `--languages` preserves the list already recorded in the guide.
+   The output is one of `current`, `stale`, or `absent`. `stale` covers both a `template_version` behind the installed template and a recorded-language set that differs from `<languages>`.
 
 4. **Act on the status.**
 
@@ -36,11 +36,11 @@ The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `s
    - **`stale`** — re-render in place, scoped to the enabled languages:
 
      ```bash
-     python3 "${SKILL_DIR}/scripts/update_spx.py" --template "${SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --languages <comma-separated-languages> --write
+     python3 "${SKILL_DIR}/scripts/update_spx.py" --template "${SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --languages <languages> --write
      ```
 
-     New template sections arrive, the guide is scoped to the enabled languages, and `template_version` is set to the installed version. Omit `--languages` to keep the guide's recorded list when only the template version changed.
-   - **`absent`** — scaffold with the same command. When running non-interactively — the `spx-updater` agent in the background — omit `--languages`; the scaffold renders no language sections, and the report states the language list must be set.
+     New template sections arrive, the guide is scoped to `<languages>`, and `template_version` is set to the installed version.
+   - **`absent`** — scaffold with the same `--write` command. When running non-interactively without a known language set, omit `--languages`; the scaffold renders no language sections, and the report states the language list must be set.
 
 5. **Report.** State the version transition and the enabled-language list the guide was scoped to (update or scaffold), or that the language list is pending (non-interactive scaffold).
 
