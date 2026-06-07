@@ -83,6 +83,17 @@ def parse_languages(text: str) -> tuple[str, ...]:
     return _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
 
 
+def has_languages(text: str) -> bool:
+    """Whether a guide records a ``languages`` frontmatter key, even if it is empty.
+
+    A guide predating the render model records no `languages` key; re-rendering it with
+    an empty list would silently drop its language sections, so the caller must supply
+    the list explicitly rather than fall through to an empty render.
+    """
+    frontmatter, _ = _split_frontmatter(text)
+    return _frontmatter_value(frontmatter, LANGUAGES_KEY) is not None
+
+
 def _version_tuple(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
@@ -192,6 +203,17 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.write and product_path is None:
         print("error: --write requires --product", file=sys.stderr)
+        return 2
+
+    if (
+        args.languages is None
+        and product_text is not None
+        and not has_languages(product_text)
+    ):
+        print(
+            "error: guide records no languages; rerun with --languages",
+            file=sys.stderr,
+        )
         return 2
 
     if args.languages is not None:

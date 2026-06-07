@@ -19,6 +19,7 @@ from outcomeeng_testing.harnesses.update_spx import (
     NEW_SECTION,
     build_template,
     load_update_spx_module,
+    write_guide_without_languages,
     write_template,
 )
 
@@ -109,6 +110,35 @@ def test_cli_write_creates_guide(tmp_path: pathlib.Path) -> None:
     content = guide.read_text(encoding="utf-8")
     assert f"### {LANG_PRIMARY.capitalize()}" in content
     assert content.endswith("\n")
+
+
+def test_cli_update_without_recorded_languages_requires_languages(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    guide = write_guide_without_languages(tmp_path, OLD_VERSION)
+
+    # A guide with no `languages` key must refuse rather than silently render empty.
+    assert (
+        module.main(["--template", str(template), "--product", str(guide), "--write"])
+        == 2
+    )
+
+    # With a supplied language set, the update renders the enabled language.
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--product",
+            str(guide),
+            "--languages",
+            LANG_PRIMARY,
+            "--write",
+        ]
+    )
+    assert exit_code == 0
+    assert f"### {LANG_PRIMARY.capitalize()}" in guide.read_text(encoding="utf-8")
 
 
 def test_is_stale_treats_a_malformed_version_as_stale() -> None:

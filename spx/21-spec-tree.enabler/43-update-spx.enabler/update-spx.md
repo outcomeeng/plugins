@@ -12,6 +12,7 @@ CAN stay current with methodology changes without manual template tracking
 - Given a guide recording an enabled-language set and a newer template that adds a section, when the guide is updated, then the re-rendered guide contains the new section and still carries the recorded enabled languages ([test](tests/test_update_spx.scenario.l1.py))
 - Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide; `--write` without `--product` exits non-zero; and `--write` creates the guide file ([test](tests/test_update_spx.scenario.l1.py))
 - Given a guide whose `template_version` is not parseable as dotted integers, when staleness is checked, then it is treated as stale rather than raising, so a re-render normalizes it to the installed version ([test](tests/test_update_spx.scenario.l1.py))
+- Given an update of a guide that records no `languages` frontmatter key, the update refuses without a supplied `--languages` rather than silently emptying the guide's language sections, and renders when a language set is supplied ([test](tests/test_update_spx.scenario.l1.py))
 
 ### Mappings
 
