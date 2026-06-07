@@ -37,13 +37,15 @@ def _kebab_segment_strategy() -> SearchStrategy[str]:
         min_size=MIN_SEGMENT_LENGTH,
         max_size=1,
     ).flatmap(
-        lambda first: st.text(
-            alphabet=_KEBAB_INNER_ALPHABET,
-            min_size=0,
-            max_size=MAX_SEGMENT_LENGTH - 1,
+        lambda first: (
+            st.text(
+                alphabet=_KEBAB_INNER_ALPHABET,
+                min_size=0,
+                max_size=MAX_SEGMENT_LENGTH - 1,
+            )
+            .map(lambda rest: first + rest)
+            .filter(lambda s: not s.endswith("-") and "--" not in s)
         )
-        .map(lambda rest: first + rest)
-        .filter(lambda s: not s.endswith("-") and "--" not in s)
     )
 
 
