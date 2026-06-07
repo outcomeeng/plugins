@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import signal
+import subprocess
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -43,15 +44,24 @@ class ControlledChild:
     pid_path: Path
 
     def descendant_alive(self) -> bool:
+        # os.kill(pid, 0) cannot tell a running process from a zombie: a
+        # descendant killed by the group SIGKILL lingers as a zombie until its
+        # reaper (init) collects it — fast on a dev machine, slow in some CI
+        # containers — and os.kill succeeds for that zombie, which reports the
+        # killed descendant as alive. Read the process state instead, so a
+        # zombie (leading 'Z' on both Linux and macOS `ps`) or a process with no
+        # state row (already reaped) reads as not alive, while any running or
+        # sleeping descendant keeps reading alive.
         try:
             pid = int(self.pid_path.read_text())
         except (FileNotFoundError, ValueError):
             return False
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        return True
+        state = subprocess.run(
+            ["ps", "-o", "state=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        return bool(state) and not state.startswith("Z")
 
 
 def _fork_script(pid_path: Path, *, parent_exits: bool) -> str:

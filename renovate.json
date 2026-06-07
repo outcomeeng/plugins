@@ -20,9 +20,12 @@
   ],
   "customManagers": [
     {
-      "description": "Track the CLI tool versions pinned as env vars in the eval workflow. Each pinned line carries an inline `# renovate: datasource=... depName=...` annotation naming its source.",
+      "description": "Track the CLI tool versions pinned as env vars in the eval and quality-gate workflows. Each pinned line carries an inline `# renovate: datasource=... depName=...` annotation naming its source.",
       "customType": "regex",
-      "managerFilePatterns": ["^\\.github/workflows/spec-tree-evals\\.yml$"],
+      "managerFilePatterns": [
+        "^\\.github/workflows/spec-tree-evals\\.yml$",
+        "^\\.github/workflows/check\\.yml$"
+      ],
       "matchStrings": [
         "\"(?<currentValue>[^\"]+)\" # renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)"
       ]

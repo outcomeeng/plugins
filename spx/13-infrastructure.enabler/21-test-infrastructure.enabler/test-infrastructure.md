@@ -8,4 +8,4 @@ CAN be verified for correctness before changes reach the main branch
 
 ### Compliance
 
-- ALWAYS: `just check` runs all quality steps defined by child enablers and exits 0 on a clean main branch — gate integrity requires every step to pass ([test](tests/test_test_infrastructure.compliance.l2.py))
+- ALWAYS: GitHub Actions runs the full quality gate on `pull_request` and on push to `main` by invoking the gate recipe (`just check`, equivalently `uv run python -m outcomeeng.validation`) with the gate's toolchain provisioned at the project's declared Python version, never an inlined or filtered subset and never a soft-passed step, per [15-ci-gate.adr.md](15-ci-gate.adr.md) ([test](tests/test_ci_gate.compliance.l1.py))
