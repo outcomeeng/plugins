@@ -1,6 +1,6 @@
 # Update spx/
 
-PROVIDES detection and application of updates to a product's `spx/CLAUDE.md` from the installed plugin template
+PROVIDES detection and rendering of a product's `spx/CLAUDE.md` from the installed spec-tree template and the guide's declared customization config
 SO THAT all spec-tree projects
 CAN stay current with methodology changes without manual template tracking
 
@@ -8,17 +8,20 @@ CAN stay current with methodology changes without manual template tracking
 
 ### Scenarios
 
-- Given a product with `spx/CLAUDE.md` at template_version 0.17.0 and the installed plugin at 0.18.2, when `/understanding` runs, then it detects the version mismatch and uses the template version as authoritative ([test](tests/test_update_spx.scenario.l1.py))
-- Given `/understanding` detected a stale `spx/CLAUDE.md`, when `/handoff` runs, then the staleness is included in the persistence proposal ([test](tests/test_update_spx.scenario.l1.py))
-- Given a user invokes `/update-spx`, when the product's `spx/CLAUDE.md` is older than the template, then the file is updated preserving user customizations in the product name placeholder ([test](tests/test_update_spx.scenario.l1.py))
-- Given a product with no `spx/CLAUDE.md`, when `/update-spx` runs, then the template is scaffolded with a prompt for the product name ([test](tests/test_update_spx.scenario.l1.py))
+- Given a template carrying the `{product-name}` placeholder and language-conditional blocks, when the guide is scaffolded with a product name and an enabled-language set, then the rendered output substitutes the product name and contains exactly the enabled languages' blocks ([test](tests/test_update_spx.scenario.l1.py))
+- Given a guide whose config enables a language set and a newer template that adds a section, when the guide is updated, then the re-rendered guide contains the new section and still carries the config's product name and enabled languages ([test](tests/test_update_spx.scenario.l1.py))
+
+### Mappings
+
+- Over the languages the template defines blocks for, a language's block appears in the rendered guide when the language is in the config's `languages` and is omitted otherwise ([test](tests/test_update_spx.mapping.l1.py))
 
 ### Properties
 
-- The template_version in `spx/CLAUDE.md` always matches the installed spec-tree plugin version after `/update-spx` completes ([test](tests/test_update_spx.property.l1.py))
+- After a scaffold or an update, the `template_version` in the output equals the installed template version ([test](tests/test_update_spx.property.l1.py))
+- Staleness ordering matches dotted-numeric version order: a product version is stale exactly when it is numerically below the installed template version ([test](tests/test_update_spx.property.l1.py))
 
 ### Compliance
 
-- ALWAYS: `/understanding` compares `spx/CLAUDE.md` frontmatter `template_version` against the installed template — staleness detection runs once per session ([review])
-- ALWAYS: `/handoff` checks for the staleness marker emitted by `/understanding` and includes it in the persistence proposal ([review])
-- NEVER: `/update-spx` overwrites user-specific content (product name, deleted language sections) — only structural sections from the template are merged ([review])
+- ALWAYS: `/understanding` compares the product guide's frontmatter `template_version` against the installed template in the understanding skill's `templates/` — staleness detection runs once per session ([audit])
+- ALWAYS: `/handoff` checks for the staleness marker emitted by `/understanding` and includes it in the persistence proposal ([audit])
+- NEVER: an update keeps an unmodeled hand-prose edit to the guide body — a re-render reflects only the template and the guide's declared config ([test](tests/test_update_spx.compliance.l1.py))

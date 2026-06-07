@@ -179,7 +179,7 @@ git commit -m "docs({plugin-name}): address review feedback"
    - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
 6. **Regenerate derived files**: Run `just build-skills` so `dist/claude/` and `dist/codex/` match the authored source.
 7. **Document changes**: Update `AGENTS.md` and generated docs when adding new commands/skills to the catalog-facing surfaces.
-8. **Update bootstrapping template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/bootstrapping/templates/spx-claude.md`
+8. **Update the spx/CLAUDE.md template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/understanding/templates/spx-claude.md`
 9. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
 
    ```bash

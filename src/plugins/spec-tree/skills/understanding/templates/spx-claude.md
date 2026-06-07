@@ -162,7 +162,9 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. **Delete sections below that don't apply to your product.**
+Test level is encoded in the filename. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
+
+<!-- lang:typescript -->
 
 ### TypeScript
 
@@ -172,6 +174,9 @@ Test level is encoded in the filename. **Delete sections below that don't apply 
 | 2     | `{subject}.{evidence}.l2.test.ts` | `cli.scenario.l2.test.ts`      |
 | 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.scenario.l3.test.ts` |
 
+<!-- /lang:typescript -->
+<!-- lang:python -->
+
 ### Python
 
 | Level | Pattern                           | Example                        |
@@ -179,6 +184,8 @@ Test level is encoded in the filename. **Delete sections below that don't apply 
 | 1     | `test_{subject}.{evidence}.l1.py` | `test_parsing.scenario.l1.py`  |
 | 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.scenario.l2.py`      |
 | 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.scenario.l3.py` |
+
+<!-- /lang:python -->
 
 ---
 
