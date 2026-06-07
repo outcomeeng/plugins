@@ -12,7 +12,7 @@ In addition to `/opening-pr`'s branch hygiene, verify before opening:
 | Plugin manifest version bumped when the change warrants it                   | STOP. Bump per `spx/local/committing-changes.md`.          |
 | Both marketplace catalogs updated when adding or removing a plugin           | STOP. `just check` enforces; run it.                       |
 | `AGENTS.md` skills, commands, and agents tables updated to match the change  | STOP. New or removed artifacts must appear in the catalog. |
-| `bootstrapping/templates/spx-claude.md` updated when skill structure changes | STOP. New projects inherit this template.                  |
+| `understanding/templates/spx-claude.md` updated when skill structure changes | STOP. New projects inherit this template.                  |
 
 ## Required body sections
 

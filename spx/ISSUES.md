@@ -17,3 +17,14 @@ The methodology documents Go's test-infrastructure home (`internal/testinfra/`) 
 **Resolution shape**: decide whether to (a) amend the lean PDR template to describe an extension for normative-heavy decisions (decision-body sections and a longer Rationale), naming `spx/15-test-infrastructure.pdr.md` as the reference, or (b) restructure this PDR into the minimal four-section shape without losing normative content. Until then, `spx/15-test-infrastructure.pdr.md` stands as a documented deviation.
 
 Identified during the lean-template migration of the product-level decision records.
+
+## Migrate command wrappers to skills
+
+`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill as the marketplace's sole user-facing invocation artifact; the command artifact type is not authored. Eight command wrappers predate this convention, each a thin `/<name>` that fronts a skill, all in the spec-tree plugin:
+
+- `src/plugins/spec-tree/commands/` — `apply`, `author`, `bootstrap`, `clarify`, `commit`, `open-pr`, `review-changes`, `rtfm`.
+- No other plugin ships a `commands/` directory (verified by `ls src/plugins/*/commands/*.md`). Re-enumerate before migrating in case new commands have landed.
+
+Each command already maps to a governing skill (e.g. `/commit` → `committing-changes`, `/open-pr` → `opening-pr`, `/apply` → `applying`, `/author` → `authoring`, `/bootstrap` → `bootstrapping`, `/clarify` → `clarify`/`interviewing`, `/review-changes` → `reviewing-changes`, `/rtfm` → `refocusing`). The `develop` plugin also ships `creating-commands` and `auditing-commands` skills whose status this convention affects — fold their disposition into the migration.
+
+**Resolution shape**: per-command (or per-batch) PRs that drop each `commands/*.md`, name the skill like the former command where a rename is wanted, update both marketplace catalogs (`.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`) and the README plugin catalog, and rebuild `dist/`. Once no `commands/` directories remain, the ADR's `[audit]` authoring-stance rules can be reinforced by a conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory ships. Audit gate: `/aligning` against `spx/13-plugin-and-runtime-conventions.adr.md` + `just check`.

@@ -102,7 +102,11 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Write `spx/CLAUDE.md` from the template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Replace `{product-name}` with the actual product name.
+3. Render the runtime's spx-level guide — `spx/CLAUDE.md` under Claude Code, `spx/AGENTS.md` under Codex — from the template via the update-spx helper, passing the product name and the project's enabled languages so the guide carries its `product_name` and `languages` config (and a later `/update-spx` re-renders from it):
+
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md" --product <runtime-guide-path> --name "<product name>" --languages <comma-separated-languages> --write
+   ```
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
    - Candidate product areas from the interview

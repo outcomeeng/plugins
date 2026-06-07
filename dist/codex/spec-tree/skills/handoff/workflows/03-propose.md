@@ -19,6 +19,17 @@ This header is declared intent, not a vote. Default path is archive-all-listed. 
 
 </session_disposition_header>
 
+<spx_claude_staleness>
+When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understanding` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
+
+```text
+☑ [Imperfection → run /update-spx] spx/CLAUDE.md is [stale|absent] vs the installed template — reconcile via /update-spx
+```
+
+Include this item even when no other imperfection surfaced — template drift is a real, actionable continuation the operator should see.
+
+</spx_claude_staleness>
+
 <process>
 Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
 
@@ -72,5 +83,6 @@ Don't collapse a long list into a terse summary option to fit the limit. Each ac
 - User has reviewed and approved (or rejected) all proposed persistence items.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
+- When a `<SPX_CLAUDE_STALE>` marker is present, the proposal includes an `/update-spx` reconciliation item.
 
 </success_criteria>

@@ -69,6 +69,22 @@ Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
 ```
 
+6. Check the product's spx-level guide for template drift (once per session — the step 1 foundation-marker guard makes this run on first load only). The guide is `spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file. The canonical template lives in this skill's own directory at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Read its frontmatter `template_version` and the guide's frontmatter `template_version`, then emit the staleness marker when any of these hold:
+
+   - The guide is absent — emit `status="absent"`.
+   - The guide exists but carries no `template_version` frontmatter key — emit `status="stale"`. A pre-render-model or hand-written guide holds no version to compare; treat it as behind the installed template so `/update-spx --name` migrates it onto the render model.
+   - The guide's `template_version` is numerically below the installed template's `template_version` — emit `status="stale"`.
+
+   Compare versions by dotted-numeric order, not string inequality: a guide whose `template_version` equals or exceeds the installed one is not stale (a guide ahead of the install would only be downgraded by a re-render), matching the `update-spx` helper's strictly-below `--check` verdict. The marker lets `/handoff` carry the staleness into the persistence proposal so the operator can run `/update-spx` (which re-renders the guide from the installed template):
+
+```text
+<SPX_CLAUDE_STALE status="[stale|absent]">
+spx/CLAUDE.md [is behind the installed template | is not present]; run /update-spx to reconcile.
+</SPX_CLAUDE_STALE>
+```
+
+When the guide carries a `template_version` that is not below the installed template's, emit nothing.
+
 </workflow>
 
 <success_criteria>
@@ -86,5 +102,6 @@ Examples available in: examples/
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing skills per product without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
 - [ ] Methodology loaded: five verification types (validation, testing, reviewing, auditing, evaluating) across verdict mode (deterministic/agentic) and purpose (conformance/correctness); three back evidence lanes (`[test]`, `[eval]`, `[audit]`)
+- [ ] `spx/CLAUDE.md` template-drift check run once per session; `<SPX_CLAUDE_STALE>` marker emitted when the product guide is absent (`status="absent"`), exists but carries no `template_version` key (`status="stale"`), or its `template_version` is numerically below the installed template (`status="stale"`)
 
 </success_criteria>
