@@ -16,9 +16,11 @@ Approved scope: Phases 1 + 2 + 3. CI fidelity: full `just check`.
   build-skills → dist-diff → build-orchestration → fmt-check(dprint) → ruff →
   manifests → skills → skill-injection → docs-check → markdown → pytest.
 - CI toolchain for full `just check`: uv + Python 3.14 + dprint + git + the
-  `claude` CLI (the `manifests` step runs `claude plugin validate`). Confirm
-  whether `claude plugin validate` needs auth (expected: local schema validation,
-  no auth) during Phase 1 implementation.
+  `claude` CLI (the `manifests` step runs `claude plugin validate` — confirmed in
+  CI to need no auth) + the `@outcomeeng/spx` CLI (the `markdown` step runs
+  `spx validation markdown`; `spx` is a globally pnpm-linked sibling repo on dev
+  machines but a published npm package `@outcomeeng/spx` for CI). All four CLI
+  versions are pinned in `.github/workflows/check.yml` and tracked by Renovate.
 - Precedent for a workflow-conformance test: `spx/32-distribution.enabler/tests/
   test_distribution_workflow.compliance.l1.py` parses `.github/workflows/*.yml`
   with `yaml` + `tomllib`.
