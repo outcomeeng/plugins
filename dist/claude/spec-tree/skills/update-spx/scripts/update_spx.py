@@ -1,15 +1,14 @@
 """Pure helpers for rendering a product's ``spx/CLAUDE.md`` from the spec-tree template.
 
-The spx-level directory guide is generated, not hand-merged: its customization
-surface is declarative frontmatter data — the product name and the enabled-language
-list — and its body is rendered from the installed template (see the node's Guide
-Render Model ADR). An update re-renders the new template with the guide's existing
-config, so new template content propagates while the product name and language
-selection are preserved.
+The spx-level directory guide is generated, not hand-merged, and carries no substituted
+strings: its only per-product variation is the enabled-language list, so a re-render keeps
+the blocks for those languages and drops the rest (see the node's Guide Render Model ADR).
+An update re-renders the new template with the guide's recorded language list, so new
+template content propagates while the language selection is preserved.
 
-Every function operates on document strings and returns document strings — no
-filesystem, environment, or subprocess access. The skill's CLI edge reads the
-template and guide files and writes the result.
+Every function here takes document strings and returns document strings — no filesystem,
+environment, or subprocess access. The skill's CLI edge reads the template and guide files,
+resolves the language list, and writes the result; language detection lives in the caller.
 """
 
 from __future__ import annotations
@@ -18,14 +17,11 @@ import argparse
 import pathlib
 import re
 import sys
-from dataclasses import dataclass
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
-PRODUCT_NAME_KEY = "product_name"
 LANGUAGES_KEY = "languages"
-PRODUCT_NAME_PLACEHOLDER = "{product-name}"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
 
 _LANG_BLOCK = re.compile(
@@ -33,14 +29,6 @@ _LANG_BLOCK = re.compile(
     re.DOTALL,
 )
 _BLANK_RUN = re.compile(r"\n{3,}")
-
-
-@dataclass(frozen=True)
-class GuideConfig:
-    """The declared customization surface of a rendered guide."""
-
-    product_name: str
-    languages: tuple[str, ...]
 
 
 def _split_frontmatter(text: str) -> tuple[list[str], str]:
@@ -55,7 +43,7 @@ def _split_frontmatter(text: str) -> tuple[list[str], str]:
 
 
 def _unquote(value: str) -> str:
-    """Strip exactly one matching pair of surrounding quotes, preserving inner quotes."""
+    """Strip exactly one matching pair of surrounding quotes."""
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
         return value[1:-1]
     return value
@@ -76,7 +64,7 @@ def _frontmatter_block(frontmatter: list[str]) -> str:
 
 
 def _parse_languages(value: str | None) -> tuple[str, ...]:
-    """Parse a ``languages`` frontmatter value (``[a, b]`` or ``a, b``) into a tuple."""
+    """Parse a ``languages`` value (``[a, b]`` or ``a, b``) into a tuple."""
     if not value:
         return ()
     inner = value.strip().removeprefix("[").removesuffix("]")
@@ -89,22 +77,21 @@ def parse_template_version(text: str) -> str | None:
     return _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY)
 
 
-def parse_config(text: str) -> GuideConfig:
-    """Read the declared customization config from a guide's frontmatter."""
+def parse_languages(text: str) -> tuple[str, ...]:
+    """Read the recorded enabled-language list from a guide's frontmatter."""
     frontmatter, _ = _split_frontmatter(text)
-    name = _frontmatter_value(frontmatter, PRODUCT_NAME_KEY) or PRODUCT_NAME_PLACEHOLDER
-    languages = _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
-    return GuideConfig(product_name=name, languages=languages)
+    return _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
 
 
-def has_config(text: str) -> bool:
-    """Whether a guide carries the render-model config (a ``product_name`` frontmatter key).
+def has_languages(text: str) -> bool:
+    """Whether a guide records a ``languages`` frontmatter key, even if it is empty.
 
-    A guide predating the schema holds the product name in its body, not frontmatter;
-    re-rendering it from an empty config would discard the name and language sections.
+    A guide predating the render model records no `languages` key; re-rendering it with
+    an empty list would silently drop its language sections, so the caller must supply
+    the list explicitly rather than fall through to an empty render.
     """
     frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(frontmatter, PRODUCT_NAME_KEY) is not None
+    return _frontmatter_value(frontmatter, LANGUAGES_KEY) is not None
 
 
 def _version_tuple(version: str) -> tuple[int, ...]:
@@ -134,12 +121,15 @@ def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     return _LANG_BLOCK.sub(replace, body)
 
 
-def render(template_text: str, config: GuideConfig, installed_version: str) -> str:
-    """Render a guide from the template and the declared config.
+def render(
+    template_text: str, languages: tuple[str, ...], installed_version: str
+) -> str:
+    """Render a guide from the template and the enabled-language list.
 
-    Language-conditional blocks render only for enabled languages, the product-name
-    placeholder is substituted, and the output frontmatter records the version,
-    source, product name, and enabled-language list so a later update reads them back.
+    Language-conditional blocks render only for enabled languages; nothing else is
+    substituted, so brace-delimited illustration tokens pass through unchanged. The output
+    frontmatter records the version, source, and language list so a later update reads the
+    languages back.
     """
     template_frontmatter, template_body = _split_frontmatter(template_text)
     source = (
@@ -147,24 +137,22 @@ def render(template_text: str, config: GuideConfig, installed_version: str) -> s
         or DEFAULT_TEMPLATE_SOURCE
     )
 
-    body = _filter_languages(template_body, config.languages)
-    body = body.replace(PRODUCT_NAME_PLACEHOLDER, config.product_name)
+    body = _filter_languages(template_body, languages)
     body = _BLANK_RUN.sub("\n\n", body)
 
     out_frontmatter = [
         f'{TEMPLATE_VERSION_KEY}: "{installed_version}"',
         f"{TEMPLATE_SOURCE_KEY}: {source}",
-        f'{PRODUCT_NAME_KEY}: "{config.product_name}"',
-        f"{LANGUAGES_KEY}: [{', '.join(config.languages)}]",
+        f"{LANGUAGES_KEY}: [{', '.join(languages)}]",
     ]
-    # `_split_frontmatter` uses `str.splitlines()`, which drops the template's
-    # trailing newline; normalize so the output always ends with exactly one.
+    # `_split_frontmatter` uses `str.splitlines()`, which drops the template's trailing
+    # newline; normalize so the output always ends with exactly one.
     rendered = f"{_frontmatter_block(out_frontmatter)}\n{body}"
     return rendered.rstrip("\n") + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Thin CLI edge: read the template and guide files, run the pure core, emit the result."""
+    """Thin CLI edge: read the template and guide, resolve languages, emit the result."""
     parser = argparse.ArgumentParser(
         description="Render a product's spx/CLAUDE.md from the spec-tree template."
     )
@@ -183,10 +171,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Write the result to --product instead of stdout.",
     )
     parser.add_argument(
-        "--name", help="Product name for a scaffold (when the guide is absent)."
-    )
-    parser.add_argument(
-        "--languages", help="Comma-separated enabled languages for a scaffold."
+        "--languages",
+        help="Comma-separated enabled languages; preserves the guide's recorded list when omitted.",
     )
     args = parser.parse_args(argv)
 
@@ -208,36 +194,35 @@ def main(argv: list[str] | None = None) -> int:
             print("absent")
             return 0
         product_version = parse_template_version(product_text)
-        print(
-            "stale"
-            if product_version is None or is_stale(product_version, installed)
-            else "current"
-        )
+        version_stale = product_version is None or is_stale(product_version, installed)
+        languages_drifted = args.languages is not None and parse_languages(
+            product_text
+        ) != _parse_languages(args.languages)
+        print("stale" if version_stale or languages_drifted else "current")
         return 0
 
     if args.write and product_path is None:
         print("error: --write requires --product", file=sys.stderr)
         return 2
 
-    cli_languages = _parse_languages(args.languages) if args.languages else None
-    if product_text is None:
-        config = GuideConfig(
-            product_name=args.name or PRODUCT_NAME_PLACEHOLDER,
-            languages=cli_languages or (),
-        )
-    elif has_config(product_text):
-        config = parse_config(product_text)
-    elif args.name is not None:
-        # Migrate a guide that predates the config schema, using the supplied config.
-        config = GuideConfig(product_name=args.name, languages=cli_languages or ())
-    else:
+    if (
+        args.languages is None
+        and product_text is not None
+        and not has_languages(product_text)
+    ):
         print(
-            "error: guide predates the config schema (no product_name); "
-            "rerun with --name and --languages",
+            "error: guide records no languages; rerun with --languages",
             file=sys.stderr,
         )
         return 2
-    result = render(template_text, config, installed)
+
+    if args.languages is not None:
+        languages = _parse_languages(args.languages)
+    elif product_text is not None:
+        languages = parse_languages(product_text)
+    else:
+        languages = ()
+    result = render(template_text, languages, installed)
 
     if args.write and product_path is not None:
         product_path.write_text(result, encoding="utf-8")

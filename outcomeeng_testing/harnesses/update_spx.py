@@ -5,8 +5,8 @@ Exposes:
 - An importlib loader for ``update_spx.py``. The module ships under a
   runtime-substituted plugin skill directory and is not importable by package
   name; tests load it through ``importlib`` instead.
-- ``build_template``. Constructs a synthetic spx-claude.md-shaped template with the
-  product-name placeholder, a language-conditional block per language in
+- ``build_template``. Constructs a synthetic spx-claude.md-shaped template with a
+  brace-delimited illustration token, a language-conditional block per language in
   ``TEMPLATE_LANGUAGES``, and (optionally) a section that exists only in a newer
   template — for exercising new-section propagation on update. The lang-block
   marker syntax mirrors the module's ``_LANG_BLOCK`` contract; a test that drifts
@@ -38,12 +38,13 @@ UPDATE_SPX_MODULE_PATH = (
 )
 
 # Invented scenario payload owned by the harness.
-PRODUCT_NAME = "Acme Telemetry"
 LANG_PRIMARY = "python"
 LANG_SECONDARY = "typescript"
 TEMPLATE_LANGUAGES = (LANG_PRIMARY, LANG_SECONDARY)
 BASE_SECTION = "Test Naming"
 NEW_SECTION = "Process Hygiene"
+# A brace-delimited illustration token the render must pass through unchanged.
+ILLUSTRATION_TOKEN = "{product-slug}"
 
 
 def load_update_spx_module() -> ModuleType:
@@ -76,14 +77,14 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
     frontmatter = (
         f"{delimiter}\n"
         f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: spec-tree\n"
+        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
         f"{delimiter}\n"
     )
     parts = [
         "",
         "# spx/ Directory Guide",
         "",
-        f"This guide is for the {module.PRODUCT_NAME_PLACEHOLDER} product.",
+        f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
         "",
         f"## {BASE_SECTION}",
         "",
@@ -117,22 +118,20 @@ def write_template(
     return path
 
 
-def write_pre_schema_guide(
-    directory: pathlib.Path, version: str, product_name: str
+def write_guide_without_languages(
+    directory: pathlib.Path, version: str
 ) -> pathlib.Path:
-    """Write a guide predating the config schema: frontmatter has only version + source.
+    """Write a guide whose frontmatter records a version but no ``languages`` key.
 
-    The product name lives in the body, not frontmatter — the pre-render-model shape an
-    update must not silently discard.
+    The pre-render-model / hand-written shape an update must not silently empty.
     """
     module = load_update_spx_module()
     path = directory / "CLAUDE.md"
     path.write_text(
         f"{module.FRONTMATTER_DELIMITER}\n"
         f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: spec-tree\n"
-        f"{module.FRONTMATTER_DELIMITER}\n\n"
-        f"# spx/ Directory Guide\n\nThis guide is for the {product_name} product.\n",
+        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
+        f"{module.FRONTMATTER_DELIMITER}\n\n# spx/ Directory Guide\n",
         encoding="utf-8",
     )
     return path

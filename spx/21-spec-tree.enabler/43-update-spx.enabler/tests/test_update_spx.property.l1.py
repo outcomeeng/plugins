@@ -1,10 +1,10 @@
 """Property evidence for the update-spx render helper.
 
 Universal invariants in ``update-spx.md``: after a render the output's
-``template_version`` equals the installed version, and staleness ordering matches
-dotted-numeric version order (catching lexicographic defects such as 0.9.0 vs
-0.10.0). Hypothesis owns the generated version domain; Python tuple ordering is the
-independent oracle.
+``template_version`` equals the installed version, every render ends with exactly one
+trailing newline, and staleness ordering matches dotted-numeric version order (catching
+lexicographic defects such as 0.9.0 vs 0.10.0). Hypothesis owns the generated version
+domain; Python tuple ordering is the independent oracle.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.update_spx import (
-    PRODUCT_NAME,
     TEMPLATE_LANGUAGES,
     build_template,
     load_update_spx_module,
@@ -33,8 +32,7 @@ def test_render_output_version_equals_installed(
 ) -> None:
     module = load_update_spx_module()
     installed_str = _to_version(installed)
-    config = module.GuideConfig(product_name=PRODUCT_NAME, languages=TEMPLATE_LANGUAGES)
-    rendered = module.render(build_template("0.0.0"), config, installed_str)
+    rendered = module.render(build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str)
     assert module.parse_template_version(rendered) == installed_str
 
 
@@ -43,8 +41,9 @@ def test_render_output_ends_with_single_newline(
     installed: tuple[int, int, int],
 ) -> None:
     module = load_update_spx_module()
-    config = module.GuideConfig(product_name=PRODUCT_NAME, languages=TEMPLATE_LANGUAGES)
-    rendered = module.render(build_template("0.0.0"), config, _to_version(installed))
+    rendered = module.render(
+        build_template("0.0.0"), TEMPLATE_LANGUAGES, _to_version(installed)
+    )
     assert rendered.endswith("\n")
     assert not rendered.endswith("\n\n")
 
@@ -55,20 +54,3 @@ def test_is_stale_matches_numeric_version_order(
 ) -> None:
     module = load_update_spx_module()
     assert module.is_stale(_to_version(left), _to_version(right)) is (left < right)
-
-
-_PRODUCT_NAME = st.text(
-    alphabet=st.characters(min_codepoint=0x20, max_codepoint=0x7E),
-    min_size=1,
-    max_size=60,
-)
-
-
-@given(name=_PRODUCT_NAME)
-def test_product_name_round_trips_through_render(name: str) -> None:
-    # Realistic product names — printable text including quotes, spaces, colons, and
-    # brackets — survive the render-then-parse round trip via the frontmatter.
-    module = load_update_spx_module()
-    config = module.GuideConfig(product_name=name, languages=())
-    rendered = module.render(build_template("0.18.0"), config, "0.18.0")
-    assert module.parse_config(rendered).product_name == name
