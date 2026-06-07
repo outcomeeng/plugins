@@ -69,12 +69,11 @@ Every closure ends with **zero or one** handoff. Pick the path once and execute 
 2. Do NOT run `spx session handoff` — that would create a second handoff and break the one-handoff end state.
 3. Read the artifact frontmatter and preserve its existing `created_at`, `agent_session_id`, and `git_ref` values.
 4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative scope from every in-scope session.
-5. Omit `result` from the rewritten artifact because it remains an available TODO continuation.
-6. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
+5. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
 
 **Path C — new handoff (one handoff, no artifact)**:
 
-1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`; omit `result`) and the markdown body.
+1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---` and prefills `created_at`, `agent_session_id`, and `git_ref` itself.
    ```bash
    # stdin = JSON header on line 1, then the body verbatim; a leading
@@ -129,12 +128,6 @@ Archive order:
 1. Earlier in-conversation pickups still in `doing/`.
 2. The most recently claimed doing session, if any.
 3. Any mid-session artifact this conversation created that is NOT the rewrite-in-place canonical (Path A archives all artifacts; Path C archives all when no rewrite happened).
-
-Before each archive command, edit the session file being archived and add or update frontmatter `result` with a non-empty completion summary:
-
-- For in-scope picked-up sessions: summarize what the closure persisted for that session and name the canonical continuation id when Path B or C created one.
-- For mid-session artifacts being archived instead of rewritten: use a result such as `Reconciled into canonical continuation <id>.` or `Closed without continuation under --no-session.`
-- Preserve existing frontmatter fields while adding `result`; do not add `tags` or `working_directory`.
 
 ```bash
 spx session archive <session-id>

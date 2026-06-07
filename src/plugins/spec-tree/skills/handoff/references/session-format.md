@@ -129,7 +129,6 @@ history.
 - **`git_ref`**: Prefilled by `spx session handoff` from git context — the branch name for a main checkout on a branch, or a commit SHA for a detached or linked-worktree handoff. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
 - **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `git_ref` identify the session context.
 - **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
-- **`result`**: Omit from new todo continuations. Add a non-empty `result` only to sessions being archived from `doing/` or abandoned mid-session artifacts before running `spx session archive`.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
 - **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
