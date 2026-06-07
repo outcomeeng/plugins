@@ -24,6 +24,8 @@ import sys
 from types import ModuleType
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+# Coupled to the update-spx skill directory name; a rename there must update this
+# path or load_update_spx_module raises RuntimeError at import time.
 UPDATE_SPX_MODULE_PATH = (
     REPO_ROOT
     / "src"
