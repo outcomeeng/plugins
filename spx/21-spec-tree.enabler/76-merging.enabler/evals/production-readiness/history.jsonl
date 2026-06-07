@@ -23,3 +23,4 @@
 {"timestamp":"2026-06-06T19-57-11Z","schema_version":"1","git_sha":"c914633","passed":false,"pass_rate":0.75,"cases_total":4,"cases_passed":3,"total_cost_usd":0.31561320000000004,"total_duration_ms":10482.0,"transcript":"runs/2026-06-06T19-57-11Z.json"}
 {"timestamp":"2026-06-06T20-15-16Z","schema_version":"1","git_sha":"b389b4b","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,"total_cost_usd":0.3155832,"total_duration_ms":8192.0,"transcript":"runs/2026-06-06T20-15-16Z.json"}
 {"timestamp":"2026-06-06T23-19-28Z","schema_version":"1","git_sha":"4be25f3","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,"total_cost_usd":0.3293082,"total_duration_ms":15083.0,"transcript":"runs/2026-06-06T23-19-28Z.json"}
+{"timestamp":"2026-06-07T08-24-36Z","schema_version":"1","git_sha":"bfc354f","passed":true,"pass_rate":1.0,"cases_total":4,"cases_passed":4,"total_cost_usd":0.3248832,"total_duration_ms":8730.0,"transcript":"runs/2026-06-07T08-24-36Z.json"}
