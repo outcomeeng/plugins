@@ -12,6 +12,7 @@ CAN stay current with methodology changes without manual template tracking
 - Given a guide whose config enables a language set and a newer template that adds a section, when the guide is updated, then the re-rendered guide contains the new section and still carries the config's product name and enabled languages ([test](tests/test_update_spx.scenario.l1.py))
 - Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide; `--write` without `--product` exits non-zero; and `--write` creates the guide file ([test](tests/test_update_spx.scenario.l1.py))
 - Given an update of a guide that predates the config schema (no `product_name` frontmatter), the update refuses without a supplied name rather than discarding the body-held name, and migrates when a name and languages are supplied ([test](tests/test_update_spx.scenario.l1.py))
+- Given a guide whose `template_version` is not parseable as dotted integers, when staleness is checked, then it is treated as stale rather than raising, so a re-render normalizes it to the installed version ([test](tests/test_update_spx.scenario.l1.py))
 
 ### Mappings
 
@@ -22,6 +23,7 @@ CAN stay current with methodology changes without manual template tracking
 - After a scaffold or an update, the `template_version` in the output equals the installed template version ([test](tests/test_update_spx.property.l1.py))
 - Every rendered guide ends with exactly one trailing newline ([test](tests/test_update_spx.property.l1.py))
 - Staleness ordering matches dotted-numeric version order: a product version is stale exactly when it is numerically below the installed template version ([test](tests/test_update_spx.property.l1.py))
+- The declared product name round-trips through the guide: for a product name of printable ASCII characters, `parse_config` reads back exactly the `product_name` that `render` wrote into the frontmatter ([test](tests/test_update_spx.property.l1.py))
 
 ### Compliance
 
