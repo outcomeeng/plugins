@@ -1,11 +1,11 @@
 ---
-template_version: "0.18.3"
+template_version: "0.18.4"
 template_source: spec-tree
 ---
 
 # spx/ Directory Guide (Spec Tree)
 
-This guide explains WHEN to invoke spec-tree skills for the **{product-name}** product. It is a **router** — the skills contain the HOW.
+This guide explains WHEN to invoke spec-tree skills for this product. It is a **router** — the skills contain the HOW.
 
 ---
 
@@ -17,7 +17,7 @@ Two node types at any depth:
 
 ```text
 spx/
-  {product-name}.product.md            # Product spec (root)
+  {product-slug}.product.md            # Product spec (root)
   NN-{slug}.adr.md                     # Architecture decision
   NN-{slug}.pdr.md                     # Product decision
   NN-{slug}.enabler/                   # Shared infrastructure
@@ -139,24 +139,40 @@ Every change destined for the default branch passes through the `REVIEW_READINES
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents, returning structured APPROVED/REJECTED verdicts. Use agents when running multiple audits in parallel; use skills when you want to discuss findings with the user.
 
-**Delete rows that don't apply to your product.**
+| User Says...             | Skill              | Agent                   |
+| ------------------------ | ------------------ | ----------------------- |
+| "Implement this outcome" | `/contextualizing` | —                       |
+| "Create an outcome"      | `/authoring`       | —                       |
+| "Add an ADR"             | `/authoring`       | —                       |
+| "This node is too big"   | `/decomposing`     | —                       |
+| "Move this under that"   | `/refactoring`     | —                       |
+| "Check these specs"      | `/aligning`        | —                       |
+| "Write tests for this"   | `/testing`         | —                       |
+| "Start the TDD flow"     | `/applying`        | `applier`               |
+| "Audit this PDR"         | `/audit-pdr`       | `audit-pdr`             |
+| "Audit this ADR"         | `/audit-adr`       | `audit-adr`             |
+| "Audit test evidence"    | `/auditing-tests`  | `test-evidence-auditor` |
+
+Per-language code, architecture, and test audits render for the product's enabled languages:
+
+<!-- lang:python -->
+
+| User Says...            | Skill                           | Agent                         |
+| ----------------------- | ------------------------------- | ----------------------------- |
+| "Audit this code"       | `/auditing-python`              | `python-code-auditor`         |
+| "Audit ADRs for Python" | `/auditing-python-architecture` | `python-architecture-auditor` |
+| "Audit these tests"     | `/auditing-python-tests`        | `python-test-auditor`         |
+
+<!-- /lang:python -->
+<!-- lang:typescript -->
 
 | User Says...                | Skill                               | Agent                             |
 | --------------------------- | ----------------------------------- | --------------------------------- |
-| "Implement this outcome"    | `/contextualizing`                  | —                                 |
-| "Create an outcome"         | `/authoring`                        | —                                 |
-| "Add an ADR"                | `/authoring`                        | —                                 |
-| "This node is too big"      | `/decomposing`                      | —                                 |
-| "Move this under that"      | `/refactoring`                      | —                                 |
-| "Check these specs"         | `/aligning`                         | —                                 |
-| "Write tests for this"      | `/testing`                          | —                                 |
-| "Start the TDD flow"        | `/applying`                         | `applier`                         |
-| "Audit this PDR"            | `/audit-pdr`                        | `audit-pdr`                       |
-| "Audit this ADR"            | `/audit-adr`                        | `audit-adr`                       |
-| "Audit test evidence"       | `/auditing-tests`                   | `test-evidence-auditor`           |
-| "Audit this code"           | `/auditing-{language}`              | `{language}-code-auditor`         |
-| "Audit ADRs for {language}" | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
-| "Audit these tests"         | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
+| "Audit this code"           | `/auditing-typescript`              | `typescript-code-auditor`         |
+| "Audit ADRs for TypeScript" | `/auditing-typescript-architecture` | `typescript-architecture-auditor` |
+| "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
+
+<!-- /lang:typescript -->
 
 ---
 

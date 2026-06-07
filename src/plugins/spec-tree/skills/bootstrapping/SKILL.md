@@ -102,10 +102,10 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Render the runtime's spx-level guide — `spx/CLAUDE.md` under Claude Code, `spx/AGENTS.md` under Codex — from the template via the update-spx helper, passing the product name and the project's enabled languages so the guide carries its `product_name` and `languages` config (and a later `/update-spx` re-renders from it):
+3. Render the runtime's spx-level guide — `spx/CLAUDE.md` under Claude Code, `spx/AGENTS.md` under Codex — from the template via the update-spx helper, passing the project's enabled languages so the guide records its `languages` config (and a later `/update-spx` re-renders from it, scoped to those languages):
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md" --product <runtime-guide-path> --name "<product name>" --languages <comma-separated-languages> --write
+   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md" --product <runtime-guide-path> --languages <comma-separated-languages> --write
    ```
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
@@ -181,7 +181,7 @@ Bootstrapping is complete when:
 - [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `spx/CLAUDE.md` created from template with product name
+- [ ] `spx/CLAUDE.md` created from template, scoped to the project's enabled languages
 - [ ] `spx/PLAN.md` created when top-level intent exists
 - [ ] Top-level structure delegated to `/decomposing spx/`
 - [ ] Next steps recommended

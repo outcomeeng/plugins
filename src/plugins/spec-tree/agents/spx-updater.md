@@ -24,7 +24,7 @@ Background runner for `spx/CLAUDE.md` template updates. This is the default, aut
 <constraints>
 
 - NEVER carry parse, compare, render, or scaffold logic in this agent — invoke the skill; all intelligence lives there.
-- This agent runs non-interactively and cannot prompt. For a `stale` guide, let the skill re-render in place (no prompt needed — the product name and language list are already in the guide's frontmatter). For an `absent` guide, the skill scaffolds with the `{product-name}` placeholder and no languages; report that the product name and language list must be set interactively rather than attempting to ask.
+- This agent runs non-interactively and cannot prompt. For a `stale` guide, let the skill re-render in place (no prompt needed — the enabled-language list is already in the guide's frontmatter). For an `absent` guide, the skill scaffolds with no language sections; report that the language list must be set interactively rather than attempting to ask.
 
 </constraints>
 
