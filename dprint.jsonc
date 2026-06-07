@@ -1,9 +1,18 @@
 {
+  // Python is formatted by the project's ruff (pyproject.toml), enforced by the
+  // gate's `ruff format --check` step. dprint's bundled ruff plugin pins a ruff
+  // version that drifts from the uv-locked toolchain, so it is intentionally absent
+  // and `py` is intentionally absent from `includes`.
   "includes": [
-    "**/*.{ts,tsx,js,jsx,json,jsonc,md,mdx,toml,py,yaml,yml,css,scss,html,vue,svelte}",
+    "**/*.{ts,tsx,js,jsx,json,jsonc,md,mdx,toml,yaml,yml,css,scss,html,vue,svelte}",
   ],
   "excludes": [
     "**/node_modules",
+    "**/.mypy_cache/**",
+    "**/.pytest_cache/**",
+    "**/.ruff_cache/**",
+    "**/.spx/sessions/**",
+    "**/.spx/reviews/**",
     "**/*-lock.json",
     "**/pnpm-lock.yaml",
     "**/semgrep_*.yaml",
@@ -38,13 +47,11 @@
     "https://plugins.dprint.dev/markdown-0.20.0.wasm",
     "https://plugins.dprint.dev/toml-0.7.0.wasm",
     "https://plugins.dprint.dev/dockerfile-0.3.3.wasm",
-    "https://plugins.dprint.dev/ruff-0.6.11.wasm",
     "https://plugins.dprint.dev/jupyter-0.2.1.wasm",
     "https://plugins.dprint.dev/g-plane/malva-v0.15.1.wasm",
     "https://plugins.dprint.dev/g-plane/markup_fmt-v0.25.3.wasm",
     "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.1.wasm",
   ],
-  "ruff": {},
   "toml": {},
   "typescript": {},
   "yaml": {},

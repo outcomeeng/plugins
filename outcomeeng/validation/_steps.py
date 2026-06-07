@@ -1,12 +1,12 @@
 """The fixed step list for the marketplace's quality gate.
 
 `STEPS` is intentionally a module-level constant rather than a config-driven
-list. Drift in the gate's composition is the regression `spx/ISSUES.md`
-records; the fixed tuple is the safeguard.
+list. Drift in the gate's composition is a regression the fixed tuple guards
+against.
 
-The compliance test enforces that `("ruff", "check")` and
-`("spx", "validation", "markdown")` appear as contiguous argv subsequences
-in at least one step each.
+The compliance test enforces that `("ruff", "format", "--check")`,
+`("ruff", "check")`, and `("spx", "validation", "markdown")` appear as
+contiguous argv subsequences in at least one step each.
 """
 
 from __future__ import annotations
@@ -45,6 +45,7 @@ STEPS: Final = (
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=("dprint", "check")),
+    Step(label="ruff-format", argv=("uv", "run", "ruff", "format", "--check", ".")),
     Step(label="ruff", argv=("uv", "run", "ruff", "check", ".")),
     Step(
         label="manifests",

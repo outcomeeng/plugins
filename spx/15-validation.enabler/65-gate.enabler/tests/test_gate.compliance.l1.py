@@ -3,8 +3,8 @@
 Verifies architectural compliance rules that can be falsified by inspecting
 source code or module-level data:
 
-- The declared step list includes a `ruff check` step and a
-  `spx validation markdown` step.
+- The declared step list includes a `ruff format --check` step, a
+  `ruff check` step, and a `spx validation markdown` step.
 - The production process spawner passes `start_new_session=True` so
   signal forwarding targets a process group.
 - The SIGKILL grace-period wait uses a single `time.monotonic()` deadline
@@ -30,6 +30,7 @@ from outcomeeng import validation as pkg
 from outcomeeng.validation import STEPS, Step
 
 RUFF_TOKENS: Final = ("ruff", "check")
+RUFF_FORMAT_TOKENS: Final = ("ruff", "format", "--check")
 SPX_MARKDOWN_TOKENS: Final = ("spx", "validation", "markdown")
 
 
@@ -44,7 +45,7 @@ def _argv_contains_sequence(argv: tuple[str, ...], tokens: tuple[str, ...]) -> b
 
 
 class TestDeclaredSteps:
-    """STEPS must include the validators named in spx/ISSUES.md."""
+    """STEPS must include the ruff-format, ruff-check, and markdown validators."""
 
     def test_steps_is_non_empty_tuple_of_step(self) -> None:
         assert isinstance(STEPS, tuple)
@@ -54,6 +55,11 @@ class TestDeclaredSteps:
 
     def test_steps_includes_ruff_check(self) -> None:
         assert any(_argv_contains_sequence(step.argv, RUFF_TOKENS) for step in STEPS)
+
+    def test_steps_includes_ruff_format(self) -> None:
+        assert any(
+            _argv_contains_sequence(step.argv, RUFF_FORMAT_TOKENS) for step in STEPS
+        )
 
     def test_steps_includes_spx_validation_markdown(self) -> None:
         assert any(
