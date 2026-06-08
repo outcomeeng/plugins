@@ -1,11 +1,11 @@
 # Verification
 
-This product adopts the verification taxonomy declared in the `/understanding` foundation reference `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md`: five types — validation, testing, reviewing, auditing, evaluating — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the evidence lanes an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing.
+This product adopts the verification taxonomy declared in the `/understanding` foundation reference `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md`: five types — validation, testing, reviewing, auditing, evaluating — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the tag an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing.
 
 Grounding for this product:
 
 - The agentic types, auditing and reviewing, are LLM-driven; their skills are themselves validated by evals in this repository through `outcomeeng_evals`.
-- Each path-bearing evidence link resolves to its target: a `[test]` link to a pytest collectable, an `[eval]` link to an `eval.toml`. The `[audit]` lane is pathless.
+- Each path-bearing evidence link resolves to its target: a `[test]` link to a pytest collectable, an `[eval]` link to an `eval.toml`. The `[audit]` tag is pathless.
 
 ## Verification
 

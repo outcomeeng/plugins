@@ -14,5 +14,5 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 ### Compliance
 
 - ALWAYS: define required sections for each artifact type — skills derive their validation rules from these templates ([review])
-- ALWAYS: the ADR and PDR decision templates require each Compliance MUST/NEVER rule to carry a single per-rule evidence-type tag — one of scenario, mapping, conformance, property, compliance ([review])
+- ALWAYS: the ADR and PDR decision templates require each `### Testing` rule to carry a single assertion-type tag — one of scenario, mapping, conformance, property, compliance ([review])
 - NEVER: duplicate template content in downstream skills — skills reference templates, they do not copy them ([review])
