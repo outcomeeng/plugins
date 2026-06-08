@@ -9,6 +9,8 @@ and N pool worktrees detached at the ``origin/main`` tip.
 
 from __future__ import annotations
 
+import pytest
+
 from outcomeeng_testing.harnesses.worktree_provisioning import (
     head_sha,
     is_bare_repo,
@@ -134,3 +136,19 @@ def test_provision_cli_origin_builds_pool() -> None:
         assert is_bare_repo(container / "repo.git")
         assert classify(probe(container / "main")) is Layout.POOL
         assert (container / "repo-a").is_dir()
+
+
+def test_provision_refuses_a_container_that_already_holds_spx() -> None:
+    with provisioning_env() as env:
+        prior = env.single_checkout("prior")
+        (prior / ".spx").mkdir()
+        container = env.container()
+        (container / ".spx").mkdir()
+
+        with pytest.raises(FileExistsError):
+            provision(
+                container=container,
+                repo_name="repo",
+                origin_url=str(env.origin),
+                carry_spx=prior / ".spx",
+            )

@@ -221,6 +221,11 @@ def provision(
 
     spx_dir = container / ".spx"
     if carry_spx is not None:
+        if spx_dir.exists():
+            raise FileExistsError(
+                f"{spx_dir} already exists; provision into a container without a .spx/ "
+                f"so the carried directory is not nested inside it"
+            )
         shutil.move(str(carry_spx), str(spx_dir))
     else:
         spx_dir.mkdir(exist_ok=True)
