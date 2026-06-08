@@ -14,7 +14,7 @@ CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairin
 
 ### Mappings
 
-- A probed checkout layout maps to a compliance verdict: a lone working tree with no linked worktrees maps to `single`; a bare repository with a sibling `main` worktree and `.spx/` beside the git-common-dir maps to `pool`; one or more linked worktrees on a non-bare repository maps to `non-compliant`; a bare pool missing the `main` sibling or the sibling `.spx/` maps to `non-compliant` ([test](tests/test_worktree_provisioning.mapping.l1.py))
+- A probed checkout layout maps to a compliance verdict: a lone working tree with no linked worktrees maps to `single`; a bare repository with a sibling `main` worktree tracking `origin/main` and `.spx/` beside the git-common-dir maps to `pool`; one or more linked worktrees on a non-bare repository maps to `non-compliant`; a bare pool missing the `main` sibling, lacking `main`-to-`origin/main` tracking, or missing the sibling `.spx/` maps to `non-compliant` ([test](tests/test_worktree_provisioning.mapping.l1.py))
 
 ### Properties
 
