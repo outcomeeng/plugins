@@ -104,26 +104,26 @@ NN-slug.{enabler|outcome}/
 - The slug matches the directory name without the numeric prefix and type suffix
 - Example: `43-status-rollup.outcome/` contains `status-rollup.md`
 
-**Test files (`[test]` lane):**
+**Test files (`[test]`):**
 
 - Co-located in `tests/` within the node directory
-- Must encode evidence type and execution level in the filename — one evidence type per file
-  - evidence ∈ {scenario, mapping, conformance, property, compliance}
+- Must encode the assertion type and execution level in the filename — one assertion type per file
+  - assertion type ∈ {scenario, mapping, conformance, property, compliance}
   - level ∈ {l1, l2, l3}
 - Naming follows the product's language convention, e.g.:
   - TypeScript: `slug.scenario.l1.test.ts`, `slug.property.l1.test.ts`, `slug.conformance.l2.test.ts`
   - Python: `test_slug.scenario.l1.py`, `test_slug.property.l1.py`, `test_slug.conformance.l2.py`
   - Go: `slug.scenario.l1_test.go`, `slug.property.l1_test.go`, `slug.conformance.l2_test.go`
 - An optional runner token sits between level and the test extension when a non-default runner applies (e.g., `slug.scenario.l2.playwright.test.ts`)
-- Verified by `[test]` evidence
+- Verified by the `[test]` verification type
 
-**Eval directories (`[eval]` lane):**
+**Eval directories (`[eval]`):**
 
 - Co-located in `evals/{rule-slug}/` within the node directory, one directory per `[eval]` assertion
 - Each directory carries `eval.toml`, `cases.jsonl`, `prompt.md`, and `history.jsonl` (all committed)
 - The `runs/` subdirectory holds full transcripts and is gitignored
-- Verified by `[eval]` evidence (the dedicated eval runner)
+- Verified by the `[eval]` verification type (the dedicated eval runner)
 
-Assertions specify output, verified by `[test]`, `[eval]`, or `[audit]` per `<evidence_mechanisms>` in `assertion-types.md`.
+Assertions specify output, verified by `[test]`, `[eval]`, or `[audit]` per `<verification_types>` in `assertion-types.md`.
 
 </common_structure>

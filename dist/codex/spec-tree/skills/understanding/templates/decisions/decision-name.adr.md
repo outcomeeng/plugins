@@ -16,10 +16,10 @@ Each rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection n
 
 ### Testing
 
-Verified by a deterministic test. Each rule carries its evidence type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — routed through `/testing`.
+Verified by a deterministic test. Each rule carries its assertion type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — selected by `/testing` (with `/testing-{language}`) from the rule's quantifier, never inferred from this heading.
 
-- ALWAYS: {rule} ([{evidence type}])
-- NEVER: {prohibition} ([{evidence type}])
+- ALWAYS: {rule} ([{assertion type}])
+- NEVER: {prohibition} ([{assertion type}])
 
 ### Eval
 

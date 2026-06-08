@@ -90,7 +90,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Purpose:** PROVES that assertions hold.
 
-**Contains:** Typed assertion files only, one evidence type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
+**Contains:** Typed assertion files only, one assertion type per file, following the canonical pattern `<subject>.<evidence>.<level>[.<runner>]`:
 
 | Level | Suffix shape                | Question                             |
 | ----- | --------------------------- | ------------------------------------ |
