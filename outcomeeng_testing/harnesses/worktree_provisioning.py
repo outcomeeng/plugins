@@ -1,0 +1,191 @@
+"""Test harness for the init-worktrees provisioning module.
+
+Exposes:
+
+- ``load_init_worktrees_module``. An importlib loader for ``init_worktrees.py``.
+  The module ships under a runtime-substituted plugin skill directory and is not
+  importable by package name; tests load it through ``importlib`` instead.
+- ``provisioning_env``. A context manager yielding a :class:`ProvisioningEnv`
+  backed by a bare ``origin`` remote (branch ``main`` with one commit) plus
+  helpers to reach the checkout shapes the provisioning tests need: a non-bare
+  single checkout, a non-bare checkout carrying linked worktrees, and an empty
+  container directory to provision the pool into.
+
+The harness owns the git lifecycle (the remote, the seed commit, temporary
+directories, and teardown on every exit path); it owns no expected outputs and
+does not call the behavior under test. Tests construct the system-under-test's
+inputs from these handles and assert against its returned values.
+
+Exception case per ``plugins/spec-tree/skills/testing/references/methodology.md``:
+none. These are real local git repositories (L1: git plus tmp dirs), not test
+doubles.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import subprocess
+import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import ModuleType
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+INIT_WORKTREES_MODULE_PATH = (
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "init-worktrees"
+    / "scripts"
+    / "init_worktrees.py"
+)
+
+
+def load_init_worktrees_module() -> ModuleType:
+    """Load the ``init_worktrees`` module via importlib and cache it."""
+    cached = sys.modules.get("init_worktrees")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "init_worktrees", INIT_WORKTREES_MODULE_PATH
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load init_worktrees from {INIT_WORKTREES_MODULE_PATH}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["init_worktrees"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _git(repo: Path, *args: str) -> None:
+    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+
+def _git_out(repo: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+@dataclass
+class ProvisioningEnv:
+    """A bare ``origin`` remote plus helpers to reach each checkout shape.
+
+    ``origin`` is a bare repository on branch ``main`` with one commit. The
+    helpers clone non-bare checkouts from it, attach linked worktrees to expose
+    the non-compliant shape, and hand back empty container directories to
+    provision the pool into. Every path lives under one temporary tree the
+    context manager removes on exit.
+    """
+
+    tmp: Path
+    origin: Path
+
+    def origin_main_tip(self) -> str:
+        """Return the commit SHA at the bare remote's ``main`` tip."""
+        return _git_out(self.origin, "rev-parse", "main")
+
+    def single_checkout(self, name: str = "checkout") -> Path:
+        """Clone a non-bare single working tree from ``origin``."""
+        checkout = self.tmp / name
+        subprocess.run(
+            ["git", "clone", "--quiet", str(self.origin), str(checkout)],
+            check=True,
+            capture_output=True,
+        )
+        _git(checkout, "config", "user.email", "test@example.invalid")
+        _git(checkout, "config", "user.name", "Spec Tree Test")
+        _git(checkout, "config", "commit.gpgsign", "false")
+        return checkout
+
+    def attach_linked_worktree(self, checkout: Path, name: str = "wt") -> Path:
+        """Attach a linked worktree to a non-bare ``checkout`` (the non-compliant shape)."""
+        worktree = checkout.parent / f"{checkout.name}-{name}"
+        _git(checkout, "worktree", "add", "--quiet", "--detach", str(worktree))
+        return worktree
+
+    def container(self, name: str = "container") -> Path:
+        """Return an empty directory to provision a pool into."""
+        target = self.tmp / name
+        target.mkdir()
+        return target
+
+
+@contextmanager
+def provisioning_env() -> Iterator[ProvisioningEnv]:
+    """Yield a :class:`ProvisioningEnv` backed by a throwaway bare remote.
+
+    The remote is initialized bare on ``main`` and seeded with one commit pushed
+    from a scratch checkout. The whole tree is removed on exit; read-only git
+    objects that resist cleanup are ignored so teardown never fails the run.
+    """
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        tmp = Path(raw)
+        origin = tmp / "origin.git"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", "-b", "main", str(origin)],
+            check=True,
+            capture_output=True,
+        )
+        seed = tmp / "seed"
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", "main", str(seed)],
+            check=True,
+            capture_output=True,
+        )
+        _git(seed, "config", "user.email", "test@example.invalid")
+        _git(seed, "config", "user.name", "Spec Tree Test")
+        _git(seed, "config", "commit.gpgsign", "false")
+        (seed / "README.md").write_text("seed\n", encoding="utf-8")
+        _git(seed, "add", "README.md")
+        _git(seed, "commit", "--quiet", "-m", "seed")
+        _git(seed, "remote", "add", "origin", str(origin))
+        _git(seed, "push", "--quiet", "-u", "origin", "main")
+        yield ProvisioningEnv(tmp=tmp, origin=origin)
+
+
+def head_sha(path: Path) -> str:
+    """Return the commit SHA at the working tree's current HEAD."""
+    return _git_out(path, "rev-parse", "HEAD")
+
+
+def is_detached(path: Path) -> bool:
+    """Return whether the working tree's HEAD is detached (on no branch)."""
+    result = subprocess.run(
+        ["git", "-C", str(path), "symbolic-ref", "-q", "HEAD"],
+        capture_output=True,
+    )
+    return result.returncode != 0
+
+
+def is_bare_repo(path: Path) -> bool:
+    """Return whether ``path`` is a bare git repository."""
+    return _git_out(path, "rev-parse", "--is-bare-repository") == "true"
+
+
+def git_common_dir(path: Path) -> Path:
+    """Return the absolute git-common-dir of the checkout containing ``path``."""
+    return Path(
+        _git_out(path, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    )
+
+
+__all__ = [
+    "ProvisioningEnv",
+    "git_common_dir",
+    "head_sha",
+    "is_bare_repo",
+    "is_detached",
+    "load_init_worktrees_module",
+    "provisioning_env",
+]
