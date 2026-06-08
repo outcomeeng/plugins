@@ -110,3 +110,27 @@ def test_provision_cli_from_prior_derives_origin_and_carries_spx() -> None:
         carried = container / ".spx" / "marker.txt"
         assert carried.read_text(encoding="utf-8") == "carried"
         assert classify(probe(container / "main")) is Layout.POOL
+
+
+def test_provision_cli_origin_builds_pool() -> None:
+    with provisioning_env() as env:
+        container = env.container()
+
+        exit_code = main(
+            [
+                "provision",
+                "--container",
+                str(container),
+                "--repo",
+                "repo",
+                "--origin",
+                str(env.origin),
+                "--worktree",
+                "repo-a",
+            ]
+        )
+
+        assert exit_code == 0
+        assert is_bare_repo(container / "repo.git")
+        assert classify(probe(container / "main")) is Layout.POOL
+        assert (container / "repo-a").is_dir()

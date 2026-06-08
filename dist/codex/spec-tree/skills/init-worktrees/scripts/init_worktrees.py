@@ -248,7 +248,7 @@ def _cmd_provision(args: argparse.Namespace) -> int:
         carry_spx = prior_spx if prior_spx.is_dir() else None
     else:
         origin_url = args.origin
-        carry_spx = Path(args.carry_spx) if args.carry_spx else None
+        carry_spx = None
     result = provision(
         container=Path(args.container),
         repo_name=args.repo,
@@ -285,7 +285,6 @@ def main(argv: list[str] | None = None) -> int:
     provision_parser.add_argument("--repo", required=True)
     provision_parser.add_argument("--origin")
     provision_parser.add_argument("--from", dest="from_checkout")
-    provision_parser.add_argument("--carry-spx", dest="carry_spx")
     provision_parser.add_argument("--worktree", action="append", default=[])
     provision_parser.set_defaults(func=_cmd_provision)
 
