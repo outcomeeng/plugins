@@ -47,6 +47,23 @@ fmt-check:
 
 # Run all checks with timing summary (signal-safe Python orchestrator)
 check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Preflight: a healthy uv environment must import the toolchain before the gate
+    # runs. A stale .venv — most often one built on a Python the system no longer
+    # provides after an upgrade — makes every `uv run` step fail with an opaque
+    # error. Catch that here and point at the hard reset instead.
+    if ! uv_err="$(uv run python -c 'import outcomeeng' 2>&1)"; then
+        echo "✗ uv environment is broken: 'uv run python -c \"import outcomeeng\"' failed."
+        echo "$uv_err" | sed 's/^/    /'
+        echo ""
+        echo "  The .venv is likely stale or built on a Python that is no longer"
+        echo "  available (e.g. after a system Python upgrade). Hard-reset it with:"
+        echo ""
+        echo "      just reset-uv"
+        echo ""
+        exit 1
+    fi
     uv run python -m outcomeeng.validation
 
 # Install lefthook git hooks
@@ -95,3 +112,22 @@ bump-check base_ref="origin/main":
 # Remove every gitignored file and directory (git clean -fdX semantics)
 clean:
     uv run python -m outcomeeng.hygiene.clean
+
+# Hard-reset the uv environment: remove .venv and Python tool caches, re-sync, verify
+# Use when `just check` reports a broken uv environment (stale .venv after a Python upgrade)
+reset-uv:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Removing .venv..."
+    rm -rf .venv
+    echo "Removing Python tool caches..."
+    rm -rf .mypy_cache .ruff_cache .pytest_cache .hypothesis
+    echo "Re-syncing dependencies with uv..."
+    uv sync
+    echo "Verifying environment..."
+    if uv run python -c 'import outcomeeng' >/dev/null 2>&1; then
+        echo "✔ uv environment healthy — outcomeeng importable. Run 'just check' to verify the gate."
+    else
+        echo "✗ outcomeeng still not importable after reset — inspect the 'uv sync' output above."
+        exit 1
+    fi
