@@ -2,7 +2,7 @@
 name: init-worktrees
 description: >-
   ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while carrying a prior checkout's .spx across. NEVER hand-run git clone --bare plus git worktree add to build the pool without this skill.
-allowed-tools: Read, Bash, AskUserQuestion
+allowed-tools: Read, Bash
 ---
 
 <objective>
@@ -29,7 +29,7 @@ The verdict is `single`, `pool`, or `non-compliant`. A `pool` verdict means the 
 
 <step name="gather">
 
-Gather the provisioning inputs. Infer what you can; ask only for genuine gaps with AskUserQuestion:
+Gather the provisioning inputs. Infer what you can; ask only for genuine gaps using the runtime's structured-question tool:
 
 - **container** — the directory that will hold `<repo>.git` and the worktrees. For a migration this is normally the parent of the prior checkout.
 - **repo name** — the bare directory is `<repo>.git`.
