@@ -61,6 +61,11 @@ LAYOUT_CASES = [
     ),
     pytest.param(_facts(**_COMPLETE_POOL), "POOL", id="complete-bare-pool"),
     pytest.param(
+        _facts(**{**_COMPLETE_POOL, "has_linked_worktrees": True}),
+        "POOL",
+        id="complete-bare-pool-with-linked-worktrees",
+    ),
+    pytest.param(
         _facts(**{**_COMPLETE_POOL, "main_worktree_present": False}),
         "NON_COMPLIANT",
         id="pool-missing-main-worktree",
