@@ -20,6 +20,7 @@ from outcomeeng_testing.harnesses.worktree_provisioning import (
 _module = load_init_worktrees_module()
 Layout = _module.Layout
 classify = _module.classify
+main = _module.main
 probe = _module.probe
 provision = _module.provision
 
@@ -83,3 +84,29 @@ def test_probe_classifies_a_real_non_compliant_checkout() -> None:
         env.attach_linked_worktree(checkout)
 
         assert classify(probe(checkout)) is Layout.NON_COMPLIANT
+
+
+def test_provision_cli_from_prior_derives_origin_and_carries_spx() -> None:
+    with provisioning_env() as env:
+        prior = env.single_checkout("prior")
+        (prior / ".spx").mkdir()
+        (prior / ".spx" / "marker.txt").write_text("carried", encoding="utf-8")
+        container = env.container()
+
+        exit_code = main(
+            [
+                "provision",
+                "--container",
+                str(container),
+                "--repo",
+                "repo",
+                "--from",
+                str(prior),
+            ]
+        )
+
+        assert exit_code == 0
+        assert is_bare_repo(container / "repo.git")
+        carried = container / ".spx" / "marker.txt"
+        assert carried.read_text(encoding="utf-8") == "carried"
+        assert classify(probe(container / "main")) is Layout.POOL

@@ -97,7 +97,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 
 <failure_modes>
 
-**Claude created a feature branch in the default-branch worktree and broke tooling that resolves against it.** Running `git switch -c <feature>` inside the default-branch worktree moved that worktree off the default branch; every consumer that resolves against the default-branch checkout broke until it was switched back. Create feature branches in a pool worktree — `git -C <repo>-a switch -c <feature>` — never in the default-branch worktree.
+**A feature branch checked out in the default-branch worktree breaks tooling that resolves against it.** Running `git switch -c <feature>` inside the default-branch worktree moves that worktree off the default branch; every consumer that resolves against the default-branch checkout breaks until it is switched back. Create feature branches in a pool worktree — `git -C <repo>-a switch -c <feature>` — never in the default-branch worktree.
 
 </failure_modes>
 
