@@ -1,4 +1,4 @@
-"""Classify and provision the repository layouts of `11-repository-layout.pdr`.
+"""Classify and provision a repository's git worktree layout.
 
 Stdlib-only (`python3` >= 3.11), portable across consumer checkouts. The skill
 invokes this module as
@@ -26,7 +26,7 @@ from pathlib import Path
 
 
 class Layout(StrEnum):
-    """The recognized repository layouts of `spx/.../11-repository-layout.pdr.md`."""
+    """The recognized repository git layouts."""
 
     SINGLE = "single"
     POOL = "pool"
@@ -180,7 +180,7 @@ def provision(
     pool_worktree_names: tuple[str, ...] = (),
     carry_spx: Path | None = None,
 ) -> ProvisionResult:
-    """Provision the bare-repo worktree pool of `11-repository-layout.pdr` in ``container``.
+    """Provision the bare-repository worktree pool in ``container``.
 
     Clones ``origin_url`` bare into ``{repo_name}.git``, restores the
     ``origin/*`` fetch refspec a bare clone omits, adds a sibling ``main``

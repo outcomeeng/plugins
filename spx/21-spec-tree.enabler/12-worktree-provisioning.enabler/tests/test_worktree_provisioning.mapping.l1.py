@@ -1,10 +1,10 @@
 """Level 1 mapping tests for the init-worktrees layout classifier.
 
 Each case constructs a source-owned ``GitFacts`` shape and pins the layout
-verdict the classifier must return. The expected verdicts are derived from
-``spx/21-spec-tree.enabler/11-repository-layout.pdr.md`` — a single working tree
-and a complete bare pool are compliant; every other shape is non-compliant — not
-copied from the classifier's output.
+verdict the classifier must return. The expected verdicts are derived from the
+layout-compliance rules — a single working tree and a complete bare pool are
+compliant; every other shape is non-compliant — not copied from the classifier's
+output.
 """
 
 from __future__ import annotations
