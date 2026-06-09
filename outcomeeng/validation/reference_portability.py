@@ -46,7 +46,7 @@ from typing import Final
 _NONPORTABLE_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"(?<![\w.-])"
     r"(?:"
-    r"spx/\d[\w./-]*"  # numbered spec-tree node or decision
+    r"spx/\d+-[\w./-]*"  # numbered spec-tree node or decision (NN-slug)
     r"|src/[\w./-]*"  # repository source tree
     r"|dist/[\w./-]*"  # generated runtime tree
     r"|outcomeeng\w*/[\w./-]*"  # marketplace toolchain package

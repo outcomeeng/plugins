@@ -35,6 +35,7 @@ PORTABLE_SAMPLES = [
     "spx/CLAUDE.md",  # methodology-universal file
     "spx/local/python.md",  # methodology-universal directory
     "spx/sessions/todo/",  # methodology-universal directory
+    "spx/1foo",  # 'spx/' + digit without the 'NN-' node prefix is not a node reference
     ".dist/claude/build-artifact.md",  # dot-prefixed build dir, not the marketplace dist/
     "${CLAUDE_SKILL_DIR}/references/x.md",  # the plugin's own files
     "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json",  # the plugin's own files
