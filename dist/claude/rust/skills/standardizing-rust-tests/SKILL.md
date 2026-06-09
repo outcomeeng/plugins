@@ -12,7 +12,7 @@ Canonical Rust test standards loaded after `/standardizing-rust`. Defines filena
 <success_criteria>
 Rust test guidance follows this standard when:
 
-- `/testing` determines evidence mode, execution level, and exception path before implementation
+- `/testing` determines the assertion type, execution level, and exception path before implementation
 - `/standardizing-rust` is loaded before this reference
 - co-located spec tests use `<subject>.<evidence>.<level>[.<runner>].rs` or the repo-local overlay
 - doubles preserve coupling to the real trait, function, protocol, or binary seam
@@ -32,7 +32,7 @@ When another skill loads this reference inside a repository, it must also check 
 </repo_local_overlay>
 
 <core_model>
-Every co-located Rust spec test file name encodes two orthogonal dimensions: the evidence type (what kind of claim is being tested) and the execution level (what infrastructure is required to run it). The canonical pattern is:
+Every co-located Rust spec test file name encodes two orthogonal dimensions: the assertion type (what kind of claim is being tested) and the execution level (what infrastructure is required to run it). The canonical pattern is:
 
 ```text
 spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs

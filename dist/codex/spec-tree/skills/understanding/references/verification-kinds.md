@@ -31,22 +31,22 @@ The axes are independent: one operation can serve both purposes, pointed at diff
 
 **Correctness — of the spec→execution chain**
 
-- **auditing** (agentic, mechanical) — a checklist skill yielding a binary verdict: the three-lane evidence (`[test]`, `[eval]`, `[audit]`) matches the spec.
+- **auditing** (agentic, mechanical) — a checklist skill yielding a binary verdict: the three verification-type tags (`[test]`, `[eval]`, `[audit]`) match the spec.
 - **reviewing** (agentic, open-ended) — principal-level judgment: consistency across spec, tests, and implementation, plus the quality, architecture, and design judgment that no checklist captures.
 - **evaluating** (deterministic) — an agent runs a case set; its JSON outputs are scored against spec-derived expectations, with a pass threshold. Subjects include skills, agents, and classifiers.
-- **testing** (deterministic) — execution of `[test]`-lane assertions.
+- **testing** (deterministic) — execution of `[test]` assertions.
 
 The entries above are applications of the five types — auditing recurs because it serves both purposes.
 
 </types>
 
-<evidence_lanes>
+<assertion_tags>
 
-Three of the five types back the evidence lanes an assertion can carry: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing. Validation and reviewing are gates that back no lane. Auditing and reviewing are both agentic but sit at opposite ends of judgment depth — auditing is a binary checklist, reviewing is irreducible principal-level assessment.
+Three of the five types back the tag an assertion can carry: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing. Validation and reviewing are gates that back no tag. Auditing and reviewing are both agentic but sit at opposite ends of judgment depth — auditing is a binary checklist, reviewing is irreducible principal-level assessment.
 
-The assertion tag `[review]` is the legacy spelling of the `[audit]` lane and resolves to it during migration; it does not denote the `reviewing` type. The collision is between a tag and a type — `[review]`-the-tag is auditing evidence, `reviewing`-the-type is the open-ended gate that backs no lane.
+The assertion tag `[review]` is the legacy spelling of the `[audit]` tag and resolves to it during migration; it does not denote the `reviewing` type. The collision is between a tag and a type — `[review]`-the-tag marks the auditing verification type, `reviewing`-the-type is the open-ended gate that backs no tag.
 
-</evidence_lanes>
+</assertion_tags>
 
 <compliance>
 

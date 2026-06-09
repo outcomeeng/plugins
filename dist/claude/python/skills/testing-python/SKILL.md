@@ -33,7 +33,7 @@ Do not create a test workaround for code that lacks source-owned contracts, type
 Run this workflow for new Python tests:
 
 1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
-2. For each assertion, use `/testing` to select evidence type, execution level, and any Stage 5 exception.
+2. For each assertion, use `/testing` to select the assertion type, execution level, and any Stage 5 exception.
 3. Inspect the code under test and identify the production contract the test will exercise.
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
@@ -99,7 +99,7 @@ Report the evidence created or repaired with:
 <success_criteria>
 Python test work satisfies this skill when:
 
-- Every changed test maps to a spec assertion and selected evidence type
+- Every changed test maps to a spec assertion and selected assertion type
 - Test filenames encode evidence, level, and optional runner
 - Tests import source-owned values instead of defining local constants
 - Generators represent meaningful variable domains

@@ -151,7 +151,7 @@ def test_user_service_creates_and_retrieves_user(
 
 Given a situation, select the appropriate test type.
 
-| Situation                      | Evidence mode               | Level cue                             |
+| Situation                      | Assertion type              | Level cue                             |
 | ------------------------------ | --------------------------- | ------------------------------------- |
 | Debugging during development   | `mapping` or `scenario`     | Usually `l1`                          |
 | Preventing known bugs          | `scenario` or `compliance`  | Lowest level that proves the failure  |

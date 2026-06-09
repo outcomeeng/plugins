@@ -1,13 +1,13 @@
 <overview>
-Every assertion in a node spec must be one of five structured types. The first four default to `[test]` evidence. Compliance assertions choose among `[test]`, `[eval]`, and `[audit]` — `[test]` when an automated test verifies the constraint, `[eval]` when it governs LLM-driven behavior that emits a parseable structured verdict, and `[audit]` when it needs agent judgment with no structural verdict to score (`[review]` is the legacy spelling of `[audit]`, accepted during migration).
+The five assertion types classify an assertion under the **testing** verification type, read from the assertion's quantifier. Evaluating (`[eval]`) and auditing (`[audit]`) carry no assertion type. `/testing` (with `/testing-{language}`) selects the verification type first — see `references/verification-kinds.md` — then, under testing, the assertion type. This reference defines the assertion types; it does not select them.
 
-| Type            | Quantifier                      | Test strategy        | Use when                                      |
-| --------------- | ------------------------------- | -------------------- | --------------------------------------------- |
-| **Scenario**    | There exists (this case works)  | Example-based        | Specific user journey or interaction          |
-| **Mapping**     | For all over a finite set       | Parameterized        | Input-output correspondence over known values |
-| **Conformance** | External oracle                 | Tool validation      | Must match an external standard or schema     |
-| **Property**    | For all over a type/value space | Property-based       | Invariant that must hold for all valid inputs |
-| **Compliance**  | ALWAYS/NEVER behavioral rules   | Test, eval, or audit | Constraints from decisions, semantic rules    |
+| Assertion type  | Quantifier                      | Test strategy                | Use when                                       |
+| --------------- | ------------------------------- | ---------------------------- | ---------------------------------------------- |
+| **Scenario**    | There exists (this case works)  | Example-based                | Specific user journey or interaction           |
+| **Mapping**     | For all over a finite set       | Parameterized                | Input-output correspondence over known values  |
+| **Conformance** | External oracle                 | Tool validation              | Must match an external standard or schema      |
+| **Property**    | For all over a type/value space | Property-based               | Invariant that must hold for all valid inputs  |
+| **Compliance**  | ALWAYS/NEVER behavioral rule    | Test against violating cases | A decision rule or boundary a test can falsify |
 
 </overview>
 
@@ -81,45 +81,34 @@ A property assertion states something that must be true for all valid inputs, no
 
 <compliance>
 
-**Quantifier:** ALWAYS/NEVER — behavioral rules that constrain the node's output.
+**Quantifier:** ALWAYS/NEVER — a behavioral rule that constrains the node's output, verified by a test that exercises the rule against violating cases.
 
-A compliance assertion states a rule the node's output must always or never exhibit. Some trace back to a PDR or ADR decision; others are intrinsic to the node itself.
+A compliance assertion states a rule the node's output must always or never exhibit, falsifiable by a deterministic test. Some rules trace back to a PDR or ADR decision; others are intrinsic to the node.
 
 ```markdown
-- ALWAYS: page presents the OSS tier as the full core toolchain — `spx/15-product-offering.pdr.md` positions open-source as complete ([audit])
 - NEVER: reference XiperHLS — deferred by `spx/15-product-offering.pdr.md` ([test](tests/open-source.compliance.l1.test.{ext}))
 ```
 
-**Test strategy:** Audit (`[audit]`) for semantic constraints requiring agent judgment (`[review]` is the legacy form). Test (`[test]`) when the constraint is automatable — including tests that exercise a lint rule against violating fixtures (see `<evidence_mechanisms>`). Eval (`[eval]`) when the constraint governs LLM-driven behavior — a skill's audit verdict, generated content classification, or rule recognition — and the producing skill emits a structurally validatable verdict whose shape the eval declares.
+**Test strategy:** A test that exercises the rule against violating cases — for example, a test that runs a lint rule against violating fixtures and asserts the violation is detected (see `<verification_types>`).
 
-**When to use:** PDR/ADR compliance rules, semantic constraints that can't be falsified by regex, behavioral boundaries that define what the node must not do.
+A rule that no deterministic test can falsify is **not** a compliance assertion: it is an auditing verification-type assertion (`[audit]`) and carries no assertion type. A rule governing LLM-driven behavior whose producer emits a parseable structured verdict is an evaluating verification-type assertion (`[eval]`), also with no assertion type.
+
+**When to use:** PDR/ADR rules and behavioral boundaries a test can falsify against violating cases.
 
 </compliance>
 
-<choosing_type>
+<selecting>
 
-Read the claim's quantifier first; it settles the type before the subject does.
+Selecting an assertion's verification type and assertion type is `/testing`'s sole responsibility (with `/testing-{language}` binding the test file). Do not select either from this reference. The law `/testing` applies:
 
-- **Universal** — the claim holds over every case (ALWAYS / NEVER / "for all" / "for every" / "no input"). Evidence is **Mapping** (finite, source-owned domain), **Conformance** (matches an external or internal contract), **Compliance** (a rule exercised against violating cases), or **Property** (open or infinite domain). A universal is **never a Scenario**: a scenario proves one case passes, which cannot establish a claim about every case.
-- **Existential** — the claim describes one specific interaction or journey ("given this case, when …, then …"). Evidence is **Scenario**.
+1. **Verification type by fallback** — testing when a deterministic test can verify the assertion, else evaluating when the producer emits a parseable structured verdict a runner scores under a pass threshold, else auditing.
+2. **Assertion type by quantifier**, under testing only — a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes mapping (finite, source-owned domain), conformance (external or internal contract), compliance (a rule exercised against violating cases), or property (open or infinite domain); an existential (one specific interaction) takes scenario. A universal is never a scenario. Evaluating and auditing carry no assertion type.
 
-Within the universal branch, pick by domain shape: enumerable finite source-owned set → **Mapping**; external or internal contract → **Conformance**; a rule enforced by exercising violating cases → **Compliance**; open or infinite domain → **Property**. A behavioral rule (ALWAYS/NEVER) from a decision is a universal — it takes one of these four, never Scenario.
+The assertion type follows the quantifier, never the section or heading a rule sits under. See the testing skill for the full routing procedure.
 
-</choosing_type>
+The tag `[review]` is the legacy spelling of `[audit]`, not the `reviewing` verification type. `reviewing` is an open-ended gate that backs no assertion tag (see `references/verification-kinds.md`); read `[review]` on an assertion as `[audit]`.
 
-<choosing_mechanism>
-
-After choosing the assertion type, choose its evidence lane:
-
-1. Is the behavior a deterministic function of inputs an automated test can drive? → **`[test]`**
-2. Is the behavior LLM-driven, and does the producer emit a parseable structured verdict a runner scores against expected fields under a pass threshold? → **`[eval]`**
-3. Is it an irreducible semantic constraint a model must judge, with no structural verdict to score? → **`[audit]`**
-
-Prefer `[test]` when behavior is deterministic. Reach for `[eval]` only when `[test]` cannot exercise the behavior but the producer's output has a parseable contract. Fall back to `[audit]` when no structural verdict exists.
-
-The tag `[review]` is the legacy spelling of `[audit]`, not the `reviewing` verification type. `reviewing` is an open-ended gate that backs no assertion lane (see `references/verification-kinds.md`); read `[review]` on an assertion as `[audit]`.
-
-</choosing_mechanism>
+</selecting>
 
 <mixing_types>
 
@@ -142,32 +131,34 @@ A single spec can contain assertions of different types. Group them under typed 
 - Status rollup is deterministic: same tree always produces same status ([test](tests/status.property.l1.test.{ext}))
 ```
 
-Only include headings for assertion types that apply. Each evidence type lives in its own test file — the filename encodes the evidence type and execution level (`<subject>.<evidence>.<level>[.<runner>].test.{ext}` / `test_<subject>.<evidence>.<level>[.<runner>].{ext}`).
+Only include headings for assertion types that apply. Each assertion type lives in its own test file — the filename encodes the assertion type and execution level (`<subject>.<evidence>.<level>[.<runner>].test.{ext}` / `test_<subject>.<evidence>.<level>[.<runner>].{ext}`).
 
 </mixing_types>
 
-<evidence_mechanisms>
+<verification_types>
 
-Every assertion links to one evidence mechanism — one of the lanes that back assertions, each backed by a verification type (`references/verification-kinds.md`):
+Every assertion declares one verification type, named by the tag it carries (`references/verification-kinds.md`):
 
-| Lane      | Tag                      | Verdict mode  | Verified by    | What it proves                                                                                                                        |
-| --------- | ------------------------ | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **Test**  | `([test](path/to/test))` | deterministic | test runner    | "The code does X" — an automated test drives behavior that is a deterministic function of its inputs                                  |
-| **Eval**  | `([eval](path/to/eval))` | deterministic | eval runner    | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
-| **Audit** | `([audit])`              | agentic       | auditing skill | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
+| Verification type | Tag                      | Verdict mode  | Verified by    | What it proves                                                                                                                        |
+| ----------------- | ------------------------ | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **testing**       | `([test](path/to/test))` | deterministic | test runner    | "The code does X" — an automated test drives behavior that is a deterministic function of its inputs                                  |
+| **evaluating**    | `([eval](path/to/eval))` | deterministic | eval runner    | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
+| **auditing**      | `([audit])`              | agentic       | auditing skill | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
 
-The `[eval]` verdict is deterministic even though an LLM produces the output: the runner scores the parsed verdict against expected fields, so no model judges the result. `([review])` is the legacy spelling of the `([audit])` lane and migrates to it — both resolve during migration. The tag `[review]` is NOT the `reviewing` verification type: `reviewing` is an open-ended, principal-level gate that backs no assertion lane. The lane↔type mapping is declared in `references/verification-kinds.md`.
+Only a `testing` assertion carries an assertion type (one of the five); `evaluating` and `auditing` carry none.
 
-**Test** is the default for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
+The `[eval]` verdict is deterministic even though an LLM produces the output: the runner scores the parsed verdict against expected fields, so no model judges the result. `([review])` is the legacy spelling of the `([audit])` tag and migrates to it — both resolve during migration. The tag `[review]` is NOT the `reviewing` verification type: `reviewing` is an open-ended, principal-level gate that backs no assertion tag. The tag↔type mapping is declared in `references/verification-kinds.md`.
+
+**testing** is the default verification type for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
 
 For structural constraints enforced by a lint rule, the `[test]` evidence is a test that exercises the rule against violating fixtures and asserts the violation is detected. The rule's presence in the validation pipeline is a separate operational concern — confirmed by the pipeline running green on the codebase — not by the spec assertion itself.
 
-**Audit** (`[audit]`; `[review]` is its legacy form) is for semantic constraints that no automated check can verify — "the design follows this principle", "the API feels intuitive", "the copy matches brand voice". An audit tag is valid evidence at the time of the audit; it does not re-verify itself as the code changes.
+**auditing** (`[audit]`; `[review]` is its legacy form) is for semantic constraints that no automated check can verify — "the design follows this principle", "the API feels intuitive", "the copy matches brand voice". An audit tag is valid evidence at the time of the audit; it does not re-verify itself as the code changes.
 
-**Eval** is for behavior that depends on LLM outputs but emits a structurally validatable verdict. The `[eval]` link points at an `eval.toml` definition file inside a per-eval directory; the directory carries the case data (`cases.jsonl`), the prompt template (`prompt.md`), and an append-only `history.jsonl` of run summaries. The dedicated eval runner replays the case set through the producing skill, parses the structured verdict against the per-eval expected fields declared in each case, and scores each case against those fields. Non-determinism is bounded by pass@k and threshold gating. Use `[eval]` when `[test]` cannot exercise LLM behavior directly but the producing skill's output has a parseable contract; prefer `[test]` when behavior is deterministic; fall back to `[audit]` when no structural verdict exists.
+**evaluating** is for behavior that depends on LLM outputs but emits a structurally validatable verdict. The `[eval]` link points at an `eval.toml` definition file inside a per-eval directory; the directory carries the case data (`cases.jsonl`), the prompt template (`prompt.md`), and an append-only `history.jsonl` of run summaries. The dedicated eval runner replays the case set through the producing skill, parses the structured verdict against the per-eval expected fields declared in each case, and scores each case against those fields. Non-determinism is bounded by pass@k and threshold gating. Use `[eval]` when `[test]` cannot exercise LLM behavior directly but the producing skill's output has a parseable contract; prefer `[test]` when behavior is deterministic; fall back to `[audit]` when no structural verdict exists.
 
 Sample link form: `[eval](evals/{rule-slug}/eval.toml)`. The runner's CLI (declared per-project, e.g. `outcomeeng-evals`) consumes the `eval.toml`, resolves sibling paths, and writes results next to it.
 
 When an assertion cites a node, ADR, or PDR as its source, cite the full path from `spx/`. Do not use bare shorthand such as `ADR-15`, `PDR-21`, or `15-build.adr.md`; those names are ambiguous because numeric prefixes repeat in different directories.
 
-</evidence_mechanisms>
+</verification_types>

@@ -26,7 +26,7 @@ Before writing or revising tests, also check:
 
 <workflow>
 1. Load the governing spec context before editing any co-located `spx/.../tests/` file.
-2. Map each assertion to the evidence type and level chosen by `/testing`.
+2. Map each assertion to the assertion type and level chosen by `/testing`.
 3. Use the `<router_mapping>` and examples in `/standardizing-rust-tests` to choose the Rust implementation shape.
 4. Keep test helpers, fixtures, and harnesses in the location prescribed by `/standardizing-rust-tests` and repo-local overlays.
 5. Run the repository's Rust validation commands before reporting the tests complete.
@@ -65,7 +65,7 @@ All Rust test examples are owned by `/standardizing-rust-tests`:
 <success_criteria>
 Rust test work is complete when:
 
-- `/testing` chose the evidence mode and target level first
+- `/testing` chose the assertion type and target level first
 - `/standardizing-rust` and `/standardizing-rust-tests` were loaded before test code was written
 - the test shape follows the canonical Rust test standard and repo-local overlays
 - controlled implementations preserve coupling to the real seam
