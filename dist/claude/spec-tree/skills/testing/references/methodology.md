@@ -8,9 +8,9 @@ This file is the local methodology payload for the `testing` skill. Keep it self
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
 - Test doubles are exceptions, not defaults. The seven exception cases in Stage 5 are the only legitimate reasons to avoid the real dependency.
 - Route every assertion through all five stages. Do not skip ahead.
-- Name tests by subject, evidence type, execution level, and optional runner.
-- Derive the evidence type from the shape of the claim, never from the section a rule appears in. A MUST/NEVER rule under a `## Compliance` heading does not imply `compliance` evidence.
-- This skill is the single authority for evidence-type selection. A decision-record author routes each compliance rule through it to record the rule's minimum evidence type; a test author routes each spec assertion through it to pick evidence at or above that evidence type. No agent hand-picks an evidence type.
+- Name tests by subject, assertion type, execution level, and optional runner.
+- Derive the assertion type from the shape of the assertion, never from the section a rule appears in. A MUST/NEVER rule under a `## Compliance` heading does not imply the `compliance` assertion type.
+- This skill is the single authority for selecting an assertion's verification type and assertion type. A decision-record author routes each rule through it to record the assertion type its `### Testing` rule carries; a test author routes each spec assertion through it to select the assertion type. No agent hand-picks either.
 
 ## Why tests exist
 
@@ -43,7 +43,7 @@ Agents often skip the evidence question. They see code and decide to test the sh
 
 Do not collapse evidence, execution pain, and tool choice into one label.
 
-- **Evidence type** describes what kind of evidence the test provides.
+- **Assertion type** describes what kind of claim the test proves.
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
@@ -54,7 +54,7 @@ Examples:
 
 The runner does not define the level, and the level does not define the runner.
 
-## Evidence types
+## Assertion types
 
 Use evidence terms that describe what the test proves:
 
@@ -103,7 +103,7 @@ Answer these questions before writing the test:
 2. If this test passes, what does that prove about the real system?
 3. What concrete failure would reach production without this test?
 
-**Quantifier first.** Read whether the claim is universal or existential before anything else — it bounds the evidence type:
+**Quantifier first.** Read whether the claim is universal or existential before anything else — it bounds the assertion type:
 
 - A **universal** claim holds over every case (ALWAYS / NEVER / "for all" / "for every" / "no input"). Its evidence is `mapping`, `conformance`, `compliance`, or `property` — never `scenario`. A scenario proves one case passes; it cannot establish a claim about every case.
 - An **existential** claim describes one specific interaction ("given this case, when …, then …"). Its evidence is `scenario`.
@@ -115,14 +115,14 @@ Within the universal branch, pick by what the evidence proves:
 - `compliance` for a rule exercised against violating cases (a real violating fixture or rule oracle)
 - `property` for an invariant across an open or infinite input space
 
-The evidence type follows what the claim proves, not the heading it sits under. A rule in a decision record's `## Compliance` section is classified here by its claim shape — it does not inherit `compliance` evidence from the section title, and an ALWAYS/NEVER rule is a universal, so it never takes `scenario`.
+The assertion type follows what the claim proves, not the heading it sits under. A rule in a decision record's `## Compliance` section is classified here by its claim shape — it does not inherit the `compliance` assertion type from the section title, and an ALWAYS/NEVER rule is a universal, so it never takes `scenario`.
 
 **Boundary-validation routing (a universal special case).** An assertion that rejects values outside a predicate is universal; route it by the structure of the invalid set:
 
-- The invalid set is open or infinite — arbitrary strings, identifiers, timestamps, keys, generated names — so the evidence type is `property`. The evidence generates values from across the space outside the predicate.
-- The invalid set is closed, finite, and source-owned — enum variants, a defined protocol set, registry members — so the evidence type is `mapping`. The evidence parameterizes over every source-owned invalid member.
+- The invalid set is open or infinite — arbitrary strings, identifiers, timestamps, keys, generated names — so the assertion type is `property`. The evidence generates values from across the space outside the predicate.
+- The invalid set is closed, finite, and source-owned — enum variants, a defined protocol set, registry members — so the assertion type is `mapping`. The evidence parameterizes over every source-owned invalid member.
 
-One rule yields one evidence type. A `property`-floor rule is not satisfied by a finite mapping over a hand-picked subset of an open space: a hand-picked bag of invalid values is neither the property's generated domain nor the mapping's complete source-owned set.
+One rule yields one assertion type. A `property`-floor rule is not satisfied by a finite mapping over a hand-picked subset of an open space: a hand-picked bag of invalid values is neither the property's generated domain nor the mapping's complete source-owned set.
 
 ### Stage 2: At what level does that evidence live?
 

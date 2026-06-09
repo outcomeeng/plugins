@@ -16,7 +16,7 @@ That local reference contains:
 
 - non-negotiable testing rules and evidence standards
 - the pre-test questions and the evidence trap
-- the separation between evidence type, execution level, and runner
+- the separation between assertion type, execution level, and runner
 - the 4-part progression
 - the 5-stage router with stop conditions
 - the 5 factors, the 7 exception cases, and key examples
@@ -78,7 +78,7 @@ For each assertion:
 | **Broken link**   | Link present but file doesn't exist           | Must create test file                      |
 | **No assertions** | Spec has no typed assertions                  | Spec needs work first — do not write tests |
 
-**Legacy filename check:** For every **Covered** link above, verify the filename encodes evidence type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
+**Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
 | Language   | Canonical pattern                                 | Legacy (fails check)                                                    |
 | ---------- | ------------------------------------------------- | ----------------------------------------------------------------------- |

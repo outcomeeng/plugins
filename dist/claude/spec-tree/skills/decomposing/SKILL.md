@@ -91,7 +91,7 @@ Each area is complete when:
 
 - **Scope Boundary** — included and excluded concerns are named, and the aggregate concern stays coherent.
 - **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
-- **Evidence Strategy** — each concern has an evidence mechanism: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
+- **Evidence Strategy** — each concern has a verification type: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
 - **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
 - **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has genuine outcome uncertainty.
 - **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
@@ -166,10 +166,10 @@ Before assigning indices, record every proposed ordering edge:
 | Field                     | Required content                                                                                                 |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Predecessor               | Candidate child or decision that must be earlier                                                                 |
-| Evidence type             | Provider/consumer, logical prerequisite, vertical slice, shared substrate, feature extension, ADR/PDR constraint |
+| Ordering basis            | Provider/consumer, logical prerequisite, vertical slice, shared substrate, feature extension, ADR/PDR constraint |
 | Constraining contribution | Concrete service, contract, invariant, state, artifact, validation surface, or delivered slice                   |
 | Successor                 | Candidate child constrained by the predecessor                                                                   |
-| Required by               | Successor assertion, workflow step, evidence mechanism, architecture invariant, or extension goal                |
+| Required by               | Successor assertion, workflow step, verification type, architecture invariant, or extension goal                 |
 | Consequence if absent     | What becomes impossible, invalid, unverifiable, or incoherent without the predecessor                            |
 | Disposition               | Ordered dependency, same-index/unordered, or open issue                                                          |
 
