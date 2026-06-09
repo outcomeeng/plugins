@@ -20,11 +20,11 @@ Identified during the lean-template migration of the product-level decision reco
 
 ## Migrate command wrappers to skills
 
-`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill as the marketplace's sole user-facing invocation artifact; the command artifact type is not authored. Eight command wrappers predate this convention, each a thin `/<name>` that fronts a skill, all in the spec-tree plugin:
+`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill as the marketplace's sole user-facing invocation artifact; the command artifact type is not authored. Seven command wrappers predate this convention, each a thin `/<name>` that fronts a skill, all in the spec-tree plugin:
 
-- `src/plugins/spec-tree/commands/` — `apply`, `author`, `bootstrap`, `clarify`, `commit`, `open-pr`, `review-changes`, `rtfm`.
+- `src/plugins/spec-tree/commands/` — `apply`, `author`, `bootstrap`, `clarify`, `commit`, `review-changes`, `rtfm`.
 - No other plugin ships a `commands/` directory (verified by `ls src/plugins/*/commands/*.md`). Re-enumerate before migrating in case new commands have landed.
 
-Each command already maps to a governing skill (e.g. `/commit` → `committing-changes`, `/open-pr` → `opening-pr`, `/apply` → `applying`, `/author` → `authoring`, `/bootstrap` → `bootstrapping`, `/clarify` → `clarify`/`interviewing`, `/review-changes` → `reviewing-changes`, `/rtfm` → `refocusing`). The `develop` plugin also ships `creating-commands` and `auditing-commands` skills whose status this convention affects — fold their disposition into the migration.
+Each command already maps to a governing skill (e.g. `/commit` → `committing-changes`, `/apply` → `applying`, `/author` → `authoring`, `/bootstrap` → `bootstrapping`, `/clarify` → `clarify`/`interviewing`, `/review-changes` → `reviewing-changes`, `/rtfm` → `refocusing`). The `develop` plugin also ships `creating-commands` and `auditing-commands` skills whose status this convention affects — fold their disposition into the migration. `/open-pr` is removed by `spx/21-spec-tree.enabler/87-pr-orchestration.enabler/`, which makes `/pr` the shipping route and treats opening/management as internal protocols.
 
 **Resolution shape**: per-command (or per-batch) PRs that drop each `commands/*.md`, name the skill like the former command where a rename is wanted, update both marketplace catalogs (`.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`) and the README plugin catalog, and rebuild `dist/`. Once no `commands/` directories remain, the ADR's `[audit]` authoring-stance rules can be reinforced by a conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory ships. Audit gate: `/aligning` against `spx/13-plugin-and-runtime-conventions.adr.md` + `just check`.

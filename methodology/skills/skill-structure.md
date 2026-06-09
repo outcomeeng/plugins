@@ -23,6 +23,7 @@ Within these steps:
 - `testing` and `auditing-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
 - `applying` orchestrates the full declare → spec → apply flow with audit gates at each step.
 - `committing-changes` enforces Conventional Commits with selective staging and atomic commits.
+- `pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `opening-pr` and `managing-pr` are internal protocols loaded by `pr`.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
 
@@ -233,10 +234,13 @@ Skills for writing tests that make assertions verifiable. Each builds on a stand
 
 Skills for writing implementation code and committing results. `applying` is an orchestrator that spans all three steps (declare → spec → apply) with audit gates — it exists because agents skip declaring prerequisites without guardrails.
 
-| Skill                | Use case | Scope                                                          | Status      |
-| -------------------- | -------- | -------------------------------------------------------------- | ----------- |
-| `applying`           | 9        | Orchestrator: declare → spec → apply with audit gates          | Implemented |
-| `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits | Implemented |
+| Skill                | Use case | Scope                                                                   | Status      |
+| -------------------- | -------- | ----------------------------------------------------------------------- | ----------- |
+| `applying`           | 9        | Orchestrator: declare → spec → apply with audit gates                   | Implemented |
+| `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits          | Implemented |
+| `pr`                 | 10       | Route shipping intent through commit, PR open, PR management, and merge | Implemented |
+| `opening-pr`         | 10       | Internal PR-opening protocol loaded by `pr`                             | Implemented |
+| `managing-pr`        | 10       | Internal open-PR management and merge protocol loaded by `pr`           | Implemented |
 
 ### Commands
 
@@ -293,10 +297,17 @@ Commands provide dynamic context injection and invoke the corresponding skill.
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
   - Runs product validation before committing
+- **`pr`** owns shipping orchestration:
+  - Detects instructed, existing-changeset, empty, and open-PR modes
+  - Reads local lifecycle routing from `spx/local/merging.md` via `understanding`
+  - Invokes the implementation, commit, opening, managing, merge, and closure skills
+- **`opening-pr`** and **`managing-pr`** own internal PR lifecycle protocols:
+  - `opening-pr` evaluates `REVIEW_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
+  - `managing-pr` inspects reviews/checks, drives follow-up pushes, evaluates merge gates, merges, and runs post-merge cleanup
 
 ## Marker-based state detection
 
-Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`committing-changes`) operate independently. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
+Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`committing-changes`) operate independently; `pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
 
 | Marker                                   | Emitted by        | Checked by                         | Meaning                              |
 | ---------------------------------------- | ----------------- | ---------------------------------- | ------------------------------------ |
@@ -460,3 +471,32 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 4. Stage specific files for one concern (never `git add .`).
 5. Write Conventional Commits message (imperative, under 50 chars).
 6. Commit, then repeat from step 4 for remaining concerns.
+
+#### `pr`
+
+1. Detect mode from arguments, branch state, working tree, commits ahead of base, and existing PR state.
+2. Load `understanding` when the foundation marker is absent so local lifecycle routing is known.
+3. Present the lifecycle proposal through the runtime's structured-question tool before mutation.
+4. Invoke implementation skills when the requested work is not yet in the tree.
+5. Invoke `committing-changes`, then the internal `opening-pr` and `managing-pr` protocols unless the local lifecycle overlay declares a different route.
+6. Invoke `handoff --no-session` after merge unless the route stops earlier.
+
+#### `opening-pr`
+
+Internal protocol loaded by `pr`.
+
+1. Load `standardizing-merging`, `committing-changes`, and `tracking-tasks`.
+2. Establish branch hygiene and topology.
+3. Establish `REVIEW_READINESS` through deterministic verification and local review convergence.
+4. Push with explicit destination ref.
+5. Open the PR ready and schedule the first heartbeat.
+
+#### `managing-pr`
+
+Internal protocol loaded by `pr`.
+
+1. Identify the open PR and inspect review, check, comment, and base-drift state.
+2. Classify and act on review findings by validity and phase.
+3. Re-establish `REVIEW_READINESS` before every follow-up push.
+4. Refresh the heartbeat.
+5. Evaluate `MERGE_READINESS` and `PRODUCTION_READINESS`, merge when both hold, and run post-merge cleanup.

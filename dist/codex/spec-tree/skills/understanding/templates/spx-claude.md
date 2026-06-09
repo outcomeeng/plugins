@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.4"
+template_version: "0.18.5"
 template_source: spec-tree
 ---
 
@@ -127,11 +127,11 @@ Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### Before opening a PR → `/opening-pr` (`REVIEW_READINESS` gate)
+### When shipping PR work → `/pr` (lifecycle router)
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch passes through the `REVIEW_READINESS` gate at `/opening-pr` before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. `/opening-pr` invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. The agent acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
+Every change destined for the default branch routes through `/pr` unless `spx/local/merging.md` declares a no-PR route or a product-specific lifecycle. `/pr` proposes the lifecycle before mutation, then invokes the internal PR protocols. The opening protocol passes through the `REVIEW_READINESS` gate before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The opening protocol invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. The agent acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
 
 ---
 
