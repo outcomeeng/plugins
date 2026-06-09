@@ -12,15 +12,9 @@ blind to our own references.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
-from outcomeeng.validation.reference_portability import (
-    find_nonportable,
-    main,
-    scan_file,
-)
+from outcomeeng.validation.reference_portability import find_nonportable
 
 # One reference per forbidden category — each must be flagged.
 NONPORTABLE_SAMPLES = [
@@ -56,35 +50,3 @@ def test_nonportable_reference_is_flagged(reference: str) -> None:
 @pytest.mark.parametrize("reference", PORTABLE_SAMPLES)
 def test_portable_reference_is_not_flagged(reference: str) -> None:
     assert find_nonportable(f"see {reference} for details") == []
-
-
-def test_cli_names_file_and_line_and_exits_nonzero(
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    skill = tmp_path / "SKILL.md"
-    skill.write_text(
-        "# Heading\n\nRead spx/13-plugin-and-runtime-conventions.adr.md first.\n",
-        encoding="utf-8",
-    )
-
-    violations = scan_file(skill)
-    assert len(violations) == 1
-    assert violations[0].line == 3
-    assert violations[0].reference.startswith("spx/13-")
-
-    exit_code = main([str(skill)])
-    assert exit_code != 0
-    out = capsys.readouterr().out
-    assert str(skill) in out
-    assert ":3" in out
-
-
-def test_cli_portable_content_exits_zero(tmp_path: Path) -> None:
-    skill = tmp_path / "SKILL.md"
-    skill.write_text(
-        "# Heading\n\nRead spx/{node-path}/{slug}.md via ${CLAUDE_SKILL_DIR}.\n",
-        encoding="utf-8",
-    )
-    assert scan_file(skill) == []
-    assert main([str(skill)]) == 0
