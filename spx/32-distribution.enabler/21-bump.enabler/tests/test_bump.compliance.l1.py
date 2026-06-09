@@ -281,6 +281,56 @@ def test_already_bumped_plugin_skipped_in_dry_run(
     assert plugin in captured.err
 
 
+def test_dry_run_skips_already_bumped_plugin_and_reports_the_other(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """DRY_RUN, two plugins: the already-bumped plugin is skipped with a stderr
+    diagnostic, the changed-but-unbumped plugin's would-be bump is reported on
+    stdout, and nothing is written.
+    """
+    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
+    bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
+    content_probe = ScriptedContentProbe(
+        content={
+            (BASE_REF, foo_path): manifest_text("foo", "0.4.1"),
+            (BASE_REF, bar_path): manifest_text("bar", "0.4.1"),
+        },
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            "foo": (
+                ManifestRecord(path=foo_path, content=manifest_text("foo", "0.4.2")),
+            ),
+            "bar": (
+                ManifestRecord(path=bar_path, content=manifest_text("bar", "0.4.1")),
+            ),
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        Segment.PATCH,
+        mode=Mode.DRY_RUN,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert manifest_writer.writes == []
+    # bar's would-be bump is reported on stdout; foo is skipped via stderr.
+    assert "bar" in captured.out
+    assert "0.4.2" in captured.out
+    assert "foo" in captured.err
+
+
 def test_unchanged_plugins_never_have_manifests_written() -> None:
     """Plugins outside the ChangeProbe's returned set are never written."""
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
