@@ -29,6 +29,17 @@ A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six 
 
 ## Open items
 
+0. **Remove standards-audit implication from the active review prompt.** The active `reviewing-changes` skill has `allowed-tools: Bash, Read`, loads only `references/review-prompt.md`, computes a diff, and validates/render/persists the result. It does not load Python, TypeScript, Rust, or other `standardizing-*` skills, and it does not invoke `/auditing`. The prompt still says the diff is judged against "`CLAUDE.md` / `AGENTS.md` and the standardizing-* skills" and includes a `standards` concern. That wording makes reviewing sound like a standards-conformance audit it cannot actually perform.
+
+   Required handling:
+
+   - Edit `src/plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` so the scope reflects what the skill loads: repository instructions and the diff context available to the reviewer.
+   - Remove `standardizing-*` from the prompt unless the skill is changed to load those references explicitly.
+   - Remove or narrow the `standards` concern so review findings do not impersonate `/auditing` or language-specific audit verdicts.
+   - Update `spx/21-spec-tree.enabler/68-reviewing.enabler/reviewing.md` and this node's assertions if the six-concern taxonomy changes.
+   - Update generated `dist/claude/spec-tree/` and `dist/codex/spec-tree/` after source skill edits.
+   - Gate with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, `just docs-check`, and the relevant reviewing-changes tests or evals if the schema/prompt contract changes.
+
 1. **(Resolved by the reviewer-only change.)** This item tracked approve/comment calibration at trivial diffs. The review-result schema no longer carries a decision or verdict field — the reviewer emits findings only, and each consumer applies its own policy (by validity and phase, never by severity) — so the approve/comment boundary no longer exists.
 
 2. **The skill hallucinates absence in own-diff live run.** Pre-PR-#43 dogfood produced false-positive findings claiming files "do not exist" that clearly did. The `judgment-grounding` eval probes this pattern across 4 cases and passed under the prior vocabulary. Worth re-confirming under the new vocabulary; if the failure reproduces under the live agent on subsequent diffs, the prompt may need an explicit "verify the file exists before claiming absence" instruction.

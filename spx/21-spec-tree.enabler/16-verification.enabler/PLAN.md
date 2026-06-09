@@ -48,6 +48,27 @@ These cannot be worked around inside the harness. Eval design must accommodate t
 - `32-auditing-nodes.enabler` (a candidate future verification skill) — when authored, will adopt the shared verification contract and this eval pattern.
 - `spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler` (has its own PLAN.md) — when implemented, the test-auditing skill is a candidate verification skill; its eval evidence requirements are documented in its own PLAN.
 
+---
+
+## Plan: Clarify reviewing versus auditing vocabulary
+
+### Why
+
+`src/plugins/spec-tree/skills/understanding/references/verification-kinds.md` correctly declares five verification types: validation, testing, reviewing, auditing, and evaluating. The confusing boundary is narrower: `reviewing` is open-ended changeset judgment, while standards conformance is `auditing` and static/tool conformance is `validation`.
+
+The active `reviewing-changes` prompt currently implies standards comparisons that the skill does not load enough context to perform. The vocabulary should make that boundary obvious before the language test-standard drift fixes proceed.
+
+### Steps
+
+1. Reconcile `verification-kinds.md` so the `reviewing` entry emphasizes open-ended changeset review over quality, risk, consistency, evidence, and architecture, without implying standards-conformance audit.
+2. Keep `spx/14-verification.pdr.md` on the five-type taxonomy; amend it only if the grounding text needs the same boundary clarification.
+3. Reconcile the reviewing node with the active `reviewing-changes` prompt and schema so any remaining review taxonomy buckets match what `reviewing-changes` can actually judge.
+4. Gate the change with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, and `just docs-check`.
+
+### Revisit condition
+
+Handle before applying the Python, TypeScript, and Rust test-standard drift fixes recorded in `docs/cross-language-test-standards-drift-audit.md`.
+
 ## Reference
 
 - PR #43 — first instance of this pattern: `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/evals/`
