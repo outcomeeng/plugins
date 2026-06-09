@@ -28,13 +28,3 @@ The ADR's read-then-write invariant still holds (the exception unwinds before an
 The lockstep invariant — both manifests carry the same version — is violated, and neither mode catches it. The ADR acknowledges the one-manifest-ahead-of-the-other failure mode as recoverable via `git checkout`, but does not note the CHECK false-pass. Caught by the marketplace code review of PR #46.
 
 **Fix sketch:** classify per-record rather than per-plugin. Track `(plugin, record)` pairs whose `working_tree_version != base_ref_version`; a dual-manifest plugin with one record ahead and one record clean is in the partial-bump state, surfaceable as a distinct diagnostic (`Plugin <name>: manifests out of lockstep — <path> at <new>, <path> at <old>`). CHECK and WRITE both exit non-zero with that diagnostic; the operator runs `git checkout -- <lagging-path>` to recover.
-
-## FOLLOW-UP [workflow]: all-or-nothing refusal across changed plugins
-
-When Plugin A is already bumped on this branch and Plugin B is newly changed (not yet bumped), `already_bumped_plugins` is non-empty and WRITE mode exits 1 without bumping Plugin B. CHECK mode correctly exits 1 for Plugin B, but `just bump` cannot resolve the state — both modes refuse in their respective ways, and the only recourse is a manual manifest edit.
-
-This becomes relevant as soon as CI wires in `just bump-check` (the test-plan follow-up). The spec NEVER clause says "NEVER: bump a plugin whose working-tree version *already* differs" (per-plugin), but the implementation extends refusal globally. The test `test_branch_already_bumped_blocks_every_changed_plugin_before_any_write` explicitly asserts this all-or-nothing behavior, so the behavior is intentional — worth documenting as a workflow constraint so maintainers know to run `just bump` once before any commit rather than incrementally. Caught by the marketplace code review of PR #46.
-
-**Fix sketch (option A — documentation):** add a workflow note to `AGENTS.md` and `README.md` saying "Run `just bump` once before the first plugin-distribution commit on a branch; do not run it incrementally as you add changes." No code change.
-
-**Fix sketch (option B — per-plugin refusal):** change WRITE to bump every non-already-bumped plugin in the same pass, emitting the "already bumped" diagnostic for each already-bumped plugin but proceeding for the rest. The all-or-nothing test would need to relax to per-plugin. This changes a NEVER's enforcement strategy and likely warrants an ADR amendment.

@@ -294,15 +294,19 @@ def bump(
             return 1
         return 0
 
-    if already_bumped_plugins:
-        for plugin in already_bumped_plugins:
-            print(
-                f"Plugin {plugin} already has a version bump on this branch",
-                file=sys.stderr,
-            )
-        return 1
+    # WRITE / DRY_RUN: skip plugins already bumped on this branch — never
+    # re-bump one (the spec NEVER clause) — while still bumping every other
+    # changed-but-unbumped plugin in the same pass.
+    for plugin in already_bumped_plugins:
+        print(
+            f"Plugin {plugin} already has a version bump on this branch; skipping",
+            file=sys.stderr,
+        )
 
+    skip = set(already_bumped_plugins)
     for plugin, record, working_tree_version, resolved in plans:
+        if plugin in skip:
+            continue
         increment = _SEGMENT_DISPATCH[resolved]
         new_version = increment(working_tree_version)
         if mode is Mode.DRY_RUN:
