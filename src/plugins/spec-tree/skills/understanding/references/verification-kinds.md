@@ -44,7 +44,7 @@ The entries above are applications of the five types — auditing recurs because
 
 Three of the five types back the tag an assertion can carry: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing. Validation and reviewing are gates that back no tag. Auditing and reviewing are both agentic but sit at opposite ends of judgment depth — auditing is a binary checklist, reviewing is irreducible principal-level assessment.
 
-The assertion tag `[review]` is the legacy spelling of the `[audit]` tag and resolves to it during migration; it does not denote the `reviewing` type. The collision is between a tag and a type — `[review]`-the-tag is auditing evidence, `reviewing`-the-type is the open-ended gate that backs no tag.
+The assertion tag `[review]` is the legacy spelling of the `[audit]` tag and resolves to it during migration; it does not denote the `reviewing` type. The collision is between a tag and a type — `[review]`-the-tag names the auditing type, `reviewing`-the-type is the open-ended gate that backs no tag.
 
 </assertion_tags>
 

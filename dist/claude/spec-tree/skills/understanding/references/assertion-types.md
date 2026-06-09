@@ -145,6 +145,8 @@ Every assertion declares one verification type, named by the tag it carries (`re
 | **evaluating**    | `([eval](path/to/eval))` | deterministic | eval runner    | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
 | **auditing**      | `([audit])`              | agentic       | auditing skill | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
 
+Only a `testing` assertion carries an assertion type (one of the five); `evaluating` and `auditing` carry none.
+
 The `[eval]` verdict is deterministic even though an LLM produces the output: the runner scores the parsed verdict against expected fields, so no model judges the result. `([review])` is the legacy spelling of the `([audit])` tag and migrates to it — both resolve during migration. The tag `[review]` is NOT the `reviewing` verification type: `reviewing` is an open-ended, principal-level gate that backs no assertion tag. The tag↔type mapping is declared in `references/verification-kinds.md`.
 
 **Test** is the default for Scenario, Mapping, Conformance, and Property assertions, and for Compliance rules with automated verification. The test file exercises behavior with direct or indirect coupling to the module under test.
