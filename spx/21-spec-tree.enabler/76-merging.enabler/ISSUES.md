@@ -41,3 +41,19 @@ Required handling when an eval-coverage sweep happens:
 - Run the eval to populate `history.jsonl`.
 
 Surfaced by the local `reviewing-changes` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
+
+## Multi-worktree post-merge sync gap (FOLLOW-UP)
+
+The merge overlay's Post-merge section (`spx/local/merging.md`) and the root `AGENTS.md` Sync step describe detaching **the current worktree** onto the merged `main` and running `just sync-marketplace`. In a bare-repo worktree pool (per `spx/21-spec-tree.enabler/11-repository-layout.pdr.md`) that is insufficient: the marketplace **source** is the `main` worktree, which is a *different* worktree from the pool worktree where the agent did the work. After a merge the agent must additionally fast-forward the `main` worktree's branch (`git -C <main-worktree> merge --ff-only origin/main`) **before** `just sync-marketplace`, or the sync re-reads stale `dist/` from the source worktree and the merged change is not installed.
+
+Observed on PR #143 (init-worktrees, 2026-06-08): `just sync-marketplace` from the pool worktree would have cached the stale `main`-worktree `dist/`; the `main` worktree (11 commits behind) had to be ff'd manually first.
+
+**Resolution shape**: the Post-merge section of `spx/local/merging.md` (and the `AGENTS.md` Sync step) should state, for the multi-worktree case, that the marketplace-source worktree (the one holding the default branch) is fast-forwarded to `origin/<default>` before `sync-marketplace` — distinct from detaching the working pool worktree. Consider having `just sync-marketplace` detect and fast-forward the default-branch source worktree itself.
+
+## `production-readiness` eval is threshold-fragile (FOLLOW-UP)
+
+`spx/21-spec-tree.enabler/76-merging.enabler/evals/production-readiness/` has **4 cases at an 85% pass threshold**, so a single LLM-non-deterministic case flip drops the suite to 75% and fails the `evals` CI check. This blocked PR #143 once and recovered on the next re-roll; `history.jsonl` shows the same 0.75 dip on 2026-06-06 recovering minutes later. The fragility is intrinsic to a 4-case / 85% suite (one flip = a 25% swing).
+
+**Resolution shape**: raise the case count so one flip is below the threshold's granularity, or lower the threshold to match the case count, or raise pass@k for the non-deterministic cases. Audit the other small merging evals for the same 4-case fragility while here.
+
+Surfaced during the autonomous merge of PR #143 (2026-06-08).
