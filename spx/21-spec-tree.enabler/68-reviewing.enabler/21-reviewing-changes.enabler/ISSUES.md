@@ -202,3 +202,46 @@ Decide in the decision record.
 
 Surfaced from the operator review of `changes-reviewer` behavior on
 `outcomeeng/plugins` PR #148 (2026-06-09).
+
+## 7. Thread-store slug resolves a stale branch name in a reused worktree
+
+`reviewing-changes` persists `review-result.json` / `review.md` under a
+thread-store slug derived from the branch identity by the `changeset-scope` skill
+(`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler`,
+governed by its `13-changeset-derivation.adr.md`). On `outcomeeng/plugins` PR #149
+(2026-06-09) the local `changes-reviewer` ran on branch
+`work/changes-reviewer-followups`, yet persisted its artifacts under the slug
+`work__handoff-lint-enforcement` and reported that branch name — the *previous,
+already-deleted* branch this pool worktree had held during the
+reference-portability work (PR #148). The reviewed diff (`origin/main...HEAD`) was
+correct, so the verdict was valid; only the slug/branch-identity was stale.
+
+This is the same class of defect as item 2 (stale local-ref resolution): the
+`changeset-scope` machinery resolved a stale ref rather than the current checkout.
+Item 2 affects the diff BASE (widening what is reviewed); this affects the
+SLUG/identity (which thread the artifacts land in). In a bare-repo worktree pool
+(`spx/21-spec-tree.enabler/11-repository-layout.pdr.md`) where a worktree is reused
+across branches that are created and deleted, the slug appears to come from a stale
+source (a reflog/HEAD remnant or a cached value) rather than
+`git branch --show-current` or the explicitly-passed branch.
+
+**Impact.** Artifacts for branch B's review land under branch A's slug, so a
+consumer reading the thread store for branch B finds the wrong branch's record (or
+none), and any cross-branch artifact lookup by slug is unreliable in the
+multi-worktree layout.
+
+**Required handling (investigate in `changeset-scope`, the governing node):**
+
+- Confirm how the branch slug is derived — current checked-out branch vs a stale or
+  cached ref — and key it off `git branch --show-current` (or the
+  explicitly-passed branch), so a worktree that previously held another branch does
+  not leak the old slug.
+- Add evidence that a worktree reused across two branches persists each review
+  under its own current-branch slug.
+- Reconcile with item 2 — both are `changeset-scope` stale-ref resolution; a single
+  fix to "resolve identity from the current checkout, never a stale ref" may cover
+  both the base-ref and the slug symptoms.
+
+Surfaced during the PR #149 local review (2026-06-09), branch
+`work/changes-reviewer-followups`; artifacts landed under
+`work__handoff-lint-enforcement`.
