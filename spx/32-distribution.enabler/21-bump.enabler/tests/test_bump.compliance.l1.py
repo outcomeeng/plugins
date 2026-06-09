@@ -11,9 +11,9 @@ preservation):
   the `tool_probe` records its calls into the shared `event_log` before
   any other probe records into it.
 - NEVER: bump a plugin whose working-tree version differs from its
-  base_ref version — bump exits non-zero, writes nothing, and emits a
-  diagnostic naming the plugin. The read-then-write phase split blocks
-  every plugin in the pass when any one plugin is already bumped.
+  base_ref version — that plugin is skipped with a diagnostic naming
+  it, while every other changed-but-unbumped plugin is still bumped in
+  the same pass.
 - NEVER: write a manifest for a plugin with no changes since base_ref —
   unchanged plugins are not queried or written.
 - NEVER: reformat manifest content beyond the version field — exercised
@@ -146,10 +146,15 @@ def test_tool_availability_is_probed_before_any_other_probe_or_write() -> None:
     )
 
 
-def test_branch_already_bumped_refuses_to_write_with_diagnostic(
+def test_already_bumped_plugin_is_skipped_not_rewritten(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Working-tree version != base_ref version on a changed plugin → refuse."""
+    """A changed plugin already bumped on this branch is skipped, not re-bumped.
+
+    Its working-tree version already differs from base_ref, so bump leaves the
+    manifest untouched and names the skip in a diagnostic. With no other changed
+    plugin to bump, the run still succeeds (idempotent re-run).
+    """
     plugin = "foo"
     claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
     working_tree_content = manifest_text(plugin, "0.4.2")
@@ -178,18 +183,19 @@ def test_branch_already_bumped_refuses_to_write_with_diagnostic(
     )
 
     captured = capsys.readouterr()
-    assert exit_code != 0
+    assert exit_code == 0
     assert manifest_writer.writes == []
-    assert plugin in (captured.err + captured.out)
+    assert plugin in captured.err
 
 
-def test_branch_already_bumped_blocks_every_changed_plugin_before_any_write(
+def test_already_bumped_plugin_skipped_while_other_changed_plugin_is_bumped(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Read-then-write phase split: detection fails before any write happens.
+    """Per-plugin refusal: an already-bumped plugin is skipped while every other
+    changed-but-unbumped plugin is still bumped in the same pass.
 
-    A plugin whose working-tree version is already ahead of base_ref blocks
-    the entire bump pass even when other changed plugins are clean.
+    `foo` is already ahead of base_ref (skipped); `bar` is changed but still at
+    its base_ref version (bumped to 0.4.2). The run succeeds.
     """
     foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
     bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
@@ -225,11 +231,104 @@ def test_branch_already_bumped_blocks_every_changed_plugin_before_any_write(
     )
 
     captured = capsys.readouterr()
-    assert exit_code != 0
-    # Read-then-write: even the clean "bar" plugin is not written when any
-    # plugin in the pass is already bumped.
+    assert exit_code == 0
+    written = dict(manifest_writer.writes)
+    # foo is already bumped → skipped (not rewritten).
+    assert foo_path not in written
+    # bar is changed but unbumped → bumped to 0.4.2 in the same pass.
+    assert bar_path in written
+    assert '"version": "0.4.2"' in written[bar_path]
+    assert "foo" in captured.err
+
+
+def test_already_bumped_plugin_skipped_in_dry_run(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """DRY_RUN also skips an already-bumped plugin with a diagnostic, writing nothing."""
+    plugin = "foo"
+    claude_path = manifest_relpath(plugin, CLAUDE_MANIFEST)
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes(plugin))
+    content_probe = ScriptedContentProbe(
+        content={(BASE_REF, claude_path): manifest_text(plugin, "0.4.1")},
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            plugin: (
+                ManifestRecord(
+                    path=claude_path, content=manifest_text(plugin, "0.4.2")
+                ),
+            )
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        Segment.PATCH,
+        mode=Mode.DRY_RUN,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
     assert manifest_writer.writes == []
-    assert "foo" in (captured.err + captured.out)
+    assert plugin in captured.err
+
+
+def test_dry_run_skips_already_bumped_plugin_and_reports_the_other(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """DRY_RUN, two plugins: the already-bumped plugin is skipped with a stderr
+    diagnostic, the changed-but-unbumped plugin's would-be bump is reported on
+    stdout, and nothing is written.
+    """
+    foo_path = manifest_relpath("foo", CLAUDE_MANIFEST)
+    bar_path = manifest_relpath("bar", CLAUDE_MANIFEST)
+
+    change_probe = ScriptedChangeProbe(changed=patch_changes("foo", "bar"))
+    content_probe = ScriptedContentProbe(
+        content={
+            (BASE_REF, foo_path): manifest_text("foo", "0.4.1"),
+            (BASE_REF, bar_path): manifest_text("bar", "0.4.1"),
+        },
+    )
+    manifest_reader = ScriptedManifestReader(
+        manifests={
+            "foo": (
+                ManifestRecord(path=foo_path, content=manifest_text("foo", "0.4.2")),
+            ),
+            "bar": (
+                ManifestRecord(path=bar_path, content=manifest_text("bar", "0.4.1")),
+            ),
+        },
+    )
+    manifest_writer = RecordingManifestWriter()
+    tool_probe = RecordingToolProbe(available=ALL_TOOLS_AVAILABLE)
+
+    exit_code = bump(
+        BASE_REF,
+        Segment.PATCH,
+        mode=Mode.DRY_RUN,
+        change_probe=change_probe,
+        content_probe=content_probe,
+        manifest_reader=manifest_reader,
+        manifest_writer=manifest_writer,
+        tool_probe=tool_probe,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert manifest_writer.writes == []
+    # bar's would-be bump is reported on stdout; foo is skipped via stderr.
+    assert "bar" in captured.out
+    assert "0.4.1 -> 0.4.2" in captured.out
+    assert "foo" in captured.err
 
 
 def test_unchanged_plugins_never_have_manifests_written() -> None:
