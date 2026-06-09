@@ -25,7 +25,7 @@ This skill audits tests and test infrastructure. It does not audit production im
 <audit_scope>
 For every in-scope test assertion, inspect the full evidence chain:
 
-- The spec assertion and selected evidence type
+- The spec assertion and selected assertion type
 - The executed test file
 - Imported production modules
 - Imported `product_testing.harnesses.*` modules
@@ -96,16 +96,16 @@ Accept explicit test doubles only when they are passed through dependency inject
 <source_ownership_audit>
 The audit asks one question per test case: *where does this case come from?* The legitimate sources:
 
-| Evidence type | Case source                                                                                                                                                            |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scenario      | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
-| Mapping       | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
-| Property      | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
-| Conformance   | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
-| Compliance    | The decision record being enforced — the case is the rule itself                                                                                                       |
-| Any (fixture) | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
+| Assertion type | Case source                                                                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario       | The spec assertion text — the case is declared by the spec, not invented by the test author                                                                            |
+| Mapping        | A finite source-owned enumeration (enum, registry, schema, structured metadata)                                                                                        |
+| Property       | A generator over a domain — the author writes the invariant, the generator owns the cases                                                                              |
+| Conformance    | An external oracle (schema validator, reference implementation, parser the test doesn't author)                                                                        |
+| Compliance     | The decision record being enforced — the case is the rule itself                                                                                                       |
+| Any (fixture)  | An inert fixture file under `product_testing/fixtures/`, passed to the code under test as a file path or byte stream — the file's whole real-world payload is the case |
 
-The first five rows pair an evidence type with the case source it normally takes. The Fixture row is cross-cutting: any evidence type may use an inert fixture file as the case. An auditor classifying a test case checks both the evidence type and whether the case is a whole-payload fixture file.
+The first five rows pair an assertion type with the case source it normally takes. The Fixture row is cross-cutting: any assertion type may use an inert fixture file as the case. An auditor classifying a test case checks both the assertion type and whether the case is a whole-payload fixture file.
 
 A case that does not have a documentable source outside the author's head is a tautology dressed as a measurement — the test confirms the author's understanding forever, never the spec. The defect is in the case's *origin*. Lexical location (`Final` at module scope, plain assignment, inline literal), syntactic form, and reuse pattern (shared bag, single-value, parametrize row) are irrelevant — the audit names them only as forms the same defect takes.
 
@@ -247,7 +247,7 @@ Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an H
 A Python test audit succeeds when:
 
 - Gate 0 deterministic checks are run or unavailable tools are reported
-- Every test is traced to the spec assertion and selected evidence type
+- Every test is traced to the spec assertion and selected assertion type
 - Runtime coupling reaches production behavior directly or through audited harnesses
 - No framework mock, monkeypatch, or import trick replaces the behavior under test
 - Source-owned values come from source modules or owning packages

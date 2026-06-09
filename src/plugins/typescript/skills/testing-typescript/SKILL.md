@@ -259,7 +259,7 @@ Tests run and fail for expected reasons (RED phase complete).
 Before declaring tests complete:
 
 - [ ] Each spec assertion has at least one test
-- [ ] Evidence mode and level match `/testing` Stage 2
+- [ ] Assertion type and level match `/testing` Stage 2
 - [ ] File names use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - [ ] No `vi.mock()` or `vi.fn()` replacing the dependency under test
 - [ ] Doubles are typed interfaces passed through DI

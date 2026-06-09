@@ -26,7 +26,7 @@ The ADR template (from `/understanding`) is decision-first — the decision is s
 1. **Title + decision** -- `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences: what it governs and what it decides.
 2. **Rationale** -- Why this is right given the constraints. Name a rejected alternative only when it sharpens the decision. Omit if self-evident.
 3. **Invariants** (optional) -- Algebraic properties that hold for ALL governed code. Omit if none apply.
-4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{evidence type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit])`), ordered by decreasing enforcement strength. Include only the subsections that apply.
+4. **Verification** -- Each rule is an ALWAYS guarantee or a NEVER boundary, grouped under the one subsection naming how it is verified: `### Testing` (deterministic test, `([{assertion type}])`), `### Eval` (graded LLM behavior, `([eval])`), `### Audit` (agent judgment, `([audit])`), ordered by decreasing enforcement strength. Include only the subsections that apply.
 
 **This is the complete list.** An ADR has no other sections. There is no `Purpose` heading, no `Context` section, no `Trade-offs` section, no `Testing Strategy` section, no `Status` field, no `Level Assignments` table — business context and trade-offs fold into the decision statement and Rationale. TypeScript architecture rules — DI mandates, mocking prohibitions — require agent judgment, so they live under `### Audit` with `([audit])`.
 

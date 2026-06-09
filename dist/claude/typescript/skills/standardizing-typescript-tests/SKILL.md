@@ -239,7 +239,7 @@ If a test can only be written by copying source literals, pinning arbitrary exam
 
 <data_ownership_decision>
 
-Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same evidence type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
+Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
 1. **Data that the source imports or should import**
 
@@ -493,7 +493,7 @@ test("API returns flag-gated payload", async ({ context }) => {
 <success_criteria>
 TypeScript test guidance follows this standard when:
 
-- `/testing` determines the evidence mode, execution level, and exception path before implementation
+- `/testing` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception

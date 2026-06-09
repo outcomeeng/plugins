@@ -95,7 +95,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 <step name="evidence">
 
-**Step 3 — Evidence type and method**
+**Step 3 — Assertion type and method**
 
 | Type        | Required TypeScript pattern                                          | REJECT if                                               |
 | ----------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -175,7 +175,7 @@ Apply the supplements in `<typescript_supplements>` for each property:
 
 - **Coupling** — 5-category taxonomy (Direct / Indirect / Transitive / False / Partial), barrel resolution, type-only import handling.
 - **Falsifiability** — incorporates step 4 (mocks) and step 5 (oracle) judgments, plus snapshot rules.
-- **Alignment** — incorporates step 2 (clause enumeration) and step 3 (evidence type).
+- **Alignment** — incorporates step 2 (clause enumeration) and step 3 (assertion type).
 - **Coverage** — package-manager detection, baseline vs. with-test deltas, saturation annotation.
 
 First property failure at this step → REJECT the assertion; move to the next.
@@ -274,7 +274,7 @@ Cannot name a mutation → unfalsifiable → REJECT.
 
 <supplement property="alignment">
 
-Apply step 2 (clauses) and step 3 (evidence type).
+Apply step 2 (clauses) and step 3 (assertion type).
 
 Alignment passes when:
 
