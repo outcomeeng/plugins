@@ -23,7 +23,7 @@ The ADR's read-then-write invariant still holds (the exception unwinds before an
 `plugin_already_bumped` is set to `True` if *any* record in a dual-manifest plugin is ahead of `base_ref`. If a previous `just bump` run was interrupted after writing `.claude-plugin/plugin.json` but before writing `.codex-plugin/plugin.json`, the codex manifest stays at the old version. On the next run:
 
 - **CHECK mode exits 0** — the plugin is in `already_bumped_plugins`, so `unbumped_plugins` is empty and the check falsely passes.
-- **WRITE mode exits 1** — the "already bumped" guard fires and refuses to bump the lagging manifest.
+- **WRITE mode skips the plugin** — the per-plugin already-bumped skip fires (any one record ahead marks the whole plugin bumped), so the lagging manifest is never bumped and the lockstep violation persists, uncaught.
 
 The lockstep invariant — both manifests carry the same version — is violated, and neither mode catches it. The ADR acknowledges the one-manifest-ahead-of-the-other failure mode as recoverable via `git checkout`, but does not note the CHECK false-pass. Caught by the marketplace code review of PR #46.
 

@@ -327,7 +327,7 @@ def test_dry_run_skips_already_bumped_plugin_and_reports_the_other(
     assert manifest_writer.writes == []
     # bar's would-be bump is reported on stdout; foo is skipped via stderr.
     assert "bar" in captured.out
-    assert "0.4.2" in captured.out
+    assert "0.4.1 -> 0.4.2" in captured.out
     assert "foo" in captured.err
 
 
