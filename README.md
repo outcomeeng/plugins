@@ -168,7 +168,8 @@ its changes:
 and requires explicit `--segment major`. Passing an explicit `--segment` flag
 overrides per-plugin detection and emits a stderr warning naming any plugin
 whose detected segment differed (so you don't silently override the file-status
-evidence). The bumper refuses to write when the branch already carries a bump,
+evidence). When a plugin already carries a bump on this branch, the bumper skips it and
+bumps every other changed plugin in the same pass,
 and preserves manifest bytes character-for-character outside the `version` field
 so bumps produce minimal diffs.
 
