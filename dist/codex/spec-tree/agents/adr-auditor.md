@@ -4,6 +4,7 @@ description: >-
   Audit ADR evidence quality. Use after writing an ADR or before
   implementing from it.
 tools: Read, Glob, Grep
+model: sonnet
 skills:
   - spec-tree:audit-adr
 ---

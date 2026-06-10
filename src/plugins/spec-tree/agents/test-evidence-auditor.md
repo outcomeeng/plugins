@@ -4,6 +4,7 @@ description: >-
   Audit test evidence quality against spec assertions. Use after writing
   tests for a spec node or before closing an outcome.
 tools: Read, Bash, Glob, Grep
+model: sonnet
 skills:
   - spec-tree:auditing-tests
 ---
