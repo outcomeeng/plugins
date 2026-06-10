@@ -3,8 +3,11 @@
 Spec: spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md
 
 Rule: NEVER a committed file under ``src/plugins/`` references a concrete path into this
-marketplace's own files — a numbered ``spx/`` node or decision, or a ``src/``/``dist/``/
-``outcomeeng/`` repository segment. The detection rule lives in the source module under
+marketplace's own files — a numbered ``spx/\\d+-`` node or decision, or a path under a
+marketplace root (``src/plugins/``, ``dist/claude/``, ``dist/codex/``, or an ``outcomeeng``
+toolchain package). The validator passes universal conventions a consumer checkout also
+resolves — the ``NN`` index-placeholder sentinel, a bare ``src/``/``dist/`` path, and the
+marketplace's own GitHub org/repo slug. The detection rule lives in the source module under
 test; this test imports it and exercises a violating case per forbidden category against a
 portable case per allowed category, so enforcement is neither trivially always-failing nor
 blind to our own references.
@@ -20,10 +23,11 @@ from outcomeeng.validation.reference_portability import find_nonportable
 NONPORTABLE_SAMPLES = [
     "spx/13-plugin-and-runtime-conventions.adr.md",  # numbered product decision
     "spx/15-validation.enabler/65-gate.enabler",  # numbered product node
-    "src/plugins/spec-tree/skills/applying/SKILL.md",  # authored-source path
-    "src/cli/index.ts",  # repository source path outside src/plugins
-    "dist/claude/spec-tree/agents/applier.md",  # generated-runtime path
+    "src/plugins/spec-tree/skills/applying/SKILL.md",  # authored-source root
+    "dist/claude/spec-tree/agents/applier.md",  # generated Claude runtime root
+    "dist/codex/spec-tree/agents/applier.md",  # generated Codex runtime root
     "outcomeeng/validation/_steps.py",  # toolchain package path
+    "outcomeeng_testing/harnesses/spec_tree.py",  # toolchain test-package path
     "/home/dev/checkout/dist/claude/spec-tree/agents/applier.md",  # absolute checkout path
 ]
 
@@ -31,12 +35,18 @@ NONPORTABLE_SAMPLES = [
 PORTABLE_SAMPLES = [
     "spx/{node-path}/{slug}.md",  # generic consumer-tree placeholder
     "spx/<full-path>",  # generic consumer-tree placeholder
+    "spx/NN-infra.enabler/NN-parser.outcome",  # 'NN' index-placeholder sentinel for an example
     "spx/EXCLUDE",  # methodology-universal file
     "spx/CLAUDE.md",  # methodology-universal file
     "spx/local/python.md",  # methodology-universal directory
     "spx/sessions/todo/",  # methodology-universal directory
     "spx/1foo",  # 'spx/' + digit without the 'NN-' node prefix is not a node reference
+    "src/index.ts",  # universal source-tree convention, not a marketplace root
+    "src/orders/processor.ts",  # generic example source path every consumer can hold
+    "dist/output.js",  # bare build dir, not the marketplace dist/claude or dist/codex
     ".dist/claude/build-artifact.md",  # dot-prefixed build dir, not the marketplace dist/
+    "outcomeeng/plugins",  # the marketplace's own GitHub org/repo slug
+    "outcomeeng/spx",  # the marketplace's own GitHub org/repo slug
     "${CLAUDE_SKILL_DIR}/references/x.md",  # the plugin's own files
     "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json",  # the plugin's own files
 ]

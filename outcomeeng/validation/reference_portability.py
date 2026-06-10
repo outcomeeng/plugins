@@ -9,13 +9,20 @@ reference into this marketplace's own files dangles there.
 A reference is non-portable when it is either:
 
 * a spec-tree node or decision named by its sibling-local numeric prefix --
-  ``spx/`` immediately followed by a digit (``spx/13-...``,
+  ``spx/`` immediately followed by real digits and a hyphen (``spx/13-...``,
   ``spx/15-validation.enabler/65-gate.enabler``).  A non-numbered ``spx/`` path
-  (``spx/EXCLUDE``, ``spx/CLAUDE.md``, ``spx/local/...``, ``spx/sessions/``) and
-  a placeholder (``spx/{...}``, ``spx/<...>``) are portable; the numeric prefix
-  is what is product-specific, and a consumer numbers its own nodes.
-* a repository path segment under ``src/``, ``dist/``, or ``outcomeeng/``
-  -- caught even inside an absolute checkout path.
+  (``spx/EXCLUDE``, ``spx/CLAUDE.md``, ``spx/local/...``, ``spx/sessions/``), a
+  placeholder (``spx/{...}``, ``spx/<...>``), and the ``NN`` index-placeholder
+  sentinel for an illustrative node (``spx/NN-infra.enabler/...``) are portable;
+  the real numeric prefix is what is product-specific, and a consumer numbers
+  its own nodes.
+* a path under one of this marketplace's own roots -- ``src/plugins/`` (authored
+  source), ``dist/claude/`` or ``dist/codex/`` (generated runtime), or an
+  ``outcomeeng`` toolchain package (``outcomeeng/validation/...``,
+  ``outcomeeng_testing/...``) -- caught even inside an absolute checkout path.  A
+  bare ``src/`` or ``dist/`` path is a universal convention a consumer also holds
+  (``src/index.ts``), and ``outcomeeng/plugins`` / ``outcomeeng/spx`` are the
+  marketplace's own GitHub org/repo slugs; all are portable.
 
 ``${CLAUDE_SKILL_DIR}`` and ``${CLAUDE_PLUGIN_ROOT}`` are the portable way to
 reach the plugin's own files and are never matched.
@@ -42,14 +49,19 @@ from typing import Final
 # lookbehind anchors each alternative at a path-segment boundary, so a substring
 # inside a longer word (``redistribute``) or a dot-prefixed build directory
 # (``.dist/``) does not match, while an absolute checkout path
-# (``/home/dev/dist/claude/...``) does.
+# (``/home/dev/dist/claude/...``) does.  Each alternative names a marketplace
+# root, never a universal convention (bare ``src/``/``dist/``) or the GitHub
+# org/repo slug (``outcomeeng/plugins``, ``outcomeeng/spx``).
 _NONPORTABLE_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"(?<![\w.-])"
     r"(?:"
-    r"spx/\d+-[\w./-]*"  # numbered spec-tree node or decision (NN-slug)
-    r"|src/[\w./-]*"  # repository source tree
-    r"|dist/[\w./-]*"  # generated runtime tree
-    r"|outcomeeng\w*/[\w./-]*"  # marketplace toolchain package
+    r"spx/\d+-[\w./-]*"  # numbered spec-tree node or decision (real digits + '-')
+    r"|src/plugins/[\w./-]*"  # marketplace authored-source tree
+    r"|dist/(?:claude|codex)/[\w./-]*"  # marketplace generated runtime trees
+    # marketplace toolchain package -- an 'outcomeeng_*' package or an
+    # 'outcomeeng/<subpkg>' path, but never the 'outcomeeng/plugins' or
+    # 'outcomeeng/spx' GitHub repo slug
+    r"|outcomeeng(?:_\w+|/(?!plugins(?![\w-])|spx(?![\w-]))[\w.-]+)(?:/[\w./-]*)?"
     r")",
 )
 
