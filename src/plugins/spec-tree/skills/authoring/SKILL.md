@@ -166,7 +166,7 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understanding/templat
 
 - Every node, ADR, and PDR reference must use the full path from `spx/`.
 - Never write a bare node name, bare decision filename, or numeric prefix by itself.
-- Use `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, not `decomposing.md` or `54-decomposing.enabler`.
+- Use `spx/NN-spec-tree.enabler/NN-decomposing.enabler/decomposing.md`, not `decomposing.md` or `54-decomposing.enabler`.
 
 </step>
 
@@ -289,10 +289,10 @@ Common temporal patterns from user input and their atemporal rewrites:
 - ATEMPORAL: "Authentication uses OAuth 2.0. Users authenticate via SSO providers."
 
 - TEMPORAL: "The API currently returns XML but we're switching to JSON."
-- ATEMPORAL: "The API returns JSON responses conforming to the schema in `spx/15-api-contract.adr.md`."
+- ATEMPORAL: "The API returns JSON responses conforming to the schema in `spx/NN-api-contract.adr.md`."
 
 - TEMPORAL: "After investigating performance issues, we decided to add caching."
-- ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in `spx/22-cache-policy.adr.md`."
+- ATEMPORAL: "Response caching reduces latency for repeated queries. Cache invalidation follows the policy in `spx/NN-cache-policy.adr.md`."
 
 **Failure 6: Junk-drawer container names**
 
@@ -310,7 +310,7 @@ How to avoid: before placing a rule under `### Audit`, answer the falsification 
 
 **Failure 8: Over-multiplying decision records in small trees**
 
-Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/15-build.adr.md." The four ADRs collapsed into one `spx/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
+Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/NN-build.adr.md." The four ADRs collapsed into one `spx/NN-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
 
 How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
 

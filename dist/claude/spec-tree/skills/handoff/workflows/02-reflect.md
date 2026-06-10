@@ -52,7 +52,7 @@ Identify exactly where the next Claude context picks up:
 - **Critical skills** — always include `/understanding` and `/contextualizing {node}` for each anchored node, plus language-specific skills used
 - **Missed skills** — any skill that should have been invoked but was not, and what problems skipping it caused
 - **Next skill invocation** — the specific skill the receiving Claude context invokes first, and why
-- **Node path** — full path to the resumption node (e.g., `spx/21-foo.enabler/32-bar.outcome`)
+- **Node path** — full path to the resumption node (e.g., `spx/NN-foo.enabler/NN-bar.outcome`)
 - **TDD flow position** — which step (1-8) per the `/applying` skill
 
 </perspective_next_context>

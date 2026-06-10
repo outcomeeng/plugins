@@ -257,7 +257,7 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 ```bash
 # By node path
-spec-tree:contextualizing spx/32-cli.enabler/54-commands.outcome
+spec-tree:contextualizing spx/NN-cli.enabler/NN-commands.outcome
 ```
 
 **If `spec-tree:contextualizing` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.

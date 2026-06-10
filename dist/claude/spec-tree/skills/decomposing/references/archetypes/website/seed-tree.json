@@ -10,7 +10,7 @@
       "kind": "adr",
       "status": "proposed",
       "topic": "Rendering strategy — static generation vs server rendering vs client hydration, and where the client/server boundary sits.",
-      "source": "xiperlabs spx/15-static-rendering.adr.md, 16-client-server-boundary.adr.md"
+      "source": "xiperlabs"
     },
     {
       "index": 18,
@@ -18,7 +18,7 @@
       "kind": "adr",
       "status": "proposed",
       "topic": "How content/variants are gated and targeted by flag, and how flags resolve across environments.",
-      "source": "xiperlabs spx/16-feature-flag-gating.adr.md"
+      "source": "xiperlabs"
     }
   ],
   "nodes": [

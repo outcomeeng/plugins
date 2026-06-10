@@ -55,7 +55,7 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 ☑ [Imperfection → standardizing-typescript-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
 ☑ [Imperfection → spec-tree plugin] Invoke /contextualizing before suggesting handoff
 ☑ [Imperfection → CLAUDE.md] Require git mv for file moves
-☑ [Imperfection → ISSUES.md in spx/21-foo.enabler] Tests for assertion 3 missing
+☑ [Imperfection → ISSUES.md in spx/NN-foo.enabler] Tests for assertion 3 missing
 ```
 
 This lets the user verify at a glance that each item is going to the right place.
