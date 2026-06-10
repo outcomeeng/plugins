@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.5"
+template_version: "0.18.6"
 template_source: spec-tree
 ---
 
@@ -131,7 +131,7 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 **BLOCKING REQUIREMENT**
 
-Every change destined for the default branch routes through `/pr` unless `spx/local/merging.md` declares a no-PR route or a product-specific lifecycle. `/pr` proposes the lifecycle before mutation, then invokes the internal PR protocols. The opening protocol passes through the `REVIEW_READINESS` gate before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The opening protocol invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. The agent acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
+Every change destined for the default branch routes through `/pr` unless `spx/local/merging.md` declares a no-PR route or a product-specific lifecycle. `/pr` proposes the lifecycle before mutation, then invokes the internal PR protocols. The opening protocol passes through the `REVIEW_READINESS` gate before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The opening protocol invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the findings are not biased by what the operator's main agent has been doing. The review agent reports findings only. The main `/pr` flow acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md` from the main conversation context). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
 
 ---
 
@@ -147,7 +147,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "This node is too big"   | `/decomposing`     | —                       |
 | "Move this under that"   | `/refactoring`     | —                       |
 | "Check these specs"      | `/aligning`        | —                       |
-| "Write tests for this"   | `/testing`         | —                       |
+| "Write tests for this"   | `/applying`        | `applier`               |
 | "Start the TDD flow"     | `/applying`        | `applier`               |
 | "Audit this PDR"         | `/audit-pdr`       | `audit-pdr`             |
 | "Audit this ADR"         | `/audit-adr`       | `audit-adr`             |
@@ -166,11 +166,11 @@ Per-language code, architecture, and test audits render for the product's enable
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill                               | Agent                             |
-| --------------------------- | ----------------------------------- | --------------------------------- |
-| "Audit this code"           | `/auditing-typescript`              | `typescript-code-auditor`         |
-| "Audit ADRs for TypeScript" | `/auditing-typescript-architecture` | `typescript-architecture-auditor` |
-| "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
+| User Says...                | Skill                                          | Agent                             |
+| --------------------------- | ---------------------------------------------- | --------------------------------- |
+| "Audit this code"           | `/typescript:auditing-typescript`              | `typescript-code-auditor`         |
+| "Audit ADRs for TypeScript" | `/typescript:auditing-typescript-architecture` | `typescript-architecture-auditor` |
+| "Audit these tests"         | `/typescript:auditing-typescript-tests`        | `typescript-test-auditor`         |
 
 <!-- /lang:typescript -->
 
@@ -209,19 +209,32 @@ Test level is encoded in the filename. This guide renders only the languages lis
 
 Spec assertions link to their evidence inline:
 
+<!-- lang:typescript -->
+
+```markdown
+### Scenarios
+
+- Given X, when Y, then Z ([test](tests/test_slug.scenario.l1.test.ts))
+```
+
+<!-- /lang:typescript -->
+<!-- lang:python -->
+
 ```markdown
 ### Scenarios
 
 - Given X, when Y, then Z ([test](tests/test_slug.scenario.l1.py))
 ```
 
+<!-- /lang:python -->
+
 Use `[test](...)` for automated evidence verified by a test runner, `[eval](...)` for LLM-driven behavior verified by graded cases against a structured verdict, and `[audit]` for semantic constraints judged by an auditing skill that no deterministic test or eval can falsify (`[review]` is the legacy form of `[audit]`, still accepted during migration). Every assertion carries exactly one verification-type tag. The `[eval]` link points at a per-eval directory's `eval.toml`; the eval runner is declared per project.
 
 ---
 
-## Excluded Nodes
+## Passing-Scope Filters
 
-Nodes with specs and tests but no implementation are listed in `spx/EXCLUDE`. The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Linting always applies — style is checked regardless of implementation existence.
+Nodes with specs and tests but no implementation are excluded from `spx test passing` through the testing descriptor in `spx.config.{toml,json,yaml}`. Normal `spx test` discovery remains independent from passing-scope filters. Linting always applies — style is checked regardless of implementation existence.
 
 `spx` never writes to product configuration files. It passes exclusion flags to each tool at invocation time.
 
