@@ -86,7 +86,7 @@ A property assertion states something that must be true for all valid inputs, no
 A compliance assertion states a rule the node's output must always or never exhibit, falsifiable by a deterministic test. Some rules trace back to a PDR or ADR decision; others are intrinsic to the node.
 
 ```markdown
-- NEVER: reference XiperHLS — deferred by `spx/15-product-offering.pdr.md` ([test](tests/open-source.compliance.l1.test.{ext}))
+- NEVER: reference XiperHLS — deferred by `spx/NN-product-offering.pdr.md` ([test](tests/open-source.compliance.l1.test.{ext}))
 ```
 
 **Test strategy:** A test that exercises the rule against violating cases — for example, a test that runs a lint rule against violating fixtures and asserts the violation is detected (see `<verification_types>`).

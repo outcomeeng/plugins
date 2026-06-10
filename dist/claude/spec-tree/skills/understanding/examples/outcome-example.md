@@ -24,5 +24,5 @@ CONTRIBUTING TO faster iteration cycles and higher spec-test coverage across the
 
 ### Compliance
 
-- ALWAYS: derive status from test results, never from manually assigned labels — `spx/15-status-derivation.adr.md` requires status reflect reality ([audit])
+- ALWAYS: derive status from test results, never from manually assigned labels — `spx/NN-status-derivation.adr.md` requires status reflect reality ([audit])
 - NEVER: cache status across separate runs — each invocation recomputes from current state ([test](tests/status-rollup.compliance.l1.test.{ext}))

@@ -62,7 +62,7 @@ This skill may be referenced during the commit phase of a code review. In that c
 2. **Scope to work item** — Stage only files from the approved work item:
    - Implementation files
    - Co-located tests (in `spx/.../tests/`)
-3. **Include work item reference** — Add a `Refs:` footer using the node path format from the reviewing skill's context (e.g. `Refs: spx/21-foo.enabler/32-bar.outcome`)
+3. **Include work item reference** — Add a `Refs:` footer using the node path format from the reviewing skill's context (e.g. `Refs: spx/NN-foo.enabler/NN-bar.outcome`)
 4. **Verify tests pass** — All tests must pass before committing
 
 The reviewing skill provides the specific file list and work item context.

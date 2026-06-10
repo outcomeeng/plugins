@@ -89,10 +89,7 @@ expect(state).toBe("declared" as NodeState); // or leave the literal; the test r
 
 ## Sibling-codebase references
 
-The pattern is used in related monorepo codebases under the name "path registry":
-
-- `~/Code/CraftFinal/root/lib/config/middleware/routes/path-registry.ts` — `API_PATH_REGISTRY` drives `PATHS`, `PATHNAMES`, `URLS` through type inference
-- `~/Code/outcomeeng/spx/src/types.ts` — `WORK_ITEM_KINDS`, `WORK_ITEM_STATUSES` (earlier, simpler variant without per-entry metadata)
+The pattern is also known as a "path registry" in related codebases: a route or path-config object whose keys drive derived `PATHS`, `PATHNAMES`, and `URLS` types through inference, and an earlier, simpler variant that derives vocabulary arrays such as `WORK_ITEM_KINDS` and `WORK_ITEM_STATUSES` without per-entry metadata.
 
 ## Testing
 

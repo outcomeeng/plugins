@@ -30,7 +30,7 @@ This skill is strictly read-only over the project. It uses `Read`, `Bash` (for g
 
 Partition the in-scope file list by file extension. The mapping from extension to language identifier is training-time knowledge for any LLM that can run this skill; no explicit table belongs in the orchestrator. For mixed-language scopes, run the protocol once per partition, collect each partition's verdict, and aggregate them via `aggregate_verdicts.py` into one wrapper verdict whose `children` array carries the per-language verdicts. Each partition's language identifier is the `<lang>` value substituted into the `auditing-{lang}*` dispatch template.
 
-The orchestrator never embeds language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language placeholder `<lang>`. See `spx/21-spec-tree.enabler/17-auditing.adr.md` for the factoring rule.
+The orchestrator never embeds language-specific tokens beyond the dispatch template `auditing-{lang}*` and the language placeholder `<lang>` — the factoring rule that keeps this orchestrator language-neutral.
 
 </language_detection>
 

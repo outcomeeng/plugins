@@ -10,7 +10,7 @@
       "kind": "pdr",
       "status": "proposed",
       "topic": "Tenancy boundaries — what isolates one tenant (and one sub-context within a tenant) from another at the data, credential, and runtime layers.",
-      "source": "leoherd spx/12-leoherd-isolation-model.pdr.md"
+      "source": "leoherd"
     },
     {
       "index": 16,
@@ -18,7 +18,7 @@
       "kind": "pdr",
       "status": "proposed",
       "topic": "Per-capability action gating — what an agent/service may do autonomously within a tenant vs what blocks on explicit approval.",
-      "source": "leoherd spx/13-leoherd-autonomy-model.pdr.md"
+      "source": "leoherd"
     },
     {
       "index": 17,
@@ -26,7 +26,7 @@
       "kind": "adr",
       "status": "proposed",
       "topic": "The runtime realization — how per-tenant runtimes, the shared substrate, and ingress compose.",
-      "source": "leoherd spx/17-leoherd-architecture.adr.md"
+      "source": "leoherd"
     },
     {
       "index": 18,
@@ -34,7 +34,7 @@
       "kind": "pdr",
       "status": "proposed",
       "topic": "Which services the platform composes and how they are wired per tenant.",
-      "source": "leoherd spx/16-application-services.pdr.md"
+      "source": "leoherd"
     },
     {
       "index": 19,
@@ -42,7 +42,7 @@
       "kind": "pdr",
       "status": "proposed",
       "topic": "Production operations obligations — what production-capable operations require and their runbook gates.",
-      "source": "leoherd spx/10-operational-runbook-model.pdr.md"
+      "source": "leoherd"
     }
   ],
   "nodes": [

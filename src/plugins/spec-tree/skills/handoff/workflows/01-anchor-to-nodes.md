@@ -6,7 +6,7 @@ Identify every spec-tree node worked on during this session. This anchors the ha
 <process>
 List every spec-tree node touched in this session (any path matching `spx/**/*.enabler` or `spx/**/*.outcome`). For each, record:
 
-- Full path (e.g., `spx/21-foo.enabler/32-bar.outcome`)
+- Full path (e.g., `spx/NN-foo.enabler/NN-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)
 - Test status (passing, failing, not yet written)
 - TDD flow position if applicable (step 1-8 per `/applying` skill)

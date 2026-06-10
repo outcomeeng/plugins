@@ -10,7 +10,7 @@
       "kind": "adr",
       "status": "proposed",
       "topic": "How does the toolchain test deterministic transforms — fixture corpus, golden artifacts, test levels?",
-      "source": "xideck spx/11-testing-architecture.adr.md"
+      "source": "xideck"
     },
     {
       "index": 18,
@@ -18,7 +18,7 @@
       "kind": "adr",
       "status": "proposed",
       "topic": "The closed contract between authored source and the pipeline's first stage (the kinds/tokens the ingest step recognizes).",
-      "source": "xideck spx/13-capture-protocol.adr.md"
+      "source": "xideck"
     }
   ],
   "nodes": [

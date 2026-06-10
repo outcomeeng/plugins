@@ -32,6 +32,9 @@ PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
+# Shipped authored text under src/plugins/ where a non-portable reference can hide.
+_REFERENCE_SUFFIXES: Final = (".md", ".py", ".json", ".toml", ".yaml", ".yml")
+
 
 def _skill_files() -> tuple[str, ...]:
     roots = (
@@ -45,6 +48,19 @@ def _skill_files() -> tuple[str, ...]:
             for root in roots
             if root.is_dir()
             for path in root.rglob("SKILL.md")
+        )
+    )
+
+
+def _reference_files() -> tuple[str, ...]:
+    root = _REPO_ROOT / "src" / "plugins"
+    if not root.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            str(path)
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix in _REFERENCE_SUFFIXES
         )
     )
 
@@ -82,6 +98,17 @@ STEPS: Final = (
             "-m",
             "outcomeeng.validation.skill_injection_safety",
             *_skill_files(),
+        ),
+    ),
+    Step(
+        label="reference-portability",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.reference_portability",
+            *_reference_files(),
         ),
     ),
     Step(
