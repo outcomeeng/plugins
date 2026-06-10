@@ -78,7 +78,7 @@ def run(
     Signal delivery during a step raises SystemExit(128 + signum) from the
     handler — this propagates through the caller's `sys.exit(run(...))`.
     """
-    old_handlers: dict[int, signal._HANDLER] = {}
+    old_handlers: dict[signal.Signals, signal._HANDLER] = {}
     for sig in _FORWARDED_SIGNALS:
         old_handlers[sig] = signal.signal(sig, _forwarding_signal_handler)
 

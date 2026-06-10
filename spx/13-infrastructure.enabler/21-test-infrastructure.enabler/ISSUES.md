@@ -13,11 +13,10 @@ has only a `21-python-code-quality.enabler` child — no `harnesses`,
 already ships `harnesses/` (15 harness modules, including `git_context.py`),
 `generators/`, and `fixtures/` with no governing category node.
 
-The gap is pre-existing and product-wide: it predates and is unrelated to any
-single harness. `git_context.py` (added for the sessions scenario-test
-hermeticity fix) only surfaced it.
+The gap is product-wide and unrelated to any single harness. `git_context.py`
+(added for the sessions scenario-test hermeticity fix) surfaced it.
 
-**Required handling** (out of scope for a single harness change):
+**Required handling** (dedicated structural change):
 
 - Author the `generators`, `fixtures`, and `harnesses` category nodes under
   `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/` via

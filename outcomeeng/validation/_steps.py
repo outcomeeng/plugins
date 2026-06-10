@@ -5,8 +5,9 @@ list. Drift in the gate's composition is a regression the fixed tuple guards
 against.
 
 The compliance test enforces that `("ruff", "format", "--check")`,
-`("ruff", "check")`, and `("spx", "validation", "markdown")` appear as
-contiguous argv subsequences in at least one step each.
+`("ruff", "check")`, the strict mypy package command, the pyright package
+command, and `("spx", "validation", "markdown")` appear in the declared step
+list.
 """
 
 from __future__ import annotations
@@ -22,6 +23,14 @@ from outcomeeng.distribution.orchestration import (
 from outcomeeng.validation._model import Step
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
+
+RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
+RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
+MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
+PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
+SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
+PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
 
 def _skill_files() -> tuple[str, ...]:
@@ -45,8 +54,10 @@ STEPS: Final = (
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=("dprint", "check")),
-    Step(label="ruff-format", argv=("uv", "run", "ruff", "format", "--check", ".")),
-    Step(label="ruff", argv=("uv", "run", "ruff", "check", ".")),
+    Step(label="ruff-format", argv=RUFF_FORMAT_ARGV),
+    Step(label="ruff", argv=RUFF_CHECK_ARGV),
+    Step(label="mypy", argv=MYPY_ARGV),
+    Step(label="pyright", argv=PYRIGHT_ARGV),
     Step(
         label="manifests",
         argv=("uv", "run", "python", "-m", "outcomeeng.validation.plugins", "."),
@@ -84,6 +95,6 @@ STEPS: Final = (
             "--check",
         ),
     ),
-    Step(label="markdown", argv=("uv", "run", "spx", "validation", "markdown")),
-    Step(label="pytest", argv=("uv", "run", "python", "-m", "pytest")),
+    Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
+    Step(label="pytest", argv=PYTEST_ARGV),
 )

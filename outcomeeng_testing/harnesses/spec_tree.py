@@ -1,8 +1,9 @@
-"""Harnesses for marketplace Spec Tree structure tests."""
+"""Harnesses for marketplace Spec Tree tests."""
 
 from __future__ import annotations
 
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 
 from outcomeeng.spec_tree_structure import (
@@ -43,3 +44,18 @@ def marketplace_tracked_spx_node_directories(test_file: str) -> list[Path]:
     )
     tracked_paths = [product_root / line for line in result.stdout.splitlines() if line]
     return list(iter_node_directories_from_tracked_paths(product_root, tracked_paths))
+
+
+def run_marketplace_command(
+    test_file: str,
+    argv: Sequence[str],
+) -> subprocess.CompletedProcess[str]:
+    """Run a marketplace command from the repository root for conformance tests."""
+    product_root = marketplace_root_for_spec_tree_root_test(test_file)
+    return subprocess.run(  # noqa: S603 — argv is a source-owned command contract.
+        list(argv),
+        cwd=product_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
