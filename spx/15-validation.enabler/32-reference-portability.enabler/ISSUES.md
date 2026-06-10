@@ -15,11 +15,15 @@ inline samples on that basis.
 
 The discriminator excludes `outcomeeng/spx` (and `outcomeeng/plugins`) via the negative
 lookahead `outcomeeng/(?!plugins(?![\w-])|spx(?![\w-]))…`, so the GitHub org/repo slug
-stays portable. The same lookahead passes every `outcomeeng/spx/…` path, including a deep
-local-checkout path such as `~/Code/outcomeeng/spx/src/types.ts` that resolves in no
-consumer checkout. Narrowing the exclusion to the bare slug (no trailing path segment)
-would flag those, but would also flag legitimate `outcomeeng/plugins/blob/main/…` GitHub
-URL paths in install docs. Evaluate whether the exclusion should be narrowed to the bare
-slug only, and migrate any genuine local-path references that surface — the file the
-review cited (`src/plugins/typescript/skills/coding-typescript/references/vocabulary-registry-pattern.md`)
-is one such reference outside this change's diff.
+stays portable — but the same lookahead also passes every deeper `outcomeeng/spx/…` path,
+which the validator's ALWAYS assertion (passes only references a consumer resolves) does
+not bless. No such reference remains in shipped content: the one the review surfaced
+(`~/Code/outcomeeng/spx/src/types.ts`, a personal local-checkout path in the typescript
+vocabulary-registry reference) is removed in this change.
+
+Open refinement: narrow the exclusion to the bare slug (no trailing path segment) so a
+future deep `outcomeeng/spx/…` path is flagged, and add a matching `NONPORTABLE` sample to
+`tests/test_reference_portability.compliance.l1.py`. The trade-off is that narrowing would
+also flag a legitimate `outcomeeng/plugins/blob/main/…` GitHub URL in install docs (none
+exist today), so the bare-slug semantics deserve a deliberate decision rather than a rushed
+regex change.
