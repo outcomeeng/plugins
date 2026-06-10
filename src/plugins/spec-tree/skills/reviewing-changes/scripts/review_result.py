@@ -25,15 +25,19 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Severity(StrEnum):
-    """Finding severity — one of ``blocking``, ``debt``, ``follow_up``."""
+    """Finding severity — one of ``blocking``, ``debt``.
+
+    ``blocking`` marks a merge-safety defect; ``debt`` marks a real defect
+    that does not jeopardize merge safety. The reviewer judges validity and
+    severity; the author judges disposition (fix-in-PR or track-out-of-scope).
+    """
 
     BLOCKING = "blocking"
     DEBT = "debt"
-    FOLLOW_UP = "follow_up"
 
 
 class Concern(StrEnum):
@@ -74,12 +78,8 @@ class Finding:
 
     Frozen so any mutation between parse and validate raises ``FrozenInstanceError``.
 
-    Label asymmetry by severity, mirrored in the render templates:
-    ``blocking`` and ``debt`` findings render ``message`` as Evidence and
-    ``action`` as the Required change in this PR; ``follow_up`` findings
-    render ``message`` as Issue and ``action`` as the Track-under location.
-    The single ``action`` field carries both senses; the render template
-    applies the right label per severity.
+    Both ``blocking`` and ``debt`` findings render ``message`` as Evidence
+    and ``action`` as the Required change, mirrored in the render templates.
     """
 
     id: str
@@ -116,9 +116,9 @@ _REQUIRED_DOCUMENT_KEYS = (
     "acknowledgements",
 )
 
-# Required keys per finding. ``action`` carries the Required change (for
-# blocking/debt) or the Track-under location (for follow_up); the render
-# templates apply the right label per severity.
+# Required keys per finding. ``action`` carries the Required change for
+# both ``blocking`` and ``debt`` findings; the render templates label it
+# uniformly.
 _REQUIRED_FINDING_KEYS = (
     "id",
     "concern",

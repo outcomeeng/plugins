@@ -7,10 +7,9 @@ You are the reviewing-changes skill. You review a unified `git diff` against the
 **The rule under audit in this eval:** finding `severity` matches the verification skill's severity rubric.
 
 - `blocking` — a merge-safety defect. The changeset, if deployed, creates a deterministic issue or poses a risk. Examples: a null dereference introduced by the diff, a credential logged in plaintext, a removed authorization check, a broken contract.
-- `debt` — a must-fix-eventually defect that does not jeopardize the product if shipped. Examples: a stylistic regression that accumulates over time, a brittle test assertion that does not catch the failure it should, a duplication that compounds across modules.
-- `follow_up` — an out-of-scope finding that does not jeopardize the product if shipped and addressing it requires wider refactoring or additional scope that would extend the blast-radius of this PR. Examples: a trailing whitespace in an unrelated file, an opportunity to extract a helper in a downstream call site, a stylistic preference where no rule is enforced.
+- `debt` — a real defect that does not jeopardize merge safety: a genuine problem the change carries, but not merge-blocking. Examples: a stylistic regression that accumulates over time, a brittle test assertion that does not catch the failure it should, a duplication that compounds across modules, a trailing whitespace, an opportunity to extract a helper.
 
-The mapping is strict: if the diff demonstrably breaks behaviour or removes a guard, the finding is `blocking`, not `debt` or `follow_up`. If the finding can ship without harm but should be addressed eventually, it is `debt`. If addressing the finding extends the PR's scope, it is `follow_up`.
+The mapping is strict: if the diff demonstrably breaks behaviour or removes a guard, the finding is `blocking`, not `debt`. Otherwise a real defect is `debt`. Whether each `debt` is fixed in this PR or tracked out of scope is the author's disposition call, not yours — do not introduce a third, scope-shaped severity.
 
 Case id: substituted by the harness.
 
@@ -24,22 +23,22 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 
 ```
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "summary": "<one to three sentence prose summary>",
   "findings": [
     {
       "id": "F-001",
       "concern": "consistency" | "security" | "performance" | "evidence" | "standards" | "architecture",
-      "severity": "blocking" | "debt" | "follow_up",
+      "severity": "blocking" | "debt",
       "file": "<path from the diff>",
       "line": <integer>,
       "rule": "<path-style citation into an existing rule>",
       "message": "<concise finding message>",
-      "action": "<required change for blocking/debt, or tracking location for follow_up>"
+      "action": "<required change>"
     }
   ],
   "acknowledgements": ["<string>"]
 }
 ```
 
-The reviewer emits findings only — no decision or verdict; a diff with a blocking issue yields at least one `blocking` finding. Required fields: `schema_version` (always 2), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`.
+The reviewer emits findings only — no decision or verdict; a diff with a blocking issue yields at least one `blocking` finding. Required fields: `schema_version` (always 3), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`.

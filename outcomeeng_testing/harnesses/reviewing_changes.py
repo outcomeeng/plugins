@@ -74,8 +74,8 @@ def load_review_result_module() -> ModuleType:
 
     The reviewing-changes scripts ship under ``src/plugins/`` (the authored
     plugin source directory) and are not importable as a package.
-    Tests that introspect ``SCHEMA_VERSION``, the ``Decision`` /
-    ``Severity`` / ``Concern`` enums, the frozen ``Finding`` /
+    Tests that introspect ``SCHEMA_VERSION``, the ``Severity`` /
+    ``Concern`` enums, the frozen ``Finding`` /
     ``ReviewResult`` dataclasses, or the ``parse_json`` /
     ``ReviewResultValidationError`` entry points load the module here.
 
@@ -152,11 +152,11 @@ def make_review_result_dict(
 ) -> dict[str, Any]:
     """Return a synthetic review-result dict with every required field.
 
-    Default shape: one ``follow_up``-severity finding under the
-    ``standards`` concern, one acknowledgement, and a summary. The follow_up finding carries an
-    ``action`` populated with a placeholder tracking location to satisfy
-    the required-field check. The defaults make the conforming case the
-    trivial caller; rejection-path tests mutate one field on the
+    Default shape: one ``debt``-severity finding under the
+    ``standards`` concern, one acknowledgement, and a summary. The debt
+    finding carries an ``action`` populated with a required change to
+    satisfy the required-field check. The defaults make the conforming
+    case the trivial caller; rejection-path tests mutate one field on the
     returned dict to construct each violation.
 
     ``schema_version`` defaults to the module-level ``SCHEMA_VERSION``
@@ -172,12 +172,12 @@ def make_review_result_dict(
             {
                 "id": "F-001",
                 "concern": "standards",
-                "severity": "follow_up",
+                "severity": "debt",
                 "file": "example.py",
                 "line": 10,
                 "rule": FIXTURE_RULE_CITATION,
-                "message": "Consider a more descriptive name.",
-                "action": "ISSUES.md",
+                "message": "The identifier is not descriptive.",
+                "action": "Rename the symbol to convey its role.",
             }
         ]
     if acknowledgements is None:

@@ -92,7 +92,7 @@ class TestUnknownEnumValueRejection:
         bad_finding = {
             "id": "F-001",
             "concern": "marketing",
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,

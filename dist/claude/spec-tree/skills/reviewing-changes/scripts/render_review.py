@@ -66,11 +66,10 @@ RENDER_DIR = pathlib.Path(__file__).resolve().parent.parent / "references" / "re
 DEFAULT_TITLE = "Change Review"
 
 # Severity wire value → render template filename. Mirrors the spec
-# clause that maps the three severities to render-class headings.
+# clause that maps the two severities to render-class headings.
 _SEVERITY_TO_TEMPLATE = {
     "blocking": "finding-blocking.md",
     "debt": "finding-debt.md",
-    "follow_up": "finding-followup.md",
 }
 
 # Severity wire value → census-marker template filename. Emitted in place
@@ -80,7 +79,6 @@ _SEVERITY_TO_TEMPLATE = {
 _SEVERITY_TO_EMPTY = {
     "blocking": "none-blocking.md",
     "debt": "none-debt.md",
-    "follow_up": "none-followup.md",
 }
 
 
@@ -119,11 +117,10 @@ def _render_finding(template: string.Template, finding: "object") -> str:
 def _partition_findings(
     findings: list["object"],
 ) -> dict[str, list["object"]]:
-    """Split findings into three buckets keyed by severity wire value."""
+    """Split findings into two buckets keyed by severity wire value."""
     buckets: dict[str, list["object"]] = {
         "blocking": [],
         "debt": [],
-        "follow_up": [],
     }
     for finding in findings:
         buckets[str(finding.severity)].append(finding)  # type: ignore[attr-defined]
@@ -136,13 +133,12 @@ def _render_markdown(result: "object") -> str:
     Loads per-section templates from ``references/render/``, partitions
     findings by severity, substitutes placeholders via stdlib
     ``string.Template``, and assembles the body in severity order
-    (BLOCKING → DEBT → FOLLOW-UP → acknowledgements). Every severity is
+    (BLOCKING → DEBT → acknowledgements). Every severity is
     reported uniformly: a bucket with findings renders them, an empty
     bucket renders its ``none-<severity>.md`` census marker — no severity
     is privileged and the render states a census, never a merge verdict.
-    Label asymmetry by severity lives in the templates: blocking/debt
-    render ``message``/``action`` as Evidence/Required; follow_up renders
-    them as Issue/Track-under.
+    Both blocking and debt render ``message``/``action`` as
+    Evidence/Required in the templates.
     """
     document_tpl = _load_template("document.md")
     severity_templates = {
@@ -159,7 +155,7 @@ def _render_markdown(result: "object") -> str:
         bucket.sort(key=lambda f: (str(f.concern), f.id))  # type: ignore[attr-defined]
 
     body_parts: list[str] = []
-    for severity in ("blocking", "debt", "follow_up"):
+    for severity in ("blocking", "debt"):
         bucket = buckets[severity]
         if bucket:
             body_parts.extend(

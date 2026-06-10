@@ -6,7 +6,7 @@ Inspect the changeset under review and the checked out working tree. Emit findin
 
 **NEVER:** emit open questions or speculative commentary that does not constitute a finding. Questions add CI roundtrips this single-pass review cannot recover from.
 
-Every finding has two dimensions: **category** and **severity**. Use only these 6 categories and 3 severities.
+Every finding has two dimensions: **category** and **severity**. Use only these 6 categories and 2 severities.
 
 ## **Category:** Classify all your findings into one of 6 categories, grouped by three axes
 
@@ -25,19 +25,20 @@ Every finding has two dimensions: **category** and **severity**. Use only these 
 - **Standards:** adherence to `CLAUDE.md` and the rules declared in standardizing-* skills (naming conventions, command tokens, file structure, language idioms).
 - **Architecture:** violation of structural principles declared by ADRs or PDRs — layer boundaries, separation of concerns, dependency directions, module-shape rules. A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
-## **Severity:** triage each finding to one of 3 levels
+## **Severity:** triage each finding to one of 2 levels
 
-| Severity    | Use when                                                                                                                                                                                         |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `BLOCKING`  | Merge-safety defect: If deployed, the changeset would create a deterministic issue or pose a risk.                                                                                               |
-| `DEBT`      | Must-fix-eventually defect: the finding does **not** jeopardize the product if shipped but accumulates technical debt.                                                                           |
-| `FOLLOW-UP` | Out-of-scope finding: the finding does **not** jeopardize the product if shipped and addressing it requires wider refactoring or additional scope that would extend the blast-radius of this PR. |
+| Severity   | Use when                                                                                                             |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| `BLOCKING` | Merge-safety defect: If deployed, the changeset would create a deterministic issue or pose a risk.                   |
+| `DEBT`     | Real defect that does **not** jeopardize merge safety: a genuine problem the change carries, but not merge-blocking. |
+
+Severity is the validity judgment the reviewer makes from the code and the rules. **Disposition** — whether each `DEBT` finding is fixed in this PR or tracked out of scope with a recorded reason — is the author's call, not the reviewer's; the reviewer carries no scope axis.
 
 ## **Reporting:** Return your findings exactly as below
 
 The bracket after the severity names the category: one of `consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`.
 
-Label asymmetry by severity is intentional: `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`; `FOLLOW-UP` requires only a tracking commitment elsewhere and uses `Reference:` + `Issue:` + `Track under:`.
+Both `BLOCKING` and `DEBT` require an action and use `Reference:` + `Evidence:` + `Required:`.
 
 ```text
 ### BLOCKING [consistency]: path/to/file:42
@@ -51,13 +52,6 @@ Required: <concrete change>.
 Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
 Evidence: <quote the diff or behavior and explain how it violates the standard>.
 Required: <concrete change>.
-```
-
-```text
-### FOLLOW-UP [architecture]: path/to/file
-Reference: <quote the standard from CLAUDE.md, skills, governance from decisions (PDR/ADR) or assertion from specs>.
-Issue: <what is missing or worthy of improvement>.
-Track under: <ISSUES.md file or product-specific issue tracker>.
 ```
 
 ## **Completeness:** Aim for *first-time right*

@@ -237,41 +237,37 @@ class TestSkillOrchestrationChain:
         )
         assert read_md.returncode == 0
         rendered = read_md.stdout
-        # Three-class render shape (matches the REVIEW.template.md
-        # taxonomy): the default fixture has one follow_up-severity
-        # finding and no blocking or debt. Render reports every severity
-        # uniformly — empty BLOCKING and DEBT buckets as `none` census
-        # markers, the follow_up finding as a FOLLOW-UP heading.
-        # The legacy class labels NEEDS-ANSWER and NOTE are not in the
-        # current three-severity taxonomy and must not appear in any
-        # rendered output.
+        # Two-severity render shape (matches the REVIEW.template.md
+        # taxonomy): the default fixture has one debt-severity finding and
+        # no blocking. Render reports both severities uniformly — the empty
+        # BLOCKING bucket as its `none` census marker, the debt finding as a
+        # DEBT heading. FOLLOW-UP is no longer part of the taxonomy and must
+        # not appear; the legacy class labels NEEDS-ANSWER and NOTE must not
+        # appear either.
         assert "## Change Review" in rendered, (
             "review.md must carry the Change Review title from document.md template"
         )
         assert "BLOCKING: none" in rendered, (
             "empty BLOCKING bucket must render its none-blocking.md census marker"
         )
-        assert "DEBT: none" in rendered, (
-            "empty DEBT bucket must render its none-debt.md census marker"
+        assert "### DEBT [standards]:" in rendered, (
+            "debt-severity finding must render as DEBT via finding-debt.md"
         )
-        assert "### FOLLOW-UP [standards]:" in rendered, (
-            "follow_up-severity finding must render as FOLLOW-UP via finding-followup.md"
+        # Both BLOCKING and DEBT render message as Evidence and action as
+        # Required.
+        assert "Evidence: " in rendered, (
+            "DEBT finding must render its message under the Evidence label"
         )
-        # Label asymmetry: FOLLOW-UP renders message as Issue and action
-        # as Track-under (BLOCKING/DEBT render them as Evidence + Required).
-        assert "Issue: " in rendered, (
-            "FOLLOW-UP finding must render its message under the Issue label"
+        assert "Required: " in rendered, (
+            "DEBT finding must render its action under the Required label"
         )
-        assert "Track under: " in rendered, (
-            "FOLLOW-UP finding must render its action under the Track-under label"
-        )
-        # Legacy four-class headings must not appear — the taxonomy
-        # dropped NEEDS-ANSWER (open questions) and NOTE (commentary) in
-        # favour of the three-severity / six-category shape.
-        for forbidden in ("### NEEDS-ANSWER", "### NOTE"):
+        # The removed FOLLOW-UP severity and the legacy four-class headings
+        # must not appear — the taxonomy is the two severities blocking/debt
+        # over six categories.
+        for forbidden in ("FOLLOW-UP", "### NEEDS-ANSWER", "### NOTE"):
             assert forbidden not in rendered, (
-                f"render must not emit {forbidden!r} — that label is not "
-                f"part of the three-severity taxonomy from REVIEW.template.md"
+                f"render must not emit {forbidden!r} — it is not part of the "
+                f"two-severity taxonomy from REVIEW.template.md"
             )
         # The legacy table format must NOT appear — confirms the
         # template-driven render replaces the f-string-table render.
@@ -282,11 +278,10 @@ class TestSkillOrchestrationChain:
     def test_render_emits_census_marker_for_every_empty_severity(
         self, tmp_path: pathlib.Path
     ) -> None:
-        # A fully-clean review (no findings) leaves all three severity
-        # buckets empty, so render reports each uniformly as its
-        # `<SEVERITY>: none` census marker — privileging no severity. This
-        # covers the none-followup.md path the default fixture, which
-        # carries a follow_up finding, leaves unexercised.
+        # A fully-clean review (no findings) leaves both severity buckets
+        # empty, so render reports each uniformly as its `<SEVERITY>: none`
+        # census marker — privileging no severity. The default fixture
+        # carries a debt finding, so the none-debt.md path is exercised here.
         store_root = tmp_path / "store"
         store_root.mkdir()
         env = _make_env_for_temp_store(store_root, cwd=tmp_path)
@@ -311,10 +306,13 @@ class TestSkillOrchestrationChain:
         render = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
         assert render.returncode == 0, render.stderr
         rendered = render.stdout
-        for marker in ("BLOCKING: none", "DEBT: none", "FOLLOW-UP: none"):
+        for marker in ("BLOCKING: none", "DEBT: none"):
             assert marker in rendered, (
                 f"empty severity bucket must render its census marker {marker!r}"
             )
+        assert "FOLLOW-UP" not in rendered, (
+            "FOLLOW-UP is not part of the two-severity taxonomy"
+        )
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:

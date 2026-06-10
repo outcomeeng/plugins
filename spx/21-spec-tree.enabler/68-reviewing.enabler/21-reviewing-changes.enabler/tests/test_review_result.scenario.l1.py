@@ -11,7 +11,7 @@ Scenarios
 
 Mappings
 - ``Severity`` enum members map to the wire values ``blocking``,
-  ``debt``, ``follow_up``.
+  ``debt``.
 - ``Concern`` enum members map to exactly the six wire values
   ``consistency``, ``security``, ``performance``, ``evidence``,
   ``standards``, ``architecture``.
@@ -71,12 +71,12 @@ class TestModuleSurface:
 
 class TestSeverityMapping:
     """``Severity`` members map to the wire values ``blocking``,
-    ``debt``, ``follow_up``."""
+    ``debt``."""
 
     def test_severity_members_map_to_wire_values(self) -> None:
         review_result = load_review_result_module()
         wire_values = {member.value for member in review_result.Severity}
-        assert wire_values == {"blocking", "debt", "follow_up"}
+        assert wire_values == {"blocking", "debt"}
 
 
 class TestConcernMapping:
@@ -149,7 +149,7 @@ class TestParseJsonRejection:
         bad_finding = {
             "id": "F-001",
             "concern": "marketing",  # not a Concern member
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
@@ -193,7 +193,7 @@ class TestRoundTrip:
         finding = {
             "id": "F-001",
             "concern": "consistency",
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
@@ -212,7 +212,7 @@ class TestRoundTrip:
         finding = {
             "id": "F-001",
             "concern": "consistency",
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": FIXTURE_RULE_CITATION,
@@ -230,7 +230,6 @@ class TestSeverityToRenderClassMapping:
 
     ``blocking`` → BLOCKING bucket.
     ``debt`` → DEBT bucket.
-    ``follow_up`` → FOLLOW-UP bucket.
 
     The mapping is total over ``Severity`` and lives in
     ``render_review._partition_findings``. Asserting it directly closes the
@@ -258,7 +257,6 @@ class TestSeverityToRenderClassMapping:
         )
         assert [f.id for f in buckets["blocking"]] == ["F-001"]
         assert buckets["debt"] == []
-        assert buckets["follow_up"] == []
 
     def test_debt_partitions_into_debt_bucket(self) -> None:
         render_review = load_render_review_module()
@@ -267,29 +265,18 @@ class TestSeverityToRenderClassMapping:
         )
         assert buckets["blocking"] == []
         assert [f.id for f in buckets["debt"]] == ["F-002"]
-        assert buckets["follow_up"] == []
-
-    def test_follow_up_partitions_into_follow_up_bucket(self) -> None:
-        render_review = load_render_review_module()
-        buckets = render_review._partition_findings(
-            [self._make_finding("follow_up", "F-003")]
-        )
-        assert buckets["blocking"] == []
-        assert buckets["debt"] == []
-        assert [f.id for f in buckets["follow_up"]] == ["F-003"]
 
     def test_mixed_severities_split_across_buckets(self) -> None:
         render_review = load_render_review_module()
         findings = [
             self._make_finding("blocking", "F-001"),
-            self._make_finding("follow_up", "F-002"),
+            self._make_finding("debt", "F-002"),
             self._make_finding("debt", "F-003"),
             self._make_finding("blocking", "F-004"),
         ]
         buckets = render_review._partition_findings(findings)
         assert {f.id for f in buckets["blocking"]} == {"F-001", "F-004"}
-        assert {f.id for f in buckets["debt"]} == {"F-003"}
-        assert {f.id for f in buckets["follow_up"]} == {"F-002"}
+        assert {f.id for f in buckets["debt"]} == {"F-002", "F-003"}
 
 
 class TestRuleCitationForm:
@@ -315,7 +302,7 @@ class TestRuleCitationForm:
         finding = {
             "id": "F-001",
             "concern": "consistency",
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": rule,
@@ -343,7 +330,7 @@ class TestRuleCitationForm:
         finding = {
             "id": "F-001",
             "concern": "consistency",
-            "severity": "follow_up",
+            "severity": "debt",
             "file": "x.py",
             "line": 1,
             "rule": rule,
