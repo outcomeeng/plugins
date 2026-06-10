@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import outcomeeng_testing
 from hypothesis import strategies as st
@@ -43,7 +44,7 @@ def manifest_text(name: str, version: str) -> str:
 
 def version_of(manifest_text: str) -> str:
     """Return the `version` field parsed from a manifest's text."""
-    return json.loads(manifest_text)["version"]
+    return cast(str, json.loads(manifest_text)["version"])
 
 
 def manifest_fixture_path(name: str) -> Path:

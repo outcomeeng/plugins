@@ -19,7 +19,7 @@ CAN trust that the same quality-gate steps run in the same order, that an interr
 
 ### Compliance
 
-- ALWAYS: the declared step list includes a `ruff format --check` step, a `ruff check` step, and a `spx validation markdown` step — so Python formatting, lint, and Markdown link integrity are each enforced on every `just check` ([test](tests/test_gate.compliance.l1.py))
+- ALWAYS: the declared step list includes a `ruff format --check` step, a `ruff check` step, a `mypy --strict` package step, a `pyright` package step, and a `spx validation markdown` step — so Python formatting, lint, package type checking, and Markdown link integrity are each enforced on every `just check` ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: each child subprocess is started with `start_new_session=True` so signal forwarding targets a process group, never a single PID — prevents orphaned grandchildren when the orchestrator is interrupted ([test](tests/test_gate.compliance.l1.py))
 - ALWAYS: the SIGKILL grace-period wait is bounded by a single `time.monotonic()` deadline computed once per signal — bounded polling for a process exit is the only wait the orchestrator performs, consistent with `spx/13-plugin-and-runtime-conventions.adr.md` `<no_until_polling>` ([test](tests/test_gate.compliance.l1.py))
 - NEVER: the orchestrator source contains a literal `gh run watch` invocation or a `while True:` loop containing `time.sleep` — unbounded polling waits are forbidden across the marketplace per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_gate.compliance.l1.py))

@@ -4,7 +4,8 @@ Verifies architectural compliance rules that can be falsified by inspecting
 source code or module-level data:
 
 - The declared step list includes a `ruff format --check` step, a
-  `ruff check` step, and a `spx validation markdown` step.
+  `ruff check` step, a `mypy --strict` package step, a `pyright` package step, and a
+  `spx validation markdown` step.
 - The production process spawner passes `start_new_session=True` so
   signal forwarding targets a process group.
 - The SIGKILL grace-period wait uses a single `time.monotonic()` deadline
@@ -27,25 +28,21 @@ from pathlib import Path
 from typing import Final
 
 from outcomeeng import validation as pkg
-from outcomeeng.validation import STEPS, Step
+from outcomeeng.validation import (
+    MYPY_ARGV,
+    PYRIGHT_ARGV,
+    RUFF_CHECK_ARGV,
+    RUFF_FORMAT_ARGV,
+    SPX_MARKDOWN_ARGV,
+    STEPS,
+    Step,
+)
 
-RUFF_TOKENS: Final = ("ruff", "check")
-RUFF_FORMAT_TOKENS: Final = ("ruff", "format", "--check")
-SPX_MARKDOWN_TOKENS: Final = ("spx", "validation", "markdown")
-
-
-def _argv_contains_sequence(argv: tuple[str, ...], tokens: tuple[str, ...]) -> bool:
-    """Return True if `tokens` appears as a contiguous subsequence of `argv`."""
-    if not tokens:
-        return True
-    for start in range(len(argv) - len(tokens) + 1):
-        if tuple(argv[start : start + len(tokens)]) == tokens:
-            return True
-    return False
+STATIC_ANALYSIS_ARGVS: Final = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 
 
 class TestDeclaredSteps:
-    """STEPS must include the ruff-format, ruff-check, and markdown validators."""
+    """STEPS must include the declared static-analysis and markdown validators."""
 
     def test_steps_is_non_empty_tuple_of_step(self) -> None:
         assert isinstance(STEPS, tuple)
@@ -54,17 +51,18 @@ class TestDeclaredSteps:
             assert isinstance(step, Step)
 
     def test_steps_includes_ruff_check(self) -> None:
-        assert any(_argv_contains_sequence(step.argv, RUFF_TOKENS) for step in STEPS)
+        assert any(step.argv == RUFF_CHECK_ARGV for step in STEPS)
 
     def test_steps_includes_ruff_format(self) -> None:
-        assert any(
-            _argv_contains_sequence(step.argv, RUFF_FORMAT_TOKENS) for step in STEPS
-        )
+        assert any(step.argv == RUFF_FORMAT_ARGV for step in STEPS)
+
+    def test_steps_include_mypy_strict_and_pyright(self) -> None:
+        step_argvs = {step.argv for step in STEPS}
+        assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
+        assert "--strict" in MYPY_ARGV
 
     def test_steps_includes_spx_validation_markdown(self) -> None:
-        assert any(
-            _argv_contains_sequence(step.argv, SPX_MARKDOWN_TOKENS) for step in STEPS
-        )
+        assert any(step.argv == SPX_MARKDOWN_ARGV for step in STEPS)
 
 
 def _package_modules() -> list[Path]:
