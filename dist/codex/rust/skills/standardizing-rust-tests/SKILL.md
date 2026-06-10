@@ -60,9 +60,9 @@ spx/.../tests/<subject>.<evidence>.<level>[.<runner>].rs
 Examples:
 
 ```text
-spx/NN-api.enabler/NN-auth.outcome/tests/session_token.scenario.l1.rs
-spx/NN-api.enabler/NN-auth.outcome/tests/registry_fetch.conformance.l2.rs
-spx/NN-api.enabler/NN-auth.outcome/tests/login_flow.scenario.l3.rs
+spx/55-example.enabler/21-auth.outcome/tests/session_token.scenario.l1.rs
+spx/55-example.enabler/21-auth.outcome/tests/registry_fetch.conformance.l2.rs
+spx/55-example.enabler/21-auth.outcome/tests/login_flow.scenario.l3.rs
 ```
 
 Repository overlays may restrict which levels the product supports. Follow the repo-local Rust test convention when it exists.

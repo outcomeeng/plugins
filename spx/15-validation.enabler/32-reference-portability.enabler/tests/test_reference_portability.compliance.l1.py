@@ -6,9 +6,9 @@ Rule: NEVER a committed file under ``src/plugins/`` references a concrete path i
 marketplace's own files — a numbered ``spx/\\d+-`` node or decision, or a path under a
 marketplace root (``src/plugins/``, ``dist/claude/``, ``dist/codex/``, an ``outcomeeng``
 toolchain package, or the marketplace's own repo slug as in ``outcomeeng/plugins/AGENTS.md``).
-The validator passes universal conventions a consumer checkout also resolves — the ``NN``
-index-placeholder sentinel, a bare ``src/``/``dist/`` path, and the marketplace's own bare
-GitHub org/repo slug. The detection rule lives in the source module under
+The validator passes universal conventions a consumer checkout also resolves — the
+``55-example`` illustrative root sentinel, a bare ``src/``/``dist/`` path, and the
+marketplace's own bare GitHub org/repo slug. The detection rule lives in the source module under
 test; this test imports it and exercises a violating case per forbidden category against a
 portable case per allowed category, so enforcement is neither trivially always-failing nor
 blind to our own references.
@@ -32,13 +32,16 @@ NONPORTABLE_SAMPLES = [
     "outcomeeng/plugins/AGENTS.md",  # path under the marketplace's own repo slug
     "outcomeeng/spx/src/types.ts",  # path under a sibling repo slug, not the bare slug
     "/home/dev/checkout/dist/claude/spec-tree/agents/applier.md",  # absolute checkout path
+    "spx/NN-infra.enabler/NN-parser.outcome",  # invalid index-placeholder path
 ]
 
 # One reference per allowed category — none may be flagged.
 PORTABLE_SAMPLES = [
     "spx/{node-path}/{slug}.md",  # generic consumer-tree placeholder
     "spx/<full-path>",  # generic consumer-tree placeholder
-    "spx/NN-infra.enabler/NN-parser.outcome",  # 'NN' index-placeholder sentinel for an example
+    "spx/55-example.enabler",  # illustrative root sentinel
+    "spx/55-example.enabler/12-parser.outcome",  # illustrative root sentinel
+    "spx/55-example.outcome/43-integration.outcome",  # illustrative root sentinel with outcome type
     "spx/EXCLUDE",  # methodology-universal file
     "spx/CLAUDE.md",  # methodology-universal file
     "spx/local/python.md",  # methodology-universal directory
