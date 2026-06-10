@@ -10,7 +10,7 @@ A reference is non-portable when it is either:
 
 * a spec-tree node or decision named by its sibling-local numeric prefix --
   ``spx/`` immediately followed by real digits and a hyphen (``spx/13-...``,
-  ``spx/15-validation.enabler/65-gate.enabler``).  A non-numbered ``spx/`` path
+  ``spx/15-infra.enabler/65-startup.enabler``).  A non-numbered ``spx/`` path
   (``spx/EXCLUDE``, ``spx/CLAUDE.md``, ``spx/local/...``, ``spx/sessions/``), a
   placeholder (``spx/{...}``, ``spx/<...>``), and the ``NN`` index-placeholder
   sentinel for an illustrative node (``spx/NN-infra.enabler/...``) are portable;
