@@ -8,7 +8,7 @@
 
 ## Example 1: Approved
 
-Auditing `spx/NN-uart.enabler/NN-transmitter.outcome/`
+Auditing `spx/55-example.enabler/21-transmitter.outcome/`
 
 Assertion mapping:
 
@@ -54,7 +54,7 @@ Delta: +41.4%
 ```
 
 ```text
-Audit: spx/NN-uart.enabler/NN-transmitter.outcome/
+Audit: spx/55-example.enabler/21-transmitter.outcome/
 Verdict: APPROVED
 
 | # | Assertion      | Coupling | Falsifiability           | Alignment | Coverage | Verdict |
@@ -64,7 +64,7 @@ Verdict: APPROVED
 
 ## Example 2: Rejected, Coupling Severed By @patch
 
-Auditing `spx/NN-api.enabler/NN-auth.outcome/`
+Auditing `spx/55-example.enabler/21-auth.outcome/`
 
 ```text
 Assertion: MUST: Given valid credentials, when authenticating,
@@ -81,7 +81,7 @@ Result: Coupling severed. Real database.query never runs.
 ```
 
 ```text
-Audit: spx/NN-api.enabler/NN-auth.outcome/
+Audit: spx/55-example.enabler/21-auth.outcome/
 Verdict: REJECT
 
 | # | Assertion     | Property Failed | Finding          | Detail                         |
@@ -97,7 +97,7 @@ returns [{"id": 1}].
 
 ## Example 3: Rejected, TYPE_CHECKING Import Disguised As Coupling
 
-Auditing `spx/NN-theme.enabler/NN-contrast.outcome/`
+Auditing `spx/55-example.enabler/21-contrast.outcome/`
 
 ```text
 Assertion: MUST: All theme colors meet WCAG AA contrast ratio (4.5:1)
@@ -117,7 +117,7 @@ Zero runtime codebase imports -> no coupling.
 ```
 
 ```text
-Audit: spx/NN-theme.enabler/NN-contrast.outcome/
+Audit: spx/55-example.enabler/21-contrast.outcome/
 Verdict: REJECT
 
 | # | Assertion        | Property Failed | Finding     | Detail                                      |

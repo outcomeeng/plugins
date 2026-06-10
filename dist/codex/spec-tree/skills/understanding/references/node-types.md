@@ -81,7 +81,7 @@ Decision records (ADR/PDR) are files within a node directory, not child nodes. B
 **Directory structure:**
 
 ```text
-NN-slug.{enabler|outcome}/
+NN-{slug}.{enabler|outcome}/
 ├── slug.md              # Spec file (no type suffix, no numeric prefix)
 ├── tests/               # Co-located [test]-lane evidence files
 │   ├── {test files}     # Named by product convention (see below)
@@ -95,7 +95,7 @@ NN-slug.{enabler|outcome}/
 │       └── runs/        # Full transcripts (gitignored)
 ├── PLAN.md              # Coordination note: deferred plan (optional)
 ├── ISSUES.md            # Coordination note: known issues (optional)
-└── NN-child.{enabler|outcome}/   # Nested child nodes (optional)
+└── NN-{child-slug}.{enabler|outcome}/   # Nested child nodes (optional)
 ```
 
 **Spec file naming:**

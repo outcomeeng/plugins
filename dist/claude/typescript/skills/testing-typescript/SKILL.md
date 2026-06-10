@@ -34,7 +34,7 @@ Write or fix test files for a node specification. This skill handles both:
 </mode_detection>
 
 <quick_start>
-**Input:** Node spec path (e.g., `spx/NN-infra.enabler/NN-parser.outcome/`)
+**Input:** Node spec path (e.g., `spx/55-example.enabler/21-parser.outcome/`)
 
 **Output:** Test files written to `{node}/tests/` directory
 
