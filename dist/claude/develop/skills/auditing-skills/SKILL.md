@@ -46,7 +46,7 @@ During audits, prioritize evaluation of:
 <critical_workflow>
 **MANDATORY**: Read standards FIRST, before auditing:
 
-1. Read `/standardizing-skills` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/standardizing-skills.md` at the repository root and read it if it exists.
+1. Read `/standardizing-skills` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 2. Read `/standardizing-agent-prompts` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
 4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples.

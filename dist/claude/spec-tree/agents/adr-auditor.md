@@ -1,5 +1,5 @@
 ---
-name: audit-adr
+name: adr-auditor
 description: >-
   Audit ADR evidence quality. Use after writing an ADR or before
   implementing from it.

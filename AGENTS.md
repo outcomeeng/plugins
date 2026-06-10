@@ -254,8 +254,8 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 
 | Skill                               | Agent                             |
 | ----------------------------------- | --------------------------------- |
-| `/audit-adr`                        | `audit-adr`                       |
-| `/audit-pdr`                        | `audit-pdr`                       |
+| `/audit-adr`                        | `adr-auditor`                     |
+| `/audit-pdr`                        | `pdr-auditor`                     |
 | `/auditing-tests`                   | `test-evidence-auditor`           |
 | `/auditing-{language}`              | `{language}-code-auditor`         |
 | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |

@@ -1,5 +1,5 @@
 ---
-name: audit-pdr
+name: pdr-auditor
 description: >-
   Audit PDR evidence quality. Use after writing a PDR or before
   implementing outcomes governed by the PDR.

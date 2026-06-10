@@ -1,7 +1,7 @@
 # Workflow: Add a Reference to Existing Skill
 
 <required_reading>
-Read `/standardizing-skills` for the full skill standards — the progressive-disclosure section governs reference files. Then check for `spx/local/standardizing-skills.md` at the repo root if present.
+Read `/standardizing-skills` for the full skill standards — the progressive-disclosure section governs reference files. Then check for `spx/local/skills.md` at the repo root if present.
 </required_reading>
 
 <process>

@@ -1,6 +1,6 @@
 # Issues: Decisions Enabler
 
-## 16-verification.enabler conformance for audit-adr / audit-pdr (deferred)
+## 16-verification.enabler conformance for adr-auditor / pdr-auditor (deferred)
 
 `audit-adr` and `audit-pdr` (skills + agents) landed at SCOPE-MIN per `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the established read-only verdict-producer shape shared by the other spec-tree audit agents. They do NOT yet conform to `spx/21-spec-tree.enabler/16-verification.enabler`:
 
@@ -9,7 +9,7 @@
 - No thread-store persistence of the machine-readable result + markdown surface.
 - The audit skills' LLM-judgment scenarios carry forward-referenced `[test]` in `pdr-auditing.md` and `[eval]` in `adr-auditing.md`; per `16-verification.enabler` the `[test]` ones should be `[eval]`, and the eval suites themselves are unbuilt (both `21-adr-auditing.enabler` and `32-pdr-auditing.enabler` are in `spx/EXCLUDE`). The specific unbuilt fixtures these scenarios reference — including the `evidence-type-mismatch` scenarios — are `evals/mode-validity/eval.toml` under `21-adr-auditing.enabler` and `tests/test_pdr_auditing.scenario.l1.py` under `32-pdr-auditing.enabler`; build them as part of this migration (the `evals/mode-validity/` directory and `invalid-mode-tag`/`invalid-tag` identifier rename are governed by the terminology-propagation entry below).
 
-This conformance is an architecture migration that applies to the whole audit-skill family, not just these two, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, reshape the audit agents to `model: sonnet` + `Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, audit-adr/audit-pdr run as read-only verdict producers in the established pre-conformance pattern.
+This conformance is an architecture migration that applies to the whole audit-skill family, not just these two, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, reshape the audit agents to `model: sonnet` + `Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, adr-auditor/pdr-auditor run as read-only verdict producers in the established pre-conformance pattern.
 
 ## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
 
@@ -18,7 +18,7 @@ The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec 
 - ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
 - ADR "wrapper agent never hand-validates emitted JSON" (`[audit]`) mirrors spec line tagged `[eval](evals/wrapper-protocol/eval.toml)`.
 
-The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
+The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/adr-auditor` on the record clean after any move.
 
 ## Verdict-row keys in `auditing-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 
