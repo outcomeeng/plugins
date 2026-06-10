@@ -10,16 +10,21 @@ Plugin hook patterns for injecting session identity and runtime context into age
 
 Claude Code injects `$CLAUDE_ENV_FILE` into `SessionStart` hooks. Writing `export VAR=value` lines to that file persists the variable for every subsequent Bash tool call in the session. Codex does not use this mechanism — it injects `$CODEX_THREAD_ID` directly as an env var.
 
-Hook script (`bin/session-start`):
+Hook script (`scripts/session-start.py` — Python, stdlib only, no `jq`):
 
-```bash
-#!/usr/bin/env bash
-INPUT=$(cat)
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+```python
+#!/usr/bin/env python3
+import json
+import os
+import sys
 
-if [[ -n "${CLAUDE_ENV_FILE:-}" ]]; then
-  echo "export CLAUDE_SESSION_ID=$SESSION_ID" >> "$CLAUDE_ENV_FILE"
-fi
+payload = json.loads(sys.stdin.read())
+session_id = payload.get("session_id") or ""
+
+env_file = os.environ.get("CLAUDE_ENV_FILE")
+if env_file and session_id:
+    with open(env_file, "a", encoding="utf-8") as handle:
+        handle.write(f"export CLAUDE_SESSION_ID={session_id}\n")
 ```
 
 Hook declaration (`hooks/hooks.json`):
@@ -30,7 +35,7 @@ Hook declaration (`hooks/hooks.json`):
     "SessionStart": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-start" }]
+        "hooks": [{ "type": "command", "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py" }]
       }
     ]
   }
@@ -60,8 +65,8 @@ my-plugin/
 │   └── plugin.json
 ├── hooks/
 │   └── hooks.json     ← hook declarations
-└── bin/
-    └── session-start  ← hook script (chmod +x)
+└── scripts/
+    └── session-start.py  ← hook script (python3, stdlib only)
 ```
 
 Use `${CLAUDE_PLUGIN_ROOT}` in hook commands to reference the plugin's installation path. Use `${CLAUDE_PLUGIN_DATA}` for data that survives plugin updates.
