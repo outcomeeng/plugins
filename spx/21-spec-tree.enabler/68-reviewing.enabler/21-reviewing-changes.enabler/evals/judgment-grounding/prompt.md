@@ -18,24 +18,24 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 
 ```
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "summary": "<one to three sentence prose summary>",
   "findings": [
     {
       "id": "F-001",
       "concern": "consistency" | "security" | "performance" | "evidence" | "standards" | "architecture",
-      "severity": "blocking" | "debt" | "follow_up",
+      "severity": "blocking" | "debt",
       "file": "<path from the diff>",
       "line": <integer>,
       "rule": "<path-style citation into an existing rule>",
       "message": "<concise finding message>",
-      "action": "<required change for blocking/debt, or tracking location for follow_up>"
+      "action": "<required change>"
     }
   ],
   "acknowledgements": ["<string>"]
 }
 ```
 
-The reviewer emits findings only — no decision or verdict. A diff with blocking issues yields at least one `severity == "blocking"` finding; a clean diff or one with only debt/follow_up findings yields no blocking finding.
+The reviewer emits findings only — no decision or verdict. A diff with blocking issues yields at least one `severity == "blocking"` finding; a clean diff or one with only debt findings yields no blocking finding.
 
-Required fields: `schema_version` (always 2), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.
+Required fields: `schema_version` (always 3), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.
