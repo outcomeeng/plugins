@@ -57,3 +57,16 @@ Observed on PR #143 (init-worktrees, 2026-06-08): `just sync-marketplace` from t
 **Resolution shape**: raise the case count so one flip is below the threshold's granularity, or lower the threshold to match the case count, or raise pass@k for the non-deterministic cases. Audit the other small merging evals for the same 4-case fragility while here.
 
 Surfaced during the autonomous merge of PR #143 (2026-06-08).
+
+## `merge-readiness` eval data model carries the removed `follow_up` severity (FOLLOW-UP)
+
+The two-severity collapse (`spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`) removed `follow_up` from the review taxonomy: the reviewer emits only `blocking`/`debt`, and the author judges disposition (fix-in-PR vs track-out-of-scope with a recorded reason). The prose surfaces — `merging.md` assertions, `standardizing-merging` `<review_classification>`, `managing-pr`, `reviewing-pr`, `REVIEW.template.md`, `AGENTS.md` — were aligned (2026-06-10), but the `evals/merge-readiness/` data model still types each modeled `ci_review` finding's `severity` as `blocking | debt | follow_up` and uses a `valid follow_up` case to exercise "a valid finding that does not withhold the gate."
+
+Under two severities that case becomes "a `valid` `debt` finding the author tracked out of scope (with a recorded reason) does not withhold the gate" — which the eval's finding model cannot express without a disposition/scope field. This is a coordinated `prompt.md` + `cases.jsonl` schema change requiring a **live eval re-run** to confirm calibration, so it belongs with the out-of-band eval recalibration, not a mechanical edit.
+
+Required handling when an eval-coverage sweep happens:
+
+- Add a `scope`/`disposition` field (e.g., `in_scope` | `tracked_out_of_scope`) to the modeled finding in `evals/merge-readiness/prompt.md` and `cases.jsonl`, drop `follow_up` from the `severity` enum, and re-key the "does not withhold" case onto a `valid` `debt` finding marked tracked-out-of-scope.
+- Re-run the eval to repopulate `history.jsonl` and confirm the threshold holds.
+
+Surfaced during the two-severity propagation (2026-06-10).

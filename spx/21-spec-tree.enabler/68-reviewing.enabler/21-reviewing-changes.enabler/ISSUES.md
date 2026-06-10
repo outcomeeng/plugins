@@ -36,7 +36,7 @@ Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
 
 ## 3. Local census markers diverge from the GH CI clean-review message (FOLLOW-UP)
 
-The local `reviewing-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` / `FOLLOW-UP: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
+The local `reviewing-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
 
 This does not block its originating PR: the divergence is in the GH workflow (another repository), outside this repo's blast-radius, and no `MERGE_READINESS` predicate reads the local render — the gate reads the CI review surface.
 
@@ -150,7 +150,19 @@ Required handling:
 
 Surfaced by the `changes-reviewer` runs on `outcomeeng/plugins` PR #148.
 
-## 6. Proposed: collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author
+## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED — cascade pending)
+
+**Decided (2026-06-10).** Governing decision recorded at
+`spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`:
+two severities `blocking`/`debt`; the reviewer judges finding validity and
+severity, the author judges disposition (fix-in-PR or track-out-of-scope in the
+owning node's `ISSUES.md`/`PLAN.md` with a recorded reason); the reviewer's
+render carries the two severity buckets and no disposition axis. The root
+`spx/15-agent-pr-authority.pdr.md` gate clauses were amended in-place to read "a
+`DEBT` finding the author tracks out of scope with a recorded reason is
+non-blocking" in place of the `FOLLOW-UP` severity. The specs, implementation,
+evals, and template below still declare the three-severity taxonomy and are in
+violation of the new decision until the cascade lands.
 
 The shared taxonomy declares three severities — `blocking`, `debt`, `follow_up`
 (`reviewing.md`, `reviewing-changes.md`'s severity rubric `[eval]`,
@@ -175,8 +187,17 @@ consumer "acts by validity and phase, never by severity"
 (`spx/15-agent-pr-authority.pdr.md`); `follow_up` is the one place the reviewer
 still makes a disposition call, in tension with that stance.
 
-**Blast-radius (cross-cutting — author a decision record first; this amends the
-agent-pr-authority taxonomy, not just this skill):**
+**Cascade landed (2026-06-10).** The decision records, the specs (`reviewing.md`,
+`reviewing-changes.md`), `REVIEW.template.md`, the implementation (the `Severity`
+enum at schema v3, `render_review.py`, `review-prompt.md`, and the deleted
+`finding-followup.md`/`none-followup.md` render templates), the four test files,
+and the eval files (`severity-classification` cases plus the three prompt schema
+blocks) all moved to the two-severity model; `dist/` was rebuilt. **Residual:** the
+live eval suite (`severity-classification`, `judgment-grounding`, `findings-direction`)
+needs a re-run to confirm calibration under two severities — that runs out-of-band
+(API cost) per the repo's eval process, and the `severity-classification` case-diff
+recalibration the prior `PLAN.md` flagged still applies. The blast-radius surfaces
+this change touched:
 
 - `reviewing.md` three-severity Compliance assertions (the
   `blocking`/`debt`/`follow_up` set and the severity-rank NEVER).
@@ -195,10 +216,12 @@ agent-pr-authority taxonomy, not just this skill):**
   out-of-scope, with a recorded reason, is not blocking." Same gate strength,
   ownership corrected.
 
-**Open.** Whether to keep a render bucket for author-tracked-out-of-scope `debt`
-(so the rendered surface still distinguishes fixed-here from tracked-elsewhere),
-or leave that distinction entirely to the author's `ISSUES.md`/`PLAN.md` record.
-Decide in the decision record.
+**Decided (render shape).** The reviewer's render carries exactly two buckets,
+`BLOCKING` and `DEBT`, each reporting its census in the empty state. The
+fixed-here versus tracked-elsewhere distinction lives only in the author's
+`ISSUES.md`/`PLAN.md`, never in the reviewer's render — a tracked-debt render
+bucket would re-introduce a disposition slot the reviewer cannot populate.
+Recorded in `spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`.
 
 Surfaced from the operator review of `changes-reviewer` behavior on
 `outcomeeng/plugins` PR #148 (2026-06-09).

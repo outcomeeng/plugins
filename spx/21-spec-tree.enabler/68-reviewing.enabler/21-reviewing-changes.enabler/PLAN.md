@@ -2,7 +2,16 @@
 
 ## Why
 
-The verification skill has been re-aligned with the `REVIEW.template.md` finding taxonomy: six categories grouped by three axes (`consistency`/`security`/`performance` for what the code does, `evidence` for how we know, `standards`/`architecture` for how it does it), three severities (`blocking`, `debt`, `follow_up`), and label asymmetry between BLOCKING/DEBT (Reference/Evidence/Required) and FOLLOW-UP (Reference/Issue/Track-under) carried by the `message` and `action` fields. This PLAN tracks open items deferred from that re-alignment and earlier iterations.
+**Update (2026-06-10) — severity set collapsed to two.** The three-severity taxonomy
+below was superseded by `spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`
+(ISSUES.md item #6): the reviewer now emits only `blocking` and `debt`, the author
+judges disposition, and the render carries two buckets with uniform Evidence/Required
+labels. The `follow_up` severity, the `finding-followup.md`/`none-followup.md` render
+templates, and the label asymmetry are removed; the schema bumped to version 3. The
+historical D-items and eval-translation notes below predate that collapse — read their
+`follow_up` references as removed.
+
+The verification skill was re-aligned with the `REVIEW.template.md` finding taxonomy: six categories grouped by three axes (`consistency`/`security`/`performance` for what the code does, `evidence` for how we know, `standards`/`architecture` for how it does it), three severities (`blocking`, `debt`, `follow_up`), and label asymmetry between BLOCKING/DEBT (Reference/Evidence/Required) and FOLLOW-UP (Reference/Issue/Track-under) carried by the `message` and `action` fields. This PLAN tracks open items deferred from that re-alignment and earlier iterations.
 
 ## Decisions (2026-05-17 interview)
 
