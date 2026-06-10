@@ -19,10 +19,12 @@ A reference is non-portable when it is either:
 * a path under one of this marketplace's own roots -- ``src/plugins/`` (authored
   source), ``dist/claude/`` or ``dist/codex/`` (generated runtime), or an
   ``outcomeeng`` toolchain package (``outcomeeng/validation/...``,
-  ``outcomeeng_testing/...``) -- caught even inside an absolute checkout path.  A
-  bare ``src/`` or ``dist/`` path is a universal convention a consumer also holds
-  (``src/index.ts``), and ``outcomeeng/plugins`` / ``outcomeeng/spx`` are the
-  marketplace's own GitHub org/repo slugs; all are portable.
+  ``outcomeeng_testing/...``), or a path under the marketplace's own repo slug
+  (``outcomeeng/plugins/AGENTS.md``, ``outcomeeng/spx/src/types.ts``) -- caught
+  even inside an absolute checkout path.  A bare ``src/`` or ``dist/`` path is a
+  universal convention a consumer also holds (``src/index.ts``), and the bare
+  ``outcomeeng/plugins`` / ``outcomeeng/spx`` repo slug with no trailing path is
+  the marketplace's own GitHub identifier; those are portable.
 
 ``${CLAUDE_SKILL_DIR}`` and ``${CLAUDE_PLUGIN_ROOT}`` are the portable way to
 reach the plugin's own files and are never matched.
@@ -50,18 +52,18 @@ from typing import Final
 # inside a longer word (``redistribute``) or a dot-prefixed build directory
 # (``.dist/``) does not match, while an absolute checkout path
 # (``/home/dev/dist/claude/...``) does.  Each alternative names a marketplace
-# root, never a universal convention (bare ``src/``/``dist/``) or the GitHub
-# org/repo slug (``outcomeeng/plugins``, ``outcomeeng/spx``).
+# root, never a universal convention (bare ``src/``/``dist/``) or the bare GitHub
+# org/repo slug (``outcomeeng/plugins``, ``outcomeeng/spx`` with no trailing path).
 _NONPORTABLE_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"(?<![\w.-])"
     r"(?:"
     r"spx/\d+-[\w./-]*"  # numbered spec-tree node or decision (real digits + '-')
     r"|src/plugins/[\w./-]*"  # marketplace authored-source tree
     r"|dist/(?:claude|codex)/[\w./-]*"  # marketplace generated runtime trees
-    # marketplace toolchain package -- an 'outcomeeng_*' package or an
-    # 'outcomeeng/<subpkg>' path, but never the 'outcomeeng/plugins' or
-    # 'outcomeeng/spx' GitHub repo slug
-    r"|outcomeeng(?:_\w+|/(?!plugins(?![\w-])|spx(?![\w-]))[\w.-]+)(?:/[\w./-]*)?"
+    # marketplace toolchain package or repo path -- an 'outcomeeng_*' package, an
+    # 'outcomeeng/<subpkg>' path, or a path under the 'outcomeeng/plugins' or
+    # 'outcomeeng/spx' repo slug; only the BARE slug (no trailing path) is exempt
+    r"|outcomeeng(?:_\w+|/(?!plugins(?![\w/-])|spx(?![\w/-]))[\w.-]+)(?:/[\w./-]*)?"
     r")",
 )
 
