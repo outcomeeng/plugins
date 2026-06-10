@@ -48,7 +48,7 @@ SHARED_FRAGMENT_FILENAME: Final = "fragment.md"
 SKILLS_SUBDIR_NAME: Final = "skills"
 COMMANDS_SUBDIR_NAME: Final = "commands"
 AGENTS_SUBDIR_NAME: Final = "agents"
-BIN_SUBDIR_NAME: Final = "bin"
+SCRIPTS_SUBDIR_NAME: Final = "scripts"
 HOOKS_SUBDIR_NAME: Final = "hooks"
 CLAUDE_PLUGIN_SUBDIR_NAME: Final = ".claude-plugin"
 CODEX_PLUGIN_SUBDIR_NAME: Final = ".codex-plugin"
@@ -58,7 +58,7 @@ PLUGIN_SUBDIRS: Final = frozenset(
         SKILLS_SUBDIR_NAME,
         COMMANDS_SUBDIR_NAME,
         AGENTS_SUBDIR_NAME,
-        BIN_SUBDIR_NAME,
+        SCRIPTS_SUBDIR_NAME,
         HOOKS_SUBDIR_NAME,
         CLAUDE_PLUGIN_SUBDIR_NAME,
         CODEX_PLUGIN_SUBDIR_NAME,

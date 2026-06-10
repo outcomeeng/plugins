@@ -6,7 +6,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/session-start"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/pre-compact.py"
           }
         ]
       }
@@ -17,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/post-compact"
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/post-compact.py"
           }
         ]
       }

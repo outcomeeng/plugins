@@ -66,3 +66,17 @@ class TestCompactPromptContainsStateSchemaHeaders:
             "past-tense" in compact_prompt.lower()
             or "factual" in compact_prompt.lower()
         ), "compactPrompt must instruct the agent to write in past-tense factual form"
+
+    def test_append_trigger_references_marker(self, compact_prompt: str):
+        # The trigger gating the appendix lives in the preamble before the first
+        # "###" section. It must reference a concrete spec-tree marker, not a
+        # subjective "spec-tree work occurred" judgment the summarizer may skip.
+        # (The marker tokens also appear inside the Pre-compact markers section
+        # description, so scope the check to the preamble to test the trigger.)
+        preamble = compact_prompt.split("###", 1)[0]
+        assert (
+            "<SPEC_TREE_FOUNDATION>" in preamble or "<SPEC_TREE_CONTEXT>" in preamble
+        ), (
+            "compactPrompt preamble must gate the state-schema appendix on the "
+            "presence of a spec-tree marker, not a subjective judgment"
+        )

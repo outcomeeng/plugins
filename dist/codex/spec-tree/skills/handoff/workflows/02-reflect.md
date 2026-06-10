@@ -24,7 +24,7 @@ Classify each imperfection by nature to determine the persistence target. The de
 
 **Defer rule**: a fix too large for this session becomes a Tier 3 coordination note (PLAN.md or ISSUES.md), proposed in workflow 03 and written in workflow 04.
 
-**Spec correction rule**: a wrong or incomplete assertion is fixed directly in the spec file — Tier 1, governed by the audit gate.
+**Spec correction rule**: a wrong or incomplete assertion is fixed directly in the spec file — Tier 2, governed by the audit gate.
 
 Read existing PLAN.md and ISSUES.md for each anchored node. Check every item against the current specs, decisions, tests, implementation, and user intent — items listed as open may now be fixed; new items may not be listed. A stale coordination note is worse than none. If updates or removals are needed, propose them in workflow 03 — do not edit here.
 
@@ -39,7 +39,7 @@ Identify what is now understood about how the remaining work should proceed:
 
 For each insight, propose the persistence target (workflow 03 confirms; workflow 04 writes):
 
-- Amend a spec (Tier 1, durable) — when the insight changes what the spec says
+- Amend a spec (Tier 2, durable) — when the insight changes what the spec says
 - Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `AskUserQuestion` approval
 - Remove PLAN.md (a done plan is a stale plan) — also requires approval
 - Session file only — coordination context
