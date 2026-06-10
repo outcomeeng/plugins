@@ -1,7 +1,7 @@
 <template>
-The handoff content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
+The session file content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
 
-**Path C (new handoff)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, and `git_ref`. The JSON header carries only the caller-supplied fields:
+**Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, and `git_ref`. The JSON header carries only the caller-supplied fields:
 
 ```text
 {"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
@@ -91,7 +91,7 @@ fixed if-then branches — the next agent decides freely from the observed state
 <constraints>
 OPTIONAL. Normative rules that hold for this continuation regardless of what the
 next agent observes. Scope them to this session's work — a rule that always holds
-belongs in methodology or CLAUDE.md, not repeated in a per-handoff file. Omit this
+belongs in methodology or CLAUDE.md, not repeated in a per-session file. Omit this
 section when there are none.
 
 - NEVER [action] — [reason]
@@ -134,7 +134,7 @@ history.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next agent cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next agent needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
-- **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or CLAUDE.md, not a per-handoff file.
+- **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or CLAUDE.md, not a per-session file.
 - **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
 - **`<incorporated_sessions>`**: Include ONLY when the in-scope set resolved by `<resolve_session_scope>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.
 

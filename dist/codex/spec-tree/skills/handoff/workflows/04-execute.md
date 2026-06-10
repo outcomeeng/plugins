@@ -57,7 +57,7 @@ The existence of any session is never permission to archive an in-scope session 
 </resolve_session_scope>
 
 <write_canonical_continuation>
-Every closure ends with **zero or one** handoff. Pick the path once and execute it. Zero is correct when no continuation reader exists.
+Every closure ends with **zero, one, or several** session files — one canonical continuation per independent continuation thread in the resolved scope. Pick the path for each and execute it. Zero is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` (Path C) requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
@@ -163,7 +163,7 @@ State:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
-- Exactly zero or one canonical continuation created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
+- Exactly zero or one canonical continuation per independent continuation thread created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two for the same thread. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
 - Continuation path executed via Path A (--no-session), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the in-scope set is non-empty.
 - Every in-scope session archived — none left in `todo/` or `doing/`.
