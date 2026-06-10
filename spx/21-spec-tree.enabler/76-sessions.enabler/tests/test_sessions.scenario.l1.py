@@ -19,10 +19,13 @@ Assertions covered:
     modifying content.
   - coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
     payload survives into the session file unchanged.
-  - post-compact parses the compact summary from its JSON payload and emits
-    <SPEC-TREE_RESUMED> with the active node (when present), plus
-    /spec-tree:understanding and /spec-tree:contextualizing (conditional on a
-    line-start <SPEC_TREE_FOUNDATION> marker in the pre-compact markers).
+  - pre-compact delegates to `spx session compact-stash` (forwarding session id
+    and transcript path); post-compact re-anchors from `spx session
+    compact-resume`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
+    a foundation was active, instructing the agent to re-invoke
+    /spec-tree:understanding and /spec-tree:contextualizing <node>. When the spx
+    CLI returns no stash, post-compact falls back to parsing the active node and
+    foundation marker out of the compact summary.
 """
 
 import json
@@ -39,8 +42,9 @@ from outcomeeng_testing.harnesses.git_context import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-BIN_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "bin"
-POST_COMPACT = BIN_DIR / "post-compact"
+SCRIPTS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "scripts"
+POST_COMPACT = SCRIPTS_DIR / "post-compact.py"
+PRE_COMPACT = SCRIPTS_DIR / "pre-compact.py"
 
 
 # ---------------------------------------------------------------------------
@@ -82,19 +86,72 @@ def _pickup(
     )
 
 
+# The hooks delegate to the spx CLI via $SPX_BIN. Tests default it to a missing
+# binary so the spx call fails and the hook takes its degraded path (post-compact
+# falls back to summary parsing; pre-compact no-ops); the delegation tests point
+# it at a fake spx that records argv and emits canned output.
+_MISSING_SPX = "/nonexistent/spx"
+
+
 def _post_compact(
-    project_dir: Path, session_id: str, summary: str
+    project_dir: Path, session_id: str, summary: str, *, spx_bin: str = _MISSING_SPX
 ) -> subprocess.CompletedProcess:
     payload = json.dumps(
         {"session_id": session_id, "compact_summary": summary, "cwd": str(project_dir)}
     )
     return subprocess.run(
-        ["bash", str(POST_COMPACT)],
+        ["python3", str(POST_COMPACT)],
         input=payload,
         capture_output=True,
         text=True,
-        env={**os.environ, "CLAUDE_PROJECT_DIR": str(project_dir)},
+        env={
+            **os.environ,
+            "CLAUDE_PROJECT_DIR": str(project_dir),
+            "SPX_BIN": spx_bin,
+        },
     )
+
+
+def _pre_compact(
+    project_dir: Path, session_id: str, transcript: Path, *, spx_bin: str = _MISSING_SPX
+) -> subprocess.CompletedProcess:
+    payload = json.dumps(
+        {
+            "session_id": session_id,
+            "transcript_path": str(transcript),
+            "cwd": str(project_dir),
+        }
+    )
+    return subprocess.run(
+        ["python3", str(PRE_COMPACT)],
+        input=payload,
+        capture_output=True,
+        text=True,
+        env={
+            **os.environ,
+            "CLAUDE_PROJECT_DIR": str(project_dir),
+            "SPX_BIN": spx_bin,
+        },
+    )
+
+
+def _fake_spx(bindir: Path, *, stdout: str = "", returncode: int = 0) -> Path:
+    """Write a fake `spx` executable that records its argv and emits canned output.
+
+    The recorded argv (everything after `spx`) is written to `<spx>.argv` as a
+    JSON list so a test can assert how the hook invoked the CLI.
+    """
+    bindir.mkdir(parents=True, exist_ok=True)
+    spx = bindir / "spx"
+    spx.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, pathlib, sys\n"
+        'pathlib.Path(__file__ + ".argv").write_text(json.dumps(sys.argv[1:]))\n'
+        f"sys.stdout.write({stdout!r})\n"
+        f"sys.exit({returncode})\n"
+    )
+    spx.chmod(0o755)
+    return spx
 
 
 def _parse_handoff_id(stdout: str) -> str:
@@ -461,6 +518,39 @@ _COMPACT_WITHOUT_FOUNDATION = textwrap.dedent("""\
     none
 """)
 
+# A summarizer that follows the compactPrompt's own examples renders the marker
+# and node path inside backticks and list bullets — the hook must still parse them.
+_COMPACT_BACKTICKED = textwrap.dedent("""\
+    1. Primary Request: Tolerant post-compact parsing.
+
+    ### Pre-compact markers
+
+    - `<SPEC_TREE_FOUNDATION>`
+    - `<SPEC_TREE_CONTEXT target="spx/21-spec-tree.enabler/76-sessions.enabler/">`
+
+    ### Active spec-tree node
+
+    `spx/21-spec-tree.enabler/76-sessions.enabler/`
+""")
+
+# The markers section records `none`, but the marker token is quoted in another
+# section — detection must stay scoped so this does not trigger re-anchoring.
+_COMPACT_MARKER_OUTSIDE_SECTION = textwrap.dedent("""\
+    1. Primary Request: Discussion of the compaction mechanism.
+
+    ### Pre-compact markers
+
+    none
+
+    ### Active spec-tree node
+
+    none
+
+    ### Last user request
+
+    The user asked how <SPEC_TREE_FOUNDATION> is detected after compaction.
+""")
+
 
 class TestPostCompactEmitsReanchoringDirective:
     def test_resumed_marker_always_emitted(self, tmp_path):
@@ -487,6 +577,25 @@ class TestPostCompactEmitsReanchoringDirective:
         assert "/spec-tree:understanding" in result.stdout
         assert "/spec-tree:contextualizing" in result.stdout
 
+    def test_contextualizing_carries_node_argument(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-b", _COMPACT_WITH_FOUNDATION)
+        assert result.returncode == 0, result.stderr
+        node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
+        assert f"/spec-tree:contextualizing {node}" in result.stdout
+
+    def test_backticked_section_still_extracts_node(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-c", _COMPACT_BACKTICKED)
+        assert result.returncode == 0, result.stderr
+        node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
+        assert f'active-node="{node}"' in result.stdout
+        assert f"/spec-tree:contextualizing {node}" in result.stdout
+
+    def test_marker_outside_markers_section_does_not_trigger(self, tmp_path):
+        result = _post_compact(tmp_path, "sess-d", _COMPACT_MARKER_OUTSIDE_SECTION)
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "<SPEC-TREE_RESUMED/>"
+        assert "/spec-tree:understanding" not in result.stdout
+
     def test_foundation_absent_omits_reanchoring_skills(self, tmp_path):
         result = _post_compact(tmp_path, "sess-b", _COMPACT_WITHOUT_FOUNDATION)
         assert result.returncode == 0, result.stderr
@@ -496,11 +605,15 @@ class TestPostCompactEmitsReanchoringDirective:
     def test_no_compact_summary_produces_no_output(self, tmp_path):
         payload = json.dumps({"session_id": "sess-c", "cwd": str(tmp_path)})
         result = subprocess.run(
-            ["bash", str(POST_COMPACT)],
+            ["python3", str(POST_COMPACT)],
             input=payload,
             capture_output=True,
             text=True,
-            env={**os.environ, "CLAUDE_PROJECT_DIR": str(tmp_path)},
+            env={
+                **os.environ,
+                "CLAUDE_PROJECT_DIR": str(tmp_path),
+                "SPX_BIN": _MISSING_SPX,
+            },
         )
         assert result.returncode == 0
         assert result.stdout == ""
@@ -511,8 +624,8 @@ class TestPostCompactEmitsReanchoringDirective:
         assert not written, f"unexpected files written: {written}"
 
     def test_foundation_in_code_block_not_treated_as_marker(self, tmp_path):
-        # <SPEC_TREE_FOUNDATION> indented inside a code block must not trigger
-        # re-anchoring — only a line-start occurrence in ### Pre-compact markers counts.
+        # <SPEC_TREE_FOUNDATION> quoted or indented in another section must not
+        # trigger re-anchoring — only an occurrence within ### Pre-compact markers counts.
         summary_with_indented_marker = textwrap.dedent("""\
             ### Pre-compact markers
 
@@ -530,3 +643,83 @@ class TestPostCompactEmitsReanchoringDirective:
         result = _post_compact(tmp_path, "sess-e", summary_with_indented_marker)
         assert result.returncode == 0, result.stderr
         assert "/spec-tree:understanding" not in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# Assertion 5 — the hooks delegate stash management to the spx CLI. The stash
+# mechanics (transcript parse, .spx/ resolution across a worktree pool,
+# placement, numbering) are owned and tested in the spx repo, not here; these
+# tests pin only the hook's contract with the CLI and its degraded paths.
+# ---------------------------------------------------------------------------
+
+
+class TestPreCompactDelegatesToSpx:
+    def test_invokes_compact_stash_with_session_and_transcript(self, tmp_path):
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text("{}\n")
+        spx = _fake_spx(tmp_path / "bin")
+        result = _pre_compact(tmp_path, "sess-p", transcript, spx_bin=str(spx))
+        assert result.returncode == 0, result.stderr
+        argv = json.loads((spx.parent / "spx.argv").read_text())
+        assert argv == [
+            "session",
+            "compact-stash",
+            "--session-id",
+            "sess-p",
+            "--transcript",
+            str(transcript),
+        ]
+
+    def test_missing_session_or_transcript_does_not_invoke_spx(self, tmp_path):
+        spx = _fake_spx(tmp_path / "bin")
+        payload = json.dumps({"session_id": "", "cwd": str(tmp_path)})
+        result = subprocess.run(
+            ["python3", str(PRE_COMPACT)],
+            input=payload,
+            capture_output=True,
+            text=True,
+            env={
+                **os.environ,
+                "CLAUDE_PROJECT_DIR": str(tmp_path),
+                "SPX_BIN": str(spx),
+            },
+        )
+        assert result.returncode == 0, result.stderr
+        assert not (spx.parent / "spx.argv").exists()
+
+    def test_missing_spx_is_a_silent_noop(self, tmp_path):
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text("{}\n")
+        result = _pre_compact(tmp_path, "sess-p", transcript)  # _MISSING_SPX
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == ""
+
+
+class TestPostCompactUsesSpxResume:
+    _NODE = "spx/21-spec-tree.enabler/76-sessions.enabler"
+
+    def test_reanchors_from_spx_resume_over_summary(self, tmp_path):
+        # spx returns a node; the hook re-anchors from it and ignores the summary.
+        stash = json.dumps({"active_node": self._NODE, "has_foundation": True})
+        spx = _fake_spx(tmp_path / "bin", stdout=stash)
+        result = _post_compact(
+            tmp_path, "sess-q", "summary lacking any markers", spx_bin=str(spx)
+        )
+        assert result.returncode == 0, result.stderr
+        assert f'active-node="{self._NODE}"' in result.stdout
+        assert f"/spec-tree:contextualizing {self._NODE}" in result.stdout
+        argv = json.loads((spx.parent / "spx.argv").read_text())
+        assert argv == ["session", "compact-resume", "--session-id", "sess-q"]
+
+    def test_falls_back_to_summary_when_spx_returns_nothing(self, tmp_path):
+        # spx exits non-zero (no stash); the hook parses the node from the summary.
+        spx = _fake_spx(tmp_path / "bin", returncode=1)
+        result = _post_compact(
+            tmp_path, "sess-q", _COMPACT_WITH_FOUNDATION, spx_bin=str(spx)
+        )
+        assert result.returncode == 0, result.stderr
+        assert "/spec-tree:understanding" in result.stdout
+        assert (
+            "/spec-tree:contextualizing spx/21-spec-tree.enabler/76-sessions.enabler"
+            in result.stdout
+        )
