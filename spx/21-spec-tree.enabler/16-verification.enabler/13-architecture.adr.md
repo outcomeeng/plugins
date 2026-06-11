@@ -4,7 +4,7 @@ Every agentic verification skill — reviewing and auditing per `src/plugins/spe
 
 ## Rationale
 
-Thread-store makes the storage surface a configuration concern, so a kind that persists locally and one that persists to a PR thread share one interface. A deterministic CLI arbiter keeps result validity an exit code rather than a second model judgment over the JSON the model just produced. Every wrapper agent must declare `model: sonnet` or `model: inherit` explicitly — omitting the field falls back to the session model (Opus 4.8), which causes verification agents to run against an unintended model. Models cannot reliably hand-validate the JSON they emit, and skills run against `python3` only in consumer projects per the Plugin Portability Constraints in `AGENTS.md`.
+Thread-store makes the storage surface a configuration concern, so a kind that persists locally and one that persists to a PR thread share one interface. A deterministic CLI arbiter keeps result validity an exit code rather than a second model judgment over the JSON the model just produced. Every wrapper agent must declare `model: sonnet` or `model: inherit` explicitly — omitting the field falls back to the session model (Opus 4.8), which causes verification agents to run against an unintended model. Direct declaration in frontmatter is simpler to audit than a build-injected value; the distribution pipeline already translates the declared identifier per runtime, so direct declaration achieves portability without additional indirection. Models cannot reliably hand-validate the JSON they emit, and skills run against `python3` only in consumer projects per the Plugin Portability Constraints in `AGENTS.md`.
 
 ## Verification
 
