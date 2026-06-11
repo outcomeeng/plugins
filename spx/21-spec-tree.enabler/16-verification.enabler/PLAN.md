@@ -95,7 +95,7 @@ The literal `Sonnet` / `model: sonnet` is independently re-typed across the spec
 - `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:49` — a `[test]`-backed assertion that the agent declares `model: sonnet`
 - `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md:15`
 - the conversion `[test]`s under `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/tests/`
-- per-agent frontmatter (`src/plugins/spec-tree/agents/changes-reviewer.md` carries `model: sonnet`; `audit-adr.md` / `audit-pdr.md` correctly carry none)
+- per-agent frontmatter (`src/plugins/spec-tree/agents/changes-reviewer.md` carries `model: sonnet`; `adr-auditor.md` / `pdr-auditor.md` correctly carry none)
 
 ### Target end-state
 
@@ -111,9 +111,9 @@ The literal `Sonnet` / `model: sonnet` is independently re-typed across the spec
 3. Amend `13-architecture.adr.md` via `/authoring`: wrapper-agent model is the single source-owned value; drop the per-agent-literal framing. Gate: `/audit-adr`.
 4. Collapse the duplicated literals to references: `verification.md`, `reviewing-changes.md` (+ adjust its `[test]` to import the constant), `21-script-decomposition.adr.md`, and the agent frontmatter.
 5. Make the conversion enabler's mapping declaration + its `[test]`s the single spec-tree home; tests import the source constant. Gate: `/auditing-tests`.
-6. Fold in the rest of `09-39-11`'s 16-verification conformance for `audit-adr` / `audit-pdr` — `tools: Bash, Read, Skill`, the `scripts/` CLI arbiter, thread-store persistence, eval suites — minus the inverted "add `model: sonnet`" instruction (those two agents correctly carry no model today).
+6. Fold in the rest of `09-39-11`'s 16-verification conformance for `adr-auditor` / `pdr-auditor` — `tools: Bash, Read, Skill`, the `scripts/` CLI arbiter, thread-store persistence, eval suites — minus the inverted "add `model: sonnet`" instruction (those two agents correctly carry no model today).
 7. `just check`; regenerate `dist`.
 
 ### Relationship to `09-39-11`
 
-`09-39-11` instructed adding `model: sonnet` to `audit-adr` / `audit-pdr` — the inverse of single-sourcing, and into the two agents that are currently correct. This plan supersedes it: same conformance scope, corrected model treatment.
+`09-39-11` instructed adding `model: sonnet` to `adr-auditor` / `pdr-auditor` — the inverse of single-sourcing, and into the two agents that are currently correct. This plan supersedes it: same conformance scope, corrected model treatment.

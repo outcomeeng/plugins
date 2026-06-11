@@ -2,7 +2,7 @@
 
 ## 16-verification.enabler conformance for adr-auditor / pdr-auditor (deferred)
 
-`audit-adr` and `audit-pdr` (skills + agents) landed at SCOPE-MIN per `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the established read-only verdict-producer shape shared by the other spec-tree audit agents. They do NOT yet conform to `spx/21-spec-tree.enabler/16-verification.enabler`:
+`adr-auditor` and `pdr-auditor` (agents) landed at SCOPE-MIN per `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the established read-only verdict-producer shape shared by the other spec-tree audit agents. They do NOT yet conform to `spx/21-spec-tree.enabler/16-verification.enabler`:
 
 - The wrapper agents use `tools: Read, Glob, Grep` and no `model:` field; `16-verification.enabler` requires `model: sonnet` and `tools: Bash, Read, Skill`.
 - No `scripts/` CLI arbiter module encodes the verification policy (schema conformance) for the wrapper agent to invoke; the verdict schema is described in skill prose.
@@ -18,7 +18,7 @@ The `/audit-adr` pass on `21-script-decomposition.adr.md` surfaced a cross-spec 
 - ADR "reviewer emits no `decision`/verdict" (`[audit]`) mirrors spec line tagged `[test](tests/test_review_result.scenario.l1.py)`.
 - ADR "wrapper agent never hand-validates emitted JSON" (`[audit]`) mirrors spec line tagged `[eval](evals/wrapper-protocol/eval.toml)`.
 
-The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/adr-auditor` on the record clean after any move.
+The third `### Audit` rule (no intermediate file when stdin/stdout suffices) has no corresponding assertion under any non-`[audit]` lane in `reviewing-changes.md`, so it is not part of this divergence. Reconcile whether the two mirrored ADR rules belong under `### Testing` / `### Eval` (mirroring the implementing spec's lanes) rather than `### Audit`. Audit gate: `/audit-adr` on the record clean after any move.
 
 ## Verdict-row keys in `auditing-{lang}-architecture` skills lack conformance evidence (FOLLOW-UP)
 

@@ -149,8 +149,8 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Check these specs"      | `/aligning`        | —                       |
 | "Write tests for this"   | `/testing`         | —                       |
 | "Start the TDD flow"     | `/applying`        | `applier`               |
-| "Audit this PDR"         | `/audit-pdr`       | `audit-pdr`             |
-| "Audit this ADR"         | `/audit-adr`       | `audit-adr`             |
+| "Audit this PDR"         | `/audit-pdr`       | `pdr-auditor`           |
+| "Audit this ADR"         | `/audit-adr`       | `adr-auditor`           |
 | "Audit test evidence"    | `/auditing-tests`  | `test-evidence-auditor` |
 
 Per-language code, architecture, and test audits render for the product's enabled languages:
