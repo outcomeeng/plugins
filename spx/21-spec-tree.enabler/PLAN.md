@@ -61,13 +61,40 @@ imprecision); the agents already declare `REJECTED`. Aligning to the Status enum
 is correct per "spec governs," but it is a verdict-terminology concern, not a
 rename — so it ships separately.
 
+## Model handling — #160 as built is WRONG; rework to single-source
+
+#160 (`feat/agent-model-sonnet`) hand-pins `model: sonnet` per agent and deletes
+the "Single-source the agentic-verification model" section of
+`spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`. Both moves violate the
+governing decision
+`spx/21-spec-tree.enabler/16-verification.enabler/13-architecture.adr.md`: the
+wrapper model is a single source-owned identifier the build resolves per runtime
+(Sonnet on Claude Code, substituted for Codex, which has no Sonnet model) —
+`NEVER pin a literal sonnet the build cannot substitute`. Single-sourcing IS the
+design (author once for Claude, adapt for Codex at build), not over-engineering.
+
+Current reality: every verification agent already hand-pins `model: sonnet`
+(`changes-reviewer` included) and the build copies it verbatim into `dist/codex`,
+so the repo is already in the scattered-literal state the ADR prohibits. #160
+extended that scatter rather than fixing it; the reviewer's BLOCKING on #160 was
+correct.
+
+Correct path (conform to the ADR, do NOT amend it):
+
+- Single-source the model: one source-owned constant the build injects into each
+  agent's `dist` per target (Sonnet for Claude, the Codex-appropriate model for
+  Codex); remove every hand-typed `model: sonnet` from agent `src`.
+- Restore the deleted single-source PLAN section as the tracking record.
+- Operator decision still open: rework #160 into the single-source implementation,
+  or drop the model change from the stack and make single-sourcing its own piece.
+
 ## Carried stale-ref notes
 
-- The `16-verification.enabler/PLAN.md` single-source section is deleted by #160;
-  any stale agent refs in it are resolved when #160 merges.
+- The `16-verification.enabler/PLAN.md` single-source section must be RESTORED
+  (see "Model handling" above) — #160's deletion of it was wrong.
 - Both #158 and #160 edit `32-decisions/ISSUES.md`. After #158 merges, #160's
   base-sync will touch that file — resolve by keeping #158's agent-name rename
-  AND #160's model-conformance note.
+  and reconciling the conformance note with the single-source rework.
 
 ## Lessons (apply to the rest of this effort)
 
