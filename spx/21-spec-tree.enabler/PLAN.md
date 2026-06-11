@@ -86,6 +86,19 @@ agents in the meantime. (A prior pass in this effort inverted this — "remove t
 literals and single-source now" — which would have defaulted every agent to Opus.
 Do not repeat it.)
 
+**Decision (operator):** the ADR amendment lands INSIDE #160. So #160 =
+
+- keep the `model: sonnet` additions on the three audit agents (correct), AND
+- amend `spx/21-spec-tree.enabler/16-verification.enabler/13-architecture.adr.md`
+  line 21: require every wrapper to declare `model: sonnet` / `inherit` now, and
+  document build-substitution (`sonnet` default-if-unspecified + Codex equivalent)
+  as the target end-state to build FIRST — not a current rule that strips literals,
+- then re-audit the amended ADR with `/audit-adr` before re-converging #160.
+
+The model-file change and the conforming decision ship together as one
+"agents pin sonnet" change. The reviewer's earlier ADR-based BLOCKING is cleared
+by the amendment, not by removing the literals.
+
 ## Carried stale-ref notes
 
 - Both #158 and #160 edit `32-decisions/ISSUES.md`. After #158 merges, #160's
