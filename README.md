@@ -17,6 +17,8 @@ This repository publishes two plugin surfaces from the same source tree:
 
 1. **RTFM:** Follow state-of-the-art (SOTA) model prompting guidance, such as [structured prompts based on XML tags](https://docs.prompts.ag/guidelines)
 2. **KILO:** *Keep It Local and Observable* — the golden source for all specifications lives locally within the product's Git repository
+3. **ABC:** *Always Be Converging* — the spec tree is the desired state; all activities are driven by it, not the other way around
+4. **DCI:** *Deterministic Context Injection* — the spec tree constructs a deterministic context injection plan for the model
 
 ## Quick Start
 
