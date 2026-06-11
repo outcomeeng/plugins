@@ -61,40 +61,36 @@ imprecision); the agents already declare `REJECTED`. Aligning to the Status enum
 is correct per "spec governs," but it is a verdict-terminology concern, not a
 rename — so it ships separately.
 
-## Model handling — #160 as built is WRONG; rework to single-source
+## Model handling — #160's `model: sonnet` is REQUIRED; amend the ADR
 
-#160 (`feat/agent-model-sonnet`) hand-pins `model: sonnet` per agent and deletes
-the "Single-source the agentic-verification model" section of
-`spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`. Both moves violate the
-governing decision
-`spx/21-spec-tree.enabler/16-verification.enabler/13-architecture.adr.md`: the
-wrapper model is a single source-owned identifier the build resolves per runtime
-(Sonnet on Claude Code, substituted for Codex, which has no Sonnet model) —
-`NEVER pin a literal sonnet the build cannot substitute`. Single-sourcing IS the
-design (author once for Claude, adapt for Codex at build), not over-engineering.
+There is NO build step substituting the wrapper model per runtime today. So every
+wrapper agent MUST declare `model: sonnet` (or `model: inherit`) explicitly — a
+missing model field falls back to the session model (Opus 4.8), which is
+unacceptable for verification agents. #160's addition of `model: sonnet` to the
+three audit agents that lacked it is CORRECT and necessary; without it they
+default to Opus. **#160 stands.**
 
-Current reality: every verification agent already hand-pins `model: sonnet`
-(`changes-reviewer` included) and the build copies it verbatim into `dist/codex`,
-so the repo is already in the scattered-literal state the ADR prohibits. #160
-extended that scatter rather than fixing it; the reviewer's BLOCKING on #160 was
-correct.
+The defect is in the decision, not in #160:
+`spx/21-spec-tree.enabler/16-verification.enabler/13-architecture.adr.md` line 21
+(`NEVER pin a literal sonnet the build cannot substitute`) presumes a build step
+that does not exist. Applied now it strips the literals and breaks every agent —
+the inverse-of-intended outcome. **Amend the ADR** to state the current
+requirement (every wrapper declares `model: sonnet` or `inherit`) and frame
+build-substitution — `sonnet` as the default-if-unspecified, a Codex-equivalent
+substituted — as the target end-state to implement FIRST, never a rule that
+strips literals before the build exists.
 
-Correct path (conform to the ADR, do NOT amend it):
-
-- Single-source the model: one source-owned constant the build injects into each
-  agent's `dist` per target (Sonnet for Claude, the Codex-appropriate model for
-  Codex); remove every hand-typed `model: sonnet` from agent `src`.
-- Restore the deleted single-source PLAN section as the tracking record.
-- Operator decision still open: rework #160 into the single-source implementation,
-  or drop the model change from the stack and make single-sourcing its own piece.
+Single-sourcing IS the eventual design (author once for Claude, adapt for Codex
+at build), but it is gated on building that substitution step and must not break
+agents in the meantime. (A prior pass in this effort inverted this — "remove the
+literals and single-source now" — which would have defaulted every agent to Opus.
+Do not repeat it.)
 
 ## Carried stale-ref notes
 
-- The `16-verification.enabler/PLAN.md` single-source section must be RESTORED
-  (see "Model handling" above) — #160's deletion of it was wrong.
 - Both #158 and #160 edit `32-decisions/ISSUES.md`. After #158 merges, #160's
   base-sync will touch that file — resolve by keeping #158's agent-name rename
-  and reconciling the conformance note with the single-source rework.
+  and #160's model-conformance note.
 
 ## Lessons (apply to the rest of this effort)
 
