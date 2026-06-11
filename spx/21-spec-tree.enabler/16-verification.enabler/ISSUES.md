@@ -53,11 +53,11 @@ Every verification skill conforming to the contract in `verification.md` is an L
 
 Handle before applying the Python, TypeScript, and Rust test-standard drift fixes recorded in `docs/cross-language-test-standards-drift-audit.md`.
 
-## `verification.md` assertions tagged `[audit]` where deterministic tests are feasible
+## `verification.md` assertions still tagged `[audit]` where deterministic tests are feasible
 
-Assertion 5 in `verification.md` ("ALWAYS: every wrapper agent declares `model: sonnet` or `model: inherit`") is tagged `[audit]`. Presence of a YAML key is deterministic — a `pytest`-level compliance test would provide stronger evidence. The same gap applies to several other assertions in `verification.md` (agent-file location, tool declarations, skills declarations) that are also currently `[audit]`.
+Assertions 5 and 9 in `verification.md` (model-field presence) were retagged to `[test](tests/test_agent_model_field.mapping.l1.py)` in PR #160. Several other assertions remain `[audit]` where deterministic checks are feasible: agent-file location under `src/plugins/spec-tree/agents/`, `tools:` field declaration, and `skills:` field declaration.
 
-**Fix:** Write `spx/21-spec-tree.enabler/16-verification.enabler/tests/test_agent_model_field.compliance.l1.py` (and tests for other machine-checkable assertions) and retag each one from `[audit]` to `[test](...)` in both `verification.md` and `13-architecture.adr.md`. Address all machine-checkable assertions together to keep the spec internally consistent.
+**Fix:** Write compliance tests covering the remaining machine-checkable assertions and retag each from `[audit]` to `[test](...)` in both `verification.md` and `13-architecture.adr.md`. Address all machine-checkable assertions together to keep the spec internally consistent.
 
 ---
 

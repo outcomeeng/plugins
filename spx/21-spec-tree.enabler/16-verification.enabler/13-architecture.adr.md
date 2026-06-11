@@ -14,9 +14,12 @@ Thread-store makes the storage surface a configuration concern, so a kind that p
 - ALWAYS: an agentic verification skill emits one machine-readable result conforming to its own JSON schema alongside one markdown surface ([audit])
 - ALWAYS: an agentic verification skill encodes its policy in a `scripts/` Python module exposed through a CLI arbiter the wrapper agent invokes before persistence ([audit])
 - ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares a model identifier, `tools: Bash, Read, Skill`, and `skills:` listing the skill ([audit])
-- ALWAYS: every wrapper agent declares `model: sonnet` or `model: inherit` — omitting the field falls back to the session model (Opus 4.8), which is unacceptable for verification agents ([audit])
 - ALWAYS: changeset-scoped records are addressed through the slug helper re-exported by thread-store ([audit])
 - NEVER: read or write a backend-specific path directly from skill or agent prose ([audit])
 - NEVER: hand-validate emitted JSON in agent prose — the arbiter's exit code is the validity signal ([audit])
-- NEVER: omit the model identifier from a wrapper agent — the missing-field fallback is Opus 4.8, which is unacceptable for verification agents ([audit])
 - NEVER: duplicate or reinvent the changeset-slug derivation rule ([audit])
+
+### Testing
+
+- ALWAYS: every wrapper agent declares `model: sonnet` or `model: inherit` — omitting the field falls back to the session model (Opus 4.8), which is unacceptable for verification agents ([mapping])
+- NEVER: omit the model identifier from a wrapper agent — the missing-field fallback is Opus 4.8, which is unacceptable for verification agents ([mapping])
