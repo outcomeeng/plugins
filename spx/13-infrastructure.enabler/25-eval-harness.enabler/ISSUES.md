@@ -6,10 +6,9 @@ Open items carried forward from the eval-harness refactor. None block the harnes
 
 Confirm `just eval-run` vs. `just eval` aligns with the existing Justfile pattern when the eval recipes are added.
 
-## Required model selection
+## Optional per-eval model pin
 
-NEVER run a bare `claude --print` in an eval as this uses the environment's default model. The eval-harness defines a default model to override the environment's default.
-An optional `model` field in `eval.toml` would let an eval pin against a specific model for reproducibility but this violates the eval-harness's governed maxim of consistency.
+`claude --print` uses the session's default model. An optional `model` field in `eval.toml` would let an eval pin against a specific model for reproducibility. Defer until a real need arises.
 
 ## Cross-suite parallelism
 
