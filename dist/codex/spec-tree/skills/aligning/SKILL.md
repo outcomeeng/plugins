@@ -7,7 +7,7 @@ description: >-
 
 <objective>
 
-Check Spec Tree files for conformance to templates, atemporal voice, and content placement rules. Report non-conformances as facts. Do not suggest fixes, rate severity, or prioritize findings.
+Check Spec Tree files for conformance to templates, atemporal voice, content placement rules, and downstream alignment after higher-level declarations change. Report non-conformances as facts. Do not suggest fixes, rate severity, or prioritize findings.
 
 </objective>
 
@@ -16,7 +16,7 @@ Check Spec Tree files for conformance to templates, atemporal voice, and content
 1. Verify `<SPEC_TREE_FOUNDATION>` marker is present — if not, invoke `/understanding` first
 2. Read all references and templates from the understanding skill's directory
 3. Glob `spx/**/*.md` (or user-specified scope)
-4. Classify each file, check against three dimensions, report findings
+4. Classify each file, check against conformance dimensions, report findings
 
 </quick_start>
 
@@ -34,8 +34,8 @@ Check Spec Tree files for conformance to templates, atemporal voice, and content
 
 **References (conformance rules):**
 
-- `${SKILL_DIR}/../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test
-- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — `<common_misplacements>` table: content in wrong artifact type
+- `${SKILL_DIR}/../understanding/references/durable-map.md` — `<atemporal_voice>` section: temporal markers table and read-aloud test; `<future_product_truth>` and `<decision_to_spec_alignment>` sections: higher-level changes require lower-spec alignment
+- `${SKILL_DIR}/../understanding/references/what-goes-where.md` — `<common_misplacements>` and `<escape_hatches>` sections: content in wrong artifact type and `PLAN.md` placement for pending node work
 - `${SKILL_DIR}/../understanding/references/node-types.md` — `<enabler>` and `<outcome>` sections: directory suffix classification
 
 **Templates (structural rules):**
@@ -69,7 +69,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 - `CLAUDE.md` files (product configuration, not specs)
 - Files inside `tests/` directories (test code, not specs)
-- `PLAN.md` and `ISSUES.md` files (stale-prone coordination notes, not spec artifacts)
+- `PLAN.md` and `ISSUES.md` files for structural, language, and placement conformance (escape hatches, not spec artifacts); downstream alignment checks may inspect whether `PLAN.md` exists
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
 
 </file_classification>
@@ -144,6 +144,49 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 </placement_conformance>
 
+<downstream_alignment_conformance>
+
+Read the `<future_product_truth>` and `<decision_to_spec_alignment>` sections from `durable-map.md`. These provide the same-PR alignment rule for higher-level declaration changes.
+
+This check is a best-effort factual guard over the changed-file set. It detects missing downstream alignment when no lower spec changed under the affected scope, and missing `PLAN.md` grounding when a lower spec absorbs a higher-level declaration without same-slice tests or code. It does not prove that every directly affected lower spec was identified. The authoring or applying workflow remains responsible for enumerating every directly affected child or target spec from the product context and aligning each one.
+
+Determine the changed file set in this order:
+
+1. Use the user-provided changed-file list when one is provided.
+2. If the repository has git metadata, use read-only git commands to list changed files against the PR base.
+3. If no changed-file set is available, report that downstream alignment was not evaluated.
+
+Classify changed files:
+
+| Changed file kind                         | Meaning                                           |
+| ----------------------------------------- | ------------------------------------------------- |
+| Product spec, ADR, PDR, or ancestor spec  | Higher-level declaration changed                  |
+| Spec file inside a lower node             | Candidate lower-spec alignment                    |
+| Test file under the lower node's `tests/` | Candidate same-slice test implementation          |
+| Non-`spx/` source file                    | Candidate same-slice code implementation          |
+| `PLAN.md` in the lower node               | Pending node work is grounded for future sessions |
+
+For each changed higher-level declaration, identify the constraining scope:
+
+- Product spec: `spx/`
+- ADR/PDR: the directory containing the decision file
+- Ancestor spec: the node directory containing the spec
+
+Report as findings:
+
+- A changed higher-level declaration has no changed lower spec under its constraining scope in the same changed-file set. Reference: `(ref: decision_to_spec_alignment)`.
+- A changed lower spec references or absorbs a changed higher-level declaration, no same-node test file and no non-`spx/` source file changed in the same set, and no `PLAN.md` exists in that lower node. Reference: `(ref: decision_to_spec_alignment)`.
+
+Do NOT report:
+
+- Higher-level declaration files when at least one lower spec under the constraining scope changed in the same set.
+- Lower specs when same-node tests or non-`spx/` source files changed in the same set.
+- Lower specs when a `PLAN.md` file exists in the lower node.
+
+When the changed-file set includes at least one lower spec under the constraining scope, state that zero-alignment coverage was observed rather than claiming full affected-spec coverage.
+
+</downstream_alignment_conformance>
+
 </conformance_dimensions>
 
 <workflow>
@@ -152,12 +195,14 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` files and files inside `tests/` directories.
-5. **Classify**: Map each file to its artifact type per `<file_classification>`.
-6. **Check each file**:
+5. **Changed files**: Determine the changed-file set for downstream alignment using user input or read-only git commands. If unavailable, record that downstream alignment was not evaluated.
+6. **Classify**: Map each file to its artifact type per `<file_classification>`.
+7. **Check each file**:
    - If classified: run structural, language, and placement checks
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
-7. **Report**: Emit findings grouped by file path per `<report_format>`.
-8. **Summary**: End with counts.
+8. **Check downstream alignment**: Use the changed-file set to report higher-level declaration changes that lack lower-spec alignment or lower-node `PLAN.md` grounding. Treat a clean result as necessary evidence only; it is not proof that every directly affected lower spec was enumerated.
+9. **Report**: Emit findings grouped by file path per `<report_format>`.
+10. **Summary**: End with counts.
 
 </workflow>
 
@@ -177,6 +222,9 @@ Language:
 
 Placement:
 - {finding} (ref: what-goes-where)
+
+Downstream alignment:
+- {finding} (ref: decision_to_spec_alignment)
 
 ---
 
@@ -200,6 +248,8 @@ Placement:
 - [ ] Structural checks run against correct template per file type
 - [ ] Language checks applied to all files (including unrecognized)
 - [ ] Placement checks applied to all classified files
+- [ ] Changed-file set determined or downstream alignment reported as not evaluated
+- [ ] Downstream alignment checks applied to changed higher-level declarations when a changed-file set is available
 - [ ] Report contains only factual findings — no suggestions, no severity, no "should"
 - [ ] Summary counts emitted
 

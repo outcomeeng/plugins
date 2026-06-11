@@ -231,9 +231,27 @@ Write the file. If `spx/CLAUDE.md` doesn't exist, note that one should be create
 
 </step>
 
+<step name="align">
+
+**Step 8: Align higher-level declarations**
+
+For any product spec, ADR, PDR, or ancestor spec change, invoke `/aligning` before finalizing the change set.
+
+The same PR must carry the declaration down to the first affected lower specs:
+
+- Enumerate every directly affected child or target spec from the product context before treating the alignment pass as sufficient.
+- Update every directly affected child or target spec assertion that first receives the new truth.
+- If tests or code are not part of the slice, add or update `PLAN.md` at the first affected lower node with the pending implementation step and the governing higher-level artifact.
+- Use `ISSUES.md` for known defects or contradictions, not for planned implementation steps.
+- Do not weaken the higher-level declaration to match current code. Current code is lower-layer evidence.
+
+`/aligning` is necessary evidence, not a complete proof that every affected lower spec was found. If `/aligning` reports a downstream alignment finding, update the lower spec or node-local `PLAN.md`, then invoke `/aligning` again for the changed scope.
+
+</step>
+
 <step name="deliver">
 
-**Step 8: Summarize and recommend next steps**
+**Step 9: Summarize and recommend next steps**
 
 Report what was created:
 
@@ -243,13 +261,13 @@ Report what was created:
 
 Recommend next steps based on artifact type:
 
-| Created                      | Recommended next                                     |
-| ---------------------------- | ---------------------------------------------------- |
-| Product spec                 | Author top-level nodes with `/authoring`             |
-| ADR/PDR                      | Verify compliance in affected nodes with `/aligning` |
-| Enabler                      | Author dependent outcome nodes                       |
-| Outcome with many assertions | Decompose with `/decomposing`                        |
-| Outcome with few assertions  | Write tests with `/testing`                          |
+| Created                      | Recommended next                                 |
+| ---------------------------- | ------------------------------------------------ |
+| Product spec                 | Author top-level nodes with `/authoring`         |
+| ADR/PDR                      | Implement the aligned lower-node `PLAN.md` steps |
+| Enabler                      | Author dependent outcome nodes                   |
+| Outcome with many assertions | Decompose with `/decomposing`                    |
+| Outcome with few assertions  | Write tests with `/testing`                      |
 
 </step>
 
@@ -320,6 +338,12 @@ Claude received a broad request, drafted several child nodes with indices, and t
 
 How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decomposing <node-address>`. The decomposition workflow owns child boundaries, node types, dependency edges, and index assignment.
 
+**Failure 10: Higher-level declaration left without lower-spec alignment**
+
+Claude authored a PDR that declared product truth ahead of implementation, then stopped at the decision file. The lower specs did not absorb the declaration, and no first affected node had `PLAN.md` steps naming the pending implementation work.
+
+How to avoid: after any product spec, ADR, PDR, or ancestor spec change, invoke `/aligning`, update the first affected lower specs in the same PR, and record pending tests or code in `PLAN.md` at the first affected lower node.
+
 </failure_modes>
 
 <anti_patterns>
@@ -344,6 +368,8 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Pre-shaping decomposition.** When a request needs multiple sibling nodes, authoring captures intent in the target node's coordination notes and delegates to `/decomposing <node-address>`. Proposed child names, proposed indices, and proposed dependency chains do not belong in the handoff.
 
+**Floating higher-level truth.** A product spec, ADR, PDR, or ancestor spec change must not remain only in the higher-level artifact. Carry it into the first affected lower specs and record pending implementation work in the first affected node's `PLAN.md`.
+
 </anti_patterns>
 
 <success_criteria>
@@ -358,6 +384,9 @@ Authoring is complete when:
 - [ ] Template read and filled with atemporal voice
 - [ ] Validation checklist passes
 - [ ] Files created in correct location
+- [ ] Higher-level declaration changes checked with `/aligning`
+- [ ] First affected lower specs aligned in the same PR when a higher-level declaration changes
+- [ ] Pending downstream implementation recorded in first affected lower-node `PLAN.md` when tests or code are not part of the slice
 - [ ] Next steps recommended
 
 </success_criteria>
