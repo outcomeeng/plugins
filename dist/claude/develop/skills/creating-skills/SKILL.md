@@ -13,7 +13,7 @@ Route skill-creation, editing, and improvement work through typed workflows. Sta
 </objective>
 
 <reference_loading>
-Before creating, editing, or auditing any skill, read `/standardizing-skills` — the single source of truth for all skill standards (frontmatter, XML structure, naming, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, script testing). Then check for `spx/local/standardizing-skills.md` at the repository root and read it if it exists.
+Before creating, editing, or auditing any skill, read `/standardizing-skills` — the single source of truth for all skill standards (frontmatter, XML structure, naming, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, script testing). Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 
 Also read `/standardizing-agent-prompts` for voice, description style, constraint language, and anti-pattern conventions before writing prompt text.
 
