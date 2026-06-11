@@ -4,6 +4,7 @@ description: >-
   Audit PDR evidence quality. Use after writing a PDR or before
   implementing outcomes governed by the PDR.
 tools: Read, Glob, Grep
+model: sonnet
 skills:
   - spec-tree:audit-pdr
 ---

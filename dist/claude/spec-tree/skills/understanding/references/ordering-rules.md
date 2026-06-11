@@ -30,7 +30,7 @@ Bare references are ambiguous because numeric prefixes are sibling-local:
 
 ```text
 Wrong: 32-parser.enabler
-Right: spx/55-example.enabler/12-parser.enabler
+Right: spx/55-example.enabler/12-infra.enabler/32-parser.enabler
 
 Wrong: 15-build.adr.md
 Right: spx/55-example.enabler/15-build.adr.md
@@ -75,6 +75,6 @@ Numeric prefixes are unique only among siblings within the same directory. Diffe
 32-feature.outcome/21-sub-setup.enabler/
 ```
 
-Always use full paths when referencing nodes. `32-parser.enabler` is ambiguous; `spx/55-example.enabler/12-parser.enabler` is not.
+Always use full paths when referencing nodes. `32-parser.enabler` is ambiguous; `spx/55-example.enabler/12-infra.enabler/32-parser.enabler` is not.
 
 </scope>
