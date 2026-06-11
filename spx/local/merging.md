@@ -13,12 +13,12 @@ The agent merges the moment `MERGE_READINESS` holds and **NEVER asks the operato
 Use a merge commit (preserves PR history; matches existing main):
 
 ```bash
-gh pr merge <pr-number> --merge
+gh pr merge <pr-number> --merge --delete-branch=false
 git push origin --delete <branch>
 gh pr view <pr-number> --json state,mergedAt,mergeCommit
 ```
 
-`--delete-branch` is omitted because `gh pr merge` fails its local-cleanup phase under multi-worktree checkouts when `main` is already checked out in another worktree (the merge succeeds on the remote, but the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'`). Delete the remote branch separately with `git push origin --delete <branch>`, then verify with `gh pr view`.
+`--delete-branch=false` is passed explicitly rather than omitted: omitting the flag relies on `gh`'s default for it, which varies by `gh` version and config and is unknowable across environments, and a host whose default is on (or whose repository auto-deletes head branches) makes `gh` run its local-cleanup phase, which fails under multi-worktree checkouts when `main` is already checked out in another worktree (the merge succeeds on the remote, but the post-merge `git checkout main` step errors with `fatal: 'main' is already used by worktree at '<path>'`). `=false` guarantees `gh` never attempts that step. Delete the remote branch separately with `git push origin --delete <branch>` (tolerating a host that already auto-deleted it), then verify with `gh pr view`.
 
 ## Deterministic verification
 

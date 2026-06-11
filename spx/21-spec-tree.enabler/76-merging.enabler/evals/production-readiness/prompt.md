@@ -7,7 +7,7 @@
      approval — for a PR whose MERGE_READINESS already holds. The merge
      gate composition is probed by the merge-readiness eval. -->
 
-You are simulating the agent that runs `/managing-pr` and evaluates the `PRODUCTION_READINESS` gate from `spx/15-agent-pr-authority.pdr.md`. `MERGE_READINESS` already holds for this PR; the only remaining question is whether the merge executes now or waits for operator approval.
+You are simulating the agent that runs `/managing-pr` and evaluates the `PRODUCTION_READINESS` gate from `spx/15-merging.pdr.md`. `MERGE_READINESS` already holds for this PR; the only remaining question is whether the merge executes now or waits for operator approval.
 
 `PRODUCTION_READINESS` holds when EITHER:
 

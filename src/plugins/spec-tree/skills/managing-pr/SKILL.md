@@ -28,7 +28,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 **Step 4 — Sync to base.** If Step 2 found the branch behind `origin/<base>`, rebase per /standardizing-merging `<base_sync>` now — independent of whether a review has landed and independent of whether any landed review carries findings. A branch behind base is superseded before it can merge, so rebasing immediately aims CI and reviewers at the head that will actually merge and surfaces a nasty rebase early. An unresolvable conflict emits `SYNC_BASE` and ends the pass; otherwise Step 6 re-establishes `REVIEW_READINESS` (deterministic verification and the local review) against the rebased tree and pushes it with `--force-with-lease`.
 
-**Step 5 — Drive the queue.** Process every finding by validity and phase per /standardizing-merging `<review_classification>`, never by severity. Validate each finding against its cited rule and the governing decisions; drop any the citation does not support. This is the PR-open phase: **fix every valid in-scope finding** the review surfaces (fix it, commit via /committing-changes) — there is no deferral of in-scope work on the open PR. Validity and scope (never the severity label) decide. A valid `DEBT` finding whose fix the author judges genuinely out of scope — work outside this PR's diff — is recorded in the owning node's `ISSUES.md` or `PLAN.md` via the Edit or Write tool (those are committed coordination artifacts) with a recorded reason and does not block the merge; a valid in-scope finding about the shipped diff is fixed, not recorded.
+**Step 5 — Drive the queue.** Process every finding by validity and phase per /standardizing-merging `<review_classification>`, never by severity. Validate each finding against its cited rule and the governing decisions; drop any the citation does not support. This is the PR-open phase: **fix every valid in-scope finding** the review surfaces (fix it, commit via /committing-changes) — there is no deferral of in-scope work on the open PR. Validity and scope (never the severity label) decide. A bounded fix — a rename propagation, a cross-reference update, a mechanical change, or a fix that merely touches another file — is in-scope work the changeset carries and is fixed here, never deferred. A valid `DEBT` finding whose fix the author judges a genuinely separate, larger concern — its own node or feature, outside this PR's diff — is recorded in the owning node's `ISSUES.md` or `PLAN.md` via the Edit or Write tool (those are committed coordination artifacts) with a reason naming why it is large and does not block the merge; a valid in-scope finding about the shipped diff is fixed, not recorded.
 
 **Step 6 — Re-establish `REVIEW_READINESS`, then push follow-ups deliberately.** A Step 5 fix or a Step 4 rebase changed the diff, so before any push re-establish both `REVIEW_READINESS` predicates **on the exact tree the push would publish**. Both predicates must hold *together* on that final tree — they iterate to a joint fixpoint, not a one-time linear pass:
 
@@ -60,16 +60,17 @@ Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase` without `--delete-branch`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
 
   Overlay-silent default (per /standardizing-merging `<merge_cleanup>`):
 
   ```bash
   base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
   branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-  # merge only — no --delete-branch (gh would switch this worktree to "${base}",
-  # which fails when "${base}" is checked out in another worktree)
-  gh pr merge <pr-number> --rebase
+  # explicit --delete-branch=false — never rely on gh's default for the omitted flag
+  # (varies by version/config, unknowable across consumers); =false skips gh's switch to
+  # "${base}", which would fail when "${base}" is checked out in another worktree
+  gh pr merge <pr-number> --rebase --delete-branch=false
   git fetch origin "${base}"
   git switch --detach "origin/${base}"   # step this worktree off the merged branch
   git branch -D "${branch}" 2>/dev/null || true   # delete the local branch (tolerate "not found")
@@ -127,7 +128,7 @@ gh api graphql --silent \
 # Overlay-silent universal default: rebase merge, then worktree-safe manual branch deletion.
 base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-gh pr merge <pr-number> --rebase                       # no --delete-branch (see <merge_cleanup>)
+gh pr merge <pr-number> --rebase --delete-branch=false   # explicit; see <merge_cleanup>
 git fetch origin "${base}"
 git switch --detach "origin/${base}"
 git branch -D "${branch}" 2>/dev/null || true

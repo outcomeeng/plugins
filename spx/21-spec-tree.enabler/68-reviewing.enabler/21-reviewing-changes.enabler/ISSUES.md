@@ -4,7 +4,7 @@
 
 The assertion added to `reviewing-changes.md` —
 
-> ALWAYS: the review prompt instructs the reviewer to review the whole diff against the whole shared taxonomy using the repository's own instructions, and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative — the local reviewer runs at parity with the CI reviewer per `spx/15-agent-pr-authority.pdr.md`
+> ALWAYS: the review prompt instructs the reviewer to review the whole diff against the whole shared taxonomy using the repository's own instructions, and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative — the local reviewer runs at parity with the CI reviewer per `spx/15-merging.pdr.md`
 
 carries `[review]` evidence. Its subject is a static, observable property of `references/review-prompt.md`: the file contains a Scope section whose text rejects caller-supplied scope, severity pre-filter, and emphasis. That is the same class of prompt-content property the sibling assertion at `reviewing-changes.md` already verifies with `[test]` — "the swappable review prompt template lives at `…/review-prompt.md`" → `tests/test_reviewing_changes.compliance.l1.py`.
 
@@ -153,12 +153,12 @@ Surfaced by the `changes-reviewer` runs on `outcomeeng/plugins` PR #148.
 ## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED — cascade pending)
 
 **Decided (2026-06-10).** Governing decision recorded at
-`spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`:
+`spx/15-merging.pdr.md`:
 two severities `blocking`/`debt`; the reviewer judges finding validity and
 severity, the author judges disposition (fix-in-PR or track-out-of-scope in the
 owning node's `ISSUES.md`/`PLAN.md` with a recorded reason); the reviewer's
 render carries the two severity buckets and no disposition axis. The root
-`spx/15-agent-pr-authority.pdr.md` gate clauses were amended in-place to read "a
+`spx/15-merging.pdr.md` gate clauses were amended in-place to read "a
 `DEBT` finding the author tracks out of scope with a recorded reason is
 non-blocking" in place of the `FOLLOW-UP` severity. The specs, implementation,
 evals, and template below still declare the three-severity taxonomy and are in
@@ -184,7 +184,7 @@ small, in-scope fix had been merely tracked. The `follow_up` label outsourced a
 scope decision the reviewer is not positioned to make. The skill already declares
 the reviewer "carries findings only … never decides" (`reviewing.md`) and that the
 consumer "acts by validity and phase, never by severity"
-(`spx/15-agent-pr-authority.pdr.md`); `follow_up` is the one place the reviewer
+(`spx/15-merging.pdr.md`); `follow_up` is the one place the reviewer
 still makes a disposition call, in tension with that stance.
 
 **Cascade landed (2026-06-10).** The decision records, the specs (`reviewing.md`,
@@ -211,7 +211,7 @@ this change touched:
   `debt`/`follow_up` across trials); a two-severity rubric would likely *improve*
   eval stability.
 - `REVIEW.template.md` (the consumer-override taxonomy surface at repo root).
-- `spx/15-agent-pr-authority.pdr.md` — `MERGE_READINESS` reads the taxonomy; its
+- `spx/15-merging.pdr.md` — `MERGE_READINESS` reads the taxonomy; its
   "`FOLLOW-UP` tracked, not blocking" clause becomes "a `debt` the author tracked
   out-of-scope, with a recorded reason, is not blocking." Same gate strength,
   ownership corrected.
@@ -221,7 +221,7 @@ this change touched:
 fixed-here versus tracked-elsewhere distinction lives only in the author's
 `ISSUES.md`/`PLAN.md`, never in the reviewer's render — a tracked-debt render
 bucket would re-introduce a disposition slot the reviewer cannot populate.
-Recorded in `spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`.
+Recorded in `spx/15-merging.pdr.md`.
 
 Surfaced from the operator review of `changes-reviewer` behavior on
 `outcomeeng/plugins` PR #148 (2026-06-09).

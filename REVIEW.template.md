@@ -32,7 +32,7 @@ Every finding has two dimensions: **category** and **severity**. Use only these 
 | `BLOCKING` | Merge-safety defect: If deployed, the changeset would create a deterministic issue or pose a risk.                   |
 | `DEBT`     | Real defect that does **not** jeopardize merge safety: a genuine problem the change carries, but not merge-blocking. |
 
-Severity is the validity judgment the reviewer makes from the code and the rules. **Disposition** — whether each `DEBT` finding is fixed in this PR or tracked out of scope with a recorded reason — is the author's call, not the reviewer's; the reviewer carries no scope axis.
+Severity is the validity judgment the reviewer makes from the code and the rules. **Disposition** — whether each `DEBT` finding is fixed in this PR or tracked out of scope — is the author's call, not the reviewer's; the reviewer carries no scope axis. A bounded fix — a rename propagation, a cross-reference update, a mechanical change, or a fix that merely touches another file — is in scope and fixed in this PR; a finding is tracked out of scope only when its fix is a genuinely separate, larger concern, with a recorded reason naming why it is large. Boundedness is never grounds to defer.
 
 ## **Reporting:** Return your findings exactly as below
 

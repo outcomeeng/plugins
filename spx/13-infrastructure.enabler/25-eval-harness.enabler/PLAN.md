@@ -29,5 +29,5 @@ mapping the `eval.toml` does not yet declare), a CLI `--model` pin, the CLI
 - **Workflow**: `.github/workflows/spec-tree-evals.yml`
 - **Runner contract**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md:16`
 - **Gate-eval node**: `spx/21-spec-tree.enabler/76-merging.enabler/merging.md` and its `ISSUES.md` item 2
-- **PR-authority PDR**: `spx/15-agent-pr-authority.pdr.md`
+- **PR-authority PDR**: `spx/15-merging.pdr.md`
 - **Launch-in-CI + configurable-surface reference**: `outcomeeng/gh-actions` `spec-tree-review.yml`
