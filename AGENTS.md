@@ -1,6 +1,6 @@
 # Outcome Engineering Plugin Marketplace
 
-Combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
+This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
 
 `AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same product instructions.
 
@@ -14,11 +14,11 @@ This repo is two things at once.
 
 It is a **product**, with its own spec tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
 
-It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a marketplace-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
+It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a product-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
 
 Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a shipped plugin change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
 
-## Runtime Surfaces
+## Coding Agents
 
 This repository publishes two plugin surfaces from the same source tree:
 
@@ -77,7 +77,7 @@ Historical plugin implementations are pruned from this repository. The history t
 - ⚠️ **ALWAYS read CLAUDE.md in subdirectories** - When working with files in `spx/`, or any other directory, read that directory's CLAUDE.md FIRST if it exists
 - ⚠️ **Skills are ALWAYS authoritative over existing files** - When a skill template prescribes a structure (e.g., Architectural Constraints table), follow the skill — not patterns found in existing spec files. Existing files may contain non-standard sections added before skills existed. Never infer framework conventions from existing files; always read the skill.
 - ⚠️ **NEVER maintain backward compatibility** - When rewriting a module, replace it entirely. No legacy aliases, no re-exports of old names, no shims. Update all imports across the codebase to use the new API.
-- ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. Review and audit enforce this convention; no automated lint rule covers the shorthand form. (The separate `reference-portability` gate step catches real-digit `spx/<digits>-…` node paths and marketplace roots in shipped `src/plugins/` content, not bare `ADR-21` shorthand.)
+- ⚠️ **NEVER reference specs or decisions from code** - No `ADR-21`, `PDR-13`, or similar in code comments or docstrings. Specs are the source of truth; code should not duplicate or point to them. Review and audit enforce this convention; no automated lint rule covers the shorthand form. (The separate `reference-portability` gate step catches real-digit `spx/<digits>-…` node paths and product roots in shipped `src/plugins/` content, not bare `ADR-21` shorthand.)
 - ⚠️ **NEVER manually delete untracked files** - use `just clean` (`git clean -fdX`) to remove gitignored caches such as `.DS_Store` and `__pycache__`; it does not touch non-gitignored untracked files or empty directories, and git-untracked empty dirs are invisible to version control and harmless, so leave them be
 - ⚠️ **NEVER use general-purpose agents to create or modify ANY files** - Agents (subagents, background agents) must ONLY be used for read-only research: searching code, reading files, running read-only commands. ALL file creation, editing, and writing MUST be done by the `applier` agent (see `spec-tree` plugin) or remain in the main conversation context
 - ⚠️ **The methodology is multi-language** - Skill content shipped under `dist/` that names a test filename pattern, an import syntax, or any other language-specific token is wrong unless framed per-language with a cross-reference. Authoritative conventions live in `spx/15-test-language.adr.md` for this product and in each language plugin's `standardizing-<lang>-tests` skill for consumers. Never write `test_*.py` (or any single-language pattern) into a skill body that ships to consumer projects — the file under audit may be a `.test.ts`, a `.rs` test module, or whatever the consumer's language plugin declares.
@@ -126,7 +126,7 @@ Every backgrounded command is a process the monitor `pgrep`s on a timer. Run one
 
 ## Plugin Portability Constraints
 
-Plugins from this marketplace are installed into consumer projects that share none of this repository's tooling. When a skill or agent invokes a script that ships inside a plugin, the script runs against the consumer's environment — not against this repo's `uv`, `pyproject.toml`, or `outcomeeng_*` packages.
+Plugins from this product are installed into consumer projects that share none of this repository's tooling. When a skill or agent invokes a script that ships inside a plugin, the script runs against the consumer's environment — not against this repo's `uv`, `pyproject.toml`, or `outcomeeng_*` packages.
 
 Authors of skills, agents, and the scripts they invoke must assume:
 
@@ -135,7 +135,7 @@ Authors of skills, agents, and the scripts they invoke must assume:
 - ⚠️ **Stdlib only.** No `click`, no `pydantic`, no third-party JSON Schema, no `tomllib`-via-package. `argparse`, `json`, `dataclasses`, `enum`, `pathlib`, `subprocess`, `sys`, `typing` — that's the toolbox. Anything richer must be vendored or replaced.
 - ⚠️ **No on-the-fly dependency installation.** Skills must not run `pip install`, `uv pip install`, `npm install`, or any other package fetch as part of their normal flow. Consumers approve plugin installation once; runtime side effects must not include further installations.
 
-The `outcomeeng_*` Python packages in this repo are part of the marketplace's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside a generated plugin runtime tree is not portable.
+The `outcomeeng_*` Python packages in this repo are part of the product's own toolchain (validation, distribution, eval harness) — they exist to build and test the plugins, not to be invoked by skills inside consumer projects. Code that lives outside a generated plugin runtime tree is not portable.
 
 When a skill genuinely needs richer Python machinery, the right answer is usually to write the logic in stdlib-only form, ship it inside the plugin, and document the `python3 "${CLAUDE_SKILL_DIR}/..."` invocation in the skill body.
 
@@ -246,10 +246,9 @@ The shortcut is valid only when the agent has already inspected the session cont
 
 ## When to Dispatch Agents vs Invoke Skills
 
-Auditor skills can be invoked directly in the main conversation or dispatched as subagents. Each auditor agent preloads the corresponding skill via the `skills:` frontmatter field.
+Auditor must be dispatched as subagents. Each auditor agent preloads the corresponding skill via the `skills:` frontmatter field.
 
-- **One audit, user wants to discuss findings** → invoke the skill directly
-- **Multiple audits in parallel** → dispatch subagents, collect verdicts
+- **Run multiple audits in parallel** → dispatch subagents, collect verdicts
 - **Autonomous flow (e.g., `/apply --agent`)** → the `applier` agent handles audit dispatch internally
 
 | Skill                               | Agent                             |
@@ -261,46 +260,13 @@ Auditor skills can be invoked directly in the main conversation or dispatched as
 | `/auditing-{language}-architecture` | `{language}-architecture-auditor` |
 | `/auditing-{language}-tests`        | `{language}-test-auditor`         |
 
-## For Claude Agents Modifying This Marketplace
+## Before Making Changes
 
-### ⛔ Subagent Restrictions
-
-**NEVER use subagents (Agent tool) to create or modify any file.** All file creation and modification must happen in the main conversation context using Read, Edit, and Write tools directly. Subagents are for research, exploration, and auditing only.
-
-### ⛔ Path Restrictions
-
-**NEVER manually write to these locations:**
-
-- `~/.claude/` - User home directory, not product-specific
-- Any path containing `.claude` in user home
-- `.claude/` files, except `.claude/settings.json` updates produced by Claude CLI product-scope plugin commands
-
-**ALWAYS write to product directories:**
-
-- `src/plugins/` - Authored plugin code, skills, commands, agents, and templates
-- `dist/claude/`, `dist/codex/` - Generated runtime plugin trees committed for marketplace installation
-- `spx/` - Specs as durable map (see [spx/CLAUDE.md](spx/CLAUDE.md))
-- `.spx/` - Tool operational files (sessions, cache) - gitignored
-- `.claude/settings.json` - Claude product-scope plugin settings created by `claude plugin ... --scope project` and committed for collaborators
-- `.codex/config.toml` - Codex product-scope config for the plugin set this repository needs
-- Product root - Package files, config files
-
-**Rationale:** Manual file operations in `.claude/` require extra permission and break workflow. Claude CLI product-scope plugin commands are the exception because they update `.claude/settings.json` for the repository's shared plugin set. Codex product config belongs in `.codex/config.toml` so collaborators inherit the plugin enablement for this repo after trusting the project.
-
-### ⛔ File Removal Restrictions
-
-**Tracked files with no changes:** Use `git rm` to remove files that are committed in git and have no uncommitted modifications.
-
-**All other files:** You CANNOT remove files that are untracked or have uncommitted changes. Do not attempt to circumvent this restriction. Instead, **ALWAYS** provide the exact `rm` command to the user and **WAIT** until the user has confirmed they have executed it before proceeding.
-
-### Before Making Changes
-
-1. **Read the context**: Check [CLAUDE.md](CLAUDE.md:1) (this file) for current structure
+1. **Identify the spec tree node:** Every file in `src/` is governed by decisions and specified by spec files in the spec tree. Always create or modify the spec before making any changes to the implementation in `src/`.
 2. **Check existing commands**: Use Glob to find existing `.md` files in `src/plugins/*/commands/`
-3. **Review plugin structure**: Each plugin has its own `plugin.json` in `.claude-plugin/`
-   - Codex-capable plugins also have `.codex-plugin/plugin.json`
+3. **Review plugin structure**: Each plugin has its own `plugin.json` in `.claude-plugin/` and `.codex-plugin/`
 
-### After Adding/Modifying Commands or Skills
+### After Adding/Modifying Skills, Agents etc.
 
 Everything under `src/plugins/` is authored source; the installed trees under `dist/claude/` and `dist/codex/` are generated. After any `src/plugins/` edit, regenerate them so the two match:
 
@@ -339,9 +305,9 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### Autonomy
 
-In this marketplace the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here. Standing authorization covers:
+In this product the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here. Standing authorization covers:
 
-- Committing changes via `/committing-changes` (the skill loads the marketplace's commit rules from `spx/local/committing-changes.md`; the agent does not bypass the skill).
+- Committing changes via `/committing-changes` (the skill loads the product's commit rules from `spx/local/committing-changes.md`; the agent does not bypass the skill).
 - Pushing the feature branch through `/pr`'s opening protocol (which runs the branch-hygiene checks and `git push -u origin HEAD:refs/heads/<branch>`).
 - Opening the PR ready through `/pr`'s opening protocol (which calls `gh pr create` with a curated title and body once `REVIEW_READINESS` holds).
 - Iterating on the PR through `/pr`'s managing protocol (commit + push + base-sync rebase with a `--force-with-lease` push of the PR's own feature branch + heartbeat + review inspection).
@@ -361,10 +327,10 @@ For pull-request work, the path is:
 
 1. **Branch.** Cut a feature branch off `origin/main` — `fix/…`, `feat/…`, `docs/…`, or `work/…`.
 2. **Bump plugin versions** when the branch's first plugin-distribution commit is about to land. Run `just bump-dry` to preview, then `just bump` to write — the tool detects every plugin with changes under `src/plugins/<name>/**` since `origin/main`, classifies each plugin's change pattern into a semver segment (a plugin that gains, loses, or renames a skill/command/agent/manifest gets `minor`; everything else gets `patch`), and writes the resulting version in every manifest each plugin owns (`.claude-plugin/plugin.json` and `.codex-plugin/plugin.json`). The same run can produce `minor` for one plugin and `patch` for another. When a plugin already carries a bump on this branch, that plugin is skipped with a diagnostic while every other changed-but-unbumped plugin is still bumped in the same pass (per `spx/local/committing-changes.md`'s "bump once per branch" rule), so re-running after a later commit bumps that newly-changed plugin without a manual edit. Auto-detection never selects `major` — pass `--segment major` (or `minor`/`patch`) to force a segment for every changed plugin; explicit overrides emit a stderr warning naming any plugin whose detected segment differed. The mutually-exclusive `--check` mode exits non-zero if any changed plugin still needs a bump; CI calls `just bump-check` to enforce that every PR carries its version bump.
-3. **Commit.** Invoke `/committing-changes`. It loads the marketplace's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
-4. **Open the PR.** Invoke `/pr`. It routes to the opening protocol, runs branch-hygiene checks and evaluates `REVIEW_READINESS` (deterministic verification `just check` green + local review converged), pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a ready PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It reads `spx/local/merging.md` for lifecycle routing and the opening protocol loads `spx/local/opening-pr.md` for marketplace-specific pre-flight checks and template sections.
-5. **Review and merge.** Continue through `/pr`. It routes to the managing protocol, drives the post-creation loop — three-surface review inspection, two-severity triage of findings, follow-up pushes — and merges autonomously when `MERGE_READINESS` (a clean current-head CI review exists — absence never satisfies it — plus every other required check terminal-green) and `PRODUCTION_READINESS` (no production-relevance mechanism here, so it holds) both hold, per `/standardizing-merging` `<authority_gates>`. The marketplace's `spx/local/merging.md` overlay loads via `/standardizing-merging` `<repo_local_overlay>` and supplies the project-specific merge command, production-relevance recognition, and post-merge sync, and centralizes the deterministic-verification command (`just check`) that `REVIEW_READINESS` otherwise resolves from the project's `CLAUDE.md` / `AGENTS.md` convention. The overlay's merge command is `gh pr merge <n> --merge` followed by `git push origin --delete <branch>` (the rebase-merge default conflicts with the marketplace's merge-commit history style; the separate remote-delete sidesteps the multi-worktree failure where `git checkout main` errors when `main` is already checked out elsewhere). Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit`, then run `/handoff --no-session`.
-6. **Sync.** Once a PR with plugin distribution changes merges, refresh your local marketplace install:
+3. **Commit.** Invoke `/committing-changes`. It loads the product's commit rules — Conventional Commits, the version-bump policy, which manifests to touch — from `spx/local/committing-changes.md`.
+4. **Open the PR.** Invoke `/pr`. It routes to the opening protocol, runs branch-hygiene checks and evaluates `REVIEW_READINESS` (deterministic verification `just check` green + local review converged), pushes the branch with an explicit destination ref (`git push -u origin HEAD:refs/heads/<branch>`), opens a ready PR with a curated title and body, and creates or requests a thread heartbeat so review/check re-inspection is handled by the runtime timer instead of a shell wait or watch loop. If the runtime can only create a new thread, seed that heartbeat with the repository, PR number, branch, and review-loop instructions. It reads `spx/local/merging.md` for lifecycle routing and the opening protocol loads `spx/local/opening-pr.md` for product-specific pre-flight checks and template sections.
+5. **Review and merge.** Continue through `/pr`. It routes to the managing protocol, drives the post-creation loop — three-surface review inspection, two-severity triage of findings, follow-up pushes — and merges autonomously when `MERGE_READINESS` (a clean current-head CI review exists — absence never satisfies it — plus every other required check terminal-green) and `PRODUCTION_READINESS` (no production-relevance mechanism here, so it holds) both hold, per `/standardizing-merging` `<authority_gates>`. The product's `spx/local/merging.md` overlay loads via `/standardizing-merging` `<repo_local_overlay>` and supplies the project-specific merge command, production-relevance recognition, and post-merge sync, and centralizes the deterministic-verification command (`just check`) that `REVIEW_READINESS` otherwise resolves from the project's `CLAUDE.md` / `AGENTS.md` convention. The overlay's merge command is `gh pr merge <n> --merge` followed by `git push origin --delete <branch>` (the rebase-merge default conflicts with the product's merge-commit history style; the separate remote-delete sidesteps the multi-worktree failure where `git checkout main` errors when `main` is already checked out elsewhere). Verify the merge with `gh pr view <n> --json state,mergedAt,mergeCommit`, then run `/handoff --no-session`.
+6. **Sync.** Once a PR with plugin distribution changes merges, refresh your local product install:
 
    ```bash
    git fetch origin main
@@ -376,7 +342,7 @@ For pull-request work, the path is:
 
 ### Publishing directly to `main`
 
-When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this marketplace, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files:
+When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this product, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files:
 
 ```bash
 just push-marketplace               # git push (current branch) + just sync-marketplace
@@ -411,7 +377,7 @@ Work in the checkout registered as the marketplace source (`claude plugin market
 
 ### Claude Code
 
-When repo-required Claude plugins are missing, ask the user before changing product-scoped Claude settings. Use Claude's product scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
+When product-required Claude plugins are missing, ask the user before changing project-scoped Claude settings. Use Claude's project scope so the marketplace and enabled plugins are written to `.claude/settings.json`; commit that file so collaborators get the same plugin set.
 
 ```bash
 claude plugin marketplace add outcomeeng/plugins --scope project

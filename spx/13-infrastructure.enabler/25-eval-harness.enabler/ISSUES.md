@@ -6,9 +6,10 @@ Open items carried forward from the eval-harness refactor. None block the harnes
 
 Confirm `just eval-run` vs. `just eval` aligns with the existing Justfile pattern when the eval recipes are added.
 
-## Optional per-eval model pin
+## Required model selection
 
-`claude --print` uses the user's default model. An optional `model` field in `eval.toml` would let an eval pin against a specific model for reproducibility. Defer until a real need arises.
+NEVER run a bare `claude --print` in an eval as this uses the environment's default model. The eval-harness defines a default model to override the environment's default.
+An optional `model` field in `eval.toml` would let an eval pin against a specific model for reproducibility but this violates the eval-harness's governed maxim of consistency.
 
 ## Cross-suite parallelism
 
@@ -93,4 +94,4 @@ The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether t
 
 ## Drop `[review]` once the `[audit]` migration completes
 
-`spx/14-verification.pdr.md` introduces the `[audit]` evidence lane (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng_testing/evals/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in `references/assertion-types.md`, `references/verification-kinds.md`, and any validator or lint rule that enumerates the lane set.
+`spx/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng_testing/evals/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in `references/assertion-types.md`, `references/verification-kinds.md`, and any validator or lint rule that enumerates the lane set.
