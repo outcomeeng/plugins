@@ -87,7 +87,7 @@ If a downstream skill encounters a situation where the architecture doesn't work
 
 1. **STOP** - Do not attempt workarounds
 2. **DOCUMENT** - Capture what was attempted and what failed
-3. **ESCALATE** - Return to the orchestrating agent with structured feedback
+3. **ESCALATE** - Return to the orchestrator with structured feedback
 4. **WAIT** - The Architect must revise the ADR before work continues
 
 ---

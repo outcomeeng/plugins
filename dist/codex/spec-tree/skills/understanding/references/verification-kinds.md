@@ -11,7 +11,7 @@ Two orthogonal axes describe every verification activity.
 **Verdict mode** — how a result is produced:
 
 - **deterministic** — a command scores against fixed expectations and returns pass or fail; no model judges the verdict.
-- **agentic** — an agent executes a skill and judges the subject. This spans a wide range of judgment: from mechanical (a checklist yielding a binary verdict) to open-ended (principal-level assessment with no fixed answer).
+- **agentic** — Claude executes a skill and judges the subject. This spans a wide range of judgment: from mechanical (a checklist yielding a binary verdict) to open-ended (principal-level assessment with no fixed answer).
 
 **Purpose** — what the verdict establishes:
 
@@ -33,7 +33,7 @@ The axes are independent: one operation can serve both purposes, pointed at diff
 
 - **auditing** (agentic, mechanical) — a checklist skill yielding a binary verdict: the three verification-type tags (`[test]`, `[eval]`, `[audit]`) match the spec.
 - **reviewing** (agentic, open-ended) — principal-level judgment: consistency across spec, tests, and implementation, plus the quality, architecture, and design judgment that no checklist captures.
-- **evaluating** (deterministic) — an agent runs a case set; its JSON outputs are scored against spec-derived expectations, with a pass threshold. Subjects include skills, agents, and classifiers.
+- **evaluating** (deterministic) — Claude runs a case set; its JSON outputs are scored against spec-derived expectations, with a pass threshold. Subjects include skills, agents, and classifiers.
 - **testing** (deterministic) — execution of `[test]` assertions.
 
 The entries above are applications of the five types — auditing recurs because it serves both purposes.

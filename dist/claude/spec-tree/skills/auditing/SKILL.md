@@ -1,6 +1,6 @@
 ---
 name: auditing
-description: Use when asked by the user to invoke the audit skill
+description: ALWAYS invoke this skill when auditing a code scope end-to-end — a diff, a branch, or a commit — partitioning by language and emitting one structured verdict. NEVER assemble audit findings by hand or run language audits piecemeal without this orchestrator.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: Read, Bash, Glob, Grep
 
 Run a deterministic audit over a code scope: prepare (Phase 0), automated gates (Phase 1), tests (Phase 2), implementation review (Phase 3), test evidence (Phase 4), ADR/PDR compliance (Phase 5), and emit (Phase 6). Partition the scope by language, dispatch to the corresponding `auditing-{lang}*` skills, aggregate each partition's verdict via `aggregate_verdicts.py`, and emit one wrapper verdict whose `children` array carries the per-language dispatched verdicts. The orchestrator itself embeds zero language-specific knowledge beyond the dispatch template — language audits live in their own skills, this one composes them.
 
-This skill runs a single audit pass per invocation. By default it is stateless: it reads no prior verdict and persists nothing — the caller renders and delivers the emitted verdict (a CI workflow posts the `markdown+json` carrier to the PR comment thread; a local agent relays the rendered output). When a caller (e.g., the `audit-orchestrator` agent) needs cross-commit continuity, the skill exposes a stateful orchestration mode that drives the `audit_orchestrator.py` CLI to maintain `.spx/audits/<lang>/<branch-slug>.md` and a TTL-bounded lock at `<state-file>.lock`. See `<stateful_orchestration>` below.
+This skill runs a single audit pass per invocation. By default it is stateless: it reads no prior verdict and persists nothing — the caller renders and delivers the emitted verdict (a CI workflow posts the `markdown+json` carrier to the PR comment thread; a local caller relays the rendered output). When a caller (e.g., the `audit-orchestrator` agent) needs cross-commit continuity, the skill exposes a stateful orchestration mode that drives the `audit_orchestrator.py` CLI to maintain `.spx/audits/<lang>/<branch-slug>.md` and a TTL-bounded lock at `<state-file>.lock`. See `<stateful_orchestration>` below.
 
 Read-only over the audited code. The stateful mode writes only under the gitignored `.spx/audits/` partition; the audited project tree is never modified.
 
@@ -22,7 +22,7 @@ Read-only over the audited code. The stateful mode writes only under the gitigno
 
 If any mechanism cannot be applied, halt and report the obstacle — do not silently substitute a looser audit.
 
-This skill is strictly read-only over the project. It uses `Read`, `Bash` (for git, project validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. It does not write its verdict to a project path or any persisted location; the caller delivers it. The `/tmp` files Phase 6 uses to stage per-partition JSON for aggregation are ephemeral scratch space, not artifacts. The Subagent Restrictions section of `AGENTS.md` requires subagents never to create or modify files.
+This skill is strictly read-only over the project. It uses `Read`, `Bash` (for git, project validation, and tests), `Glob`, and `Grep` — never `Write` or `Edit`. It does not write its verdict to a project path or any persisted location; the caller delivers it. The `/tmp` files Phase 6 uses to stage per-partition JSON for aggregation are ephemeral scratch space, not artifacts. Subagents invoked by this skill never create or modify files.
 
 </determinism_contract>
 
@@ -198,9 +198,9 @@ Callers that need cross-run continuity — carrying open finding IDs forward, re
 
 State partitioning and naming are deterministic. State files live at `.spx/audits/<lang>/<branch-slug>.md` rooted in the repo working tree, with the run lock at `<state-file>.lock`. The `.spx/` root is gitignored — state is local development scratch, not product truth. Language partition is the same `<lang>` the orchestrator dispatches against in Phase 3–5; branch slug is derived from the current branch via the CLI.
 
-The skill drives every CLI invocation from inside its own prose so the calling agent never constructs a path into `scripts/`. Each command below is invoked exactly once per language partition as part of the stateful flow. Every shell variable below is set within these blocks — there are no upward references to undefined names — so an agent that runs each block in order has every value in scope.
+The skill drives every CLI invocation from inside its own prose so Claude never constructs a path into `scripts/`. Each command below is invoked exactly once per language partition as part of the stateful flow. Every shell variable below is set within these blocks — there are no upward references to undefined names — so running each block in order keeps every value in scope.
 
-1. **Resolve the branch and the state path.** `LANG` is the partition language identifier from Phase 0 step 3 (`python`, `typescript`, `rust`, …). The block assumes `LANG` is set in the agent's environment — one invocation per partition with `LANG` set accordingly.
+1. **Resolve the branch and the state path.** `LANG` is the partition language identifier from Phase 0 step 3 (`python`, `typescript`, `rust`, …). The block assumes `LANG` is set in the environment — one invocation per partition with `LANG` set accordingly.
 
    ```bash
    BRANCH=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" current-branch)
@@ -219,7 +219,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
      --path "$LOCK_FILE" || exit 1
    ```
 
-   Crash recovery is the TTL's responsibility, not a shell `trap`. The agent invokes the stateful flow as a sequence of separate `Bash` tool calls, each spawning a fresh shell; a `trap EXIT` registered in the acquisition call does not survive into later calls. If the agent or session aborts between this step and step 5's explicit release, the lock file persists until its mtime exceeds `DEFAULT_LOCK_TTL_SECONDS` (600 s), after which the next acquire-lock invocation overwrites it. The clean-exit release lives in step 5 below.
+   Crash recovery is the TTL's responsibility, not a shell `trap`. Claude invokes the stateful flow as a sequence of separate `Bash` tool calls, each spawning a fresh shell; a `trap EXIT` registered in the acquisition call does not survive into later calls. If Claude or the session aborts between this step and step 5's explicit release, the lock file persists until its mtime exceeds `DEFAULT_LOCK_TTL_SECONDS` (600 s), after which the next acquire-lock invocation overwrites it. The clean-exit release lives in step 5 below.
 
 3. **Run the audit (stateless Phases 0–6).** Phase 6 writes per-language verdict JSON files into the scratch directory `$CHILDREN_DIR` defined inside the Phase 6 `<phase number="6">` block above. Read this partition's verdict back into a shell variable with `read_verdict.py`:
 
@@ -255,7 +255,7 @@ The skill drives every CLI invocation from inside its own prose so the calling a
 
 The lock TTL defaults to `DEFAULT_LOCK_TTL_SECONDS` (600 seconds). A lock with mtime older than the TTL is treated as stale (left by a crashed run) and overwritten; this is the crash-recovery path. The explicit `release-lock` above is the clean-exit path.
 
-The state-transition CLI distinguishes three failure modes by exit code: `1` for lock-held / acquisition failure, `2` for `StateFileCorruptError` (the on-disk state file failed to parse), `3` for malformed stdin JSON (missing required finding keys). Exit `2` is the agent's signal to surface the state-file path and ask the caller whether to discard it for a clean re-run or keep it for inspection.
+The state-transition CLI distinguishes three failure modes by exit code: `1` for lock-held / acquisition failure, `2` for `StateFileCorruptError` (the on-disk state file failed to parse), `3` for malformed stdin JSON (missing required finding keys). Exit `2` is Claude's signal to surface the state-file path and ask the caller whether to discard it for a clean re-run or keep it for inspection.
 
 The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, dispatched children, and `$CHILDREN_DIR` scratch space remain ephemeral per the stateless contract.
 
@@ -265,9 +265,9 @@ The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, disp
 
 CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself — the durable cross-CI-run surface for an audit verdict — the skill writes nothing to `.spx/` in either mode.
 
-The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a calling agent's wording drifts; loud failure surfaces the drift on the next CI run.
+The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a caller's wording drifts; loud failure surfaces the drift on the next CI run.
 
-**MODE: prior-verdict-read.** Pull the prior audit verdict, if any, from the target PR's comment thread. The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The skill drives the pipeline below from inside its own prose so the calling agent never constructs a path into `scripts/`.
+**MODE: prior-verdict-read.** Pull the prior audit verdict, if any, from the target PR's comment thread. The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The skill drives the pipeline below from inside its own prose so Claude never constructs a path into `scripts/`.
 
 ```bash
 PRIOR_RAW=$(gh -R "$REPO" pr view "$PR_NUMBER" --json comments --jq \

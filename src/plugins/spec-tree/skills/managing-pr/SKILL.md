@@ -60,7 +60,7 @@ Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. The agent follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. The agent never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
 
   Overlay-silent default (per /standardizing-merging `<merge_cleanup>`):
 
@@ -79,7 +79,7 @@ When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
   ```
 
   Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
-- **Production-relevant and not yet approved** → emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. The agent has already done the full `MERGE_READINESS` work; only execution waits.
+- **Production-relevant and not yet approved** → emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
 
 If `MERGE_READINESS` does not hold, emit exactly one token from /standardizing-merging `<action_tokens>` and rely on the /tracking-tasks heartbeat to re-fire.
 
@@ -157,7 +157,7 @@ The managing flow satisfies its contract when, at minimum:
 - The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.
 - Every follow-up push re-establishes `REVIEW_READINESS` on the diff it would publish — the project's full deterministic-verification command passes, and the local `reviewing-changes` review (invoked at parity per /standardizing-merging `<local_review_invocation>`, with no caller narrowing) has converged with no valid finding unaddressed — re-runs /standardizing-merging `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
 - Merge fires autonomously when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved.
-- A production-relevant, unapproved change emits `AWAIT_APPROVAL:<reason>` and waits; the agent does the full `MERGE_READINESS` work regardless.
+- A production-relevant, unapproved change emits `AWAIT_APPROVAL:<reason>` and waits; Claude does the full `MERGE_READINESS` work regardless.
 - A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /standardizing-merging `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `WAIT_FOR_REVIEW` — the exception is scoped to the self-modifying-PR case only.
 - Each pass that does not fire an autonomous action emits exactly one token from /standardizing-merging `<action_tokens>`.
 - No `<self_reference>` violation per /standardizing-merging.

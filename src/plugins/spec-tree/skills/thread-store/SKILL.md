@@ -42,7 +42,7 @@ Slug derivation re-exports the canonical helper from `${CLAUDE_SKILL_DIR}/../cha
 
 <invocation>
 
-Direct invocation from a wrapper agent:
+Direct invocation from a wrapping skill:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/write_record.py" --slug "$SLUG" --name result.json < "$PAYLOAD_FILE"
@@ -51,7 +51,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/list_records.py" --slug "$SLUG"
 python3 "${CLAUDE_SKILL_DIR}/scripts/delete_record.py" --slug "$SLUG" --name result.json
 ```
 
-Skill authors instruct the wrapper agent to invoke these commands rather than implementing the I/O inline.
+Skill authors instruct Claude to invoke these commands rather than implementing the I/O inline.
 
 </invocation>
 
@@ -65,7 +65,7 @@ Skill authors instruct the wrapper agent to invoke these commands rather than im
 
 <success_criteria>
 
-- [ ] Wrapper agent invocations of the four CLIs exit 0 on success
+- [ ] Invocations of the four CLIs exit 0 on success
 - [ ] `read_record.py` exits non-zero with a `NotFound` message that names slug and record
 - [ ] `get_backend()` honors `SPX_VERIFY_BACKEND` and rejects unknown values
 - [ ] Slug re-export is identity-equal to the canonical helper

@@ -7,7 +7,7 @@ model: claude-haiku-4-5-20251001
 
 <objective>
 
-Investigate GitHub Actions workflow runs from inside an agent session — status, run discovery, log triage, authentication-state diagnosis — under the marketplace's safety constraints. Read-only by default. No fork-bombing CLI patterns. No credential or workflow mutation without explicit user instruction.
+Investigate GitHub Actions workflow runs from inside a Claude session — status, run discovery, log triage, authentication-state diagnosis — under the marketplace's safety constraints. Read-only by default. No fork-bombing CLI patterns. No credential or workflow mutation without explicit user instruction.
 
 </objective>
 
@@ -18,7 +18,7 @@ Investigate GitHub Actions workflow runs from inside an agent session — status
 Resolve repository identity, host, and gh authentication state in one call. The helper parses `git remote get-url origin`, extracts `owner_repo` and `host`, probes repo access with the active gh account, lists available authenticated accounts, and reports whether the session is TTY-attached:
 
 ```bash
-uv run python "${SKILL_DIR}/scripts/gh_access.py"
+python3 "${SKILL_DIR}/scripts/gh_access.py"
 ```
 
 The output is a JSON object with these fields:

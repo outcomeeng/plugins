@@ -4,12 +4,12 @@ A developer tool that transforms authored **source** into an **artifact**, optio
 hand-edits to the artifact back into source.
 
 **Outcome topology: none.** The transform is determined by its specification and the users are the
-author plus the agent — there is no measurable multi-user behavior change to bet on, so every node is
+author plus Claude — there is no measurable multi-user behavior change to bet on, so every node is
 an enabler. A product seeded from this archetype is correctly outcome-free.
 
 ## When the router matches a product here
 
-- Users are few and known (an author + an agent), not many anonymous users.
+- Users are few and known (an author + Claude), not many anonymous users.
 - The output is fully determined by its transform, not a bet on behavior.
 - Primary surface is a CLI, a library, or file output.
 - The natural decomposition is a transformation pipeline (ingest → emit → verify).
