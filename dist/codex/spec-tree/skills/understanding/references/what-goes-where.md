@@ -147,13 +147,15 @@ Test harnesses (modules that mediate access to the system under test), test gene
 
 **Purpose:** Node-local coordination notes. They preserve pending work and known issues so a future session reads them on context load. Both files are committed to git for that one reason — git-tracking carries the coordination across sessions; it does not make the content product truth. They go stale unless acted upon, so treat a coordination note as a fallible input, never as authority: before it steers work, reconcile it against the node's spec, the governing ADRs/PDRs, the assertions, the tests, the implementation, and the current user intent, and act only where it still holds. Prefer amending specs or fixing issues directly when the correction is clear and safe. Session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git; `spx session` shares them across worktrees.
 
-**PLAN.md** — concrete remaining steps for a node. Written when work is interrupted or when an approved plan must persist beyond the current conversation. Commit it; remove completed items in subsequent commits.
+**PLAN.md** — concrete remaining steps for a node. Written when work is interrupted, when an approved plan must persist beyond the current conversation, or when a higher-level declaration creates pending implementation work in the first affected lower node. Commit it; remove completed items in subsequent commits.
 
-**ISSUES.md** — known issues that remain unresolved: spec gaps, implementation bugs, untestable assertions. Commit it; remove fixed items and add new ones in subsequent commits.
+**ISSUES.md** — known issues that remain unresolved: spec gaps, contradictions, implementation bugs, untestable assertions. Commit it; remove fixed items and add new ones in subsequent commits.
 
 **Verified by:** Reconcile against the durable layers and current user intent before use. `/contextualizing` reads them automatically; `/pickup` checks for them.
 
 **Does NOT contain:** Spec content (→ spec file), architecture decisions (→ ADR), product decisions (→ PDR).
+
+Higher-level truth belongs in product specs, ADRs, PDRs, and ancestor specs. Lower specs carry declarations that absorb that truth. `PLAN.md` carries the pending implementation steps left after those declarations are aligned.
 
 </coordination_notes>
 
@@ -172,19 +174,20 @@ ADR/PDR ──governs──→ Spec ──┤
 
 <common_misplacements>
 
-| Content                  | Wrong location | Correct location                                                           |
-| ------------------------ | -------------- | -------------------------------------------------------------------------- |
-| Architecture choice      | Spec           | ADR                                                                        |
-| Product decision         | Spec           | PDR                                                                        |
-| Outcome hypothesis       | ADR            | Outcome spec                                                               |
-| Test reference           | ADR/PDR        | Spec assertions                                                            |
-| Implementation detail    | Spec           | Code (not spec)                                                            |
-| "How to build it"        | Spec           | ADR or code                                                                |
-| "What users can rely on" | Spec           | PDR                                                                        |
-| Enforceable constraint   | `[audit]`      | `[test]` on the lint rule                                                  |
-| Cross-cutting invariant  | Child spec     | Ancestor spec                                                              |
-| Remaining work steps     | Session file   | PLAN.md in node                                                            |
-| Known unresolved issues  | Session file   | ISSUES.md in node                                                          |
-| Child-node enumeration   | Parent spec    | Remove — `/contextualizing` surfaces children; each child describes itself |
+| Content                              | Wrong location             | Correct location                                                           |
+| ------------------------------------ | -------------------------- | -------------------------------------------------------------------------- |
+| Architecture choice                  | Spec                       | ADR                                                                        |
+| Product decision                     | Spec                       | PDR                                                                        |
+| Outcome hypothesis                   | ADR                        | Outcome spec                                                               |
+| Test reference                       | ADR/PDR                    | Spec assertions                                                            |
+| Implementation detail                | Spec                       | Code (not spec)                                                            |
+| "How to build it"                    | Spec                       | ADR or code                                                                |
+| "What users can rely on"             | Spec                       | PDR                                                                        |
+| Enforceable constraint               | `[audit]`                  | `[test]` on the lint rule                                                  |
+| Cross-cutting invariant              | Child spec                 | Ancestor spec                                                              |
+| Remaining work steps                 | Session file               | PLAN.md in node                                                            |
+| Known unresolved issues              | Session file               | ISSUES.md in node                                                          |
+| Pending work from higher-level truth | Higher-level decision/spec | PLAN.md in first affected lower node after lower specs align               |
+| Child-node enumeration               | Parent spec                | Remove — `/contextualizing` surfaces children; each child describes itself |
 
 </common_misplacements>
