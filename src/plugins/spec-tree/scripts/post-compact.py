@@ -2,7 +2,7 @@
 """PostCompact hook: re-anchor the resuming agent after compaction.
 
 The active node comes first from the spx CLI's resume stash
-(`spx session compact-resume`), which the PreCompact hook populated from the
+(`spx compact resume`), which the PreCompact hook populated from the
 transcript. When the CLI returns no stash — it is absent, the command is not yet
 available, or nothing was captured — the hook falls back to parsing the active
 node and foundation marker out of the compact summary the harness injected.
@@ -18,7 +18,7 @@ Reads (from the PostCompact JSON payload on stdin):
   .session_id       Conversation id; passed to the spx CLI.
   .compact_summary  Compaction output; the fallback node source.
 
-Invokes: spx session compact-resume --session-id <id>
+Invokes: spx compact resume --session-id <id>
 ($SPX_BIN overrides the `spx` executable; tests point it at a fake.)
 
 stdlib only (python3); no third-party packages.
@@ -72,7 +72,7 @@ def resume_from_spx(session_id: str) -> dict | None:
     spx = os.environ.get("SPX_BIN", "spx")
     try:
         result = subprocess.run(
-            [spx, "session", "compact-resume", "--session-id", session_id],
+            [spx, "compact", "resume", "--session-id", session_id],
             check=False,
             capture_output=True,
             text=True,
