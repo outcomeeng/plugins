@@ -2,13 +2,16 @@
 
 After the upgrade, the cache for each plugin in the working tree is reconciled
 against the set of versions published to the plugin's manifest within the
-configured window (default ten days). Versions inside the window become
-either the real current directory or a symlink pointing at it; versions outside
-the window are removed; plugins absent from the working tree have their cache
-directory pruned in full. The preservation set is derived from git history,
-not from the pre-upgrade cache snapshot. A single bypassed recipe invocation
-has no permanent effect -- the next invocation reconstructs the symlink set
-from the same authoritative source.
+configured window (default ten days). The symlink target is the cache directory
+named with the plugin's current working-tree version; in-window versions other
+than the current one become symlinks pointing at it, versions outside the window
+are removed, and plugins absent from the working tree have their cache directory
+pruned in full. When the upgrade leaves no real directory for the current
+version, no compatibility symlink is created for the plugin -- a symlink to a
+non-current directory would resolve the current version to stale content. The
+preservation set is derived from git history, not from the pre-upgrade cache
+snapshot. A single bypassed recipe invocation has no permanent effect -- the
+next invocation reconstructs the symlink set from the same authoritative source.
 
 Usage::
 
@@ -42,6 +45,8 @@ class PluginHistory(Protocol):
     def working_tree_plugins(self) -> frozenset[str]: ...
 
     def published_versions(self, plugin: str) -> frozenset[str]: ...
+
+    def current_version(self, plugin: str) -> str | None: ...
 
 
 @dataclass(frozen=True)
@@ -94,6 +99,10 @@ class GitPluginHistory:
         if current is not None:
             versions.add(current)
         return frozenset(versions)
+
+    def current_version(self, plugin: str) -> str | None:
+        manifest_rel = f"{SOURCE_PLUGINS_DIR}/{plugin}/.claude-plugin/plugin.json"
+        return self._read_working_tree_version(manifest_rel)
 
     def _read_manifest_version_at(self, sha: str, manifest_rel: str) -> str | None:
         result = subprocess.run(
@@ -186,15 +195,33 @@ def preserve_during_upgrade(
 
     for plugin in sorted(working_tree_plugins):
         plugin_dir = marketplace_dir / plugin
-        in_window = resolved_history.published_versions(plugin)
-        current_real = _newest_real_version_dir(plugin_dir)
-        if current_real is None:
+        if not plugin_dir.is_dir():
+            # Working-tree plugin absent from the Codex cache: nothing to reconcile.
             continue
-
-        keep_versions = in_window | {current_real.name}
+        in_window = resolved_history.published_versions(plugin)
+        current_version = resolved_history.current_version(plugin)
+        keep_versions = in_window | (
+            frozenset({current_version}) if current_version is not None else frozenset()
+        )
         pruned_links.extend(
             _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
         )
+
+        current_real = _current_real_version_dir(plugin_dir, current_version)
+        if current_real is None:
+            # The upgrade exited successfully without materializing the current
+            # version as a real directory. No valid target exists, so create no
+            # compatibility symlink, and remove any stale symlink left at the
+            # current version path by a prior run so the current version resolves
+            # to nothing rather than to a non-current directory's content.
+            # validate_install reports the absent current version.
+            pruned_links.extend(
+                _prune_current_version_symlink(
+                    plugin_dir, current_version, dry_run=dry_run
+                )
+            )
+            continue
+
         linked_versions.extend(
             _ensure_in_window_symlinks(
                 plugin_dir, current_real, in_window, dry_run=dry_run
@@ -229,17 +256,38 @@ def _prune_orphan_plugins(
     return pruned
 
 
-def _newest_real_version_dir(plugin_dir: Path) -> Path | None:
-    if not plugin_dir.is_dir():
+def _current_real_version_dir(
+    plugin_dir: Path, current_version: str | None
+) -> Path | None:
+    if current_version is None:
         return None
-    real_versions = [
-        entry
-        for entry in plugin_dir.iterdir()
-        if entry.is_dir() and not entry.is_symlink()
-    ]
-    if not real_versions:
-        return None
-    return max(real_versions, key=lambda p: p.stat().st_mtime)
+    candidate = plugin_dir / current_version
+    if candidate.is_dir() and not candidate.is_symlink():
+        return candidate
+    return None
+
+
+def _prune_current_version_symlink(
+    plugin_dir: Path,
+    current_version: str | None,
+    *,
+    dry_run: bool,
+) -> list[Path]:
+    """Remove a compatibility symlink standing in for the current version.
+
+    The current version is the symlink target, never a compatibility symlink. When
+    no real directory exists for it, a symlink left at its path resolves the current
+    version to a non-current directory, so it is pruned. A real directory or an
+    absent path is left untouched.
+    """
+    if current_version is None:
+        return []
+    path = plugin_dir / current_version
+    if not path.is_symlink():
+        return []
+    if not dry_run:
+        path.unlink()
+    return [path]
 
 
 def _prune_out_of_window_paths(
