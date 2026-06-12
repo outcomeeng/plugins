@@ -9,6 +9,10 @@ Invoke the `python:standardizing-python` skill before proceeding. If that skill 
 
 Invoke the `python:standardizing-python-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+<repo_local_overlay>
+**Standards are pre-loaded above.** After loading, check for `spx/local/python.md` and `spx/local/python-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
+
 <objective>
 Write or fix implementation code that makes tests pass. This skill handles both:
 1. **Writing new implementation** - Given failing tests, produce code that passes them
