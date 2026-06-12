@@ -157,33 +157,33 @@ Specified and failing are normal states. Specified nodes have declarations and v
 
 <failure_modes>
 
-**Failure 1: An agent shaped a PDR to current implementation**
+**Failure 1: Claude shaped a PDR to current implementation**
 
-What happened: The agent reviewed a PDR that declared a cleaner product model than the current code and argued that the model should collapse to the current implementation shape.
+What happened: Claude reviewed a PDR that declared a cleaner product model than the current code and argued that the model should collapse to the current implementation shape.
 
-Why it failed: The agent treated implementation incompleteness as evidence against the decision. Spec Tree truth flows down; a PDR can lead code and create downstream work.
+Why it failed: Claude treated implementation incompleteness as evidence against the decision. Spec Tree truth flows down; a PDR can lead code and create downstream work.
 
 How to avoid: When a decision is ahead of implementation, preserve the product truth, identify the first affected lower specs, and name the follow-on work. Challenge incoherent product taxonomy, wrong artifact placement, missing affected-spec alignment, or a PR that falsely claims lower-layer passing evidence.
 
-**Failure 2: An agent treated missing implementation as evidence against product truth**
+**Failure 2: Claude treated missing implementation as evidence against product truth**
 
-What happened: The agent saw that code could not express a new decision cleanly and treated the decision as over-modeled.
+What happened: Claude saw that code could not express a new decision cleanly and treated the decision as over-modeled.
 
 Why it failed: Current code shape is a lower-layer fact. It can expose implementation work, but it does not decide product truth.
 
 How to avoid: Separate "is the declaration coherent?" from "which lower layers must catch up?" A coherent higher-level declaration stays; lower specs, tests, and code align beneath it.
 
-**Failure 3: An agent changed a higher-level artifact without aligning lower specs**
+**Failure 3: Claude changed a higher-level artifact without aligning lower specs**
 
-What happened: The agent authored or edited a product spec, ADR, PDR, or ancestor spec and left the new truth only in that higher-level file.
+What happened: Claude authored or edited a product spec, ADR, PDR, or ancestor spec and left the new truth only in that higher-level file.
 
 Why it failed: Future work lost the understanding that produced the decision. The next session saw a high-level declaration with no first affected spec or node-local plan to continue from.
 
 How to avoid: In the same PR, update the first affected lower specs. When tests or code remain pending, add `PLAN.md` at the first affected lower node with the next implementation step and the governing higher-level artifact.
 
-**Failure 4: An agent used `spx/EXCLUDE` as a conceptual escape hatch**
+**Failure 4: Claude used `spx/EXCLUDE` as a conceptual escape hatch**
 
-What happened: The agent suggested excluding a lower node to handle a mismatch between decision truth and current implementation.
+What happened: Claude suggested excluding a lower node to handle a mismatch between decision truth and current implementation.
 
 Why it failed: `spx/EXCLUDE` scopes specified tests out of the quality gate when specs and tests exist but implementation is absent. It does not resolve product-model disagreement and does not permit lower layers to contradict decisions.
 
