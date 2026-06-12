@@ -49,9 +49,11 @@ subjects verbatim.
   not the skill-auditor run for this sweep), and the referential forms (`this agent's prose`) do not
   map cleanly to imperative/"Claude". Sweep it as a dedicated subagent-voice pass with a
   `develop:subagent-auditor` gate.
-- **`spx/CLAUDE.md` template** (`understanding/templates/spx-claude.md:131`, one `The agent acts on
-  each finding` line): a versioned consumer-guide template — fixing it requires a `template_version`
-  bump and an `/update-spx` re-render of this repo's `spx/AGENTS.md` and downstream guides.
+- **`spx/CLAUDE.md` template** (`understanding/templates/spx-claude.md`, one `The agent acts on
+  each finding` line): left unchanged on purpose — it is a versioned consumer-guide template, and
+  fixing the line requires a `template_version` bump plus an `/update-spx` re-render of this repo's
+  `spx/AGENTS.md` and downstream guides (which would also absorb origin's in-flight template drift).
+  Handle as a dedicated `template_version`-aware change, not part of this prose sweep.
 - **`uv run` beyond `github-actions`** (`python` plugin `uv run pytest`/`ruff`/`mypy`; excalidraw
   `uv run playwright`/`render_excalidraw.py`): a design decision about how each plugin invokes the
   consumer's toolchain and the vendored excalidraw setup — distinct from the bundled-stdlib-helper
