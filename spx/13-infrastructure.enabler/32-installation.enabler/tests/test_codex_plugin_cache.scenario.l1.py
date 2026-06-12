@@ -574,3 +574,41 @@ def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> 
     assert result.pruned_plugins == (), (
         f"dry run plans no prunes when the query is skipped, got {result.pruned_plugins}"
     )
+
+
+def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> None:
+    """A non-zero upgrade returns before the installed-set query is attempted: a
+    raising installed provider is never invoked (no raise), the result carries the
+    upgrade return code, and no cache directory is pruned — the upgrade failure
+    short-circuits the recipe regardless of the installed provider.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            NOT_INSTALLED_PLUGIN: frozenset([NOT_INSTALLED_CURRENT_VERSION]),
+        },
+        current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
+    )
+
+    def _failing_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 1)
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=RaisingInstalled(),
+        runner=_failing_runner,
+    )
+
+    assert result.upgrade_returncode == 1, (
+        f"expected the upgrade return code to propagate, got {result.upgrade_returncode}"
+    )
+    assert plugin_dir.is_dir(), (
+        f"expected {plugin_dir} untouched: an upgrade failure returns before any prune"
+    )
