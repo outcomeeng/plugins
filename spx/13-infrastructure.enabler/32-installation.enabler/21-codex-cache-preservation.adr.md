@@ -32,9 +32,11 @@ Scoping preservation to the installed set resolves the stale-leftover failure mo
 - NEVER: compute the preservation set solely from the pre-upgrade snapshot delta — bypass a single recipe invocation and the chain breaks permanently ([property])
 - NEVER: skip preservation when the git-history callable returns an empty set for a plugin — the empty set entails the orphan-prune behavior, not a silent skip ([compliance])
 - ALWAYS: a plugin present in the cache and the working tree but absent from the injected installed set has its entire cache directory pruned — not-installed is treated identically to working-tree-absent ([property])
+- ALWAYS: a plugin present in both the working tree and the installed set is preserved — the preserved set is the intersection, so an installed plugin's cache survives while a not-installed sibling's is pruned in the same run ([property])
 - ALWAYS: the installed set is parsed from `codex plugin list --json` output as the `name` of each entry in the `installed` array, scoped to the queried marketplace; a payload that is not an object, or that lacks an `installed` array of named entries, raises rather than yielding a silent empty set ([property])
 - NEVER: mutate the cache when the installed-set query fails or returns an unrecognized shape — preservation aborts so a degraded signal cannot drive deletion ([compliance])
 - ALWAYS: a dry run reports planned changes without invoking the installed-set query and without mutating the cache — the preview treats every working-tree plugin as wanted and requires no Codex CLI present ([property])
+- NEVER: attempt the installed-set query when the upgrade exits non-zero — the upgrade failure short-circuits the recipe before the query is attempted, regardless of the installed provider ([property])
 
 ### Audit
 
