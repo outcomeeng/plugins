@@ -1,23 +1,20 @@
-"""Conformance tests for the /pr skill's portable routing contract.
+"""Conformance tests for the GitHub-PR transport's /github-pr packaging contract.
 
-Asserts the Conformance clauses in ``../github-pr.md``: the /pr router
-ships as a portable Agent Skill, reads free-form arguments, honors local
-lifecycle routing, and owns the user-facing PR route while the concrete opening
-and managing protocols stay internal.
+Asserts the structural Conformance clauses in ``../github-pr.md``: the
+/github-pr orchestration ships as a portable Agent Skill (not a command), is
+user-invocable, and keeps the concrete opening and managing protocols internal
+(no /open-pr command wrapper; opening-pr and managing-pr are user-invocable:
+false).
 
-Per ``spx/13-plugin-and-runtime-conventions.adr.md``:
+Per ``spx/13-plugin-and-runtime-conventions.adr.md`` a skill, not a command, is
+the cross-runtime vehicle.
 
-- A skill (``skills/pr/SKILL.md``), not a command (``commands/pr.md``), is the
-  cross-runtime vehicle.
-- ``$ARGUMENTS`` is the substitution token that carries the user's free-form
-  instructions into the skill body.
-- The skill is user-invocable (no ``user-invocable: false``).
-- ``opening-pr`` and ``managing-pr`` are loadable internal protocols.
-- A direct ``open-pr`` command wrapper is absent; /pr routes PR opening.
-
-This is an L1 conformance check: it reads the real source skill files from the
-marketplace tree. No test doubles: the artifacts under test are the files
-themselves.
+These are L1 conformance checks over the real source files — packaging facts
+(file presence/absence, frontmatter flags), never prose-grep proxies for
+behavior. The transport-selection behavior (/github-pr is selected by /merge and
+defers transport selection to it) is a semantic constraint verified by audit
+(and, in a follow-up, eval), not asserted here by matching strings in a skill
+body.
 """
 
 from __future__ import annotations
@@ -36,109 +33,57 @@ def _marketplace_root() -> Path:
 
 MARKETPLACE_ROOT = _marketplace_root()
 SPEC_TREE_PLUGIN = MARKETPLACE_ROOT / "src" / "plugins" / "spec-tree"
-PR_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "pr" / "SKILL.md"
-PR_COMMAND_FILE = SPEC_TREE_PLUGIN / "commands" / "pr.md"
+GITHUB_PR_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "github-pr" / "SKILL.md"
+GITHUB_PR_COMMAND_FILE = SPEC_TREE_PLUGIN / "commands" / "github-pr.md"
 OPEN_PR_COMMAND_FILE = SPEC_TREE_PLUGIN / "commands" / "open-pr.md"
 OPENING_PR_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "opening-pr" / "SKILL.md"
 MANAGING_PR_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "managing-pr" / "SKILL.md"
-UNDERSTANDING_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "understanding" / "SKILL.md"
-STANDARDIZING_MERGING_SKILL_FILE = (
-    SPEC_TREE_PLUGIN / "skills" / "standardizing-merging" / "SKILL.md"
-)
-PR_ORCHESTRATION_SPEC_FILE = Path(__file__).resolve().parents[1] / "github-pr.md"
 
 
 def _frontmatter(text: str) -> str:
     match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
     assert match is not None, (
-        "the /pr SKILL.md must begin with a YAML frontmatter block "
+        "the /github-pr SKILL.md must begin with a YAML frontmatter block "
         "delimited by '---' lines"
     )
     return match.group(1)
 
 
-class TestPrSkillPackaging:
-    """The /pr router is a portable, user-invocable skill reading $ARGUMENTS."""
+class TestGithubPrPackaging:
+    """The /github-pr orchestration is a portable, user-invocable skill."""
 
     def test_skill_file_exists(self) -> None:
-        assert PR_SKILL_FILE.is_file(), (
-            "the /pr router must ship as a skill at "
-            f"{PR_SKILL_FILE.relative_to(MARKETPLACE_ROOT)}"
+        assert GITHUB_PR_SKILL_FILE.is_file(), (
+            "the /github-pr orchestration must ship as a skill at "
+            f"{GITHUB_PR_SKILL_FILE.relative_to(MARKETPLACE_ROOT)}"
         )
 
-    def test_router_is_a_skill_not_a_command(self) -> None:
+    def test_is_a_skill_not_a_command(self) -> None:
         # Slash commands are Claude Code-only; a skill activates on both runtimes.
-        assert not PR_COMMAND_FILE.exists(), (
-            "the /pr router must be a skill, not a command; "
-            f"{PR_COMMAND_FILE.relative_to(MARKETPLACE_ROOT)} must not exist"
+        assert not GITHUB_PR_COMMAND_FILE.exists(), (
+            "the /github-pr orchestration must be a skill, not a command; "
+            f"{GITHUB_PR_COMMAND_FILE.relative_to(MARKETPLACE_ROOT)} must not exist"
         )
 
     def test_skill_is_user_invocable(self) -> None:
-        frontmatter = _frontmatter(PR_SKILL_FILE.read_text(encoding="utf-8"))
+        frontmatter = _frontmatter(GITHUB_PR_SKILL_FILE.read_text(encoding="utf-8"))
         assert not re.search(
             r"^user-invocable:\s*false\b", frontmatter, re.MULTILINE
-        ), "the /pr skill must be user-invocable (no 'user-invocable: false')"
-
-    def test_skill_reads_arguments(self) -> None:
-        body = PR_SKILL_FILE.read_text(encoding="utf-8")
-        assert "$ARGUMENTS" in body, (
-            "the /pr skill must read the user's free-form input via $ARGUMENTS"
-        )
-
-    def test_description_keeps_pr_trigger_narrow(self) -> None:
-        frontmatter = _frontmatter(PR_SKILL_FILE.read_text(encoding="utf-8"))
-        assert "ALWAYS invoke this skill when the user asks to ship" in frontmatter
-        assert "open or manage a PR" in frontmatter
-        forbidden = ("public" + " entry point", "one" + " entry point")
-        assert all(phrase not in frontmatter for phrase in forbidden)
+        ), "the /github-pr skill must be user-invocable (no 'user-invocable: false')"
 
 
-class TestPrLifecycleRouting:
-    """The PR lifecycle routes through /pr while concrete protocols stay internal."""
+class TestInternalProtocolsStayInternal:
+    """opening-pr and managing-pr stay internal; no /open-pr command wrapper exists."""
 
     def test_open_pr_command_wrapper_is_absent(self) -> None:
         assert not OPEN_PR_COMMAND_FILE.exists(), (
-            "direct /open-pr command wrapper must not exist; route shipping through /pr"
+            "direct /open-pr command wrapper must not exist; "
+            "route shipping through /github-pr"
         )
 
     def test_opening_and_managing_pr_protocols_are_internal(self) -> None:
-        opening_frontmatter = _frontmatter(
-            OPENING_PR_SKILL_FILE.read_text(encoding="utf-8")
-        )
-        managing_frontmatter = _frontmatter(
-            MANAGING_PR_SKILL_FILE.read_text(encoding="utf-8")
-        )
-
-        assert re.search(
-            r"^user-invocable:\s*false\b", opening_frontmatter, re.MULTILINE
-        )
-        assert re.search(
-            r"^user-invocable:\s*false\b", managing_frontmatter, re.MULTILINE
-        )
-        assert "Loaded by /pr" in opening_frontmatter
-        assert "Loaded by /pr" in managing_frontmatter
-
-    def test_pr_skill_detects_and_manages_existing_prs(self) -> None:
-        body = PR_SKILL_FILE.read_text(encoding="utf-8")
-        assert "**Open PR**" in body
-        assert "PR number or PR URL" in body
-        assert "skip directly to Step 6" in body
-        assert "Skip this step in Open PR mode" in body
-
-    def test_understanding_reads_local_merging_overlay(self) -> None:
-        body = UNDERSTANDING_SKILL_FILE.read_text(encoding="utf-8")
-        assert "spx/local/merging.md" in body
-        assert "disabling PRs" in body
-        assert "default /pr lifecycle" in body
-
-    def test_standardizing_merging_heartbeats_reenter_pr(self) -> None:
-        body = STANDARDIZING_MERGING_SKILL_FILE.read_text(encoding="utf-8")
-        assert "/pr <pr-number>" in body
-        assert "/managing-pr <pr-number>" not in body
-
-    def test_spec_describes_eval_model_without_eval_links(self) -> None:
-        spec = PR_ORCHESTRATION_SPEC_FILE.read_text(encoding="utf-8")
-        assert "## Eval Coverage Model" in spec
-        assert "Local lifecycle overlay mode" in spec
-        assert "Existing open PR mode" in spec
-        assert "[eval]" not in spec
+        for skill in (OPENING_PR_SKILL_FILE, MANAGING_PR_SKILL_FILE):
+            frontmatter = _frontmatter(skill.read_text(encoding="utf-8"))
+            assert re.search(
+                r"^user-invocable:\s*false\b", frontmatter, re.MULTILINE
+            ), f"{skill.name} internal protocol must be 'user-invocable: false'"

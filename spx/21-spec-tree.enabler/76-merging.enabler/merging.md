@@ -12,7 +12,15 @@ CAN drive a changeset from review-ready to merge under one policy, routed to the
 - Given a required check's `statusCheckRollup` status and conclusion, when the gate classifies it, then it is terminal-green only when terminal (`status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}`) and successful (`conclusion == SUCCESS` or `state == SUCCESS`); a `SKIPPED`, `NEUTRAL`, `FAILURE`, `CANCELLED`, `TIMED_OUT`, still-running, or absent required check is not terminal-green and withholds `MERGE_READINESS` ([eval](evals/terminal-green/eval.toml))
 - Given an auditor verdict surfaces while the merging flow drives review feedback, when the overall verdict is `REJECTED` or `UNKNOWN`, a row status is `FAIL` or `UNKNOWN`, or a finding verdict is `REJECT`, then the flow treats the cited issue or audit uncertainty as in-slice unresolved work to fix or resolve before merge rather than deferred `ISSUES.md` / `PLAN.md` work ([eval](evals/auditor-verdict-handling/eval.toml))
 
+### Conformance
+
+- The `/merge` dispatcher conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/merge/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_merge.conformance.l1.py))
+- The `/merge` dispatcher classifies the changeset through the canonical `changeset_scope` primitives (`detect_base_ref` for the base ref, `branch_scope` for the committed diff) via a co-located `scripts/classify_changeset.py`, never re-deriving the base ref or diff range inline in the skill body, per `spx/21-spec-tree.enabler/17-auditing.adr.md` ([test](tests/test_classify_changeset.scenario.l1.py))
+
 ### Compliance
+
+- ALWAYS: `/merge` reads the changeset and the `spx/local/merging.md` transport selector, selects exactly one transport per the precedence (overlay-declared, else coordination-note-only → direct-push, else GitHub-PR), and presents a proposal before any direct-push mutation ([audit])
+- ALWAYS: `/merge` delegates the GitHub-PR transport to `/github-pr` (which owns the commit → open → manage → close protocols) and drives the direct-push transport through `/committing-changes` and the `changes-reviewer` review, never reimplementing a transport's internal protocol inline ([audit])
 
 - ALWAYS: the merging skills expose exactly three gates — `REVIEW_READINESS`, `MERGE_READINESS`, `PRODUCTION_READINESS` — named with the single word "gate"; every condition a gate reads is a predicate, never a gate, per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: the merging policy — the three gates and the finding-disposition rule — is transport-neutral, and `/merge` selects the transport from `spx/local/merging.md`: a coordination-note-only changeset routes to the direct-push transport, an overlay-declared transport is honored, else the GitHub-PR transport is the default; `/merge` then delegates to that transport's skills, per `spx/15-merging.pdr.md` ([audit])

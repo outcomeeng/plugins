@@ -2,12 +2,12 @@
 name: opening-pr
 user-invocable: false
 description: >-
-  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first heartbeat. Loaded by /pr.
+  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first heartbeat. Loaded by /github-pr.
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
+The opening protocol. Loaded by /github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>

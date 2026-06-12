@@ -12,6 +12,9 @@ Exposes:
   against the remote-tracking ref excludes it.
 - ``build_repo_without_origin``. A repository with a branch and a commit but no
   ``refs/remotes/origin/HEAD`` symbolic ref, for the base-ref fallback paths.
+- ``build_repo_with_modified_spaced_note``. A repository whose only working-tree
+  change is a committed-then-modified coordination note at a path containing a
+  space, for the porcelain-quoting case.
 
 The harness owns the scenario's invented payload (the merged-file and
 feature-file names) and the git lifecycle; tests assert behavior against the
@@ -45,6 +48,7 @@ FEATURE_FILE = "feature.txt"
 INITIAL_FILE = "README.md"
 BASE_BRANCH = "main"
 FEATURE_BRANCH = "feature/x"
+SPACED_NOTE_PATH = "spx dir/PLAN.md"
 
 
 def load_changeset_scope_module() -> ModuleType:
@@ -167,6 +171,37 @@ def build_repo_without_origin(repo: pathlib.Path) -> str:
     _git(repo, "config", "commit.gpgsign", "false")
     _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
     return BASE_BRANCH
+
+
+@dataclass(frozen=True)
+class SpacedNoteRepo:
+    """A repo whose only working-tree change is a modified spaced-path note.
+
+    ``note_path`` is a coordination note (``PLAN.md``) under a directory whose
+    name contains a space. It is committed first (so git lists the individual
+    file rather than collapsing an untracked directory) and then modified, so it
+    appears as a working-tree change. ``git status --porcelain`` without ``-z``
+    C-quotes the spaced path; consumers must use ``-z`` to recover the unquoted
+    name that matches ``git diff --name-only`` output.
+    """
+
+    repo: pathlib.Path
+    note_path: str
+
+
+def build_repo_with_modified_spaced_note(repo: pathlib.Path) -> SpacedNoteRepo:
+    """Build a repo with a committed-then-modified coordination note at a spaced path.
+
+    Sequence: initialise the repo with a base commit (no origin needed — the
+    working-tree query does not read it); create the spaced directory; commit
+    the note so git tracks the individual file; modify it so it surfaces as a
+    working-tree change. Returns the handle carrying the note's unquoted path.
+    """
+    build_repo_without_origin(repo)
+    (repo / "spx dir").mkdir()
+    _commit_file(repo, SPACED_NOTE_PATH, "v1\n", "add spaced note")
+    (repo / SPACED_NOTE_PATH).write_text("v2\n", encoding="utf-8")
+    return SpacedNoteRepo(repo=repo, note_path=SPACED_NOTE_PATH)
 
 
 def detach_head(repo: pathlib.Path) -> None:

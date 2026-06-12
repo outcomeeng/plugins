@@ -2,12 +2,12 @@
 name: managing-pr
 user-invocable: false
 description: >-
-  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /pr.
+  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /github-pr.
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
 <objective>
-The managing protocol. Loaded by /pr for the loop body that runs per heartbeat fire: inspect → classify → sync to base → drive queue → re-review and push follow-ups → refresh heartbeat → evaluate the merge gates → act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /standardizing-merging `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
+The managing protocol. Loaded by /github-pr for the loop body that runs per heartbeat fire: inspect → classify → sync to base → drive queue → re-review and push follow-ups → refresh heartbeat → evaluate the merge gates → act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /standardizing-merging `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
 </objective>
 
 <the_managing_flow>

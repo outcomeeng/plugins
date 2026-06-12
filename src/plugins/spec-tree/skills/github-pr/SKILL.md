@@ -1,13 +1,14 @@
 ---
-name: pr
+name: github-pr
 description: >-
-  ALWAYS invoke this skill when the user asks to ship, open or manage a PR, merge, or runs /pr.
+  ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /github-pr.
+  NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
 allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
 <objective>
-Route a changeset from shipping intent to the governed lifecycle. /pr detects what is being shipped, proposes a plan, and on confirmation invokes the skills that own implementation, committing, PR opening, PR management, merge, and closure. The lifecycle skills own their protocols; /pr routes to them and never reimplements them.
+Orchestrate the GitHub-PR merge transport — the lifecycle that takes a changeset from shipping intent to a merged pull request. /github-pr is the GitHub-PR transport's lifecycle orchestration, invoked by `/merge` when it selects this transport, or directly when a pull request is the chosen way to ship. It detects what is being shipped, proposes a plan, and on confirmation invokes the skills that own implementation, committing, PR opening, PR management, merge, and closure. Transport selection belongs to `/merge`; /github-pr assumes the GitHub-PR transport and never reimplements the lifecycle skills' protocols, per /standardizing-merging.
 </objective>
 
 <context>
@@ -41,9 +42,9 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 <workflow>
 
-**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understanding` first so the local lifecycle marker is known. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and skip directly to Step 6 after confirmation. In Empty mode, invoke `/interviewing` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualizing` first per CLAUDE.md. If `spx/local/merging.md` changes or disables the default PR lifecycle, the proposal follows that overlay.
+**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understanding` first so the foundation is loaded. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and skip directly to Step 6 after confirmation. In Empty mode, invoke `/interviewing` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualizing` first per CLAUDE.md. `spx/local/merging.md` configures this transport (merge command, production-relevance recognition, pre-flight, post-merge) and is read by `/opening-pr`, `/managing-pr`, and `/standardizing-merging`; whether a PR is the transport at all is `/merge`'s selection, not this skill's.
 
-**Step 2 — Propose and confirm.** Present the plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex): the change to make, the branch, the commit shape, the local lifecycle route, and that the flow runs through merge and closure unless the overlay or user instruction says otherwise. Obtain confirmation before any mutating action. This pause is mandatory — never branch, commit, push, open, or merge before the proposal is confirmed.
+**Step 2 — Propose and confirm.** Present the plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex): the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise. Obtain confirmation before any mutating action. This pause is mandatory — never branch, commit, push, open, or merge before the proposal is confirmed.
 
 **Step 3 — Implement if needed.** When the agreed scope requires code that does not exist yet, drive it through the governing skills — `/applying` for a spec-tree node, or the language coding and testing skills — never writing implementation by hand outside them.
 
@@ -61,9 +62,9 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 - MUST present the plan through the runtime's structured-question tool and obtain confirmation before any mutating action — branch creation, commit, push, PR open, or merge. The proposal is the contract the rest of the flow executes.
 - MUST drive every stage by invoking its governing skill — `/committing-changes`, `/opening-pr`, `/managing-pr`, and `/applying` or the coding skills — never reimplementing their protocols inline. Drift between a reimplementation and the source skill is the failure this skill exists to prevent.
-- MUST honor `spx/local/merging.md` when present. If it disables PRs or declares a different lifecycle, follow the overlay instead of the default PR route.
+- MUST read `spx/local/merging.md` for the GitHub-PR transport's configuration (merge command, production-relevance recognition, pre-flight, post-merge) through `/opening-pr`, `/managing-pr`, and `/standardizing-merging`. Transport selection — whether a PR is the transport at all — is `/merge`'s, never this skill's.
 - NEVER merge directly — the merge executes only through `/managing-pr`'s `MERGE_READINESS` ∧ `PRODUCTION_READINESS` authority.
-- MUST follow CLAUDE.md and the loaded skills exactly — /pr changes who invokes the lifecycle, not what the lifecycle does.
+- MUST follow CLAUDE.md and the loaded skills exactly — /github-pr changes who invokes the lifecycle, not what the lifecycle does.
 
 </constraints>
 
@@ -71,7 +72,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 - The detected mode matches `$ARGUMENTS` and the injected repository state.
 - A proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
-- The proposal named the lifecycle route from `spx/local/merging.md` when present, or the default `/pr` route when absent.
+- The GitHub-PR transport was assumed (transport selection having been made by `/merge`), and `spx/local/merging.md` configured the transport through `/opening-pr`, `/managing-pr`, and `/standardizing-merging`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
 - The PR reached merged state through `/managing-pr`'s gates and the session closed through `/handoff --no-session`, or the flow stopped at an explicit gate — an unmet `REVIEW_READINESS` or `MERGE_READINESS` predicate, or a withheld `PRODUCTION_READINESS` — surfaced to the user.
 

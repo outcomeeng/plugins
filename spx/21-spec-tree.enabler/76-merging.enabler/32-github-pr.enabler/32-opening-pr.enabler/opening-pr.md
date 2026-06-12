@@ -1,7 +1,7 @@
 # PR Opening Protocol
 
 PROVIDES the pull-request opening protocol — `REVIEW_READINESS` evaluation, branch push with an explicit destination ref, ready pull-request creation, and the first review-and-check heartbeat
-SO THAT the GitHub-PR transport's `/pr` orchestration
+SO THAT the GitHub-PR transport's `/github-pr` orchestration
 CAN publish a changeset as a ready-for-review pull request the moment `REVIEW_READINESS` holds, per `spx/15-merging.pdr.md`
 
 ## Assertions

@@ -9,6 +9,5 @@ Declared transport. Two variants:
 
 ## Pending
 
-- Author the `/merge` direct-push execution path (skill materialization step).
-- Add `[eval]` coverage mirroring the GitHub-PR transport gate evals once the execution path exists; the current `[audit]` assertions are the Declared-state evidence.
+- Add `[eval]` coverage mirroring the GitHub-PR transport gate evals; the current `[audit]` assertions are the Declared-state evidence. The variant-1 execution path now exists in the `/merge` skill (`<direct_push_lifecycle>`), so the evals can replay the direct-push gate bindings — review predicate bound to the local review, no PR, no CI wait.
 - Decide the local-trunk-checkout (variant 2) execution and worktree-safety model when a consumer requires it.
