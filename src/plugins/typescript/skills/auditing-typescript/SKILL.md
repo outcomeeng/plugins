@@ -15,7 +15,7 @@ This skill is read-only. It produces verdicts, not commits or fixes.
 **Test evidence quality is audited by skill `/auditing-typescript-tests`.** This skill audits implementation code, not test code.
 Almost every Typecsript file must be covered by tests. Invoke `/auditing-typescript-tests` separately as part of the overall auditing workflow.
 
-**Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists as the repo-local specialization.
+**Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
 </objective>
 

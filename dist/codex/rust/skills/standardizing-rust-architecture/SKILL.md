@@ -17,9 +17,11 @@ This is a reference skill. The architect and auditor load these conventions auto
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/rust-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization.
+When another skill loads this reference inside a repository, it must also check for `spx/local/rust-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions.
 
-When evaluating test-level references in ADRs, also check for `spx/local/rust-tests.md` and apply any repo-local test-level restrictions.
+When evaluating test-level references in ADRs, also check for `spx/local/rust-tests.md` and apply any repo-local routing to governing test-level specs or decisions.
+
+A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <adr_sections>
@@ -179,7 +181,7 @@ The architect needs enough testing context to write effective Verification rules
 - Git, filesystem, tempdirs, and standard Rust tooling are Level 1
 - Real workspace binaries, codegen tools, and local services that require setup are Level 2
 - External APIs, SaaS systems, browsers, and deployed environments are Level 3
-- Product overlays, especially `spx/local/rust-tests.md`, may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator
+- Product specs or decisions may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator; `spx/local/rust-tests.md` may point the skill to that declaration
 
 **How levels relate to ADRs:** The ADR does not assign levels. It establishes constraints that determine what levels are achievable. "ALWAYS accept a runner as parameter" makes Level 1 possible for command-building logic. "NEVER call external APIs from domain logic" preserves Level 1 for the domain and pushes the real remote boundary to Level 3 or to a repo-specific product decision.
 

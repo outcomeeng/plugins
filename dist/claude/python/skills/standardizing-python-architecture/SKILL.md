@@ -15,6 +15,14 @@ Canonical ADR conventions for Python projects. Defines what sections an ADR has,
 This is a reference skill. The architect and auditor load these conventions automatically. Invoke `/architecting-python` to write ADRs or `/auditing-python-architecture` to review them.
 </reference_note>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/python-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions.
+
+When evaluating test-level references in ADRs, also check for `spx/local/python-tests.md` and apply any repo-local routing to governing test-level specs or decisions.
+
+A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
+
 <adr_sections>
 
 The ADR template (from `/understanding`) is decision-first — the decision is stated directly under the title, with no `Purpose` heading and no preamble:

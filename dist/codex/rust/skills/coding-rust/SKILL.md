@@ -27,7 +27,7 @@ Do not search the product directory for skill files when the loading message alr
 </accessing_skill_files>
 
 <reference_loading>
-**Standards are pre-loaded above.** After loading, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
+**Standards are pre-loaded above.** After loading, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </reference_loading>
 
 <quick_start>
@@ -53,7 +53,7 @@ Do not declare work complete until the full validation sequence passes.
 </essential_principles>
 
 <repo_local_overlays>
-After loading `/standardizing-rust` and `/standardizing-rust-tests`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat them as repo-local specializations of the generic Rust standards.
+After loading `/standardizing-rust` and `/standardizing-rust-tests`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 </repo_local_overlays>
 
 <hierarchy_of_authority>

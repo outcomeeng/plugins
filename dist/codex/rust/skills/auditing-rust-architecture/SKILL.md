@@ -16,7 +16,7 @@ Review ADRs against `/standardizing-rust`, `/standardizing-rust-architecture`, `
 <context_loading>
 For spec-tree work items, load full ADR/PDR hierarchy first with `spec-tree:contextualizing`, then review the target ADR against that hierarchy.
 
-After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and enforce it as the repo-local specialization.
+After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </context_loading>
 
 <process>
