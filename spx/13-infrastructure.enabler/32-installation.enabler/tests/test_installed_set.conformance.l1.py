@@ -173,3 +173,29 @@ def test_provider_raises_when_query_exits_nonzero() -> None:
         provider.installed_plugins(DEFAULT_MARKETPLACE)
 
     assert "marketplace not found" in str(exc_info.value)
+
+
+def test_provider_invokes_the_codex_plugin_list_command() -> None:
+    """The provider invokes `codex plugin list --json --marketplace <mkt>` — the exact
+    command the spec's compliance assertion names. A wrong subcommand or a missing
+    `--json` / `--marketplace` flag is caught here rather than at runtime, where the
+    stub-ignored command would otherwise pass silently."""
+    captured: list[list[str]] = []
+
+    def recording_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        captured.append(command)
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=_payload(
+                [{"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE}]
+            ),
+        )
+
+    provider = codex_cache.CodexCliInstalled(runner=recording_runner)
+
+    provider.installed_plugins(DEFAULT_MARKETPLACE)
+
+    assert captured == [[*codex_cache.CODEX_LIST_COMMAND, DEFAULT_MARKETPLACE]], (
+        f"expected the codex plugin list command, got {captured}"
+    )
