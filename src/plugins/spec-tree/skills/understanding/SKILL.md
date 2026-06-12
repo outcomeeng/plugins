@@ -41,7 +41,7 @@ About to load context for an existing target and explain why lower-index sibling
 
 1. Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If present, skip — already loaded.
 2. Read core references (always loaded):
-   - `references/durable-map.md` — truth hierarchy, declarative model, atemporal voice, node states
+   - `references/durable-map.md` — truth hierarchy, future product truth, decision-to-spec alignment, declarative model, atemporal voice, node states
    - `references/node-types.md` — enabler vs outcome, directory structure
    - `references/assertion-types.md` — scenario, mapping, conformance, property, compliance
    - `references/ordering-rules.md` — context-loading meaning of existing numeric prefixes and sibling number scope
@@ -100,11 +100,15 @@ When the guide carries a `template_version` not below the installed template's a
 - [ ] `spx/local/merging.md` checked and read when present; default `/pr` lifecycle known when absent
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
+- [ ] Methodology loaded: PDRs, ADRs, product specs, and ancestor specs may declare future product truth ahead of implementation; current code shape is lower-layer evidence, not a reason to weaken the declaration
+- [ ] Methodology loaded: higher-level artifact changes require lower-level spec alignment in the same PR so the declaration has an immediate path down the tree
 - [ ] Methodology loaded: enabler vs outcome distinction, three-part hypothesis structure
 - [ ] Methodology loaded: atemporal voice principle, prohibited temporal markers
 - [ ] Methodology loaded: five assertion types (scenario, mapping, conformance, property, compliance) and selection criteria
 - [ ] Methodology loaded: existing lower-index siblings are read as constraining context; same-index and higher-index siblings are listed but not read as target constraints
 - [ ] Methodology loaded: all node, ADR, and PDR references use full paths from `spx/`
+- [ ] Methodology loaded: `PLAN.md` anchors pending downstream implementation created by higher-level truth; `ISSUES.md` records known defects or contradictions; neither declares spec truth
+- [ ] Methodology loaded: `spx/EXCLUDE` scopes specified nodes with tests and absent implementation; it is not a conceptual workaround for product-decision gaps
 - [ ] Methodology loaded: coordination notes (PLAN.md, ISSUES.md) are node-local, git-tracked only to carry coordination across sessions, stale-prone, verified and reconciled against specs/decisions/assertions/tests/implementation/user intent before use, and never spec truth; session files under `.spx/sessions/` are the only spec-tree artifacts that live outside git
 - [ ] Methodology loaded: `spx/local/` overlays supplement coding/architecting/testing/lifecycle skills per product without modifying the shared marketplace
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
