@@ -16,7 +16,7 @@ This is a reference skill. /pr, /opening-pr, and /managing-pr load this vocabula
 </reference_note>
 
 <repo_local_overlay>
-When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization. Topics the overlay MAY refine:
+When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth. Topics the overlay MAY refine:
 
 - Extra pre-flight checks beyond `<branch_hygiene>`.
 - The project's full deterministic-verification command (validation and testing) that `REVIEW_READINESS` runs.
