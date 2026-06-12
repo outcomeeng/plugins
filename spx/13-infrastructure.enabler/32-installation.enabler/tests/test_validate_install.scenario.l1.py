@@ -512,6 +512,23 @@ def test_codex_reported_versions_empty_when_cli_absent() -> None:
     )
 
 
+def test_codex_reported_versions_forwards_the_marketplace_to_the_cli() -> None:
+    """The query invokes `codex plugin list --json --marketplace <marketplace>`: the
+    marketplace token is forwarded so the listing is scoped to the right marketplace,
+    and a wrong subcommand or missing flag is caught here rather than at runtime."""
+    captured: list[list[str]] = []
+
+    def recording_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        captured.append(command)
+        return subprocess.CompletedProcess(
+            command, 0, stdout=json.dumps({"installed": [], "available": []})
+        )
+
+    validate_install.codex_reported_versions(MARKETPLACE_NAME, runner=recording_runner)
+
+    assert captured == [[*validate_install.CODEX_LIST_COMMAND, MARKETPLACE_NAME]]
+
+
 def test_print_cache_codex_marks_reported_version_not_working_tree(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
