@@ -58,9 +58,9 @@ Identify exactly where the next Claude context picks up:
 </perspective_next_context>
 
 <perspective_external_state>
-Identify external-infrastructure state the next agent cannot re-derive from the spec tree, PLAN.md/ISSUES.md, or git history: live PR, run, image, or job identifiers and their status; in-flight workflows or deployments; inventory or baseline counts. When such state exists and bears on the next agent's first action, capture it for the session file's `<state_at_handoff>` section so the next pickup skips the re-discovery, and note what one read-only command re-confirms it. When every fact the next agent needs already lives in the repository, this perspective produces nothing and the handoff stays a thin pointer.
+Identify external-infrastructure state the next session cannot re-derive from the spec tree, PLAN.md/ISSUES.md, or git history: live PR, run, image, or job identifiers and their status; in-flight workflows or deployments; inventory or baseline counts. When such state exists and bears on the next session's first action, capture it for the session file's `<state_at_handoff>` section so the next pickup skips the re-discovery, and note what one read-only command re-confirms it. When every fact the next session needs already lives in the repository, this perspective produces nothing and the handoff stays a thin pointer.
 
-Guide the next pickup from the state in prose. Do not pre-compute fixed if-then branches — the next agent decides freely from what it observes.
+Guide the next pickup from the state in prose. Do not pre-compute fixed if-then branches — the next session decides freely from what it observes.
 
 </perspective_external_state>
 

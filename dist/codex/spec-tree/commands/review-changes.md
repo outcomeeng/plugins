@@ -41,7 +41,7 @@ Print, in this order:
 
 - The skill's chain ran end-to-end and persisted both `review-result.json` and `review.md`.
 - The slash command printed the two paths, the finding-count line, and (when applicable) the full `review.md`.
-- No `--slug` argument was passed to any thread-store CLI — the agent never names the thread address.
+- No `--slug` argument was passed to any thread-store CLI — Claude never names the thread address.
 - When the review carries any finding, the main agent sees the full verdict text without having to read it from disk, so it can handle every finding by validity and phase.
 
 </success_criteria>

@@ -1,7 +1,7 @@
 """Gate state-changing GitHub commands behind explicit user instruction.
 
 Usage:
-    uv run python mutation_gate.py check [--user-instructed] <command...>
+    python3 mutation_gate.py check [--user-instructed] <command...>
 
 `--user-instructed` must precede the command tokens; argparse's `REMAINDER`
 captures everything after the first command token verbatim, so a flag

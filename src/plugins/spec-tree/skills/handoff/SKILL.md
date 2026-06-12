@@ -34,7 +34,7 @@ The imperfection ledger you started when invoking the `/understanding` skill (`r
 
 A session file initializes Claude in the next session. Claude starts from a blank slate — none of what was achieved, learnt, or tried in this session will be known to Claude in the next session. The session file is an initialization prompt: it lists the skills to invoke, points at the relevant spec tree nodes, and suggests the first action. This way, the user does not have to point Claude at information the repository holds. Claude will derive all details from the spec tree, not from the session file.
 
-- **Initialization session file** — every fact the next agent needs lives in the repository. The file carries pointers (skills, nodes, action) plus the coordination that cannot be reconstructed from the spec tree and git history.
+- **Initialization session file** — every fact the next session needs lives in the repository. The file carries pointers (skills, nodes, action) plus the coordination that cannot be reconstructed from the spec tree and git history.
 - **Initialization session file with external state** — the same pointers and suggested actions plus the optional `<state_at_handoff>` section recording observable external state Claude cannot re-derive from the repository (live PR/run/image identifiers, deployed inventories, failed workflows to be re-started). Through this skill, Claude guides the next Claude's pickup from that external state in clear and unambiguous prose.
 
 <what_not_to_add>

@@ -39,9 +39,9 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 5. **If the review has no `BLOCKING` or `DEBT` items, say so directly.** Do not manufacture lower-priority findings to prove that review happened.
 6. **Deliver the review.** Two invocation modes:
    - **Standalone** (a developer asking for a review, or a workflow invoking only this skill): post the feedback with `gh pr comment <number> --body-file - <<'EOF' ... EOF` (via the `Bash` tool), piping the body on stdin so kilobyte-sized reviews are not truncated by shell-argument limits. One comment per run.
-   - **Composed** (the `pr-reviewer` agent invokes this skill alongside `/auditing` and posts one combined comment): return the review prose as the skill's output. Do not post separately — the calling agent posts the single combined comment.
+   - **Composed** (the `pr-reviewer` agent invokes this skill alongside `/auditing` and posts one combined comment): return the review prose as the skill's output. Do not post separately — the caller posts the single combined comment.
 
-   **Mode selection is explicit.** The caller passes a `MODE:` line in the invocation prompt — `MODE: composed` for composed mode, `MODE: standalone` for standalone mode. The skill keys on that line; a free-text description of the desired behaviour may accompany it for human readability but is not what the skill matches on. Exactly one `MODE:` line must appear: if the invocation prompt contains no recognisable `MODE: composed` or `MODE: standalone` line, OR contains both `MODE: composed` AND `MODE: standalone` (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces a spurious extra PR comment when a calling agent's wording drifts, and the failure surfaces months later as duplicate comments; loud failure surfaces the drift on the next CI run.
+   **Mode selection is explicit.** The caller passes a `MODE:` line in the invocation prompt — `MODE: composed` for composed mode, `MODE: standalone` for standalone mode. The skill keys on that line; a free-text description of the desired behaviour may accompany it for human readability but is not what the skill matches on. Exactly one `MODE:` line must appear: if the invocation prompt contains no recognisable `MODE: composed` or `MODE: standalone` line, OR contains both `MODE: composed` AND `MODE: standalone` (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces a spurious extra PR comment when a caller's wording drifts, and the failure surfaces months later as duplicate comments; loud failure surfaces the drift on the next CI run.
 
 </process>
 
@@ -65,7 +65,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 - Every finding is labeled with one severity × one category per `/standardizing-merging` `<review_classification>` — `BLOCKING` / `DEBT`, never `FOLLOW-UP`, never a severity rank, never a legacy class label.
 - A review with no `BLOCKING` or `DEBT` items says so directly rather than padding with lower-priority findings.
 - **Standalone mode**: the feedback was posted as one `gh pr comment --body-file -` on the target PR.
-- **Composed mode**: the review prose was returned to the calling agent; no `gh pr comment` was issued by this skill.
+- **Composed mode**: the review prose was returned to the caller; no `gh pr comment` was issued by this skill.
 - No code, tests, or commits were produced; no structured audit verdict was emitted.
 
 </success_criteria>

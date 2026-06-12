@@ -88,7 +88,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 - Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `git_ref`)
 - `<nodes>` and `<skills>` — from workflow 01 (anchored nodes) and `<perspective_next_context>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, coordination notes created
-- `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next agent needs
+- `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
 - `<constraints>` (optional) — session-specific normative rules; omit when there are none
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context
 - `<incorporated_sessions>` — include ONLY when the in-scope set is non-empty; list each session id with its archive disposition

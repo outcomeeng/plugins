@@ -1,7 +1,7 @@
 """Detect repository identity, host, and gh authentication state.
 
 Usage:
-    uv run python gh_access.py [OWNER/REPO]
+    python3 gh_access.py [OWNER/REPO]
 
 If OWNER/REPO is omitted, the helper parses `git remote get-url origin` to
 detect it. The host is parsed from the remote URL (github.com or a GitHub

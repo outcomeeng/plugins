@@ -1,13 +1,13 @@
 """Inspect GitHub Actions workflow runs, jobs, logs, checks, and artifacts.
 
 Usage:
-    uv run python workflow_inspect.py runs [--branch BRANCH] [--limit N]
-    uv run python workflow_inspect.py run <run-id>
-    uv run python workflow_inspect.py jobs <run-id>
-    uv run python workflow_inspect.py log <run-id> [--failed] [--max-bytes N]
-    uv run python workflow_inspect.py checks <pr-number>
-    uv run python workflow_inspect.py artifacts <run-id>
-    uv run python workflow_inspect.py workflow-files
+    python3 workflow_inspect.py runs [--branch BRANCH] [--limit N]
+    python3 workflow_inspect.py run <run-id>
+    python3 workflow_inspect.py jobs <run-id>
+    python3 workflow_inspect.py log <run-id> [--failed] [--max-bytes N]
+    python3 workflow_inspect.py checks <pr-number>
+    python3 workflow_inspect.py artifacts <run-id>
+    python3 workflow_inspect.py workflow-files
 
 Each subcommand returns JSON on stdout. The `log` subcommand returns the raw
 log text inside a `log` field (not JSON-structured) and preserves whitespace

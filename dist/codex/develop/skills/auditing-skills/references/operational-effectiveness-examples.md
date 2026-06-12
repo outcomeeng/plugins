@@ -40,7 +40,7 @@ Examples of operational effectiveness issues to flag:
 5. Run audits</workflow>
 ```
 
-**Why it fails**: No stop points. Agent can write implementation before tests, or skip the architecture audit between spec and code. A failure at step 5 leaves the agent guessing which prior step introduced the defect.
+**Why it fails**: No stop points. Claude can write implementation before tests, or skip the architecture audit between spec and code. A failure at step 5 leaves Claude guessing which prior step introduced the defect.
 
 ✅ Should be:
 
@@ -111,7 +111,7 @@ Skill has detailed workflow but no `<failure_modes>` section.
 <success_criteria>Audit verdict reflects test quality accurately.</success_criteria>
 ```
 
-**Why it fails**: "Reflects accurately" is unfalsifiable. What does the verdict look like? How does the agent know its output matches the expected shape?
+**Why it fails**: "Reflects accurately" is unfalsifiable. What does the verdict look like? How does Claude know its output matches the expected shape?
 
 ✅ Should be:
 
@@ -140,7 +140,7 @@ Audit verdict for this assertion (Gate 1 finding shape):
 Output shape (full verdict): `<assertion>` element with `<verdict>APPROVED</verdict>` and one `<finding>` per evaluated step.</success_criteria>
 ```
 
-**Why it works**: The agent can compare its actual verdict to the example line-for-line — same field names, same shape, same expected values for a known input — and detect a mismatch before emitting.
+**Why it works**: Claude can compare its actual verdict to the example line-for-line — same field names, same shape, same expected values for a known input — and detect a mismatch before emitting.
 </example>
 
 <example name="procedural_without_operational">
@@ -156,7 +156,7 @@ No `<verification_gates>`, no `<failure_modes>`. The procedural side is exhausti
 
 **Pattern**: Heavy procedural, light operational = agents know HOW to act but not WHETHER they succeeded.
 
-**Why it matters**: An agent following the workflow produces child nodes that compile and lint clean, then closes the turn. The defects appear later — a child node typed as enabler when it should be outcome, indices that collide with future siblings because the agent picked `21` and `22` instead of sparse `21` and `32`, a concern boundary that cuts across an ADR rule. Each is a separate skill rerun to repair.
+**Why it matters**: Claude, following the workflow, produces child nodes that compile and lint clean, then closes the turn. The defects appear later — a child node typed as enabler when it should be outcome, indices that collide with future siblings because Claude picked `21` and `22` instead of sparse `21` and `32`, a concern boundary that cuts across an ADR rule. Each is a separate skill rerun to repair.
 
 ✅ Balanced skill has roughly equal investment in:
 

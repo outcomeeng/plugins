@@ -36,9 +36,9 @@ For language-specific skills that reference a foundation, use unqualified names 
 
 **Skill invocation limitations:** Skills cannot automatically invoke other skills. They can:
 
-1. Instruct the agent to read another skill file first
+1. Instruct Claude to read another skill file first
 2. Reference foundational concepts by skill name
-3. Be invoked sequentially by the user or agent
+3. Be invoked sequentially by the user or Claude
 
 </skill_organization>
 
@@ -427,7 +427,7 @@ Before auditing, read `/standardizing-prose` for the complete catalog of anti-pa
 
 **Referencing skill files from SKILL.md:**
 
-Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable form) to reference files within skill source. Claude Code expands it to the absolute path of the skill's directory before the agent sees the content.
+Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable form) to reference files within skill source. Claude Code expands it to the absolute path of the skill's directory before Claude sees the content.
 Do not write `SKILL_DIR` in source; the build emits that token for Codex output.
 
 ```markdown
