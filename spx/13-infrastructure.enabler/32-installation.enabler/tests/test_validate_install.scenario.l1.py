@@ -464,9 +464,9 @@ def test_parse_codex_reported_versions_empty_on_unrecognized_payload() -> None:
     )
 
 
-def test_codex_reported_versions_empty_on_query_failure() -> None:
+def test_codex_reported_versions_empty_on_nonzero_exit() -> None:
     """A non-zero exit from the Codex CLI degrades to an empty map; the informational
-    listing tolerates an unavailable or failing CLI."""
+    listing tolerates a failing CLI."""
 
     def failing_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(command, 1, stdout="")
@@ -475,6 +475,20 @@ def test_codex_reported_versions_empty_on_query_failure() -> None:
         validate_install.codex_reported_versions(
             MARKETPLACE_NAME, runner=failing_runner
         )
+        == {}
+    )
+
+
+def test_codex_reported_versions_empty_when_cli_absent() -> None:
+    """When the Codex binary is absent the runner raises OSError, and the query
+    degrades to an empty map rather than propagating — the most common 'CLI
+    unavailable' case on a fresh install or in CI, distinct from a non-zero exit."""
+
+    def absent_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        raise FileNotFoundError("codex: command not found")
+
+    assert (
+        validate_install.codex_reported_versions(MARKETPLACE_NAME, runner=absent_runner)
         == {}
     )
 
