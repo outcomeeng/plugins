@@ -25,12 +25,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from outcomeeng.distribution.codex_cache import (
+    CODEX_LIST_COMMAND,
+    CommandRunner,
+    run_command_capture,
+)
 
 DEFAULT_MARKETPLACE = "outcomeeng"
 DEFAULT_MAX_AGE_DAYS = 10
@@ -92,15 +97,6 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
     return version if isinstance(version, str) else None
 
 
-CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
-
-CodexListRunner = Callable[[list[str]], "subprocess.CompletedProcess[str]"]
-
-
-def _run_codex_list(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, check=False, text=True, capture_output=True)
-
-
 def parse_codex_reported_versions(payload: str, marketplace: str) -> dict[str, str]:
     """Map plugin name to the version Codex reports installed for `marketplace`,
     parsed from `codex plugin list --json` output.
@@ -134,7 +130,7 @@ def parse_codex_reported_versions(payload: str, marketplace: str) -> dict[str, s
 
 
 def codex_reported_versions(
-    marketplace: str, *, runner: CodexListRunner = _run_codex_list
+    marketplace: str, *, runner: CommandRunner = run_command_capture
 ) -> dict[str, str]:
     """Return plugin name to the version Codex reports for `marketplace`, queried
     from `codex plugin list --json`. The version Codex reports is the marketplace
