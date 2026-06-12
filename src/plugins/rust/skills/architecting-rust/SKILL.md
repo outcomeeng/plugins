@@ -15,7 +15,7 @@ Create Rust ADRs that follow the standard Rust architecture template, preserve s
 <essential_principles>
 **Standards are pre-loaded above.** The first skill defines shared Rust standards; the architecture standard defines canonical ADR sections, how testability appears in `## Verification` `### Audit` rules, and what does not belong in an ADR.
 
-After reading those standards, check for `spx/local/rust.md` and `spx/local/rust-architecture.md` at the repository root. Read each file that exists and apply it as the repo-local specialization.
+After reading those standards, check for `spx/local/rust.md` and `spx/local/rust-architecture.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
 - ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section

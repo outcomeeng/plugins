@@ -16,7 +16,11 @@ This is a reference skill. The architect and auditor load these conventions auto
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/typescript-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as the repo-local specialization.
+When another skill loads this reference inside a repository, it must also check for `spx/local/typescript-architecture.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions.
+
+When evaluating test-level references in ADRs, also check for `spx/local/typescript-tests.md` and apply any repo-local routing to governing test-level specs or decisions.
+
+A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <adr_sections>

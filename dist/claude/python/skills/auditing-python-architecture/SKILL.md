@@ -41,7 +41,7 @@ If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure com
 
 <process>
 
-1. **Standards are pre-loaded above.** Read repo-local `spx/local/python-architecture.md` if present.
+1. **Standards are pre-loaded above.** Read repo-local `spx/local/python-architecture.md` if present; an overlay routes skill behavior to the product's governing specs and decisions and supplements skill behavior without declaring product truth.
 2. **Read `/testing`** for methodology (5 stages, 5 factors, 7 exceptions)
 3. **Verify an ADR exists.** If the module makes architectural decisions (module layout, library choice, DI patterns) without an ADR, the absence is the violation — REJECT immediately. Do not treat missing ADRs as N/A.
 4. **Read the ADR** completely

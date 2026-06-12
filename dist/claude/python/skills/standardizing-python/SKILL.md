@@ -24,6 +24,10 @@ This is a reference skill. Other Python skills reference these standards. You ty
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/python.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
+
 ---
 
 <type_annotations>

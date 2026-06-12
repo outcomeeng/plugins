@@ -28,7 +28,7 @@ This is a reference skill. `/testing-rust` uses it to produce tests and `/auditi
 </reference_note>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, it must also check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists after this reference and apply them as repo-local specializations.
+When another skill loads this reference inside a repository, it must also check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists after this reference and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
 <core_model>
@@ -66,7 +66,7 @@ spx/55-example.enabler/21-auth.outcome/tests/registry_fetch.conformance.l2.rs
 spx/55-example.enabler/21-auth.outcome/tests/login_flow.scenario.l3.rs
 ```
 
-Repository overlays may restrict which levels the product supports. Follow the repo-local Rust test convention when it exists.
+Product specs or decisions may restrict which levels the product supports. Follow the repo-local Rust test overlay when it points to the governing spec or decision.
 </core_model>
 
 <level_tooling>
@@ -83,7 +83,7 @@ Level rules:
 - Pure computation, parsing, serialization, config loading, command building, and cheap temp-dir filesystem behavior belong at Level 1
 - Real workspace binaries, local DBs, local queues, local HTTP services, and containerized collaborators belong at Level 2
 - Remote APIs, deployed systems, SaaS collaborators, browser UI, and shared environments belong at Level 3
-- Product overlays may disable Level 3 when the suite cannot safely stand up or isolate those collaborators
+- Product specs or decisions may disable Level 3 when the suite cannot safely stand up or isolate those collaborators; repo-local overlays only route skills to those declarations
 
 </level_tooling>
 

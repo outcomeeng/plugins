@@ -25,7 +25,7 @@ Use this path to access skill files:
 </accessing_skill_files>
 
 <reference_loading>
-Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root and apply each file that exists as the repo-local specialization.
+Standards are pre-loaded above. Check for `spx/local/typescript.md` and `spx/local/typescript-tests.md` at the repository root and apply each file that exists as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </reference_loading>
 
 <essential_principles>

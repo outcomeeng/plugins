@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Glob, Grep
 Invoke the `typescript:standardizing-typescript-architecture` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <essential_principles>
-**Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists as the repo-local specialization.
+**Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
 - ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section

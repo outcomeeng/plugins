@@ -12,6 +12,10 @@ Define Python-specific test standards loaded by `/testing-python`, `/coding-pyth
 Read `/testing` first when deciding what evidence to create. Read `/standardizing-python` before this reference when writing or reviewing Python test code. These standards implement the product's `test-infrastructure` PDR and Python test standards.
 </objective>
 
+<repo_local_overlay>
+When another skill loads this reference inside a repository, it must also check for `spx/local/python-tests.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
+
 <core_model>
 Every Python test file name encodes three independent axes:
 

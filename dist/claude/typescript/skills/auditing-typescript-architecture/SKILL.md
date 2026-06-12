@@ -9,7 +9,7 @@ Invoke the `typescript:standardizing-typescript-architecture` skill before proce
 <objective>
 Review ADRs against `/standardizing-typescript-architecture` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 
-**Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists as the repo-local specialization.
+**Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </objective>
 
 <context_loading>

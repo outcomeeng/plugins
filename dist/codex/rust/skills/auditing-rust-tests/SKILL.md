@@ -24,7 +24,7 @@ A gate failure skips every later gate.
 <prerequisites>
 
 1. Invoking 4 skills: Already done above.
-2. Read local overlay files, they supersede any skills and are loaded below:
+2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
 
 Read `spx/local/rust.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills only.
@@ -61,7 +61,7 @@ Each file must match `<subject>.<evidence>.<level>[.<runner>].rs` where:
 - `<level>` is one of: `l1`, `l2`, `l3`
 - `<runner>` is optional (e.g., `tokio`, `actix`)
 
-Fail Gate 0 for files that do not match this pattern, unless a repo-local overlay defines a different Rust test filename convention. If product instructions or repo-local overlays disable Level 3, fail `.l3.rs` files for that product.
+Fail Gate 0 for files that do not match this pattern, unless a governing product spec or decision declares a different Rust test filename convention and a repo-local overlay points to it. If governing product truth disables Level 3, fail `.l3.rs` files for that product.
 </check>
 
 <check id="R1" name="source_file_reads">
@@ -337,7 +337,7 @@ How to avoid: Gate 0 fails production source-file reads from tests.
 
 Claude encoded one repository's no-Level-3 test policy in the reusable Rust standard. Other Rust projects can own real remote APIs, browser flows, deployed services, or shared environments where Level 3 evidence is appropriate.
 
-How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when product instructions or repo-local overlays disable Level 3.
+How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing product spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
 </failure_modes>
 
 <success_criteria>

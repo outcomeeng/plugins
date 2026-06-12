@@ -16,6 +16,8 @@ Invoke the `spec-tree:auditing-tests` skill before proceeding. If that skill is 
 
 !`test -f spx/local/python-tests.md && cat spx/local/python-tests.md || true`
 
+Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
+
 <objective>
 Audit Python test evidence against the spec-tree test-audit properties plus Python-specific source ownership, testability, harness, generator, inert-fixture, and pytest discovery rules.
 

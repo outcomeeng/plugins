@@ -26,7 +26,7 @@ A gate failure skips the next gate.
 <prerequisites>
 
 1. Invoking 4 skills: Already done above.
-2. Read local overlay files, they supersede any skills and are loaded below:
+2. Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them — and are loaded below:
 
 Read `spx/local/typescript.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded skills only.
