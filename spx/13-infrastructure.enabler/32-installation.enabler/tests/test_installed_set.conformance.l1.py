@@ -160,10 +160,16 @@ def test_provider_returns_names_on_successful_query() -> None:
 
 def test_provider_raises_when_query_exits_nonzero() -> None:
     """A non-zero exit from `codex plugin list` is a failed query: the provider
-    raises so preservation aborts rather than pruning against a degraded signal."""
-    runner = StubRunner(subprocess.CompletedProcess([], 1, stdout=""))
+    raises so preservation aborts rather than pruning against a degraded signal, and
+    the CLI's stderr diagnostic is carried in the error message so the operator need
+    not rerun the command to see why it failed."""
+    runner = StubRunner(
+        subprocess.CompletedProcess([], 1, stdout="", stderr="marketplace not found")
+    )
 
     provider = codex_cache.CodexCliInstalled(runner=runner)
 
-    with pytest.raises(codex_cache.InstalledSetError):
+    with pytest.raises(codex_cache.InstalledSetError) as exc_info:
         provider.installed_plugins(DEFAULT_MARKETPLACE)
+
+    assert "marketplace not found" in str(exc_info.value)

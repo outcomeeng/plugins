@@ -612,3 +612,96 @@ def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> N
     assert plugin_dir.is_dir(), (
         f"expected {plugin_dir} untouched: an upgrade failure returns before any prune"
     )
+
+
+def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
+    tmp_path: Path,
+) -> None:
+    """With two working-tree plugins — one in the Codex installed set, one absent —
+    preservation keeps the installed plugin's cache and prunes the not-installed
+    sibling's. This pins the preserved set to the intersection of the working-tree
+    set and the installed set: pruning every plugin (ignoring the installed set) or
+    preserving every plugin (ignoring it) both fail this test.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "installed content")
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    installed_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    not_installed_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME, NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+            NOT_INSTALLED_PLUGIN: frozenset(
+                [NOT_INSTALLED_STALE_VERSION, NOT_INSTALLED_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={
+            PLUGIN_NAME: CURRENT_VERSION,
+            NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+        },
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled(frozenset([PLUGIN_NAME])),
+        runner=_quiet_runner,
+    )
+
+    assert installed_dir.is_dir(), (
+        f"installed plugin {installed_dir} must be preserved (it is in the intersection)"
+    )
+    assert PLUGIN_NAME not in result.pruned_plugins, (
+        f"expected {PLUGIN_NAME} not pruned, got {result.pruned_plugins}"
+    )
+    assert not not_installed_dir.exists(), (
+        f"not-installed plugin {not_installed_dir} must be pruned (outside the intersection)"
+    )
+    assert NOT_INSTALLED_PLUGIN in result.pruned_plugins, (
+        f"expected {NOT_INSTALLED_PLUGIN} in result.pruned_plugins={result.pruned_plugins}"
+    )
+
+
+def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
+    """A successful query reporting an empty installed set prunes every plugin's cache
+    directory for the marketplace — an empty set is a valid prune-all instruction,
+    distinct from a failed query (which aborts).
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "content b"
+    )
+    dir_a = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    dir_b = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME, NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+            NOT_INSTALLED_PLUGIN: frozenset([NOT_INSTALLED_CURRENT_VERSION]),
+        },
+        current_by_plugin={
+            PLUGIN_NAME: CURRENT_VERSION,
+            NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+        },
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled(frozenset()),
+        runner=_quiet_runner,
+    )
+
+    assert not dir_a.exists() and not dir_b.exists(), (
+        f"empty installed set must prune every cache dir; "
+        f"a={dir_a.exists()} b={dir_b.exists()}"
+    )
+    assert PLUGIN_NAME in result.pruned_plugins and (
+        NOT_INSTALLED_PLUGIN in result.pruned_plugins
+    ), f"expected both plugins pruned, got {result.pruned_plugins}"
