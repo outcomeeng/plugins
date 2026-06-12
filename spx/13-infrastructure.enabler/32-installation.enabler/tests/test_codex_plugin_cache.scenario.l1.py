@@ -30,6 +30,7 @@ ORPHAN_PLUGIN_NAME = "removed-plugin"
 UNINSTALLED_PLUGIN_NAME = "uninstalled-plugin"
 OLDER_VERSION = "0.26.5"
 CURRENT_VERSION = "0.26.6"
+NEW_CURRENT_VERSION = "0.26.7"
 
 
 @dataclass(frozen=True)
@@ -290,6 +291,92 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     )
     assert current_link in result.pruned_links, (
         f"expected {current_link} in result.pruned_links={result.pruned_links}"
+    )
+    assert older_dir.is_dir() and not older_dir.is_symlink(), (
+        f"expected {older_dir} to remain an untouched real directory"
+    )
+
+
+def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
+    tmp_path: Path,
+) -> None:
+    """A prior run left an older in-window version symlinked to a now-non-current
+    real directory, and the new current version has no real directory. The next
+    preservation run removes every compatibility symlink for the plugin so no
+    version resolves to the non-current directory.
+    """
+    cache_root = tmp_path / "cache"
+    # CURRENT_VERSION is the prior current with a real directory; OLDER_VERSION is an
+    # in-window compatibility symlink pointing at it; NEW_CURRENT_VERSION is the new
+    # current with no real directory after the upgrade.
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    prior_real_dir = plugin_dir / CURRENT_VERSION
+    older_link = plugin_dir / OLDER_VERSION
+    older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset(
+                [OLDER_VERSION, CURRENT_VERSION, NEW_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert not os.path.lexists(older_link), (
+        f"expected the in-window symlink {older_link} to be removed so it no longer "
+        f"resolves to the non-current {prior_real_dir}"
+    )
+    assert older_link in result.pruned_links, (
+        f"expected {older_link} in result.pruned_links={result.pruned_links}"
+    )
+    assert prior_real_dir.is_dir() and not prior_real_dir.is_symlink(), (
+        f"expected the real directory {prior_real_dir} to remain untouched"
+    )
+
+
+def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
+    tmp_path: Path,
+) -> None:
+    """A working-tree plugin whose current version cannot be determined (absent from
+    the history's current-version map, as when its manifest version is unreadable)
+    takes the no-current-real-directory branch: its compatibility symlinks are pruned
+    and the loop exits cleanly without creating any link.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "older content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_dir = plugin_dir / OLDER_VERSION
+    stale_link = plugin_dir / CURRENT_VERSION
+    stale_link.symlink_to(OLDER_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION]),
+        },
+        current_by_plugin={},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert not os.path.lexists(stale_link), (
+        f"expected {stale_link} pruned when the current version is undeterminable"
+    )
+    assert result.linked_versions == (), (
+        f"expected no links when the current version is undeterminable, got {result.linked_versions}"
     )
     assert older_dir.is_dir() and not older_dir.is_symlink(), (
         f"expected {older_dir} to remain an untouched real directory"

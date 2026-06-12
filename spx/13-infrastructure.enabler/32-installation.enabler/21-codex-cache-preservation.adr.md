@@ -8,10 +8,10 @@ Two requirements collide: the preservation set must cover in-flight conversation
 
 ## Invariants
 
-- For any plugin `P` with manifest version `V` published to the marketplace branch within the last ten days, `~/.codex/plugins/cache/<marketplace>/P/V/` resolves to the current version directory or a symlink to it immediately after `just push-marketplace` completes.
+- For any plugin `P` with manifest version `V` published to the marketplace branch within the last ten days, `~/.codex/plugins/cache/<marketplace>/P/V/` resolves to the current version directory or a symlink to it immediately after `just push-marketplace` completes — when the current version exists as a real directory after the upgrade. When the current version is absent as a real directory, no compatibility symlink exists for `P` (the next invariant governs) and `validate_install` reports the gap.
 - For any version `V` that is neither current nor present in the last ten days of `P`'s manifest history, `~/.codex/plugins/cache/<marketplace>/P/V/` does not exist after the recipe completes.
 - The post-recipe cache state is a pure function of the published git history and the working-tree manifests, independent of the cache state observed before the recipe ran.
-- The compatibility-symlink target for plugin `P` is the real cache directory named with `P`'s current working-tree manifest version; version identity selects the target, never directory modification time. Absent that real directory after the upgrade, no path under `~/.codex/plugins/cache/<marketplace>/P/` is created as a compatibility symlink, so no version resolves to a non-current directory's content.
+- The compatibility-symlink target for plugin `P` is the real cache directory named with `P`'s current working-tree manifest version; version identity selects the target, never directory modification time. Absent that real directory after the upgrade, every compatibility symlink for `P` is removed and none is created — leaving only real version directories — so no version resolves to a non-current directory's content.
 
 ## Verification
 
@@ -22,7 +22,7 @@ Two requirements collide: the preservation set must cover in-flight conversation
 - ALWAYS: compatibility symlinks for plugin versions outside the window are pruned during the same recipe invocation that creates current-window symlinks ([property])
 - ALWAYS: plugins absent from the working tree but present in cache have their entire cache directory pruned — orphaned plugins retain no compatibility paths ([property])
 - ALWAYS: the compatibility-symlink target is the real cache directory whose name equals the plugin's current working-tree manifest version — version identity selects the target, never directory modification time ([property])
-- NEVER: create a compatibility symlink for a plugin whose current working-tree version is absent as a real cache directory after the upgrade — a symlink to a non-current directory resolves the current version to stale content ([compliance])
+- NEVER: leave or create a compatibility symlink for a plugin whose current working-tree version is absent as a real cache directory after the upgrade — every such symlink is removed, since a symlink to a non-current directory resolves a version to stale content ([compliance])
 - NEVER: compute the preservation set solely from the pre-upgrade snapshot delta — bypass a single recipe invocation and the chain breaks permanently ([property])
 - NEVER: skip preservation when the git-history callable returns an empty set for a plugin — the empty set entails the orphan-prune behavior, not a silent skip ([compliance])
 

@@ -7,11 +7,12 @@ named with the plugin's current working-tree version; in-window versions other
 than the current one become symlinks pointing at it, versions outside the window
 are removed, and plugins absent from the working tree have their cache directory
 pruned in full. When the upgrade leaves no real directory for the current
-version, no compatibility symlink is created for the plugin -- a symlink to a
-non-current directory would resolve the current version to stale content. The
-preservation set is derived from git history, not from the pre-upgrade cache
-snapshot. A single bypassed recipe invocation has no permanent effect -- the
-next invocation reconstructs the symlink set from the same authoritative source.
+version, every compatibility symlink for the plugin is removed and none is
+created -- a symlink to a non-current directory would resolve a version to stale
+content. The preservation set is derived from git history, not from the
+pre-upgrade cache snapshot. A single bypassed recipe invocation has no permanent
+effect -- the next invocation reconstructs the symlink set from the same
+authoritative source.
 
 Usage::
 
@@ -200,28 +201,21 @@ def preserve_during_upgrade(
             continue
         in_window = resolved_history.published_versions(plugin)
         current_version = resolved_history.current_version(plugin)
-        keep_versions = in_window | (
-            frozenset({current_version}) if current_version is not None else frozenset()
-        )
-        pruned_links.extend(
-            _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
-        )
-
         current_real = _current_real_version_dir(plugin_dir, current_version)
         if current_real is None:
             # The upgrade exited successfully without materializing the current
-            # version as a real directory. No valid target exists, so create no
-            # compatibility symlink, and remove any stale symlink left at the
-            # current version path by a prior run so the current version resolves
-            # to nothing rather than to a non-current directory's content.
-            # validate_install reports the absent current version.
-            pruned_links.extend(
-                _prune_current_version_symlink(
-                    plugin_dir, current_version, dry_run=dry_run
-                )
-            )
+            # version as a real directory. No compatibility symlink can point at
+            # current content, so remove every compatibility symlink for the
+            # plugin -- leaving only real directories -- rather than let any
+            # version resolve to a non-current directory. validate_install reports
+            # the absent current version.
+            pruned_links.extend(_prune_all_symlinks(plugin_dir, dry_run=dry_run))
             continue
 
+        keep_versions = in_window | {current_real.name}
+        pruned_links.extend(
+            _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
+        )
         linked_versions.extend(
             _ensure_in_window_symlinks(
                 plugin_dir, current_real, in_window, dry_run=dry_run
@@ -267,27 +261,17 @@ def _current_real_version_dir(
     return None
 
 
-def _prune_current_version_symlink(
-    plugin_dir: Path,
-    current_version: str | None,
-    *,
-    dry_run: bool,
-) -> list[Path]:
-    """Remove a compatibility symlink standing in for the current version.
-
-    The current version is the symlink target, never a compatibility symlink. When
-    no real directory exists for it, a symlink left at its path resolves the current
-    version to a non-current directory, so it is pruned. A real directory or an
-    absent path is left untouched.
-    """
-    if current_version is None:
-        return []
-    path = plugin_dir / current_version
-    if not path.is_symlink():
-        return []
-    if not dry_run:
-        path.unlink()
-    return [path]
+def _prune_all_symlinks(plugin_dir: Path, *, dry_run: bool) -> list[Path]:
+    pruned: list[Path] = []
+    for entry in sorted(plugin_dir.iterdir()):
+        if not entry.is_symlink():
+            # Real version directories are left alone -- only Codex creates or
+            # removes them, and removing them risks data loss.
+            continue
+        if not dry_run:
+            entry.unlink()
+        pruned.append(entry)
+    return pruned
 
 
 def _prune_out_of_window_paths(
