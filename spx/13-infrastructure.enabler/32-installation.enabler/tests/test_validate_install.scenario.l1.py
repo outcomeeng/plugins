@@ -520,3 +520,30 @@ def test_print_cache_codex_marks_reported_version_not_working_tree(
     assert len(current_lines) == 1, f"expected one current row, got {current_lines}"
     assert "0.4.0" in current_lines[0]
     assert "0.5.0" not in current_lines[0]
+
+
+def test_print_cache_codex_no_marker_when_reported_version_absent(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """When the version Codex reports has no cache directory, the Codex listing shows
+    no current marker — the Codex listing does not synthesize a row the way the
+    working-tree-pinned Claude listing does. validate_install surfaces the absent
+    version separately."""
+    cache_root = tmp_path / "codex_cache"
+    _seed_cache(cache_root, PLUGIN_NAME, "0.5.0")
+
+    validate_install.print_cache(
+        cache_root,
+        "Codex",
+        MARKETPLACE_NAME,
+        {PLUGIN_NAME: "0.5.0"},
+        current_override={PLUGIN_NAME: "0.4.0"},
+    )
+
+    out = capsys.readouterr().out
+    assert "0.5.0" in out, "the materialized version is still listed"
+    assert validate_install.CURRENT_MARKER not in out, (
+        "Codex does not synthesize a current row for a reported version absent from "
+        "the cache"
+    )
