@@ -1,7 +1,7 @@
 # PR Managing Protocol
 
 PROVIDES the open pull-request management protocol — three-surface review and check inspection, two-severity finding triage, follow-up pushes, `MERGE_READINESS` evaluation, and the worktree-safe merge with branch cleanup
-SO THAT the GitHub-PR transport's `/pr` orchestration
+SO THAT the GitHub-PR transport's `/github-pr` orchestration
 CAN drive an open pull request to an autonomous merge once `MERGE_READINESS` and `PRODUCTION_READINESS` hold, per `spx/15-merging.pdr.md`
 
 ## Assertions

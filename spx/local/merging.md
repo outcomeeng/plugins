@@ -1,6 +1,14 @@
 # Marketplace Merge Rules
 
-Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository. Marketplace-specific overrides to the base merge flow.
+Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository, and by `/merge` for transport selection. Marketplace-specific overrides to the base merge flow.
+
+## Transport selection
+
+This repository uses the **GitHub-PR transport** by default — feature work, spec/decision/implementation/test/doc changes, and anything that needs review all ship as a pull request through `/github-pr`.
+
+A **coordination-note-only changeset** — every changed path is a `PLAN.md` or `ISSUES.md` — routes to the **direct-push transport** automatically, per `/merge`'s classification and the marketplace guidance that node-local coordination files may be committed directly so collaborators see the coordination state immediately. There is no explicit `transport:` override; the changeset heuristic governs.
+
+The sections below split into the per-transport blocks `/merge` and the lifecycle skills consume: **Production-relevance recognition**, **Merge command**, **Deterministic verification**, and **Mention-reviewer trigger phrase** configure the GitHub-PR transport; **Direct-push transport** configures the direct-push path; **Post-merge** applies to both.
 
 ## Production-relevance recognition
 
@@ -27,6 +35,22 @@ The marketplace's full deterministic-verification command is `just check`. It is
 ## Mention-reviewer trigger phrase
 
 `@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate), per `/standardizing-merging` `<authority_gates>` reviewer-skipped-by-design exception. Any other skip cause (path filter, branch filter, manual skip) emits `WAIT_FOR_REVIEW` and does not post the trigger phrase.
+
+## Direct-push transport
+
+A coordination-note-only changeset publishes straight to `main` with no pull request, per `/merge`'s transport classification and `spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/direct-push.md`. The three gates are unchanged; only the predicate bindings differ.
+
+**Deterministic verification.** A coordination-note-only changeset touches only Markdown coordination notes, so the spec lane is sufficient: `spx validation markdown` and `spx spec status --format json` (per the [AGENTS.md spec-only validation rule](../../AGENTS.md)). The full `just check` is not required when no implementation, test, validation config, or generated catalog file changed.
+
+**Review predicate.** No CI review exists on this path. The local `changes-reviewer` review (converged at `REVIEW_READINESS`) is the `MERGE_READINESS` review predicate. `PRODUCTION_READINESS` holds — this repository declares no production-relevance mechanism (above).
+
+**Push command.** Once `REVIEW_READINESS` holds (spec-lane verification green and the local review converged), publish to trunk with the explicit destination ref:
+
+```bash
+git push origin HEAD:refs/heads/main
+```
+
+The agent never opens a PR and never waits on CI for this transport. Post-merge follows the section below; a coordination-note-only change touches no plugin distribution files, so `just sync-marketplace` exits without refreshing.
 
 ## Post-merge
 

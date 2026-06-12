@@ -23,7 +23,7 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 9. **COORDINATION NOTES INFORM, SPECS DECLARE** — PLAN.md and ISSUES.md are node-local coordination notes inside the tree. They are committed to git for one reason: future sessions read them on context load. They go stale unless acted upon, so verify a coordination note before it steers work — reconcile it against the specs, decisions (ADR/PDR), assertions, tests, implementation, and the current user intent, then act only where it still holds. A coordination note never declares product truth, architecture, product decisions, assertions, or evidence. `/contextualizing` reads them automatically; conformance checks ignore them. Session files under `.spx/sessions/` are the only spec-tree artifacts not committed to git — `spx session` shares them across worktrees.
 10. **FULL PATHS ONLY** — Every node, ADR, and PDR reference uses the full path from `spx/`. Bare names and bare decision filenames are ambiguous because numeric prefixes repeat under different parents.
 11. **LOCAL OVERLAYS** — `spx/local/` holds product-specific overlays for coding, architecting, testing, and lifecycle skills. They supplement marketplace skill defaults without modifying the shared plugin. Enumerated by `/contextualizing`; consumed by the relevant skill.
-12. **LOCAL LIFECYCLE ROUTE** — `spx/local/merging.md` may override the default commit-to-merge lifecycle by disabling PRs or declaring a product-specific PR route. Read it when present. When absent, changes destined for the default branch use `/pr`, which routes committing, PR opening, PR management, merge, and closure unless the user explicitly requests a different stop.
+12. **LOCAL LIFECYCLE ROUTE** — changes destined for the default branch route through `/merge`, the transport dispatcher: it reads `spx/local/merging.md` and selects the merge transport — a coordination-note-only changeset to direct-push, an overlay-declared `transport:` when present, else the GitHub-PR transport (`/github-pr`) as the default — then delegates to that transport's skills. `spx/local/merging.md` may refine the selection and configure each transport (merge command, production-relevance recognition, post-merge step). Read it when present.
 13. **IMPERFECTIONS ARE TRACKED** — Claude maintains a per-turn imperfection ledger. Safe fixes happen immediately. Unresolved entries either block for operator judgment or are written to the correct artifact: product truth in specs/ADRs/PDRs, workflow rules in methodology, and future-session coordination in PLAN.md or ISSUES.md. Read `references/imperfection-protocol.md`.
 14. **VERIFICATION TYPES** — Five verification types establish a node's standing: validation, testing, reviewing, auditing, evaluating. Two orthogonal axes describe each — verdict mode (deterministic or agentic) and purpose (conformance or correctness). Three types back the tag an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing; validation and reviewing are gates that back no tag. Read `references/verification-kinds.md`.
 
@@ -53,8 +53,8 @@ About to load context for an existing target and explain why lower-index sibling
    - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualizing`, `/handoff`)
    - `spx/local/*.md` — product-specific overlays for `/coding-*`, `/architecting-*`, `/testing-*`, and lifecycle skills (enumerated by `/contextualizing`)
 4. Check for local lifecycle routing:
-   - If `spx/local/merging.md` exists at the repository root, read it. Its declarations govern whether changes use PRs, skip PRs, or use a product-specific PR lifecycle.
-   - If it is absent, default changes destined for the default branch to `/pr`, which routes committing, PR opening, PR management, merge, and closure unless the user explicitly requests a different stop.
+   - Changes destined for the default branch route through `/merge`, the transport dispatcher. It reads `spx/local/merging.md` and selects the merge transport — a coordination-note-only changeset to direct-push, an overlay-declared `transport:` when present, else the GitHub-PR transport (`/github-pr`) as the default — then delegates to that transport's skills.
+   - If `spx/local/merging.md` exists at the repository root, read it. Its declarations refine the transport selection and configure each transport (merge command, production-relevance recognition, post-merge step).
 5. Note template and example locations (read only when authoring):
    - `templates/product/product-name.product.md`
    - `templates/decisions/decision-name.adr.md`
@@ -68,7 +68,7 @@ About to load context for an existing target and explain why lower-index sibling
 <SPEC_TREE_FOUNDATION>
 Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol, verification-kinds
 Operational references available: what-goes-where, excluded-nodes
-Local lifecycle route: spx/local/merging.md read when present; default /pr lifecycle when absent
+Local lifecycle route: changes route through /merge (reads spx/local/merging.md, selects transport: direct-push for coordination-note-only, overlay transport, else GitHub-PR /github-pr)
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
@@ -97,7 +97,7 @@ When the guide carries a `template_version` not below the installed template's a
 
 - [ ] Six core reference files read and understood
 - [ ] Operational reference, template, and example locations known
-- [ ] `spx/local/merging.md` checked and read when present; default `/pr` lifecycle known when absent
+- [ ] Local lifecycle route known: changes route through `/merge`, which reads `spx/local/merging.md` and selects the transport (direct-push for coordination-note-only, overlay transport, else GitHub-PR `/github-pr`)
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree
 - [ ] Methodology loaded: PDRs, ADRs, product specs, and ancestor specs may declare future product truth ahead of implementation; current code shape is lower-layer evidence, not a reason to weaken the declaration

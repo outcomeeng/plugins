@@ -3,16 +3,16 @@ name: standardizing-merging
 user-invocable: false
 description: >-
   Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, the three PR-authority gates (review / merge / production readiness), review classification, three review surfaces, action tokens, and repo-local overlay topics.
-  Loaded by /pr, /opening-pr, and /managing-pr.
+  Loaded by /github-pr, /opening-pr, and /managing-pr.
 allowed-tools: Read
 ---
 
 <objective>
-Defines the concepts, predicates, gates, commands, and tokens shared by the PR lifecycle — /pr as router, /opening-pr as the one-shot opening protocol, and /managing-pr as the per-heartbeat managing protocol. Carries no flow itself; ships vocabulary only.
+Defines the concepts, predicates, gates, commands, and tokens shared by the PR lifecycle — /github-pr as router, /opening-pr as the one-shot opening protocol, and /managing-pr as the per-heartbeat managing protocol. Carries no flow itself; ships vocabulary only.
 </objective>
 
 <reference_note>
-This is a reference skill. /pr, /opening-pr, and /managing-pr load this vocabulary automatically. Do not invoke directly.
+This is a reference skill. /github-pr, /opening-pr, and /managing-pr load this vocabulary automatically. Do not invoke directly.
 </reference_note>
 
 <repo_local_overlay>
@@ -229,9 +229,9 @@ The merge flag follows the overlay when it declares one (`--merge` or `--squash`
 
 Waiting for CI runs, reviews, or check completion happens through the runtime timer, never in-shell. The consuming flow loads `/tracking-tasks` before creating, refreshing, or deleting runtime tracking after opening a PR and after every follow-up push.
 
-`/tracking-tasks` owns runtime-specific payload shape, stale-context limits, lifecycle rules, failed-check handling, approval-boundary deletion, and timer-tool selection. This section owns only the PR-flow fact that PR waits use runtime tracking and re-enter /pr with the PR pointer.
+`/tracking-tasks` owns runtime-specific payload shape, stale-context limits, lifecycle rules, failed-check handling, approval-boundary deletion, and timer-tool selection. This section owns only the PR-flow fact that PR waits use runtime tracking and re-enter /github-pr with the PR pointer.
 
-The re-entry prompt follows `/tracking-tasks` `<heartbeat_payload>`: it names the skill to reload and the pointer that skill handles — the PR number — as `/pr <pr-number>`. From that pointer the managing protocol resolves the branch, base, review state, and checks via `gh pr view`, and reconstructs the directive and finding classifications by re-reading the PR body, the commits, and the node's `PLAN.md` / `ISSUES.md`. The prompt never carries the directive, the finding classifications, or the merge-gate reasoning — those are reconstructed on wake-up, and anything a later fire must know is written to `PLAN.md` / `ISSUES.md`, never assumed to survive in conversation memory.
+The re-entry prompt follows `/tracking-tasks` `<heartbeat_payload>`: it names the skill to reload and the pointer that skill handles — the PR number — as `/github-pr <pr-number>`. From that pointer the managing protocol resolves the branch, base, review state, and checks via `gh pr view`, and reconstructs the directive and finding classifications by re-reading the PR body, the commits, and the node's `PLAN.md` / `ISSUES.md`. The prompt never carries the directive, the finding classifications, or the merge-gate reasoning — those are reconstructed on wake-up, and anything a later fire must know is written to `PLAN.md` / `ISSUES.md`, never assumed to survive in conversation memory.
 
 **One heartbeat per PR.** Whichever flow first needs a heartbeat creates it; the other refreshes the same heartbeat rather than creating a second one.
 
