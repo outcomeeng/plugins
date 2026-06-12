@@ -32,6 +32,13 @@ OLDER_VERSION = "0.26.5"
 CURRENT_VERSION = "0.26.6"
 NEW_CURRENT_VERSION = "0.26.7"
 
+# Faithful to the captured broken state: a working-tree plugin whose only cache
+# entry is a stale real version directory while its current version was never
+# materialized and Codex does not report it as installed.
+NOT_INSTALLED_PLUGIN = "python"
+NOT_INSTALLED_STALE_VERSION = "0.18.6"
+NOT_INSTALLED_CURRENT_VERSION = "0.18.8"
+
 
 @dataclass(frozen=True)
 class StaticHistory:
@@ -56,6 +63,32 @@ class StaticHistory:
 
     def current_version(self, plugin: str) -> str | None:
         return self.current_by_plugin.get(plugin)
+
+
+@dataclass(frozen=True)
+class StaticInstalled:
+    """Interaction-protocol stub for the Codex installed-set provider.
+
+    Stage 5 exception 2 (interaction-protocol DI): the real provider queries the
+    `codex` binary, which is absent at l1, so the installed set is injected as a
+    typed Protocol returning a deterministic plugin-name set.
+    """
+
+    names: frozenset[str]
+
+    def installed_plugins(self, marketplace: str) -> frozenset[str]:
+        return self.names
+
+
+@dataclass(frozen=True)
+class RaisingInstalled:
+    """Stub that fails the installed-set query (Stage 5 exception 1 -- failure
+    simulation), proving preservation aborts before mutating the cache."""
+
+    def installed_plugins(self, marketplace: str) -> frozenset[str]:
+        raise preserve_codex_plugin_cache.InstalledSetError(
+            "installed-set query failed"
+        )
 
 
 def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
@@ -429,3 +462,246 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     assert older_dir.is_dir() and not older_dir.is_symlink(), (
         f"expected {older_dir} to remain an untouched real directory"
     )
+
+
+def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> None:
+    """A working-tree plugin whose only cache entry is a stale real version directory,
+    and which Codex does not report as installed, has its entire cache directory pruned
+    -- not-installed is treated identically to a working-tree-absent orphan. Reproduces
+    the captured state where `python/0.18.6` lingered while `0.18.8` was never
+    materialized and `validate_install` reported MISSING for the current version.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            NOT_INSTALLED_PLUGIN: frozenset(
+                [NOT_INSTALLED_STALE_VERSION, NOT_INSTALLED_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled(frozenset()),
+        runner=_quiet_runner,
+    )
+
+    assert not plugin_dir.exists(), (
+        f"expected the whole cache directory {plugin_dir} pruned for a not-installed "
+        f"plugin, leaving nothing for validate_install to flag"
+    )
+    assert NOT_INSTALLED_PLUGIN in result.pruned_plugins, (
+        f"expected {NOT_INSTALLED_PLUGIN} in result.pruned_plugins={result.pruned_plugins}"
+    )
+
+
+def test_installed_set_query_failure_aborts_without_pruning(tmp_path: Path) -> None:
+    """When the installed-set query fails, preservation raises and mutates nothing: a
+    cache directory that would be pruned were the query to succeed empty remains intact,
+    proving the abort happens before any prune so a degraded signal never drives
+    deletion.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            NOT_INSTALLED_PLUGIN: frozenset([NOT_INSTALLED_CURRENT_VERSION]),
+        },
+        current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
+    )
+
+    with pytest.raises(preserve_codex_plugin_cache.InstalledSetError):
+        preserve_codex_plugin_cache.preserve_during_upgrade(
+            DEFAULT_MARKETPLACE,
+            cache_root=cache_root,
+            history=history,
+            installed=RaisingInstalled(),
+            runner=_quiet_runner,
+        )
+
+    assert plugin_dir.is_dir(), (
+        f"expected {plugin_dir} untouched when the installed-set query fails; "
+        f"preservation must abort before any prune"
+    )
+
+
+def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> None:
+    """A dry run reports planned changes without querying the installed set: the
+    provided installed provider is never invoked (a raising one does not raise), and
+    a not-installed plugin whose cache a real run would prune is retained. The preview
+    therefore needs no Codex CLI present and mutates nothing.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            NOT_INSTALLED_PLUGIN: frozenset(
+                [NOT_INSTALLED_STALE_VERSION, NOT_INSTALLED_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=RaisingInstalled(),
+        dry_run=True,
+        runner=_quiet_runner,
+    )
+
+    assert plugin_dir.is_dir(), (
+        f"dry run must retain {plugin_dir}: it skips the installed-set query and "
+        f"prunes nothing"
+    )
+    assert result.pruned_plugins == (), (
+        f"dry run plans no prunes when the query is skipped, got {result.pruned_plugins}"
+    )
+
+
+def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> None:
+    """A non-zero upgrade returns before the installed-set query is attempted: a
+    raising installed provider is never invoked (no raise), the result carries the
+    upgrade return code, and no cache directory is pruned — the upgrade failure
+    short-circuits the recipe regardless of the installed provider.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            NOT_INSTALLED_PLUGIN: frozenset([NOT_INSTALLED_CURRENT_VERSION]),
+        },
+        current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
+    )
+
+    def _failing_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 1)
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=RaisingInstalled(),
+        runner=_failing_runner,
+    )
+
+    assert result.upgrade_returncode == 1, (
+        f"expected the upgrade return code to propagate, got {result.upgrade_returncode}"
+    )
+    assert plugin_dir.is_dir(), (
+        f"expected {plugin_dir} untouched: an upgrade failure returns before any prune"
+    )
+
+
+def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
+    tmp_path: Path,
+) -> None:
+    """With two working-tree plugins — one in the Codex installed set, one absent —
+    preservation keeps the installed plugin's cache and prunes the not-installed
+    sibling's. This pins the preserved set to the intersection of the working-tree
+    set and the installed set: pruning every plugin (ignoring the installed set) or
+    preserving every plugin (ignoring it) both fail this test.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "installed content")
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
+    )
+    installed_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    not_installed_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME, NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+            NOT_INSTALLED_PLUGIN: frozenset(
+                [NOT_INSTALLED_STALE_VERSION, NOT_INSTALLED_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={
+            PLUGIN_NAME: CURRENT_VERSION,
+            NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+        },
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled(frozenset([PLUGIN_NAME])),
+        runner=_quiet_runner,
+    )
+
+    assert installed_dir.is_dir(), (
+        f"installed plugin {installed_dir} must be preserved (it is in the intersection)"
+    )
+    assert PLUGIN_NAME not in result.pruned_plugins, (
+        f"expected {PLUGIN_NAME} not pruned, got {result.pruned_plugins}"
+    )
+    assert not not_installed_dir.exists(), (
+        f"not-installed plugin {not_installed_dir} must be pruned (outside the intersection)"
+    )
+    assert NOT_INSTALLED_PLUGIN in result.pruned_plugins, (
+        f"expected {NOT_INSTALLED_PLUGIN} in result.pruned_plugins={result.pruned_plugins}"
+    )
+
+
+def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
+    """A successful query reporting an empty installed set prunes every plugin's cache
+    directory for the marketplace — an empty set is a valid prune-all instruction,
+    distinct from a failed query (which aborts).
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
+    _write_skill(
+        cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "content b"
+    )
+    dir_a = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    dir_b = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME, NOT_INSTALLED_PLUGIN]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+            NOT_INSTALLED_PLUGIN: frozenset([NOT_INSTALLED_CURRENT_VERSION]),
+        },
+        current_by_plugin={
+            PLUGIN_NAME: CURRENT_VERSION,
+            NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+        },
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled(frozenset()),
+        runner=_quiet_runner,
+    )
+
+    assert not dir_a.exists() and not dir_b.exists(), (
+        f"empty installed set must prune every cache dir; "
+        f"a={dir_a.exists()} b={dir_b.exists()}"
+    )
+    assert PLUGIN_NAME in result.pruned_plugins and (
+        NOT_INSTALLED_PLUGIN in result.pruned_plugins
+    ), f"expected both plugins pruned, got {result.pruned_plugins}"

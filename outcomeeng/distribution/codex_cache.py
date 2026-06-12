@@ -35,6 +35,7 @@ from typing import Protocol
 DEFAULT_MARKETPLACE = "outcomeeng"
 DEFAULT_WINDOW_DAYS = 10
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
+CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
@@ -155,6 +156,89 @@ def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, check=False, text=True)
 
 
+def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True)
+
+
+class InstalledSetError(RuntimeError):
+    """The Codex installed-set query failed or returned an unrecognized shape.
+
+    Raised rather than returning an empty set so a failed query is never mistaken
+    for "no plugins installed" -- the latter would prune every cache directory.
+    Preservation propagates this to abort before any cache mutation.
+    """
+
+
+class InstalledPlugins(Protocol):
+    """Source-of-truth for which plugins Codex considers installed."""
+
+    def installed_plugins(self, marketplace: str) -> frozenset[str]: ...
+
+
+def parse_installed_plugins(payload: str, marketplace: str) -> frozenset[str]:
+    """Extract the installed plugin names for `marketplace` from `codex plugin list
+    --json` output.
+
+    The contract is the CLI's documented shape: a JSON object with an ``installed``
+    array whose entries each carry a string ``name`` and may carry a
+    ``marketplaceName``. Entries naming a different marketplace are excluded so the
+    set is scoped even when the caller omits the ``--marketplace`` filter. Any
+    departure from the contract -- unparseable text, a non-object payload, a missing
+    or non-list ``installed`` key, or an entry without a string ``name`` -- raises
+    ``InstalledSetError`` rather than yielding a silent empty set.
+    """
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise InstalledSetError(
+            f"codex plugin list output is not valid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise InstalledSetError("codex plugin list output is not a JSON object")
+    installed = data.get("installed")
+    if not isinstance(installed, list):
+        raise InstalledSetError("codex plugin list output has no 'installed' array")
+    names: set[str] = set()
+    for entry in installed:
+        if not isinstance(entry, dict):
+            raise InstalledSetError(
+                "codex plugin list 'installed' entry is not an object"
+            )
+        name = entry.get("name")
+        if not isinstance(name, str):
+            raise InstalledSetError(
+                "codex plugin list 'installed' entry has no string 'name'"
+            )
+        entry_marketplace = entry.get("marketplaceName")
+        if isinstance(entry_marketplace, str) and entry_marketplace != marketplace:
+            continue
+        names.add(name)
+    return frozenset(names)
+
+
+@dataclass(frozen=True)
+class CodexCliInstalled:
+    """Default InstalledPlugins: queries the Codex CLI for its installed set.
+
+    Reads the authoritative installed set from `codex plugin list --json
+    --marketplace <marketplace>` rather than from `~/.codex/config.toml`, so a
+    changed CLI contract surfaces as a parse failure instead of a silent misread.
+    """
+
+    runner: CommandRunner = run_command_capture
+
+    def installed_plugins(self, marketplace: str) -> frozenset[str]:
+        result = self.runner([*CODEX_LIST_COMMAND, marketplace])
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip()
+            detail = f": {stderr}" if stderr else ""
+            raise InstalledSetError(
+                f"codex plugin list exited {result.returncode} "
+                f"for marketplace {marketplace}{detail}"
+            )
+        return parse_installed_plugins(result.stdout or "", marketplace)
+
+
 def preserve_during_upgrade(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
@@ -162,8 +246,19 @@ def preserve_during_upgrade(
     runner: CommandRunner = run_command,
     dry_run: bool = False,
     history: PluginHistory | None = None,
+    installed: InstalledPlugins | None = None,
 ) -> CachePreservationResult:
-    """Run the marketplace upgrade and reconcile the cache against history."""
+    """Run the marketplace upgrade and reconcile the cache against history.
+
+    When an ``installed`` provider is supplied and this is not a dry run,
+    preservation is scoped to the plugins Codex reports as installed: a plugin
+    present in the working tree but absent from the installed set has its entire
+    cache directory pruned, the same treatment as a working-tree-absent orphan.
+    The recipe's ``main`` supplies the real ``CodexCliInstalled`` provider. A dry
+    run skips the installed-set query, so the preview needs no Codex CLI present
+    and mutates nothing; when ``installed`` is ``None`` no scoping is applied
+    either. In both cases every working-tree plugin is treated as wanted.
+    """
     resolved_cache_root = cache_root if cache_root is not None else default_cache_root()
     resolved_history = (
         history if history is not None else GitPluginHistory(repo_root=Path.cwd())
@@ -187,14 +282,28 @@ def preserve_during_upgrade(
     marketplace_dir = resolved_cache_root / marketplace
     working_tree_plugins = resolved_history.working_tree_plugins()
 
-    pruned_plugins = _prune_orphan_plugins(
-        marketplace_dir, working_tree_plugins, dry_run=dry_run
-    )
+    if installed is not None and not dry_run:
+        # Query the installed set before the first prune so the recipe is
+        # all-or-nothing: a failed or unrecognized query raises here and no cache
+        # directory has been touched, so a degraded signal never drives a deletion.
+        installed_set = installed.installed_plugins(marketplace)
+        wanted = working_tree_plugins & installed_set
+    else:
+        # A dry run reports planned changes without querying the installed set, so
+        # the preview needs no Codex CLI present and mutates nothing; it treats
+        # every working-tree plugin as wanted. Absent an installed provider, no
+        # scoping is applied either.
+        wanted = working_tree_plugins
+
+    # A cache directory for any plugin outside the wanted set is pruned in full --
+    # a working-tree-absent orphan and a not-installed plugin are pruned by the
+    # same rule.
+    pruned_plugins = _prune_orphan_plugins(marketplace_dir, wanted, dry_run=dry_run)
 
     linked_versions: list[Path] = []
     pruned_links: list[Path] = []
 
-    for plugin in sorted(working_tree_plugins):
+    for plugin in sorted(wanted):
         plugin_dir = marketplace_dir / plugin
         if not plugin_dir.is_dir():
             # Working-tree plugin absent from the Codex cache: nothing to reconcile.
@@ -367,12 +476,19 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     history = GitPluginHistory(repo_root=args.repo_root, window_days=args.window_days)
-    result = preserve_during_upgrade(
-        args.marketplace,
-        cache_root=args.cache_root,
-        dry_run=args.dry_run,
-        history=history,
-    )
+    # preserve_during_upgrade skips the query on a dry run, so a dry run never
+    # shells out to the Codex CLI even though the provider is constructed here.
+    try:
+        result = preserve_during_upgrade(
+            args.marketplace,
+            cache_root=args.cache_root,
+            dry_run=args.dry_run,
+            history=history,
+            installed=CodexCliInstalled(),
+        )
+    except InstalledSetError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     if result.upgrade_returncode != 0:
         print(
