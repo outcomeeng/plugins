@@ -10,6 +10,7 @@ treating it as a hard error.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -335,3 +336,250 @@ def test_cached_entries_sorts_non_numeric_entries_after_numeric_versions(
     )
 
     assert [entry.version for entry in entries] == ["0.9.0", "0.10.0", "snapshot"]
+
+
+def test_cached_entries_synthesizes_current_when_working_tree_ahead(
+    tmp_path: Path,
+) -> None:
+    """When synthesize_current is set and every real cached directory is below the
+    current (working-tree) version, a non-materialized current entry is appended at
+    its numeric position so the listing still marks the resolved version."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.56.1", "0.56.3"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, "0.56.5", synthesize_current=True
+    )
+
+    assert [e.version for e in entries] == ["0.56.1", "0.56.3", "0.56.5"]
+    synth = entries[-1]
+    assert synth.is_current and not synth.materialized
+    assert not entries[0].is_current and not entries[1].is_current
+
+
+def test_cached_entries_synthesizes_current_into_mid_numeric_position(
+    tmp_path: Path,
+) -> None:
+    """The synthesized current row sorts into numeric position, not merely appended:
+    a current version between two cached versions lands between them, proving the
+    sort positions the synthetic entry rather than tacking it onto the end."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.56.1", "0.56.5"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, "0.56.3", synthesize_current=True
+    )
+
+    assert [e.version for e in entries] == ["0.56.1", "0.56.3", "0.56.5"]
+    assert entries[1].version == "0.56.3"
+    assert entries[1].is_current and not entries[1].materialized
+
+
+def test_cached_entries_marks_real_current_without_synthesizing(
+    tmp_path: Path,
+) -> None:
+    """When the current version matches a real cached directory, that directory is
+    marked current and no synthetic row is added even with synthesize_current set."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.56.1", "0.56.3"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, "0.56.3", synthesize_current=True
+    )
+
+    assert [e.version for e in entries] == ["0.56.1", "0.56.3"]
+    assert all(e.materialized for e in entries)
+    assert entries[1].is_current and not entries[0].is_current
+
+
+def test_cached_entries_no_synthesis_when_plugin_absent_from_cache(
+    tmp_path: Path,
+) -> None:
+    """A plugin with no cached directories gets no synthetic current row — synthesis
+    applies only when the working tree is ahead of existing directories."""
+    cache_root = tmp_path / "claude_cache"
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, "0.56.5", synthesize_current=True
+    )
+
+    assert entries == []
+
+
+def test_print_cache_claude_marks_synthesized_working_tree_current(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The Claude listing renders the working-tree version as the current row,
+    annotated as resolving from the working tree, when the cache lags behind it."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.56.1", "0.56.3"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    validate_install.print_cache(
+        cache_root,
+        "Claude Code",
+        MARKETPLACE_NAME,
+        {PLUGIN_NAME: "0.56.5"},
+        working_tree_pinned=True,
+    )
+
+    current_lines = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if validate_install.CURRENT_MARKER in line
+    ]
+    assert len(current_lines) == 1, f"expected one current row, got {current_lines}"
+    assert "0.56.5" in current_lines[0]
+    assert validate_install.WORKING_TREE_KIND in current_lines[0]
+
+
+def test_parse_codex_reported_versions_maps_installed_name_to_version() -> None:
+    """parse_codex_reported_versions returns name → version for installed entries
+    scoped to the marketplace; entries naming another marketplace are excluded."""
+    payload = json.dumps(
+        {
+            "installed": [
+                {
+                    "name": "spec-tree",
+                    "version": "0.56.3",
+                    "marketplaceName": MARKETPLACE_NAME,
+                },
+                {
+                    "name": "prose",
+                    "version": "0.4.0",
+                    "marketplaceName": MARKETPLACE_NAME,
+                },
+                {"name": "foreign", "version": "9.9.9", "marketplaceName": "elsewhere"},
+            ],
+            "available": [],
+        }
+    )
+
+    versions = validate_install.parse_codex_reported_versions(payload, MARKETPLACE_NAME)
+
+    assert versions == {"spec-tree": "0.56.3", "prose": "0.4.0"}
+
+
+def test_parse_codex_reported_versions_empty_on_unrecognized_payload() -> None:
+    """An unparseable, non-object, or installed-less payload degrades to an empty map
+    rather than raising — the listing must not crash on a malformed CLI response."""
+    assert (
+        validate_install.parse_codex_reported_versions("not json", MARKETPLACE_NAME)
+        == {}
+    )
+    assert (
+        validate_install.parse_codex_reported_versions(json.dumps([]), MARKETPLACE_NAME)
+        == {}
+    )
+    assert (
+        validate_install.parse_codex_reported_versions(
+            json.dumps({"available": []}), MARKETPLACE_NAME
+        )
+        == {}
+    )
+
+
+def test_codex_reported_versions_empty_on_nonzero_exit() -> None:
+    """A non-zero exit from the Codex CLI degrades to an empty map; the informational
+    listing tolerates a failing CLI."""
+
+    def failing_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 1, stdout="")
+
+    assert (
+        validate_install.codex_reported_versions(
+            MARKETPLACE_NAME, runner=failing_runner
+        )
+        == {}
+    )
+
+
+def test_codex_reported_versions_empty_when_cli_absent() -> None:
+    """When the Codex binary is absent the runner raises OSError, and the query
+    degrades to an empty map rather than propagating — the most common 'CLI
+    unavailable' case on a fresh install or in CI, distinct from a non-zero exit."""
+
+    def absent_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        raise FileNotFoundError("codex: command not found")
+
+    assert (
+        validate_install.codex_reported_versions(MARKETPLACE_NAME, runner=absent_runner)
+        == {}
+    )
+
+
+def test_codex_reported_versions_forwards_the_marketplace_to_the_cli() -> None:
+    """The query invokes `codex plugin list --json --marketplace <marketplace>`: the
+    marketplace token is forwarded so the listing is scoped to the right marketplace,
+    and a wrong subcommand or missing flag is caught here rather than at runtime."""
+    captured: list[list[str]] = []
+
+    def recording_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        captured.append(command)
+        return subprocess.CompletedProcess(
+            command, 0, stdout=json.dumps({"installed": [], "available": []})
+        )
+
+    validate_install.codex_reported_versions(MARKETPLACE_NAME, runner=recording_runner)
+
+    assert captured == [[*validate_install.CODEX_LIST_COMMAND, MARKETPLACE_NAME]]
+
+
+def test_print_cache_codex_marks_reported_version_not_working_tree(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The Codex listing marks current against the version Codex reports (via
+    current_override), not the local working-tree version — a feature-branch working
+    tree ahead of what Codex resolves does not move the marker."""
+    cache_root = tmp_path / "codex_cache"
+    for version in ("0.4.0", "0.5.0"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    validate_install.print_cache(
+        cache_root,
+        "Codex",
+        MARKETPLACE_NAME,
+        {PLUGIN_NAME: "0.5.0"},
+        current_override={PLUGIN_NAME: "0.4.0"},
+    )
+
+    current_lines = [
+        line
+        for line in capsys.readouterr().out.splitlines()
+        if validate_install.CURRENT_MARKER in line
+    ]
+    assert len(current_lines) == 1, f"expected one current row, got {current_lines}"
+    assert "0.4.0" in current_lines[0]
+    assert "0.5.0" not in current_lines[0]
+
+
+def test_print_cache_codex_no_marker_when_reported_version_absent(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """When the version Codex reports has no cache directory, the Codex listing shows
+    no current marker — the Codex listing does not synthesize a row the way the
+    working-tree-pinned Claude listing does. validate_install surfaces the absent
+    version separately."""
+    cache_root = tmp_path / "codex_cache"
+    _seed_cache(cache_root, PLUGIN_NAME, "0.5.0")
+
+    validate_install.print_cache(
+        cache_root,
+        "Codex",
+        MARKETPLACE_NAME,
+        {PLUGIN_NAME: "0.5.0"},
+        current_override={PLUGIN_NAME: "0.4.0"},
+    )
+
+    out = capsys.readouterr().out
+    assert "0.5.0" in out, "the materialized version is still listed"
+    assert validate_install.CURRENT_MARKER not in out, (
+        "Codex does not synthesize a current row for a reported version absent from "
+        "the cache"
+    )

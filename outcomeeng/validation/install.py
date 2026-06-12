@@ -31,11 +31,22 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from outcomeeng.distribution.codex_cache import (
+    CODEX_LIST_COMMAND,
+    CommandRunner,
+    run_command_capture,
+)
+
 DEFAULT_MARKETPLACE = "outcomeeng"
 DEFAULT_MAX_AGE_DAYS = 10
 SECONDS_PER_DAY = 24 * 60 * 60
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 CLAUDE_DIST_PLUGINS_DIR = Path("dist") / "claude"
+
+# Listing display tokens — the marker the listing places on the resolved version,
+# and the kind label for a synthesized current row that has no cache directory.
+CURRENT_MARKER = "← current"
+WORKING_TREE_KIND = "resolves from working tree"
 
 
 def claude_cache_root() -> Path:
@@ -84,6 +95,54 @@ def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
         return None
     version = data.get("version")
     return version if isinstance(version, str) else None
+
+
+def parse_codex_reported_versions(payload: str, marketplace: str) -> dict[str, str]:
+    """Map plugin name to the version Codex reports installed for `marketplace`,
+    parsed from `codex plugin list --json` output.
+
+    Unlike the fail-loud prune parser, this is for the informational listing, so any
+    unrecognized shape or malformed entry is skipped and an empty map is returned
+    rather than raising — a display glitch must not crash `validate_install`.
+    """
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    installed = data.get("installed")
+    if not isinstance(installed, list):
+        return {}
+    versions: dict[str, str] = {}
+    for entry in installed:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        version = entry.get("version")
+        marketplace_name = entry.get("marketplaceName")
+        if not isinstance(name, str) or not isinstance(version, str):
+            continue
+        if isinstance(marketplace_name, str) and marketplace_name != marketplace:
+            continue
+        versions[name] = version
+    return versions
+
+
+def codex_reported_versions(
+    marketplace: str, *, runner: CommandRunner = run_command_capture
+) -> dict[str, str]:
+    """Return plugin name to the version Codex reports for `marketplace`, queried
+    from `codex plugin list --json`. The version Codex reports is the marketplace
+    version it resolves, not any local manifest. Returns an empty map when the query
+    fails — the listing is informational and must not crash if the CLI is absent."""
+    try:
+        result = runner([*CODEX_LIST_COMMAND, marketplace])
+    except OSError:
+        return {}
+    if result.returncode != 0:
+        return {}
+    return parse_codex_reported_versions(result.stdout or "", marketplace)
 
 
 def _parse_version(version: str) -> tuple[int, ...] | None:
@@ -141,12 +200,26 @@ class CachedEntry:
     version: str
     is_symlink: bool
     is_current: bool
+    materialized: bool = True
 
 
 def cached_entries(
-    cache_root: Path, marketplace: str, plugin: str, current_version: str
+    cache_root: Path,
+    marketplace: str,
+    plugin: str,
+    current_version: str,
+    *,
+    synthesize_current: bool = False,
 ) -> list[CachedEntry]:
-    """Return all version directories for a plugin, ordered by numeric version."""
+    """Return all version directories for a plugin, ordered by numeric version.
+
+    When `synthesize_current` is set and the plugin has real cached directories but
+    none of them is the current version — the working-tree version has advanced past
+    every cached directory under working-tree-pinned resolution — a non-materialized
+    entry for the current version is appended and sorted into numeric position, so
+    the listing marks the resolved version rather than dropping the marker. No row is
+    synthesized for a plugin with no cached directories at all.
+    """
     plugin_dir = cache_root / marketplace / plugin
     if not plugin_dir.is_dir():
         return []
@@ -161,6 +234,20 @@ def cached_entries(
                 is_current=entry.name == current_version,
             )
         )
+    if (
+        synthesize_current
+        and current_version
+        and entries
+        and not any(entry.is_current for entry in entries)
+    ):
+        entries.append(
+            CachedEntry(
+                version=current_version,
+                is_symlink=False,
+                is_current=True,
+                materialized=False,
+            )
+        )
     return sorted(entries, key=lambda e: _version_sort_key(e.version))
 
 
@@ -169,16 +256,41 @@ def print_cache(
     label: str,
     marketplace: str,
     versions: dict[str, str],
+    *,
+    current_override: dict[str, str] | None = None,
+    working_tree_pinned: bool = False,
 ) -> None:
+    """Render a cache's version directories per plugin, marking the current one.
+
+    `versions` selects which plugins to list and supplies the default current
+    version. `current_override` replaces that current version per plugin where a
+    cache resolves from a source other than the working tree — the Codex listing
+    passes the version Codex reports so its marker tracks the marketplace version
+    Codex resolves, not the local manifest. `working_tree_pinned` enables a
+    synthesized current row for a working-tree-pinned cache whose current version
+    has advanced past every cached directory.
+    """
     plugin_width = max((len(p) for p in versions), default=0)
     print(f"━━━ {label} ({cache_root / marketplace}) ━━━")
     for plugin in sorted(versions):
-        entries = cached_entries(cache_root, marketplace, plugin, versions[plugin])
+        current_version = (current_override or {}).get(plugin, versions[plugin])
+        entries = cached_entries(
+            cache_root,
+            marketplace,
+            plugin,
+            current_version,
+            synthesize_current=working_tree_pinned,
+        )
         if not entries:
             continue
         for i, entry in enumerate(entries):
-            kind = "symlink" if entry.is_symlink else "live   "
-            current = " ← current" if entry.is_current else ""
+            if not entry.materialized:
+                kind = WORKING_TREE_KIND
+            elif entry.is_symlink:
+                kind = "symlink"
+            else:
+                kind = "live   "
+            current = f" {CURRENT_MARKER}" if entry.is_current else ""
             prefix = plugin.ljust(plugin_width) if i == 0 else " " * plugin_width
             print(f"  {prefix}  {entry.version}  {kind}{current}")
     print()
@@ -348,8 +460,20 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path.cwd()
     versions = current_versions(repo_root)
 
-    print_cache(claude_cache_root(), "Claude Code", args.marketplace, versions)
-    print_cache(codex_cache_root(), "Codex", args.marketplace, versions)
+    print_cache(
+        claude_cache_root(),
+        "Claude Code",
+        args.marketplace,
+        versions,
+        working_tree_pinned=True,
+    )
+    print_cache(
+        codex_cache_root(),
+        "Codex",
+        args.marketplace,
+        versions,
+        current_override=codex_reported_versions(args.marketplace),
+    )
 
     result = validate(
         args.marketplace, repo_root=repo_root, max_age_days=args.max_age_days
