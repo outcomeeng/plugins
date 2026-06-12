@@ -70,3 +70,44 @@ checkout — or a different machine — would have recovered nothing.
 corrected that the only valid handoff persists everything on an origin branch and
 creates a session file pointing at it. This branch (`work/handoff-lint-enforcement`)
 is the corrected handoff and the carrier of this diagnosis.
+
+## Handoff silently honors `--no-session` when continuation work remains (gap)
+
+`sessions.md` line 42 permits closing without a session file "when the user passes
+`--no-session`" — treating the flag as an unconditional user-intent escape. But the
+PR lifecycle hardcodes it: `/pr` Step 7 (the `pr` skill body and the GitHub-PR
+transport's `/pr` orchestration spec, `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/github-pr.md`)
+and `spx/local/merging.md`'s post-merge step both say "run `/handoff --no-session`"
+as the fixed post-merge closure. So automation passes a user-intent override on the
+user's behalf, and the handoff skill silently honors it — skipping the session file
+even when unresolved in-scope continuation work exists. This directly defeats
+`sessions.md` lines 41–42 (create a session whenever continuation remains; PLAN.md is
+not a substitute).
+
+### What to fix and how
+
+1. **Make `--no-session` answerable to continuation state.** In the handoff skill
+   (`workflows/02-reflect.md` computes the signal, `04-execute.md` acts on it),
+   detect unresolved in-scope continuation work — node-local `PLAN.md` pending
+   items, `spx/EXCLUDE` entries, or declared-but-unimplemented spec assertions
+   touched this session. When `--no-session` is passed but that signal is present,
+   do NOT silently honor it: surface the contradiction and create the session (or
+   require explicit re-confirmation). Amend `sessions.md` line 42 to drop the
+   unconditional `--no-session` escape — `--no-session` asserts "there is no
+   continuation," never "skip the session regardless."
+
+2. **De-hardcode `--no-session` in the lifecycle.** `/pr` Step 7 (the `pr` skill
+   body + `github-pr.md`) and `spx/local/merging.md`'s post-merge step must invoke
+   `/handoff` PLAIN. Automation must never pass a user-intent override on the
+   user's behalf; the skill decides per `sessions.md` lines 41–42.
+
+Distinct from the origin-branch-persistence gap above (that is about *persisting*
+the handoff; this is about the *session-creation decision*), but the same class of
+fix — make the handoff's preconditions answerable to state rather than silently
+bypassable.
+
+**Evidence:** closing PR #163 (transport-neutral merging, merged 2026-06-12 as
+`04ee6ffa`). The agent proposed `/handoff --no-session` following the hardcoded
+`/pr` Step 7 default, despite having just authored `76-merging.enabler/PLAN.md` with
+deferred continuation (the `/merge` build, `/pr` refocus, direct-push execution, the
+eval recalibration). Operator caught it.
