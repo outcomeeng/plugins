@@ -230,8 +230,11 @@ class CodexCliInstalled:
     def installed_plugins(self, marketplace: str) -> frozenset[str]:
         result = self.runner([*CODEX_LIST_COMMAND, marketplace])
         if result.returncode != 0:
+            stderr = (result.stderr or "").strip()
+            detail = f": {stderr}" if stderr else ""
             raise InstalledSetError(
-                f"codex plugin list exited {result.returncode} for marketplace {marketplace}"
+                f"codex plugin list exited {result.returncode} "
+                f"for marketplace {marketplace}{detail}"
             )
         return parse_installed_plugins(result.stdout or "", marketplace)
 
