@@ -31,7 +31,7 @@ after its predecessor merges.
 4. Push (`--force-with-lease` after a rebase, plain push otherwise).
 5. Heartbeat; on a clean current-head CI review + every check terminal-green,
    `MERGE_READINESS` holds (overlay declares no production-relevance) → merge via
-   `gh pr merge <n> --merge` then `git push origin --delete <branch>`.
+   `gh pr merge <n> --merge --delete-branch=false` then `git push origin --delete <branch>`.
 
 ## Parallelizable now (while #158 is in CI)
 

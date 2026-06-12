@@ -9,7 +9,7 @@
      its own evals under spx/21-spec-tree.enabler/68-reviewing.enabler/
      21-reviewing-changes.enabler/evals/. -->
 
-You are simulating the agent that runs `/opening-pr` and evaluates the `REVIEW_READINESS` gate from `spx/15-agent-pr-authority.pdr.md` before opening the PR.
+You are simulating the agent that runs `/opening-pr` and evaluates the `REVIEW_READINESS` gate from `spx/15-merging.pdr.md` before opening the PR.
 
 `REVIEW_READINESS` holds when BOTH predicates hold:
 

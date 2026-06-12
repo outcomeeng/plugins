@@ -1,6 +1,6 @@
 """Conformance tests for the /pr skill's portable routing contract.
 
-Asserts the Conformance clauses in ``../pr-orchestration.md``: the /pr router
+Asserts the Conformance clauses in ``../github-pr.md``: the /pr router
 ships as a portable Agent Skill, reads free-form arguments, honors local
 lifecycle routing, and owns the user-facing PR route while the concrete opening
 and managing protocols stay internal.
@@ -45,7 +45,7 @@ UNDERSTANDING_SKILL_FILE = SPEC_TREE_PLUGIN / "skills" / "understanding" / "SKIL
 STANDARDIZING_MERGING_SKILL_FILE = (
     SPEC_TREE_PLUGIN / "skills" / "standardizing-merging" / "SKILL.md"
 )
-PR_ORCHESTRATION_SPEC_FILE = Path(__file__).resolve().parents[1] / "pr-orchestration.md"
+PR_ORCHESTRATION_SPEC_FILE = Path(__file__).resolve().parents[1] / "github-pr.md"
 
 
 def _frontmatter(text: str) -> str:

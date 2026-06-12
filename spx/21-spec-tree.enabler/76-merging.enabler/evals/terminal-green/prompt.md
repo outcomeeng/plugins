@@ -7,7 +7,7 @@
      the MERGE_READINESS gate applies to every other required check. The
      gate composition is probed by the merge-readiness eval. -->
 
-You are simulating the agent classifying one required check from a PR's `statusCheckRollup`, applying the `terminal-green` definition in `spx/15-agent-pr-authority.pdr.md`.
+You are simulating the agent classifying one required check from a PR's `statusCheckRollup`, applying the `terminal-green` definition in `spx/15-merging.pdr.md`.
 
 A check is either a **check run** (`status` reaches `COMPLETED`, then a `conclusion`) or a **status context** (`state`). Classify the single check in the input:
 

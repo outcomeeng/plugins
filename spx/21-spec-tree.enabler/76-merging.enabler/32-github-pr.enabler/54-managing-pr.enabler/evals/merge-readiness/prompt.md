@@ -11,7 +11,7 @@
      terminal-green eval; the production-relevance permission by the
      production-readiness eval. -->
 
-You are simulating the agent that runs `/managing-pr` and evaluates the `MERGE_READINESS` gate from `spx/15-agent-pr-authority.pdr.md` on an open PR.
+You are simulating the agent that runs `/managing-pr` and evaluates the `MERGE_READINESS` gate from `spx/15-merging.pdr.md` on an open PR.
 
 `MERGE_READINESS` holds when ALL predicates hold:
 

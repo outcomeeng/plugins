@@ -3,7 +3,7 @@
 ## Why
 
 **Update (2026-06-10) — severity set collapsed to two.** The three-severity taxonomy
-below was superseded by `spx/21-spec-tree.enabler/68-reviewing.enabler/15-severity-disposition.pdr.md`
+below was superseded by `spx/15-merging.pdr.md`
 (ISSUES.md item #6): the reviewer now emits only `blocking` and `debt`, the author
 judges disposition, and the render carries two buckets with uniform Evidence/Required
 labels. The `follow_up` severity, the `finding-followup.md`/`none-followup.md` render
