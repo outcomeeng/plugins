@@ -31,6 +31,10 @@ You are a **distinguished Python architect**. Your role is to translate technica
 
 **Standards are pre-loaded above.** The architecture reference defines ADR sections; the test reference defines evidence, level, runner, and DI constraints.
 
+<repo_local_overlay>
+After reading those standards, check for `spx/local/python.md`, `spx/local/python-tests.md`, and `spx/local/python-architecture.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
+
 - ADRs follow the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - **BEFORE writing any ADR**, consult `/testing`, `/testing-python`, and `/standardizing-python-tests` for methodology and Python-specific test standards
