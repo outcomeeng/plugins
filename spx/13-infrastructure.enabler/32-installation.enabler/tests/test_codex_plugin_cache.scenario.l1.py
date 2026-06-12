@@ -248,8 +248,8 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
         f"expected no cache entry at {current_path}; preservation must not fabricate "
         f"a symlink for the current version pointing at the stale {older_dir}"
     )
-    assert current_path not in result.linked_versions, (
-        f"expected the current version not linked, got {result.linked_versions}"
+    assert result.linked_versions == (), (
+        f"expected no compatibility symlinks created, got {result.linked_versions}"
     )
     assert older_dir.is_dir() and not older_dir.is_symlink(), (
         f"expected {older_dir} to remain an untouched real directory"
@@ -343,6 +343,51 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
     )
 
 
+def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absent(
+    tmp_path: Path,
+) -> None:
+    """Two compatibility symlinks — an older in-window entry and a current-version
+    entry, both pointing at the same prior real directory — are all removed in one
+    pass when the declared current version has no real directory of its own, so the
+    "every symlink" invariant holds for more than one symlink.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    prior_real_dir = plugin_dir / CURRENT_VERSION
+    older_link = plugin_dir / OLDER_VERSION
+    current_link = plugin_dir / NEW_CURRENT_VERSION
+    older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    current_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset(
+                [OLDER_VERSION, CURRENT_VERSION, NEW_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert not os.path.lexists(older_link) and not os.path.lexists(current_link), (
+        f"expected both {older_link} and {current_link} removed, got "
+        f"lexists={os.path.lexists(older_link)}/{os.path.lexists(current_link)}"
+    )
+    assert older_link in result.pruned_links and current_link in result.pruned_links, (
+        f"expected both symlinks in result.pruned_links={result.pruned_links}"
+    )
+    assert prior_real_dir.is_dir() and not prior_real_dir.is_symlink(), (
+        f"expected the real directory {prior_real_dir} to remain untouched"
+    )
+
+
 def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     tmp_path: Path,
 ) -> None:
@@ -374,6 +419,9 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
 
     assert not os.path.lexists(stale_link), (
         f"expected {stale_link} pruned when the current version is undeterminable"
+    )
+    assert stale_link in result.pruned_links, (
+        f"expected {stale_link} in result.pruned_links={result.pruned_links}"
     )
     assert result.linked_versions == (), (
         f"expected no links when the current version is undeterminable, got {result.linked_versions}"
