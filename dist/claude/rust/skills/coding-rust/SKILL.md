@@ -53,9 +53,9 @@ Do not declare work complete until the full validation sequence passes.
 
 </essential_principles>
 
-<repo_local_overlays>
+<repo_local_overlay>
 After loading `/standardizing-rust` and `/standardizing-rust-tests`, check for `spx/local/rust.md` and `spx/local/rust-tests.md` at the repository root. Read each file that exists before discovery and implementation. Treat each as repo-local routing to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
-</repo_local_overlays>
+</repo_local_overlay>
 
 <hierarchy_of_authority>
 Use guidance in this order:
