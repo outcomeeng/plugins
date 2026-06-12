@@ -54,14 +54,26 @@ The agent never opens a PR and never waits on CI for this transport. Post-merge 
 
 ## Post-merge
 
-After the merge lands on `main`, refresh the local marketplace install with `just sync-marketplace <previous-main-ref>` (the [CLAUDE.md sync step](../../CLAUDE.md)).
+The Claude marketplace is registered as a **Directory source** at the authoritative default-branch worktree — the checkout named like the remote (for example `~/Code/outcomeeng/plugins/plugins`), which stays on branch `main`. `claude plugin marketplace list --json` reports it as `{"name": "outcomeeng", "source": "directory", "path": "<worktree>"}`. That worktree's `dist/` is what every Claude session and `claude plugin marketplace update` reads, so the marketplace serves current plugin content only when **that worktree's `main` is current** — not when some other worktree's HEAD is.
 
-Update the current worktree to the merged `main` by **detaching**, never by attaching the branch:
+After a merge lands on `origin/main`, fast-forward the **marketplace-source worktree's** `main`, then refresh installs:
 
 ```bash
-git fetch origin main
-git switch --detach origin/main
-just sync-marketplace <previous-main-ref>
+src=$(claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and e.get("source")=="directory"), ""))')
+[ -n "$src" ] || { echo "outcomeeng is not registered as a directory source" >&2; exit 1; }
+git -C "$src" fetch origin main
+git -C "$src" merge --ff-only origin/main   # the source worktree is on main; fast-forward it to the merged tip
+just sync-marketplace <previous-main-ref>    # re-indexes the now-current source and re-validates installs
 ```
 
-This repository is a multi-worktree checkout where `main` is kept checked out in no worktree so every worktree can reach it. `git switch main` attaches `main` to the current worktree and pins it there — a later `git switch main` in another worktree then fails with `fatal: 'main' is already used by worktree at <path>`, the same multi-worktree cleanup failure the separate `git push origin --delete <branch>` above already avoids. The `--detach` form lands HEAD on the merged commit without claiming the branch. The CLAUDE.md sync step carries the same detach form; this overlay is the authoritative source for the multi-worktree rationale.
+Advancing the source worktree's `main` is the step that makes the merged `dist/` visible to the marketplace. Running `just sync-marketplace` against a source still behind `origin/main` re-indexes stale content — the failure mode this procedure exists to prevent. A PR that changes no plugin-distribution files leaves `dist/` unchanged, so `sync-marketplace` skips the install refresh, but the source worktree's `main` is still fast-forwarded so it never drifts behind.
+
+If `git -C "$src" merge --ff-only origin/main` exits non-zero, the source worktree has diverged from `origin/main` — it should carry no local commits or uncommitted changes, since feature work belongs in other worktrees. Inspect with `git -C "$src" status` and `git -C "$src" log --oneline origin/main..HEAD`, move any unexpected local commits onto a feature branch (never discard them with `reset --hard`), then re-run the fast-forward before `just sync-marketplace`.
+
+The **current (feature) worktree** — where the `/pr` flow ran — is a different checkout. Detach it onto the merged commit so it is not left on the deleted branch, and never attach `main`:
+
+```bash
+git switch --detach origin/main
+```
+
+`main` is checked out in exactly one place: the marketplace-source worktree, kept current by the fast-forward above. Every other worktree detaches and never attaches `main`, so `git switch main` in a feature worktree — which fails with `fatal: 'main' is already used by worktree at <path>` — never happens, and the source worktree never contends with feature work. Keep feature work out of the source worktree so its `main` stays fast-forwardable. This overlay is the authoritative source for the multi-worktree post-merge rationale; the [AGENTS.md sync step](../../AGENTS.md) mirrors it.
