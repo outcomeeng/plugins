@@ -23,9 +23,9 @@ Review Rust implementation code after the mechanical checks pass. Find design fl
 
 </quick_start>
 
-<repo_local_overlays>
+<repo_local_overlay>
 Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-</repo_local_overlays>
+</repo_local_overlay>
 
 <essential_principles>
 
