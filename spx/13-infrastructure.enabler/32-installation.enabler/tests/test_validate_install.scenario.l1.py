@@ -358,6 +358,25 @@ def test_cached_entries_synthesizes_current_when_working_tree_ahead(
     assert not entries[0].is_current and not entries[1].is_current
 
 
+def test_cached_entries_synthesizes_current_into_mid_numeric_position(
+    tmp_path: Path,
+) -> None:
+    """The synthesized current row sorts into numeric position, not merely appended:
+    a current version between two cached versions lands between them, proving the
+    sort positions the synthetic entry rather than tacking it onto the end."""
+    cache_root = tmp_path / "claude_cache"
+    for version in ("0.56.1", "0.56.5"):
+        _seed_cache(cache_root, PLUGIN_NAME, version)
+
+    entries = validate_install.cached_entries(
+        cache_root, MARKETPLACE_NAME, PLUGIN_NAME, "0.56.3", synthesize_current=True
+    )
+
+    assert [e.version for e in entries] == ["0.56.1", "0.56.3", "0.56.5"]
+    assert entries[1].version == "0.56.3"
+    assert entries[1].is_current and not entries[1].materialized
+
+
 def test_cached_entries_marks_real_current_without_synthesizing(
     tmp_path: Path,
 ) -> None:
