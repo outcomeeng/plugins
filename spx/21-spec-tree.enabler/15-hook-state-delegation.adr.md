@@ -18,11 +18,11 @@ Concentrating `.spx/` access in the `spx` CLI keeps one owner of the on-disk mod
 
 - ALWAYS: each hook reaches `.spx/` state only through an `spx` subprocess invocation and performs no direct `.spx/` filesystem read or write ([compliance])
 - NEVER: a hook reads or parses the conversation transcript itself — it forwards the transcript path to the `spx` CLI, which performs the read ([compliance])
-- ALWAYS: the SessionStart hook's only direct filesystem write is `$CLAUDE_ENV_FILE`, and it creates no `.spx/` state — per-runtime session directories are created lazily by `spx session pickup` ([conformance])
 - ALWAYS: when the `spx` CLI is absent or exits non-zero, the invoking hook degrades to a silent no-op and writes no `.spx/` state itself ([compliance])
 - NEVER: a hook other than SessionStart writes any filesystem path directly ([compliance])
 
 ### Audit
 
 - ALWAYS: the `spx` CLI is the single owner of `.spx/` resolution and state placement, so hook-produced state never diverges from the CLI's `.spx/` model ([audit])
+- ALWAYS: the SessionStart hook's only direct filesystem write is `$CLAUDE_ENV_FILE`, and it creates no `.spx/` state — per-runtime session directories are created lazily by `spx session pickup` ([audit])
 - NEVER: extend the direct-write carve-out beyond the SessionStart hook's `$CLAUDE_ENV_FILE` write — a new hook state need is met by adding an `spx` CLI state-store command, never by writing files from the hook ([audit])
