@@ -342,7 +342,7 @@ Use the workflow the user chooses for the current change. Pull requests are the 
    [ -n "$src" ] || { echo "outcomeeng is not registered as a directory source" >&2; exit 1; }
    git -C "$src" fetch origin main
    git -C "$src" merge --ff-only origin/main      # fast-forward the source worktree's main to the merged tip
-   just sync-marketplace <previous-main-ref>       # re-index the now-current source + re-validate installs
+   (cd "$src" && just sync-marketplace <previous-main-ref>)   # run FROM the source worktree (validate reads its versions)
    git switch --detach origin/main                 # detach THIS feature worktree off the deleted branch
    ```
 
@@ -379,7 +379,7 @@ Work in the checkout registered as the marketplace source (`claude plugin market
 2. Run `/reload-plugins`. For a Claude session serving from the source `dist/` — the usual case while developing — this re-reads the edited SKILL.md directly, so no version bump or sync is needed to smoke-test a Claude change in the source checkout.
 3. Invoke the skill — the first invocation after the reload loads the new content.
 
-`just sync-marketplace` is for the cross-runtime install state, not for serving a Claude edit in the source checkout. It runs `claude plugin marketplace update outcomeeng` (which, on a version bump, repoints running Claude sessions to the versioned cache snapshot) and the Codex cache-preservation step (`outcomeeng.distribution.codex_cache`, per `21-codex-cache-preservation.adr.md`), then `validate_install` and `check-installed`. After a PR merge or direct `main` publication that changes plugin distribution files, fast-forward the **marketplace-source worktree's** `main` to the merged state and refresh installs — `git -C "$src" fetch origin main && git -C "$src" merge --ff-only origin/main`, then `just sync-marketplace <previous-main-ref>`, where `$src` is the Directory-source path from `claude plugin marketplace list --json` (the exact steps and rationale are in [`spx/local/merging.md`](spx/local/merging.md) Post-merge) — then `/reload-plugins`. Detaching the current feature worktree onto `origin/main` does not advance the source worktree the marketplace serves from.
+`just sync-marketplace` is for the cross-runtime install state, not for serving a Claude edit in the source checkout. It runs `claude plugin marketplace update outcomeeng` (which, on a version bump, repoints running Claude sessions to the versioned cache snapshot) and the Codex cache-preservation step (`outcomeeng.distribution.codex_cache`, per `21-codex-cache-preservation.adr.md`), then `validate_install` and `check-installed`. After a PR merge or direct `main` publication that changes plugin distribution files, fast-forward the **marketplace-source worktree's** `main` to the merged state and refresh installs — `git -C "$src" fetch origin main && git -C "$src" merge --ff-only origin/main`, then `(cd "$src" && just sync-marketplace <previous-main-ref>)`, where `$src` is the Directory-source path from `claude plugin marketplace list --json` (the exact steps and rationale are in [`spx/local/merging.md`](spx/local/merging.md) Post-merge) — then `/reload-plugins`. `sync-marketplace` must run from the source worktree: its `validate_install` reads `current_versions` from its own working directory, so running it from a feature worktree behind `origin/main` false-fails against that worktree's stale versions. Detaching the current feature worktree onto `origin/main` does not advance the source worktree the marketplace serves from.
 
 ## Missing plugins or skills
 
