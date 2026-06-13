@@ -17,3 +17,4 @@ CAN create correctly structured artifacts while preserving decomposition structu
 - ALWAYS: reference nodes, ADRs, and PDRs by full path from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])
 - NEVER: pass proposed child nodes, proposed indices, or pre-baked dependency order to `/decomposing` — decomposition owns the structure model ([review])
 - NEVER: place implementation details in specs — "how" belongs in ADRs or code ([review])
+- NEVER: select an assertion's verification type or assertion type, write or edit a test file, or implement a work item — type selection and test authoring route to `/applying` (which invokes `/testing`); authoring writes assertion text and the evidence-tag requirement only ([audit])

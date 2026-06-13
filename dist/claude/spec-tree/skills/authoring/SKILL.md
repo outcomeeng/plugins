@@ -10,6 +10,12 @@ Author Spec Tree artifacts — product specs, decision records (ADR/PDR), enable
 
 </objective>
 
+<stop_triggers>
+
+About to choose an assertion's verification type (`[test]` / `[eval]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/applying`, which routes type selection to `/testing`. Write the assertion's TEXT and mark that it requires an evidence tag; never select which type the tag resolves to, and never write the test or implementation behind it. Tagging an assertion with a chosen type, authoring a test, or writing implementation code from inside this skill is the exact boundary breach this trigger exists to stop.
+
+</stop_triggers>
+
 <quick_start>
 
 **PREREQUISITE**: Check for `<SPEC_TREE_FOUNDATION>` marker. If absent, invoke `/understanding` first.
