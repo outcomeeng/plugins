@@ -11,7 +11,7 @@ Reads (from the PreCompact JSON payload on stdin):
   .session_id       Conversation id; keys the stash.
   .transcript_path  Path to the conversation transcript (JSONL).
 
-Invokes: spx compact stash --session-id <id> --transcript <path>
+Invokes: spx compact store --session-id <id> --transcript <path>
 ($SPX_BIN overrides the `spx` executable; tests point it at a fake.)
 
 A missing or pre-command spx CLI is a silent no-op — re-anchoring degrades, it
@@ -43,7 +43,7 @@ def main() -> int:
             [
                 spx,
                 "compact",
-                "stash",
+                "store",
                 "--session-id",
                 session_id,
                 "--transcript",
