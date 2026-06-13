@@ -39,6 +39,17 @@ Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
 
 </language_detection>
 
+<scope_detection>
+
+Before starting Step 3, determine the change's scope — this determination governs every later gate:
+
+- **Node-local** — the entire diff stays within the target node's own directory (its spec, its `tests/`, and the implementation files that node governs).
+- **Cross-node** — the work touches anything else: a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node.
+
+When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at **whole-changeset** scope, not only the target node, and Step 9 is REQUIRED before the flow may be declared complete. A per-node audit reads only the target node's files; it cannot see a regression the change introduced in a file the node does not own. Carry the determination through Steps 4, 6, and 8 — each gate step restates the scope requirement at its point of action.
+
+</scope_detection>
+
 <skill_map>
 
 Steps 1–2 are language-independent. Steps 3–8 use the detected language. Step 9 is language-independent and runs only when the change reaches beyond the target node.
@@ -97,6 +108,8 @@ Produce the ADR(s) for the work item. The architecture must be complete before a
 
 Invoke the architecture audit skill for the detected language.
 
+When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — an architecture regression the change introduced in a file the node does not own is invisible to a per-node audit.
+
 **REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
 </step>
@@ -112,6 +125,8 @@ Write tests for all assertions in the spec. Tests come before implementation —
 <step number="6" name="Test audit" gate="true">
 
 Invoke the test audit skill for the detected language.
+
+When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — test evidence the change invalidated in a sibling node is invisible to a per-node audit.
 
 **REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
@@ -129,7 +144,7 @@ Write implementation code. All tests from Step 5 must pass.
 
 Invoke the code audit skill for the detected language.
 
-When the change touches files beyond the target node — a refactor, a move, a consolidation, a cross-cutting rename — point the architecture, test, and code audit gates (Steps 4, 6, 8) at the **whole changeset**, not only the new node. A per-node audit reads the target node's files; it cannot see a regression the change introduced in a file the node does not own. Widening these gates is necessary but not sufficient: each still inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
+When the scope is cross-node (see `<scope_detection>`), point this audit at the **whole changeset**, not only the target node — as Steps 4 and 6 already did at their gates. Widening the three per-node audits is necessary but not sufficient: each inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
 
 **REJECT → fix → re-invoke this step.** Loop until APPROVED.
 
@@ -158,7 +173,7 @@ Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or
 
 On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the findings, re-invoke the same skill, and scan again.
 
-**3 consecutive REJECTs on the same gate → STOP.** Report which gate failed and why, and ask the user for guidance.
+**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings → STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the change needs human direction, not unbounded iteration.
 
 </review_gates>
 
