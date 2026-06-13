@@ -12,7 +12,7 @@ hooks:
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential. Three review gates that loop until APPROVED — no exceptions, no soft passes. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
+Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node. Four review gates that loop until clean — no exceptions, no soft passes. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
 
 </objective>
 
@@ -23,6 +23,7 @@ Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequen
 3. Architect → audit until APPROVED (Steps 3–4)
 4. Test → audit until APPROVED (Steps 5–6)
 5. Implement → audit until APPROVED (Steps 7–8)
+6. Whole-changeset review when the change reaches beyond the target node (Step 9)
 
 </quick_start>
 
@@ -40,20 +41,23 @@ Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
 
 <skill_map>
 
-Steps 1–2 are language-independent. Steps 3–8 use the detected language.
+Steps 1–2 are language-independent. Steps 3–8 use the detected language. Step 9 is language-independent and runs only when the change reaches beyond the target node.
 
-| Step | Purpose            | TypeScript                                                | Python                                  |
-| ---- | ------------------ | --------------------------------------------------------- | --------------------------------------- |
-| 1    | Load methodology   | `Skill("spec-tree:understanding")`                        | same                                    |
-| 2    | Load context       | `Skill("spec-tree:contextualizing", args: "{node-path}")` | same                                    |
-| 3    | Architect          | `Skill("architecting-typescript")`                        | `Skill("architecting-python")`          |
-| 4    | Architecture audit | `Skill("auditing-typescript-architecture")`               | `Skill("auditing-python-architecture")` |
-| 5    | Write tests        | `Skill("testing-typescript")`                             | `Skill("testing-python")`               |
-| 6    | Test audit         | `Skill("auditing-typescript-tests")`                      | `Skill("auditing-python-tests")`        |
-| 7    | Implement          | `Skill("coding-typescript")`                              | `Skill("coding-python")`                |
-| 8    | Code audit         | `Skill("auditing-typescript")`                            | `Skill("auditing-python")`              |
+| Step | Purpose                  | TypeScript                                                         | Python                                  |
+| ---- | ------------------------ | ------------------------------------------------------------------ | --------------------------------------- |
+| 1    | Load methodology         | `Skill("spec-tree:understanding")`                                 | same                                    |
+| 2    | Load context             | `Skill("spec-tree:contextualizing", args: "{node-path}")`          | same                                    |
+| 3    | Architect                | `Skill("architecting-typescript")`                                 | `Skill("architecting-python")`          |
+| 4    | Architecture audit       | `Skill("auditing-typescript-architecture")`                        | `Skill("auditing-python-architecture")` |
+| 5    | Write tests              | `Skill("testing-typescript")`                                      | `Skill("testing-python")`               |
+| 6    | Test audit               | `Skill("auditing-typescript-tests")`                               | `Skill("auditing-python-tests")`        |
+| 7    | Implement                | `Skill("coding-typescript")`                                       | `Skill("coding-python")`                |
+| 8    | Code audit               | `Skill("auditing-typescript")`                                     | `Skill("auditing-python")`              |
+| 9    | Whole-changeset review † | `changes-reviewer` agent or `Skill("spec-tree:reviewing-changes")` | same                                    |
 
-**You MUST invoke the exact Skill tool call shown.** Do not substitute, skip, or reorder.
+† Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
+
+**Invoke the exact Skill tool call shown.** Never substitute, skip, or reorder.
 
 </skill_map>
 
@@ -125,7 +129,19 @@ Write implementation code. All tests from Step 5 must pass.
 
 Invoke the code audit skill for the detected language.
 
+When the change touches files beyond the target node — a refactor, a move, a consolidation, a cross-cutting rename — point the architecture, test, and code audit gates (Steps 4, 6, 8) at the **whole changeset**, not only the new node. A per-node audit reads the target node's files; it cannot see a regression the change introduced in a file the node does not own. Widening these gates is necessary but not sufficient: each still inspects through its own lens (architecture, test evidence, code), so the distinct whole-diff review in Step 9 remains required for cross-cutting effects no single audit lens catches.
+
 **REJECT → fix → re-invoke this step.** Loop until APPROVED.
+
+</step>
+
+<step number="9" name="Whole-changeset review" gate="true" condition="the change touches files or specs beyond the target node">
+
+Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
+
+Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent, or `/reviewing-changes` when the agent is not installed. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
+
+Fix every valid finding it surfaces, then re-run. **Unaddressed valid finding → fix → re-run this step.** Loop until the review converges.
 
 </step>
 
@@ -133,26 +149,27 @@ Invoke the code audit skill for the detected language.
 
 <review_gates>
 
-Steps 4, 6, and 8 are blocking review gates. Each audit skill emits `APPROVED` or `REJECT`.
+Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or `REJECT`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node.
 
 - Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
-- Before declaring success: scan the conversation for the Step 8 verdict. If `APPROVED` is not present, stop — invoke Step 8.
+- Before considering implementation complete: scan the conversation for the Step 8 verdict. If `APPROVED` is not present, stop — invoke Step 8.
+- Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
 
-On `REJECT`: fix the findings, re-invoke the same audit skill, and scan again.
+On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the findings, re-invoke the same skill, and scan again.
 
 **3 consecutive REJECTs on the same gate → STOP.** Report which gate failed and why, and ask the user for guidance.
 
 </review_gates>
 
 <rationale>
-When something breaks or behaves unexpectedly, your instinct will be to write ad hoc code — a quick script, a throwaway snippet, a print-and-pray debugging session. That instinct is the symptom, not the fix. The problem you hit exists because your tests were insufficient. The ad hoc code patches over one instance; a proper test catches every future instance too.
+When something breaks or behaves unexpectedly, Claude's instinct is to write ad hoc code — a quick script, a throwaway snippet, a print-and-pray debugging session. That instinct is the symptom, not the fix. The problem surfaced because the tests were insufficient. The ad hoc code patches over one instance; a proper test catches every future instance too.
 
 1. **Do not** write ad hoc code to "see what's happening."
-2. **Do** write a test that reproduces the problem. The fact that you hit this issue proves your test coverage has a gap.
+2. **Do** write a test that reproduces the problem. Hitting this issue proves the test coverage has a gap.
 3. **Then** fix the implementation until the test passes.
 
-This is not slower. The ad hoc script you were about to write takes the same effort as a test, but the script gets deleted and the test stays.
+This is not slower. The ad hoc script takes the same effort as a test, but the script gets deleted and the test stays.
 
 </rationale>
 
@@ -165,6 +182,7 @@ Scan the conversation for these markers before declaring done:
 - [ ] Step 4 audit skill emitted `APPROVED`
 - [ ] Step 6 audit skill emitted `APPROVED`
 - [ ] Step 8 audit skill emitted `APPROVED`
+- [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
 - [ ] All tests pass
 
 </success_criteria>

@@ -31,9 +31,22 @@ Before asking ANY questions:
 
 Use an Explore agent for codebase research. Summarize findings as a structured brief and share it with the user before the first question.
 
-**Structure caveat — existing code informs content, not structure.** Pre-analysis tells you what the code *is* and how it is *filed* — packages, modules, directories, files. That is the implementation: the lowest layer. It informs vocabulary, constraints, and open decisions. It must never become the structure of the artifact you are about to create. Do not let the code's module or file layout dictate spec-tree node boundaries or document sections. Separate "how the code is organized" from "what the product does for its consumers" — only the latter drives structure.
+**Structure caveat — existing code informs content, not structure.** Pre-analysis reveals what the code *is* and how it is *filed* — packages, modules, directories, files. That is the implementation: the lowest layer. It informs vocabulary, constraints, and open decisions. It must never become the structure of the artifact about to be created. Do not let the code's module or file layout dictate spec-tree node boundaries or document sections. Separate "how the code is organized" from "what the product does for its consumers" — only the latter drives structure.
 
 When modifying an existing document, read it first. The coverage map starts from the document's existing sections — the interview focuses on deltas, not re-covering settled content.
+
+**Decide-First Protocol**
+
+A question is the last resort, not the first move. Before composing any question:
+
+- **Reason to a recommendation.** Work the decision through to the answer the code, the specs, the decisions, and sensible defaults point to. Carry that reasoning into the question — never ask a question without first trying to answer it.
+- **Ask only what is genuinely the operator's to decide.** A question is warranted only when the decision is the operator's and the evidence does not settle it — a product bet, a priority call, a preference with real trade-offs. When the code, specs, decisions, or a sensible default already settle it, decide and proceed; do not stage a question to ratify a call already made.
+- **No genuine fork → no question.** If reasoning leaves one defensible answer, take it and state the call. A question with only one real answer wastes a turn and pushes back onto the operator a decision the evidence already made.
+
+When a question is warranted, its options obey:
+
+- **Materially distinct end-states.** Every option is a different outcome a reasonable operator might choose — never one real option padded with a strawman, and never one judgment split into a false 50/50.
+- **Recommendation first.** State the recommended option first and label it as recommended; the description gives the trade-off that earns the recommendation. Hiding the recommendation to look neutral hands the operator a decision the evidence was enough to make.
 
 **Questioning Protocol**
 
@@ -42,7 +55,7 @@ When modifying an existing document, read it first. The coverage map starts from
 - **No obvious questions** — never ask what can be inferred from input or codebase analysis
 - **Options must require judgment** — no "yes/no", no obviously-correct choices
 - **Describe trade-offs** — each option's description explains consequences, not just what it is
-- **Think before asking** — spend a turn reasoning about what you've learned so far, what's still ambiguous, and what question would resolve the most uncertainty
+- **Think before asking** — spend a turn reasoning about what the interview has surfaced so far, what's still ambiguous, and what question would resolve the most uncertainty
 
 **Coverage Protocol**
 
@@ -56,13 +69,13 @@ Coverage areas are dynamic:
 
 - **Generic defaults**: Problem, Users, Technical Approach, Risks, Constraints
 - **Calling skill overrides**: When a calling skill provides domain-specific areas, use those instead
-- **Refine as you go**: Split broad areas (e.g., "Technical Approach" into "API Design" + "Data Model")
+- **Refine as the interview proceeds**: Split broad areas (e.g., "Technical Approach" into "API Design" + "Data Model")
 - **Add discovered areas**: New concerns that emerge during conversation
 - **Mark [done]**: When an area is sufficiently explored
 
 **Pushback Protocol**
 
-When you detect:
+When any of these appear:
 
 - **Contradictions** with previous answers — challenge directly, cite the specific prior answer
 - **Over-engineering** for the scope — call it out, propose a simpler alternative
@@ -171,7 +184,7 @@ All in `${CLAUDE_SKILL_DIR}/workflows/`:
 
 Claude asks 15+ questions all drilling into one area (e.g., "API Design") while ignoring other pending areas on the coverage map. The interview grows without making the coverage map advance. User gets frustrated; context window fills with narrow detail.
 
-How to avoid: Before each question, check the coverage map. If an area is at 3+ consecutive questions and still not marked [done], ask yourself whether you're probing a real gap or just exploring. Move to the next pending area when the current one has enough signal to draft the spec section — depth is for unclear cases, not comprehensive documentation.
+How to avoid: Before each question, check the coverage map. If an area is at 3+ consecutive questions and still not marked [done], ask whether the question probes a real gap or just explores. Move to the next pending area when the current one has enough signal to draft the spec section — depth is for unclear cases, not comprehensive documentation.
 
 **Failure 2: Accepting vague answers without pushback**
 
@@ -183,7 +196,7 @@ How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follo
 
 After 30+ turns, Claude loses track of which areas are [done] vs [pending]. Coverage map stops being displayed. Questions start repeating or missing obvious areas. Context compression eats the early interview.
 
-How to avoid: Display the coverage map before EVERY question, not just the first one. The display is a forcing function — writing it out pulls the state back into active context. If you catch yourself not displaying it, that's the signal to stop and re-read your own previous turns.
+How to avoid: Display the coverage map before EVERY question, not just the first one. The display is a forcing function — writing it out pulls the state back into active context. A turn that skips the display is the signal to stop and re-read the previous turns.
 
 **Failure 4: Generated spec doesn't trace back to interview**
 
@@ -195,7 +208,19 @@ How to avoid: Every section of the generated spec must trace to a specific cover
 
 Claude invokes `/interviewing`, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
 
-How to avoid: Pre-Analysis Protocol is non-negotiable. Launch the Explore agent before the first question. Share the brief. The user should never have to tell you something that exists in the codebase or docs.
+How to avoid: Pre-Analysis Protocol is non-negotiable. Launch the Explore agent before the first question. Share the brief. The user should never have to supply something that exists in the codebase or docs.
+
+**Failure 6: Asking a question the evidence already settled**
+
+Claude framed a question — "should the parser tolerate trailing commas?" — whose answer the loaded spec and the existing parser already fixed. The operator answered the obvious, and the turn produced nothing the code did not already say. A variant: Claude reasoned to a clear recommendation, then asked anyway "to confirm", staging a decision it had already made.
+
+How to avoid: Decide-First Protocol. Reason the decision through first. Ask only when the answer is genuinely the operator's and the evidence does not settle it. When one defensible answer remains, take it and state the call — do not ask to ratify it.
+
+**Failure 7: Strawman options and false balance**
+
+Claude offered "use the existing validation harness" against "hand-roll a bespoke validator from scratch" — the second option a strawman no one would pick, dressed up to make the question look like a real choice. Or it split a single judgment into a fabricated 50/50 to appear neutral, when one option was plainly correct.
+
+How to avoid: every option is a materially distinct end-state a reasonable operator might actually choose. If only one option survives scrutiny, there is no question — decide and proceed. When a question is real, state the recommended option first and label it recommended; do not manufacture a counterweight to look balanced.
 
 </failure_modes>
 
@@ -203,7 +228,8 @@ How to avoid: Pre-Analysis Protocol is non-negotiable. Launch the Explore agent 
 A well-conducted interview:
 
 - Pre-analysis completed before first question
-- Every question used AskUserQuestion with 2-4 non-obvious options
+- Each question was reasoned to a recommendation first and asked only because the decision was genuinely the operator's and unsettled by code, specs, decisions, or defaults
+- Every question used AskUserQuestion with 2-4 non-obvious options that are materially distinct end-states — no strawman, no false 50/50 — with the recommended option stated first
 - Coverage map displayed and updated before each question
 - Pushback applied when contradictions or risks detected
 - Decisions log captures every pushback and its resolution
