@@ -1,29 +1,24 @@
 # Issues: Test Infrastructure Enabler
 
-## 1. Canonical test-infrastructure category subtree is absent
+## 1. Test-infrastructure governance inventory is incomplete
 
-`spx/15-test-infrastructure.pdr.md` mandates the canonical subtree
-`infrastructure → testing → {generators, fixtures, harnesses}` with those exact
-slugs, and requires every test-infrastructure artifact to be traceable to a
-category node (covered by the node's assertions, or by a child spec).
-
-This product's `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/`
-has only a `21-python-code-quality.enabler` child — no `harnesses`,
-`generators`, or `fixtures` category nodes. Meanwhile `outcomeeng_testing/`
-already ships `harnesses/` (15 harness modules, including `git_context.py`),
-`generators/`, and `fixtures/` with no governing category node.
+`spx/15-test-infrastructure.pdr.md` requires every test harness, generator, and
+fixture to be governed by a naturally placed spec node. `outcomeeng_testing/`
+ships harness modules, generators, and fixtures whose governing nodes should be
+inventoried by following the evidence chain from spec assertion to test file to
+imported artifact.
 
 The gap is product-wide and unrelated to any single harness. `git_context.py`
-(added for the sessions scenario-test hermeticity fix) surfaced it.
+surfaced it while adding hermetic session scenario tests.
 
 **Required handling** (dedicated structural change):
 
-- Author the `generators`, `fixtures`, and `harnesses` category nodes under
-  `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/` via
-  `/authoring`, declaring the category-wide contract each enforces per
-  `spx/15-test-infrastructure.pdr.md`.
-- Establish traceability from each `outcomeeng_testing/{harnesses,generators,fixtures}/`
-  artifact to the matching category node.
+- Inventory each `outcomeeng_testing/{harnesses,generators,fixtures}/` artifact.
+- Identify the natural governing node for each artifact from the assertion, test,
+  and import chain.
+- Add or move assertions only where an artifact's behavior, policy, lifecycle, or
+  reusable semantics are not already covered. Do not create category nodes solely
+  for taxonomy.
 
 Surfaced during the `fix/sessions-test-hermeticity` change review.
 

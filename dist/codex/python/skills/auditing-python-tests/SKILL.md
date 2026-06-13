@@ -229,7 +229,7 @@ Claude saw a Hypothesis strategy and treated it as property evidence. The strate
 
 Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
-Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the canonical test-infrastructure package. Avoid this by checking every applying `conftest.py`.
+Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the product's test-infrastructure implementation home. Avoid this by checking every applicable `conftest.py`.
 
 Failure 5: Accepted a hand-picked test case as evidence.
 

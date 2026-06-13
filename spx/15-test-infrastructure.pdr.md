@@ -1,14 +1,15 @@
 # Test Infrastructure
 
-Every spec tree governed by the Spec Tree methodology presents a canonical test-infrastructure subtree at the top level, places test-infrastructure implementations at a predictable per-language home outside `spx/` and outside any `tests/` directory, governs every harness, generator, and inert fixture by one set of category semantics, and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: the same canonical subtree in every tree, a predictable implementation home per language, and every test-infrastructure artifact governed as production code.
+Every spec tree governed by the Spec Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
 
-Methodology users observe and rely on this subtree shape:
+Methodology users observe and rely on this governance shape:
 
-- A top-level enabler with slug `infrastructure`.
-- Under it, an enabler with slug `testing`.
-- Under that, exactly three enabler children with slugs `generators`, `fixtures`, `harnesses`.
+- A harness, generator, or inert fixture is infrastructure because it enables test assertions that establish product truth.
+- The artifact's governing spec node sits wherever the product's Spec Tree naturally places that concern: a shared infrastructure node when category-wide policy is a real product concern, the node whose assertions depend on the artifact when the behavior is local to that node, or another ancestor or descendant selected by normal decomposition.
+- The governing spec node declares the artifact's behavior or category contract, carries tests for that declaration when deterministic evidence exists, and inherits the decisions in its ancestry.
+- A product may have nodes named `infrastructure`, `testing`, `generators`, `fixtures`, or `harnesses` when those names express natural product concerns. The methodology does not require those slugs, a top-level `infrastructure` node, or a fixed category subtree.
 
-The slugs are normative. The methodology uses the term **infrastructure** for this testing category. The terms "support", "helpers", "utilities", and "tools" are not category names for test infrastructure.
+The methodology uses the term **infrastructure** for this testing category. The terms "support", "helpers", "utilities", and "tools" are not category names for test infrastructure.
 
 Test-infrastructure implementations live outside `spx/` and outside any `tests/` directory, in a home the build keeps off the product's shipped artifacts. Each language realizes that separation idiomatically: a sibling directory or package for TypeScript and Python, a separate workspace-member crate for Rust, and for Go a module-private `internal/` package — Go restricts `internal/` to importers within the same module, and importing it only from `_test.go` files keeps the toolchain from compiling it into any shipped binary. The per-language path methodology users can expect:
 
@@ -74,16 +75,16 @@ Test infrastructure cannot make a weaker evidence shape impersonate a stronger o
 
 ## Spec Traceability
 
-The three category nodes `generators`, `fixtures`, and `harnesses` are mandatory. They govern category-wide rules even before a product has many artifacts. A test-infrastructure artifact is traceable to the spec tree in one of two ways:
+A test-infrastructure artifact is traceable to the spec tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
 
-- The artifact is covered by the category node's assertions because it only participates in that category's standard contract.
-- The artifact exposes behavior, policy, lifecycle, or reusable semantics that materially affect evidence; it has a child spec under the relevant category node or is named by an assertion there.
+- The artifact is covered by a naturally placed spec node's assertions because it only participates in that category's standard contract.
+- The artifact exposes behavior, policy, lifecycle, or reusable semantics that materially affect evidence; it has its own natural child spec or is named by an assertion in the governing node.
 
-Methodology users can derive the governing node from an artifact path and can derive the artifact category from the governing node.
+Methodology users derive the artifact category from its implementation home or behavior, and derive the governing node by following the evidence chain from the spec assertion to the executed test file and the imported test-infrastructure artifact. A fixed tree path is never the source of governance.
 
 ## Rationale
 
-Methodology users rely on four predictable properties: where to find a harness, generator, or fixture; what category of artifact it is; who owns the values it carries; and how audits judge the evidence chain. The decision gives each property a single answer that holds across products and languages. Leaving placement, ownership, or artifact semantics to local convention would make every product invent its own answer, defeat drift detection across audits, and produce contradictory skill-driven guidance across languages — while one canonical answer turns the decision into a lookup and gives audits the authority to reject literal laundering, severed coupling, and helper directories masquerading as evidence.
+Methodology users rely on four predictable properties: where implementation files live, what category of artifact each file is, who owns the values it carries, and how audits judge the evidence chain. The decision gives those properties one answer that holds across products and languages while preserving natural Spec Tree placement for the governing node. Leaving implementation homes, ownership, or artifact semantics to local convention would make every product invent its own answer, defeat drift detection across audits, and produce contradictory skill-driven guidance across languages; forcing every product into the same root subtree would make the tree less true by moving local or shared evidence concerns away from the product area they actually serve. Natural placement keeps the truth hierarchy intact while category semantics and audit traversal give audits the authority to reject literal laundering, severed coupling, and helper directories masquerading as evidence.
 
 **Why a separate home, not inside `tests/`.** Putting harnesses, generators, or fixtures in `tests/support/`, `tests/_support/`, `tests/helpers/`, `tests/fixtures/`, `conftest.py` as a helper home, or equivalent inside-test paths mixes production-grade test infrastructure into a directory whose canonical filename model declares typed assertion files only. Methodology users lose the per-file evidence guarantee, and audit findings can no longer distinguish an assertion from scaffolding that changes the assertion's meaning.
 
@@ -101,17 +102,18 @@ Methodology users rely on four predictable properties: where to find a harness, 
 
 The decision accepts these trade-offs:
 
-| Trade-off                                                                        | Mitigation / reasoning                                                                                                                                                                            |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Methodology users remember a different implementation path per language          | Each language's testing and auditing skills document the path and examples for that language; the category subtree and artifact semantics remain identical across languages.                      |
-| Products with inside-`tests/` helper directories or fixture modules move files   | The move preserves behavior while restoring the evidence boundary: assertion files stay in `spx/<node>/tests/`, and test infrastructure moves to the language's normative home.                   |
-| The methodology mandates artifact semantics, not only paths                      | Audits can reject laundering even when files sit in the right directory; correct placement alone does not make a generator variable, a fixture inert, or a harness coupled to source behavior.    |
-| Source modules may need architecture changes before tests become acceptable      | This is the intended forcing function. Tests that require copied source literals or replacement mocks expose missing source contracts; improving source testability produces better product APIs. |
-| Rust workspace-member test infrastructure requires Cargo workspace configuration | Rust products pay the setup cost once and gain a package boundary that keeps product crates from importing test infrastructure as shipping code.                                                  |
+| Trade-off                                                                                               | Mitigation / reasoning                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Methodology users remember a different implementation path per language                                 | Each language's testing and auditing skills document the path and examples for that language; the category semantics remain identical across languages.                                           |
+| Natural spec placement requires following the evidence chain instead of looking for one fixed node path | Test audits already traverse assertion files, imports, and test-infrastructure artifacts; the same traversal identifies the governing node and keeps local concerns local.                        |
+| Products with inside-`tests/` helper directories or fixture modules move files                          | The move preserves behavior while restoring the evidence boundary: assertion files stay in `spx/<node>/tests/`, and test infrastructure moves to the language's normative home.                   |
+| The methodology mandates artifact semantics, not only paths                                             | Audits can reject laundering even when files sit in the right directory; correct placement alone does not make a generator variable, a fixture inert, or a harness coupled to source behavior.    |
+| Source modules may need architecture changes before tests become acceptable                             | This is the intended forcing function. Tests that require copied source literals or replacement mocks expose missing source contracts; improving source testability produces better product APIs. |
+| Rust workspace-member test infrastructure requires Cargo workspace configuration                        | Rust products pay the setup cost once and gain a package boundary that keeps product crates from importing test infrastructure as shipping code.                                                  |
 
 ## Product properties
 
-- **Placement and derivability**: the canonical subtree `infrastructure → testing → {generators, fixtures, harnesses}` exists at the top level, and every test-infrastructure artifact lives at the language's normative path outside `spx/` and outside any `tests/` directory — so a methodology user derives the governing node from an artifact path (and the category from the node), and scans a test's imports to know whether each imported artifact is governed by this PDR.
+- **Placement and derivability**: every test-infrastructure artifact lives at the language's normative path outside `spx/` and outside any `tests/` directory, and every such artifact is governed by a naturally placed spec node — so a methodology user derives the category from the implementation home or artifact behavior, derives the governing node from the evidence chain, and scans a test's imports to know whether each imported artifact is governed by this PDR.
 - **Ownership and one-way dependency**: source-owned domain truth comes from source modules, generated values from variable input domains, fixtures stay inert whole-payload inputs, and harnesses manage resources and access to behavior; the dependency direction is one-way (test assertion files depend on test infrastructure; product modules never import it) — so a methodology user inspects the evidence chain to identify which layer owns each value and relies on shipping code carrying no test-infrastructure references.
 - **Full-chain audit**: test audits inspect the complete test-infrastructure chain before approving evidence, naming the exact artifact that weakens evidence and the evidence property affected — not only the visible test file.
 
@@ -119,7 +121,7 @@ The decision accepts these trade-offs:
 
 ### Audit
 
-- ALWAYS: every spec tree governed by this methodology contains the canonical subtree `infrastructure → testing → {generators, fixtures, harnesses}` with these exact slugs ([audit])
+- ALWAYS: every test harness, generator, and fixture is governed by a naturally placed spec node whose assertions or child specs cover the artifact's behavior, policy, lifecycle, reusable semantics, or category contract ([audit])
 - ALWAYS: test harness, generator, and fixture implementations live at the language's normative path, outside `spx/` and outside any `tests/` directory ([audit])
 - ALWAYS: source modules expose the protocol values, registries, constructors, schemas, typed factories, or other observable contracts that tests need; tests and test infrastructure consume those source contracts instead of recreating them ([audit])
 - ALWAYS: harnesses manage setup, teardown, cleanup, resource lifecycle, dependency checks, and access to real behavior, preserving coupling to the behavior an assertion claims to verify ([audit])
@@ -129,6 +131,7 @@ The decision accepts these trade-offs:
 - ALWAYS: spec assertions for test-infrastructure artifacts pass the same code audit, test evidence audit, and architecture audit as any other production-code node ([audit])
 - ALWAYS: language testing, standardizing, and auditing skills teach the path, ownership, generator, fixture, harness, and full-chain audit rules from this decision for their language surface ([audit])
 - ALWAYS: the methodology — across skills, references, templates, examples, and audit findings — uses the term "infrastructure" for this category and never "support" as the category name ([audit])
+- NEVER: require or fabricate a top-level `infrastructure → testing → {generators, fixtures, harnesses}` subtree solely to govern test infrastructure — nodes with those slugs exist only when normal Spec Tree composition selects them for a real product concern ([audit])
 - NEVER: a `tests/` directory at any level of any spec tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files matching `<subject>.<evidence>.<level>[.<runner>]` ([audit])
 - NEVER: the terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, language standards, examples, paths, or audit skills as governing categories for harnesses, generators, or fixtures ([audit])
 - NEVER: a test-infrastructure module is imported into a product module — the dependency direction is `tests → infrastructure`, never `product → infrastructure` ([audit])

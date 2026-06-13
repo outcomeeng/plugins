@@ -33,7 +33,7 @@ Required handling:
 
 ## 3. Python architecture references understate generators in package-layout guidance
 
-Some positive guidance names `fixtures` and `harnesses` while omitting `generators`, even though the PDR defines the canonical test-infrastructure package as the three-category set `generators`, `fixtures`, and `harnesses`.
+Some positive guidance names `fixtures` and `harnesses` while omitting `generators`, even though the PDR defines the Python test-infrastructure implementation home with the three categories `generators`, `fixtures`, and `harnesses`.
 
 Governed by:
 
