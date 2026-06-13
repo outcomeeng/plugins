@@ -23,7 +23,7 @@ Accept exactly one target:
 Read before composing:
 
 - `${CLAUDE_SKILL_DIR}/../understanding/references/node-types.md` — enabler/outcome structure and nesting rules
-- `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md` — artifact content taxonomy and the mandatory test-infrastructure tree shape (`<test_infrastructure>`)
+- `${CLAUDE_SKILL_DIR}/../understanding/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
 - `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/enabler-name.md`
 - `${CLAUDE_SKILL_DIR}/../understanding/templates/nodes/outcome-name.md`
 - `/interviewing` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
@@ -42,7 +42,7 @@ If the target is `spx/`:
 2. Read `spx/CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
-5. The test-infrastructure baseline is mandatory, not discretionary. Per `what-goes-where.md` `<test_infrastructure>`, every tree has a top-level enabler with slug `infrastructure`, an enabler child with slug `testing`, and grandchildren `generators`, `fixtures`, `harnesses`. Compose this baseline when it is absent; use the normative slugs exactly — do not invent alternatives such as `test-infrastructure` or `test-support`.
+5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `testing`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 

@@ -1,6 +1,8 @@
 ---
 name: auditing-python-tests
-description: Use when asked by the user to invoke the Python test audit skill
+description: >-
+  ALWAYS invoke this skill when the user asks to audit Python test evidence, review Python tests for spec-tree evidence quality, or evaluate Python test infrastructure.
+  NEVER audit Python test evidence without this skill.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -230,7 +232,7 @@ Claude saw a Hypothesis strategy and treated it as property evidence. The strate
 
 Failure 4: Accepted pytest fixture body code in `conftest.py`.
 
-Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the canonical test-infrastructure package. Avoid this by checking every applying `conftest.py`.
+Claude treated pytest discovery as a reason to put setup logic in `conftest.py`. The PDR requires harness logic to live in the product's test-infrastructure implementation home. Avoid this by checking every applicable `conftest.py`.
 
 Failure 5: Accepted a hand-picked test case as evidence.
 

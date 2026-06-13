@@ -228,22 +228,16 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 </property_based_testing>
 
 <test_data_policy>
-
 <existing_code_stance>
-
 When writing tests for existing code, evaluate whether the source contract needs to change before writing around it. Maintainable evidence may require architecture improvements first: extract pure functions, inject side-effect dependencies, expose source-owned registries, split command boundaries from domain logic, or add typed constructors that make the behavior observable without copying internals.
 
 If a test can only be written by copying source literals, pinning arbitrary example objects, mocking the behavior under test, or storing inert fixture strings, stop and improve the source contract first.
-
 </existing_code_stance>
-
 <data_ownership_decision>
-
 Use this decision table for every assertion in the spec file. Every test file can only cover assertions of the same assertion type: mapping goes in one file, compliance goes in another file. See `<core_model>` above.
 
 1. **Data that the source imports or should import**
-
-ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
+   ALWAYS verify that the code under test imports routes, selectors, ids, feature flags, registry names, and all other public constants from the module that owns them.
 
 ALWAYS verify that the code under test imports standard values like HTTP status codes from the canonical source of the runtime (Node) or framework (e.g., React or Next.js).
 
@@ -403,7 +397,7 @@ Strings and numbers are never valid fixtures by themselves. A string literal tha
 </test_data_policy>
 
 <test_infrastructure>
-Test infrastructure (harnesses, generators, inert fixtures) is production code governed by the product's `test-infrastructure` PDR. In TypeScript, it lives in a `testing/` directory at the product root, path-mapped to `@testing/` via `tsconfig.json` and `vitest.config.ts`. The PDR mandates the three category subdirectories: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`. This `testing/` directory is sibling to product code (`src/` or product root), never inside `spx/` and never inside any `tests/` directory; the corresponding spec-tree nodes live at `<root>/<NN>-infrastructure.enabler/<NN>-testing.enabler/<NN>-{generators|fixtures|harnesses}.enabler/`.
+Test infrastructure (harnesses, generators, inert fixtures) is production code governed by the product's `test-infrastructure` PDR. In TypeScript, it lives in a `testing/` directory at the product root, path-mapped to `@testing/` via `tsconfig.json` and `vitest.config.ts`. The PDR mandates the three category subdirectories: `@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`. This `testing/` directory is sibling to product code (`src/` or product root), never inside `spx/` and never inside any `tests/` directory. Each test-infrastructure artifact is governed by the naturally placed spec node whose assertions, child specs, or category contract cover the artifact's behavior, policy, lifecycle, or reusable semantics.
 
 ```text
 testing/

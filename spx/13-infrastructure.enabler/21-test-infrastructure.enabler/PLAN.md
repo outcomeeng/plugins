@@ -74,21 +74,18 @@ Approved scope: Phases 1 + 2 + 3. CI fidelity: full `just check`.
 - Remove the child from `spx/EXCLUDE`. Resolve the gate node's mypy ISSUES entry.
 - Audit gates + `just check` green; PR.
 
-## Phase 3 — PDR test-infrastructure subtree conformance
+## Phase 3 — test-infrastructure governance inventory
 
-Resolves this node's `ISSUES.md`. `spx/15-test-infrastructure.pdr.md` mandates
-`infrastructure → testing → {generators, fixtures, harnesses}` with those exact
-slugs. The tree has no `testing` node; `outcomeeng_testing/` ships 20 harness
-modules, 2 generators, and a fixtures tree with no governing node.
+Resolves this node's `ISSUES.md`. `spx/15-test-infrastructure.pdr.md` requires
+test harnesses, generators, and inert fixtures to be governed by naturally placed
+spec nodes. `outcomeeng_testing/` ships harness modules, generators, and fixtures
+whose coverage should be inventoried against the evidence chain.
 
-- STRUCTURAL FORK to resolve first (via `/refactoring` + a structured question):
-  the current `21-test-infrastructure.enabler` charter is the *quality gate*, not
-  the PDR's harness/generator/fixture categories — the names collide. Decide
-  whether the PDR `testing → {generators, fixtures, harnesses}` subtree is a new
-  node under `spx/13-infrastructure.enabler` distinct from the quality-gate node,
-  or a restructure/rename of the existing node. The "exactly three children"
-  constraint conflicts with keeping `python-code-quality` as a sibling.
-- Author the subtree (`/authoring`) with per-category assertions; establish
-  traceability from each `outcomeeng_testing/{harnesses,generators,fixtures}`
-  artifact to its category node.
+- Inventory each `outcomeeng_testing/{harnesses,generators,fixtures}/` artifact.
+- For each artifact, identify the natural governing node by following the spec
+  assertion, test file, and imported artifact chain. When an artifact is covered
+  only by category-wide policy, identify or author the natural shared-policy node
+  rather than creating taxonomy-only children.
+- Add or move assertions only where an artifact's behavior, policy, lifecycle, or
+  reusable semantics are not already covered by the natural governing node.
 - Audit gates (`/auditing-python-architecture`, `test-evidence-auditor`, `/aligning`) + green; PR.

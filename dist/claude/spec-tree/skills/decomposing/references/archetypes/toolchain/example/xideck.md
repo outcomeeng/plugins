@@ -47,8 +47,9 @@ deck-reconciliation   -> diff-classifier | duplicate-of-detection | orphan-shape
   `design-system` → `domain-vocabulary`, `pptx-io` → `artifact-io`, `capture` → `ingest`,
   `emission` → `emit`, `lint-and-verification` → `verify`, `shape-record` → `ir-contract`,
   `deck-reconciliation` → `reconciliation`.
-- Conforms `test-infrastructure` to the normative `testing → {generators, fixtures, harnesses}`
-  subtree.
+- Normalizes `test-infrastructure` as a shared testing concern under infrastructure without forcing
+  category child nodes; concrete harnesses, generators, and fixtures are governed where their behavior
+  naturally belongs.
 - Marks `design-system`/`source-format`/`asset-library`/`authoring-loop`/`reconciliation` as optional
   concerns gated on product signals, so a headless transformer takes only the core spine.
 

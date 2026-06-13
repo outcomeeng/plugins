@@ -36,13 +36,9 @@
           "slug": "testing",
           "kind": "enabler",
           "status": "proposed",
-          "note": "normalized to the normative test-infrastructure subtree",
+          "note": "shared test runner and evidence infrastructure when product scope calls for it; concrete harnesses, generators, and fixtures are governed where their behavior naturally belongs",
           "source_slug": "test-infrastructure",
-          "children": [
-            { "index": 21, "slug": "generators", "kind": "enabler", "status": "proposed" },
-            { "index": 28, "slug": "fixtures", "kind": "enabler", "status": "proposed" },
-            { "index": 33, "slug": "harnesses", "kind": "enabler", "status": "proposed" }
-          ]
+          "children": []
         },
         { "index": 27, "slug": "artifact-io", "kind": "enabler", "status": "proposed", "source_slug": "pptx-io" },
         {

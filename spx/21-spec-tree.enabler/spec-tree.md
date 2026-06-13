@@ -30,7 +30,7 @@ CAN operate within a structured, spec-first framework with deterministic context
 
 - ALWAYS: load complete spec-tree context before any implementation work ([review])
 - ALWAYS: use atemporal voice in all specs — specs are permanent truth ([review])
-- ALWAYS: the `/understanding` skill's references declare the canonical test-infrastructure subtree `infrastructure → testing → {generators, fixtures, harnesses}` with normative slugs, per `spx/15-test-infrastructure.pdr.md` ([review])
+- ALWAYS: the `/understanding` skill's references declare that test harnesses, generators, and inert fixtures are governed by naturally placed spec nodes rather than by a mandatory top-level category subtree, per `spx/15-test-infrastructure.pdr.md` ([review])
 - ALWAYS: the `/understanding` skill's references declare that a higher-level declaration — product spec, PDR, ADR, or ancestor spec — may lead implementation, and that a change to a higher-level declaration aligns the first affected lower specs in the same change, recording any remaining downstream work in the first affected node's `PLAN.md` ([review])
 - ALWAYS: the methodology — skill prose, references, templates, audit findings, examples — uses "infrastructure" as the category term for test harnesses, generators, and inert fixtures, per `spx/15-test-infrastructure.pdr.md` ([review])
 - ALWAYS: the interviewing methodology reasons to a recommendation before asking the operator, asks only when the decision is genuinely the operator's and unsettled by the code, specs, decisions, or sensible defaults, and presents materially distinct options with the recommendation stated first — never a strawman or a false balance ([audit])
