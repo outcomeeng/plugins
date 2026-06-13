@@ -50,7 +50,7 @@ See `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the full cros
 
 - ESLint rule implementation. Lives in `spx/43-typescript.enabler/`.
 - Ruff / Python equivalent. Lives in `spx/43-python.enabler/`.
-- Schema change for the new `testability` step and source-file findings. The verdict format is JSON per `spx/15-audit-verdict-format.pdr.md`; the prior XSD-based `audit-verdict-schema` node has been removed, so schema work proceeds against the JSON `verdict.py` schema under `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/`.
+- Schema change for the new `testability` step and source-file findings. The verdict format is JSON per `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/verdict-toolchain.md`; the prior XSD-based `audit-verdict-schema` node has been removed, so schema work proceeds against the JSON `verdict.py` schema under `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/`.
 - Authoring the constant-object guidance itself. Lives in the language enablers.
 
 ## Done when
