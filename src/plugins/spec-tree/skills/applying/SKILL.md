@@ -12,7 +12,7 @@ hooks:
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node. Four review gates that loop until clean — no exceptions, no soft passes. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
+Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
 
 </objective>
 
