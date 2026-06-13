@@ -707,7 +707,7 @@ class TestPreCompactDelegatesToSpx:
         assert after == before, f"PreCompact wrote: {after - before}"
 
 
-class TestPostCompactUsesSpxResume:
+class TestPostCompactUsesSpxRetrieve:
     _NODE = "spx/21-spec-tree.enabler/76-sessions.enabler"
 
     def test_reanchors_from_spx_retrieve_over_summary(self, tmp_path):
