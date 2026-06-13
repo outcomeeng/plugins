@@ -22,4 +22,5 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 - ALWAYS: resolve session identity from `$CLAUDE_SESSION_ID` (Claude Code) or `$CODEX_THREAD_ID` (Codex) — never infer identity from file modification timestamps, directory enumeration, or index files ([review])
 - ALWAYS: create the per-runtime session directory lazily on first `spx session pickup` claim, not in the `SessionStart` hook — eager creation in the hook leaves empty directories for conversations that never claim a session ([review])
+- ALWAYS: the `SessionStart` hook's only direct filesystem write is the harness-provided `$CLAUDE_ENV_FILE`; it performs no `.spx/` state write, so session identity reaches the environment through the env file while all `.spx/` state stays owned by the `spx` CLI ([review])
 - NEVER: read or write another agent's session directory — each agent's scope is limited to `.spx/sessions/<own_session_id>/` ([review])

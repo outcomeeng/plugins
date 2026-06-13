@@ -19,9 +19,9 @@ Assertions covered:
     modifying content.
   - coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
     payload survives into the session file unchanged.
-  - pre-compact delegates to `spx session compact-stash` (forwarding session id
-    and transcript path); post-compact re-anchors from `spx session
-    compact-resume`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
+  - pre-compact delegates to `spx compact stash` (forwarding session id
+    and transcript path); post-compact re-anchors from `spx compact
+    resume`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
     a foundation was active, instructing the agent to re-invoke
     /spec-tree:understanding and /spec-tree:contextualizing <node>. When the spx
     CLI returns no stash, post-compact falls back to parsing the active node and
@@ -662,8 +662,8 @@ class TestPreCompactDelegatesToSpx:
         assert result.returncode == 0, result.stderr
         argv = json.loads((spx.parent / "spx.argv").read_text())
         assert argv == [
-            "session",
-            "compact-stash",
+            "compact",
+            "stash",
             "--session-id",
             "sess-p",
             "--transcript",
@@ -694,6 +694,18 @@ class TestPreCompactDelegatesToSpx:
         assert result.returncode == 0, result.stderr
         assert result.stdout == ""
 
+    def test_writes_no_filesystem_path_itself(self, tmp_path):
+        # The PreCompact hook reaches state only through the spx CLI; it writes
+        # nothing itself. With the CLI absent it no-ops, so the filesystem is
+        # untouched — the only file present is the transcript the test created.
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text("{}\n")
+        before = set(tmp_path.rglob("*"))
+        result = _pre_compact(tmp_path, "sess-p", transcript)  # _MISSING_SPX
+        assert result.returncode == 0, result.stderr
+        after = set(tmp_path.rglob("*"))
+        assert after == before, f"PreCompact wrote: {after - before}"
+
 
 class TestPostCompactUsesSpxResume:
     _NODE = "spx/21-spec-tree.enabler/76-sessions.enabler"
@@ -709,7 +721,7 @@ class TestPostCompactUsesSpxResume:
         assert f'active-node="{self._NODE}"' in result.stdout
         assert f"/spec-tree:contextualizing {self._NODE}" in result.stdout
         argv = json.loads((spx.parent / "spx.argv").read_text())
-        assert argv == ["session", "compact-resume", "--session-id", "sess-q"]
+        assert argv == ["compact", "resume", "--session-id", "sess-q"]
 
     def test_falls_back_to_summary_when_spx_returns_nothing(self, tmp_path):
         # spx exits non-zero (no stash); the hook parses the node from the summary.
