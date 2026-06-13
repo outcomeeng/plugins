@@ -17,5 +17,5 @@ CAN produce implementations that conform to their governing specs on the first p
 
 - ALWAYS: write tests before implementation — tests derive from spec assertions, not from code ([review])
 - ALWAYS: run all three audit gates after implementation — skipping gates produces unverified evidence ([review])
-- ALWAYS: when the change touches files or specs beyond the target node, run a whole-changeset review (the `changes-reviewer` agent or `/reviewing-changes`) over the full diff and point the language audit gates at the whole changeset before declaring the flow complete — per-node gates miss cross-node effects ([review])
+- ALWAYS: when the change touches files or specs beyond the target node, run a whole-changeset review (the `changes-reviewer` agent or `/reviewing-changes`) over the full diff and point the language audit gates at the whole changeset before declaring the flow complete — per-node gates miss cross-node effects ([audit])
 - NEVER: modify a spec assertion to make a failing test pass — the declaration governs ([review])
