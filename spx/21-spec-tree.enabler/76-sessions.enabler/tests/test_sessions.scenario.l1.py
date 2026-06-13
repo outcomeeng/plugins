@@ -694,6 +694,18 @@ class TestPreCompactDelegatesToSpx:
         assert result.returncode == 0, result.stderr
         assert result.stdout == ""
 
+    def test_writes_no_filesystem_path_itself(self, tmp_path):
+        # The PreCompact hook reaches state only through the spx CLI; it writes
+        # nothing itself. With the CLI absent it no-ops, so the filesystem is
+        # untouched — the only file present is the transcript the test created.
+        transcript = tmp_path / "transcript.jsonl"
+        transcript.write_text("{}\n")
+        before = set(tmp_path.rglob("*"))
+        result = _pre_compact(tmp_path, "sess-p", transcript)  # _MISSING_SPX
+        assert result.returncode == 0, result.stderr
+        after = set(tmp_path.rglob("*"))
+        assert after == before, f"PreCompact wrote: {after - before}"
+
 
 class TestPostCompactUsesSpxResume:
     _NODE = "spx/21-spec-tree.enabler/76-sessions.enabler"
