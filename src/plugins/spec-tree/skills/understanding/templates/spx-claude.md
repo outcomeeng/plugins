@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.10"
+template_version: "0.18.11"
 template_source: spec-tree
 ---
 
@@ -212,6 +212,16 @@ Per-language code, architecture, and test audits render for the product's enable
 | "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
 
 <!-- /lang:typescript -->
+<!-- lang:rust -->
+
+| User Says...          | Skill                         | Agent                       |
+| --------------------- | ----------------------------- | --------------------------- |
+| "Audit this code"     | `/auditing-rust`              | `rust-code-auditor`         |
+| "Audit unsafe Rust"   | `/auditing-rust`              | `rust-unsafe-auditor`       |
+| "Audit ADRs for Rust" | `/auditing-rust-architecture` | `rust-architecture-auditor` |
+| "Audit these tests"   | `/auditing-rust-tests`        | `rust-test-auditor`         |
+
+<!-- /lang:rust -->
 
 ---
 
@@ -230,6 +240,18 @@ Test level is encoded in the filename. This guide renders only the languages lis
 | 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.scenario.l3.test.ts` |
 
 <!-- /lang:typescript -->
+<!-- lang:rust -->
+
+### Rust
+
+| Level | Pattern                                    | Example                         |
+| ----- | ------------------------------------------ | ------------------------------- |
+| 1     | `{subject}.{evidence}.l1.rs`               | `parsing.scenario.l1.rs`        |
+| 2     | `{subject}.{evidence}.l2.rs`               | `cli.scenario.l2.rs`            |
+| 3     | `{subject}.{evidence}.l3.rs`               | `workflow.scenario.l3.rs`       |
+| 1-3   | `{subject}.{evidence}.{level}.{runner}.rs` | `workflow.scenario.l2.tokio.rs` |
+
+<!-- /lang:rust -->
 <!-- lang:python -->
 
 ### Python

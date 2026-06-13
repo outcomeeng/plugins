@@ -27,7 +27,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Testing and audit skills (testing, auditing-tests) as supersets of standalone methodology
 - TDD flow orchestration (coding) with language-specific delegation
 - Commit workflow (committing-changes) with Conventional Commits
-- Language-specific plugins (Python, TypeScript) for architecture, testing, coding, review
+- Language-specific plugins (Python, TypeScript, Rust) for architecture, testing, coding, review
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
 - Local plugin installation and update support for developer machines
