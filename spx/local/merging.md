@@ -63,14 +63,16 @@ src=$(claude plugin marketplace list --json | python3 -c 'import json,sys; print
 [ -n "$src" ] || { echo "outcomeeng is not registered as a directory source" >&2; exit 1; }
 git -C "$src" fetch origin main
 git -C "$src" merge --ff-only origin/main   # the source worktree is on main; fast-forward it to the merged tip
-just sync-marketplace <previous-main-ref>    # re-indexes the now-current source and re-validates installs
+(cd "$src" && just sync-marketplace <previous-main-ref>)   # run FROM the source worktree; see below
 ```
 
 Advancing the source worktree's `main` is the step that makes the merged `dist/` visible to the marketplace. Running `just sync-marketplace` against a source still behind `origin/main` re-indexes stale content — the failure mode this procedure exists to prevent. A PR that changes no plugin-distribution files leaves `dist/` unchanged, so `sync-marketplace` skips the install refresh, but the source worktree's `main` is still fast-forwarded so it never drifts behind.
 
-If `git -C "$src" merge --ff-only origin/main` exits non-zero, the source worktree has diverged from `origin/main` — it should carry no local commits or uncommitted changes, since feature work belongs in other worktrees. Inspect with `git -C "$src" status` and `git -C "$src" log --oneline origin/main..HEAD`, move any unexpected local commits onto a feature branch (never discard them with `reset --hard`), then re-run the fast-forward before `just sync-marketplace`.
+Run `just sync-marketplace` from the source worktree (`cd "$src"` first), not from the feature worktree the change was prepared in. `sync-marketplace`'s `validate_install` reads `current_versions` from its own working directory: invoked from a feature worktree that is behind `origin/main`, it checks the cache against that worktree's stale manifest versions and reports false `MISSING` errors for plugins the cache already holds at the newer published version. Invoked from the fast-forwarded source worktree, it validates against the current versions the cache actually carries.
 
-The **current (feature) worktree** — where the `/pr` flow ran — is a different checkout. Detach it onto the merged commit so it is not left on the deleted branch, and never attach `main`:
+If `git -C "$src" merge --ff-only origin/main` exits non-zero, the source worktree has diverged from `origin/main` — it should carry no local commits or uncommitted changes, since feature work belongs in other worktrees. Inspect with `git -C "$src" status` and `git -C "$src" log --oneline origin/main..HEAD`, move any unexpected local commits onto a feature branch (never discard them with `reset --hard`), then re-run the fast-forward before `(cd "$src" && just sync-marketplace <previous-main-ref>)`.
+
+The **current (feature) worktree** — where the change was prepared — is a different checkout. Detach it onto the merged commit so it is not left on the deleted branch, and never attach `main`:
 
 ```bash
 git switch --detach origin/main
