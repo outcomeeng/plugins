@@ -131,43 +131,43 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 Every change destined for the default branch routes through `/merge`, the transport dispatcher. It reads `spx/local/merging.md` and selects the merge transport — a coordination-note-only changeset (only `PLAN.md` / `ISSUES.md`) to the direct-push transport, an overlay-declared `transport:` when present, else the GitHub-PR transport (`/github-pr`) as the default — then delegates to that transport's skills. The three authority gates and the finding-disposition rule are transport-neutral and live in `/standardizing-merging`; `/merge` owns transport selection only.
 
-For the GitHub-PR transport, `/github-pr` proposes the lifecycle before mutation, then invokes the internal PR protocols. The opening protocol passes through the `REVIEW_READINESS` gate before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The opening protocol invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when the agent is not installed; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. Claude acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
+For the GitHub-PR transport, `/github-pr` proposes the lifecycle before mutation, then invokes the internal PR protocols. The opening protocol passes through the `REVIEW_READINESS` gate before the PR opens. The gate holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The opening protocol invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when `changes-reviewer` is unavailable; both run the same `reviewing-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main agent has been doing. Claude acts on each finding by **validity and phase, never severity**: it validates each finding against its cited rule and drops any the citation does not support, applies every valid finding that belongs, and splits out of the changeset any whose fix is too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). Once `REVIEW_READINESS` holds the PR opens `ready_for_review`; `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/standardizing-merging` `<authority_gates>` for the three-gate vocabulary.
 
 ## Stop Triggers
 
-### About to summarize after validation
+### Claude Is About to Summarize After Validation
 
-🛑 STOP TRIGGER — about to send a final response after saying edits are done, validation passed, tests passed, review passed, or audits passed for work destined for the default branch.
+🛑 STOP TRIGGER — Claude is about to send a final response after saying edits are done, validation passed, tests passed, review passed, or audits passed for work destined for the default branch.
 
 Action: do not summarize yet. Continue into the default-branch lifecycle: ensure the work is on a local branch, commit through `/committing-changes`, then invoke `/merge`.
 
-### About to say blocked
+### Claude Is About to Say Blocked
 
-🛑 STOP TRIGGER — about to say the task is blocked, waiting, or needs operator input.
+🛑 STOP TRIGGER — Claude is about to say the task is blocked, waiting, or needs operator input.
 
 Action: first ask internally: "What work can still be done without this answer or external-state change?" Do all of that work before asking. A blocker exists only when the remaining next action cannot proceed without the operator or external state.
 
 Before calling it blocked, the local branch must contain every change that can be made without the answer, and all applicable verification, review, or audit gates must have run or produced concrete failing evidence.
 
-### About to ask a question
+### Claude Is About to Ask a Question
 
-🛑 STOP TRIGGER — about to ask the operator a question during implementation, verification, committing, or merge preparation.
+🛑 STOP TRIGGER — Claude is about to ask the operator a question during implementation, verification, committing, or merge preparation.
 
 Action: ask only when the answer changes the immediate next action and there is no independent verification, cleanup, branch setup, committing, review, or merge-preparation work left to do first.
 
-### About to finish on detached HEAD
+### Claude Is About to Finish on Detached HEAD
 
-🛑 STOP TRIGGER — about to finish while `git status --short --branch` reports `## HEAD (no branch)` and the work is destined for the default branch.
+🛑 STOP TRIGGER — Claude is about to finish while `git status --short --branch` reports `## HEAD (no branch)` and the work is destined for the default branch.
 
 Action: create or switch to a local branch, preserving the current worktree changes. Commit through `/committing-changes`, then continue through `/merge`.
 
-### About to stop after committing
+### Claude Is About to Stop After Committing
 
-🛑 STOP TRIGGER — about to send a final response after creating a local commit for default-branch work.
+🛑 STOP TRIGGER — Claude is about to send a final response after creating a local commit for default-branch work.
 
 Action: do not stop at the commit. A local commit packages the changeset for review and merge. Continue into `/merge` unless the user explicitly asked only for a local commit.
 
-### About to treat "proposal accepted" as done
+### User Accepted Proposal
 
 🛑 STOP TRIGGER — the user accepted a proposal with "yes", "go", "do it", or equivalent, and the change is destined for the default branch.
 
