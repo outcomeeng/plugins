@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.8"
+template_version: "0.18.9"
 template_source: spec-tree
 ---
 
@@ -258,4 +258,4 @@ agent_session_id: abc123-def456
 ---
 ```
 
-`spx session handoff` reads a JSON header on the first line of stdin followed by the body bytes. It prefills `created_at`, `agent_session_id` when available, and `git_ref`. The handoff must provide non-empty `goal` and `next_step`. Before archiving a claimed session, add a non-empty `result` to that session's frontmatter.
+`spx session handoff` reads a JSON header on the first line of stdin followed by the body bytes. It prefills `created_at`, `agent_session_id` when available, and `git_ref`. The handoff must provide non-empty `goal` and `next_step`.
