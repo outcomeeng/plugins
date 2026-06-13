@@ -19,9 +19,9 @@ Assertions covered:
     modifying content.
   - coordination-note content (PLAN.md / ISSUES.md excerpts) in the handoff
     payload survives into the session file unchanged.
-  - pre-compact delegates to `spx compact stash` (forwarding session id
+  - pre-compact delegates to `spx compact store` (forwarding session id
     and transcript path); post-compact re-anchors from `spx compact
-    resume`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
+    retrieve`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
     a foundation was active, instructing the agent to re-invoke
     /spec-tree:understanding and /spec-tree:contextualizing <node>. When the spx
     CLI returns no stash, post-compact falls back to parsing the active node and
@@ -654,7 +654,7 @@ class TestPostCompactEmitsReanchoringDirective:
 
 
 class TestPreCompactDelegatesToSpx:
-    def test_invokes_compact_stash_with_session_and_transcript(self, tmp_path):
+    def test_invokes_compact_store_with_session_and_transcript(self, tmp_path):
         transcript = tmp_path / "transcript.jsonl"
         transcript.write_text("{}\n")
         spx = _fake_spx(tmp_path / "bin")
@@ -663,7 +663,7 @@ class TestPreCompactDelegatesToSpx:
         argv = json.loads((spx.parent / "spx.argv").read_text())
         assert argv == [
             "compact",
-            "stash",
+            "store",
             "--session-id",
             "sess-p",
             "--transcript",
@@ -707,10 +707,10 @@ class TestPreCompactDelegatesToSpx:
         assert after == before, f"PreCompact wrote: {after - before}"
 
 
-class TestPostCompactUsesSpxResume:
+class TestPostCompactUsesSpxRetrieve:
     _NODE = "spx/21-spec-tree.enabler/76-sessions.enabler"
 
-    def test_reanchors_from_spx_resume_over_summary(self, tmp_path):
+    def test_reanchors_from_spx_retrieve_over_summary(self, tmp_path):
         # spx returns a node; the hook re-anchors from it and ignores the summary.
         stash = json.dumps({"active_node": self._NODE, "has_foundation": True})
         spx = _fake_spx(tmp_path / "bin", stdout=stash)
@@ -721,7 +721,7 @@ class TestPostCompactUsesSpxResume:
         assert f'active-node="{self._NODE}"' in result.stdout
         assert f"/spec-tree:contextualizing {self._NODE}" in result.stdout
         argv = json.loads((spx.parent / "spx.argv").read_text())
-        assert argv == ["compact", "resume", "--session-id", "sess-q"]
+        assert argv == ["compact", "retrieve", "--session-id", "sess-q"]
 
     def test_falls_back_to_summary_when_spx_returns_nothing(self, tmp_path):
         # spx exits non-zero (no stash); the hook parses the node from the summary.
