@@ -47,7 +47,9 @@ def test_session_start_creates_no_per_runtime_session_directory(tmp_path):
 
 
 def test_behind_default_emits_staleness_directive(tmp_path):
-    with worktree_against_origin(behind=2) as repo:
+    behind = 2
+    default_branch = "main"
+    with worktree_against_origin(behind=behind, default_branch=default_branch) as repo:
         result = run_session_start(
             {"session_id": SESSION_ID, "cwd": str(repo)},
             env_file=tmp_path / "claude.env",
@@ -55,8 +57,7 @@ def test_behind_default_emits_staleness_directive(tmp_path):
         )
     assert result.returncode == 0
     assert "<SPEC-TREE_SESSION_START" in result.stdout
-    assert 'behind="2"' in result.stdout
-    # The fixture's default branch is "main", so the directive names origin/main.
-    assert 'default="origin/main"' in result.stdout
+    assert f'behind="{behind}"' in result.stdout
+    assert f'default="origin/{default_branch}"' in result.stdout
     assert "rebase" in result.stdout
     assert "never" in result.stdout and "reset" in result.stdout
