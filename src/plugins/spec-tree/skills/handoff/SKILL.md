@@ -49,12 +49,12 @@ Create a session file unless absolutely no unresolved work in-scope remains.
 
 **Unfinished work needs a session file, even when the remaining steps are written to a node's `PLAN.md`.** The `PLAN.md` is the *what* (the steps, on the branch); the session is the point-in-time *pointer* by which Claude in another worktree discovers the work exists and which branch carries it. They are not substitutes.
 
-Closing without a session file is appropriate only in two cases:
+Closing without a session file is appropriate only when **no in-scope continuation remains** — workflow 02's `<CONTINUATION_SIGNAL>` is `absent`. This holds in two cases:
 
-1. When **absolutely no continuation exists** as the work reached the user-approved stopping state and only deferred coordination notes remain, or
-2. When the **user explicitly asks by passing `--no-session`** or passes along words to that effect (e.g., `determine if a session file is needed`).
+1. The work reached the user-approved stopping state and only deferred coordination notes remain, or
+2. The **user passes `--no-session`** (or words to that effect, e.g. `determine if a session file is needed`) AND no continuation remains.
 
-In any other situation, a session file is required.
+`--no-session` asserts that no continuation remains; it never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present`. When `--no-session` meets a `present` signal, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf while continuation work exists. In any other situation, a session file is required.
 
 <no_excuses>
 
@@ -71,7 +71,7 @@ Three rules govern a conversation's session scope:
 
 1. Scope grows only by user confirmation (via `/pickup`).
 2. Closure has exactly one acceptable end state per in-scope session: archived after this workflow runs against it.
-3. Quick-release shortcut via `/handoff --no-session` if the user confirms within a few turns of pickup.
+3. Quick-release shortcut via `/handoff --no-session` for a wrongly-claimed session the user releases within a few turns of pickup — valid because such a session carries no continuation, so the `<CONTINUATION_SIGNAL>` is `absent`.
 
 Permission to archive comes from completing this workflow against the in-scope set named in `<SESSION_SCOPE ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session session files created by this conversation are workflow artifacts, not scope members.
 
@@ -105,7 +105,7 @@ NEVER archive others' work. `doing` = claimed by active contexts; archive only t
 </multi_agent_awareness>
 
 <arguments>
-- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially in-scope sessions, etc. The only difference is that Claude skips creating a session file.
+- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially in-scope sessions, etc. The difference is that, when no in-scope continuation remains, Claude skips creating a session file. `--no-session` asserts that absence; it does not override a `present` `<CONTINUATION_SIGNAL>` — workflow 04 Path A surfaces the contradiction instead of silently skipping.
 - `--prune`: after writing the new handoff, delete archived sessions. Ignored under `--no-session`.
 
 Check `$ARGUMENTS` for these flags before starting the workflows below.
@@ -130,6 +130,7 @@ A successful closure or handoff:
 - [ ] All five perspectives worked through (workflow 02)
 - [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness — updated or removed if stale (workflow 02)
 - [ ] `<RESOLVED_SCOPE>` marker emitted into the conversation by workflow 02
+- [ ] `<CONTINUATION_SIGNAL>` marker emitted by workflow 02, and `--no-session` honored only when it is `absent`
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
 - [ ] Session-owned spec, test, code, and coordination-note changes committed before closure (workflow 04)
 - [ ] Continuation need explicitly decided: session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)
