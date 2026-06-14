@@ -103,7 +103,7 @@ python3 "${SKILL_DIR}/scripts/init_worktrees.py" classify --path <container>/<re
 
 - [ ] The current checkout classified as `single`, `pool`, or `non-compliant`
 - [ ] A compliant `pool` reported and left unchanged
-- [ ] Provisioning inputs gathered (container, repo, origin, pool worktree names)
+- [ ] Provisioning inputs gathered (container, origin, pool worktree names)
 - [ ] Every local branch confirmed present on the remote before any removal
 - [ ] Bare `<repo>.git`, sibling main checkout (named for the repository) tracking `origin/<default>`, detached pool worktrees, and `.spx/` beside the git-common-dir all created
 - [ ] Prior-checkout removal handed to the operator, never run by the skill
