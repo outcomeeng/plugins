@@ -54,7 +54,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 **Step 6 — Drive to merge.** Invoke `/managing-pr`. It evaluates `MERGE_READINESS` and `PRODUCTION_READINESS`, merges under the gates, and runs the post-merge steps.
 
-**Step 7 — Close the session.** After merge and post-merge verification, invoke `/handoff --no-session` unless the user explicitly asked to stop earlier or the lifecycle overlay declares a different closure.
+**Step 7 — Close the session.** After merge and post-merge verification, invoke `/handoff` unless the user explicitly asked to stop earlier or the lifecycle overlay declares a different closure — the skill decides session-file creation per continuation state; never pass `--no-session` on the user's behalf.
 
 </workflow>
 
@@ -74,6 +74,6 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The GitHub-PR transport was assumed (transport selection having been made by `/merge`), and `spx/local/merging.md` configured the transport through `/opening-pr`, `/managing-pr`, and `/standardizing-merging`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.
-- The PR reached merged state through `/managing-pr`'s gates and the session closed through `/handoff --no-session`, or the flow stopped at an explicit gate — an unmet `REVIEW_READINESS` or `MERGE_READINESS` predicate, or a withheld `PRODUCTION_READINESS` — surfaced to the user.
+- The PR reached merged state through `/managing-pr`'s gates and the session closed through `/handoff` (the skill deciding session-file creation per continuation state, never a hardcoded `--no-session`), or the flow stopped at an explicit gate — an unmet `REVIEW_READINESS` or `MERGE_READINESS` predicate, or a withheld `PRODUCTION_READINESS` — surfaced to the user.
 
 </success_criteria>

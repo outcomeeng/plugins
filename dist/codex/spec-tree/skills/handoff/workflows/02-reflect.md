@@ -84,10 +84,31 @@ A handoff replaces incorporated context. The existence of any session is not, by
 
 </perspective_session_scope>
 
+<continuation_signal>
+Compute the continuation signal workflow 04 reads to decide session-file creation — the check that makes `--no-session` answerable to state rather than an unconditional skip. Unresolved in-scope continuation work is present when any of these holds for an in-scope anchored node:
+
+- a node-local `PLAN.md` carries a pending step this session did not complete;
+- an `spx/EXCLUDE` entry names an in-scope node (specified but unimplemented);
+- a spec assertion touched this session is declared but not yet satisfied (no passing `[test]`/`[eval]`, or an unmet `[audit]`);
+- the path-forward perspective named concrete remaining steps, or an in-scope `ISSUES.md` records an open gap this session did not close.
+
+Emit the signal so workflow 04 reads it from context:
+
+```text
+<CONTINUATION_SIGNAL state="present|absent">
+<one line: the unresolved work, or "no in-scope continuation remains">
+</CONTINUATION_SIGNAL>
+```
+
+`--no-session` asserts `state="absent"` — it never authorizes skipping the session file when the signal is `present`. Workflow 04's `<write_canonical_continuation>` Path A acts on this: a `--no-session` invocation that meets a `present` signal surfaces the contradiction rather than silently omitting the session file.
+
+</continuation_signal>
+
 <success_criteria>
 
 - All five perspectives completed internally before proceeding to workflow 03.
 - `<RESOLVED_SCOPE>` marker emitted into the conversation.
+- `<CONTINUATION_SIGNAL>` marker emitted into the conversation.
 - Stale PLAN.md or ISSUES.md items identified for proposal in workflow 03 (or fixed inline if safe).
 
 </success_criteria>
