@@ -56,5 +56,7 @@ def test_behind_default_emits_staleness_directive(tmp_path):
     assert result.returncode == 0
     assert "<SPEC-TREE_SESSION_START" in result.stdout
     assert 'behind="2"' in result.stdout
+    # The fixture's default branch is "main", so the directive names origin/main.
+    assert 'default="origin/main"' in result.stdout
     assert "rebase" in result.stdout
     assert "never" in result.stdout and "reset" in result.stdout

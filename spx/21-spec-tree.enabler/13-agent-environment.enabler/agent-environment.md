@@ -19,7 +19,7 @@ CAN scope work to the current agent and begin on a current base, without file-sy
 
 ### Properties
 
-- For any session UUID, the env file receives exactly that value as `$CLAUDE_SESSION_ID` — the identity round-trips unchanged ([test](tests/test_agent_environment.property.l1.py))
+- For any session UUID, the env file receives that identity as `$CLAUDE_SESSION_ID` with surrounding whitespace trimmed — the value round-trips through the hook's shell-quoting otherwise unchanged ([test](tests/test_agent_environment.property.l1.py))
 - The hook writes the session identity deterministically: repeated `SessionStart` events with the same payload produce the same `$CLAUDE_SESSION_ID` export line, so every Bash tool call in the session reads one stable value ([test](tests/test_agent_environment.property.l1.py))
 
 ### Compliance
