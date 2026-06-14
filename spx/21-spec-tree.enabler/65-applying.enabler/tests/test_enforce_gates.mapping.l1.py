@@ -121,7 +121,9 @@ MALFORMED_PARSEABLE = [
 ]
 
 
-@pytest.mark.parametrize("raw", MALFORMED_PARSEABLE)
+@pytest.mark.parametrize(
+    "raw", MALFORMED_PARSEABLE, ids=[repr(r) for r in MALFORMED_PARSEABLE]
+)
 def test_parseable_but_wrong_shape_is_silent_noop(raw: str) -> None:
     result = subprocess.run(
         [sys.executable, str(HOOK)],
