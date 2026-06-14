@@ -1,10 +1,12 @@
 # Worktree Provisioning — Issues
 
-## Harden the `init-worktrees` destructive-removal handoff
+## Deferred `init-worktrees` skill-quality improvements
 
-The skill emits an `rm -rf <prior-checkout>` command for the operator and **never** runs it itself (per the node's `NEVER … deletes a prior checkout's working tree` compliance assertion). Two gaps weaken that guarantee against an autonomous or `/apply` flow. Both predate the repo-name-derivation work and are out of scope for it; deferred here.
+General robustness improvements to the `init-worktrees` SKILL.md, surfaced by `develop:skill-auditor`. They are out of scope for the removal-handoff hardening (the `allowed-tools` fencing and the operator-confirmation gate, now in place) and are deferred here.
 
-- **`allowed-tools` does not fence off `rm`.** The frontmatter grants `Read, Bash` with no command restriction, so a misread of the `hand_off_removal` step could let the agent run the `rm -rf` itself. Tightening to the command subset the skill actually invokes (`Bash(python3 *)`, `Bash(git *)`) makes the operator-only removal mechanically enforceable while still permitting the `git push --all --dry-run` check and the `python3` provisioner. Verify the dry-run and provisioner invocations still resolve under the tightened allowlist before shipping.
-- **`hand_off_removal` "wait for confirmation" is unenforced prose.** The step says to emit the command and "wait for confirmation before treating the layout as complete," but nothing stops the `confirm` (re-classify) step from running in the same turn before the operator has deleted the prior checkout — yielding a `pool` verdict while the old checkout still exists. Replace the prose with an explicit structured-question gate (`AskUserQuestion` / `request_user_input`) that blocks the `confirm` step until the operator confirms the removal ran.
+- **Add a named pass-condition gate before `provision`.** The `verify_remote` step says "if any branch is unpushed, stop" in prose; a named GATE checkpoint with an explicit pass condition (`git -C <prior> push --all --dry-run` exits 0 and lists no branch) would keep the irreversible provisioning step from running past an unpushed branch on a misread.
+- **Document infrastructure failure modes.** The `<failure_modes>` section covers behavioral mistakes but no external-state failures the provisioner can hit: `git clone --bare` against an unreachable remote, a `--from` checkout with no `.spx/`, or a pool worktree name collision. One entry per class, with the script's failure output and the recovery action, gives the operator a reference instead of a blind re-run.
+- **Make success criteria verifiable.** The `<success_criteria>` checklist items are prose assertions; attaching the confirming command or expected output to each checkable item (e.g. the `classify` re-run emitting `{"layout": "pool"}`) makes completion a boolean check.
+- **Record the script's tested cases.** Per `develop:standardizing-skills` `<script_testing_rule>`, name the input cases `scripts/init_worktrees.py` is exercised against. The node's co-located `tests/` already cover the classify/provision paths; a pointer from the skill closes the documentation gap.
 
-Source: `develop:skill-auditor` findings f-010, f-011 on `src/plugins/spec-tree/skills/init-worktrees/SKILL.md`.
+Source: `develop:skill-auditor` findings on `src/plugins/spec-tree/skills/init-worktrees/SKILL.md`.
