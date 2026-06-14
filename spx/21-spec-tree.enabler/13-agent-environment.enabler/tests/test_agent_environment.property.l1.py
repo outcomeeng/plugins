@@ -48,3 +48,29 @@ def test_session_id_round_trips_through_env_file(session_id):
     assert exported, "hook wrote no CLAUDE_SESSION_ID export line"
     recovered = shlex.split(exported[-1][len(_EXPORT_PREFIX) :])[0]
     assert recovered == session_id.strip()
+
+
+def _exported_identity_line(env_file: Path) -> str:
+    lines = [
+        line
+        for line in env_file.read_text(encoding="utf-8").splitlines()
+        if line.startswith(_EXPORT_PREFIX)
+    ]
+    assert lines, "hook wrote no CLAUDE_SESSION_ID export line"
+    return lines[-1]
+
+
+@given(session_id=_session_ids)
+def test_session_id_write_is_deterministic(session_id):
+    # The same payload must yield the same export line every run, so every Bash
+    # call in a session that sources the env file observes one stable identity.
+    with tempfile.TemporaryDirectory() as scratch:
+        first = Path(scratch) / "first.env"
+        second = Path(scratch) / "second.env"
+        for env_file in (first, second):
+            run_session_start(
+                {"session_id": session_id, "cwd": scratch},
+                env_file=env_file,
+                project_dir=scratch,
+            )
+        assert _exported_identity_line(first) == _exported_identity_line(second)
