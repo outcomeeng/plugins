@@ -9,9 +9,11 @@ production module's contract.
 from __future__ import annotations
 
 import re
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from tempfile import TemporaryDirectory
+from typing import Iterator, Mapping
 
 from outcomeeng.distribution.build import (
     AGENTS_SUBDIR_NAME,
@@ -104,7 +106,7 @@ class SrcTreeBuilder:
             for skill_name, content in skills.items():
                 skill_dir = skills_root / skill_name
                 skill_dir.mkdir(exist_ok=True)
-                (skill_dir / SKILL_FILENAME).write_text(content)
+                (skill_dir / SKILL_FILENAME).write_text(content, encoding="utf-8")
 
         if commands:
             for command_name in commands:
@@ -113,7 +115,7 @@ class SrcTreeBuilder:
             commands_root.mkdir(exist_ok=True)
             for command_name, content in commands.items():
                 (commands_root / f"{command_name}{COMMAND_FILE_SUFFIX}").write_text(
-                    content
+                    content, encoding="utf-8"
                 )
 
         if agents:
@@ -122,7 +124,9 @@ class SrcTreeBuilder:
             agents_root = plugin_root / AGENTS_SUBDIR_NAME
             agents_root.mkdir(exist_ok=True)
             for agent_name, content in agents.items():
-                (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(content)
+                (agents_root / f"{agent_name}{AGENT_FILE_SUFFIX}").write_text(
+                    content, encoding="utf-8"
+                )
 
         return self
 
@@ -145,7 +149,9 @@ class SrcTreeBuilder:
         topic_root = self.src_root / SHARED_DIR_NAME / scope / topic
         topic_root.mkdir(parents=True, exist_ok=True)
 
-        (topic_root / SHARED_FRAGMENT_FILENAME).write_text(fragment_body)
+        (topic_root / SHARED_FRAGMENT_FILENAME).write_text(
+            fragment_body, encoding="utf-8"
+        )
 
         if references:
             for ref_name in references:
@@ -153,6 +159,18 @@ class SrcTreeBuilder:
             references_root = topic_root / REFERENCES_SUBDIR_NAME
             references_root.mkdir(exist_ok=True)
             for ref_name, content in references.items():
-                (references_root / ref_name).write_text(content)
+                (references_root / ref_name).write_text(content, encoding="utf-8")
 
         return self
+
+
+@contextmanager
+def src_tree() -> Iterator[SrcTreeBuilder]:
+    """Yield a SrcTreeBuilder rooted in a fresh temporary directory.
+
+    Owns the temporary-directory lifecycle so a property test can materialize a
+    new src/ tree per generated example and have it removed on every exit path.
+    The builder writes files; this manages the resource the builder writes into.
+    """
+    with TemporaryDirectory() as tmp:
+        yield SrcTreeBuilder(Path(tmp))

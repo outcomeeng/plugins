@@ -14,23 +14,22 @@ because the text contains no `${CLAUDE_SKILL_DIR}` token. Future evidence work i
 this node should add a direct two-target comparison so the assertion remains
 visible from the tests rather than only from source structure.
 
-## FOLLOW-UP [architecture]: `scenarios.py` is filed under `harnesses/` but is not a harness
+## FOLLOW-UP [evidence]: recursive include expansion and cycle detection are unspecified
 
-`outcomeeng_testing/harnesses/scenarios.py` exposes frozen `IncludeScenario`
-dataclass instances (`SCENARIO_SIMPLE_INCLUDE`, `SCENARIO_MULTILINE_INCLUDE`)
-carrying invented `fragment_body` payloads and the queries tests run against
-them. Per `spx/15-test-infrastructure.pdr.md` Category Semantics, a harness
-mediates resources and lifecycle; this module manages no resources — it is a
-named whole-payload scenario bag closer to an inert fixture (or a generator if
-the shapes should vary). The test-evidence audit flagged the mislabeling while
-confirming it commits none of the PDR's prohibitions (it owns no source-owned
-domain truth and replaces no behavior under test).
+`render_text` recursively expands directives found inside an included
+fragment's body (`_render_directives` re-processes the inlined body) and raises
+`CyclicIncludeError` when includes form a cycle; it also runs a Jinja pass when
+the rendered output contains the variable delimiter `{{!`. None of these
+behaviors is named by a spec assertion. The verbatim-inlining property
+(`test_render_text.property.l1.py`) is deliberately scoped to directive-free,
+variable-delimiter-free bodies precisely because render-level verbatim is
+conditional on the absence of those tokens.
 
-Required handling: decide the correct category for `scenarios.py` (inert fixture
-vs. generator), move it to the matching `outcomeeng_testing/` subdirectory, and
-update the imports in `test_expand_include.scenario.l1.py` and
-`test_render_text.scenario.l1.py`. Deferred as a separate test-infrastructure
-refactor rather than folded into the governance-inventory changeset.
+Required handling: add assertions (and `[test]` evidence) for recursive include
+expansion, cycle detection (`CyclicIncludeError`), and the variable-delimiter
+Jinja pass — each a behavior the build relies on but the spec does not yet
+declare. Larger than a single property test; route through `/authoring` +
+`/testing`.
 
-Surfaced by the test-evidence audit during the test-infrastructure governance
-inventory.
+Surfaced while reworking the verbatim-preservation evidence from named example
+bodies into generated properties.
