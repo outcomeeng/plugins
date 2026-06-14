@@ -92,4 +92,4 @@ def test_gate_workflow_has_no_soft_passed_step() -> None:
 def test_gate_job_runs_unconditionally() -> None:
     job = _gate_job(_workflow())
     assert "if" not in job
-    assert job.get("continue-on-error", "false") == "false"
+    assert "continue-on-error" not in job
