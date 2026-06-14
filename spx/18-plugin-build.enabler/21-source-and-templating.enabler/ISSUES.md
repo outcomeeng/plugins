@@ -14,7 +14,7 @@ because the text contains no `${CLAUDE_SKILL_DIR}` token. Future evidence work i
 this node should add a direct two-target comparison so the assertion remains
 visible from the tests rather than only from source structure.
 
-## FOLLOW-UP [coverage]: recursive include expansion and cycle detection are unspecified
+## FOLLOW-UP [evidence]: recursive include expansion and cycle detection are unspecified
 
 `render_text` recursively expands directives found inside an included
 fragment's body (`_render_directives` re-processes the inlined body) and raises
