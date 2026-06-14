@@ -8,13 +8,19 @@ This repository uses the **GitHub-PR transport** by default — feature work, sp
 
 A **coordination-note-only changeset** — every changed path is a `PLAN.md` or `ISSUES.md` — routes to the **direct-push transport** automatically, per `/merge`'s classification and the marketplace guidance that node-local coordination files may be committed directly so collaborators see the coordination state immediately. There is no explicit `transport:` override; the changeset heuristic governs.
 
-The sections below split into the per-transport blocks `/merge` and the lifecycle skills consume: **Production-relevance recognition**, **Merge command**, **Deterministic verification**, and **Mention-reviewer trigger phrase** configure the GitHub-PR transport; **Direct-push transport** configures the direct-push path; **Post-merge** applies to both.
+The sections below split into the per-transport blocks `/merge` and the lifecycle skills consume: **Production-relevance recognition**, **Merge command**, **Deterministic verification**, and **Mention-reviewer trigger phrase** configure the GitHub-PR transport; **Direct-push transport** configures the direct-push path; **Pre-mutation confirmation** and **Post-merge** apply to both.
 
 ## Production-relevance recognition
 
 This repository declares **no** production-relevance recognition mechanism: every change is treated as not production-relevant, so `PRODUCTION_READINESS` holds by default and `MERGE_READINESS` holding is sufficient authority to merge autonomously. The marketplace ships methodology and plugin sources; a merge to `main` publishes the next marketplace version, which the post-merge sync step picks up — no per-PR human merge approval is required.
 
 The agent merges the moment `MERGE_READINESS` holds and **NEVER asks the operator whether to merge, for merge approval, or whether to hold for human review** — there is no merge-approval decision for the operator to make in this repository, so surfacing one (through the runtime's structured-question tool or in prose) violates this overlay. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I merge?".
+
+## Pre-mutation confirmation
+
+This repository declares **no** pre-mutation confirmation: the agent drives a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow → Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
+
+Establishing *what* to ship when nothing is determined (the `/github-pr` Empty-mode `/interviewing` pass) is requirements work, not a pre-mutation confirmation, and proceeds regardless. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I proceed?".
 
 ## Merge command
 
