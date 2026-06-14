@@ -45,7 +45,7 @@ Before any step that removes a prior checkout, confirm every local branch is pre
 git -C <prior> push --all --dry-run
 ```
 
-If any branch is unpushed, stop and surface it. Do not proceed to removal until the operator pushes it or explicitly accepts the loss.
+GATE: the output must read only `Everything up-to-date`. If it instead lists any branch — a `[new branch]` line or a `->` ref-update line — that branch is unpushed; STOP and surface it. (`git push --all --dry-run` exits 0 whether or not branches would push, so the output text, not the exit code, is the signal.) Do not proceed to the `hand_off_removal` step until the operator pushes every listed branch or explicitly accepts the loss.
 
 </step>
 
@@ -102,17 +102,19 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 
 **Claude advances to `confirm` before the operator removes the prior checkout, reporting a false `pool`.** The `confirm` step classifies the new pool path, which is already a compliant `pool` whether or not the old checkout still exists, so re-classifying early reports completion while the prior checkout remains on disk. The `hand_off_removal` step blocks on the structured-question tool for exactly this reason — do not run `confirm` until the operator confirms the removal ran.
 
+**Claude re-runs `provision` after a script error instead of surfacing it.** The provisioner fails fast with a specific error rather than leaving a half-built pool: an origin URL that yields no repository name raises `ValueError`; a container that already holds `.spx/` raises `FileExistsError`; an unreachable remote (failed bare clone) or a pool-worktree name colliding with an existing directory surfaces a non-zero `git` exit. None is transient — surface the exact error to the operator and resolve its cause (correct the URL, provision into a container without a `.spx/`, restore remote access, or choose a free worktree name) before re-running, rather than re-invoking blindly.
+
 </failure_modes>
 
 <success_criteria>
 
-- [ ] The current checkout classified as `single`, `pool`, or `non-compliant`
-- [ ] A compliant `pool` reported and left unchanged
+- [ ] `classify --path .` exits 0 and emits a `layout` of `single`, `pool`, or `non-compliant`
+- [ ] A `pool` verdict ends the flow with no provisioning run
 - [ ] Provisioning inputs gathered (container, origin, pool worktree names)
-- [ ] Every local branch confirmed present on the remote before any removal
+- [ ] `git -C <prior> push --all --dry-run` reports no unpushed branch before any removal
 - [ ] Bare `<repo>.git`, sibling main checkout (named for the repository) tracking `origin/<default>`, detached pool worktrees, and `.spx/` beside the git-common-dir all created
 - [ ] Prior-checkout removal handed to the operator, never run by the skill
 - [ ] Operator confirmation of the removal obtained through the structured-question gate before re-classifying
-- [ ] New main checkout re-classified as `pool`
+- [ ] `classify --path <container>/<repo>` on the new main checkout emits `{"layout": "pool"}`
 
 </success_criteria>
