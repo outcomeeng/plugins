@@ -9,12 +9,12 @@ CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairin
 ### Scenarios
 
 - Given a prior non-bare checkout that contains a `.spx/` directory, when `init-worktrees` provisions the pool, then `.spx/` sits beside the new `{repo}.git` git-common-dir with its contents preserved byte-for-byte ([test](tests/test_worktree_provisioning.scenario.l1.py))
-- Given a request to provision `{repo}` with N pool worktrees against an existing remote, when `init-worktrees` completes, then `{repo}.git` is a bare repository, a sibling `main` worktree tracks `origin/main`, and N additional worktrees exist detached at the `origin/main` tip ([test](tests/test_worktree_provisioning.scenario.l1.py))
+- Given a request to provision `{repo}` with N pool worktrees against an existing remote, when `init-worktrees` completes, then `{repo}.git` is a bare repository, a sibling main checkout at the repository-name path (`<container>/<repo-name>`) tracks the git-resolved default branch `origin/<default>`, and N additional worktrees exist detached at the `origin/<default>` tip ([test](tests/test_worktree_provisioning.scenario.l1.py))
 - Given a checkout on disk, when its layout is probed and classified, then a lone working tree classifies as `single` and a non-bare checkout carrying a linked worktree classifies as `non-compliant` ([test](tests/test_worktree_provisioning.scenario.l1.py))
 
 ### Mappings
 
-- A probed checkout layout maps to a compliance verdict: a lone working tree with no linked worktrees maps to `single`; a bare repository with a sibling `main` worktree tracking `origin/main` and `.spx/` beside the git-common-dir maps to `pool`; one or more linked worktrees on a non-bare repository maps to `non-compliant`; a bare pool missing the `main` sibling, lacking `main`-to-`origin/main` tracking, or missing the sibling `.spx/` maps to `non-compliant` ([test](tests/test_worktree_provisioning.mapping.l1.py))
+- A probed checkout layout maps to a compliance verdict: a lone working tree with no linked worktrees maps to `single`; a bare repository with a sibling main checkout whose basename equals the origin repository name and `.spx/` beside the git-common-dir maps to `pool`, independent of the branch checked out there; one or more linked worktrees on a non-bare repository maps to `non-compliant`; a bare pool missing the repository-name main checkout sibling, or missing the sibling `.spx/`, maps to `non-compliant` ([test](tests/test_worktree_provisioning.mapping.l1.py))
 
 ### Properties
 

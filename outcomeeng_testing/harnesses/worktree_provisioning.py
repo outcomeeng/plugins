@@ -6,10 +6,13 @@ Exposes:
   The module ships under a runtime-substituted plugin skill directory and is not
   importable by package name; tests load it through ``importlib`` instead.
 - ``provisioning_env``. A context manager yielding a :class:`ProvisioningEnv`
-  backed by a bare ``origin`` remote (branch ``main`` with one commit) plus
+  backed by a bare ``origin`` remote — ``{repo_name}.git`` (default ``repo``) on
+  ``default_branch`` (default ``main``), each overridable so a test can exercise
+  a repository whose name or default branch differs — with one commit, plus
   helpers to reach the checkout shapes the provisioning tests need: a non-bare
-  single checkout, a non-bare checkout carrying linked worktrees, and an empty
-  container directory to provision the pool into.
+  single checkout, a non-bare checkout carrying linked worktrees, a bare
+  repository without an origin remote, and an empty container directory to
+  provision the pool into.
 
 The harness owns the git lifecycle (the remote, the seed commit, temporary
 directories, and teardown on every exit path); it owns no expected outputs and
@@ -81,19 +84,21 @@ def _git_out(repo: Path, *args: str) -> str:
 class ProvisioningEnv:
     """A bare ``origin`` remote plus helpers to reach each checkout shape.
 
-    ``origin`` is a bare repository on branch ``main`` with one commit. The
-    helpers clone non-bare checkouts from it, attach linked worktrees to expose
-    the non-compliant shape, and hand back empty container directories to
+    ``origin`` is a bare repository on its ``default_branch`` with one commit.
+    The helpers clone non-bare checkouts from it, attach linked worktrees to
+    expose the non-compliant shape, and hand back empty container directories to
     provision the pool into. Every path lives under one temporary tree the
     context manager removes on exit.
     """
 
     tmp: Path
     origin: Path
+    repo_name: str
+    default_branch: str
 
-    def origin_main_tip(self) -> str:
-        """Return the commit SHA at the bare remote's ``main`` tip."""
-        return _git_out(self.origin, "rev-parse", "main")
+    def origin_default_tip(self) -> str:
+        """Return the commit SHA at the bare remote's default-branch tip."""
+        return _git_out(self.origin, "rev-parse", self.default_branch)
 
     def single_checkout(self, name: str = "checkout") -> Path:
         """Clone a non-bare single working tree from ``origin``."""
@@ -120,26 +125,65 @@ class ProvisioningEnv:
         target.mkdir()
         return target
 
+    def bare_without_origin(self, name: str = "no-origin") -> Path:
+        """Return a bare repository that has no ``origin`` remote.
+
+        The classifier reads the repository name from ``git remote get-url
+        origin`` to identify the main checkout; with no origin it can name none,
+        so this shape exercises the no-origin probe fallback.
+        """
+        bare = self.tmp / f"{name}.git"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", str(bare)],
+            check=True,
+            capture_output=True,
+        )
+        return bare
+
+    def set_origin_url(self, repo: Path, url: str) -> None:
+        """Re-point ``repo``'s ``origin`` remote at ``url``.
+
+        Writes the remote URL into config without contacting it, so a test can
+        exercise a non-filesystem URL form (HTTPS, scp-like SSH) that the
+        repository-name parser must handle.
+        """
+        _git(repo, "remote", "set-url", "origin", url)
+
+    def move_worktree(self, repo: Path, src: Path, dst: Path) -> None:
+        """Move a worktree from ``src`` to ``dst`` via ``git worktree move``.
+
+        Updates git's worktree tracking, so a test can give the main checkout a
+        directory basename that no longer matches the origin repository name.
+        """
+        _git(repo, "worktree", "move", str(src), str(dst))
+
 
 @contextmanager
-def provisioning_env() -> Iterator[ProvisioningEnv]:
+def provisioning_env(
+    repo_name: str = "repo", default_branch: str = "main"
+) -> Iterator[ProvisioningEnv]:
     """Yield a :class:`ProvisioningEnv` backed by a throwaway bare remote.
 
-    The remote is initialized bare on ``main`` and seeded with one commit pushed
-    from a scratch checkout. The whole tree is removed on exit; read-only git
-    objects that resist cleanup are ignored so teardown never fails the run.
+    The remote is a bare ``{repo_name}.git`` on ``default_branch``, seeded with
+    one commit pushed from a scratch checkout. Its directory basename carries
+    ``repo_name`` so the layout classifier — which reads the repository name from
+    ``git remote get-url origin`` — resolves the same name ``provision`` places
+    the main checkout under. ``default_branch`` is ``main`` unless a test
+    exercises a repository whose default branch is named otherwise. The whole
+    tree is removed on exit; read-only git objects that resist cleanup are
+    ignored so teardown never fails the run.
     """
     with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
         tmp = Path(raw)
-        origin = tmp / "origin.git"
+        origin = tmp / f"{repo_name}.git"
         subprocess.run(
-            ["git", "init", "--quiet", "--bare", "-b", "main", str(origin)],
+            ["git", "init", "--quiet", "--bare", "-b", default_branch, str(origin)],
             check=True,
             capture_output=True,
         )
         seed = tmp / "seed"
         subprocess.run(
-            ["git", "init", "--quiet", "-b", "main", str(seed)],
+            ["git", "init", "--quiet", "-b", default_branch, str(seed)],
             check=True,
             capture_output=True,
         )
@@ -150,8 +194,13 @@ def provisioning_env() -> Iterator[ProvisioningEnv]:
         _git(seed, "add", "README.md")
         _git(seed, "commit", "--quiet", "-m", "seed")
         _git(seed, "remote", "add", "origin", str(origin))
-        _git(seed, "push", "--quiet", "-u", "origin", "main")
-        yield ProvisioningEnv(tmp=tmp, origin=origin)
+        _git(seed, "push", "--quiet", "-u", "origin", default_branch)
+        yield ProvisioningEnv(
+            tmp=tmp,
+            origin=origin,
+            repo_name=repo_name,
+            default_branch=default_branch,
+        )
 
 
 def head_sha(path: Path) -> str:
@@ -180,6 +229,11 @@ def git_common_dir(path: Path) -> Path:
     )
 
 
+def upstream_ref(path: Path) -> str:
+    """Return the upstream tracking ref of the worktree's checked-out branch."""
+    return _git_out(path, "rev-parse", "--abbrev-ref", "@{upstream}")
+
+
 __all__ = [
     "ProvisioningEnv",
     "git_common_dir",
@@ -188,4 +242,5 @@ __all__ = [
     "is_detached",
     "load_init_worktrees_module",
     "provisioning_env",
+    "upstream_ref",
 ]
