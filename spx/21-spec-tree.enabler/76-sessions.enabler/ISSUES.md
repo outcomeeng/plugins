@@ -71,6 +71,24 @@ corrected that the only valid handoff persists everything on an origin branch an
 creates a session file pointing at it. This branch (`work/handoff-lint-enforcement`)
 is the corrected handoff and the carrier of this diagnosis.
 
+### Status — marketplace half landed; CLI half remains
+
+The marketplace-repo half is implemented and governed durably:
+`spx/21-spec-tree.enabler/76-sessions.enabler/13-handoff-persistence.adr.md` records
+the decision; `sessions.md` declares the origin-persistence precondition and the
+no-relocation-bypass rule (`[audit]`); the `/handoff` skill enforces both — the
+`<release_work_branch>` why-driven precondition + push, and the `<no_excuses>`
+relocation-bypass naming — the session-format template carries the `work_branch`
+anchor, and `/pickup` fetches and checks it out.
+
+**Remaining — the `spx` CLI half (separate repo, `~/Code/outcomeeng/spx/`).** Item 3
+above is unfixed: let `spx session handoff` accept an explicit work-branch ref in its
+stdin JSON header (recorded as `git_ref`) so a pool-worktree handoff anchors `git_ref`
+at the feature branch rather than the `origin/<default>` base SHA. Until then the
+marketplace half names the branch in the session body's `work_branch` field. When the
+CLI lands, reconcile the `<release_work_branch>` mechanics with the new accepted-context
+set and add a `git_ref`-accepts-explicit-ref `[test]` assertion in the `spx` repo's spec.
+
 ## Handoff silently honors `--no-session` when continuation work remains (gap)
 
 `sessions.md` line 42 permits closing without a session file "when the user passes

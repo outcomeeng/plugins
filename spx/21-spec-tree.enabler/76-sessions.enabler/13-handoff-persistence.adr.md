@@ -1,0 +1,23 @@
+# Handoff Origin-Branch Persistence
+
+A `/handoff` session document is valid only when the work it points at is recoverable from origin: the working tree is clean and the work branch is published to origin — its `@{upstream}` exists and the branch is not ahead of it. When that does not hold, `/handoff` commits and pushes the work branch before writing the session document; it never emits a chat-only or local-only handoff. The session document names `origin/<work-branch>` in its body so `/pickup` fetches and checks it out. The `git_ref` the `spx session handoff` gate records anchors to that work branch where the gate admits an explicit work-branch ref in its stdin JSON header; where it records only the running worktree's own ref — a branch name for a main checkout, the `origin/<default-branch>` base SHA for a pool worktree — the body's `work_branch` carries the anchor.
+
+## Rationale
+
+A handoff promises that a cold agent — another worktree, another checkout, another machine — can recover the work from the repository alone. Two facts make that promise true, and persisting to an origin branch enforces both at once: the work is really pushed (uncommitted WIP and a local-only branch are invisible to every other context), and the session document anchors to where the work actually is. A session document is a pointer that initializes the next agent through repository-derived pointers (`spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md`); if the spec-tree state it points at is not on origin, the pointer dangles.
+
+The bare-repository worktree pool (`spx/21-spec-tree.enabler/11-repository-layout.pdr.md`) puts feature work on a named branch in a pool worktree while the main checkout stays on the default branch. The `spx session handoff` git-context gate records only the running worktree's own ref and refuses a named branch in a pool worktree, so no worktree can record the feature branch as `git_ref` — the branch is forced into unvalidated prose. Accepting an explicit work-branch ref reconciles the gate with the pool layout: the handoff names the branch directly, and the precondition proves it is pushed.
+
+The precondition is self-explaining, not a bare prohibition. An agent with a confident, helpful-sounding reason reads a bare rule as "not for my clever case," so the skill states what breaks: unpushed work is unrecoverable, and a branch left occupied is one `/pickup` cannot claim. The seductive bypass — running the handoff from a different already-clean worktree while the work worktree keeps its branch — is named explicitly because it is the exact failure that records an anchor at unrelated state and strands the branch. A guard that explains what it protects cannot be rationalized around.
+
+The contract spans two repositories. This marketplace repository owns the `/handoff` skill enforcement and the session-document shape; the `spx` CLI (a separate checkout) owns the `git_ref` gate and the verification, against its multi-worktree harness, that the gate accepts an explicit work-branch ref. The two halves are independent: the skill enforces clean-and-pushed and anchors the session document to the work branch on its own authority. When the gate records only the running worktree's own ref, the skill names `origin/<work-branch>` in the session body — a prose anchor backed by the enforced push, not a dangling pointer.
+
+## Verification
+
+### Audit
+
+- ALWAYS: `/handoff` writes a session document only after confirming the working tree is clean and the work branch's `@{upstream}` exists on origin and is not ahead of it; when that does not hold, it runs `/committing-changes` and pushes the work branch before writing the document ([audit])
+- ALWAYS: the session document names `origin/<work-branch>` in its body so `/pickup` fetches and checks it out in a pool worktree before reading the spec tree; `git_ref` records the running worktree's own ref per the `spx session handoff` gate ([audit])
+- ALWAYS: the `/handoff` skill frames the persistence precondition by what breaks when it is violated — unpushed work is invisible to a cold agent, and an occupied branch is one `/pickup` cannot claim — so the guarantee is understood, not merely prohibited ([audit])
+- NEVER: `/handoff` emits a chat-only or local-only session document, or any document pointing at uncommitted or unpushed work ([audit])
+- NEVER: satisfy the persistence precondition by running the handoff from a different already-clean worktree while the work worktree keeps its branch — that records `git_ref` at unrelated state and leaves the work branch occupied so `/pickup` cannot claim it; release the worktree holding the work and run the handoff there ([audit])
