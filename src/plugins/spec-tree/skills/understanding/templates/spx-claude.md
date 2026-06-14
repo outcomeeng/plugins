@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.11"
+template_version: "0.18.12"
 template_source: spec-tree
 ---
 
@@ -134,43 +134,17 @@ For the GitHub-PR transport, `/github-pr` proposes the lifecycle before mutation
 
 ## Stop Triggers
 
-### Claude Is About to Summarize After Validation
+Default-branch work is complete only when merged — passing validation, tests, review, or audits is progress, not a stopping point, and an accepted proposal ("yes", "go", "do it") authorizes the whole lifecycle, not a pause. Each trigger below resolves the same way: finish the remaining independent work, then continue through `/committing-changes` and `/merge` until the change is merged.
 
-🛑 STOP TRIGGER — Claude is about to send a final response after saying edits are done, validation passed, tests passed, review passed, or audits passed for work destined for the default branch.
+🛑 **About to summarize after edits, validation, tests, review, or audits passed** — do not conclude. Ensure the work is on a local branch, then drive `/committing-changes` and `/merge`.
 
-Action: do not summarize yet. Continue into the default-branch lifecycle: ensure the work is on a local branch, commit through `/committing-changes`, then invoke `/merge`.
+🛑 **About to report blocked, wait, or ask a question** — first do every action that does not need the answer: edits, verification, branch setup, commit, review. A blocker exists only when all three hold:
 
-### Claude Is About to Say Blocked
+- the immediate next action cannot proceed without the operator or an external-state change;
+- the local branch already holds every change makeable without the answer;
+- the applicable gates have run or produced concrete failing evidence.
 
-🛑 STOP TRIGGER — Claude is about to say the task is blocked, waiting, or needs operator input.
-
-Action: first ask internally: "What work can still be done without this answer or external-state change?" Do all of that work before asking. A blocker exists only when the remaining next action cannot proceed without the operator or external state.
-
-Before calling it blocked, the local branch must contain every change that can be made without the answer, and all applicable verification, review, or audit gates must have run or produced concrete failing evidence.
-
-### Claude Is About to Ask a Question
-
-🛑 STOP TRIGGER — Claude is about to ask the operator a question during implementation, verification, committing, or merge preparation.
-
-Action: ask only when the answer changes the immediate next action and there is no independent verification, cleanup, branch setup, committing, review, or merge-preparation work left to do first.
-
-### Claude Is About to Finish on Detached HEAD
-
-🛑 STOP TRIGGER — Claude is about to finish while `git status --short --branch` reports `## HEAD (no branch)` and the work is destined for the default branch.
-
-Action: create or switch to a local branch, preserving the current worktree changes. Commit through `/committing-changes`, then continue through `/merge`.
-
-### Claude Is About to Stop After Committing
-
-🛑 STOP TRIGGER — Claude is about to send a final response after creating a local commit for default-branch work.
-
-Action: do not stop at the commit. A local commit packages the changeset for review and merge. Continue into `/merge` unless the user explicitly asked only for a local commit.
-
-### User Accepted Proposal
-
-🛑 STOP TRIGGER — the user accepted a proposal with "yes", "go", "do it", or equivalent, and the change is destined for the default branch.
-
-Action: implement, verify, commit on a local branch, and continue through `/merge`. The accepted proposal is authorization to execute the lifecycle, not a new stopping point.
+🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint. Create or switch to a local branch preserving the worktree changes, then continue through `/merge` unless the user asked only for a local commit.
 
 ---
 

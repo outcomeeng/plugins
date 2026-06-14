@@ -32,9 +32,9 @@ Load the Spec Tree methodology into the conversation so all subsequent skills op
 
 <stop_triggers>
 
-Claude is about to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decomposing`; this foundation only covers the context-loading meaning of existing order.
+About to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decomposing`; this foundation only covers the context-loading meaning of existing order.
 
-Claude is about to load context for an existing target and explain why lower-index siblings are read -> read `references/ordering-rules.md`.
+About to load context for an existing target and explain why lower-index siblings are read -> read `references/ordering-rules.md`.
 
 </stop_triggers>
 
