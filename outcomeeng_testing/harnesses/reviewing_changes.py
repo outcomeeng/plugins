@@ -171,8 +171,8 @@ def make_review_result_dict(
         findings = [
             {
                 "id": "F-001",
-                "concern": "standards",
-                "severity": "debt",
+                "concern": review_result.Concern.STANDARDS,
+                "severity": review_result.Severity.DEBT,
                 "file": "example.py",
                 "line": 10,
                 "rule": FIXTURE_RULE_CITATION,
