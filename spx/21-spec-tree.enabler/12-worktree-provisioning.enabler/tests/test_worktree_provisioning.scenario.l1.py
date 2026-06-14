@@ -4,9 +4,10 @@ The scenarios run the provisioning module against a throwaway bare remote in a
 temporary directory (L1: git plus tmp dirs). They prove a prior checkout's
 ``.spx/`` is carried across byte-for-byte; that a fresh provision produces a bare
 repository, a sibling main checkout at the repository-name path tracking the
-git-resolved default branch, and N pool worktrees detached at that tip; and that
-the designation is branch-agnostic — a repository whose default branch is not
-``main`` provisions and classifies identically.
+git-resolved default branch, and N pool worktrees detached at that tip; that the
+repository name is derived from the origin URL rather than a separate input; and
+that the designation is branch-agnostic — a repository whose default branch is
+not ``main`` provisions and classifies identically.
 """
 
 from __future__ import annotations
@@ -41,7 +42,6 @@ def test_prior_spx_is_carried_across_byte_for_byte() -> None:
 
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
             carry_spx=spx,
         )
@@ -59,7 +59,6 @@ def test_fresh_provision_builds_bare_pool_with_detached_worktrees() -> None:
 
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
             pool_worktree_names=names,
         )
@@ -78,13 +77,29 @@ def test_fresh_provision_builds_bare_pool_with_detached_worktrees() -> None:
             assert head_sha(worktree) == tip
 
 
+def test_provision_names_the_main_checkout_from_a_distinctive_origin() -> None:
+    # provision takes no repository-name input; the bare dir and main checkout
+    # are named from the origin URL, so a distinctively named origin yields a
+    # distinctively named, compliant pool — provision and probe cannot disagree.
+    with provisioning_env(repo_name="acme-tool") as env:
+        container = env.container()
+
+        result = provision(
+            container=container,
+            origin_url=str(env.origin),
+        )
+
+        assert result.bare_dir == container / "acme-tool.git"
+        assert result.main_worktree == container / "acme-tool"
+        assert classify(probe(result.main_worktree)) is Layout.POOL
+
+
 def test_provision_designates_main_checkout_by_repo_name_for_non_main_default() -> None:
     with provisioning_env(default_branch="trunk") as env:
         container = env.container()
 
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
             pool_worktree_names=("worktree-a",),
         )
@@ -132,7 +147,6 @@ def test_probe_resolves_the_repo_name_from_an_scp_like_ssh_origin_url() -> None:
         container = env.container()
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
         )
         # Re-point origin at an scp-like SSH URL whose repository basename still
@@ -151,7 +165,6 @@ def test_probe_classifies_a_pool_with_a_misnamed_main_checkout_as_non_compliant(
         container = env.container()
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
         )
         # Move the main checkout to a basename that does not match the origin
@@ -174,8 +187,6 @@ def test_provision_cli_from_prior_derives_origin_and_carries_spx() -> None:
                 "provision",
                 "--container",
                 str(container),
-                "--repo",
-                env.repo_name,
                 "--from",
                 str(prior),
             ]
@@ -197,8 +208,6 @@ def test_provision_cli_origin_builds_pool() -> None:
                 "provision",
                 "--container",
                 str(container),
-                "--repo",
-                env.repo_name,
                 "--origin",
                 str(env.origin),
                 "--worktree",
@@ -222,7 +231,6 @@ def test_provision_refuses_a_container_that_already_holds_spx() -> None:
         with pytest.raises(FileExistsError):
             provision(
                 container=container,
-                repo_name=env.repo_name,
                 origin_url=str(env.origin),
                 carry_spx=prior / ".spx",
             )

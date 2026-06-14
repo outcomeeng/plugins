@@ -42,7 +42,6 @@ def test_every_worktree_resolves_the_one_spx_beside_the_common_dir(
         container = env.container()
         result = provision(
             container=container,
-            repo_name=env.repo_name,
             origin_url=str(env.origin),
             pool_worktree_names=tuple(names),
         )
