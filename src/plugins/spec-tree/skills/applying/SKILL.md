@@ -3,12 +3,6 @@ name: applying
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
   NEVER write code for a spec-tree node without this skill.
-hooks:
-  PostToolUse:
-    - matcher: "Skill"
-      hooks:
-        - type: command
-          command: "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/enforce-gates.py"
 ---
 
 <objective>
