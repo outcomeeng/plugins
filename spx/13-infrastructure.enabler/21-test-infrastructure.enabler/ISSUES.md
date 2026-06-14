@@ -1,28 +1,6 @@
 # Issues: Test Infrastructure Enabler
 
-## 1. Test-infrastructure governance inventory is incomplete
-
-`spx/15-test-infrastructure.pdr.md` requires every test harness, generator, and
-fixture to be governed by a naturally placed spec node. `outcomeeng_testing/`
-ships harness modules, generators, and fixtures whose governing nodes should be
-inventoried by following the evidence chain from spec assertion to test file to
-imported artifact.
-
-The gap is product-wide and unrelated to any single harness. `git_context.py`
-surfaced it while adding hermetic session scenario tests.
-
-**Required handling** (dedicated structural change):
-
-- Inventory each `outcomeeng_testing/{harnesses,generators,fixtures}/` artifact.
-- Identify the natural governing node for each artifact from the assertion, test,
-  and import chain.
-- Add or move assertions only where an artifact's behavior, policy, lifecycle, or
-  reusable semantics are not already covered. Do not create category nodes solely
-  for taxonomy.
-
-Surfaced during the `fix/sessions-test-hermeticity` change review.
-
-## 2. Gate-job-level soft-pass / skip is not covered by the workflow-contract test
+## 1. Gate-job-level soft-pass / skip is not covered by the workflow-contract test
 
 `tests/test_ci_gate.compliance.l1.py` asserts no gate *step* carries
 `continue-on-error`, a step-level `if:`, or a soft-passing `run:` shell, per the
