@@ -1,8 +1,9 @@
-"""Scenarios for expand_include.
+"""Scenario: an include whose target fragment is absent fails loudly.
 
-Verifies that expand_include reads the included file's body verbatim,
-preserves multi-line structure, and raises IncludeResolutionError when
-the target file does not exist.
+expand_include raises IncludeResolutionError when the referenced file does not
+exist, so an unresolved include fails the build instead of emitting empty or
+partial output. Verbatim body preservation is a property
+(test_expand_include.property.l1.py), not a named example.
 """
 
 from __future__ import annotations
@@ -16,10 +17,6 @@ from outcomeeng.distribution.build import (
     IncludeDirective,
     IncludeResolutionError,
     expand_include,
-)
-from outcomeeng_testing.harnesses.scenarios import (
-    SCENARIO_MULTILINE_INCLUDE,
-    SCENARIO_SIMPLE_INCLUDE,
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
@@ -35,32 +32,6 @@ def _require_module_implemented() -> None:
 
 
 MISSING_FRAGMENT_PATH = "no-such-scope/no-such-topic/fragment.md"
-
-
-class TestReturnsBodyVerbatim:
-    """expand_include returns the included file's body unchanged."""
-
-    def test_simple_fragment_body_returned_verbatim(self, tmp_path: Path) -> None:
-        builder = SrcTreeBuilder(tmp_path)
-        SCENARIO_SIMPLE_INCLUDE.apply(builder)
-
-        result = expand_include(
-            SCENARIO_SIMPLE_INCLUDE.directive,
-            shared_root=builder.shared_root,
-        )
-
-        assert result == SCENARIO_SIMPLE_INCLUDE.fragment_body
-
-    def test_multiline_fragment_preserves_structure(self, tmp_path: Path) -> None:
-        builder = SrcTreeBuilder(tmp_path)
-        SCENARIO_MULTILINE_INCLUDE.apply(builder)
-
-        result = expand_include(
-            SCENARIO_MULTILINE_INCLUDE.directive,
-            shared_root=builder.shared_root,
-        )
-
-        assert result == SCENARIO_MULTILINE_INCLUDE.fragment_body
 
 
 class TestRaisesOnMissingFile:
