@@ -60,6 +60,8 @@ In any other situation, a session file is required.
 
 When the invocation of **`spx session handoff` refuses to create a session file,** e.g. on a linked worktree that is not cleanly detached at `origin/<default>` because the persist-then-detach precondition is unmet (see `workflows/04-execute.md` `<release_work_branch>`), address the problem by properly executing `workflows/04-execute.md` rather than rationalizing that no session file is needed.
 
+The refusal is not satisfied by **relocating** — running the handoff from a different worktree that is already clean while the work worktree keeps its branch. That records `git_ref` at unrelated state and leaves the work branch occupied, so `/pickup` cannot claim it: the handoff then points at the wrong place AND strands the work. The "keep the work worktree on its branch so it's ready to continue" instinct is the trap — that worktree is exactly the one the next agent cannot use. Release the worktree that holds the work — commit, push the work branch, detach it to `origin/<default>` — and run the handoff there, so the recorded anchor and the freed branch both point at the work.
+
 </no_excuses>
 
 </session_file_purpose>

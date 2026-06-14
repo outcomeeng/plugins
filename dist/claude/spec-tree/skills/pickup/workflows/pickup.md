@@ -15,6 +15,16 @@ The previous Claude context skipped these skills and it caused problems. List ea
 **Next action — where to resume**
 Show the recommended skill and TDD flow position.
 
+**Step 2b: Check out the work branch**
+
+Read the `work_branch` field from the session body `<metadata>`. When it names `origin/<work-branch>`, fetch and check that branch out **before** loading node context — the spec-tree state the session points at lives on that branch, and `/handoff`'s persistence precondition guarantees it exists on origin:
+
+```bash
+git fetch origin <work-branch>
+```
+
+Then check it out per the checkout kind: in a bare-repository worktree pool, claim the branch in a free pool worktree (`git -C <pool-worktree> switch <work-branch>`, or `git worktree add` a fresh one) — never the main checkout; in a single working tree, `git switch <work-branch>` from a clean tree. When `work_branch` is absent, the work landed on the default branch — skip this step and read the spec tree from there.
+
 **Step 3: Load node context**
 
 For each node in the `<nodes>` section:
@@ -111,6 +121,7 @@ This applies after the post-context checkpoint in Step 6 completes, or after the
 <success_criteria>
 
 - [ ] Skills checklist presented BEFORE any work starts
+- [ ] When the session body `<metadata>` names a `work_branch`, that branch is fetched and checked out before node context is loaded (Step 2b)
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged

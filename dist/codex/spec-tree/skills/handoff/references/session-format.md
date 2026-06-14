@@ -32,6 +32,7 @@ files:
   product: [Product name from cwd]
   git_ref: [value from frontmatter git_ref]
   git_status: [clean | dirty]
+  work_branch: origin/[work-branch the work is pushed to — the branch /pickup fetches and checks out]
 </metadata>
 
 <nodes>
@@ -127,6 +128,7 @@ history.
 - **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
 - **Path C JSON header**: Carries only the caller-supplied fields — `priority`, `goal`, `next_step`, optional `specs`, optional `files`. Do not put `created_at`, `agent_session_id`, or `git_ref` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
 - **`git_ref`**: Prefilled by `spx session handoff` from git context — the branch name for a main checkout on a branch, or a commit SHA for a detached or linked-worktree handoff. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
+- **`work_branch`** (body `<metadata>`): Names `origin/<work-branch>` — the origin branch the work is pushed to, which `/pickup` fetches and checks out in a pool worktree before reading the spec tree. The persistence precondition (`workflows/04-execute.md` `<release_work_branch>`) guarantees this branch exists on origin and is not behind local. Where the `spx session handoff` git-context gate records only the running worktree's own ref as `git_ref` (a pool worktree records the `origin/<default>` base SHA), `work_branch` is the body anchor that names where the work actually is; omit it only when the work landed on the default branch with no feature branch.
 - **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `git_ref` identify the session context.
 - **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.

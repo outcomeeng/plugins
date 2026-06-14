@@ -96,26 +96,33 @@ Every closure ends with **zero, one, or several** session files — one canonica
 </write_canonical_continuation>
 
 <release_work_branch>
-A handoff RELEASES the work branch. The committed branch ref — not any checkout — carries the work forward, so after the handoff the releasing context steps off the branch and leaves it unoccupied for the next worktree or agent to claim via `/pickup`. This holds for every checkout kind; only the git mechanics differ. It is a post-handoff hygiene rule, not a worktree-only concern.
+A handoff RELEASES the work branch, and it is valid only when the work it points at is recoverable from origin. The precondition is: the working tree is clean AND the work branch is published to origin — its `@{upstream}` exists and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. A chat-only or local-only handoff is never valid.
 
-**Pre-handoff CLI precondition.** `spx session handoff` (Path C) requires an allowed git state before it will record the handoff, and that precondition differs by checkout kind:
+**Why this precondition exists.** A handoff promises a cold agent two things — the work is safe, and the agent can claim it — and running the handoff from the worktree that holds the work, released, enforces both at once:
 
-- **Main checkout on a named branch** — already allowed; the CLI records the branch name. No pre-handoff detach is needed.
-- **Linked (pool) worktree** — allowed only as a clean tree detached at the `origin/<default-branch>` tip; the CLI records that base SHA and REFUSES a linked worktree in any other state. When the committed work sits on a feature branch checked out in a linked worktree, detach to `origin/<default-branch>` before invoking the handoff. The commits persist on the branch ref in the shared `.git`, so detaching loses nothing:
+1. **The work is really pushed.** Detaching a pool worktree onto `origin/<default-branch>` is lossless only because the commits live on the branch ref and on origin, so the release forces the push — turning the promise from a claim into a proof. An unpushed branch is invisible to every other checkout and machine; a session document pointing at it dangles.
+2. **The branch is free to claim.** `/pickup` checks the work branch out in a pool worktree, and git refuses a branch already checked out elsewhere. A branch left occupied is precisely the one the next agent cannot use.
 
-  ```bash
-  git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
-  ```
+Run the handoff FROM the worktree that holds the work and release THAT worktree; the recorded `git_ref` and the `origin/<work-branch>` the session body names then anchor to where the work actually is.
 
-**Post-handoff step-off.** After the handoff is written, step off the released branch. The form follows the checkout kind:
+**Two seductive instincts that each break a guarantee — act on neither:**
 
-- **Main checkout** — switch back to the base branch (the repository's default branch) so the feature branch is unoccupied:
+- *"Run the handoff from a worktree that's already clean."* It records `git_ref` at unrelated state and leaves the work branch occupied — the relocation bypass `SKILL.md` `<no_excuses>` forbids.
+- *"Keep the work worktree on its branch so it's ready to continue."* The "ready to continue" worktree is exactly the one the next agent cannot use — `/pickup` cannot claim a branch this context still holds.
+
+**Release mechanics by checkout kind.** First ensure the work branch is committed and pushed — `git push -u origin HEAD:refs/heads/<branch>` when `@{upstream}` is absent, else `git push` — then satisfy the `spx session handoff` git-context gate and step off:
+
+- **Main checkout on a named branch** — the CLI records the branch name; no detach is needed. After the handoff, switch back to the base branch so the feature branch is unoccupied:
 
   ```bash
   git switch "$(basename "$(git symbolic-ref --short refs/remotes/origin/HEAD)")"   # e.g. main
   ```
 
-- **Linked (pool) worktree** — LEAVE it detached at the `origin/<default-branch>` tip.
+- **Linked (pool) worktree** — the CLI accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. The session body names `origin/<work-branch>` so `/pickup` fetches and checks it out. Leave the worktree detached afterward.
+
+  ```bash
+  git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
+  ```
 
 NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.
 </release_work_branch>
