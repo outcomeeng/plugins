@@ -114,3 +114,13 @@ Required handling:
 - Sweep `standardizing-merging/SKILL.md` and any other PR-flow skill that mixes the conventions.
 
 Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens scope across multiple PR-flow skills; the rebase-merge PR scope is intentionally narrow.
+
+## 20. Hook output-contract vocabulary is not source-owned across hooks and their tests
+
+The four spec-tree hook scripts (`src/plugins/spec-tree/scripts/{session-start,post-compact,pre-compact,enforce-gates}.py`) each define their stdout-contract vocabulary — markers such as `<SPEC-TREE_SESSION_START>` / `<SPEC-TREE_RESUMED>`, their attribute names, and the `export CLAUDE_SESSION_ID=` env line — inline, and their tests hand-write the same literals to assert on subprocess stdout (e.g. `spx/21-spec-tree.enabler/76-sessions.enabler/tests/test_sessions.scenario.l1.py:559` and the `13-agent-environment.enabler` tests). `python:python-test-auditor` flagged this against `spx/15-test-infrastructure.pdr.md` "source contracts come first" on PR for the agent-environment base-staleness work.
+
+It is not fixed in place because the hook scripts are hyphenated standalone files invoked as `python3 .../<name>.py` — not importable modules — and they ship stdlib-only into consumer repos, so neither the test suite nor a shared constant module can import from them without restructuring how every hook is packaged. The tokens are also spec-declared contract vocabulary (named in `agent-environment.md` / `sessions.md`), so the spec is arguably their source of truth. A proper fix spans all four hooks plus their tests (extract an importable, shippable constants module each hook and each test imports, or generate the tokens from a shared source), which is larger than any single node's changeset and would otherwise leave the agent-environment tests inconsistent with the established, audit-passed sessions-test convention.
+
+**Resolution shape:** decide whether hook output-contract tokens get a single importable source (a stdlib-only module co-located in `scripts/` that both the hyphenated hook entry and the tests import) applied uniformly across all four hooks, or whether spec-declared marker tokens asserted against subprocess stdout are accepted as spec-owned and the rule is scoped to exclude them. Apply the decision to all four hooks and their tests together.
+
+Surfaced by `python-test-auditor` on the `feat/session-start-base-staleness` work (2026-06-14).
