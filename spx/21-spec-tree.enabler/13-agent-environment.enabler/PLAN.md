@@ -24,6 +24,12 @@ Three behaviors were scoped. One is shipped; two remain.
 - **A session is worktree-independent.** The handoff queue is pool-global; `/pickup` happens in whatever worktree the agent occupies. Do not scope the discoverability queue to the current worktree's branch; `git_ref` identifies which branch/PR a session involves, not a filter.
 - **Honesty caveat for discoverability:** a queued session whose branch is unpushed can point at unrecoverable work (`spx/21-spec-tree.enabler/76-sessions.enabler/ISSUES.md`); wording must not over-promise.
 
-## Open consideration
+## Structure
 
-`agent-environment.md` now carries ~13 assertions across two concerns (identity + base-currency), past the `/decomposing` >7 trigger. Consider splitting into identity + base-currency child enablers before adding behavior 2 here, or relocating behaviors 2–3 to their related nodes. Decide via `/decomposing`.
+`13-agent-environment.enabler` is decomposed into three child enablers, with the hook-wide write-discipline constraint left in the parent:
+
+- `21-identity.enabler` — session-id resolution and env write.
+- `21-base-currency.enabler` — the shipped staleness check (behavior 1).
+- `43-session-directory.enabler` — per-runtime `.spx/sessions/<id>/` lifecycle (depends on identity).
+
+When the remaining behaviors land: behavior 2 (the `/understanding` directive) is a new context-loading concern at this subtree (a new sibling enabler, or the parent hook, per `/decomposing`); behavior 3 (queued-work discoverability) extends `43-session-directory.enabler` and relates to `spx/21-spec-tree.enabler/76-sessions.enabler`.

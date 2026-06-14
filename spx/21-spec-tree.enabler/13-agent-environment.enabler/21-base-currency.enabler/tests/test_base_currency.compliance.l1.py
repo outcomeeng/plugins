@@ -1,4 +1,4 @@
-"""Compliance tests for 13-agent-environment.enabler (agent-environment.md compliance).
+"""Compliance tests for 21-base-currency.enabler (base-currency.md compliance).
 
 L1: the real `session-start.py` hook is run as a subprocess against real git
 repositories in pytest tmp_path directories, with no test doubles.

@@ -1,12 +1,13 @@
-"""Property tests for 13-agent-environment.enabler (agent-environment.md property).
+"""Property tests for 21-identity.enabler (identity.md properties).
 
 L1: the real `session-start.py` hook is run as a subprocess against real
 filesystem I/O in pytest tmp_path directories, with no test doubles.
 
-Assertion covered:
-  - For any session UUID, the env file receives exactly that value as
-    $CLAUDE_SESSION_ID — the identity round-trips unchanged through the hook's
-    shell-quoting.
+Assertions covered:
+  - For any session UUID, the env file receives that identity (whitespace
+    trimmed) as $CLAUDE_SESSION_ID — round-trips through the hook's shell-quoting.
+  - The hook writes the identity deterministically: the same payload yields the
+    same export line every run.
 """
 
 import shlex
@@ -29,27 +30,6 @@ _session_ids = st.text(
 ).filter(lambda value: value.strip() != "")
 
 
-@given(session_id=_session_ids)
-def test_session_id_round_trips_through_env_file(session_id):
-    # A fresh temp dir per generated input — a function-scoped fixture would not
-    # reset between Hypothesis examples.
-    with tempfile.TemporaryDirectory() as scratch:
-        env_file = Path(scratch) / "claude.env"
-        run_session_start(
-            {"session_id": session_id, "cwd": scratch},
-            env_file=env_file,
-            project_dir=scratch,
-        )
-        exported = [
-            line
-            for line in env_file.read_text(encoding="utf-8").splitlines()
-            if line.startswith(_EXPORT_PREFIX)
-        ]
-    assert exported, "hook wrote no CLAUDE_SESSION_ID export line"
-    recovered = shlex.split(exported[-1][len(_EXPORT_PREFIX) :])[0]
-    assert recovered == session_id.strip()
-
-
 def _exported_identity_line(env_file: Path) -> str:
     lines = [
         line
@@ -58,6 +38,21 @@ def _exported_identity_line(env_file: Path) -> str:
     ]
     assert lines, "hook wrote no CLAUDE_SESSION_ID export line"
     return lines[-1]
+
+
+@given(session_id=_session_ids)
+def test_session_id_round_trips_through_env_file(session_id):
+    with tempfile.TemporaryDirectory() as scratch:
+        env_file = Path(scratch) / "claude.env"
+        run_session_start(
+            {"session_id": session_id, "cwd": scratch},
+            env_file=env_file,
+            project_dir=scratch,
+        )
+        recovered = shlex.split(
+            _exported_identity_line(env_file)[len(_EXPORT_PREFIX) :]
+        )[0]
+    assert recovered == session_id.strip()
 
 
 @given(session_id=_session_ids)
