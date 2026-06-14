@@ -31,7 +31,7 @@ See `templates/nodes/enabler-name.md` for the spec format.
 
 **Directory suffix:** `.outcome`
 **Spec opening:** `WE BELIEVE THAT ... WILL ... CONTRIBUTING TO ...`
-**Purpose:** A bet on which output achieves a desired user behavior change. The word "hypothesis" means genuine uncertainty — you don't know which output achieves it.
+**Purpose:** A bet on which output achieves a desired user behavior change. The word "hypothesis" means genuine uncertainty — which output achieves it is unknown.
 
 The hypothesis has three parts:
 
@@ -39,21 +39,21 @@ The hypothesis has three parts:
 - **Outcome** — measurable change in user behavior the output is expected to produce. Requires real users to validate.
 - **Impact** — business value: increase revenue, sustain revenue, reduce costs, or avoid costs.
 
-Assertions specify the **output** — not the outcome or impact. You can test what the software does; you can only hypothesize about the user behavior change and business value it leads to.
+Assertions specify the **output** — not the outcome or impact. The software's behavior is testable; the user behavior change and business value it leads to can only be hypothesized.
 
 **The key property of an outcome:** The majority of assertions could change while the hypothesis stays the same. A landing page that doesn't convert gets redesigned — different assertions, same outcome hypothesis. The hypothesis is stable; the output is experimental.
 
 **When to create an outcome:**
 
-- You cannot fully specify the output because the right design is uncertain
+- The output cannot be fully specified because the right design is uncertain
 - The same goal could be achieved by a fundamentally different set of assertions
-- You are making a bet: "this output will cause this behavior change"
+- The work is a bet: "this output will cause this behavior change"
 
 **When NOT to create an outcome:**
 
 - The output is fully determined by its specification (use an enabler)
 - The assertions are stable and grow only by addition (use an enabler)
-- You find yourself forcing the hypothesis (e.g., "WE BELIEVE THAT providing timestamps WILL cause agents to...") — if the hypothesis feels forced, the node is an enabler
+- A forced hypothesis (e.g., "WE BELIEVE THAT providing timestamps WILL cause agents to...") signals the node is an enabler
 
 See `templates/nodes/outcome-name.md` for the spec format.
 

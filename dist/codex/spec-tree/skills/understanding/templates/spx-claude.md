@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.12"
+template_version: "0.18.13"
 template_source: spec-tree
 ---
 
@@ -104,7 +104,7 @@ Loads the Spec Tree methodology. Required once per session and again after every
 
 **ALWAYS** invoke `/contextualizing` before working on a spec node.
 
-**🛑 STOP TRIGGER — after every compaction event:** all loaded spec-tree context is gone. **Re-invoke `/contextualizing` on every node still in scope** before touching it again — not just the next one you work on.
+**🛑 STOP TRIGGER — after every compaction event:** all loaded spec-tree context is gone. **Re-invoke `/contextualizing` on every node still in scope** before touching it again — not just the next one being worked on.
 
 **NEVER** resume work on a node without having invoked `/contextualizing` since the last compaction.
 

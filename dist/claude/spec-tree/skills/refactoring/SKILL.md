@@ -274,7 +274,7 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 **Extracting enablers directly.** Refactoring applies tree surgery; `/decomposing` owns shared-enabler boundaries, ordering evidence, and indices.
 
-**Leaving empty nodes after re-scope.** If you move all assertions out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
+**Leaving empty nodes after re-scope.** If all assertions move out of a node, the node is now empty. Either remove it or consolidate it — don't leave a spec with no assertions.
 
 **Treating `spx/local/` as a node directory.** `spx/local/` holds skill overlays, not spec nodes. It has no enabler or outcome suffix and its files have no spec structure. Do not move, archive, or validate it as part of tree surgery.
 

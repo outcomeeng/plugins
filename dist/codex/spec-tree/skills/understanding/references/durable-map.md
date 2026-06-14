@@ -75,15 +75,15 @@ This alignment is about declarations and coordination, not forced implementation
 
 <declarations>
 
-When you write a spec, you make a **declaration** — an authoritative statement of what the product does. The implementation either conforms or is in violation.
+Writing a spec makes a **declaration** — an authoritative statement of what the product does. The implementation either conforms or is in violation.
 
-When you write tests for that spec, the declaration becomes **verifiable**. Tests are the executable form of the declaration.
+Writing tests for that spec makes the declaration **verifiable**. Tests are the executable form of the declaration.
 
 When tests pass, the node is **passing**. The implementation conforms to the declaration.
 
-When you edit a passing spec, tests may start failing. The implementation is now in violation of the new declaration. Reconcile by updating tests and code — not by reverting the spec.
+Editing a passing spec can make tests start failing. The implementation is now in violation of the new declaration. Reconcile by updating tests and code — not by reverting the spec.
 
-When you remove a spec, you **prune** — deciding this branch no longer serves the product.
+Removing a spec **prunes** the tree — deciding this branch no longer serves the product.
 
 </declarations>
 

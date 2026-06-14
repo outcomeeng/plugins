@@ -29,7 +29,7 @@ On success the command exits 0 and prints one JSON object — `{"layout": "pool"
 
 <step name="gather">
 
-Gather the provisioning inputs. Infer what you can; ask only for genuine gaps using the runtime's structured-question tool:
+Gather the provisioning inputs. Infer where possible; ask only for genuine gaps using the runtime's structured-question tool:
 
 - **container** — the directory that will hold `<repo>.git` and the worktrees. For a migration this is normally the parent of the prior checkout.
 - **origin URL** — derive from the prior checkout (`git -C <prior> remote get-url origin`) or take it from the user. The provisioner reads the repository name from this URL; the bare directory and the main checkout are both named for it, so no separate repository name is passed.

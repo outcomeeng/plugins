@@ -40,7 +40,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 Invoke `/contextualizing` on the directory containing the PDR.
 
-Do not proceed if you do not see the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
+Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
 
 </step>
 
@@ -84,7 +84,7 @@ For each product property:
 1. Is it observable from the user's perspective?
    - "Pages load in under 2 seconds" → observable ✓
    - "Database uses row-level locking" → not user-observable ✗
-2. Is it falsifiable — can you describe a scenario where it's violated?
+2. Is it falsifiable — is there a scenario where it's violated?
    - "Good user experience" → unfalsifiable ✗
    - "Search returns results in under 500ms" → falsifiable ✓
 
