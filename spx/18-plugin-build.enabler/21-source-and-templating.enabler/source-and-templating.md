@@ -6,6 +6,10 @@ CAN locate sources predictably and express shared-content includes uniformly.
 
 ## Assertions
 
+### Scenarios
+
+- Given an `{!% include %!}` directive whose target fragment file is absent, when the source renders, then `IncludeResolutionError` is raised so an unresolved include fails the build loudly instead of emitting empty or partial output ([test](tests/test_expand_include.scenario.l1.py))
+
 ### Compliance
 
 - ALWAYS: `src/` contains `src/plugins/<plugin>/{skills,commands,agents}/` mirroring Claude Code plugin structure and `src/_shared/<scope>/<topic>/` holding canonical shared content — a single source tree houses all authored plugin material ([test](tests/test_source_and_templating.compliance.l1.py))
