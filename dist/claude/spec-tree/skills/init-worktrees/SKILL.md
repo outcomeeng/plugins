@@ -1,8 +1,8 @@
 ---
 name: init-worktrees
 description: >-
-  ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while carrying a prior checkout's .spx across. NEVER hand-run git clone --bare plus git worktree add to build the pool without this skill.
-allowed-tools: Read, Bash
+  ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while carrying a prior checkout's .spx across. NEVER run git clone --bare plus git worktree add to build the pool outside this skill.
+allowed-tools: Read, Bash(git:*), Bash(python3:*), AskUserQuestion
 ---
 
 <objective>
@@ -23,7 +23,7 @@ Probe the current checkout and report its layout:
 python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path .
 ```
 
-The verdict is `single`, `pool`, or `non-compliant`. A `pool` verdict means the layout is already compliant — report it and stop. A `single` or `non-compliant` verdict means provisioning the pool is the next step.
+On success the command exits 0 and prints one JSON object — `{"layout": "pool", "facts": {…}}` — whose `layout` is `single`, `pool`, or `non-compliant`. Read the verdict from that field; a non-zero exit or output that is not a single JSON object with a `layout` key is an error, not a verdict. A `pool` verdict means the layout is already compliant — report it and stop. A `single` or `non-compliant` verdict means provisioning the pool is the next step.
 
 </step>
 
@@ -65,17 +65,19 @@ For a fresh layout with no prior checkout, pass `--origin <url>` in place of `--
 
 <step name="hand_off_removal">
 
-Provisioning never deletes the prior checkout. After `.spx/` is relocated and remote presence is verified, emit the exact removal command for the operator to run, and wait for confirmation before treating the layout as complete:
+Provisioning never deletes the prior checkout. After `.spx/` is relocated and remote presence is verified, emit the exact removal command for the operator to run:
 
 ```bash
 rm -rf <prior-checkout>
 ```
 
+Then block on the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) asking the operator to confirm the removal ran. Do not run the removal — the operator runs it — and do not advance to `confirm` until the structured-question tool returns confirmation. A re-classification before the prior checkout is gone reports a `pool` verdict while the old checkout still exists on disk; the gate exists to prevent that false completion.
+
 </step>
 
 <step name="confirm">
 
-Re-classify the new main checkout to confirm a `pool` verdict:
+Only after the `hand_off_removal` gate returns the operator's confirmation, re-classify the new main checkout to confirm a `pool` verdict:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <container>/<repo>
@@ -88,15 +90,17 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 <constraints>
 
 - NEVER check out a feature branch in the main checkout — keep it on the default branch and create feature branches in a pool worktree. The main checkout is the stable default-branch reference other worktrees and external tooling resolve against.
-- NEVER delete a prior checkout's working tree from within this skill — emit the `rm` command for the operator and wait, after `.spx/` is relocated and remote presence is verified.
+- NEVER delete a prior checkout's working tree from within this skill — emit the `rm` command for the operator, then block on the structured-question gate for their confirmation, after `.spx/` is relocated and remote presence is verified. The skill itself runs only the classification, provisioning, and remote-check commands — never the removal — so the emitted `rm -rf` stays the operator's action.
 - ALWAYS confirm every local branch is present on the remote before emitting any removal step — `.spx/` is the only state provisioning carries that the remote cannot restore.
-- The provisioner runs on stdlib `python3` alone — never add a dependency or reach outside the target container and the skill directory.
+- NEVER add a dependency to the provisioner or reach outside the target container and the skill directory — it runs on stdlib `python3` alone.
 
 </constraints>
 
 <failure_modes>
 
-**A feature branch checked out in the default-branch worktree breaks tooling that resolves against it.** Running `git switch -c <feature>` inside the default-branch worktree moves that worktree off the default branch; every consumer that resolves against the default-branch checkout breaks until it is switched back. Create feature branches in a pool worktree — `git -C <repo>-a switch -c <feature>` — never in the default-branch worktree.
+**Claude checks out a feature branch in the main checkout, breaking tooling that resolves against it.** Running `git switch -c <feature>` inside the main checkout moves it off the default branch; every consumer that resolves against the default-branch checkout breaks until it is switched back. Create feature branches in a pool worktree — `git -C <repo>-a switch -c <feature>` — never in the main checkout.
+
+**Claude advances to `confirm` before the operator removes the prior checkout, reporting a false `pool`.** The `confirm` step classifies the new pool path, which is already a compliant `pool` whether or not the old checkout still exists, so re-classifying early reports completion while the prior checkout remains on disk. The `hand_off_removal` step blocks on the structured-question tool for exactly this reason — do not run `confirm` until the operator confirms the removal ran.
 
 </failure_modes>
 
@@ -108,6 +112,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 - [ ] Every local branch confirmed present on the remote before any removal
 - [ ] Bare `<repo>.git`, sibling main checkout (named for the repository) tracking `origin/<default>`, detached pool worktrees, and `.spx/` beside the git-common-dir all created
 - [ ] Prior-checkout removal handed to the operator, never run by the skill
+- [ ] Operator confirmation of the removal obtained through the structured-question gate before re-classifying
 - [ ] New main checkout re-classified as `pool`
 
 </success_criteria>
