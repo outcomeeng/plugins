@@ -151,4 +151,60 @@ def handoff_git_env() -> Iterator[HandoffGitEnv]:
         yield HandoffGitEnv(root=root, default_branch="main", origin_tip=origin_tip)
 
 
-__all__ = ["HandoffGitEnv", "accepted_git_context", "handoff_git_env"]
+@contextmanager
+def worktree_against_origin(
+    *, behind: int = 0, default_branch: str = "main"
+) -> Iterator[Path]:
+    """Yield a repo whose HEAD trails ``origin/<default_branch>`` by ``behind`` commits.
+
+    Provisions a bare remote on ``default_branch`` and a checkout that pushes a
+    seed commit, then advances ``origin`` by ``behind`` commits and resets the
+    local branch back to the seed — so the remote-tracking ref sits ``behind``
+    commits ahead of HEAD without any fetch left for the reader to run, and
+    ``origin/HEAD`` resolves to ``default_branch``. With ``behind=0`` the checkout
+    is current with the tip. The whole tree is removed on exit; read-only git
+    objects that resist cleanup are ignored so teardown never fails the run.
+
+    Exception case per `plugins/spec-tree/skills/testing/references/methodology.md`:
+    none. This is a real local git repository (L1: git plus tmp dirs), not a test
+    double. The harness owns resource setup, teardown, and cleanup; it does not
+    replace the behavior under test.
+    """
+    with TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        base = Path(tmp)
+        remote = base / "remote.git"
+        repo = base / "repo"
+        subprocess.run(
+            ["git", "init", "--quiet", "--bare", "-b", default_branch, str(remote)],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "init", "--quiet", "-b", default_branch, str(repo)],
+            check=True,
+            capture_output=True,
+        )
+        _git(repo, "config", "user.email", "test@example.invalid")
+        _git(repo, "config", "user.name", "Spec Tree Test")
+        _git(repo, "config", "commit.gpgsign", "false")
+        (repo / "README.md").write_text("seed\n", encoding="utf-8")
+        _git(repo, "add", "README.md")
+        _git(repo, "commit", "-m", "seed")
+        _git(repo, "remote", "add", "origin", str(remote))
+        _git(repo, "push", "--quiet", "-u", "origin", default_branch)
+        _git(repo, "remote", "set-head", "origin", "-a")
+        seed_sha = _git_out(repo, "rev-parse", "HEAD")
+        for index in range(behind):
+            _git(repo, "commit", "--allow-empty", "-m", f"origin advance {index + 1}")
+            _git(repo, "push", "--quiet", "origin", default_branch)
+        if behind:
+            _git(repo, "reset", "--hard", seed_sha)
+        yield repo
+
+
+__all__ = [
+    "HandoffGitEnv",
+    "accepted_git_context",
+    "handoff_git_env",
+    "worktree_against_origin",
+]
