@@ -92,4 +92,6 @@ def test_gate_workflow_has_no_soft_passed_step() -> None:
 def test_gate_job_runs_unconditionally() -> None:
     job = _gate_job(_workflow())
     assert "if" not in job
-    assert "continue-on-error" not in job
+    # Mirror the step-level continue-on-error check: a falsy value is a harmless
+    # no-op; only a truthy continue-on-error lets a failed job report success.
+    assert job.get("continue-on-error", "false") == "false"
