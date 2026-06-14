@@ -7,7 +7,7 @@ allowed-tools: Read, Bash
 
 <objective>
 
-Bring a repository into one of the two compliant git layouts and keep it there: a single working tree, or a bare-repository worktree pool. The pool is a bare `<repo>.git` repository whose git-common-dir has, as siblings, a `main` worktree tracking `origin/main` and a shared `.spx/` operational directory; additional pool worktrees are created detached at the `origin/main` tip. The layout keeps `main` claimable by no single worktree and lets every worktree resolve one shared `.spx/`, which the session, review, and merge workflows depend on.
+Bring a repository into one of the two compliant git layouts and keep it there: a single working tree, or a bare-repository worktree pool. The pool is a bare `<repo>.git` repository whose git-common-dir has, as siblings, a **main checkout** — the worktree whose directory basename is the repository name, tracking the repository's git-resolved default branch `origin/<default>` — and a shared `.spx/` operational directory; additional pool worktrees are created detached at the `origin/<default>` tip. The layout keeps the default branch claimable by no single worktree and lets every worktree resolve one shared `.spx/`, which the session, review, and merge workflows depend on.
 
 Deterministic classification and provisioning run in `scripts/init_worktrees.py`; this skill orchestrates that helper, gathers its inputs, and guards the one destructive step — removing a prior checkout — behind operator confirmation.
 
@@ -32,9 +32,8 @@ The verdict is `single`, `pool`, or `non-compliant`. A `pool` verdict means the 
 Gather the provisioning inputs. Infer what you can; ask only for genuine gaps using the runtime's structured-question tool:
 
 - **container** — the directory that will hold `<repo>.git` and the worktrees. For a migration this is normally the parent of the prior checkout.
-- **repo name** — the bare directory is `<repo>.git`.
-- **origin URL** — derive from the prior checkout (`git -C <prior> remote get-url origin`) or take it from the user.
-- **pool worktree names** — default to `<repo>-a`, `<repo>-b`, `<repo>-c`, `<repo>-d`; the `main` worktree is always created.
+- **origin URL** — derive from the prior checkout (`git -C <prior> remote get-url origin`) or take it from the user. The provisioner reads the repository name from this URL; the bare directory and the main checkout are both named for it, so no separate repository name is passed.
+- **pool worktree names** — default to `<repo>-a`, `<repo>-b`, `<repo>-c`, `<repo>-d`; the main checkout, named for the repository, is always created.
 
 </step>
 
@@ -52,11 +51,11 @@ If any branch is unpushed, stop and surface it. Do not proceed to removal until 
 
 <step name="provision">
 
-Run the provisioner. It clones `<repo>.git` bare, restores the `origin/*` fetch refspec a bare clone omits, adds the sibling `main` worktree tracking `origin/main`, adds one detached pool worktree per name at the `origin/main` tip, and moves the prior checkout's `.spx/` beside the new git-common-dir:
+Run the provisioner. It reads the repository name from the origin URL, clones `<repo>.git` bare, restores the `origin/*` fetch refspec a bare clone omits, resolves the default branch from the clone, adds the sibling main checkout (named for the repository) tracking `origin/<default>`, adds one detached pool worktree per name at the `origin/<default>` tip, and moves the prior checkout's `.spx/` beside the new git-common-dir:
 
 ```bash
 python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" provision \
-  --container <container> --repo <repo> --from <prior> \
+  --container <container> --from <prior> \
   --worktree <repo>-a --worktree <repo>-b --worktree <repo>-c --worktree <repo>-d
 ```
 
@@ -76,10 +75,10 @@ rm -rf <prior-checkout>
 
 <step name="confirm">
 
-Re-classify the new `main` worktree to confirm a `pool` verdict:
+Re-classify the new main checkout to confirm a `pool` verdict:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <container>/main
+python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <container>/<repo>
 ```
 
 </step>
@@ -88,7 +87,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 
 <constraints>
 
-- NEVER check out a feature branch in the default-branch (`main`) worktree — keep it on the default branch and create feature branches in a pool worktree. The default-branch worktree is the stable reference other worktrees and external tooling resolve against.
+- NEVER check out a feature branch in the main checkout — keep it on the default branch and create feature branches in a pool worktree. The main checkout is the stable default-branch reference other worktrees and external tooling resolve against.
 - NEVER delete a prior checkout's working tree from within this skill — emit the `rm` command for the operator and wait, after `.spx/` is relocated and remote presence is verified.
 - ALWAYS confirm every local branch is present on the remote before emitting any removal step — `.spx/` is the only state provisioning carries that the remote cannot restore.
 - The provisioner runs on stdlib `python3` alone — never add a dependency or reach outside the target container and the skill directory.
@@ -105,10 +104,10 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/init_worktrees.py" classify --path <contain
 
 - [ ] The current checkout classified as `single`, `pool`, or `non-compliant`
 - [ ] A compliant `pool` reported and left unchanged
-- [ ] Provisioning inputs gathered (container, repo, origin, pool worktree names)
+- [ ] Provisioning inputs gathered (container, origin, pool worktree names)
 - [ ] Every local branch confirmed present on the remote before any removal
-- [ ] Bare `<repo>.git`, sibling `main` worktree tracking `origin/main`, detached pool worktrees, and `.spx/` beside the git-common-dir all created
+- [ ] Bare `<repo>.git`, sibling main checkout (named for the repository) tracking `origin/<default>`, detached pool worktrees, and `.spx/` beside the git-common-dir all created
 - [ ] Prior-checkout removal handed to the operator, never run by the skill
-- [ ] New `main` worktree re-classified as `pool`
+- [ ] New main checkout re-classified as `pool`
 
 </success_criteria>

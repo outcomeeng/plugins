@@ -22,6 +22,7 @@ CAN assume the shared-`.spx/` bare-pool topology without re-deriving or repairin
 
 ### Compliance
 
+- ALWAYS: `init-worktrees` derives the bare directory and main checkout name from the origin URL it clones — it takes no separate repository-name input — so the provisioned main checkout's basename always matches the name classification resolves from `git remote get-url origin` ([test](tests/test_worktree_provisioning.scenario.l1.py))
 - ALWAYS: before emitting any step that removes a prior checkout, `init-worktrees` verifies every local branch is present on the remote and names `.spx/` as the only state not recoverable from the remote ([audit])
 - NEVER: `init-worktrees` deletes a prior checkout's working tree itself — it emits the exact removal command for the operator to run after `.spx/` is relocated and remote presence is verified ([audit])
 - ALWAYS: the provisioning helper complies with `spx/13-plugin-and-runtime-conventions.adr.md` — stdlib `python3` only, paths resolved via `${CLAUDE_SKILL_DIR}` — and reads or writes nothing outside the target container and the installed plugin tree, except relocating an explicitly provided prior-checkout `.spx/` into the container ([audit])

@@ -93,21 +93,30 @@ def _git_out(*args: str, cwd: Path | None = None) -> str:
     return proc.stdout.strip()
 
 
+def _repo_name_from_url(url: str) -> str | None:
+    """Return the repository basename of a git remote URL, or ``None``.
+
+    The last path segment with any ``.git`` suffix removed, handling both
+    slash-separated (HTTPS, filesystem) and colon-separated (scp-like SSH) URL
+    forms. ``None`` when the URL yields no name.
+    """
+    tail = url.rstrip("/").rsplit("/", 1)[-1].rsplit(":", 1)[-1]
+    return tail.removesuffix(".git") or None
+
+
 def _origin_repo_name(path: Path) -> str | None:
     """Return the ``origin`` remote's repository basename, or ``None``.
 
-    Parses the repository name from ``git remote get-url origin`` — the last
-    path segment of the URL with any ``.git`` suffix removed, handling both
-    slash-separated (HTTPS) and colon-separated (scp-like SSH) forms. Returns
-    ``None`` when no ``origin`` remote is configured: such a checkout cannot host
-    a main checkout identified by repository name.
+    Reads ``git remote get-url origin`` from ``path`` and parses the name with
+    :func:`_repo_name_from_url`. ``None`` when no ``origin`` remote is
+    configured: such a checkout cannot host a main checkout identified by
+    repository name.
     """
     try:
         url = _git_out("remote", "get-url", "origin", cwd=path)
     except subprocess.CalledProcessError:
         return None
-    tail = url.rstrip("/").rsplit("/", 1)[-1].rsplit(":", 1)[-1]
-    return tail.removesuffix(".git") or None
+    return _repo_name_from_url(url)
 
 
 @dataclass(frozen=True)
@@ -190,20 +199,27 @@ class ProvisionResult:
 def provision(
     *,
     container: Path,
-    repo_name: str,
     origin_url: str,
     pool_worktree_names: tuple[str, ...] = (),
     carry_spx: Path | None = None,
 ) -> ProvisionResult:
     """Provision the bare-repository worktree pool in ``container``.
 
-    Clones ``origin_url`` bare into ``{repo_name}.git``, restores the
+    Derives the repository name from ``origin_url`` — the same source the
+    classifier reads — so the provisioned main checkout's basename always
+    matches the name classification resolves, taking no separate repository-name
+    input. Clones ``origin_url`` bare into ``{repo}.git``, restores the
     ``origin/*`` fetch refspec a bare clone omits, resolves the default branch
     from the clone's HEAD, adds the main checkout at the repository-name sibling
-    ``{repo_name}`` tracking ``origin/<default>`` and one detached worktree per
+    ``{repo}`` tracking ``origin/<default>`` and one detached worktree per
     ``pool_worktree_names`` at the ``origin/<default>`` tip, and places ``.spx/``
     beside the bare dir — moving ``carry_spx`` there when given, else creating it.
     """
+    repo_name = _repo_name_from_url(origin_url)
+    if repo_name is None:
+        raise ValueError(
+            f"cannot derive a repository name from origin URL: {origin_url!r}"
+        )
     container.mkdir(parents=True, exist_ok=True)
     bare_dir = container / f"{repo_name}.git"
     subprocess.run(
@@ -281,7 +297,6 @@ def _cmd_provision(args: argparse.Namespace) -> int:
         carry_spx = None
     result = provision(
         container=Path(args.container),
-        repo_name=args.repo,
         origin_url=origin_url,
         pool_worktree_names=tuple(args.worktree),
         carry_spx=carry_spx,
@@ -312,7 +327,6 @@ def main(argv: list[str] | None = None) -> int:
 
     provision_parser = sub.add_parser("provision", help="provision the bare-repo pool")
     provision_parser.add_argument("--container", required=True)
-    provision_parser.add_argument("--repo", required=True)
     provision_parser.add_argument("--origin")
     provision_parser.add_argument("--from", dest="from_checkout")
     provision_parser.add_argument("--worktree", action="append", default=[])
