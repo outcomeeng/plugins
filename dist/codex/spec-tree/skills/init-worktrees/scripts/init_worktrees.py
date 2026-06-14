@@ -15,6 +15,15 @@ independent of the checked-out or default branch; it tracks the git-resolved
 default branch (``origin/<default>``). The destructive removal of a prior
 working tree is never performed here: the skill emits that command for the
 operator.
+
+Tested behaviors (verified over real git in temporary directories): ``classify``
+maps every ``GitFacts`` combination to its layout; ``provision`` builds the bare
+pool with detached worktrees, derives the repository name from both slash-form
+and scp-like SSH origin URLs, carries a prior ``.spx/`` across byte-for-byte,
+designates the main checkout independent of the default branch, and refuses a
+container that already holds ``.spx/``; ``probe`` classifies single, pool, no-origin,
+and misnamed-checkout layouts; every pool worktree resolves the one ``.spx/``
+beside the git-common-dir.
 """
 
 from __future__ import annotations
