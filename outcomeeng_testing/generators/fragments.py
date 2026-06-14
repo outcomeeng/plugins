@@ -23,7 +23,9 @@ from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
 from outcomeeng.distribution.build import (
+    BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
+    VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
 )
 
@@ -48,9 +50,9 @@ _MAX_LINES = 12
 # delimiter constants so the tokens track the production contract.
 _DELIMITER_TOKENS = [
     BLOCK_DELIMITER_START,
-    "%!}",
+    BLOCK_DELIMITER_END,
     VARIABLE_DELIMITER_START,
-    "!}}",
+    VARIABLE_DELIMITER_END,
     "{%",
     "%}",
     "{{",

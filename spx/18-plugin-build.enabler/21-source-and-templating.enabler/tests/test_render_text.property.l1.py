@@ -62,8 +62,13 @@ class TestInlinesBodyVerbatim:
     ) -> None:
         with src_tree() as builder:
             builder.add_shared_topic(SCOPE, TOPIC, body)
-            template = f"{prefix}{_DIRECTIVE_TEXT}{suffix}"
+            # Newline-separate the parts: each value is individually delimiter-free,
+            # but directly abutting them could form a delimiter that straddles a
+            # junction (e.g. a prefix ending in "{" beside a body starting "{!"),
+            # which render_text would then expand or Jinja-process. The newline
+            # isolates verbatim inlining from junction delimiter formation.
+            template = f"{prefix}\n{_DIRECTIVE_TEXT}\n{suffix}"
 
             result = render_text(template, shared_root=builder.shared_root)
 
-            assert result == f"{prefix}{body}{suffix}"
+            assert result == f"{prefix}\n{body}\n{suffix}"
