@@ -8,8 +8,8 @@ CAN take a change from intent to merge through the governed commit, PR, review, 
 
 ### Scenarios
 
-- Given `/github-pr` invoked with arguments, when it runs, then it interprets the arguments as instructions, presents a proposal through the runtime's structured-question tool, and on confirmation drives the lifecycle by invoking `/committing-changes`, `/opening-pr`, and `/managing-pr` ([review])
-- Given `/github-pr` invoked with no arguments and an existing changeset — uncommitted working-tree changes, or a branch ahead of its base — when it runs, then it derives the proposal from that changeset and, on confirmation, drives the same lifecycle ([review])
+- Given `/github-pr` invoked with arguments, when it runs, then it interprets the arguments as instructions and drives the lifecycle by invoking `/committing-changes`, `/opening-pr`, and `/managing-pr` — autonomously by default, or presenting a pre-mutation confirmation through the runtime's structured-question tool and waiting first when the merge overlay opts into it ([review])
+- Given `/github-pr` invoked with no arguments and an existing changeset — uncommitted working-tree changes, or a branch ahead of its base — when it runs, then it derives intent from that changeset and drives the same lifecycle, presenting a pre-mutation confirmation first only when the merge overlay opts into it ([review])
 - Given `/github-pr` invoked with no arguments and a clean working tree on the base branch, when it runs, then it interviews the user through `/interviewing` to establish the change before any mutation ([review])
 - Given a confirmed GitHub-PR changeset, when `/github-pr` drives the lifecycle, then it runs `/committing-changes`, `/opening-pr`, `/managing-pr`, and post-merge closure through `/handoff --no-session` ([review])
 - Given `/github-pr` is invoked with an existing PR number, PR URL, or branch that already has an open PR, when it runs, then it delegates PR-state work to `/managing-pr` instead of opening another PR ([review])
@@ -22,7 +22,7 @@ CAN take a change from intent to merge through the governed commit, PR, review, 
 ### Compliance
 
 - ALWAYS: the GitHub-PR transport's `/github-pr` orchestration is selected by `/merge`, not by itself — `/github-pr` assumes this transport and reads `spx/local/merging.md` only for the transport's configuration, never to decide whether a PR is the transport ([audit])
-- ALWAYS: present a proposal through the runtime's structured-question tool and obtain confirmation before any mutating action — branch creation, commit, push, PR open, or merge ([review])
+- ALWAYS: drive the lifecycle from a determined changeset without an up-front operator proposal by default; only when the merge overlay opts into a pre-mutation confirmation, present the changeset and intended lifecycle through the runtime's structured-question tool and obtain confirmation before the first mutating action — branch creation, commit, push, PR open, or merge — per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: drive the lifecycle by invoking the governing skills — `/applying` or the language coding skills for implementation, `/committing-changes`, `/opening-pr`, and `/managing-pr` — never reimplementing their protocols ([review])
 - NEVER: merge directly — the merge executes only through `/managing-pr`'s `MERGE_READINESS` ∧ `PRODUCTION_READINESS` authority, per `spx/15-merging.pdr.md` ([review])
 
@@ -30,7 +30,7 @@ CAN take a change from intent to merge through the governed commit, PR, review, 
 
 When this node uses eval evidence, the eval suite covers these conversation cases:
 
-- Argument instruction mode: a user asks `/github-pr` to implement and ship work, and the response proposes the default lifecycle before mutation.
-- Existing changeset mode: a dirty working tree or branch ahead of base is treated as the thing to ship, and the proposal derives intent from the diff and commits.
+- Argument instruction mode: a user asks `/github-pr` to implement and ship work, and the response drives the default lifecycle autonomously — or presents a pre-mutation confirmation first when the merge overlay opts into it.
+- Existing changeset mode: a dirty working tree or branch ahead of base is treated as the thing to ship, and intent is derived from the diff and commits.
 - Empty mode: a clean base branch starts with `/interviewing`, not branch creation, committing, pushing, PR opening, or merging.
 - Existing open PR mode: the branch already has a PR, or the user passes a PR number or URL, and `/github-pr` invokes the management protocol instead of opening a duplicate PR.

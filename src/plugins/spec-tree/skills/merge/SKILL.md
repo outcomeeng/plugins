@@ -55,7 +55,7 @@ It prints the total and non-coordination-note counts over the full changed-file 
 
 **Step 3 — Dispatch.**
 
-- **GitHub-PR transport** → invoke `/github-pr` with `$ARGUMENTS` verbatim. `/github-pr` owns the GitHub-PR lifecycle end to end: its own mode detection, the proposal-before-mutation pass, and the commit → open → manage → close protocols. /merge adds nothing to that flow and never reimplements it. State the transport selection in prose before delegating; the proposal `/github-pr` presents is the single proposal-before-mutation for this path.
+- **GitHub-PR transport** → invoke `/github-pr` with `$ARGUMENTS` verbatim. `/github-pr` owns the GitHub-PR lifecycle end to end: its own mode detection, the pre-mutation-confirmation pass (opt-in, off by default), and the commit → open → manage → close protocols. /merge adds nothing to that flow and never reimplements it. State the transport selection in prose before delegating; any pre-mutation confirmation `/github-pr` presents is the single confirmation for this path.
 - **Direct-push transport** → drive the direct-push lifecycle in `<direct_push_lifecycle>`.
 
 **Step 4 — Close.** When the dispatched transport reaches merged state, the session closes through that transport's closure (`/github-pr` runs `/handoff --no-session`; the direct-push lifecycle runs it at its end). /merge adds no closure of its own.
@@ -65,7 +65,7 @@ It prints the total and non-coordination-note counts over the full changed-file 
 <direct_push_lifecycle>
 The direct-push transport publishes a verified changeset straight to the remote trunk with no pull request, under the same three gates as every transport, with the review predicate bound to the local review since no CI review exists, per /standardizing-merging `<authority_gates>`. The project's `spx/local/merging.md` direct-push block binds the push command and the post-merge step.
 
-**Step D1 — Propose and confirm.** Present the plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex): the changeset, that the transport is direct-push to trunk (no PR), and that the flow runs through the push and post-merge steps. Obtain confirmation before any mutating action. This pause is mandatory — never commit or push before the proposal is confirmed. When `spx/local/merging.md` declares direct-push as the standing transport for this changeset class and forbids a discretionary merge pause, honor that overlay and skip only the merge-approval question, never the transport confirmation when the selection was the coordination-note heuristic.
+**Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose (the changeset, that the transport is direct-push to trunk with no PR, and that the flow runs through the push and post-merge steps) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
 
 **Step D2 — Commit.** Invoke `/committing-changes`. Branch hygiene from /standardizing-merging `<branch_hygiene>` does not apply unchanged here — direct-push publishes to trunk, so the working changeset is committed on the trunk-tracking checkout or a short-lived branch per the overlay's direct-push configuration.
 
@@ -85,18 +85,18 @@ The direct-push transport publishes a verified changeset straight to the remote 
 - MUST select exactly one transport per `<transport_selection>` and delegate to that transport's skills — never run two transports, never reimplement a transport's internal protocol inline. The GitHub-PR lifecycle is `/github-pr`'s; the direct-push lifecycle invokes `/committing-changes`, `/standardizing-merging`, and the `changes-reviewer` review.
 - MUST keep the three gates and the finding-disposition rule transport-neutral — /merge selects the transport and binds nothing about the gates. A transport binds only the gate predicates, per /standardizing-merging `<authority_gates>`.
 - MUST honor `spx/local/merging.md`: an explicit `transport:` selector wins over the changeset heuristic, and the per-transport configuration (merge command, production-relevance recognition, post-merge step) is the transport's, not /merge's.
-- MUST present a proposal through the runtime's structured-question tool and obtain confirmation before any mutating action — for the direct-push path /merge presents it; for the GitHub-PR path `/github-pr` presents it. Never mutate before confirmation.
+- MUST proceed autonomously from the determined changeset by default; present a pre-mutation confirmation through the runtime's structured-question tool and obtain confirmation before any mutating action only when the merge overlay opts into it — for the direct-push path /merge presents it, for the GitHub-PR path `/github-pr` presents it.
 - NEVER merge directly outside a transport's authority — the direct-push push executes only under `MERGE_READINESS` ∧ `PRODUCTION_READINESS`, and the GitHub-PR merge executes only through `/managing-pr`'s gates.
 
 </constraints>
 
 <failure_modes>
 
-**Mis-selected the transport from a mixed changeset.** A changeset that touched a `PLAN.md` plus a spec or implementation file was read as coordination-note-only and routed to direct-push, bypassing the PR review. Coordination-note-only holds only when *every* changed path is a `PLAN.md` / `ISSUES.md`; one non-note file makes the whole changeset GitHub-PR. Re-read the full changed-file set before classifying — never sample.
+**Mis-selected the transport from a mixed changeset.** Claude read a changeset that touched a `PLAN.md` plus a spec or implementation file as coordination-note-only and routed it to direct-push, bypassing the PR review. Coordination-note-only holds only when *every* changed path is a `PLAN.md` / `ISSUES.md`; one non-note file makes the whole changeset GitHub-PR. Re-read the full changed-file set before classifying — never sample.
 
-**Routed a not-yet-materialized instructed change to direct-push.** An instructed change whose files do not exist yet has an empty or unknown changeset; classifying that as coordination-note-only is wrong. An empty or not-yet-materialized changeset defaults to GitHub-PR, where `/github-pr` establishes the change and re-evaluation happens against the real diff.
+**Routed a not-yet-materialized instructed change to direct-push.** Claude classified an instructed change whose files do not exist yet — an empty or unknown changeset — as coordination-note-only, which is wrong. An empty or not-yet-materialized changeset defaults to GitHub-PR, where `/github-pr` establishes the change and re-evaluation happens against the real diff.
 
-**Double proposal.** /merge presented its own proposal and then `/github-pr` presented another. For the GitHub-PR path, `/github-pr` owns the single proposal-before-mutation — /merge states the transport selection in prose and delegates without a structured question. /merge presents a structured proposal only on the direct-push path, which it executes itself.
+**Double confirmation.** Claude presented /merge's own pre-mutation confirmation and then `/github-pr` presented another. For the GitHub-PR path, `/github-pr` owns the single pre-mutation confirmation when the overlay opts into one — /merge states the transport selection in prose and delegates without a structured question. /merge presents a structured confirmation only on the direct-push path it executes itself, and only when the overlay opts in.
 
 </failure_modes>
 
@@ -105,7 +105,7 @@ The direct-push transport publishes a verified changeset straight to the remote 
 - Exactly one transport was selected per `<transport_selection>`, with the reason named (overlay selector, coordination-note-only, or default).
 - A coordination-note-only changeset routed to direct-push; every other changeset routed to GitHub-PR unless the overlay declared a transport.
 - The GitHub-PR path delegated to `/github-pr` without reimplementing its lifecycle; the direct-push path drove `<direct_push_lifecycle>` invoking the governing skills.
-- A proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
+- By default the flow proceeded autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, a proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The three gates and the finding-disposition rule stayed transport-neutral; only the predicate bindings differed by transport.
 - The changeset reached trunk through the selected transport's authority, and the session closed through that transport's closure, or the flow stopped at an explicit gate surfaced to the user.
 

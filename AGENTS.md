@@ -309,7 +309,7 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### Autonomy
 
-In this product the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here. Standing authorization covers:
+In this product the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here, and `spx/local/merging.md` Pre-mutation confirmation declares no up-front proposal-and-confirm pause, so `/merge` and `/github-pr` state the plan in prose and drive the lifecycle without waiting. Standing authorization covers:
 
 - Dispatching the transport via `/merge`, which reads `spx/local/merging.md`, selects the transport (direct-push for a coordination-note-only changeset, else the GitHub-PR transport), and delegates to that transport's skills.
 - Committing changes via `/committing-changes` (the skill loads the product's commit rules from `spx/local/committing-changes.md`; the agent does not bypass the skill).
