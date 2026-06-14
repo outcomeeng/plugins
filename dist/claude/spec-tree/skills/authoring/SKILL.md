@@ -273,13 +273,13 @@ How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to
 
 Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
 
-How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. If you're writing Given/When/Then, you're writing a spec assertion, not a decision record.
+How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
 
 **Failure 3: Wrong template used for node type**
 
 Claude created an enabler node using the outcome template. The spec had a three-part hypothesis (output → outcome → impact) but the node existed only to provide shared infrastructure for two siblings. The hypothesis was forced — "We believe that providing a database schema will cause developers to write queries faster" — because the node wasn't delivering user-facing value.
 
-How to avoid: Apply the decision table from `node-types.md` before selecting a template. If you can't write a natural hypothesis, it's probably an enabler.
+How to avoid: Apply the decision table from `node-types.md` before selecting a template. If a natural hypothesis can't be written, it's probably an enabler.
 
 **Failure 4: Index collision with existing sibling**
 
@@ -330,11 +330,11 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 <anti_patterns>
 
-**Writing implementation details in specs.** Specs describe *what*, not *how*. "How" belongs in ADRs (architecture) or code. If you're writing about function signatures, data structures, or algorithms, stop — that's an ADR or code.
+**Writing implementation details in specs.** Specs describe *what*, not *how*. "How" belongs in ADRs (architecture) or code. If the spec describes function signatures, data structures, or algorithms, stop — that's an ADR or code.
 
 **Copying temporal language from user input.** Users naturally say "we need to fix X" or "currently the system does Y." Translate to atemporal: "The system does Z" or "X handles Y correctly."
 
-**Creating outcomes without hypotheses.** Every outcome must express: output → outcome → impact. If you can't write the hypothesis, the scope may be wrong — it might be an enabler or need further clarification.
+**Creating outcomes without hypotheses.** Every outcome must express: output → outcome → impact. If the hypothesis can't be written, the scope may be wrong — it might be an enabler or need further clarification.
 
 **Placing assertions in ADRs/PDRs.** Decision records govern; they don't assert. Assertions belong in specs. ADRs/PDRs carry MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection.
 
@@ -342,7 +342,7 @@ How to avoid: when a request needs multiple sibling nodes, capture the user's in
 
 **Numbering from 1.** Indices start at 10+ and use the sparse distribution formula. Never use single-digit indices.
 
-**Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. If your parent spec reads "X provides A, B, and C (these are the child nodes)", you have written a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualizing` walk the tree to surface children.
+**Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. A parent spec that reads "X provides A, B, and C (these are the child nodes)" is a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualizing` walk the tree to surface children.
 
 **Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 

@@ -126,7 +126,7 @@ The mutation must be:
 - **Relevant** — changes the behavior the assertion claims to verify
 - **Detectable** — the test's assertions would actually catch it
 
-If you cannot name such a mutation: the test is unfalsifiable.
+If no such mutation can be named: the test is unfalsifiable.
 
 **Mocking severs coupling**
 

@@ -117,7 +117,7 @@ A handoff RELEASES the work branch. The committed branch ref — not any checkou
 
 - **Linked (pool) worktree** — LEAVE it detached at the `origin/<default-branch>` tip.
 
-NEVER re-check-out the handed-off branch "to return to where you were." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.
+NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.
 </release_work_branch>
 
 <archive_scope>

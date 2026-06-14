@@ -40,7 +40,7 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 Invoke `/contextualizing` on the directory containing the ADR.
 
-Do not proceed if you do not see the `<SPEC_TREE_CONTEXT>` marker for the ADR directory.
+Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the ADR directory.
 
 </step>
 

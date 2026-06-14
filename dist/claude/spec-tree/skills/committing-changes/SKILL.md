@@ -314,7 +314,7 @@ docs: add installation prerequisites
 
 **Principle 3: Don't Repeat the Prefix**
 
-The type already tells you what kind of change:
+The type already names the kind of change:
 
 ```text
 # ❌ Redundant - prefix already says it's a spec

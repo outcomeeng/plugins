@@ -22,7 +22,7 @@ Every test should serve at least one of these purposes:
 
 If a test serves none of these purposes, delete it.
 
-## Before you write any test
+## Before writing any test
 
 Every test must answer these questions:
 
@@ -30,7 +30,7 @@ Every test must answer these questions:
 2. If this test passes, what does it prove about the real system?
 3. What failure would this catch before users see it?
 
-If you cannot answer all three, stop.
+If all three cannot be answered, stop.
 
 ## The evidence trap
 
@@ -95,7 +95,7 @@ Before writing any test, route through all five stages.
 | 5     | Exception case matches                               | Use the appropriate double and record the exception. DONE.                          |
 | 5     | No exception matches                                 | Move the test outward to the lowest real level that can prove it. DONE.             |
 
-### Stage 1: What evidence do you need?
+### Stage 1: What evidence is needed?
 
 Answer these questions before writing the test:
 
@@ -171,7 +171,7 @@ Choose the level from operational reality, not from habit.
 
 **Factor 5: Where does achievable confidence live?**
 
-| You Need to Know...              | Achievable At |
+| What to Know                     | Achievable At |
 | -------------------------------- | ------------- |
 | Your math is correct             | `L1`          |
 | Your SQL is valid                | `L2`          |
@@ -213,7 +213,7 @@ If all four answers are yes, use the real system at the current level. DONE.
 
 ### Stage 5: Which exception applies?
 
-Only now may you use a test double. Match a specific exception.
+Only now may a test double be used. Match a specific exception.
 
 | Exception                | When                                                                                | Double Type                            |
 | ------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------- |
@@ -252,7 +252,7 @@ Focus test effort on:
 
 ## Four-part progression
 
-| Phase                   | What You Are Testing                | Confidence Gain  |
+| Phase                   | What Is Being Tested                | Confidence Gain  |
 | ----------------------- | ----------------------------------- | ---------------- |
 | 1. Typical cases        | Happy paths and common scenarios    | Baseline         |
 | 2. Edge and boundary    | Limits, special values, error cases | Robustness       |
@@ -276,7 +276,7 @@ A good test failure narrows the search space.
 - Put evidence at the lowest level that can prove the claim.
 - Prefer direct assertions over indirect side-channel checks.
 - Keep setup proportional to the evidence.
-- Redesign the test if a failure would not tell you what broke.
+- Redesign the test if a failure would not reveal what broke.
 
 ## Anti-patterns
 

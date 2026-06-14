@@ -67,7 +67,7 @@ About to load context for an existing target and explain why lower-index sibling
    - `templates/decisions/decision-name.pdr.md`
    - `templates/nodes/enabler-name.md`
    - `templates/nodes/outcome-name.md`
-   - `examples/` — concrete filled specs (read when you need to see what a completed spec looks like)
+   - `examples/` — concrete filled specs (read to see what a completed spec looks like)
 7. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
 ```text

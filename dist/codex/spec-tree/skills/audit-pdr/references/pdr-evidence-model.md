@@ -47,7 +47,7 @@ PDRs govern observable product behavior. Every statement must pass the user test
 Product properties are guarantees users can rely on. They must be:
 
 1. **Observable** — a user can perceive whether the property holds
-2. **Falsifiable** — you can describe a scenario where it's violated
+2. **Falsifiable** — a scenario exists where it's violated
 3. **Stable** — the property holds across all contexts, not just happy paths
 
 **Good properties:**
