@@ -13,9 +13,12 @@ from outcomeeng.distribution.build import (
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
+    PLUGINS_DIR_NAME,
     REQUIRE_SKILL_TEXT_TEMPLATE,
     SHARED_FRAGMENT_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
+    SKILL_FILENAME,
+    SKILLS_SUBDIR_NAME,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     IncludeDirective,
@@ -23,7 +26,9 @@ from outcomeeng.distribution.build import (
     SourceFormatError,
     Target,
     build,
+    emit_skill,
     expand_require_skill,
+    format_directive,
     make_jinja_environment,
     render_text,
 )
@@ -163,6 +168,51 @@ def test_skill_dir_escape_survives_jinja_pass(tmp_path: Path) -> None:
         # preserved verbatim in both targets rather than stripped by the Jinja pass.
         assert CLAUDE_SKILL_DIR_TOKEN in rendered
         assert SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in rendered
+
+
+def test_require_skill_expands_identically_across_targets(tmp_path: Path) -> None:
+    builder = SrcTreeBuilder(tmp_path)
+    require_directive = format_directive(RequireSkillDirective(SKILL_REF))
+    skill_body = (
+        f"---\nname: {SKILL_NAME}\n---\n\nBefore.\n{require_directive}\nAfter.\n"
+    )
+    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: skill_body})
+    src_path = (
+        builder.src_root
+        / PLUGINS_DIR_NAME
+        / PLUGIN_NAME
+        / SKILLS_SUBDIR_NAME
+        / SKILL_NAME
+        / SKILL_FILENAME
+    )
+    dist_root = tmp_path / "dist"
+
+    emitted: dict[Target, str] = {}
+    for target in Target:
+        emit_skill(
+            src_path,
+            target=target,
+            dist_root=dist_root,
+            shared_root=builder.shared_root,
+        )
+        destination = (
+            dist_root
+            / target.value
+            / PLUGIN_NAME
+            / SKILLS_SUBDIR_NAME
+            / SKILL_NAME
+            / SKILL_FILENAME
+        )
+        emitted[target] = destination.read_text(encoding="utf-8")
+
+    # Direct two-target byte comparison through the real emit pipeline: the
+    # require_skill directive carries no ${CLAUDE_SKILL_DIR} token and no
+    # Claude-only frontmatter, so both targets emit byte-identical files. The
+    # comparison is against emit_skill's own output, not a test re-assembly of
+    # its translation sequence.
+    assert emitted[Target.CLAUDE] == emitted[Target.CODEX]
+    assert SKILL_REF in emitted[Target.CLAUDE]
+    assert require_directive not in emitted[Target.CLAUDE]
 
 
 def test_include_directive_uses_fragment_file_contract(tmp_path: Path) -> None:
