@@ -16,8 +16,10 @@ Two outputs on two channels, plus a delegated worktree-occupancy claim:
    queued-work directive.
 
    The understanding directive fires when the project directory is a spec tree
-   (an `spx/*.product.md` exists), prompting the agent to load the methodology
-   foundation before spec-tree work.
+   (an `spx/*.product.md` exists). It is informational — it points at the
+   mechanical `PreToolUse` load gate that enforces the foundation and node-context
+   loads, since `SessionStart` stdout alone is out-prioritized by the harness
+   resume prompt after a compaction.
 
    The base-staleness directive fires when the worktree's HEAD trails its
    resolved default branch, so the agent rebases onto a current base before
@@ -142,18 +144,24 @@ def _is_spec_tree(project_dir: str) -> bool:
 
 
 def understanding_directive(project_dir: str) -> str:
-    """Return a foundation-priming directive when the project dir is a spec tree, else "".
+    """Return an informational foundation directive when the project dir is a spec tree, else "".
 
-    Fires only in a spec-tree repository (see `_is_spec_tree`).
+    Fires only in a spec-tree repository (see `_is_spec_tree`). The directive
+    points at the mechanical `PreToolUse` load gate; it informs and enforces
+    nothing itself, since `SessionStart` stdout is out-prioritized by the harness
+    resume prompt after a compaction.
     """
     if not _is_spec_tree(project_dir):
         return ""
     return "\n".join(
         [
             '<SPEC-TREE_SESSION_START foundation="load"/>',
-            "This is a Spec Tree repository. Before any spec-tree work, invoke",
-            "/spec-tree:understanding to load the methodology foundation, then",
-            "/spec-tree:contextualizing <node> on the node you will work on.",
+            "This repository is governed by Spec Tree. After any start or compaction",
+            "the methodology foundation and node context are gone, regardless of any",
+            '"resume as if the break never happened" instruction. Enforcement is',
+            "mechanical: a PreToolUse gate denies the first tool call until",
+            "/spec-tree:understanding loads the foundation, and denies an edit to a",
+            "node until /spec-tree:contextualizing loads that node.",
         ]
     )
 
