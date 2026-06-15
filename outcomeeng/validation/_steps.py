@@ -15,6 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.build import TEXT_FILE_SUFFIXES
 from outcomeeng.distribution.orchestration import (
     BUILD_COMMAND_ARGV,
     DIST_DIFF_ARGV,
@@ -68,9 +69,11 @@ def _reference_files() -> tuple[str, ...]:
 def runtime_token_files() -> tuple[str, ...]:
     # Authored source the build renders or inlines: plugin content and the
     # shared fragments plugin files include. A raw runtime token in either ships
-    # into a generated target, so both are enforced. Public — the runtime-token
-    # node's compliance test scans exactly this set so its "every authored file
-    # is enforced" claim cannot drift from what the gate feeds the validator.
+    # into a generated target, so both are enforced. The suffix set is the build's
+    # own TEXT_FILE_SUFFIXES — the files the build renders — so the lint's coverage
+    # cannot drift from what the build emits. Public — the runtime-token node's
+    # compliance test scans exactly this set so its "every authored file is
+    # enforced" claim cannot drift from what the gate feeds the validator.
     roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
     return tuple(
         sorted(
@@ -78,7 +81,7 @@ def runtime_token_files() -> tuple[str, ...]:
             for root in roots
             if root.is_dir()
             for path in root.rglob("*")
-            if path.is_file() and path.suffix in _REFERENCE_SUFFIXES
+            if path.is_file() and path.suffix in TEXT_FILE_SUFFIXES
         )
     )
 
