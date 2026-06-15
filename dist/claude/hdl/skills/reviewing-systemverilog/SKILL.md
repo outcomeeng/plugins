@@ -13,7 +13,7 @@ Review hand-written SystemVerilog (IEEE 1800-2017) through the lens of an experi
 <quick_start>
 Invoke: `/reviewing-systemverilog`
 
-Provide the SystemVerilog files you want reviewed (design files, packages, interfaces, testbenches, or any combination). The skill walks through a structured review:
+Provide the SystemVerilog files to review (design files, packages, interfaces, testbenches, or any combination). The skill walks through a structured review:
 
 1. **Type & Package Review** - `logic` usage, enums, structs, packages, parameterization
 2. **Always-Block & FSM Review** - `always_ff`/`always_comb`, blocking vs non-blocking, FSM patterns

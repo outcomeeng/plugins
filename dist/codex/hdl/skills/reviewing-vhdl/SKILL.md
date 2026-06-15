@@ -13,7 +13,7 @@ Review hand-written VHDL through the lens of an experienced FPGA/ASIC engineer w
 <quick_start>
 Invoke: `/reviewing-vhdl`
 
-Provide the VHDL files you want reviewed (design files, packages, testbenches, or any combination). The skill walks through a structured review:
+Provide the VHDL files to review (design files, packages, testbenches, or any combination). The skill walks through a structured review:
 
 1. **Library & Type Review** - IEEE library usage, type discipline, package organization
 2. **Process & Structural Review** - Process patterns, FSMs, entity/architecture idioms
