@@ -1,21 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Interview — Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+    /* Design tokens vendored from the Levenate prototypes (OKLCH steel + azure). */
     :root {
-      --bg: #0a0f1c;
-      --panel: #111827;
-      --card: #1a2236;
-      --line: #243049;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #00d4aa;
-      --accent-bg: rgba(0, 212, 170, 0.12);
-      --enabler: #60a5fa;
-      --outcome: #f59e0b;
+      --canvas: oklch(0.966 0.004 255);
+      --surface: oklch(0.995 0.001 255);
+      --paper: oklch(0.976 0.003 255);
+      --sunken: oklch(0.945 0.005 255);
+      --ink: oklch(0.215 0.011 255);
+      --ink-3: oklch(0.505 0.013 255);
+      --line-tok: oklch(0.895 0.006 255);
+      --accent-tok: oklch(0.550 0.130 250);
+      --accent-wash: oklch(0.955 0.025 250);
+      --st-specified: oklch(0.580 0.100 245);
+      --cat-outcome: oklch(0.560 0.110 80);
+      --font-sans: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+      /* prototype aliases → token system */
+      --bg: var(--canvas);
+      --panel: var(--surface);
+      --card: var(--paper);
+      --line: var(--line-tok);
+      --text: var(--ink);
+      --muted: var(--ink-3);
+      --accent: var(--accent-tok);
+      --accent-bg: var(--accent-wash);
+      --enabler: var(--st-specified);
+      --outcome: var(--cat-outcome);
+    }
+    [data-theme="dark"] {
+      --canvas: oklch(0.150 0.009 255);
+      --surface: oklch(0.215 0.011 255);
+      --paper: oklch(0.175 0.010 255);
+      --sunken: oklch(0.115 0.008 255);
+      --ink: oklch(0.976 0.003 255);
+      --ink-3: oklch(0.840 0.007 255);
+      --line-tok: oklch(0.300 0.012 255);
+      --accent-tok: oklch(0.680 0.150 250);
+      --accent-wash: oklch(0.300 0.060 250);
+      --st-specified: oklch(0.700 0.130 245);
+      --cat-outcome: oklch(0.560 0.110 80);
     }
     * {
       box-sizing: border-box;
@@ -25,7 +56,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font: 15px/1.5 system-ui, sans-serif;
+      font: 15px/1.5 var(--font-sans);
     }
     header {
       padding: 12px 20px;
