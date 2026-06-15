@@ -12,6 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY
+from outcomeeng.validation._steps import runtime_token_files
 from outcomeeng.validation.runtime_tokens import (
     RUNTIME_TOKEN_IGNORE,
     find_raw_tokens,
@@ -19,10 +20,6 @@ from outcomeeng.validation.runtime_tokens import (
     scan_file,
     scan_paths,
 )
-
-# The authored-source roots and text suffixes the gate step feeds the validator.
-_AUTHORED_ROOTS = ("src/plugins", "src/_shared")
-_TEXT_SUFFIXES = (".md", ".py", ".json", ".toml", ".yaml", ".yml")
 
 _REGISTRY_NAMES = frozenset(
     name for entry in RUNTIME_TOKEN_REGISTRY.values() for name in entry.values()
@@ -69,13 +66,7 @@ def test_real_tree_scan_passes_only_because_raw_tokens_are_ignore_listed() -> No
     # validator. It returns empty only because every file carrying a raw token
     # is on the ignore-list and every non-ignored file is clean — the live
     # invariant the gate enforces.
-    gate_files = [
-        str(path)
-        for root in _AUTHORED_ROOTS
-        if (_REPO_ROOT / root).is_dir()
-        for path in (_REPO_ROOT / root).rglob("*")
-        if path.is_file() and path.suffix in _TEXT_SUFFIXES
-    ]
+    gate_files = runtime_token_files()
     assert gate_files  # the gate scans a non-empty authored set
     assert scan_paths(gate_files) == []
 

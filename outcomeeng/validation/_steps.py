@@ -65,10 +65,12 @@ def _reference_files() -> tuple[str, ...]:
     )
 
 
-def _runtime_token_files() -> tuple[str, ...]:
+def runtime_token_files() -> tuple[str, ...]:
     # Authored source the build renders or inlines: plugin content and the
     # shared fragments plugin files include. A raw runtime token in either ships
-    # into a generated target, so both are enforced.
+    # into a generated target, so both are enforced. Public — the runtime-token
+    # node's compliance test scans exactly this set so its "every authored file
+    # is enforced" claim cannot drift from what the gate feeds the validator.
     roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
     return tuple(
         sorted(
@@ -135,7 +137,7 @@ STEPS: Final = (
             "python",
             "-m",
             "outcomeeng.validation.runtime_tokens",
-            *_runtime_token_files(),
+            *runtime_token_files(),
         ),
     ),
     Step(
