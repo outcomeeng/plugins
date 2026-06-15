@@ -1,5 +1,5 @@
 <overview>
-For comprehensive or technical diagrams, build the JSON one section at a time. Do NOT attempt to generate the entire file in a single pass. Claude Code has a ~32,000 token output limit per response, and a comprehensive diagram easily exceeds that in one shot. Even if it didn't, generating everything at once leads to worse quality.
+For comprehensive or technical diagrams, MUST build the JSON one section at a time. Do NOT attempt to generate the entire file in a single pass. Claude Code has a ~32,000 token output limit per response, and a comprehensive diagram easily exceeds that in one shot. Even if it didn't, generating everything at once leads to worse quality.
 </overview>
 
 <section_workflow>

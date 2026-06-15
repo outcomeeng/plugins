@@ -56,7 +56,7 @@ Before designing, determine what level of detail this diagram needs:
 - The audience needs to understand what things actually look like
 - The diagram shows how multiple technologies integrate
 
-**For technical diagrams, include evidence artifacts and do research first.**
+**For technical diagrams, MUST include evidence artifacts and do research first.**
 </depth_assessment>
 
 <research_mandate>
@@ -231,7 +231,7 @@ See `references/element-templates.md` for copy-paste JSON templates for each ele
 </json_structure>
 
 <render_validate>
-A diagram cannot be judged from JSON alone. After generating or editing the Excalidraw JSON, render it to PNG, view the image, and fix what the render shows — in a loop until it's right.
+A diagram cannot be judged from JSON alone. After generating or editing the Excalidraw JSON, MUST render it to PNG, view the image, and fix what the render shows — in a loop until it's right.
 
 **GATE: Before first render**, verify the `.excalidraw` file is valid JSON:
 
