@@ -26,7 +26,7 @@ SESSION_START = (
 # to a missing `spx` and no-ops. Defaulted for every run so the hook's other
 # outputs (env file, stdout) stay hermetic; a test that exercises the claim
 # passes a fake via ``env_overrides={"SPX_BIN": ...}`` (and
-# ``SPX_CLAIM_TIMEOUT_SECONDS`` to bound a deliberately slow fake).
+# ``SPX_TIMEOUT_SECONDS`` to bound a deliberately slow fake).
 MISSING_SPX = "/nonexistent/spx"
 
 
@@ -66,4 +66,16 @@ def run_session_start(
     )
 
 
-__all__ = ["MISSING_SPX", "SESSION_START", "run_session_start"]
+def make_spec_tree(root: Path) -> None:
+    """Mark ``root`` a spec tree so the hook's spec-tree directives fire.
+
+    The SessionStart directives that gate on a spec-tree repository detect it by
+    an ``spx/*.product.md`` product spec under the project directory; this writes
+    a minimal one so a directive under test reaches its CLI read or its output.
+    """
+    spx = root / "spx"
+    spx.mkdir()
+    (spx / "demo.product.md").write_text("# Demo product\n", encoding="utf-8")
+
+
+__all__ = ["MISSING_SPX", "SESSION_START", "make_spec_tree", "run_session_start"]
