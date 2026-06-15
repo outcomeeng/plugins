@@ -11,13 +11,22 @@ Two outputs, on two channels:
      CLAUDE_PROJECT_DIR  Claude Code product root, exposed to Bash tool calls.
      PROJECT_DIR         Short alias for CLAUDE_PROJECT_DIR.
 
-2. Stdout (injected into Claude's context) carries a base-staleness directive
-   when the worktree's HEAD trails its resolved default branch, so the agent
-   rebases onto a current base before building on a stale one. The check is
-   read-only — it resolves the default from `origin/HEAD` and counts commits with
-   `git rev-list`; it never fetches or mutates git state, and stays silent (no
-   stdout) when the worktree is current, is not a git repository, or has no
-   resolvable default. Diagnostics still go to stderr, never stdout.
+2. Stdout (injected into Claude's context) carries up to two directives, in
+   order: an understanding directive, then a base-staleness directive.
+
+   The understanding directive fires when the project directory is a spec tree
+   (an `spx/*.product.md` exists), prompting the agent to load the methodology
+   foundation before spec-tree work.
+
+   The base-staleness directive fires when the worktree's HEAD trails its
+   resolved default branch, so the agent rebases onto a current base before
+   building on a stale one. That check is read-only — it resolves the default
+   from `origin/HEAD` and counts commits with `git rev-list`; it never fetches or
+   mutates git state, and stays silent when the worktree is current, is not a git
+   repository, or has no resolvable default.
+
+   Each directive is emitted only when it applies; either, both, or neither may
+   appear. Diagnostics still go to stderr, never stdout.
 
 The per-runtime .spx/sessions/$CLAUDE_SESSION_ID directory is created lazily by
 `spx session pickup` on first successful claim — not here, so conversations that
@@ -32,6 +41,7 @@ import re
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
@@ -54,7 +64,7 @@ def write_env_file(payload: dict, project_dir: str) -> None:
     """Append the session export lines to $CLAUDE_ENV_FILE.
 
     No-ops (with a stderr diagnostic) when the session id or env file is absent,
-    so a missing field never aborts the base-staleness directive that follows.
+    so a missing field never aborts the directives that follow.
     """
     session_id = (payload.get("session_id") or "").strip()
     if not session_id:
@@ -84,8 +94,33 @@ def write_env_file(payload: dict, project_dir: str) -> None:
             handle.write("\n".join(lines) + "\n")
     except OSError as exc:
         # Degrade like every other failure path so a write error never aborts
-        # the base-staleness directive that main() emits next.
+        # the directives that main() emits next.
         warn(f"could not write $CLAUDE_ENV_FILE ({env_file}): {exc}")
+
+
+def understanding_directive(project_dir: str) -> str:
+    """Return a foundation-priming directive when the project dir is a spec tree, else "".
+
+    A spec tree is detected by the presence of `spx/*.product.md` under the
+    project directory — a plain filesystem read of the durable tree, never `.spx/`
+    state or any other heuristic.
+    """
+    if not project_dir:
+        return ""
+    try:
+        product_specs = any(Path(project_dir).glob("spx/*.product.md"))
+    except OSError:
+        return ""
+    if not product_specs:
+        return ""
+    return "\n".join(
+        [
+            '<SPEC-TREE_SESSION_START foundation="load"/>',
+            "This is a Spec Tree repository. Before any spec-tree work, invoke",
+            "/spec-tree:understanding to load the methodology foundation, then",
+            "/spec-tree:contextualizing <node> on the node you will work on.",
+        ]
+    )
 
 
 def _git(project_dir: str, *args: str) -> subprocess.CompletedProcess | None:
@@ -159,9 +194,12 @@ def main() -> int:
 
     write_env_file(payload, project_dir)
 
-    directive = base_staleness_directive(project_dir)
-    if directive:
-        print(directive)
+    for directive in (
+        understanding_directive(project_dir),
+        base_staleness_directive(project_dir),
+    ):
+        if directive:
+            print(directive)
     return 0
 
 
