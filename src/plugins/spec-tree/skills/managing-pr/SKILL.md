@@ -1,8 +1,7 @@
 ---
 name: managing-pr
-user-invocable: false
 description: >-
-  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /github-pr.
+  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /github-pr, and a valid heartbeat re-entry target.
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
@@ -14,7 +13,7 @@ The managing protocol. Loaded by /github-pr for the loop body that runs per hear
 
 Walk these steps on every heartbeat fire. Routine steps — inspect, classify, rebase, re-review, push, refresh heartbeat — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds.
 
-**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary), /committing-changes (commit format for any follow-up commits), and /tracking-tasks (runtime tracking rules) via the Skill tool.
+**Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understanding first — a cold heartbeat re-entry that fires `/managing-pr <pr>` directly carries no loaded foundation. Then invoke /standardizing-merging (shared vocabulary), /committing-changes (commit format for any follow-up commits), and /tracking-tasks (runtime tracking rules) via the Skill tool.
 
 **Step 1 — Identify the PR.**
 

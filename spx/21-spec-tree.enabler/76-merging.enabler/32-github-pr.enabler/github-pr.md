@@ -17,7 +17,8 @@ CAN take a change from intent to merge through the governed commit, PR, review, 
 ### Conformance
 
 - The `/github-pr` skill conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/github-pr/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_github_pr.conformance.l1.py))
-- The PR lifecycle protocol skills conform to internal-protocol packaging — `/opening-pr` and `/managing-pr` are `user-invocable: false` (hidden from direct user invocation, loaded by `/github-pr`), and the direct `/open-pr` command wrapper is absent ([test](tests/test_github_pr.conformance.l1.py))
+- `/opening-pr` conforms to internal-protocol packaging — `user-invocable: false`, hidden from direct invocation and loaded only by `/github-pr`; it runs once per opening and is never an automation re-entry target, and no direct `/open-pr` command wrapper exists ([test](tests/test_github_pr.conformance.l1.py))
+- `/managing-pr` is loaded by `/github-pr` yet stays user-invocable rather than `user-invocable: false` — as the per-heartbeat loop body it is a heartbeat re-entry target, and an automation re-entry target must be user-invocable because a scheduled wakeup fires as a user-style prompt, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_github_pr.conformance.l1.py))
 
 ### Compliance
 
