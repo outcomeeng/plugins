@@ -31,6 +31,7 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
 - Local plugin installation and update support for developer machines
+- Interface surfaces (browser) that render the spec tree from the SPX CLI projection and support interactive review and restructuring
 
 ### What's excluded
 
