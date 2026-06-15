@@ -15,10 +15,12 @@ copied literal list.  A correctly-authored reference carries the capability key
 runtime's tool uses the runtime-explicit token (``tool('ask_user', 'claude')``),
 which also renders rather than embeds the literal.
 
-Every file under ``src/plugins/`` is enforced by default.  ``RUNTIME_TOKEN_IGNORE``
-names the not-yet-converted files exempt from enforcement; the set shrinks to
-empty as each plugin's content is converted to tokens.  A newly added plugin is
-enforced without being opted in.
+Every authored-source file the build renders or inlines — plugin content under
+``src/plugins/`` and the shared fragments under ``src/_shared/`` that plugin files
+include — is enforced by default.  ``RUNTIME_TOKEN_IGNORE`` names the not-yet-converted
+files exempt from enforcement; the set shrinks to empty as each plugin's content is
+converted to tokens.  A newly added plugin or shared fragment is enforced without
+being opted in.
 
 Usage::
 

@@ -14,12 +14,16 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY
+from outcomeeng.distribution.build import (
+    RUNTIME_TOKEN_REGISTRY,
+    SHARED_FRAGMENT_FILENAME,
+)
 from outcomeeng.validation.runtime_tokens import (
     RUNTIME_TOKEN_IGNORE,
     main,
     scan_file,
 )
+from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 _RAW_NAME = RUNTIME_TOKEN_REGISTRY["ask_user"]["claude"]
 _CAPABILITY = "ask_user"
@@ -53,6 +57,22 @@ def test_token_expressed_content_reports_nothing_and_exits_zero(tmp_path: Path) 
     )
     assert scan_file(skill) == []
     assert main([str(skill)]) == 0
+
+
+def test_raw_token_in_a_shared_fragment_is_reported(tmp_path: Path) -> None:
+    # A shared fragment the build inlines into plugin output is enforced too — a
+    # raw token there leaks into every target that includes it. The step
+    # enumerates src/_shared/ alongside src/plugins/.
+    builder = SrcTreeBuilder(tmp_path)
+    builder.add_shared_topic(
+        "shared-scope", "shared-topic", fragment_body=f"Ask via {_RAW_NAME}.\n"
+    )
+    fragment = (
+        builder.shared_root / "shared-scope" / "shared-topic" / SHARED_FRAGMENT_FILENAME
+    )
+
+    violations = scan_file(fragment)
+    assert [v.token for v in violations] == [_RAW_NAME]
 
 
 def test_ignored_file_with_raw_token_is_not_reported() -> None:

@@ -65,6 +65,22 @@ def _reference_files() -> tuple[str, ...]:
     )
 
 
+def _runtime_token_files() -> tuple[str, ...]:
+    # Authored source the build renders or inlines: plugin content and the
+    # shared fragments plugin files include. A raw runtime token in either ships
+    # into a generated target, so both are enforced.
+    roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
+    return tuple(
+        sorted(
+            str(path)
+            for root in roots
+            if root.is_dir()
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix in _REFERENCE_SUFFIXES
+        )
+    )
+
+
 STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
@@ -119,7 +135,7 @@ STEPS: Final = (
             "python",
             "-m",
             "outcomeeng.validation.runtime_tokens",
-            *_reference_files(),
+            *_runtime_token_files(),
         ),
     ),
     Step(
