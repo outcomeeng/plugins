@@ -8,7 +8,7 @@ description: >-
 <objective>
 Generate `.excalidraw` JSON files that **argue visually**, not just display information.
 
-**Setup:** If the user asks you to set up this skill (renderer, dependencies, etc.), see `README.md` for instructions.
+**Setup:** When the user asks for this skill to be set up (renderer, dependencies, etc.), see `README.md` for instructions.
 </objective>
 
 <customization>
@@ -35,7 +35,7 @@ Pull colors from `references/color-palette.md`, element templates from `referenc
 
 A diagram isn't formatted text. It's a visual argument that shows relationships, causality, and flow that words alone can't express. The shape should BE the meaning.
 
-**The Isomorphism Test**: If you removed all text, would the structure alone communicate the concept? If not, redesign.
+**The Isomorphism Test**: With all text removed, would the structure alone communicate the concept? If not, redesign.
 
 **The Education Test**: Could someone learn something concrete from this diagram, or does it just label boxes? A good diagram teaches — it shows actual formats, real event names, concrete examples.
 </philosophy>
@@ -54,15 +54,15 @@ Before designing, determine what level of detail this diagram needs:
 - Diagramming a real system, protocol, or architecture
 - The diagram will be used to teach or explain (e.g., YouTube video)
 - The audience needs to understand what things actually look like
-- You're showing how multiple technologies integrate
+- The diagram shows how multiple technologies integrate
 
-**For technical diagrams, you MUST include evidence artifacts and do research first.**
+**For technical diagrams, include evidence artifacts and do research first.**
 </depth_assessment>
 
 <research_mandate>
 **Before drawing anything technical, research the actual specifications.**
 
-If you're diagramming a protocol, API, or framework:
+When diagramming a protocol, API, or framework:
 
 1. Look up the actual JSON/data formats
 2. Find the real event names, method names, or API endpoints
@@ -76,9 +76,9 @@ Good: "AG-UI streams events (RUN_STARTED, STATE_DELTA, A2UI_UPDATE)" → "Copilo
 </research_mandate>
 
 <evidence_artifacts>
-Evidence artifacts are concrete examples that prove your diagram is accurate and help viewers learn. Include them in technical diagrams.
+Evidence artifacts are concrete examples that prove the diagram is accurate and help viewers learn. Include them in technical diagrams.
 
-**Types of evidence artifacts** (choose what's relevant to your diagram):
+**Types of evidence artifacts** (choose what's relevant to the diagram):
 
 | Artifact Type            | When to Use                                | How to Render                                                                         |
 | ------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------- |
@@ -231,7 +231,7 @@ See `references/element-templates.md` for copy-paste JSON templates for each ele
 </json_structure>
 
 <render_validate>
-You cannot judge a diagram from JSON alone. After generating or editing the Excalidraw JSON, you MUST render it to PNG, view the image, and fix what you see — in a loop until it's right.
+A diagram cannot be judged from JSON alone. After generating or editing the Excalidraw JSON, render it to PNG, view the image, and fix what the render shows — in a loop until it's right.
 
 **GATE: Before first render**, verify the `.excalidraw` file is valid JSON:
 
@@ -252,7 +252,7 @@ This outputs a PNG next to the `.excalidraw` file. Then use the **Read tool** on
 **The loop:**
 
 1. **Render & View** — Run the render script, then Read the PNG.
-2. **Audit against your original vision** — Does the visual structure match the conceptual structure you planned? Does each section use the intended pattern? Is the visual hierarchy correct?
+2. **Audit against the original vision** — Does the visual structure match the planned conceptual structure? Does each section use the intended pattern? Is the visual hierarchy correct?
 3. **Check for visual defects:**
    - Text clipped by or overflowing its container
    - Text or shapes overlapping other elements
@@ -263,7 +263,7 @@ This outputs a PNG next to the `.excalidraw` file. Then use the **Read tool** on
 4. **Fix** — Edit the JSON. Common fixes: widen containers, adjust `x`/`y` coordinates, add waypoints to arrow `points` arrays, reposition labels, resize elements.
 5. **Re-render & re-view** — Repeat until the diagram passes both the vision check and the defect check. Typically 2-4 iterations.
 
-**When to stop:** No text clipped or overlapping, arrows route cleanly, spacing is consistent, composition is balanced, you'd show it without caveats.
+**When to stop:** No text clipped or overlapping, arrows route cleanly, spacing is consistent, composition is balanced, and it is presentable without caveats.
 
 **First-time setup:**
 
@@ -346,7 +346,7 @@ Failures from actual usage:
 | --------------------------------- | -------------------------------------------------- |
 | `references/color-palette.md`     | Before generating any diagram (colors and styles)  |
 | `references/element-templates.md` | When writing JSON (copy-paste element templates)   |
-| `references/json-schema.md`       | When you need the complete element schema          |
+| `references/json-schema.md`       | When the complete element schema is needed         |
 | `references/visual-patterns.md`   | During Step 2 (concept-to-pattern mapping)         |
 | `references/large-diagrams.md`    | When building comprehensive/multi-section diagrams |
 
