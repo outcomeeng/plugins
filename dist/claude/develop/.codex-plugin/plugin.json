@@ -1,6 +1,6 @@
 {
   "name": "develop",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "description": "Create and audit plugin assets: skills, commands, subagents, and agent prompt standards",
   "author": {
     "name": "Simon Heimlicher",
