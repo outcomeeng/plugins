@@ -2,6 +2,7 @@
 name: coding-python
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Python.
+  NEVER write or fix Python implementation without this skill.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -14,11 +15,11 @@ Invoke the `python:standardizing-python-tests` skill before proceeding. If that 
 </repo_local_overlay>
 
 <objective>
-Write or fix implementation code that makes tests pass. This skill handles both:
+Write or fix implementation code that makes tests pass. Two modes:
 1. **Writing new implementation** - Given failing tests, produce code that passes them
 2. **Fixing rejected implementation** - Given reviewer feedback, fix existing code
 
-**This skill WRITES implementation. Tests should already exist.**
+**Write implementation only — tests MUST already exist.**
 </objective>
 
 <mode_detection>
@@ -49,18 +50,16 @@ If tests don't exist or aren't approved, go back to earlier steps.
 
 <write_mode_workflow>
 
-## WRITE Mode: Creating Implementation
+Run the product's own canonical commands when it documents them — a `CLAUDE.md` / `AGENTS.md` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
 
-### Step 1: Understand Tests
-
-Read the existing tests to understand:
+**Step 1 — Understand the tests.** Read the existing tests to understand:
 
 ```bash
 # Read test files
 cat {node_path}/tests/*.py
 
 # Run tests to see failures
-just run test {node_path}/tests/ -v
+python3 -m pytest {node_path}/tests/ -v
 ```
 
 Understand:
@@ -69,9 +68,7 @@ Understand:
 - What interfaces are expected (function signatures, classes)
 - What the tests import (where implementation should live)
 
-### Step 2: Write Implementation (GREEN)
-
-Write minimal code that makes tests pass.
+**Step 2 — Write implementation (GREEN).** Write minimal code that makes tests pass.
 
 **Code standards (per `/standardizing-python`):**
 
@@ -91,33 +88,31 @@ class Deps:
     run_command: CommandRunner
 ```
 
-### Step 3: Run Tests (Verify GREEN)
+**Step 3 — Run tests (verify GREEN).**
 
 ```bash
-just run test {node_path}/tests/ -v
+python3 -m pytest {node_path}/tests/ -v
 ```
 
-All tests should pass. If any fail, fix implementation and re-run.
+All tests MUST pass. If any fail, fix implementation and re-run.
 
-### Step 4: Refactor (Keep GREEN)
-
-Clean up while keeping tests green:
+**Step 4 — Refactor (keep GREEN).** Clean up while keeping tests green:
 
 1. Move semantic values to the owning source module
 2. Simplify
 3. DRY
 
-### Step 5: Self-Verify
+**Step 5 — Self-verify.**
 
 ```bash
 # Type checking
-just run mypy product/
+python3 -m mypy product/
 
 # Linting
-just run ruff check product/
+python3 -m ruff check product/
 
 # Tests one more time
-just run test {node_path}/tests/ -v
+python3 -m pytest {node_path}/tests/ -v
 ```
 
 All must pass before declaring complete.
@@ -126,19 +121,13 @@ All must pass before declaring complete.
 
 <fix_mode_workflow>
 
-## FIX Mode: Fixing Rejected Implementation
-
-### Step 1: Read Rejection Feedback
-
-Find the most recent `/auditing-python` output. Look for:
+**Step 1 — Read rejection feedback.** Find the most recent `/auditing-python` output. Look for:
 
 - Specific file:line locations
 - Issue categories (magic values, missing DI, etc.)
 - Required fixes
 
-### Step 2: Apply Fixes
-
-For each rejection reason:
+**Step 2 — Apply fixes.** For each rejection reason:
 
 | Rejection Category       | Fix Action                                       |
 | ------------------------ | ------------------------------------------------ |
@@ -149,20 +138,20 @@ For each rejection reason:
 | Missing `-> None`        | Add return type                                  |
 | Security issues          | Fix the vulnerability (don't suppress)           |
 
-### Step 3: Verify Fixes
+**Step 3 — Verify fixes.**
 
 ```bash
 # Run tests
-just run test {node_path}/tests/ -v
+python3 -m pytest {node_path}/tests/ -v
 
 # Type checking
-just run mypy product/
+python3 -m mypy product/
 
 # Linting
-just run ruff check product/
+python3 -m ruff check product/
 ```
 
-### Step 4: Report What Was Fixed
+**Step 4 — Report what was fixed.**
 
 ```markdown
 ## Implementation Fixed
@@ -183,9 +172,7 @@ All tests pass. Types and lint clean. Ready for re-review.
 
 <code_patterns>
 
-## Mandatory Patterns
-
-### Named Constants
+**Named constants**
 
 ```python
 # ❌ REJECTED
@@ -202,7 +189,7 @@ def validate_score(score: int) -> bool:
     return MIN_SCORE <= score <= MAX_SCORE
 ```
 
-### Dependency Injection
+**Dependency injection**
 
 ```python
 # ❌ REJECTED
@@ -225,7 +212,7 @@ def sync_files(src: str, dest: str, deps: SyncDeps) -> bool:
     return returncode == 0
 ```
 
-### Type Annotations
+**Type annotations**
 
 ```python
 # ✅ All functions have full type annotations

@@ -2,6 +2,7 @@
 name: testing-python
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for Python.
+  NEVER write or fix Python tests without this skill.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -26,7 +27,7 @@ Determine the mode before editing:
 | Fix   | `/auditing-python-tests` rejected existing Python evidence | Follow `<fix_workflow>`      |
 | Split | The test requires source architecture changes first        | Change source contract first |
 
-Do not create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
+NEVER create a test workaround for code that lacks source-owned contracts, typed dependency boundaries, or observable behavior.
 </mode_detection>
 
 <write_workflow>
@@ -73,15 +74,15 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 </source_contract_gate>
 
 <verification>
-Use the product's canonical commands. When no product-specific command exists, use the closest equivalent:
+Run the product's canonical test, lint, and type commands — the ones its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
 ```bash
-uv run pytest <node-path>/tests/ -v
-uv run ruff check <node-path>/tests/
-uv run mypy <node-path>/tests/
+python3 -m pytest <node-path>/tests/ -v
+python3 -m ruff check <node-path>/tests/
+python3 -m mypy <node-path>/tests/
 ```
 
-For spec-tree products with custom validation commands, run those commands instead of raw tool invocations.
+Report any tool the product lacks rather than silently skipping it.
 </verification>
 
 <reporting>
