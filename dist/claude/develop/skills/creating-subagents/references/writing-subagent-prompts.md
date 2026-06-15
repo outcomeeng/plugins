@@ -357,7 +357,7 @@ Subagents execute in isolated contexts ("black boxes"). They cannot use AskUserQ
 - Presenting options and waiting for selection
 
 **Design principle:**
-If your subagent prompt includes "ask user", "present options", or "wait for confirmation", it's designed incorrectly. Move user interaction to main chat.
+A subagent prompt that includes "ask user", "present options", or "wait for confirmation" is designed incorrectly. Move user interaction to main chat.
 </anti_pattern>
 </anti_patterns>
 
@@ -501,7 +501,7 @@ Task is complete when:
 
 1. **Invoke the subagent** with a representative task
 2. **Check if it follows the workflow** specified in the prompt
-3. **Verify output format** matches what you defined
+3. **Verify output format** matches what the prompt specifies
 4. **Test edge cases** - does it handle unusual inputs well?
 5. **Check constraints** - does it respect boundaries?
 6. **Iterate** - refine the prompt based on observed behavior
