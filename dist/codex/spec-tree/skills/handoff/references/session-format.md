@@ -1,10 +1,10 @@
 <template>
 The session file content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
 
-**Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, and prefills `created_at`, `agent_session_id`, and `git_ref`. The JSON header carries only the caller-supplied fields:
+**Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying it exists on `origin`. The JSON header carries the caller-supplied fields:
 
 ```text
-{"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
+{"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "git_ref": "[work branch the work is pushed to — the stable anchor /pickup checks out]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
 ```
 
 **Path B (rewrite in place)** writes the stored-file format directly to the existing artifact, preserving its existing `created_at`, `agent_session_id`, and `git_ref` values. The stored format is YAML frontmatter followed by the body:
@@ -30,9 +30,8 @@ files:
 <metadata>
   timestamp: [UTC timestamp]
   product: [Product name from cwd]
-  git_ref: [value from frontmatter git_ref]
+  git_ref: [value from frontmatter git_ref — the work branch /pickup checks out]
   git_status: [clean | dirty]
-  work_branch: origin/[work-branch the work is pushed to — the branch /pickup fetches and checks out]
 </metadata>
 
 <nodes>
@@ -126,9 +125,8 @@ history.
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
 - **`goal`**: Required, non-empty continuation objective. Use one sentence that identifies the user-visible outcome, not a generic handoff phrase.
 - **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
-- **Path C JSON header**: Carries only the caller-supplied fields — `priority`, `goal`, `next_step`, optional `specs`, optional `files`. Do not put `created_at`, `agent_session_id`, or `git_ref` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
-- **`git_ref`**: Prefilled by `spx session handoff` from git context — the branch name for a main checkout on a branch, or a commit SHA for a detached or linked-worktree handoff. Preserve the value as written; do not overwrite it during Path B rewrites. Caller-supplied values are ignored for Path C.
-- **`work_branch`** (body `<metadata>`): Names `origin/<work-branch>` — the origin branch the work is pushed to, which `/pickup` fetches and checks out in a pool worktree before reading the spec tree. The persistence precondition (`workflows/04-execute.md` `<release_work_branch>`) guarantees this branch exists on origin and is not behind local. Where the `spx session handoff` git-context gate records only the running worktree's own ref as `git_ref` (a pool worktree records the `origin/<default>` base SHA), `work_branch` is the body anchor that names where the work actually is; omit it only when the work landed on the default branch with no feature branch.
+- **Path C JSON header**: Carries the caller-supplied fields — `priority`, `goal`, `next_step`, `git_ref`, optional `specs`, optional `files`. Do not put `created_at` or `agent_session_id` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
+- **`git_ref`**: For Path C, supply the pushed work branch in the JSON header; `spx session handoff` records it after verifying the branch exists on `origin` (omit it only when the work landed on the default branch with no feature branch, and the command derives the base from git context — a branch name for a main checkout, a commit SHA for a detached or pool-worktree handoff). `git_ref` is the single anchor `/pickup` reads: it fetches and checks out the branch `git_ref` names in a pool worktree, and reads in place when `git_ref` is the default branch or a commit SHA. The persistence precondition (`workflows/04-execute.md` `<release_work_branch>`) guarantees the work branch exists on origin and is not behind local. Preserve the value as written; do not overwrite it during Path B rewrites.
 - **`agent_session_id`**: Prefilled by `spx session handoff` from the runtime environment (`$CLAUDE_SESSION_ID` for Claude Code, `$CODEX_THREAD_ID` for Codex). Preserve the value as written; do not overwrite it. If absent, `created_at` + `git_ref` identify the session context.
 - **`created_at`**: ISO 8601 UTC timestamp written by `spx session handoff`. Preserve the value as written.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
