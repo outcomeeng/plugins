@@ -112,6 +112,17 @@ STEPS: Final = (
         ),
     ),
     Step(
+        label="runtime-token",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.validation.runtime_tokens",
+            *_reference_files(),
+        ),
+    ),
+    Step(
         label="docs-check",
         argv=(
             "uv",
