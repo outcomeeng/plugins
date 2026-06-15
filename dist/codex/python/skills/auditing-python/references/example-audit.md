@@ -10,14 +10,14 @@ Auditing `product/config/` for a CLI tool after Phase 1 and Phase 2 passed.
 
 ## Verdict
 
-| # | Concern                | Status | Detail                                 |
-| - | ---------------------- | ------ | -------------------------------------- |
-| 1 | Automated gates        | PASS   | `just run check` -- zero warnings      |
-| 2 | Test execution         | PASS   | 47/47 tests, 84% coverage              |
-| 3 | Function comprehension | PASS   | 12 functions, no surprises             |
-| 4 | Design coherence       | PASS   | IO separated, DI used, SRP maintained  |
-| 5 | Import structure       | PASS   | All package imports, no deep relatives |
-| 6 | ADR/PDR compliance     | PASS   | 15-database.adr.md constraints met     |
+| # | Concern                | Status | Detail                                     |
+| - | ---------------------- | ------ | ------------------------------------------ |
+| 1 | Automated gates        | PASS   | the product check command -- zero warnings |
+| 2 | Test execution         | PASS   | 47/47 tests, 84% coverage                  |
+| 3 | Function comprehension | PASS   | 12 functions, no surprises                 |
+| 4 | Design coherence       | PASS   | IO separated, DI used, SRP maintained      |
+| 5 | Import structure       | PASS   | All package imports, no deep relatives     |
+| 6 | ADR/PDR compliance     | PASS   | 15-database.adr.md constraints met         |
 
 ---
 
@@ -37,7 +37,7 @@ Auditing `product/orders/` for a web service.
 
 | # | Concern                | Status | Detail                                         |
 | - | ---------------------- | ------ | ---------------------------------------------- |
-| 1 | Automated gates        | PASS   | `just run check` -- zero warnings              |
+| 1 | Automated gates        | PASS   | the product check command -- zero warnings     |
 | 2 | Test execution         | PASS   | 23/23 tests pass                               |
 | 3 | Function comprehension | REJECT | process_orders tangles IO with logic           |
 | 4 | Design coherence       | REJECT | IO/logic separation violated                   |
@@ -145,7 +145,7 @@ Short example showing early termination.
 
 ## Required Changes
 
-1. Fix 3 ruff errors and 1 mypy error reported by `just run check`
+1. Fix 3 ruff errors and 1 mypy error reported by the product check command
 
 ---
 

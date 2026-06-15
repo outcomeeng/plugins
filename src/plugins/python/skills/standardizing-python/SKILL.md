@@ -10,16 +10,12 @@ allowed-tools: Read
 Python code standards enforced by linters (ruff, mypy) and manual review. Defines what `/coding-python` must follow and `/auditing-python` enforces.
 </objective>
 
-<quick_start>
-Reference this skill when coding or reviewing Python. Standards grouped by category with ruff rule codes. All examples show correct (✅) and incorrect (❌) patterns.
-</quick_start>
-
 <success_criteria>
-Code follows these standards when all ruff rules and mypy checks pass. See summary table at the end for the complete rejection criteria with rule codes.
+Code follows these standards when all ruff rules and mypy checks pass. See `${CLAUDE_SKILL_DIR}/references/rejection-criteria.md` for the complete rejection-criteria lookup with rule codes.
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other Python skills reference these standards. You typically don't invoke this directly—invoke `/coding-python`, `/testing-python`, or `/auditing-python` instead.
+This is a reference skill. Other Python skills load these standards. Do not invoke it directly — invoke `/coding-python`, `/testing-python`, or `/auditing-python` instead.
 
 These standards apply to ALL Python code: production and test code alike.
 </reference_note>
@@ -303,32 +299,7 @@ result = cast(str, value)  # type: ignore[no-untyped-call]  # third-party lib mi
 
 <modern_syntax>
 
-```python
-# ❌ REJECTED: Old-style type unions (UP007)
-from typing import Optional, Union
-
-
-def get_user(id: int) -> Optional[User]: ...
-def process(value: Union[str, int]) -> None: ...
-
-
-# ✅ REQUIRED: Modern union syntax
-def get_user(id: int) -> User | None: ...
-def process(value: str | int) -> None: ...
-
-
-# ❌ REJECTED: Old-style generic types (UP006)
-from typing import List, Dict, Tuple
-
-
-def get_users() -> List[User]: ...
-def get_config() -> Dict[str, Any]: ...
-
-
-# ✅ REQUIRED: Lowercase generics
-def get_users() -> list[User]: ...
-def get_config() -> dict[str, Any]: ...
-```
+Use modern syntax: `X | None` (not `Optional[X]`), `X | Y` (not `Union[X, Y]`), and lowercase generics `list[str]` / `dict[str, V]` (not `List` / `Dict`).
 
 **Ruff rules enforced:**
 
@@ -343,20 +314,10 @@ def get_config() -> dict[str, Any]: ...
 
 <error_handling>
 
+Catch specific exceptions and handle or re-raise them; never a bare `except:` or a broad `except Exception: pass` that swallows errors.
+
 ```python
-# ❌ REJECTED: Bare except (E722)
-try:
-    process()
-except:
-    pass
-
-# ❌ REJECTED: Swallowing all errors (S110)
-try:
-    process()
-except Exception:
-    pass
-
-# ✅ REQUIRED: Catch specific exceptions
+# ✅ REQUIRED: catch specific exceptions, then handle or re-raise
 try:
     process()
 except ValueError as e:
@@ -416,16 +377,7 @@ Context matters for security rules — a CLI tool invoked by the user has differ
 
 <resource_management>
 
-```python
-# ❌ REJECTED: File not opened with context manager (SIM115)
-f = open("file.txt")
-data = f.read()
-f.close()
-
-# ✅ REQUIRED: Use context managers
-with open("file.txt") as f:
-    data = f.read()
-```
+Acquire files and other resources with a context manager (`with open(...) as f:`), never a manual `open()` / `.close()` pair.
 
 **Ruff rules enforced:**
 
@@ -439,20 +391,7 @@ with open("file.txt") as f:
 
 <code_hygiene>
 
-```python
-# ❌ REJECTED: Commented-out code (ERA001)
-# result = old_function(x)
-# if condition:
-#     do_something()
-
-# ❌ REJECTED: Unused imports (F401)
-import os  # never used
-
-# ❌ REJECTED: sys.path manipulation
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-```
+Remove commented-out code and unused imports; never manipulate `sys.path` to reach modules — depend on an installed package instead (see `<import_hygiene>`).
 
 **Ruff rules enforced:**
 
@@ -537,10 +476,10 @@ name = "product"
 where = ["src"]
 ```
 
-**3. Install in editable mode:**
+**3. Install in editable mode** (portable fallback; prefer the product's own wrapper):
 
 ```bash
-uv pip install -e .
+python3 -m pip install -e .
 ```
 
 </import_hygiene>
@@ -548,32 +487,5 @@ uv pip install -e .
 ---
 
 <rejection_criteria_summary>
-
-| Issue                             | Example                           | Rule    |
-| --------------------------------- | --------------------------------- | ------- |
-| Missing `-> None` on test         | `def test_foo(self):`             | ANN201  |
-| Untyped fixture parameter         | `def test_foo(self, tmp_path):`   | ANN001  |
-| Missing `-> None` on init         | `def __init__(self, x: int):`     | ANN204  |
-| Magic values in assertions        | `assert result == 42`             | PLR2004 |
-| Uppercase argument names          | `def __init__(self, WIDTH=8):`    | N803    |
-| Shadowing builtins                | `def foo(input: str):`            | A002    |
-| Bare `except:`                    | `except: pass`                    | E722    |
-| Swallowing exceptions             | `except Exception: pass`          | S110    |
-| Hardcoded secrets                 | `API_KEY = "sk-..."`              | S105    |
-| `eval()` / `exec()`               | `eval(user_input)`                | S307    |
-| `shell=True`                      | `subprocess.run(cmd, shell=True)` | S602    |
-| Pickle with untrusted data        | `pickle.loads(data)`              | S301    |
-| SSL disabled                      | `requests.get(url, verify=False)` | S501    |
-| No context manager                | `f = open(...); f.close()`        | SIM115  |
-| Old union syntax                  | `Optional[X]`, `Union[X, Y]`      | UP007   |
-| Old generic syntax                | `List[str]`, `Dict[str, int]`     | UP006   |
-| Commented-out code                | `# old_function(x)`               | ERA001  |
-| Unused imports                    | `import os  # never used`         | F401    |
-| Deep relative imports             | `from ... import x`               | manual  |
-| `sys.path` manipulation           | `sys.path.insert(0, ...)`         | manual  |
-| Unqualified `Any`                 | `def f(x: Any) -> Any:`           | mypy    |
-| `type: ignore` no reason          | `x = foo()  # type: ignore`       | manual  |
-| Plain class with uppercase fields | `class Status: PASS = "pass"`     | review  |
-| Re-export of library constants    | `HTTP_OK = HTTPStatus.OK`         | review  |
-
+The complete rejection-criteria lookup — every issue the sections above state, indexed by its ruff rule code (or `manual` / `review` / `mypy`) — lives in `${CLAUDE_SKILL_DIR}/references/rejection-criteria.md`.
 </rejection_criteria_summary>

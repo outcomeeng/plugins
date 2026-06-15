@@ -41,17 +41,17 @@ Do not approve a test by looking only at the test file. Laundering and severed c
 </audit_scope>
 
 <gate_0_deterministic>
-Run deterministic checks before judgment when the repository provides the tools:
+Run deterministic checks before judgment when the repository provides the tools. Prefer the repository's canonical commands — those its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document; the `python3 -m …` forms below are the portable fallback when the product ships no wrapper:
 
 ```bash
 bad_test_names="$(rg --files <spec-node-path>/tests/ --glob '*.py' | rg -v '/test_[^.]+\.(scenario|mapping|conformance|property|compliance)\.l[123](\.[^.]+)?\.py$' || true)"
 test -z "$bad_test_names"
-uv run pytest --collect-only -q <spec-node-path>/tests/
-uv run ruff check <spec-node-path>/tests/
-uv run mypy <spec-node-path>/tests/
+python3 -m pytest --collect-only -q <spec-node-path>/tests/
+python3 -m ruff check <spec-node-path>/tests/
+python3 -m mypy <spec-node-path>/tests/
 ```
 
-Use repository-canonical commands when they exist. Report unavailable tools separately instead of silently skipping them.
+Report unavailable tools separately instead of silently skipping them.
 
 If collection, linting, type checking, or repository-canonical deterministic checks fail, halt the audit and emit `REJECT` with the failing command and diagnostic. Do not proceed to semantic evidence judgment on uncollectable, untyped, or lint-failing tests.
 </gate_0_deterministic>

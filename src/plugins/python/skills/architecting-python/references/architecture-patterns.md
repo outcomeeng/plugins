@@ -437,7 +437,7 @@ product/
                 └── test_baz.conformance.l3.py
 ```
 
-**Key**: Test utilities in `mypackage_testing/` are installed via `uv pip install -e ".[dev]"`. Co-located tests in `spx/.../tests/` import generators from `mypackage_testing.generators`, harnesses from `mypackage_testing.harnesses`, and consume inert fixture files by path. See `test-infrastructure-patterns.md`.
+**Key**: Test infrastructure in `mypackage_testing/` is installed via the product's editable install (portable fallback `python3 -m pip install -e ".[dev]"`). Co-located tests in `spx/.../tests/` import generators from `mypackage_testing.generators`, harnesses from `mypackage_testing.harnesses`, and consume inert fixture files under `mypackage_testing/fixtures/` by path. See `test-infrastructure-patterns.md`.
 
 ---
 

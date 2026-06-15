@@ -4,48 +4,51 @@ Test infrastructure is an architectural concern. Design it once in ADRs, not ad-
 
 ## Core Principle
 
-> **Test utilities are production code. Package them properly. Verify the environment before running tests.**
+> **Test infrastructure is production code. Package it properly. Verify the environment before running tests.**
+
+The governing category is **test infrastructure** — never "test utilities", "support", "helpers", or "tools". It has three kinds: `generators` (variable input domains), `harnesses` (resource lifecycle and access to real behavior), and `fixtures` (inert whole-payload input files consumed by path).
 
 ---
 
-## The Test Environment Problem
+## Running Tests And The Environment
+
+Run the product's canonical test command — the one its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document. The direct `python3 -m pytest` invocations below are the portable fallback for a product that ships no wrapper.
 
 ### Symptom: "Module not found" When Running Tests
 
 ```bash
-$ just run test spx/.../tests/test_foo.scenario.l1.py
-ModuleNotFoundError: No module named 'click'  # But click IS installed!
+python3 -m pytest spx/.../tests/test_foo.scenario.l1.py
+ModuleNotFoundError: No module named 'click'  # but click IS installed
 ```
 
-### Root Cause: Wrong pytest
+### Root Cause: The Wrong Interpreter
+
+The `pytest` resolved on `PATH` may run under a different interpreter than the one holding the product's dependencies. Confirm which interpreter resolves:
 
 ```bash
-$ uv run which pytest
-/opt/homebrew/bin/pytest  # ❌ WRONG - System pytest, not product venv
+python3 -c "import sys; print(sys.executable)"
+python3 -m pytest --version
 ```
 
-The system pytest uses a different Python that doesn't have your product's dependencies.
-
-### Fix: Install Dev Dependencies in Product Venv
+### Fix: Install The Product For That Interpreter
 
 ```bash
-# This installs pytest AND all dev deps in the product venv
-uv pip install -e ".[dev]"
-
-# Verify
-uv run which pytest
-# /path/to/product/.venv/bin/pytest  # ✅ CORRECT
+python3 -m pip install -e ".[dev]"
 ```
+
+Then invoke pytest through the same interpreter (`python3 -m pytest`) so it sees the installed packages.
 
 ---
 
-## Test Utility Packaging
+## Test-Infrastructure Packaging
 
 ### The Problem: Tests Can't Import Shared Code
 
 ```python
 # spx/.../tests/test_foo.scenario.l1.py
-from tests.fixtures import create_user  # ❌ ModuleNotFoundError
+from tests.fixtures import (
+    create_user,
+)  # ❌ ModuleNotFoundError — tests/ is not a package
 ```
 
 ### ❌ Wrong: Path Hacks
@@ -55,32 +58,36 @@ from tests.fixtures import create_user  # ❌ ModuleNotFoundError
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))  # Brittle, breaks easily
+sys.path.insert(0, str(Path(__file__).parent.parent))  # brittle, breaks easily
 ```
 
-### ✅ Right: Make Test Utilities an Installable Package
+### ✅ Right: Make Test Infrastructure An Installable Package
 
-**Step 1: Structure**
+**Step 1: Structure** — the `{product}_testing/` package carries all three categories:
 
 ```
 product/
 ├── pyproject.toml
-├── mypackage/              # Main package
+├── mypackage/                 # main package
 │   └── ...
-├── mypackage_testing/      # Test utilities package (NOT tests/)
+├── mypackage_testing/         # test-infrastructure package (NOT tests/)
 │   ├── __init__.py
-│   ├── generators/
+│   ├── generators/            # variable input domains (e.g. Hypothesis strategies)
 │   │   ├── __init__.py
-│   │   └── users.py        # valid_users(), etc.
-│   └── harnesses/
-│       ├── __init__.py
-│       └── cli.py          # CLIHarness, etc.
-└── spx/                    # Co-located tests (per Outcome Engineering framework)
+│   │   └── users.py           # valid_users(), etc.
+│   ├── harnesses/             # resource lifecycle, access to real behavior
+│   │   ├── __init__.py
+│   │   └── cli.py             # CLIHarness, etc.
+│   └── fixtures/              # inert whole-payload input files (consumed by path)
+│       └── sample_report.json
+└── spx/                       # co-located tests (per Outcome Engineering framework)
     └── .../tests/
-        └── test_foo.scenario.l1.py # from mypackage_testing.generators import valid_users
+        └── test_foo.scenario.l1.py
 ```
 
-**Step 2: pyproject.toml**
+Co-located tests import generators and harnesses from the package (`from mypackage_testing.generators import valid_users`) and consume fixtures as inert files by path — never by importing them as modules.
+
+**Step 2: pyproject.toml** — both packages are installable:
 
 ```toml
 [build-system]
@@ -88,20 +95,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["mypackage", "mypackage_testing"] # Both are installable
+packages = ["mypackage", "mypackage_testing"] # both are installable
 ```
 
-**Step 3: Install**
+**Step 3: Install** (portable fallback; prefer the product's own wrapper):
 
 ```bash
-uv pip install -e ".[dev]"  # Installs both packages in editable mode
+python3 -m pip install -e ".[dev]"  # installs both packages in editable mode
 ```
 
 **Step 4: Import**
 
 ```python
 # spx/.../tests/test_foo.scenario.l1.py
-from mypackage_testing.generators import valid_users  # ✅ Works everywhere
+from mypackage_testing.generators import valid_users  # ✅ works everywhere
 ```
 
 ---
@@ -140,25 +147,18 @@ pythonpath = ["."]
 
 ## Excluding Out-of-Scope Code
 
-### The Problem: Broken out-of-scope code fails `just check`
+### The Problem: Broken out-of-scope code fails the check command
 
 ```bash
-$ just check
 ERROR archive/tests/test_emitter.py - ImportError: cannot import name 'HDLEmitterBase'
 ```
 
-### Fix: Explicit Exclusions in Check Commands
+### Fix: Explicit Exclusions in the Check Command
 
-```makefile
-# justfile
+Add the exclusion to the product's own test or check recipe (Justfile, Makefile, or package script). With a direct invocation it is:
 
-# Run all checks - excludes archived work/
-check: lint typecheck
-    just run test mypackage_testing/ spx/ --ignore=archive/
-
-# Coverage commands also need exclusion
-test-cov:
-    just run test --cov=mypackage --cov-report=term --ignore=archive/
+```bash
+python3 -m pytest mypackage_testing/ spx/ --ignore=archive/
 ```
 
 ---
@@ -172,10 +172,10 @@ Every Python product ADR governing test infrastructure should express rules unde
 
 ### Audit
 
-- ALWAYS: test utilities are packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/` ([audit])
+- ALWAYS: test infrastructure is packaged as `{product}_testing/` with `generators/`, `harnesses/`, and inert fixture data under `fixtures/` ([audit])
 - ALWAYS: `pyproject.toml` includes `{product}` and `{product}_testing` as installable packages ([audit])
 - ALWAYS: pytest uses `--import-mode=importlib` when co-located test files can share module names ([audit])
-- NEVER: tests mutate `sys.path` to import shared fixtures or harnesses ([audit])
+- NEVER: tests mutate `sys.path` to import shared generators or harnesses ([audit])
 
 ```toml
 [tool.pytest.ini_options]
@@ -185,17 +185,17 @@ pythonpath = ["."]
 
 ### Test Locations
 
-| Type             | Location         | Runs in `just check` |
-| ---------------- | ---------------- | -------------------- |
-| Co-located tests | `spx/.../tests/` | Yes                  |
-| Regression tests | `tests/`         | Yes                  |
+| Type             | Location         | In the product's check run |
+| ---------------- | ---------------- | -------------------------- |
+| Co-located tests | `spx/.../tests/` | Yes                        |
+| Regression tests | `tests/`         | Yes                        |
 
 ### Environment Verification
 
-Before running tests, verify:
+Before running tests, verify the interpreter resolves the product venv and the test-infrastructure package imports:
 
-1. `uv run which pytest` → must be `.venv/bin/pytest`
-2. Dev deps installed → `uv pip install -e ".[dev]"`
+1. `python3 -c "import sys; print(sys.executable)"` → the product venv's interpreter
+2. Dev deps installed → `python3 -m pip install -e ".[dev]"`
 ````
 
 ---
@@ -205,14 +205,13 @@ Before running tests, verify:
 Before running any tests, verify:
 
 ```bash
-# 1. pytest is from product venv
-uv run which pytest
-# Expected: /path/to/product/.venv/bin/pytest
-# If wrong: uv pip install -e ".[dev]"
+# 1. the resolving interpreter is the product venv
+python3 -c "import sys; print(sys.executable)"
+# Expected: /path/to/product/.venv/bin/python
 
-# 2. Test utilities are importable
-uv run python -c "from mypackage_testing.generators import ...; from mypackage_testing.harnesses import ...; print('OK')"
-# If fails: Check pyproject.toml packages list, re-run uv pip install -e ".[dev]"
+# 2. test infrastructure is importable
+python3 -c "import mypackage_testing.generators, mypackage_testing.harnesses; print('OK')"
+# If fails: check pyproject.toml packages list, re-run the editable install
 
 # 3. pytest config has importlib mode
 grep "import-mode" pyproject.toml
@@ -223,12 +222,12 @@ grep "import-mode" pyproject.toml
 
 ## Key Principles
 
-1. **Test utilities are packages** — Install them, don't path-hack them
+1. **Test infrastructure is a package** — install it, don't path-hack it
 
-2. **Verify environment first** — `uv run which pytest` before running tests
+2. **Verify the interpreter first** — confirm `sys.executable` before running tests
 
-3. **Use importlib mode** — Required for projects with multiple test directories
+3. **Use importlib mode** — required for projects with multiple test directories
 
-4. **Exclude out-of-scope code** — Legacy/broken code gets quarantined, not blocking
+4. **Exclude out-of-scope code** — legacy/broken code gets quarantined, not blocking
 
-5. **Document in ADRs** — Test infrastructure is an architectural decision
+5. **Document in ADRs** — test infrastructure is an architectural decision
