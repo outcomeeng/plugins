@@ -45,30 +45,30 @@ For each anchored node, check `git status` and record:
 
 </record_state>
 
-<resolve_session_scope>
-Read the `<RESOLVED_SCOPE ids="…" artifact_id="…">` marker emitted by workflow 02 (`<perspective_session_scope>`). Use it as the authoritative archive list and artifact identifier for the rest of this workflow.
+<resolve_claimed_sessions>
+Read the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 (`<perspective_claimed_sessions>`). Use it as the authoritative archive list and artifact identifier for the rest of this workflow.
 
-**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the scope-resolution algorithm in `references/scope-resolution.md`, then emit a fresh `<RESOLVED_SCOPE>` marker before continuing. Do not proceed without resolved scope.
+**If the marker is missing** (workflow 02 did not emit it, or context compaction dropped it): STOP and re-run the claimed-session-resolution algorithm in `references/claimed-session-resolution.md`, then emit a fresh `<RESOLVED_CLAIMED_SESSIONS>` marker before continuing. Do not proceed without resolved claimed-session set.
 
 **Cross-check against workflow 03 approval.** The marker must match the session-disposition header the user approved. If the user named additional sessions during workflow 03, add them before archiving. If any session is classified **ambiguous**, STOP and resolve with the user before proceeding.
 
-The existence of any session is never permission to archive an in-scope session — permission flows from completion of this workflow against the resolved scope.
+The existence of any session is never permission to archive a claimed session — permission flows from completion of this workflow against the resolved claimed-session set.
 
-</resolve_session_scope>
+</resolve_claimed_sessions>
 
 <write_canonical_continuation>
-Every closure ends with **zero, one, or several** session files — one canonical continuation per independent continuation thread in the resolved scope. Pick the path for each and execute it. Zero is correct when no continuation reader exists.
+Every closure ends with **zero, one, or several** session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Pick the path for each and execute it. Zero is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` (Path C) requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
-**Path A — `--no-session` (zero handoffs)**: valid only when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`. When the signal is `present`, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the unresolved in-scope work and ask whether to (a) create the continuation instead (Path C) or (b) confirm there is genuinely no continuation and proceed to omit. NEVER silently honor `--no-session` against a `present` signal; automation must not skip the session file on the user's behalf when continuation remains. When the signal is `absent`, or the user explicitly re-confirms omission, skip to `<archive_scope>`: all in-scope sessions are archived, no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived scope: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — `--no-session` (zero handoffs)**: valid only when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`. When the signal is `present`, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the unresolved continuation work and ask whether to (a) create the continuation instead (Path C) or (b) confirm there is genuinely no continuation and proceed to omit. NEVER silently honor `--no-session` against a `present` signal; automation must not skip the session file on the user's behalf when continuation remains. When the signal is `absent`, or the user explicitly re-confirms omission, skip to `<archive_claimed_sessions>`: all claimed sessions are archived, no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 
-1. Use the artifact id from `<resolve_session_scope>`. Derive its file path from `spx session show <artifact-id>` or the root worktree's `.spx/sessions/todo/<artifact-id>.md`.
+1. Use the artifact id from `<resolve_claimed_sessions>`. Derive its file path from `spx session show <artifact-id>` or the root worktree's `.spx/sessions/todo/<artifact-id>.md`.
 2. Do NOT run `spx session handoff` — that would create a second handoff and break the one-handoff end state.
 3. Read the artifact frontmatter and preserve its existing `created_at`, `agent_session_id`, and `git_ref` values.
-4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative scope from every in-scope session.
+4. Write (overwrite) the artifact file using the template in `references/session-format.md`. The file content is the canonical continuation with cumulative continuation from every claimed session.
 5. Use `<HANDOFF_ID>` = artifact id for the confirmation message.
 
 **Path C — new handoff (one handoff, no artifact)**:
@@ -91,7 +91,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 - `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
 - `<constraints>` (optional) — session-specific normative rules; omit when there are none
 - `<coordination>` — unapproved items from workflow 03 that are coordination-only context
-- `<incorporated_sessions>` — include ONLY when the in-scope set is non-empty; list each session id with its archive disposition
+- `<incorporated_sessions>` — include ONLY when the claimed-session set is non-empty; list each session id with its archive disposition
 
 </write_canonical_continuation>
 
@@ -127,8 +127,8 @@ Run the handoff FROM the worktree that holds the work and release THAT worktree;
 NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.
 </release_work_branch>
 
-<archive_scope>
-After the canonical continuation is written and verified (Path B or C), or immediately under Path A, archive every session in the resolved scope plus any mid-session artifact that was NOT rewritten in place.
+<archive_claimed_sessions>
+After the canonical continuation is written and verified (Path B or C), or immediately under Path A, archive every session in the resolved claimed-session set plus any mid-session artifact that was NOT rewritten in place.
 
 Release the running worktree's occupancy claim here, as the session closes — Path A, Path B, and Path C all reach this step, so a closing session never leaves its worktree marked occupied for the next agent (the claim is written at session start regardless of checkout kind):
 
@@ -148,7 +148,7 @@ spx session archive <session-id>
 
 Run the command once per id. NEVER archive sessions classified as **unrelated** or **ambiguous**. NEVER archive the session that was just rewritten in place under Path B. NEVER archive TODO sessions created by other conversations — the TODO queue is shared across agents.
 
-**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves an in-scope session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
+**Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
 **If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
 
@@ -159,14 +159,14 @@ spx session delete <archive-session-id>
 
 NEVER delete todo or doing sessions. `--prune` only affects archive.
 
-</archive_scope>
+</archive_claimed_sessions>
 
 <confirm>
 State:
 
 - Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (--no-session)"
 - Session-owned work was committed before closure
-- Every session id archived from the resolved scope (and any artifact NOT rewritten in place)
+- Every session id archived from the resolved claimed-session set (and any artifact NOT rewritten in place)
 - Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
 - Worktree occupancy claim released via `spx worktree release`, or left to age out on process exit when the `worktree` command is unavailable
 
@@ -179,8 +179,8 @@ State:
 - Committed vs uncommitted state recorded for each anchored node.
 - Exactly zero or one canonical continuation per independent continuation thread created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two for the same thread. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
 - Continuation path executed via Path A (--no-session), Path B (rewrite in place), or Path C (new handoff).
-- `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the in-scope set is non-empty.
-- Every in-scope session archived — none left in `todo/` or `doing/`.
+- `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the claimed-session set is non-empty.
+- Every claimed session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
 - Confirmation output names the continuation path and the archived ids.
 - The releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.

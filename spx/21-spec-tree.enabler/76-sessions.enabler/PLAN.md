@@ -5,7 +5,7 @@
 The spec-tree plugin now specifies `.spx/sessions/$CLAUDE_SESSION_ID/` (or `$CODEX_THREAD_ID/` under Codex) as the authoritative accumulator for every session an agent has claimed during a runtime. The marketplace side is in place after commit `ad7d696`:
 
 - `src/plugins/spec-tree/scripts/session-start.py` no longer mkdirs the per-runtime directory. It is created lazily on first claim.
-- `src/plugins/spec-tree/skills/handoff/references/scope-resolution.md` reads the filesystem as primary source of truth and cross-checks against `<SESSION_SCOPE>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers.
+- `src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md` reads the filesystem as primary source of truth and cross-checks against `<CLAIMED_SESSIONS>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers.
 - `src/plugins/spec-tree/skills/pickup/SKILL.md` documents the dual accumulator (filesystem symlink + marker).
 
 The corresponding `spx` CLI changes have not landed. Until they do, the filesystem source is empty on every runtime, the algorithm falls through to marker-based scope recovery, and context compaction still risks dropping scope — the exact failure mode this work eliminates.
@@ -45,7 +45,7 @@ Relative symlink is deliberate — absolute paths break when the repo is checked
 - **Dangling symlinks**: `spx session pickup` on a previously-dangling id must first remove the old symlink, then create the new one. Never overwrite without validating.
 - **Runtime id collision**: if two conversations happen to produce the same `$CLAUDE_SESSION_ID` (should not occur — Claude session ids are per-conversation), the second pickup silently shares the same directory. This is acceptable degraded behavior; no special handling required.
 - **File permissions**: the per-runtime directory and its symlinks inherit umask. Do not chmod explicitly.
-- **Concurrency**: pickup and archive are already atomic at the queue level. The accumulator steps happen before/after the queue move — a crash between queue move and symlink create leaves a session in `doing/` without a symlink (scope-resolution.md's "markers are a superset of filesystem" case — the marker cross-check catches this). A crash between symlink remove and archive move leaves a symlink with a target in `archive/` (resolution: the filesystem step classifies it as "already archived" and skips it). Both are acceptable recovery paths.
+- **Concurrency**: pickup and archive are already atomic at the queue level. The accumulator steps happen before/after the queue move — a crash between queue move and symlink create leaves a session in `doing/` without a symlink (claimed-session-resolution.md's "markers are a superset of filesystem" case — the marker cross-check catches this). A crash between symlink remove and archive move leaves a symlink with a target in `archive/` (resolution: the filesystem step classifies it as "already archived" and skips it). Both are acceptable recovery paths.
 
 ## Work breakdown with audit gates
 
@@ -83,16 +83,16 @@ Return to `~/Code/outcomeeng/plugins/`. Install the updated `spx` via `pnpm link
 1. In a fresh conversation, `/pickup` some test session. Verify `.spx/sessions/$CLAUDE_SESSION_ID/<id>.md` exists as a symlink pointing at `../doing/<id>.md`.
 2. `/handoff`. Confirm workflow 04 resolves scope from the filesystem (the verdict output should name the symlink's id) and the symlink is removed after `spx session archive`.
 3. Inspect `.spx/sessions/$CLAUDE_SESSION_ID/`. It must be empty or removed after closure.
-4. Context-compaction test: claim a session, run `/compact`, then `/handoff`. Scope must still resolve correctly via the filesystem even though the `<SESSION_SCOPE>` marker is gone.
+4. Context-compaction test: claim a session, run `/compact`, then `/handoff`. Scope must still resolve correctly via the filesystem even though the `<CLAIMED_SESSIONS>` marker is gone.
 
 ## Touch points in the marketplace repo
 
-Nothing else to change here. The plugin-side contract is already merged. If the spx agent finds a drift between what this PLAN.md describes and what `references/scope-resolution.md` prescribes, the `references/scope-resolution.md` is authoritative — update this PLAN.md, not the reference.
+Nothing else to change here. The plugin-side contract is already merged. If the spx agent finds a drift between what this PLAN.md describes and what `references/claimed-session-resolution.md` prescribes, the `references/claimed-session-resolution.md` is authoritative — update this PLAN.md, not the reference.
 
 ## Pointers
 
 - Marketplace commit implementing the plugin-side contract: `ad7d696`
-- Authoritative algorithm: [`src/plugins/spec-tree/skills/handoff/references/scope-resolution.md`](../../../src/plugins/spec-tree/skills/handoff/references/scope-resolution.md)
+- Authoritative algorithm: [`src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md`](../../../src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md)
 - SessionStart hook (lazy-create expectation): [`src/plugins/spec-tree/scripts/session-start.py`](../../../src/plugins/spec-tree/scripts/session-start.py)
 - Current spx session command handlers (paths observed during plan drafting; confirm on entry): `src/commands/session/pickup.ts`, `src/commands/session/archive.ts`, `src/domains/session/index.ts`
 

@@ -11,9 +11,9 @@ Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none 
 Sessions to archive after closure: <id-1>, <id-2>, ...
 ```
 
-The list comes from the `<RESOLVED_SCOPE ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (in-scope), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
+The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
 
-This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave an in-scope session beside the new continuation.
+This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave a claimed session beside the new continuation.
 
 **STOP if the user disputes the disposition.** If the user objects to the canonical continuation plan, the archive list, or any session id in either, halt the workflow. Do not proceed to workflow 04, do not archive, do not write the canonical continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
 
