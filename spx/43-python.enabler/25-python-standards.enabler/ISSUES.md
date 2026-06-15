@@ -15,4 +15,11 @@ marketplace-wide breaking change — every `/skill` invocation path,
 cross-reference moves together — so it is sequenced as its own coordinated change
 across all plugins, never folded into a single plugin's content work.
 
+The marketplace-wide transition — naming scheme, full skill inventory (the nine
+Python skills among them), mechanical recipe, breaking-change handling, and
+sequencing against the queued `you`-voice sweeps — is planned at
+`spx/43-develop.enabler/21-skills.enabler/PLAN.md`. The Python rename is the
+subset tabled there; execute it as part of that coordinated transition, not on
+its own.
+
 Surfaced by the skill auditor during the Python-standards content hardening.
