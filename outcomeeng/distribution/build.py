@@ -118,6 +118,9 @@ CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
+# Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
+# the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
+SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
 
 # Source-owned registry of runtime-divergent names, keyed by capability then by
 # runtime. Authored source names a capability via the `tool('<capability>')`
@@ -362,13 +365,29 @@ def render_text(
         shared_root=shared_root,
         include_stack=(),
     )
-    if VARIABLE_DELIMITER_START not in rendered:
+    # Run the Jinja pass when a variable token ({{! !}}) or a Jinja control block
+    # ({!% if %!}) survives directive expansion — bare conditionals carry no
+    # variable token but still need evaluation. The remaining {!% blocks are
+    # control statements; include/require_skill directives were already expanded.
+    if (
+        VARIABLE_DELIMITER_START not in rendered
+        and BLOCK_DELIMITER_START not in rendered
+    ):
         return rendered
+    # The skill-directory rewrite escape shares the {!# #!} syntax Jinja treats as
+    # a comment, but it is processed later by rewrite_paths_for_target, not here.
+    # Protect it across the Jinja render so the escape survives intact.
+    protected = rendered.replace(
+        SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
+    )
     try:
         environment = make_jinja_environment(shared_root)
-        return environment.from_string(rendered).render(variables or {})
+        result = environment.from_string(protected).render(variables or {})
     except TemplateError as exc:
         raise TemplateRenderError(str(exc)) from exc
+    return result.replace(
+        SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER, SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -533,16 +552,7 @@ def build(src_root: Path, dist_root: Path) -> None:
         if plugin_name in RUNTIME_TOKEN_GUARDED_PLUGINS and _is_rendered_text(
             source_file
         ):
-            # Scan include-expanded text so a raw name pulled in from a shared
-            # fragment is caught, not only literals in the file's own body.
-            guard_runtime_tokens(
-                _render_directives(
-                    source_file.read_text(encoding="utf-8"),
-                    shared_root=shared_root,
-                    include_stack=(),
-                ),
-                source=source_file,
-            )
+            guard_plugin_runtime_tokens(source_file, shared_root=shared_root)
         for target in Target:
             if _is_rendered_text(source_file):
                 if (
@@ -628,6 +638,21 @@ def guard_runtime_tokens(raw_text: str, *, source: Path) -> None:
                 f"raw runtime token {name!r} in {source}; author it with a "
                 "tool(...) token or a per-runtime conditional"
             )
+
+
+def guard_plugin_runtime_tokens(source_file: Path, *, shared_root: Path) -> None:
+    """Guard a guarded plugin's source file over its include-expanded text.
+
+    Expands include directives first so a raw runtime token pulled in from a
+    shared fragment is caught, not only literals in the file's own body, then
+    applies guard_runtime_tokens to the expanded result.
+    """
+    expanded = _render_directives(
+        source_file.read_text(encoding="utf-8"),
+        shared_root=shared_root,
+        include_stack=(),
+    )
+    guard_runtime_tokens(expanded, source=source_file)
 
 
 def make_jinja_environment(shared_root: Path | None = None) -> Environment:

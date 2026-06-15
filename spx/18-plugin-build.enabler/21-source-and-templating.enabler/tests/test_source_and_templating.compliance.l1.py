@@ -9,21 +9,25 @@ import pytest
 from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
+    CLAUDE_SKILL_DIR_TOKEN,
     COMMENT_DELIMITER_END,
     COMMENT_DELIMITER_START,
     IMPLEMENTED,
     REQUIRE_SKILL_TEXT_TEMPLATE,
     SHARED_FRAGMENT_FILENAME,
+    SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     VARIABLE_DELIMITER_END,
     VARIABLE_DELIMITER_START,
     IncludeDirective,
     RequireSkillDirective,
     SourceFormatError,
+    Target,
     build,
     expand_require_skill,
     make_jinja_environment,
     render_text,
 )
+from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
 
@@ -105,6 +109,60 @@ def test_require_skill_renders_inline(tmp_path: Path) -> None:
 
     assert SKILL_REF in rendered
     assert directive not in rendered
+
+
+def test_bare_conditional_block_renders_per_target(tmp_path: Path) -> None:
+    builder = SrcTreeBuilder(tmp_path)
+    builder.add_shared_topic(FRAGMENT_SCOPE, FRAGMENT_TOPIC, FRAGMENT_BODY)
+    # A conditional block with no {{! !}} variable token must still be evaluated,
+    # not shipped verbatim.
+    template = (
+        f"{BLOCK_DELIMITER_START} if target == 'claude' {BLOCK_DELIMITER_END}"
+        "claude-only"
+        f"{BLOCK_DELIMITER_START} else {BLOCK_DELIMITER_END}"
+        "codex-only"
+        f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
+    )
+
+    claude = render_text(
+        template, shared_root=builder.shared_root, variables={"target": "claude"}
+    )
+    codex = render_text(
+        template, shared_root=builder.shared_root, variables={"target": "codex"}
+    )
+
+    assert claude == "claude-only"
+    assert codex == "codex-only"
+    assert BLOCK_DELIMITER_START not in claude
+    assert BLOCK_DELIMITER_START not in codex
+
+
+def test_skill_dir_escape_survives_jinja_pass(tmp_path: Path) -> None:
+    builder = SrcTreeBuilder(tmp_path)
+    # A skill body carrying BOTH a Jinja control block (which triggers the Jinja
+    # pass) AND the skill-directory rewrite escape. The escape shares Jinja's
+    # comment syntax, so it must be protected across the render and survive.
+    escaped_line = (
+        f"Write `{CLAUDE_SKILL_DIR_TOKEN}/x.md` {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}"
+    )
+    body = (
+        "---\nname: creating-skills\n---\n\n"
+        f"{BLOCK_DELIMITER_START} if target == 'claude' {BLOCK_DELIMITER_END}"
+        "c"
+        f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}\n"
+        f"{escaped_line}\n"
+    )
+    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: body})
+
+    build(builder.src_root, tmp_path / "dist")
+
+    reader = DistTreeReader(tmp_path)
+    for target in Target:
+        rendered = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=target)
+        # The escape directive is consumed, and its CLAUDE_SKILL_DIR token is
+        # preserved verbatim in both targets rather than stripped by the Jinja pass.
+        assert CLAUDE_SKILL_DIR_TOKEN in rendered
+        assert SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE not in rendered
 
 
 def test_include_directive_uses_fragment_file_contract(tmp_path: Path) -> None:

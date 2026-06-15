@@ -30,9 +30,3 @@ declares the full symmetric model. These parts are declared ahead of implementat
 - **Marketplace-wide rollout.** Apply the token + guard to the other plugins whose
   `dist/codex/` output still carries raw Claude tool names (spec-tree and others); extend the
   guard's enforcement scope beyond `src/plugins/develop/` once they are converted.
-- **Bare conditional rendering.** `render_text` runs the Jinja pass only when a `{{! !}}`
-  variable token is present, so a fact-level `{!% if target == 'claude' %!}…{!% endif %!}`
-  block with no accompanying token would ship verbatim. Phase 1 conditionals always wrap a
-  `tool(...)` token, so this is latent. Before Phase 2 fact-level prose conditionals, trigger
-  the Jinja pass on the block delimiter too — and resolve the interaction with the
-  `{!# … #!}` comment delimiter so the skill-directory rewrite escape is not stripped early.
