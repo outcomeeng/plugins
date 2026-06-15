@@ -91,7 +91,7 @@ Option 2 expands that scope to include *platform-level runtime plumbing* (bash s
 1. **Expand `/standardizing-agent-prompts`** — add `<bash_safety>`, `<runtime_variables>`, `<allowed_tools>` sections. Update the objective. If promoting `<nested_code_fences>` and `<xml_tag_formatting>`, add those too.
 2. **Trim `/standardizing-skills`** — remove the promoted sections; replace with a single cross-reference at the top: "Read `/standardizing-agent-prompts` for runtime plumbing (bash, variables, allowed-tools) that applies to every prompt artifact."
 3. **Update the `/standardizing-skills` reference file `platform-constraints.md`** — either delete (if fully absorbed into agent-prompts) or retain only skill-specific content.
-4. **Create `/standardizing-commands`** — new reference skill with `disable-model-invocation: true`, passive description, and the command-specific standards listed above.
+4. **Create `/standardizing-commands`** — new reference skill with `user-invocable: false`, passive description, and the command-specific standards listed above. (Use `user-invocable: false`, not `disable-model-invocation: true`: the latter blocks Skill-tool loading by other skills and subagent preloading — see the invocability matrix in `/standardizing-skills`.)
 5. **Rewrite `/creating-commands/SKILL.md`** as a router — same shape as the post-refactor `/creating-skills/SKILL.md`. Preserve the workflows and references that are genuinely command-authoring workflow (not standards).
 6. **Delete obsolete `/creating-commands/references/` content** — the standards sections that moved out.
 7. **Rewrite `/auditing-commands/SKILL.md` `<critical_workflow>`** — reads `/standardizing-agent-prompts` and `/standardizing-commands` only.

@@ -66,15 +66,19 @@ Every SKILL.md starts with YAML frontmatter. The canonical catalog of supported 
 | `paths`                    | No          | Glob patterns that limit auto-activation to matching files. Comma-separated string or YAML list.                                                                                                                                  |
 | `shell`                    | No          | `bash` (default) or `powershell` for the skill's inline and fenced command-injection blocks. The `powershell` value requires `CLAUDE_CODE_USE_POWERSHELL_TOOL=1`.                                                                 |
 
-**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately:
+**Visibility vs invocability.** Two fields gate how a skill is reached. They are not aliases — pick deliberately. Automation re-entry — a scheduled wakeup, heartbeat, or `/loop` — arrives as a user-style prompt because the harness offers no Claude-private heartbeat, so it follows the `User /skill` column exactly:
 
-| Frontmatter                      | User can invoke (`/skill`) | Claude can invoke (Skill tool) | Description in context |
-| -------------------------------- | -------------------------- | ------------------------------ | ---------------------- |
-| *(default)*                      | Yes                        | Yes                            | Always                 |
-| `disable-model-invocation: true` | Yes                        | **No**                         | Not in context         |
-| `user-invocable: false`          | **No**                     | Yes                            | Always                 |
+| Frontmatter                      | User `/skill` | Claude (Skill tool) | Subagent preload | Automation re-entry | Description in context |
+| -------------------------------- | ------------- | ------------------- | ---------------- | ------------------- | ---------------------- |
+| *(default)*                      | Yes           | Yes                 | Yes              | Yes                 | Always                 |
+| `disable-model-invocation: true` | Yes           | **No**              | **No**           | Yes                 | Not in context         |
+| `user-invocable: false`          | **No**        | Yes                 | Yes              | **No**              | Always                 |
 
-Reference skills that other SKILL.md files load via the Skill tool MUST use `user-invocable: false`. `disable-model-invocation: true` blocks the Skill-tool call and surfaces as `Skill <name> cannot be used with Skill tool due to disable-model-invocation` during execution.
+Pick the gate by role:
+
+- A reference skill another SKILL.md loads via the Skill tool, or a background-knowledge skill, uses `user-invocable: false` — hidden from the `/` menu, still loadable by Claude and preloadable into subagents.
+- A user-only side-effecting command (`/deploy`) uses `disable-model-invocation: true`. NEVER set it on a skill other skills or subagents must load: it blocks the Skill-tool call (surfacing `Skill <name> cannot be used with Skill tool due to disable-model-invocation`) AND blocks subagent preloading.
+- A skill any automation loop re-enters — a scheduled wakeup, heartbeat, or `/loop` target — MUST be user-invocable (leave the default; never `user-invocable: false`). Automation fires as a user-style prompt, so `user-invocable: false` rejects it and no Claude-private heartbeat exists to bypass that. When a loop body is otherwise reference-like, expose a user-invocable entry the loop targets rather than gating the body.
 
 ```yaml
 # Invoked skill (routing, workflow, creation)
@@ -244,6 +248,8 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 | `<common_patterns>`    | Reusable recipes.                                                                                                                              |
 | `<reference_guides>`   | Pointers to detailed reference files.                                                                                                          |
 | `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                           |
+
+This table is representative, not exhaustive: a skill may add semantically named domain sections beyond it (this file's `<frontmatter>`, `<descriptions>`, and reference-pointer sections such as `<platform_constraints>` and `<script_standards>` are examples).
 
 **Nesting:** XML tags can nest for hierarchical content.
 
@@ -425,36 +431,7 @@ Before auditing, read `/standardizing-prose` for the complete catalog of anti-pa
 
 <templates_and_variables>
 
-**Referencing skill files from SKILL.md:**
-
-Use the Claude Code skill-directory token (`CLAUDE_SKILL_DIR` in shell-variable form) to reference files within skill source. Claude Code expands it to the absolute path of the skill's directory before Claude sees the content.
-Do not write `SKILL_DIR` in source; the build emits that token for Codex output.
-
-```markdown
-Read `${CLAUDE_SKILL_DIR}/references/example.md`
-```
-
-Do NOT define aliases, add troubleshooting sections, or explain compatibility tokens. Author the Claude Code token once; the build owns Codex compatibility.
-
-**Variable scopes:**
-
-| Variable                | Scope                      | Skill content (`!` commands) | Hook `command:` field |
-| ----------------------- | -------------------------- | ---------------------------- | --------------------- |
-| `${CLAUDE_SKILL_DIR}`   | Skill's SKILL.md directory | Yes                          | **No**                |
-| `${CLAUDE_PLUGIN_ROOT}` | Plugin installation root   | No                           | **Yes**               |
-| `${CLAUDE_PLUGIN_DATA}` | Plugin persistent data dir | No                           | **Yes**               |
-| `$CLAUDE_PROJECT_DIR`   | Product working directory  | No                           | **Yes**               |
-
-For hook scripts bundled with a plugin skill, use `${CLAUDE_PLUGIN_ROOT}`:
-
-```yaml
-hooks:
-  PostToolUse:
-    - matcher: "Skill"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/skills/my-skill/scripts/hook.sh"
-```
+Reference skill-bundled files with the Claude Code skill-directory token. The runtime variable scopes (`${CLAUDE_SKILL_DIR}`, `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR`), where each one resolves, and hook `command:` path examples live in `${CLAUDE_SKILL_DIR}/references/runtime-variables.md`. Read it before referencing bundled files or wiring hook commands. Hook authoring patterns — the `SessionStart` + `$CLAUDE_ENV_FILE` session-identity mechanism and the plugin `hooks/` directory layout — live in `${CLAUDE_SKILL_DIR}/references/plugin-hooks.md`.
 
 </templates_and_variables>
 
@@ -498,45 +475,8 @@ Enforced by the `fix-xml-spacing` pre-commit hook (`scripts/fix-xml-spacing.py`)
 
 ---
 
-<validation_rule>
+<script_standards>
 
-Validation scripts catch errors Claude might miss. They are force multipliers for quality-critical skills.
+Skills that ship `scripts/` must validate inputs with verbose, deterministic, actionable error messages and test every script before inclusion. The full validation-message and script-testing rules live in `${CLAUDE_SKILL_DIR}/references/script-standards.md`. Read it before authoring a skill that bundles scripts.
 
-**A good validation script:**
-
-- Emits verbose, specific error messages.
-- Shows available valid options when something is invalid.
-- Pinpoints the exact location of the problem.
-- Suggests an actionable fix.
-- Is deterministic — same input, same output.
-
-```text
-❌ "Validation failed."
-✅ "Field 'signature_date' not found.
-    Available fields: customer_name, order_total, signature_date_signed
-    Did you mean 'signature_date_signed'?"
-```
-
-Verbose errors let Claude fix issues without user intervention.
-
-</validation_rule>
-
----
-
-<script_testing_rule>
-
-Scripts shipped in a skill's `scripts/` directory must be tested before inclusion. The skill's documentation should record what was tested and with what inputs:
-
-```bash
-# scripts/extract_text.py
-# Tested with:
-# - Single page PDF ✓
-# - Multi-page PDF ✓
-# - Scanned PDF (OCR) ✓
-# - Encrypted PDF → Returns clear error ✓
-# - Non-PDF file → Returns clear error ✓
-```
-
-Cover: sample input, expected output match, error cases (invalid input, missing files), and cleanup (no temp files left behind).
-
-</script_testing_rule>
+</script_standards>

@@ -53,10 +53,10 @@ subjects verbatim.
   `uv run playwright`/`render_excalidraw.py`): a design decision about how each plugin invokes the
   consumer's toolchain and the vendored excalidraw setup — distinct from the bundled-stdlib-helper
   case fixed here.
-- **Skill-auditor WARNINGs** (worth-improving, not blocking): `standardizing-skills` 543 lines over
-  the 500 ceiling; `reviewing-changes` gerund name vs the imperative convention in
-  `spx/local/skills.md`; orphaned `reviewing-changes/references/render/*` and
-  `github-actions/scripts/workflow_inspect.py`.
+- **Skill-auditor WARNINGs** (worth-improving, not blocking): `reviewing-changes` gerund name vs the
+  imperative convention in `spx/local/skills.md`; orphaned `reviewing-changes/references/render/*` and
+  `github-actions/scripts/workflow_inspect.py`. (`standardizing-skills` over the 500-line ceiling —
+  resolved: split into `references/runtime-variables.md` and `references/script-standards.md`.)
 - **Standalone `you` / `the model`** beyond prose: noisy survey, mostly legitimate
   (reader-addressing `you`, domain/data models); classify per-site if pursued.
 
