@@ -7,23 +7,27 @@ invokes this module as
 Three layouts are recognized: a ``single`` working tree, a compliant bare-repo
 worktree ``pool``, and ``non-compliant`` (anything matching neither). The pure
 ``classify`` function decides a layout from ``GitFacts``; ``probe`` reads those
-facts from a real checkout with git; ``provision`` builds the pool — cloning the
-bare repository, adding the repository-name main checkout and detached pool
-worktrees, and carrying a prior checkout's ``.spx/`` across. The main checkout
+facts from a real checkout with git; ``provision`` builds the pool — pushing a
+prior checkout's local branches and tags to the remote, cloning the bare
+repository, adding the repository-name main checkout and detached pool
+worktrees, renaming an in-place prior checkout aside to a ``.migrate`` husk, and
+carrying the prior checkout's gitignored state across (``.spx/`` to the container
+level, every other gitignored path into the main checkout). The main checkout
 is designated by the ``origin`` repository name and its sibling placement,
 independent of the checked-out or default branch; it tracks the git-resolved
-default branch (``origin/<default>``). The destructive removal of a prior
-working tree is never performed here: the skill emits that command for the
-operator.
+default branch (``origin/<default>``). The destructive removal of the prior husk
+is never performed here: the skill emits that command for the operator.
 
 Tested behaviors (verified over real git in temporary directories): ``classify``
 maps every ``GitFacts`` combination to its layout; ``provision`` builds the bare
 pool with detached worktrees, derives the repository name from both slash-form
-and scp-like SSH origin URLs, carries a prior ``.spx/`` across byte-for-byte,
-designates the main checkout independent of the default branch, and refuses a
-container that already holds ``.spx/``; ``probe`` classifies single, pool, no-origin,
-and misnamed-checkout layouts; every pool worktree resolves the one ``.spx/``
-beside the git-common-dir.
+and scp-like SSH origin URLs, pushes a prior checkout's local-only refs to the
+remote, carries a prior ``.spx/`` across byte-for-byte plus other gitignored
+paths into the main checkout, renames an in-place prior checkout aside, refuses
+a non-in-place provision into a container that already holds ``.spx/``, and
+designates the main checkout independent of the default branch; ``probe``
+classifies single, pool, no-origin, and misnamed-checkout layouts; every pool
+worktree resolves the one ``.spx/`` beside the git-common-dir.
 """
 
 from __future__ import annotations
@@ -100,6 +104,30 @@ def _git_out(*args: str, cwd: Path | None = None) -> str:
         cwd=None if cwd is None else str(cwd),
     )
     return proc.stdout.strip()
+
+
+def _gitignored_entries(repo: Path) -> list[str]:
+    """Return ``repo``'s gitignored paths, directories collapsed, no trailing slash.
+
+    Enumerated via ``git ls-files --others --ignored --exclude-standard
+    --directory`` — the same source the carry moves — so the carry and the
+    pre-carry guards agree on exactly what is gitignored, independent of which
+    ``.gitignore`` pattern form (``.spx`` or ``.spx/``) matched.
+    """
+    listing = _git_out(
+        "ls-files",
+        "--others",
+        "--ignored",
+        "--exclude-standard",
+        "--directory",
+        cwd=repo,
+    )
+    entries: list[str] = []
+    for raw in listing.splitlines():
+        rel = raw.strip().rstrip("/")
+        if rel:
+            entries.append(rel)
+    return entries
 
 
 def _repo_name_from_url(url: str) -> str | None:
@@ -196,40 +224,144 @@ def probe(path: Path) -> GitFacts:
 
 @dataclass(frozen=True)
 class ProvisionResult:
-    """The paths a provisioning run created or relocated."""
+    """The paths a provisioning run created or relocated.
+
+    ``prior_husk`` is the renamed-aside prior checkout the operator removes after
+    provisioning, or ``None`` when no in-place rename occurred (a fresh build, or
+    a prior checkout at a path other than the target container).
+    """
 
     container: Path
     bare_dir: Path
     main_worktree: Path
     pool_worktrees: tuple[Path, ...]
     spx_dir: Path
+    prior_husk: Path | None = None
+
+
+def _carry_gitignored(prior: Path, container: Path, main_worktree: Path) -> Path:
+    """Move ``prior``'s gitignored artifacts into the new pool, return ``.spx/``.
+
+    Gitignored state is the only state a remote cannot restore, so it is carried
+    to its layout-correct home: ``.spx/`` to the container level beside the
+    git-common-dir (where every pool worktree resolves it), and every other
+    gitignored path into the ``main_worktree`` working tree. Enumerated via
+    ``git ls-files --others --ignored --exclude-standard --directory`` so an
+    ignored directory moves whole rather than file-by-file. ``.spx/`` is created
+    empty when ``prior`` carries none.
+
+    No carry destination can already exist: the ``.spx/`` home is verified absent
+    by :func:`provision` before any building, and every other destination lies in
+    the freshly-added ``main_worktree`` (tracked files only, which an
+    untracked-ignored path can never collide with).
+    """
+    spx_dir = container / ".spx"
+    for rel in _gitignored_entries(prior):
+        src = prior / rel
+        if not src.exists():
+            continue
+        dst = spx_dir if rel == ".spx" else main_worktree / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(src), str(dst))
+    spx_dir.mkdir(exist_ok=True)
+    return spx_dir
 
 
 def provision(
     *,
     container: Path,
-    origin_url: str,
+    origin_url: str | None = None,
+    from_checkout: Path | None = None,
     pool_worktree_names: tuple[str, ...] = (),
-    carry_spx: Path | None = None,
 ) -> ProvisionResult:
     """Provision the bare-repository worktree pool in ``container``.
 
-    Derives the repository name from ``origin_url`` — the same source the
-    classifier reads — so the provisioned main checkout's basename always
-    matches the name classification resolves, taking no separate repository-name
-    input. Clones ``origin_url`` bare into ``{repo}.git``, restores the
-    ``origin/*`` fetch refspec a bare clone omits, resolves the default branch
-    from the clone's HEAD, adds the main checkout at the repository-name sibling
-    ``{repo}`` tracking ``origin/<default>`` and one detached worktree per
-    ``pool_worktree_names`` at the ``origin/<default>`` tip, and places ``.spx/``
-    beside the bare dir — moving ``carry_spx`` there when given, else creating it.
+    The layout is defined by the target state, not by the prior checkout's shape:
+    the repository name comes from ``origin_url`` (or, with ``from_checkout``, from
+    that checkout's ``origin`` remote) — the same source the classifier reads — so
+    the provisioned main checkout's basename always matches the name
+    classification resolves, taking no separate repository-name input.
+
+    With ``from_checkout`` (a migration), every local branch and tag is first
+    pushed to the remote so no local-only ref is lost; if the prior checkout
+    occupies the target ``container`` path it is renamed aside to a ``.migrate``
+    husk (reported in ``prior_husk`` for the operator to remove) so the pool can
+    be built at the original path. Then ``origin_url`` is cloned bare into
+    ``{repo}.git``, the ``origin/*`` fetch refspec a bare clone omits is restored,
+    the default branch is resolved from the clone's HEAD, the main checkout is
+    added at the repository-name sibling ``{repo}`` tracking ``origin/<default>``
+    with one detached worktree per ``pool_worktree_names`` at the
+    ``origin/<default>`` tip, and the prior checkout's gitignored artifacts are
+    carried in via :func:`_carry_gitignored`. The prior husk is never deleted
+    here — the skill emits that command for the operator.
     """
+    if from_checkout is not None:
+        from_checkout = Path(from_checkout)
+        origin_url = _git_out("remote", "get-url", "origin", cwd=from_checkout)
+    if origin_url is None:
+        raise ValueError("provision requires origin_url or from_checkout")
     repo_name = _repo_name_from_url(origin_url)
     if repo_name is None:
         raise ValueError(
             f"cannot derive a repository name from origin URL: {origin_url!r}"
         )
+    # The pool nests as <repo>/<repo>, so the container is the repository-name
+    # directory — never the multi-repository workspace that holds it. Enforce it
+    # here so a mis-pointed container cannot scatter the bare repo, .spx/, and
+    # worktrees across the workspace — a layout the classifier would still call a
+    # pool because it only checks placement relative to the git-common-dir.
+    if container.name != repo_name:
+        raise ValueError(
+            f"container basename {container.name!r} must equal the repository name "
+            f"{repo_name!r}: the pool nests as <repo>/<repo>, so --container is the "
+            f"repository-name directory, not the workspace that holds it"
+        )
+
+    if from_checkout is not None:
+        # The carry enumerates gitignored paths, so a .spx/ that is not gitignored
+        # would be skipped and abandoned with the removed husk. Refuse before the
+        # push or rename below so its session state is never silently lost.
+        if (from_checkout / ".spx").exists() and ".spx" not in _gitignored_entries(
+            from_checkout
+        ):
+            raise ValueError(
+                f"{from_checkout / '.spx'} is not gitignored; add .spx/ to "
+                f".gitignore in the prior checkout so its state is carried into the "
+                f"pool rather than abandoned with the removed husk"
+            )
+        # All read-only guards passed; push every local branch and tag so the
+        # remote holds every commit. A rejected push (a diverged branch) fails
+        # fast rather than risking loss.
+        _git(from_checkout, "push", "--quiet", "origin", "--all")
+        _git(from_checkout, "push", "--quiet", "origin", "--tags")
+
+    main_worktree = container / repo_name
+    prior_husk: Path | None = None
+    if from_checkout is not None and from_checkout.resolve() == container.resolve():
+        prior_husk = from_checkout.with_name(f"{from_checkout.name}.migrate")
+        if prior_husk.exists():
+            # The push above has already run — safe and intentional, since the
+            # husk's branches are on the remote; only the rename is blocked here.
+            raise FileExistsError(
+                f"{prior_husk} already exists; remove it before provisioning in place"
+            )
+        from_checkout.rename(prior_husk)
+        from_checkout = prior_husk
+
     container.mkdir(parents=True, exist_ok=True)
+    # Fail before building when the carry's .spx/ home is already occupied —
+    # the only carry destination that can pre-exist, since every other gitignored
+    # path lands in the freshly-built main checkout (a fresh `git worktree add`
+    # holds tracked files only, and an untracked-ignored path cannot already
+    # occupy it). Checking .spx/ here keeps a carry collision from leaving a
+    # half-built pool behind. An in-place migration recreated the container empty
+    # above, so container/.spx cannot pre-exist then — this guard only fires for a
+    # non-in-place provision into a container that already holds .spx/.
+    if from_checkout is not None and (container / ".spx").exists():
+        raise FileExistsError(
+            f"{container / '.spx'} already exists; cannot carry the prior checkout's "
+            f".spx/ into a container that already holds one"
+        )
     bare_dir = container / f"{repo_name}.git"
     subprocess.run(
         ["git", "clone", "--quiet", "--bare", origin_url, str(bare_dir)],
@@ -246,7 +378,6 @@ def provision(
     # rather than assuming a literal `main`.
     default_branch = _git_out("symbolic-ref", "--short", "HEAD", cwd=bare_dir)
 
-    main_worktree = container / repo_name
     _git(bare_dir, "worktree", "add", "--quiet", str(main_worktree), default_branch)
     _git(
         main_worktree,
@@ -269,15 +400,10 @@ def provision(
         )
         pool_worktrees.append(worktree)
 
-    spx_dir = container / ".spx"
-    if carry_spx is not None:
-        if spx_dir.exists():
-            raise FileExistsError(
-                f"{spx_dir} already exists; provision into a container without a .spx/ "
-                f"so the carried directory is not nested inside it"
-            )
-        shutil.move(str(carry_spx), str(spx_dir))
+    if from_checkout is not None:
+        spx_dir = _carry_gitignored(from_checkout, container, main_worktree)
     else:
+        spx_dir = container / ".spx"
         spx_dir.mkdir(exist_ok=True)
 
     return ProvisionResult(
@@ -286,6 +412,7 @@ def provision(
         main_worktree=main_worktree,
         pool_worktrees=tuple(pool_worktrees),
         spx_dir=spx_dir,
+        prior_husk=prior_husk,
     )
 
 
@@ -296,19 +423,12 @@ def _cmd_classify(args: argparse.Namespace) -> int:
 
 
 def _cmd_provision(args: argparse.Namespace) -> int:
-    if args.from_checkout is not None:
-        prior = Path(args.from_checkout)
-        origin_url = _git_out("remote", "get-url", "origin", cwd=prior)
-        prior_spx = prior / ".spx"
-        carry_spx = prior_spx if prior_spx.is_dir() else None
-    else:
-        origin_url = args.origin
-        carry_spx = None
+    from_checkout = Path(args.from_checkout) if args.from_checkout is not None else None
     result = provision(
         container=Path(args.container),
-        origin_url=origin_url,
+        origin_url=args.origin,
+        from_checkout=from_checkout,
         pool_worktree_names=tuple(args.worktree),
-        carry_spx=carry_spx,
     )
     print(
         json.dumps(
@@ -318,6 +438,9 @@ def _cmd_provision(args: argparse.Namespace) -> int:
                 "main_worktree": str(result.main_worktree),
                 "pool_worktrees": [str(p) for p in result.pool_worktrees],
                 "spx_dir": str(result.spx_dir),
+                "prior_husk": (
+                    str(result.prior_husk) if result.prior_husk is not None else None
+                ),
             }
         )
     )
@@ -336,18 +459,16 @@ def main(argv: list[str] | None = None) -> int:
 
     provision_parser = sub.add_parser("provision", help="provision the bare-repo pool")
     provision_parser.add_argument("--container", required=True)
-    provision_parser.add_argument("--origin")
-    provision_parser.add_argument("--from", dest="from_checkout")
+    # --origin (fresh build) and --from (migration) are mutually exclusive and
+    # one is required: with --from the origin URL is read from the prior
+    # checkout, so passing --origin too would be silently ignored.
+    source = provision_parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--origin")
+    source.add_argument("--from", dest="from_checkout")
     provision_parser.add_argument("--worktree", action="append", default=[])
     provision_parser.set_defaults(func=_cmd_provision)
 
     args = parser.parse_args(argv)
-    if (
-        args.command == "provision"
-        and args.origin is None
-        and args.from_checkout is None
-    ):
-        parser.error("provision requires --origin or --from")
     return int(args.func(args))
 
 

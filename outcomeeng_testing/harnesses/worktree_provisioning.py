@@ -113,15 +113,75 @@ class ProvisioningEnv:
         _git(checkout, "config", "commit.gpgsign", "false")
         return checkout
 
+    def ignore(self, checkout: Path, *patterns: str) -> None:
+        """Append ``patterns`` to the checkout's ``.gitignore`` and commit it."""
+        gitignore = checkout / ".gitignore"
+        prior = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+        gitignore.write_text(
+            prior + "".join(f"{p}\n" for p in patterns), encoding="utf-8"
+        )
+        _git(checkout, "add", ".gitignore")
+        _git(checkout, "commit", "--quiet", "-m", "ignore patterns")
+
+    def write_ignored(self, checkout: Path, rel: str, data: bytes) -> Path:
+        """Write a gitignored file at ``rel`` under ``checkout`` and return its path."""
+        target = checkout / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        return target
+
+    def create_local_branch(self, checkout: Path, name: str) -> None:
+        """Create a local branch carrying one commit, left unpushed."""
+        _git(checkout, "checkout", "--quiet", "-b", name)
+        (checkout / f"{name}.txt").write_text(name, encoding="utf-8")
+        _git(checkout, "add", f"{name}.txt")
+        _git(checkout, "commit", "--quiet", "-m", f"local {name}")
+        _git(checkout, "checkout", "--quiet", self.default_branch)
+
+    def create_local_tag(self, checkout: Path, name: str) -> None:
+        """Create a lightweight tag, left unpushed."""
+        _git(checkout, "tag", name)
+
+    def origin_branches(self) -> list[str]:
+        """Return the branch names present on the bare ``origin`` remote."""
+        return _git_out(
+            self.origin, "for-each-ref", "--format=%(refname:short)", "refs/heads"
+        ).splitlines()
+
+    def origin_tags(self) -> list[str]:
+        """Return the tag names present on the bare ``origin`` remote."""
+        return [t for t in _git_out(self.origin, "tag").splitlines() if t]
+
+    def commit_file(self, checkout: Path, name: str, content: str = "x") -> None:
+        """Commit a tracked file on the checkout's current branch."""
+        (checkout / name).write_text(content, encoding="utf-8")
+        _git(checkout, "add", name)
+        _git(checkout, "commit", "--quiet", "-m", f"add {name}")
+
+    def push_default(self, checkout: Path) -> None:
+        """Push the checkout's default branch to ``origin``, advancing the remote."""
+        _git(checkout, "push", "--quiet", "origin", self.default_branch)
+
+    def pool_tracking_refs(self, bare_dir: Path) -> list[str]:
+        """Return the ``origin/*`` remote-tracking refs the pool's bare clone holds."""
+        return _git_out(
+            bare_dir, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"
+        ).splitlines()
+
     def attach_linked_worktree(self, checkout: Path, name: str = "wt") -> Path:
         """Attach a linked worktree to a non-bare ``checkout`` (the non-compliant shape)."""
         worktree = checkout.parent / f"{checkout.name}-{name}"
         _git(checkout, "worktree", "add", "--quiet", "--detach", str(worktree))
         return worktree
 
-    def container(self, name: str = "container") -> Path:
-        """Return an empty directory to provision a pool into."""
-        target = self.tmp / name
+    def container(self) -> Path:
+        """Return an empty repository-name directory to provision a pool into.
+
+        Named for the repository because ``provision`` requires the container
+        basename to equal the origin repository name (the pool nests as
+        ``<repo>/<repo>``).
+        """
+        target = self.tmp / self.repo_name
         target.mkdir()
         return target
 
