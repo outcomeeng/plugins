@@ -25,7 +25,7 @@ mkdir -p ~/.claude/skills/{skill-name}/references
 
 ## Step 3: Gather Reference Details
 
-Ask using AskUserQuestion:
+Ask using request_user_input:
 
 1. **Reference name**: What should this reference be called?
    - Use lowercase-with-hyphens

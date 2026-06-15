@@ -14,7 +14,7 @@ Read `/standardizing-skills` for the full skill standards before running this wo
 **If user just invoked skill without context:**
 → Ask what they want to build
 
-### Using AskUserQuestion
+### Using {{! tool('ask_user') !}}
 
 Ask 2-4 domain-specific questions based on actual gaps:
 

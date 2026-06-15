@@ -1,8 +1,8 @@
-<key_insight>
+<context>
 Subagent prompts should be task-specific, not generic. They define a specialized role with clear focus areas, workflows, and constraints.
 
 **Critical**: Subagent.md files use pure XML structure (no markdown headings). Like skills and slash commands, this improves parsing and token efficiency.
-</key_insight>
+</context>
 
 <xml_structure_rule>
 **Remove ALL markdown headings (##, ###) from subagent body.** Use semantic XML tags instead.
@@ -321,7 +321,7 @@ Without constraints, subagents might:
 
 **Bad example:**
 
-```markdown
+```text
 ---
 name: intake-agent
 description: Gathers requirements from user

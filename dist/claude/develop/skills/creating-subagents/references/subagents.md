@@ -80,7 +80,7 @@ Subagents execute in isolated contexts without user interaction.
 
 Keep user interaction in main chat:
 
-```markdown
+```text
 # ❌ WRONG - Subagent cannot do this
 
 ---

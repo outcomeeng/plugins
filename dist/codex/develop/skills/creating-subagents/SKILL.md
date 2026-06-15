@@ -8,7 +8,7 @@ description: >-
 Invoke the `develop:standardizing-agent-prompts` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Subagents are specialized Claude instances that run in isolated contexts with focused roles and limited tool access. This skill teaches you how to create effective subagents, write strong system prompts, configure tool access, and orchestrate multi-agent workflows using the Task tool.
+Subagents are specialized Claude instances that run in isolated contexts with focused roles and limited tool access. This skill covers creating effective subagents, writing strong system prompts, configuring tool access, and orchestrating multi-agent workflows using the Task tool.
 
 Subagents enable delegation of complex tasks to specialized agents that operate autonomously without user interaction, returning their final output to the main conversation.
 
@@ -123,7 +123,7 @@ Subagents run in isolated contexts and return their final output to the main con
 
 - ✅ Can use tools like Read, Write, Edit, Bash, Grep, Glob
 - ✅ Can access MCP servers and other non-interactive tools
-- ❌ **Cannot use AskUserQuestion** or any tool requiring user interaction
+- ❌ **Cannot use request_user_input** or any tool requiring user interaction
 - ❌ **Cannot present options or wait for user input**
 - ❌ **User never sees subagent's intermediate steps**
 
@@ -135,7 +135,7 @@ The main conversation sees only the subagent's final report/output.
 
 Use **main chat** for:
 
-- Gathering requirements from user (AskUserQuestion)
+- Gathering requirements from user (request_user_input)
 - Presenting options or decisions to user
 - Any task requiring user confirmation/input
 - Work where user needs visibility into progress
@@ -150,7 +150,7 @@ Use **subagents** for:
 **Example workflow pattern:**
 
 ```
-Main Chat: Ask user for requirements (AskUserQuestion)
+Main Chat: Ask user for requirements (request_user_input)
 ↓
 Subagent: Research API and create documentation (no user interaction)
 ↓
