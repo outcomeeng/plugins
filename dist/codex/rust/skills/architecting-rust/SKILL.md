@@ -227,4 +227,5 @@ ADR is complete when:
 - [ ] No contradictions with existing ADRs
 - [ ] Ownership, type-system, and resource-lifecycle considerations addressed
 - [ ] Security boundaries identified
-      </success_criteria>
+
+</success_criteria>
