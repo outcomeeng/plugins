@@ -28,23 +28,9 @@ Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`
 - `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` and `plugins/develop/skills/auditing-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
 - `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
 
-## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks
+## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks (RESOLVED)
 
-`spx/15-test-infrastructure.pdr.md` carries cross-product `[audit]` rules for
-natural test-infrastructure governance. This marketplace can still add
-product-specific `[test]` evidence for locally decidable facts without asserting
-a fixed root category subtree.
-
-- Test-infrastructure implementation homes outside `spx/` and outside any
-  `tests/` directory can be checked against this repository's tracked files.
-- Test filename shape is already covered through `spx/15-test-language.adr.md`
-  and the validator under `spx/15-validation.enabler/`. Any PDR-level local test
-  should reuse that evidence instead of duplicating a filename convention.
-
-`[audit]` remains correct for the cross-product natural-placement rule because
-this repository cannot structurally assert what other products do.
-
-Surfaced by `claude-review` on PR 14 (2026-05-13).
+Resolved 2026-06-15. `spx/13-infrastructure.enabler/21-test-infrastructure.enabler` now carries an `ALWAYS` compliance assertion backed by `tests/test_infra_placement.compliance.l1.py`: the marketplace's `outcomeeng_testing/` home is verified — against the repository's git-tracked files and against synthetic violating placements — to live outside `spx/` and outside any `tests/` directory. `tests/` filename-shape conformance stays with `spx/15-test-language.adr.md` and the validator under `spx/15-validation.enabler/`, not duplicated; `[audit]` remains correct in `spx/15-test-infrastructure.pdr.md` for the cross-product natural-placement rule this repository cannot structurally assert for other products.
 
 ## 14. PDR Rust row lacks the hyphen→underscore explanation
 
