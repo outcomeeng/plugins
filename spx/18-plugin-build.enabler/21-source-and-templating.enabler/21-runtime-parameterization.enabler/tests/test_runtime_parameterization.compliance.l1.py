@@ -8,6 +8,7 @@ import pytest
 
 from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
+    SHARED_FRAGMENT_FILENAME,
     IMPLEMENTED,
     RuntimeTokenError,
     Target,
@@ -86,6 +87,26 @@ def test_guard_fails_on_raw_runtime_token_in_develop(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeTokenError):
         _build_one_skill(tmp_path, f"Ask the user via {raw_token} now.")
+
+
+def test_guard_fails_on_raw_token_pulled_from_shared_fragment(tmp_path: Path) -> None:
+    raw_token = RUNTIME_TOKEN_REGISTRY[BOTH_RUNTIME_CAPABILITY]["claude"]
+    scope, topic = "shared-scope", "shared-topic"
+    builder = SrcTreeBuilder(tmp_path)
+    builder.add_shared_topic(scope, topic, fragment_body=f"Ask via {raw_token}.")
+    builder.add_plugin(
+        PLUGIN_NAME,
+        skills={
+            SKILL_NAME: _skill_with(
+                f"{{!% include '{scope}/{topic}/{SHARED_FRAGMENT_FILENAME}' %!}}"
+            )
+        },
+    )
+
+    # The guard scans include-expanded text, so a raw token living only in the
+    # included fragment still fires it.
+    with pytest.raises(RuntimeTokenError):
+        build(builder.src_root, tmp_path / "dist")
 
 
 def test_token_for_capability_absent_on_target_fails(tmp_path: Path) -> None:
