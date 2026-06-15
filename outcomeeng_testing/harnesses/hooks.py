@@ -18,9 +18,9 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-SESSION_START = (
-    _REPO_ROOT / "src" / "plugins" / "spec-tree" / "scripts" / "session-start.py"
-)
+_SCRIPTS = _REPO_ROOT / "src" / "plugins" / "spec-tree" / "scripts"
+SESSION_START = _SCRIPTS / "session-start.py"
+LOAD_GATE = _SCRIPTS / "load-gate.py"
 
 # A path that does not resolve, so the hook's worktree-occupancy claim delegates
 # to a missing `spx` and no-ops. Defaulted for every run so the hook's other
@@ -78,4 +78,45 @@ def make_spec_tree(root: Path) -> None:
     (spx / "demo.product.md").write_text("# Demo product\n", encoding="utf-8")
 
 
-__all__ = ["MISSING_SPX", "SESSION_START", "make_spec_tree", "run_session_start"]
+def run_pretool_gate(
+    payload: dict[str, object],
+    *,
+    project_dir: Path | str | None = None,
+    env_overrides: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run the real ``PreToolUse`` load-gate hook with ``payload`` on stdin.
+
+    Mediates the same hook→CLI boundary as ``run_session_start``: the ambient
+    ``CLAUDE_PROJECT_DIR`` and ``SPX_BIN`` are dropped so the hook sees only what
+    the call provides, and ``SPX_BIN`` defaults to a missing binary so the gate's
+    verdict delegation no-ops (degrading to allow). Pass
+    ``env_overrides={"SPX_BIN": ...}`` to point the gate at a fake ``spx`` that
+    returns a crafted verdict.
+    """
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in ("CLAUDE_PROJECT_DIR", "SPX_BIN")
+    }
+    env["SPX_BIN"] = MISSING_SPX
+    if project_dir is not None:
+        env["CLAUDE_PROJECT_DIR"] = str(project_dir)
+    if env_overrides:
+        env.update(env_overrides)
+    return subprocess.run(
+        [sys.executable, str(LOAD_GATE)],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+__all__ = [
+    "LOAD_GATE",
+    "MISSING_SPX",
+    "SESSION_START",
+    "make_spec_tree",
+    "run_pretool_gate",
+    "run_session_start",
+]

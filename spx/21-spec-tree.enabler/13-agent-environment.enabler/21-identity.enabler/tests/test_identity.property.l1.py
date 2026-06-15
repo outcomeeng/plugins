@@ -14,12 +14,19 @@ import shlex
 import tempfile
 from pathlib import Path
 
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.hooks import run_session_start
 
 _EXPORT_PREFIX = "export CLAUDE_SESSION_ID="
+
+# These properties spawn the real hook as a subprocess, so each example's runtime
+# is dominated by interpreter startup — wall-clock time that carries no
+# determinism signal. Disable hypothesis's per-example deadline: under host load
+# the subprocess startup exceeds the 200 ms default and raises a spurious
+# DeadlineExceeded/FlakyFailure, never a real defect in the hook's identity write.
+_subprocess_property = settings(deadline=None)
 
 # Session ids are single-line tokens; exclude control characters (which include
 # newlines and nulls) so the value occupies one shell `export` line. shlex
@@ -40,6 +47,7 @@ def _exported_identity_line(env_file: Path) -> str:
     return lines[-1]
 
 
+@_subprocess_property
 @given(session_id=_session_ids)
 def test_session_id_round_trips_through_env_file(session_id):
     with tempfile.TemporaryDirectory() as scratch:
@@ -55,6 +63,7 @@ def test_session_id_round_trips_through_env_file(session_id):
     assert recovered == session_id.strip()
 
 
+@_subprocess_property
 @given(session_id=_session_ids)
 def test_session_id_write_is_deterministic(session_id):
     # The same payload must yield the same export line every run, so every Bash

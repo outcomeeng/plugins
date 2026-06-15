@@ -34,3 +34,6 @@ def test_spec_tree_repo_emits_understanding_directive(tmp_path):
     assert '<SPEC-TREE_SESSION_START foundation="load"/>' in result.stdout
     assert "/spec-tree:understanding" in result.stdout
     assert "/spec-tree:contextualizing" in result.stdout
+    # The directive points at the mechanical PreToolUse gate as the enforcement,
+    # not at itself — SessionStart stdout alone is out-prioritized after compaction.
+    assert "PreToolUse" in result.stdout
