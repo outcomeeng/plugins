@@ -280,25 +280,25 @@ Failures from actual usage:
 
 **Failure 1: JSON truncated mid-generation**
 
-- What happened: Entire diagram generated in one response, hit output token limit, produced invalid JSON
+- What happened: Claude generated the entire diagram in one response, hit the output token limit, and produced invalid JSON
 - Why it failed: Comprehensive diagrams exceed ~32,000 token output limit
 - How to avoid: ALWAYS build section-by-section for large diagrams. See `references/large-diagrams.md`
 
 **Failure 2: Text clipped by container**
 
-- What happened: Text overflowed rectangle bounds but looked fine in JSON
+- What happened: Claude let text overflow the rectangle bounds though the JSON looked fine
 - Why it failed: Container `width`/`height` not updated after changing text content
 - How to avoid: After changing any `text` property, recalculate and update the container dimensions. Always verify with a render cycle.
 
 **Failure 3: Arrow bound to wrong element**
 
-- What happened: Arrow visually pointed at element B but was bound to element A
+- What happened: Claude bound the arrow to element A while it visually pointed at element B
 - Why it failed: IDs were reused or copy-pasted without updating `startBinding`/`endBinding`
 - How to avoid: Use descriptive unique IDs (e.g., `"auth_flow_arrow"`, not `"arrow1"`). After every arrow edit, verify both `startBinding.elementId` and `endBinding.elementId` reference the correct targets.
 
 **Failure 4: All boxes same size — "card grid" anti-pattern**
 
-- What happened: Diagram looked like a PowerPoint slide with equal rectangles
+- What happened: Claude produced a diagram that looked like a PowerPoint slide with equal rectangles
 - Why it failed: Skipped Step 2 (map concepts to patterns) and defaulted to uniform containers
 - How to avoid: Each major concept MUST use a different visual pattern. Run the Isomorphism Test before generating JSON.
 
