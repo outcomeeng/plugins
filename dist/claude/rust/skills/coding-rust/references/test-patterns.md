@@ -40,7 +40,7 @@ fn processes_simple_input() {
 }
 ```
 
-Each failure names a concrete category, so you can inspect the case immediately.
+Each failure names a concrete category, so the failing case is immediately inspectable.
 </named_typical_cases>
 
 <named_edge_cases>

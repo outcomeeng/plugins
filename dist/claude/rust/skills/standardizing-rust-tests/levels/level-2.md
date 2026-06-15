@@ -21,7 +21,7 @@ Before writing a Level 2 test, identify the harness for every real dependency:
 - how the test resets state
 - which environment variables or ports it needs
 
-If you cannot describe the harness precisely, stop and ask.
+When the harness cannot be described precisely, stop and ask.
 </harness_rule>
 
 <file_placement>
