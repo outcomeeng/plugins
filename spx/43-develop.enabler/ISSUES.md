@@ -57,8 +57,15 @@ subjects verbatim.
   imperative convention in `spx/local/skills.md`; orphaned `reviewing-changes/references/render/*` and
   `github-actions/scripts/workflow_inspect.py`. (`standardizing-skills` over the 500-line ceiling —
   resolved: split into `references/runtime-variables.md` and `references/script-standards.md`.)
-- **Standalone `you` / `the model`** beyond prose: noisy survey, mostly legitimate
-  (reader-addressing `you`, domain/data models); classify per-site if pursued.
+- **Standalone `you` / `the model`** beyond prose: the executing-Claude `you` sweep runs as a
+  per-plugin pass, converting executing-Claude `you`/`your` to imperative/declarative and keeping
+  user-facing intake/README/brand second-person. **Done:** `rust` (PR #219), `work` (PR #221),
+  `hdl` (PR #223) — all merged. **Remaining:** `develop`, `python`, `typescript` — the
+  `architecting-*` skills carry the same template `you` sites rust did (including the
+  `*Remember: Your decisions…*` line and the `<what_you_do_not_do>` tag), so those convert
+  identically; `typescript-simplifier.md` subagent role-framing (`You are an expert…`) is a
+  distinct subagent-voice concern. The `the model` survey is clean. Close this residual once the
+  develop/python/typescript pass merges.
 
 **Verification gate:** `develop:skill-auditor` (`/auditing-skills`) loads `standardizing-agent-prompts`;
 `develop:subagent-auditor` (`/auditing-subagents`) governs the agent-definition files. Run both on
