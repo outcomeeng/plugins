@@ -118,3 +118,19 @@ class TestRaisesOnMalformedDirective:
     def test_unknown_directive_name_raises(self) -> None:
         with pytest.raises(DirectiveSyntaxError):
             parse_directives(UNKNOWN_DIRECTIVE_TEXT)
+
+    def test_directive_missing_argument_raises(self) -> None:
+        malformed = f"{BLOCK_DELIMITER_START} include {BLOCK_DELIMITER_END}"
+        with pytest.raises(DirectiveSyntaxError):
+            parse_directives(malformed)
+
+
+class TestIgnoresCustomDelimiterJinjaBlocks:
+    """Custom-delimiter Jinja control statements are not directives."""
+
+    def test_conditional_block_returns_no_directives(self) -> None:
+        text = (
+            f"{BLOCK_DELIMITER_START} if target == 'codex' {BLOCK_DELIMITER_END}"
+            f"body{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}"
+        )
+        assert parse_directives(text) == ()

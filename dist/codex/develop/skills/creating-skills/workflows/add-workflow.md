@@ -25,7 +25,7 @@ ls ~/.claude/skills/{skill-name}/workflows/ 2>/dev/null
 
 ## Step 3: Gather Workflow Details
 
-Ask using AskUserQuestion:
+Ask using request_user_input:
 
 1. **Workflow name**: What should this workflow be called?
    - Use lowercase-with-hyphens

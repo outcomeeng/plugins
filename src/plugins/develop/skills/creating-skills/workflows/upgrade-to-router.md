@@ -90,7 +90,7 @@ description: >-
 ---
 ```
 
-**IMPORTANT:** ALWAYS use the AskUserQuestion tool to ask the user for guidance and decisions. Present concise, highly structured options. Think hardest when determinng, which options to present and whether the user must choose one or multiple options might make sense.
+**IMPORTANT:** ALWAYS use the {{! tool('ask_user') !}} tool to ask the user for guidance and decisions. Present concise, highly structured options. Think hardest when determinng, which options to present and whether the user must choose one or multiple options might make sense.
 
 ```text
 <essential_principles>

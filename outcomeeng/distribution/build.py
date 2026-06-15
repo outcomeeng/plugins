@@ -21,7 +21,14 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateError
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    StrictUndefined,
+    TemplateError,
+    pass_context,
+)
+from jinja2.runtime import Context
 
 # Implementation status flag. Tests gate on this via:
 #
@@ -111,6 +118,31 @@ CLAUDE_SKILL_DIR_TOKEN: Final = "${CLAUDE_SKILL_DIR}"
 CODEX_SKILL_DIR_TOKEN: Final = "${SKILL_DIR}"
 SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE: Final = "{!# no-codex-skill-dir-rewrite #!}"
 SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
+# Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
+# the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
+SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
+
+# Source-owned registry of runtime-divergent names, keyed by capability then by
+# runtime. Authored source names a capability via the `tool('<capability>')`
+# template token; the build renders the current target's name. A capability with
+# no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
+# per-runtime conditional so the token is never evaluated for the missing runtime.
+# Seeded from the Agent Runtime Guidance table in AGENTS.md.
+RUNTIME_TOKEN_REGISTRY: Final[dict[str, dict[str, str]]] = {
+    "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
+    "schedule_wakeup": {"claude": "ScheduleWakeup"},
+}
+
+# Plugins whose authored source the runtime-token guard enforces. Scoped to the
+# pilot; other plugins join as their content is converted to tokens.
+RUNTIME_TOKEN_GUARDED_PLUGINS: Final = frozenset({"develop"})
+
+# Every runtime-divergent name the registry owns. The guard rejects any of these
+# appearing raw in guarded source — a divergent reference is a `tool(...)` token
+# or a per-runtime conditional, never a hardcoded one-runtime literal.
+GUARDED_RUNTIME_TOKEN_NAMES: Final = frozenset(
+    name for entry in RUNTIME_TOKEN_REGISTRY.values() for name in entry.values()
+)
 
 REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
@@ -127,6 +159,18 @@ _DIRECTIVE_BODY_RE: Final = re.compile(
     r"(?P<quote>['\"])(?P<argument>.*?)(?P=quote)$",
     re.DOTALL,
 )
+
+# Jinja control statements share the `{!% %!}` block delimiter with the build's
+# directives. A block whose first token is one of these is a Jinja statement the
+# build leaves for the render pass; any other non-`name 'arg'` body is a malformed
+# directive that must fail the build rather than ship verbatim.
+_JINJA_CONTROL_KEYWORDS: Final = frozenset(
+    {"if", "elif", "else", "endif", "for", "endfor", "set", "with", "endwith"}
+)
+
+
+def _is_jinja_control_block(body: str) -> bool:
+    return bool(body) and body.split()[0] in _JINJA_CONTROL_KEYWORDS
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +243,15 @@ class TemplateRenderError(BuildError):
     """A template could not be rendered."""
 
 
+class RuntimeTokenError(BuildError):
+    """A runtime-divergent token is unresolved or leaked into guarded source.
+
+    Raised when a `tool(...)` token names an unknown capability or a runtime the
+    capability has no name for, and when a raw runtime-divergent name appears in a
+    guarded plugin's authored source instead of a token or a per-runtime conditional.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Stage 1: Directive parsing
 # ---------------------------------------------------------------------------
@@ -219,6 +272,10 @@ def parse_directives(text: str) -> tuple[Directive, ...]:
         body = " ".join(match.group(1).split())
         body_match = _DIRECTIVE_BODY_RE.match(body)
         if body_match is None:
+            if _is_jinja_control_block(body):
+                # A Jinja block statement (`{!% if target == 'codex' %!}`,
+                # `{!% endif %!}`) — not a directive to collect; Jinja evaluates it.
+                continue
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
         argument = body_match.group("argument")
@@ -308,13 +365,29 @@ def render_text(
         shared_root=shared_root,
         include_stack=(),
     )
-    if VARIABLE_DELIMITER_START not in rendered:
+    # Run the Jinja pass when a variable token ({{! !}}) or a Jinja control block
+    # ({!% if %!}) survives directive expansion — bare conditionals carry no
+    # variable token but still need evaluation. The remaining {!% blocks are
+    # control statements; include/require_skill directives were already expanded.
+    if (
+        VARIABLE_DELIMITER_START not in rendered
+        and BLOCK_DELIMITER_START not in rendered
+    ):
         return rendered
+    # The skill-directory rewrite escape shares the {!# #!} syntax Jinja treats as
+    # a comment, but it is processed later by rewrite_paths_for_target, not here.
+    # Protect it across the Jinja render so the escape survives intact.
+    protected = rendered.replace(
+        SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE, SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER
+    )
     try:
         environment = make_jinja_environment(shared_root)
-        return environment.from_string(rendered).render(variables or {})
+        result = environment.from_string(protected).render(variables or {})
     except TemplateError as exc:
         raise TemplateRenderError(str(exc)) from exc
+    return result.replace(
+        SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER, SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -475,6 +548,11 @@ def build(src_root: Path, dist_root: Path) -> None:
         target_root.mkdir(parents=True, exist_ok=True)
 
     for source_file in _iter_plugin_files(plugins_root):
+        plugin_name = source_file.relative_to(plugins_root).parts[0]
+        if plugin_name in RUNTIME_TOKEN_GUARDED_PLUGINS and _is_rendered_text(
+            source_file
+        ):
+            guard_plugin_runtime_tokens(source_file, shared_root=shared_root)
         for target in Target:
             if _is_rendered_text(source_file):
                 if (
@@ -517,10 +595,70 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+@pass_context
+def render_runtime_token(
+    context: Context,
+    capability: str,
+    runtime: str | None = None,
+) -> str:
+    """Render a runtime-divergent name for the build target (the `tool` global).
+
+    `tool('ask_user')` renders the current target's name; `tool('ask_user',
+    'claude')` renders the named runtime's name regardless of target. Raises
+    RuntimeTokenError when the capability is unknown or has no name for the
+    resolved runtime — the caller wraps the absent case in a per-runtime conditional.
+    """
+    resolved = runtime if runtime is not None else context.get("target")
+    entry = RUNTIME_TOKEN_REGISTRY.get(capability)
+    if entry is None:
+        raise RuntimeTokenError(f"unknown runtime-token capability {capability!r}")
+    if resolved is None:
+        raise RuntimeTokenError(
+            f"runtime-token {capability!r} rendered with no target in context"
+        )
+    name = entry.get(resolved)
+    if name is None:
+        raise RuntimeTokenError(
+            f"capability {capability!r} has no name for runtime {resolved!r}; "
+            "wrap the token in a per-runtime conditional"
+        )
+    return name
+
+
+def guard_runtime_tokens(raw_text: str, *, source: Path) -> None:
+    """Reject a raw runtime-divergent name in a guarded plugin's authored source.
+
+    A divergent reference is a `tool(...)` token (which carries the capability key,
+    not the name) or a per-runtime conditional, so a registry name appearing as a
+    literal is an unparameterized leak.
+    """
+    for name in GUARDED_RUNTIME_TOKEN_NAMES:
+        if name in raw_text:
+            raise RuntimeTokenError(
+                f"raw runtime token {name!r} in {source}; author it with a "
+                "tool(...) token or a per-runtime conditional"
+            )
+
+
+def guard_plugin_runtime_tokens(source_file: Path, *, shared_root: Path) -> None:
+    """Guard a guarded plugin's source file over its include-expanded text.
+
+    Expands include directives first so a raw runtime token pulled in from a
+    shared fragment is caught, not only literals in the file's own body, then
+    applies guard_runtime_tokens to the expanded result.
+    """
+    expanded = _render_directives(
+        source_file.read_text(encoding="utf-8"),
+        shared_root=shared_root,
+        include_stack=(),
+    )
+    guard_runtime_tokens(expanded, source=source_file)
+
+
 def make_jinja_environment(shared_root: Path | None = None) -> Environment:
     """Return the build's configured Jinja2 environment."""
     loader = FileSystemLoader(str(shared_root)) if shared_root is not None else None
-    return Environment(
+    environment = Environment(
         loader=loader,
         block_start_string=BLOCK_DELIMITER_START,
         block_end_string=BLOCK_DELIMITER_END,
@@ -532,6 +670,8 @@ def make_jinja_environment(shared_root: Path | None = None) -> Environment:
         autoescape=False,
         keep_trailing_newline=True,
     )
+    environment.globals["tool"] = render_runtime_token
+    return environment
 
 
 def _render_directives(
@@ -544,6 +684,10 @@ def _render_directives(
         body = " ".join(match.group(1).split())
         body_match = _DIRECTIVE_BODY_RE.match(body)
         if body_match is None:
+            if _is_jinja_control_block(body):
+                # A Jinja block statement sharing the block delimiter — leave it
+                # for Jinja to evaluate during render.
+                return match.group(0)
             raise DirectiveSyntaxError(f"invalid directive: {match.group(0)!r}")
         name = body_match.group("name")
         argument = body_match.group("argument")

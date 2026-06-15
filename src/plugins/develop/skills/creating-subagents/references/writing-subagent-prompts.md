@@ -1,8 +1,8 @@
-<key_insight>
+<context>
 Subagent prompts should be task-specific, not generic. They define a specialized role with clear focus areas, workflows, and constraints.
 
 **Critical**: Subagent.md files use pure XML structure (no markdown headings). Like skills and slash commands, this improves parsing and token efficiency.
-</key_insight>
+</context>
 
 <xml_structure_rule>
 **Remove ALL markdown headings (##, ###) from subagent body.** Use semantic XML tags instead.
@@ -321,29 +321,29 @@ Without constraints, subagents might:
 
 **Bad example:**
 
-```markdown
+```text
 ---
 name: intake-agent
 description: Gathers requirements from user
-tools: AskUserQuestion
+tools: {{! tool('ask_user') !}}
 ---
 
 <workflow>
-1. Ask user about their requirements using AskUserQuestion
+1. Ask user about their requirements using {{! tool('ask_user') !}}
 2. Follow up with clarifying questions
 3. Return finalized requirements
 </workflow>
 ```
 
 **Why this fails:**
-Subagents execute in isolated contexts ("black boxes"). They cannot use AskUserQuestion or any tool requiring user interaction. The user never sees intermediate steps.
+Subagents execute in isolated contexts ("black boxes"). They cannot use {{! tool('ask_user') !}} or any tool requiring user interaction. The user never sees intermediate steps.
 
 **Correct approach:**
 
 ```markdown
 # Main chat handles user interaction
 
-1. Main chat: Use AskUserQuestion to gather requirements
+1. Main chat: Use {{! tool('ask_user') !}} to gather requirements
 2. Launch subagent: Research based on requirements (no user interaction)
 3. Main chat: Present research to user, get confirmation
 4. Launch subagent: Generate code based on confirmed plan
@@ -352,7 +352,7 @@ Subagents execute in isolated contexts ("black boxes"). They cannot use AskUserQ
 
 **Tools that require user interaction (cannot use in subagents):**
 
-- AskUserQuestion
+- {{! tool('ask_user') !}}
 - Any workflow expecting user to respond mid-execution
 - Presenting options and waiting for selection
 

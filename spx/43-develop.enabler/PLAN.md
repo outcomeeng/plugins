@@ -119,3 +119,26 @@ Option 2 expands that scope to include *platform-level runtime plumbing* (bash s
 
 - `spx/43-develop.enabler/develop.md` — removed the skill-enumeration paragraph, kept aggregate compliance rules
 - `spx/43-develop.enabler/21-skills.enabler/skills.md` — new child enabler for the skills-about-skills cluster with 5 compliance assertions
+
+---
+
+## Runtime-neutral authoring pilot (separate effort)
+
+`develop` is the pilot for runtime-neutral authoring
+(`spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`).
+It is the densest concentration of runtime-divergent content in the marketplace, so it
+proves the model before a marketplace-wide rollout.
+
+**Phase 1 (current):** convert the name-level cases whose Codex mapping is known — the
+instruction-role `AskUserQuestion` uses in `skills/creating-skills/workflows/*.md` become
+`tool('ask_user')` registry tokens; the `ScheduleWakeup` mention in the tracking-tasks
+documentation (Claude-only, no Codex equivalent) becomes a per-runtime conditional. The
+source-layer guard then passes over `src/plugins/develop/`.
+
+**Phase 2 (declared in the build-architecture ADR, not yet done):** the subject-matter
+teaching that names Claude's authoring surface — `allowed-tools`/`disable-model-invocation`/
+`argument-hint` (×90+), the subagent model (~224 mentions), and fact-level claims
+("subagents cannot use AskUserQuestion") — needs `field(...)`/`term(...)` registry tokens and
+per-runtime conditional blocks, plus consolidated Codex agent-model facts to write the Codex
+branches. Largest, most judgment-heavy slice; do it once Phase 1 is proven. Until then
+`develop`'s Codex output still teaches Claude's authoring surface in those sections.

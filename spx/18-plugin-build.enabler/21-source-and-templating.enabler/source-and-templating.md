@@ -9,6 +9,8 @@ CAN locate sources predictably and express shared-content includes uniformly.
 ### Scenarios
 
 - Given an `{!% include %!}` directive whose target fragment file is absent, when the source renders, then `IncludeResolutionError` is raised so an unresolved include fails the build loudly instead of emitting empty or partial output ([test](tests/test_expand_include.scenario.l1.py))
+- Given a directive whose block body is neither a recognized `name 'argument'` directive nor a Jinja control statement (for example `{!% include %!}` with the argument omitted), when directives are parsed, then `DirectiveSyntaxError` is raised so a malformed directive fails the build rather than shipping verbatim ([test](tests/test_parse_directives.scenario.l1.py))
+- Given a Jinja control block in the custom block delimiter (for example `{!% if target == 'codex' %!}`), when directives are parsed, then it yields no directive — the block passes through to the render pass for Jinja to evaluate ([test](tests/test_parse_directives.scenario.l1.py))
 
 ### Compliance
 
@@ -17,6 +19,8 @@ CAN locate sources predictably and express shared-content includes uniformly.
 - ALWAYS: the Jinja2 environment uses custom delimiters `{!% %!}` and `{{! !}}` for template parsing — collision-free with skill content that literally contains standard Jinja2 syntax ([test](tests/test_source_and_templating.compliance.l1.py))
 - ALWAYS: `{!% require_skill 'plugin:skill' %!}` expands to identical coding-agent-neutral invocation text in both targets — full sister-skill content stays in its own skill ([test](tests/test_source_and_templating.compliance.l1.py))
 - NEVER: standard Jinja2 delimiters `{% %}` or `{{ }}` in source content trigger template parsing — content teaching templating syntax passes through unchanged ([test](tests/test_parse_directives.scenario.l1.py))
+- ALWAYS: a per-runtime conditional block carrying no variable token still renders per target — the render pass evaluates a surviving `{!% if %!}` control block rather than shipping it verbatim ([test](tests/test_source_and_templating.compliance.l1.py))
+- ALWAYS: the skill-directory rewrite escape directive survives the render pass intact even when the body triggers Jinja — the escape shares Jinja's comment syntax but reaches per-target path rewriting unstripped ([test](tests/test_source_and_templating.compliance.l1.py))
 
 ### Properties
 

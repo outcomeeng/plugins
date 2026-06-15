@@ -68,7 +68,7 @@ Subagents execute in isolated contexts without user interaction.
 - ✅ Subagents can use Read, Write, Edit, Bash, Grep, Glob, WebSearch, WebFetch
 - ✅ Subagents can access MCP servers (non-interactive tools)
 - ✅ Subagents can make decisions based on their prompt and available data
-- ❌ **Subagents CANNOT use AskUserQuestion**
+- ❌ **Subagents CANNOT use request_user_input**
 - ❌ **Subagents CANNOT present options and wait for user selection**
 - ❌ **Subagents CANNOT request confirmations or clarifications from user**
 - ❌ **User does not see subagent's tool calls or intermediate reasoning**
@@ -80,13 +80,13 @@ Subagents execute in isolated contexts without user interaction.
 
 Keep user interaction in main chat:
 
-```markdown
+```text
 # ❌ WRONG - Subagent cannot do this
 
 ---
 name: requirement-gatherer
 description: Gathers requirements from user
-tools: AskUserQuestion # This won't work!
+tools: request_user_input # This won't work!
 ---
 
 You ask the user questions to gather requirements...
@@ -95,7 +95,7 @@ You ask the user questions to gather requirements...
 ```markdown
 # ✅ CORRECT - Main chat handles interaction
 
-Main chat: Uses AskUserQuestion to gather requirements
+Main chat: Uses request_user_input to gather requirements
 ↓
 Launch subagent: Uses requirements to research/build (no interaction)
 ↓
