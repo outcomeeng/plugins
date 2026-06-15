@@ -32,6 +32,7 @@ import re
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
@@ -86,6 +87,31 @@ def write_env_file(payload: dict, project_dir: str) -> None:
         # Degrade like every other failure path so a write error never aborts
         # the base-staleness directive that main() emits next.
         warn(f"could not write $CLAUDE_ENV_FILE ({env_file}): {exc}")
+
+
+def understanding_directive(project_dir: str) -> str:
+    """Return a foundation-priming directive when the project dir is a spec tree, else "".
+
+    A spec tree is detected by the presence of `spx/*.product.md` under the
+    project directory — a plain filesystem read of the durable tree, never `.spx/`
+    state or any other heuristic.
+    """
+    if not project_dir:
+        return ""
+    try:
+        product_specs = any(Path(project_dir).glob("spx/*.product.md"))
+    except OSError:
+        return ""
+    if not product_specs:
+        return ""
+    return "\n".join(
+        [
+            '<SPEC-TREE_SESSION_START foundation="load"/>',
+            "This is a Spec Tree repository. Before any spec-tree work, invoke",
+            "/spec-tree:understanding to load the methodology foundation, then",
+            "/spec-tree:contextualizing <node> on the node you will work on.",
+        ]
+    )
 
 
 def _git(project_dir: str, *args: str) -> subprocess.CompletedProcess | None:
@@ -159,9 +185,12 @@ def main() -> int:
 
     write_env_file(payload, project_dir)
 
-    directive = base_staleness_directive(project_dir)
-    if directive:
-        print(directive)
+    for directive in (
+        understanding_directive(project_dir),
+        base_staleness_directive(project_dir),
+    ):
+        if directive:
+            print(directive)
     return 0
 
 
