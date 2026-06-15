@@ -4,12 +4,15 @@ Coordination note; not spec truth. Reconcile before use.
 
 ## Phase 1 (current)
 
-Registry-backed `tool(...)` token + runtime-explicit form + the source-layer guard for
-runtime-divergent unique tokens, implemented in `outcomeeng/distribution/build.py` with the
-registry populated from the `AGENTS.md` Agent Runtime Guidance table. Piloted on the
-`develop` plugin (see `spx/43-develop.enabler/PLAN.md`). Registry seeded with the
-capabilities `develop` needs: `ask_user` (`AskUserQuestion`/`request_user_input`) and the
-no-Codex-equivalent unique token `ScheduleWakeup` (guard-only, no render).
+Registry-backed `tool(...)` token + runtime-explicit form, implemented in
+`outcomeeng/distribution/build.py` with the registry populated from the `AGENTS.md` Agent
+Runtime Guidance table. The `develop` plugin's content is converted to tokens. Enforcement
+that no raw runtime-divergent name appears in authored source is the runtime-token validation
+lint (`outcomeeng/validation/runtime_tokens.py`, governed by
+`spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) — default-on across
+`src/plugins/` with a shrinking `RUNTIME_TOKEN_IGNORE` set of not-yet-converted files. Registry
+seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the no-Codex-equivalent
+`ScheduleWakeup`.
 
 ## Phase 2 (declared in the ADR, not yet implemented)
 
@@ -27,6 +30,7 @@ declares the full symmetric model. These parts are declared ahead of implementat
 - **Concept-term conversion in `develop`.** The subagent model (~224 mentions) and
   fact-level claims need term tokens and per-runtime conditional blocks; needs consolidated
   Codex agent-model facts.
-- **Marketplace-wide rollout.** Apply the token + guard to the other plugins whose
-  `dist/codex/` output still carries raw Claude tool names (spec-tree and others); extend the
-  guard's enforcement scope beyond `src/plugins/develop/` once they are converted.
+- **Marketplace-wide rollout.** Convert the other plugins whose `dist/codex/` output still
+  carries raw Claude tool names (spec-tree and `work`, the current `RUNTIME_TOKEN_IGNORE`
+  entries) to `tool(...)` tokens, dropping each from the ignore-list as it converts until the
+  set reaches empty and the marketplace is fully enforced.

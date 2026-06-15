@@ -127,22 +127,13 @@ SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ES
 # template token; the build renders the current target's name. A capability with
 # no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
 # per-runtime conditional so the token is never evaluated for the missing runtime.
-# Seeded from the Agent Runtime Guidance table in AGENTS.md.
+# Seeded from the Agent Runtime Guidance table in AGENTS.md. Enforcement that a
+# raw name never appears in authored source is the runtime-token validation lint
+# (outcomeeng.validation.runtime_tokens), not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, dict[str, str]]] = {
     "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
     "schedule_wakeup": {"claude": "ScheduleWakeup"},
 }
-
-# Plugins whose authored source the runtime-token guard enforces. Scoped to the
-# pilot; other plugins join as their content is converted to tokens.
-RUNTIME_TOKEN_GUARDED_PLUGINS: Final = frozenset({"develop"})
-
-# Every runtime-divergent name the registry owns. The guard rejects any of these
-# appearing raw in guarded source — a divergent reference is a `tool(...)` token
-# or a per-runtime conditional, never a hardcoded one-runtime literal.
-GUARDED_RUNTIME_TOKEN_NAMES: Final = frozenset(
-    name for entry in RUNTIME_TOKEN_REGISTRY.values() for name in entry.values()
-)
 
 REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
@@ -548,11 +539,6 @@ def build(src_root: Path, dist_root: Path) -> None:
         target_root.mkdir(parents=True, exist_ok=True)
 
     for source_file in _iter_plugin_files(plugins_root):
-        plugin_name = source_file.relative_to(plugins_root).parts[0]
-        if plugin_name in RUNTIME_TOKEN_GUARDED_PLUGINS and _is_rendered_text(
-            source_file
-        ):
-            guard_plugin_runtime_tokens(source_file, shared_root=shared_root)
         for target in Target:
             if _is_rendered_text(source_file):
                 if (
@@ -623,36 +609,6 @@ def render_runtime_token(
             "wrap the token in a per-runtime conditional"
         )
     return name
-
-
-def guard_runtime_tokens(raw_text: str, *, source: Path) -> None:
-    """Reject a raw runtime-divergent name in a guarded plugin's authored source.
-
-    A divergent reference is a `tool(...)` token (which carries the capability key,
-    not the name) or a per-runtime conditional, so a registry name appearing as a
-    literal is an unparameterized leak.
-    """
-    for name in GUARDED_RUNTIME_TOKEN_NAMES:
-        if name in raw_text:
-            raise RuntimeTokenError(
-                f"raw runtime token {name!r} in {source}; author it with a "
-                "tool(...) token or a per-runtime conditional"
-            )
-
-
-def guard_plugin_runtime_tokens(source_file: Path, *, shared_root: Path) -> None:
-    """Guard a guarded plugin's source file over its include-expanded text.
-
-    Expands include directives first so a raw runtime token pulled in from a
-    shared fragment is caught, not only literals in the file's own body, then
-    applies guard_runtime_tokens to the expanded result.
-    """
-    expanded = _render_directives(
-        source_file.read_text(encoding="utf-8"),
-        shared_root=shared_root,
-        include_stack=(),
-    )
-    guard_runtime_tokens(expanded, source=source_file)
 
 
 def make_jinja_environment(shared_root: Path | None = None) -> Environment:

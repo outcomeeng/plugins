@@ -133,7 +133,8 @@ proves the model before a marketplace-wide rollout.
 instruction-role `AskUserQuestion` uses in `skills/creating-skills/workflows/*.md` become
 `tool('ask_user')` registry tokens; the `ScheduleWakeup` mention in the tracking-tasks
 documentation (Claude-only, no Codex equivalent) becomes a per-runtime conditional. The
-source-layer guard then passes over `src/plugins/develop/`.
+runtime-token validation lint (`spx/15-validation.enabler/32-runtime-token.enabler`) then
+passes over `src/plugins/develop/` — develop is not on the lint's ignore-list.
 
 **Phase 2 (declared in the build-architecture ADR, not yet done):** the subject-matter
 teaching that names Claude's authoring surface — `allowed-tools`/`disable-model-invocation`/
