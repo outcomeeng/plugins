@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""SessionStart hook: persist session metadata and surface a stale base.
+"""SessionStart hook: persist session metadata, claim the worktree, surface a stale base.
 
-Two outputs, on two channels:
+Two outputs on two channels, plus a delegated worktree-occupancy claim:
 
 1. The harness env file ($CLAUDE_ENV_FILE) receives shell `export` lines so every
    subsequent Bash tool call in this conversation can read the values:
@@ -28,6 +28,12 @@ Two outputs, on two channels:
    Each directive is emitted only when it applies; either, both, or neither may
    appear. Diagnostics still go to stderr, never stdout.
 
+3. The spx CLI records a worktree-occupancy claim for the running worktree via
+   `spx worktree claim`, so another agent sharing the pool can tell the worktree
+   is held by a live agent rather than inferring "clean ⇒ free". The hook owns no
+   .spx/ state — the CLI performs the claim I/O — and an absent, failing, or hung
+   spx is a silent no-op.
+
 The per-runtime .spx/sessions/$CLAUDE_SESSION_ID directory is created lazily by
 `spx session pickup` on first successful claim — not here, so conversations that
 never claim a session leave no empty directories.
@@ -45,6 +51,18 @@ from pathlib import Path
 
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
+
+
+def _claim_timeout_seconds() -> float:
+    """Bound the worktree-claim subprocess so a hung spx never stalls session start.
+
+    `$SPX_CLAIM_TIMEOUT_SECONDS` overrides the default (tests set it low); a
+    missing or malformed value falls back to the default.
+    """
+    try:
+        return float(os.environ.get("SPX_CLAIM_TIMEOUT_SECONDS") or "")
+    except ValueError:
+        return 5.0
 
 
 def warn(message: str) -> None:
@@ -123,6 +141,37 @@ def understanding_directive(project_dir: str) -> str:
     )
 
 
+def claim_worktree(payload: dict, project_dir: str) -> None:
+    """Record a worktree-occupancy claim for the running worktree via the spx CLI.
+
+    The hook owns no `.spx/` state: it invokes `spx worktree claim`, and the CLI
+    performs the claim's `.spx/worktrees/` I/O, captures the agent's controlling
+    process, and runs the on-demand liveness check. An absent, failing, or hung
+    spx is a silent no-op — occupancy detection degrades, it does not error, and
+    a bounded timeout keeps a stuck claim from stalling session start — and the
+    claim's output never reaches stdout, which is injected into Claude's context.
+
+    No-ops when no session identity or product directory is known, since the
+    claim is keyed on the agent and targets its worktree.
+    """
+    session_id = (payload.get("session_id") or "").strip()
+    if not session_id or not project_dir:
+        return
+
+    spx = os.environ.get("SPX_BIN", "spx")
+    try:
+        subprocess.run(
+            [spx, "worktree", "claim", "--session-id", session_id],
+            check=False,
+            capture_output=True,
+            cwd=project_dir,
+            timeout=_claim_timeout_seconds(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        # spx absent, or a claim that stalls past the timeout — degrade silently.
+        pass
+
+
 def _git(project_dir: str, *args: str) -> subprocess.CompletedProcess | None:
     """Run a read-only `git -C project_dir` command; None when git is unavailable."""
     try:
@@ -193,6 +242,7 @@ def main() -> int:
         )
 
     write_env_file(payload, project_dir)
+    claim_worktree(payload, project_dir)
 
     for directive in (
         understanding_directive(project_dir),
