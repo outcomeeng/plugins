@@ -23,7 +23,14 @@ Read the `work_branch` field from the session body `<metadata>`. When it names `
 git fetch origin <work-branch>
 ```
 
-Then check it out per the checkout kind: in a bare-repository worktree pool, claim the branch in a free pool worktree (`git -C <pool-worktree> switch <work-branch>`, or `git worktree add` a fresh one) — never the main checkout; in a single working tree, `git switch <work-branch>` from a clean tree. When `work_branch` is absent, the work landed on the default branch — skip this step and read the spec tree from there.
+Then check it out per the checkout kind:
+
+- **Bare-repository worktree pool** — claim the branch in a **free** pool worktree, never the main checkout. A pool worktree is free only when no live agent holds it: read its occupancy with `spx worktree status <pool-worktree>` and enter only a worktree the command reports unclaimed or stale (a claim whose holding agent is dead). Git cleanliness is not freedom — a clean, detached worktree can still be actively held by an agent between commits or mid-think. Run `git -C <pool-worktree> switch <work-branch>`, or `git worktree add` a fresh one. When `spx worktree status` is unavailable or errors, occupancy is unreadable; `git worktree add` a fresh worktree rather than reuse an existing one, so no held worktree is entered.
+- **Single working tree** — `git switch <work-branch>` from a clean tree.
+
+**Foreign-pool guardrail.** Operate only inside a pool Claude participates in. A worktree in a `.spx/` pool Claude does not participate in — another product's checkout — is off-limits regardless of how free its git state looks; treat it as occupied. The claim protocol coordinates only agents that share one pool.
+
+When `work_branch` is absent, the work landed on the default branch — skip this step and read the spec tree from there.
 
 **Step 3: Load node context**
 

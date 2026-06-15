@@ -24,5 +24,5 @@ Concentrating `.spx/` access in the `spx` CLI keeps one owner of the on-disk mod
 ### Audit
 
 - ALWAYS: the `spx` CLI is the single owner of `.spx/` resolution and state placement, so hook-produced state never diverges from the CLI's `.spx/` model ([audit])
-- ALWAYS: the SessionStart hook's only direct filesystem write is `$CLAUDE_ENV_FILE`, and it creates no `.spx/` state — per-runtime session directories are created lazily by `spx session pickup` ([audit])
+- ALWAYS: the SessionStart hook's only direct filesystem write is `$CLAUDE_ENV_FILE`; any `.spx/` state tied to session start — the worktree-occupancy claim — is created through an `spx` CLI subprocess (`spx worktree claim`), never a direct hook write, and per-runtime session directories stay lazily created by `spx session pickup` ([audit])
 - NEVER: extend the direct-write carve-out beyond the SessionStart hook's `$CLAUDE_ENV_FILE` write — a new hook state need is met by adding an `spx` CLI state-store command, never by writing files from the hook ([audit])

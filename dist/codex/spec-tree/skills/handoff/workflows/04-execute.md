@@ -130,6 +130,12 @@ NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occup
 <archive_scope>
 After the canonical continuation is written and verified (Path B or C), or immediately under Path A, archive every session in the resolved scope plus any mid-session artifact that was NOT rewritten in place.
 
+Release the running worktree's occupancy claim here, as the session closes — Path A, Path B, and Path C all reach this step, so a closing session never leaves its worktree marked occupied for the next agent (the claim is written at session start regardless of checkout kind):
+
+```bash
+spx worktree release   # frees the running worktree's claim; a missing worktree command, a non-zero exit, or a slow release is harmless — the claim ages out via liveness when the process exits
+```
+
 Archive order:
 
 1. Earlier in-conversation pickups still in `doing/`.
@@ -162,6 +168,7 @@ State:
 - Session-owned work was committed before closure
 - Every session id archived from the resolved scope (and any artifact NOT rewritten in place)
 - Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
+- Worktree occupancy claim released via `spx worktree release`, or left to age out on process exit when the `worktree` command is unavailable
 
 </confirm>
 

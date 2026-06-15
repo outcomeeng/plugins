@@ -22,6 +22,13 @@ SESSION_START = (
     _REPO_ROOT / "src" / "plugins" / "spec-tree" / "scripts" / "session-start.py"
 )
 
+# A path that does not resolve, so the hook's worktree-occupancy claim delegates
+# to a missing `spx` and no-ops. Defaulted for every run so the hook's other
+# outputs (env file, stdout) stay hermetic; a test that exercises the claim
+# passes a fake via ``env_overrides={"SPX_BIN": ...}`` (and
+# ``SPX_CLAIM_TIMEOUT_SECONDS`` to bound a deliberately slow fake).
+MISSING_SPX = "/nonexistent/spx"
+
 
 def run_session_start(
     payload: dict[str, object],
@@ -34,13 +41,16 @@ def run_session_start(
 
     The ambient ``CLAUDE_PROJECT_DIR`` and ``CLAUDE_ENV_FILE`` are dropped so the
     hook sees only what the call provides, isolating the result from the runner's
-    own session environment.
+    own session environment. ``SPX_BIN`` defaults to a missing binary so the
+    worktree-occupancy claim no-ops; pass ``env_overrides={"SPX_BIN": ...}`` to
+    exercise it.
     """
     env = {
         key: value
         for key, value in os.environ.items()
-        if key not in ("CLAUDE_PROJECT_DIR", "CLAUDE_ENV_FILE")
+        if key not in ("CLAUDE_PROJECT_DIR", "CLAUDE_ENV_FILE", "SPX_BIN")
     }
+    env["SPX_BIN"] = MISSING_SPX
     if env_file is not None:
         env["CLAUDE_ENV_FILE"] = str(env_file)
     if project_dir is not None:
@@ -56,4 +66,4 @@ def run_session_start(
     )
 
 
-__all__ = ["SESSION_START", "run_session_start"]
+__all__ = ["MISSING_SPX", "SESSION_START", "run_session_start"]
