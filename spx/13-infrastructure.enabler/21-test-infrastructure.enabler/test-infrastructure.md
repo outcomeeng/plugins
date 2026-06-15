@@ -1,8 +1,8 @@
 # Test Infrastructure
 
-PROVIDES a unified quality gate covering static analysis, type checking, linting, and test execution for all implementation code
+PROVIDES a unified quality gate covering static analysis, type checking, linting, and test execution for all implementation code, plus the placement guarantee that the marketplace's own test-infrastructure implementation lives at its declared home
 SO THAT the marketplace's Python scripts, validation tools, and test harnesses
-CAN be verified for correctness before changes reach the main branch
+CAN be verified for correctness before changes reach the main branch, with the test-infrastructure home kept outside `spx/` and outside any `tests/` directory
 
 ## Assertions
 
@@ -10,3 +10,4 @@ CAN be verified for correctness before changes reach the main branch
 
 - ALWAYS: GitHub Actions runs the full quality gate on `pull_request` and on push to `main` by invoking the gate recipe (`just check`, equivalently `uv run python -m outcomeeng.validation`) with the gate's toolchain provisioned at the project's declared Python version, never an inlined or filtered subset and never a soft-passed step, per [15-ci-gate.adr.md](15-ci-gate.adr.md) ([test](tests/test_ci_gate.compliance.l1.py))
 - ALWAYS: the gate `check` job runs unconditionally — no job-level `if:` and no truthy job-level `continue-on-error` — so neither a gate step nor the enclosing job can skip or soft-pass the gate, per [15-ci-gate.adr.md](15-ci-gate.adr.md) ([test](tests/test_ci_gate.compliance.l1.py))
+- ALWAYS: the marketplace's test-infrastructure implementation home is the top-level `outcomeeng_testing/` package — every tracked file under it lives outside `spx/` and outside any `tests/` directory, and no test-infrastructure module is tracked under `spx/` or within any `tests/` directory — the locally decidable subset of the placement rule in `spx/15-test-infrastructure.pdr.md`, checked against this repository's tracked files; `tests/` filename-shape conformance is covered separately by `spx/15-test-language.adr.md` and the validator under `spx/15-validation.enabler/` ([test](tests/test_infra_placement.compliance.l1.py))
