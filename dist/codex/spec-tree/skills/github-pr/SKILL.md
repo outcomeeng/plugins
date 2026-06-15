@@ -52,7 +52,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 **Step 6 — Drive to merge.** Invoke `/managing-pr`. It evaluates `MERGE_READINESS` and `PRODUCTION_READINESS`, merges under the gates, and runs the post-merge steps.
 
-**Step 7 — Continue or close.** A merged PR is one step, not necessarily the session's end. If any in-scope part of the user's stated goal remains — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly; a merge is not a license to stop. Invoke `/handoff` only when continuation by Claude now is impossible (the user halted, context is exhausted, or an external blocker prevents the next action), per `/understanding` `references/imperfection-protocol.md` `<closing_protocol>` and the `/handoff` precondition; the skill then decides session-file creation per continuation state and never receives `--no-session` on the user's behalf.
+**Step 7 — Continue or close.** A merged PR is one step, not necessarily the session's end. If any in-scope part of the user's stated goal remains — a further PR, a pending `PLAN.md` item, a `spx/EXCLUDE` entry, a declared-but-unimplemented assertion — continue with it directly; a merge is not a license to stop. Invoke `/handoff` only when the session is genuinely over — the goal is met with no in-scope work remaining, or continuation by Claude is impossible (the user halted, context is exhausted, or an external blocker prevents the next action) — per `/understanding` `references/imperfection-protocol.md` `<closing_protocol>` and the `/handoff` precondition; the skill then decides session-file creation per continuation state and never receives `--no-session` on the user's behalf.
 
 </workflow>
 

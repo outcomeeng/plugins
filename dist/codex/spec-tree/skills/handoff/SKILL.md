@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: ALWAYS invoke when closing an in-scope spec-tree session, deciding whether to create a session file, writing a session file, or preparing continuation context. NEVER create a spec-tree session file without this skill.
+description: ALWAYS invoke to close an in-scope spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining or continuation by Claude is impossible (context exhausted, user halted, external blocker). NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 ---
 
 <context>
@@ -22,7 +22,7 @@ description: ALWAYS invoke when closing an in-scope spec-tree session, deciding 
 </context>
 
 <precondition>
-**Handoff is not a voluntary close. Run this skill only when continuation by Claude now is impossible** — the user halted the work, the context is exhausted, or an external blocker (operator input, a remote-state change Claude cannot effect) prevents the next action. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A merge, a passing gate, or a freshly written coordination note is not a reason to hand off. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understanding`.
+**Handoff is not a voluntary close. Run this skill only when the session is genuinely over** — either the user's stated goal is met with no in-scope continuation remaining, or continuation by Claude now is impossible (the user halted the work, the context is exhausted, or an external blocker — operator input, a remote-state change Claude cannot effect — prevents the next action). Genuine completion is a valid reason to run this skill; it then archives the in-scope session and decides session-file creation per the rules below. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A merge, a passing gate, or a freshly written coordination note is not a reason to hand off. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understanding`.
 </precondition>
 
 <objective>
