@@ -25,7 +25,7 @@ The full path of the spec-tree node being worked on (e.g., `spx/21-spec-tree.ena
 
 ### Pre-compact markers
 
-Foundation markers emitted in this conversation before compaction. List each marker with any attributes (e.g., `<SPEC_TREE_FOUNDATION>`, `<SPEC_TREE_CONTEXT target="spx/...">`, `<SESSION_SCOPE ids="...">`). If none, write `none`.
+Foundation markers emitted in this conversation before compaction. List each marker with any attributes (e.g., `<SPEC_TREE_FOUNDATION>`, `<SPEC_TREE_CONTEXT target="spx/...">`, `<CLAIMED_SESSIONS ids="...">`). If none, write `none`.
 
 ### Modified files this session
 
