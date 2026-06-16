@@ -1,5 +1,15 @@
 title = "merge-command-overlay-precedence"
 cases = "cases.jsonl"
 prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/15-merging.pdr.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**",
+  "src/plugins/spec-tree/skills/managing-pr/**",
+  "src/plugins/spec-tree/skills/standardizing-merging/**",
+  "dist/claude/spec-tree/skills/managing-pr/**",
+  "dist/claude/spec-tree/skills/standardizing-merging/**",
+]
+smoke_cases = ["overlay-silent-uses-rebase-default", "overlay-declares-merge-commit-with-rationale"]
 threshold = 0.85
 trials = 1

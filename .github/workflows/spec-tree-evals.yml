@@ -14,27 +14,23 @@
 # minimum configurable surface, and for the authorize gate below — not for
 # the job shape.
 #
-# Triggers: every `pull_request` that touches the spec-tree plugin, its
-# evals, or the harness (path-filtered; the eval acts as a per-PR gate, like
-# spec-tree-review), plus `push` to main, a weekly `schedule`, and manual
-# `workflow_dispatch`. A change to the workflow file itself is not a trigger
-# path — validate workflow edits via `workflow_dispatch`. The OAuth secret
-# reaches the `claude` subprocess, so
-# every PR run is gated by the `authorize` job: only a PR whose author has
-# admin/maintain/write permission runs (fork/external PRs are skipped, and
-# GitHub withholds secrets from fork `pull_request` runs regardless). The
-# trust boundary matches spec-tree-review's: a PR editing an eval prompt.md
-# could otherwise instruct claude to exfiltrate the token, so only trusted
-# authors' PRs execute.
+# Triggers: every `pull_request` that touches an eval-owned spec or skill
+# surface, plus `push` to main for the same paths, a weekly `schedule`, and
+# manual `workflow_dispatch`. A change to the workflow file itself is not a
+# trigger path — validate workflow edits via `workflow_dispatch`. The OAuth
+# secret reaches the `claude` subprocess, so every PR run is gated by the
+# `authorize` job: only a PR whose author has admin/maintain/write permission
+# runs (fork/external PRs are skipped, and GitHub withholds secrets from fork
+# `pull_request` runs regardless). The trust boundary matches
+# spec-tree-review's: a PR editing an eval prompt.md could otherwise instruct
+# claude to exfiltrate the token, so only trusted authors' PRs execute.
 #
-# Scope (v1): the five merging gate evals under
-# spx/21-spec-tree.enabler/76-merging.enabler/evals/, all of which load the
-# spec-tree plugin (dist/claude/spec-tree). Deferred to follow-ups:
-#   - the 4 reviewing-changes evals (also spec-tree) and the 1 typescript
-#     eval (dist/claude/typescript) — the latter needs a per-eval
-#     plugin-dir mapping the eval.toml does not yet declare;
-#   - a `--model` pin (the harness `run` CLI does not expose one yet — see
-#     the eval-harness ISSUES.md), so this job uses claude's default model.
+# Scope: the workflow discovers eval.toml files under EVALS_ROOT and asks the
+# `outcomeeng-evals plan` command which suites and cases to run. PR runs use
+# changed paths and each suite's `owned_paths` / `smoke_cases` metadata, so a
+# skill-only edit runs a small canary set. Eval-definition changes and harness
+# changes run the full affected suites. Push, schedule, and manual runs use the
+# full plan.
 #
 # CI owns the canonical history.jsonl appends (eval-harness.md:28): only on
 # main (not on PR runs) the appended rows are committed back with [skip ci],
@@ -48,27 +44,55 @@ name: Spec Tree Evals
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    # Scoped to PRs that can change eval outcomes — the spec-tree plugin under
-    # test, the eval definitions, or the harness — so unrelated PRs don't spend
-    # the LLM eval suites. A change to this workflow file itself is deliberately
-    # NOT a trigger path: validate workflow edits via workflow_dispatch rather
-    # than auto-running every suite on a workflow-only PR. NOTE: a path-filtered
-    # workflow is absent (not "skipped") on non-matching PRs, so do not mark it
-    # a required status check without a separate always-runs gate job.
+    # A path-filtered workflow is absent (not "skipped") on non-matching PRs,
+    # so do not mark it a required status check without a separate always-runs
+    # gate job.
     paths:
-      - "spx/21-spec-tree.enabler/76-merging.enabler/evals/**"
-      - "src/plugins/spec-tree/**"
-      - "dist/claude/spec-tree/**"
+      - "spx/15-merging.pdr.md"
+      - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
+      - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
+      - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
+      - "src/plugins/spec-tree/skills/github-pr/**"
+      - "src/plugins/spec-tree/skills/managing-pr/**"
+      - "src/plugins/spec-tree/skills/opening-pr/**"
+      - "src/plugins/spec-tree/skills/reviewing-changes/**"
+      - "src/plugins/spec-tree/skills/standardizing-merging/**"
+      - "src/plugins/typescript/skills/standardizing-typescript-tests/**"
+      - "src/plugins/typescript/skills/testing-typescript/**"
+      - "dist/claude/spec-tree/skills/github-pr/**"
+      - "dist/claude/spec-tree/skills/managing-pr/**"
+      - "dist/claude/spec-tree/skills/opening-pr/**"
+      - "dist/claude/spec-tree/skills/reviewing-changes/**"
+      - "dist/claude/spec-tree/skills/standardizing-merging/**"
+      - "dist/claude/typescript/skills/standardizing-typescript-tests/**"
+      - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
+      - "outcomeeng_testing/evals/**"
   push:
     branches: [main]
     # Same scope as the PR filter — a change to this workflow file itself does
     # not refresh the baseline; dispatch it when a workflow edit needs a run.
     paths:
-      - "spx/21-spec-tree.enabler/76-merging.enabler/evals/**"
-      - "src/plugins/spec-tree/**"
-      - "dist/claude/spec-tree/**"
+      - "spx/15-merging.pdr.md"
+      - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
+      - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
+      - "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**"
+      - "src/plugins/spec-tree/skills/github-pr/**"
+      - "src/plugins/spec-tree/skills/managing-pr/**"
+      - "src/plugins/spec-tree/skills/opening-pr/**"
+      - "src/plugins/spec-tree/skills/reviewing-changes/**"
+      - "src/plugins/spec-tree/skills/standardizing-merging/**"
+      - "src/plugins/typescript/skills/standardizing-typescript-tests/**"
+      - "src/plugins/typescript/skills/testing-typescript/**"
+      - "dist/claude/spec-tree/skills/github-pr/**"
+      - "dist/claude/spec-tree/skills/managing-pr/**"
+      - "dist/claude/spec-tree/skills/opening-pr/**"
+      - "dist/claude/spec-tree/skills/reviewing-changes/**"
+      - "dist/claude/spec-tree/skills/standardizing-merging/**"
+      - "dist/claude/typescript/skills/standardizing-typescript-tests/**"
+      - "dist/claude/typescript/skills/testing-typescript/**"
       - "outcomeeng_evals/**"
+      - "outcomeeng_testing/evals/**"
   schedule:
     # Weekly, Monday 06:00 UTC. Start here; tighten if drift signals warrant.
     - cron: "0 6 * * 1"
@@ -77,9 +101,9 @@ on:
       evals_root:
         description: "Directory tree to discover eval.toml files under."
         type: string
-        default: spx/21-spec-tree.enabler/76-merging.enabler/evals
+        default: spx
       plugin_dir:
-        description: "Plugin directory loaded for every discovered eval (all v1 suites target the spec-tree plugin)."
+        description: "Fallback plugin directory when an eval.toml omits plugin_dir."
         type: string
         default: dist/claude/spec-tree
       workers:
@@ -171,7 +195,7 @@ jobs:
       # (never interpolated into a run: body). The harness reads it via the
       # inherited environment per eval-harness.md:16.
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-      EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx/21-spec-tree.enabler/76-merging.enabler/evals' }}
+      EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx' }}
       PLUGIN_DIR: ${{ github.event.inputs.plugin_dir || 'dist/claude/spec-tree' }}
       WORKERS: ${{ github.event.inputs.workers || '1' }}
       MAX_BUDGET_USD: ${{ github.event.inputs.max_budget_usd || '0.50' }}
@@ -190,6 +214,7 @@ jobs:
           # persisted GITHUB_TOKEN extraheader would otherwise shadow the PAT
           # on a same-repo push and fail once main is protected).
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
@@ -223,34 +248,81 @@ jobs:
           set -euo pipefail
           uv sync
 
+      - name: Collect changed paths
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git diff --name-only --diff-filter=ACMRT \
+              "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}" \
+              > changed-paths.txt
+          else
+            : > changed-paths.txt
+          fi
+
+      - name: Plan eval suites
+        env:
+          CI_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
+        run: |
+          set -euo pipefail
+          uv run outcomeeng-evals plan "$EVALS_ROOT" \
+            --mode "$CI_MODE" \
+            --changed-paths-file changed-paths.txt \
+            --default-plugin-dir "$PLUGIN_DIR" \
+            > eval-plan.json
+          python3 -m json.tool eval-plan.json
+
       - name: Run eval suites
         run: |
           set -euo pipefail
-          mapfile -t tomls < <(uv run outcomeeng-evals discover "$EVALS_ROOT")
-          if [ "${#tomls[@]}" -eq 0 ]; then
-            echo "::error::No eval.toml found under $EVALS_ROOT"
-            exit 1
-          fi
-          echo "Discovered ${#tomls[@]} eval suite(s):"
-          printf '  %s\n' "${tomls[@]}"
+          python3 <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
 
-          fail=0
-          for toml in "${tomls[@]}"; do
-            echo "::group::eval $toml"
-            # `run` exits non-zero when the suite is below its threshold; the
-            # `if !` captures that without tripping `set -e` so every suite
-            # runs and the job fails if any one did.
-            if ! uv run outcomeeng-evals run "$toml" \
-              --plugin-dir "$PLUGIN_DIR" \
-              --workers "$WORKERS" \
-              --max-budget-usd "$MAX_BUDGET_USD" \
-              --timeout-seconds "$TIMEOUT_SECONDS"; then
-              echo "::error::Eval suite below threshold or errored: $toml"
-              fail=1
-            fi
-            echo "::endgroup::"
-          done
-          exit "$fail"
+          with open("eval-plan.json", encoding="utf-8") as fh:
+              plan = json.load(fh)
+
+          if not plan:
+              print("No eval suites selected for this change.")
+              sys.exit(0)
+
+          print(f"Selected {len(plan)} eval suite invocation(s):")
+          for item in plan:
+              case_suffix = ""
+              if item["case_ids"]:
+                  case_suffix = " cases=" + ",".join(item["case_ids"])
+              print(f"  {item['eval_toml']} plugin={item['plugin_dir']}{case_suffix}")
+
+          failed = False
+          for item in plan:
+              print(f"::group::eval {item['eval_toml']}")
+              command = [
+                  "uv",
+                  "run",
+                  "outcomeeng-evals",
+                  "run",
+                  item["eval_toml"],
+                  "--plugin-dir",
+                  item["plugin_dir"],
+                  "--workers",
+                  os.environ["WORKERS"],
+                  "--max-budget-usd",
+                  os.environ["MAX_BUDGET_USD"],
+                  "--timeout-seconds",
+                  os.environ["TIMEOUT_SECONDS"],
+              ]
+              for case_id in item["case_ids"]:
+                  command.extend(("--case-id", case_id))
+              completed = subprocess.run(command, check=False)
+              if completed.returncode != 0:
+                  print(f"::error::Eval suite below threshold or errored: {item['eval_toml']}")
+                  failed = True
+              print("::endgroup::")
+
+          sys.exit(1 if failed else 0)
+          PY
 
       - name: Commit history.jsonl appends
         # Runs even when a suite fails (a failed run still records a history

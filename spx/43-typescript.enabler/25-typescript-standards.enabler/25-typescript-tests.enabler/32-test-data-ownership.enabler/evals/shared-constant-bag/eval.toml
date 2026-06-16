@@ -1,5 +1,14 @@
 title = "shared-test-owned-constant-bag"
 cases = "cases.jsonl"
 prompt = "prompt.md"
+plugin_dir = "dist/claude/typescript"
+owned_paths = [
+  "spx/43-typescript.enabler/25-typescript-standards.enabler/25-typescript-tests.enabler/32-test-data-ownership.enabler/**",
+  "src/plugins/typescript/skills/testing-typescript/**",
+  "src/plugins/typescript/skills/standardizing-typescript-tests/**",
+  "dist/claude/typescript/skills/testing-typescript/**",
+  "dist/claude/typescript/skills/standardizing-typescript-tests/**",
+]
+smoke_cases = ["positive-typical-edges-bag", "negative-source-owned-registry"]
 threshold = 0.85
 trials = 1

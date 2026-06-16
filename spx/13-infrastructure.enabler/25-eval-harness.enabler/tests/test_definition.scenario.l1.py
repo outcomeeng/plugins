@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from outcomeeng_evals.definition import (
+    CiPolicy,
     DEFAULT_SUITE_THRESHOLD,
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
@@ -26,6 +27,9 @@ EVAL_FILENAME = "eval.toml"
 TITLE = "shared-test-owned-constant-bag"
 CUSTOM_THRESHOLD = 0.95
 CUSTOM_TRIALS = 3
+PLUGIN_DIR = "dist/claude/spec-tree"
+OWNED_PATH = "src/plugins/spec-tree/skills/managing-pr/**"
+SMOKE_CASE = "happy-path"
 
 
 def _write_eval_dir(
@@ -151,6 +155,28 @@ def test_uses_explicit_trials_when_set(tmp_path: Path) -> None:
     definition = load_definition(toml_path)
 
     assert definition.trials == CUSTOM_TRIALS
+
+
+def test_loads_optional_ci_metadata(tmp_path: Path) -> None:
+    toml_path = _write_eval_dir(
+        tmp_path,
+        toml_text=(
+            f'title = "{TITLE}"\n'
+            f'cases = "{CASES_FILENAME}"\n'
+            f'prompt = "{PROMPT_FILENAME}"\n'
+            f'plugin_dir = "{PLUGIN_DIR}"\n'
+            f'owned_paths = ["{OWNED_PATH}"]\n'
+            f'smoke_cases = ["{SMOKE_CASE}"]\n'
+            'ci_policy = "manual"\n'
+        ),
+    )
+
+    definition = load_definition(toml_path)
+
+    assert definition.plugin_dir == Path(PLUGIN_DIR)
+    assert definition.owned_paths == (OWNED_PATH,)
+    assert definition.smoke_case_ids == (SMOKE_CASE,)
+    assert definition.ci_policy is CiPolicy.MANUAL
 
 
 def test_accepts_trials_at_cap(tmp_path: Path) -> None:

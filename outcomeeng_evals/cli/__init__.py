@@ -7,6 +7,7 @@ The ``main`` group exposes four subcommands:
 - ``history`` — read a per-eval history.jsonl and print a trend summary.
 - ``view`` — open a run's HTML report (or the latest one).
 - ``discover`` — walk a directory tree and list every eval.toml found.
+- ``plan`` — select eval suites and cases for CI.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ import click
 
 from outcomeeng_evals.cli.commands.discover import discover_command
 from outcomeeng_evals.cli.commands.history import history_command
+from outcomeeng_evals.cli.commands.plan import plan_command
 from outcomeeng_evals.cli.commands.run import run_command
 from outcomeeng_evals.cli.commands.view import view_command
 
@@ -28,3 +30,4 @@ main.add_command(run_command)
 main.add_command(history_command)
 main.add_command(view_command)
 main.add_command(discover_command)
+main.add_command(plan_command)
