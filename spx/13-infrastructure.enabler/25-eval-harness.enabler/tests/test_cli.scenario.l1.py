@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from outcomeeng_evals.cli import main
 from outcomeeng_evals.cli.commands import run as run_module
 from outcomeeng_evals.cli.commands.run import MAX_WORKERS, _FORMAT_SUFFIX
+from outcomeeng_evals.definition import CiPolicy
 from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
 
 
@@ -340,6 +341,84 @@ def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -
     ]
 
 
+def test_plan_subcommand_selects_full_suite_for_eval_definition_change(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    eval_root = Path("spx")
+    eval_toml = _write_planned_eval(
+        eval_root,
+        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        smoke_cases=("happy-path",),
+    )
+    changed_paths = Path("changed.txt")
+    changed_paths.write_text(
+        f"{eval_toml.parent.as_posix()}/cases.jsonl\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plan",
+            str(eval_root),
+            "--mode",
+            "pr",
+            "--changed-paths-file",
+            str(changed_paths),
+        ],
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    plan = json.loads(result.output)
+    assert plan == [
+        {
+            "eval_toml": str(eval_toml),
+            "plugin_dir": "dist/claude/spec-tree",
+            "case_ids": [],
+        }
+    ]
+
+
+def test_plan_subcommand_full_mode_excludes_manual_evals(tmp_path: Path) -> None:
+    runner = CliRunner()
+    automatic_eval = _write_planned_eval(
+        tmp_path,
+        rule="automatic",
+        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        smoke_cases=("happy-path",),
+    )
+    _write_planned_eval(
+        tmp_path,
+        rule="manual",
+        owned_paths=("src/plugins/spec-tree/skills/reviewing-changes/**",),
+        smoke_cases=("manual-smoke",),
+        ci_policy=CiPolicy.MANUAL,
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plan",
+            str(tmp_path),
+            "--mode",
+            "full",
+        ],
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    plan = json.loads(result.output)
+    assert plan == [
+        {
+            "eval_toml": str(automatic_eval),
+            "plugin_dir": "dist/claude/spec-tree",
+            "case_ids": [],
+        }
+    ]
+
+
 def test_plan_subcommand_skips_unrelated_pr_change(tmp_path: Path) -> None:
     runner = CliRunner()
     _write_planned_eval(
@@ -367,27 +446,30 @@ def test_plan_subcommand_skips_unrelated_pr_change(tmp_path: Path) -> None:
 
 
 def _write_planned_eval(
-    tmp_path: Path,
+    root: Path,
     *,
+    rule: str = "rule",
     owned_paths: tuple[str, ...],
     smoke_cases: tuple[str, ...],
+    ci_policy: CiPolicy | None = None,
 ) -> Path:
-    eval_dir = tmp_path / "evals" / "rule"
+    eval_dir = root / "evals" / rule
     eval_dir.mkdir(parents=True)
     owned_paths_toml = ", ".join(f'"{path}"' for path in owned_paths)
     smoke_cases_toml = ", ".join(f'"{case_id}"' for case_id in smoke_cases)
     eval_toml = eval_dir / "eval.toml"
+    lines = [
+        f'title = "{rule}"',
+        'cases = "cases.jsonl"',
+        'prompt = "prompt.md"',
+        'plugin_dir = "dist/claude/spec-tree"',
+        f"owned_paths = [{owned_paths_toml}]",
+        f"smoke_cases = [{smoke_cases_toml}]",
+    ]
+    if ci_policy is not None:
+        lines.append(f'ci_policy = "{ci_policy.value}"')
     eval_toml.write_text(
-        "\n".join(
-            (
-                'title = "rule"',
-                'cases = "cases.jsonl"',
-                'prompt = "prompt.md"',
-                'plugin_dir = "dist/claude/spec-tree"',
-                f"owned_paths = [{owned_paths_toml}]",
-                f"smoke_cases = [{smoke_cases_toml}]",
-            )
-        ),
+        "\n".join(lines),
         encoding="utf-8",
     )
     (eval_dir / "cases.jsonl").write_text("", encoding="utf-8")
