@@ -341,6 +341,44 @@ def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -
     ]
 
 
+def test_plan_subcommand_selects_full_suite_for_absolute_eval_definition_change(
+    tmp_path: Path,
+) -> None:
+    runner = CliRunner()
+    eval_toml = _write_planned_eval(
+        tmp_path,
+        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        smoke_cases=("happy-path",),
+    )
+    changed_paths = tmp_path / "changed.txt"
+    changed_paths.write_text(
+        f"{eval_toml.parent / 'cases.jsonl'}\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plan",
+            str(tmp_path),
+            "--mode",
+            "pr",
+            "--changed-paths-file",
+            str(changed_paths),
+        ],
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    plan = json.loads(result.output)
+    assert plan == [
+        {
+            "eval_toml": str(eval_toml),
+            "plugin_dir": "dist/claude/spec-tree",
+            "case_ids": [],
+        }
+    ]
+
+
 def test_plan_subcommand_selects_full_suite_for_eval_definition_change(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
