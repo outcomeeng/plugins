@@ -20,9 +20,9 @@ Write or fix test files for a node specification. This skill handles both:
 </objective>
 
 <mode_detection>
-**Determine which mode you're in:**
+**Determine the current mode:**
 
-1. **WRITE mode** - Tests do not exist yet or you are starting fresh
+1. **WRITE mode** - Tests do not exist yet, or starting fresh
    - Check: `ls {node_path}/tests/*.ts` returns nothing or minimal files
    - Action: Follow full workflow below
 
@@ -138,7 +138,7 @@ The literal checker (`spx validation literal`) reports two finding kinds:
 
 **These findings are a test quality signal, not a naming problem.**
 
-When a specific value like `"src/foo.ts"` appears in three test files, those three tests are asserting that the code handles exactly that path. They confirm the author's expectation about one hand-picked input. They tell you nothing about inputs the author didn't think of.
+When a specific value like `"src/foo.ts"` appears in three test files, those three tests are asserting that the code handles exactly that path. They confirm the author's expectation about one hand-picked input. They reveal nothing about inputs the author didn't think of.
 
 ### The WRONG fix: shared constants ("literal laundering")
 

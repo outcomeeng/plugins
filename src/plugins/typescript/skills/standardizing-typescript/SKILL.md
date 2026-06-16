@@ -19,7 +19,7 @@ Code follows these standards when tsc strict mode and eslint checks pass. See su
 </success_criteria>
 
 <reference_note>
-This is a reference skill. Other TypeScript skills reference these standards. You typically don't invoke this directly—invoke `/coding-typescript`, `/testing-typescript`, or `/auditing-typescript` instead.
+This is a reference skill. Other TypeScript skills reference these standards. It is not invoked directly—invoke `/coding-typescript`, `/testing-typescript`, or `/auditing-typescript` instead.
 
 These standards apply to ALL TypeScript code, including tests and scripts. `/standardizing-typescript-tests` adds stricter rules for test code.
 </reference_note>
@@ -155,7 +155,7 @@ export function validateScoreBad(score: number): boolean {
 | no-magic-numbers                    | Literal numbers in code      |
 | @typescript-eslint/no-magic-numbers | TypeScript-specific literals |
 
-**Rule exemptions:** ESLint already exempts common idiomatic values: `0`, `1`, `-1` in array indexes, and enum values. You don't need constants for these.
+**Rule exemptions:** ESLint already exempts common idiomatic values: `0`, `1`, `-1` in array indexes, and enum values. These do not need constants.
 
 ```typescript
 // ✅ OK: Idiomatic values are exempt
@@ -415,7 +415,7 @@ import { Position } from "./position";
 import { tokenize } from "./tokens";
 ```
 
-**Infrastructure** is stable code that doesn't move when your feature moves. Must use path aliases:
+**Infrastructure** is stable code that doesn't move when the feature moves. Path aliases are required:
 
 ```typescript
 // ❌ REJECTED: Deep relative to infrastructure

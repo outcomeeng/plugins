@@ -148,7 +148,7 @@ Read: package.json → dependencies, devDependencies
 Glob/Grep: actual modules, harnesses, fixtures, registries, and entrypoints
 
 # 5. Confirm local file placement
-Read: existing files in the same directory you'll write to
+Read: existing files in the same target directory
 ```
 
 ### What to Discover
@@ -186,7 +186,7 @@ class MyError extends Error {} // Product has @/errors
 
 ### Script Entry Points
 
-If you are editing a checked-in entrypoint under `scripts/`, treat it as boundary code:
+When editing a checked-in entrypoint under `scripts/`, treat it as boundary code:
 
 - use the repository's canonical argument parsing library
 - do not hand-roll `process.argv` parsing
@@ -266,27 +266,27 @@ spec-tree:contextualizing spx/55-example.enabler/21-commands.outcome
 </context_loading>
 
 <two_modes>
-You operate in one of two modes depending on your input:
+This skill operates in one of two modes depending on the input:
 
 | Input                            | Mode               | Workflow                      |
 | -------------------------------- | ------------------ | ----------------------------- |
 | Spec (ADR/PDR, node spec)        | **Implementation** | `workflows/implementation.md` |
 | Rejection feedback from reviewer | **Remediation**    | `workflows/remediation.md`    |
 
-Determine your mode from the input, then follow the appropriate workflow.
+Determine the mode from the input, then follow the appropriate workflow.
 </two_modes>
 
 <core_principles>
 
-1. **Spec Is Law**: The specification is your contract. Implement exactly what it says.
+1. **Spec Is Law**: The specification is the contract. Implement exactly what it says.
 
 2. **Test-Driven Development**: Write tests first or alongside code. Tests prove correctness.
 
 3. **Type Safety First**: Use strict TypeScript with `strict: true`. No `any` without justification.
 
-4. **Self-Verification**: Before declaring "done," run tsc, eslint, and vitest yourself.
+4. **Self-Verification**: Before declaring "done," run tsc, eslint, and vitest.
 
-5. **Humility**: Your code must pass review. Write code that will survive adversarial review.
+5. **Humility**: The code must pass review. Write code that will survive adversarial review.
 
 6. **Clean Architecture**: Dependency injection, single responsibility, no circular imports, **no deep relative imports**.
 
@@ -410,7 +410,7 @@ When sources conflict, resolve in this priority: local agent instructions, repos
 </tool_invocation>
 
 <success_criteria>
-Your implementation is ready for review when:
+The implementation is ready for review when:
 
 - [ ] Spec fully implemented
 - [ ] All functions have type annotations
@@ -424,5 +424,4 @@ Your implementation is ready for review when:
 - [ ] No console.log statements
 - [ ] No hardcoded secrets
 
-*Your code will face an adversarial reviewer with zero tolerance. Write code that will survive that scrutiny.*
 </success_criteria>

@@ -31,7 +31,7 @@ See `<codebase_discovery>` in SKILL.md for complete guidance.
 Read: README.md, docs/, CLAUDE.md
 
 # 2. Read the relevant skill/spec first
-Read: the skill and spec docs that define the pattern you are about to use
+Read: the skill and spec docs that define the pattern in use
 
 # 3. Check available libraries
 Read: package.json → dependencies, devDependencies

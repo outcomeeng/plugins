@@ -1,6 +1,6 @@
 # Remediation Protocol
 
-When your input is **rejection feedback** from a reviewer, follow this protocol.
+When the input is **rejection feedback** from a reviewer, follow this protocol.
 
 ## Phase R0: Parse the Rejection
 
@@ -85,7 +85,7 @@ exec("git status");
 
 **Spec Deviations**:
 
-1. Quote the spec requirement you're aligning to
+1. Quote the spec requirement being aligned to
 2. Show the deviation in current code
 3. Implement the aligned version
 4. Add a test that verifies spec compliance
