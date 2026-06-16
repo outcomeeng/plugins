@@ -34,7 +34,7 @@ Search for:
 - existing trait seams, error types, and tracing conventions
 - nearby tests and fixtures that already exercise the area
 
-Document for yourself before moving on:
+Document before moving on:
 
 - crates already available
 - prior art worth following
