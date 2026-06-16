@@ -102,6 +102,82 @@ def test_codex_cache_missing_published_version_is_an_error(tmp_path: Path) -> No
     assert PUBLISHED_VERSION in result.errors[0]
 
 
+def test_absent_codex_cache_for_installed_plugin_is_an_error(
+    tmp_path: Path,
+) -> None:
+    """When the working-tree and Codex-reported installed versions agree but the
+    Codex marketplace cache directory is absent, validation reports the missing
+    installed version instead of treating the empty Codex section as valid.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert result.warnings == [], f"unexpected warnings: {result.warnings}"
+    assert len(result.errors) == 1
+    assert PLUGIN_NAME in result.errors[0]
+    assert PUBLISHED_VERSION in result.errors[0]
+
+
+def test_absent_codex_cache_for_not_installed_plugin_is_clean(
+    tmp_path: Path,
+) -> None:
+    """When Codex reports that a working-tree plugin is not installed, an absent
+    cache directory is valid: preservation prunes not-installed plugins in full.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    def published_version(plugin: str) -> str | None:
+        return PUBLISHED_VERSION if plugin == PLUGIN_NAME else None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=published_version,
+        codex_resolved_versions={},
+    )
+
+    assert result.errors == [], f"unexpected errors: {result.errors}"
+    assert result.warnings == [], f"unexpected warnings: {result.warnings}"
+
+
+def test_absent_codex_cache_without_installed_set_signal_is_clean(
+    tmp_path: Path,
+) -> None:
+    """When the live Codex installed-set signal is unavailable and no cache
+    directory exists, validation has no installed Codex target to verify.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    def published_version(plugin: str) -> str | None:
+        return PUBLISHED_VERSION if plugin == PLUGIN_NAME else None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=published_version,
+    )
+
+    assert result.errors == [], f"unexpected errors: {result.errors}"
+    assert result.warnings == [], f"unexpected warnings: {result.warnings}"
+
+
 def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
     tmp_path: Path,
 ) -> None:

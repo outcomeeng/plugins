@@ -454,7 +454,9 @@ def validate(
     published_for = codex_marketplace_version or (
         lambda plugin: read_codex_marketplace_version(marketplace, plugin)
     )
-    resolved_versions = codex_resolved_versions or {}
+    resolved_versions = (
+        codex_resolved_versions if codex_resolved_versions is not None else {}
+    )
     working_tree_plugins = set(versions)
 
     collect_orphan_plugins(claude, marketplace, working_tree_plugins, warnings)
@@ -471,31 +473,35 @@ def validate(
             )
 
         # Codex: validates the version Codex reports as installed when available.
-        # If that live signal is unavailable, it falls back to the marketplace
-        # clone's published version for feature-branch lag tolerance.
-        if (codex / marketplace / plugin).exists():
-            target_version = resolved_versions.get(plugin)
-            if target_version is not None:
-                if target_version != version:
-                    warnings.append(
-                        f"{plugin}  working-tree {version} differs from Codex "
-                        f"resolved {target_version}; verifying Codex resolved "
-                        "version in cache"
-                    )
+        # If that live signal is unavailable and cache content exists, it falls
+        # back to the marketplace clone's published version for feature-branch lag
+        # tolerance.
+        codex_plugin_dir = codex / marketplace / plugin
+        target_version = resolved_versions.get(plugin)
+        published = published_for(plugin)
+        if target_version is not None:
+            if target_version != version:
+                warnings.append(
+                    f"{plugin}  working-tree {version} differs from Codex "
+                    f"resolved {target_version}; verifying Codex resolved "
+                    "version in cache"
+                )
+        elif codex_plugin_dir.exists():
+            if published is not None and is_strictly_ahead(version, published):
+                target_version = published
+                warnings.append(
+                    f"{plugin}  working-tree {version} ahead of marketplace "
+                    f"clone {published}; verifying clone version in cache"
+                )
             else:
-                published = published_for(plugin)
-                if published is not None and is_strictly_ahead(version, published):
-                    target_version = published
-                    warnings.append(
-                        f"{plugin}  working-tree {version} ahead of marketplace "
-                        f"clone {published}; verifying clone version in cache"
-                    )
-                else:
-                    target_version = version
+                target_version = version
+        if target_version is not None:
             check_version_present(codex, marketplace, plugin, target_version, errors)
-            check_single_real_codex_version(
-                codex, marketplace, plugin, target_version, errors
-            )
+        if codex_plugin_dir.exists():
+            if target_version is not None:
+                check_single_real_codex_version(
+                    codex, marketplace, plugin, target_version, errors
+                )
             check_complete_codex_entries(codex, marketplace, plugin, errors)
             check_no_stale_symlinks(
                 codex, marketplace, plugin, max_age_days, resolved_now, errors

@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
@@ -89,6 +89,67 @@ class RaisingInstalled:
         raise preserve_codex_plugin_cache.InstalledSetError(
             "installed-set query failed"
         )
+
+
+@dataclass
+class SequenceInstalled:
+    """Installed-version stub returning one snapshot per query.
+
+    Stage 5 exception 2 (interaction-protocol DI): the repair path must prove it
+    re-reads Codex's installed set after marketplace registration repair without
+    invoking the real CLI.
+    """
+
+    snapshots: list[dict[str, str]]
+    calls: list[str] = field(default_factory=list)
+
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
+        self.calls.append(marketplace)
+        if not self.snapshots:
+            raise AssertionError("installed set queried more often than expected")
+        return self.snapshots.pop(0)
+
+
+@dataclass
+class RepairingMarketplaceRunner:
+    """Runner stub that materializes the plugin cache on a chosen upgrade call.
+
+    Stage 5 exception 2 (interaction-protocol DI): the production repair path
+    drives the `codex` CLI and observes its filesystem side effect. The l1 test
+    injects a command runner that records commands and materializes the same
+    side effect deterministically.
+    """
+
+    cache_root: Path
+    materialize_on_upgrade_call: int
+    first_upgrade_returncode: int = 0
+    first_upgrade_stderr: str = ""
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+    upgrade_calls: int = 0
+
+    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
+        command_tuple = tuple(command)
+        self.calls.append(command_tuple)
+        upgrade_command = (
+            *preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND,
+            DEFAULT_MARKETPLACE,
+        )
+        if command_tuple == upgrade_command:
+            self.upgrade_calls += 1
+            if self.upgrade_calls == self.materialize_on_upgrade_call:
+                _write_skill(
+                    self.cache_root,
+                    PLUGIN_NAME,
+                    CURRENT_VERSION,
+                    "current content",
+                )
+            if self.upgrade_calls == 1:
+                return subprocess.CompletedProcess(
+                    command,
+                    self.first_upgrade_returncode,
+                    stderr=self.first_upgrade_stderr,
+                )
+        return subprocess.CompletedProcess(command, 0)
 
 
 def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
@@ -759,6 +820,98 @@ def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> N
     assert plugin_dir.is_dir(), (
         f"expected {plugin_dir} untouched: an upgrade failure returns before any prune"
     )
+
+
+def test_absent_cache_with_empty_installed_set_repairs_marketplace_registration(
+    tmp_path: Path,
+) -> None:
+    """A zero-exit upgrade that leaves no marketplace cache and no installed plugins
+    is repaired by re-registering the marketplace, rerunning the upgrade, and
+    re-reading the installed set before compatibility reconciliation.
+    """
+    cache_root = tmp_path / "cache"
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION])},
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+    installed = SequenceInstalled([{}, {PLUGIN_NAME: CURRENT_VERSION}])
+    runner = RepairingMarketplaceRunner(
+        cache_root=cache_root,
+        materialize_on_upgrade_call=2,
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=installed,
+        runner=runner,
+    )
+
+    assert runner.calls == [
+        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
+        (*preserve_codex_plugin_cache.CODEX_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+        (
+            *preserve_codex_plugin_cache.CODEX_ADD_COMMAND,
+            preserve_codex_plugin_cache.DEFAULT_MARKETPLACE_SOURCE,
+        ),
+        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
+    ]
+    assert installed.calls == [DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE]
+    assert _skill_file(cache_root, PLUGIN_NAME, CURRENT_VERSION).is_file()
+    assert result.upgrade_returncode == 0
+    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
+    assert result.linked_versions == (older_path,)
+    assert older_path.is_symlink()
+    assert older_path.readlink() == Path(CURRENT_VERSION)
+
+
+def test_not_configured_git_marketplace_upgrade_adds_source_and_retries(
+    tmp_path: Path,
+) -> None:
+    """A missing Git marketplace registration is repaired by adding the marketplace
+    source and retrying the upgrade before cache reconciliation.
+    """
+    cache_root = tmp_path / "cache"
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION])},
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+    installed = SequenceInstalled([{PLUGIN_NAME: CURRENT_VERSION}])
+    runner = RepairingMarketplaceRunner(
+        cache_root=cache_root,
+        materialize_on_upgrade_call=2,
+        first_upgrade_returncode=1,
+        first_upgrade_stderr=(
+            "Error: marketplace `outcomeeng` is not configured as a Git marketplace\n"
+        ),
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=installed,
+        runner=runner,
+    )
+
+    assert runner.calls == [
+        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
+        (
+            *preserve_codex_plugin_cache.CODEX_ADD_COMMAND,
+            preserve_codex_plugin_cache.DEFAULT_MARKETPLACE_SOURCE,
+        ),
+        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
+    ]
+    assert installed.calls == [DEFAULT_MARKETPLACE]
+    assert _skill_file(cache_root, PLUGIN_NAME, CURRENT_VERSION).is_file()
+    assert result.upgrade_returncode == 0
+    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
+    assert result.linked_versions == (older_path,)
+    assert older_path.is_symlink()
+    assert older_path.readlink() == Path(CURRENT_VERSION)
 
 
 def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
