@@ -12,7 +12,7 @@ Not all tool violations are real issues. Context matters.
 
 <when_not_false_positive>
 
-- You cannot explain exactly why it's safe in this specific context
+- The reason it's safe in this specific context cannot be explained
 - The "justification" is just "we've always done it this way"
 - The code runs in a web service, API, or multi-tenant environment
 - The surprise in the predict/verify protocol has no good explanation

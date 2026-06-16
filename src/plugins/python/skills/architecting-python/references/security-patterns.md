@@ -311,7 +311,7 @@ import requests
 # SSL verification is ON by default - don't disable it
 response = requests.get("https://api.example.com/data")
 
-# If you need custom CA:
+# For a custom CA:
 response = requests.get(
     "https://internal.example.com/data",
     verify="/path/to/ca-bundle.crt",
@@ -442,7 +442,7 @@ obj = pickle.loads(user_data)  # Can execute arbitrary code!
 
 ### When Pickle is Acceptable
 
-Only for internal data YOU control:
+Only for internal, caller-controlled data:
 
 ```python
 # ACCEPTABLE - Internal cache, not from users

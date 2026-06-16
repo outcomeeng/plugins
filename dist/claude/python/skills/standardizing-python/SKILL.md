@@ -237,7 +237,7 @@ def test_processing(self, input_val: str, expected: int) -> None:
 
 - Shadows Python's builtin `input()` function
 - Causes A002 (argument shadows builtin) lint errors
-- Makes code confusing if you need the actual `input()` function
+- Makes code confusing when the actual `input()` function is needed
 - The tuple form `("input_val", "expected")` is also preferred by pytest for clarity
 
 </naming_conventions>
@@ -424,7 +424,7 @@ from . import tokens
 from .position import Position
 ```
 
-**Infrastructure** is stable code that doesn't move when your feature moves. Must use absolute imports:
+**Infrastructure** is stable code that doesn't move when the feature moves. Absolute imports are required:
 
 ```python
 # ❌ REJECTED: Deep relative to infrastructure

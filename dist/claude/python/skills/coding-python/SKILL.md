@@ -23,7 +23,7 @@ Write or fix implementation code that makes tests pass. Two modes:
 </objective>
 
 <mode_detection>
-**Determine which mode you're in:**
+**Determine the current mode:**
 
 1. **WRITE mode** - Implementation doesn't exist or tests are failing
    - Check: Tests fail with ImportError or AssertionError
