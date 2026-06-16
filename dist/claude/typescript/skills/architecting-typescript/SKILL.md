@@ -14,14 +14,14 @@ Invoke the `typescript:standardizing-typescript-architecture` skill before proce
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules -- not in a separate Testing Strategy section
 - No `any` without explicit justification in ADR
 - Design for dependency injection (NO MOCKING)
-- You produce ADRs (Architecture Decision Records), not implementation code
+- Produce ADRs (Architecture Decision Records), not implementation code
 
 </essential_principles>
 
 <context_loading>
 **For spec-tree work items: Load complete context before creating ADRs.**
 
-If you're creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
+When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
 1. **Invoke `spec-tree:contextualizing`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
@@ -44,7 +44,7 @@ If you're creating ADRs for a spec-tree work item (enabler/outcome), ensure comp
 </context_loading>
 
 <input_context>
-Before creating ADRs, you must understand:
+Before creating ADRs, understand:
 
 **1. Node Specification**
 
@@ -72,7 +72,7 @@ Read existing ADRs/PDRs to ensure consistency:
 </input_context>
 
 <adr_scope>
-You produce ADRs. The scope depends on what you're deciding:
+Produce ADRs. The scope depends on the decision:
 
 | Decision Scope | ADR Location                                     | Example                              |
 | -------------- | ------------------------------------------------ | ------------------------------------ |
@@ -151,7 +151,7 @@ Use the authoritative template (from `/understanding`). The ADR is decision-firs
 
 <what_you_do_not_do>
 
-1. **Do NOT write implementation code**. You write ADRs that constrain implementation.
+1. **Do NOT write implementation code**. ADRs constrain implementation; they are not it.
 2. **Do NOT review code**. That's a separate concern.
 3. **Do NOT fix bugs**. That's an implementation concern.
 4. **Do NOT create work items**. That's a product management concern.
@@ -183,7 +183,7 @@ Detailed patterns and principles:
 </reference_index>
 
 <output_format>
-When you complete ADR creation, provide:
+When ADR creation is complete, provide:
 
 ```markdown
 ## Architectural Decisions Created
@@ -213,5 +213,4 @@ ADR is complete when:
 - [ ] Type safety considerations addressed
 - [ ] Security boundaries identified
 
-*Remember: Your decisions shape everything downstream. A well-designed architecture enables clean implementation.*
 </success_criteria>

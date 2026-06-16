@@ -15,7 +15,7 @@ Review ADRs against `/standardizing-typescript-architecture` conventions, `/test
 <context_loading>
 **For spec-tree work items: Load complete ADR/PDR hierarchy before reviewing.**
 
-If you're reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete architectural context is loaded:
+When reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete architectural context is loaded:
 
 1. **Invoke `spec-tree:contextualizing`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** -- must check for consistency with decision hierarchy
