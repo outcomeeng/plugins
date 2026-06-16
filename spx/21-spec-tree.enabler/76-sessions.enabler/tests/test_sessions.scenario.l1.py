@@ -488,6 +488,7 @@ class TestHandoffGitContext:
             result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
             assert result.returncode != 0
             assert "SessionHandoffBaseError" in result.stderr
+            assert not list(sessions_dir.rglob("*.md"))
 
     def test_linked_worktree_detached_off_tip_is_refused(self, tmp_path):
         sessions_dir = tmp_path / "sessions"
@@ -496,6 +497,7 @@ class TestHandoffGitContext:
             result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
             assert result.returncode != 0
             assert "SessionHandoffBaseError" in result.stderr
+            assert not list(sessions_dir.rglob("*.md"))
 
     def test_explicit_work_branch_ref_records_branch_name(self, tmp_path):
         # From a linked worktree at the origin tip — the accepted pool-worktree
@@ -525,6 +527,7 @@ class TestHandoffGitContext:
             )
             assert result.returncode != 0
             assert "SessionWorkBranchNotOnOriginError" in result.stderr
+            assert not list(sessions_dir.rglob("*.md"))
 
 
 # ---------------------------------------------------------------------------
