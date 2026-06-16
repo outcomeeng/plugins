@@ -73,19 +73,20 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 **Path C — new handoff (one handoff, no artifact)**:
 
-1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`) and the markdown body.
-2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---` and prefills `created_at`, `agent_session_id`, and `git_ref` itself.
+1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
+2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
    ```bash
    # stdin = JSON header on line 1, then the body verbatim; a leading
    # '#' or '---' in the body is literal, never parsed as frontmatter.
-   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '[canonical continuation body — <metadata> through <incorporated_sessions>]' | spx session handoff
+   # git_ref names the pushed work branch — the stable anchor /pickup checks out.
+   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '[canonical continuation body — <metadata> through <incorporated_sessions>]' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
-4. Read `<SESSION_FILE>` to confirm it exists and contains the CLI-prefilled `created_at`, `agent_session_id` when available, and `git_ref` values.
+4. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available, and the `git_ref` work branch.
 
 **Content of the canonical continuation (B and C):**
 
-- Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `git_ref`)
+- Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, `git_ref` naming the pushed work branch, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `git_ref`)
 - `<nodes>` and `<skills>` — from workflow 01 (anchored nodes) and `<perspective_next_context>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, coordination notes created
 - `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
@@ -103,7 +104,7 @@ A handoff RELEASES the work branch, and it is valid only when the work it points
 1. **The work is really pushed.** Detaching a pool worktree onto `origin/<default-branch>` is lossless only because the commits live on the branch ref and on origin, so the release forces the push — turning the promise from a claim into a proof. An unpushed branch is invisible to every other checkout and machine; a session document pointing at it dangles.
 2. **The branch is free to claim.** `/pickup` checks the work branch out in a pool worktree, and git refuses a branch already checked out elsewhere. A branch left occupied is precisely the one the next agent cannot use.
 
-Run the handoff FROM the worktree that holds the work and release THAT worktree; the recorded `git_ref` and the `origin/<work-branch>` the session body names then anchor to where the work actually is.
+Run the handoff FROM the worktree that holds the work and release THAT worktree; passing the work branch as `git_ref` then anchors the recorded ref to where the work actually is — the branch `/pickup` fetches and checks out.
 
 **Two seductive instincts that each break a guarantee — act on neither:**
 
@@ -118,10 +119,11 @@ Run the handoff FROM the worktree that holds the work and release THAT worktree;
   git switch "$(basename "$(git symbolic-ref --short refs/remotes/origin/HEAD)")"   # e.g. main
   ```
 
-- **Linked (pool) worktree** — the CLI accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. The session body names `origin/<work-branch>` so `/pickup` fetches and checks it out. Leave the worktree detached afterward.
+- **Linked (pool) worktree** — the CLI's git-context gate accepts only a clean tree detached at the `origin/<default-branch>` tip and refuses any other linked-worktree state, so detach there after pushing; the commits persist on the branch ref in the shared `.git`, so detaching loses nothing. Pass the pushed work branch as the header's `git_ref` so the recorded ref is the branch (not the base tip the gate would otherwise record) — the gate still runs on the detached tip and is never bypassed. `/pickup` checks out the branch `git_ref` names. Leave the worktree detached afterward.
 
   ```bash
   git switch --detach "$(git symbolic-ref --short refs/remotes/origin/HEAD)"
+  # then run spx session handoff with "git_ref": "<work-branch>" in the JSON header
   ```
 
 NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occupying it strands the queued continuation: another context cannot claim a branch this one still holds (and git refuses a branch already checked out in another worktree). `/pickup` checks the branch out when the session is claimed.

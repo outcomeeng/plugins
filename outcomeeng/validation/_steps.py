@@ -31,6 +31,13 @@ RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
 MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
+SPX_VERSION_FLOOR_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.spx_version",
+)
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
 # Shipped authored text under src/plugins/ where a non-portable reference can hide.
@@ -155,5 +162,6 @@ STEPS: Final = (
         ),
     ),
     Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
+    Step(label="spx-version", argv=SPX_VERSION_FLOOR_ARGV),
     Step(label="pytest", argv=PYTEST_ARGV),
 )

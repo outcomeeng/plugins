@@ -112,6 +112,21 @@ class HandoffGitEnv:
         _git(self.root, "worktree", "add", "--detach", str(worktree), self.head_sha())
         return worktree
 
+    def push_work_branch(self, name: str = "work/feature") -> str:
+        """Create a branch at the ``origin/<default>`` tip, push it to origin, and
+        materialize its remote-tracking ref.
+
+        An explicit handoff ``git_ref`` is recorded only when
+        ``refs/remotes/origin/<name>`` resolves, so the fetch after the push is
+        what makes the branch reachable from every worktree sharing this repo's
+        git dir. Returns the branch name for the test to pass as the explicit
+        ref and compare against the recorded value.
+        """
+        _git(self.root, "branch", name, self.origin_tip)
+        _git(self.root, "push", "origin", name)
+        _git(self.root, "fetch", "origin")
+        return name
+
 
 @contextmanager
 def handoff_git_env() -> Iterator[HandoffGitEnv]:
