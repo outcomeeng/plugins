@@ -148,6 +148,8 @@ Resolve textual conflicts by editing the conflict markers out, then `git rebase 
 
 A rebase that cannot be resolved autonomously — semantic conflicts, ambiguous overlapping edits — emits `SYNC_BASE` from `<action_tokens>` and waits for the operator; the heartbeat re-fires.
 
+Integrate base movement only with `git rebase origin/<base>`, which updates the working tree. NEVER `git reset` onto `origin/<base>` — not to integrate, and not to reorganize the branch's own commits during the review-convergence loop. `origin/<base>` advances as concurrent worktree-pool branches merge, so a reset onto it silently re-bases the branch onto whatever it became; with `--soft` the working tree is left on the old basis while HEAD jumps forward, desyncing the tree (files present in HEAD show as deleted, files the new base changed show as modified, none of it the branch's work). To reword or re-split the branch's own commits, reset to a FIXED ancestor on the branch — `git reset --soft HEAD~N` where N is the branch's own commit count, or the fork-point SHA from `git merge-base HEAD origin/<base>` — never onto `origin/<base>`. After any history rewrite, confirm `git diff --stat origin/<base>...HEAD` shows only the intended files and `git status` reports no surprise deletions before the `<push_semantics>` push; surprise files mean the base moved under the rewrite — stop and re-derive, do not push.
+
 </base_sync>
 
 <local_review_invocation>
