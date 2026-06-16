@@ -1,7 +1,7 @@
 ---
 template_version: "0.18.15"
 template_source: spec-tree
-languages: [python, typescript, rust]
+languages: [python, typescript]
 ---
 
 # spx/ Directory Guide (Spec Tree)
@@ -183,15 +183,6 @@ Per-language code, architecture, and test audits render for the product's enable
 | "Audit ADRs for TypeScript" | `/auditing-typescript-architecture` | `typescript-architecture-auditor` |
 | "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
 
-| User Says...          | Skill                         | Agent                       |
-| --------------------- | ----------------------------- | --------------------------- |
-| "Audit this code"     | `/auditing-rust`              | `rust-code-auditor`         |
-| "Audit unsafe Rust"   | `/auditing-rust`              | `rust-unsafe-auditor`       |
-| "Audit ADRs for Rust" | `/auditing-rust-architecture` | `rust-architecture-auditor` |
-| "Audit these tests"   | `/auditing-rust-tests`        | `rust-test-auditor`         |
-
----
-
 ## Test Naming Convention
 
 Test level is encoded in the filename. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
@@ -203,15 +194,6 @@ Test level is encoded in the filename. This guide renders only the languages lis
 | 1     | `{subject}.{evidence}.l1.test.ts` | `parsing.scenario.l1.test.ts`  |
 | 2     | `{subject}.{evidence}.l2.test.ts` | `cli.scenario.l2.test.ts`      |
 | 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.scenario.l3.test.ts` |
-
-### Rust
-
-| Level | Pattern                                    | Example                         |
-| ----- | ------------------------------------------ | ------------------------------- |
-| 1     | `{subject}.{evidence}.l1.rs`               | `parsing.scenario.l1.rs`        |
-| 2     | `{subject}.{evidence}.l2.rs`               | `cli.scenario.l2.rs`            |
-| 3     | `{subject}.{evidence}.l3.rs`               | `workflow.scenario.l3.rs`       |
-| 1-3   | `{subject}.{evidence}.{level}.{runner}.rs` | `workflow.scenario.l2.tokio.rs` |
 
 ### Python
 
