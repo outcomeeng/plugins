@@ -1,6 +1,6 @@
 <overview>
 
-Technical patterns for skills that execute processes — error handling, security, dependencies, performance. Reference these when the skill you're building processes data, calls APIs, handles files, or performs any multi-step operation with failure modes.
+Technical patterns for skills that execute processes — error handling, security, dependencies, performance. Reference these when the skill being built processes data, calls APIs, handles files, or performs any multi-step operation with failure modes.
 
 Skill structure standards (naming, frontmatter, XML tags, file organization) live in `/standardizing-skills`. This file covers concerns internal to what skills DO, not how they're shaped.
 

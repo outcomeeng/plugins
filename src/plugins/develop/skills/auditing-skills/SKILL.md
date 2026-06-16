@@ -39,7 +39,7 @@ During audits, prioritize evaluation of:
 - Error handling coverage (missing files, malformed input, edge cases)
 - Example quality (concrete, realistic, demonstrates key patterns)
 - **Operational effectiveness** (verifiable success criteria, verification gates, failure modes)
-- **Procedural/operational balance** (skill tells you how to DO and how to KNOW you did it right)
+- **Procedural/operational balance** (skill states both how to DO the work and how to KNOW it was done right)
 
 </focus_areas>
 
@@ -97,7 +97,7 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 **Success Criteria Verifiability**:
 
 - Are success criteria concrete and testable? (commands to run, thresholds to check)
-- Can you answer "did I succeed?" with a boolean, not a judgment call?
+- Can "did I succeed?" be answered with a boolean, not a judgment call?
 - ❌ Bad: "Task complete when migration is done"
 - ✅ Good: "Coverage on src/foo.ts must be ≥86%. Run: `pnpm test --coverage | grep foo.ts`"
 
@@ -119,14 +119,14 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 **Example Concreteness**:
 
 - Do examples show real outputs with actual values?
-- Can you compare your output to the example to verify correctness?
+- Can the output be compared to the example to verify correctness?
 - ❌ Bad: "Coverage should match between legacy and SPX tests"
 - ✅ Good: "Legacy: 24 tests, 86.3% on state.ts. SPX: 24 tests, 86.3% on state.ts. ✓ Match"
 
 **Procedural vs Operational Balance**:
 
 - Procedural = HOW to do steps
-- Operational = how to KNOW you did it right
+- Operational = how to KNOW it was done right
 - Skills need both; flag if heavily imbalanced toward procedural
 
 </area>

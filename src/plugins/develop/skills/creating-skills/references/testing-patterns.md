@@ -6,7 +6,7 @@ Test skills with evaluation-driven development. Build evaluations BEFORE writing
 
 <evaluation_driven_development>
 
-Build evaluations first, not last. This ensures you solve actual problems, not anticipated ones.
+Build evaluations first, not last. This ensures the evals target actual problems, not anticipated ones.
 
 **Process:**
 
@@ -101,7 +101,7 @@ Develop skills with two Claude instances — "Claude A" authors, "Claude B" uses
 **Creating new skills:**
 
 1. Complete a task without a skill using normal prompting with Claude A.
-2. Identify a pattern in what you repeatedly provide as context.
+2. Identify a pattern in the context repeatedly provided.
 3. Ask Claude A to create a skill that captures the pattern.
 4. Review for conciseness — remove unnecessary explanations.
 5. Test with a fresh Claude B instance with the skill loaded.
@@ -133,7 +133,7 @@ Quality-critical skills include explicit feedback loops.
 ```markdown
 <process>
 
-1. Make your edits to the file.
+1. Edit the file.
 2. Validate immediately: run the validation script.
 3. If validation fails:
    - Review the error message carefully.

@@ -171,7 +171,7 @@ Combines positional arguments with dynamic bash execution.
 
 ### Use $ARGUMENTS for Simple Commands
 
-When you just need to pass a value through:
+When simply passing a value through:
 
 ```markdown
 Fix issue #$ARGUMENTS

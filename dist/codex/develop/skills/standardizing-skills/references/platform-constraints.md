@@ -20,7 +20,7 @@ name: demo
 
 **Multi-nested breaks.** Never nest multiple 3-backtick blocks inside a single 4-backtick fence — `markup_fmt` (dprint) prematurely closes the outer fence after the first inner fence, destroying all subsequent content.
 
-**Workaround:** when you need to show a markdown template that itself contains multiple code blocks, move the template into `references/` and point to it:
+**Workaround:** to show a markdown template that itself contains multiple code blocks, move the template into `references/` and point to it:
 
 ```markdown
 <example_review>
