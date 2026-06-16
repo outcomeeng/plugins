@@ -17,6 +17,7 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng import validation
+from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV, STEPS
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[4]
 GATE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
@@ -75,6 +76,24 @@ def test_gate_workflow_invokes_the_full_gate_recipe() -> None:
     ]
 
     assert any(GATE_MODULE in run for run in runs)
+
+
+def test_gate_declares_workflow_and_shell_lint_steps() -> None:
+    step_argvs = {step.argv for step in STEPS}
+
+    assert ACTIONLINT_ARGV in step_argvs
+    assert SHELLCHECK_ARGV in step_argvs
+
+
+def test_gate_workflow_provisions_workflow_and_shell_lint_tools() -> None:
+    workflow = _workflow()
+    env = cast("dict[str, str]", _gate_job(workflow)["env"])
+    runs = [cast("str", step["run"]) for step in _gate_steps(workflow) if "run" in step]
+
+    assert "ACTIONLINT_VERSION" in env
+    assert "SHELLCHECK_VERSION" in env
+    assert any("actionlint" in run for run in runs)
+    assert any("shellcheck" in run for run in runs)
 
 
 def test_gate_workflow_python_matches_project_metadata() -> None:

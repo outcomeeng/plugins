@@ -46,9 +46,9 @@ jobs:
           # Configure git to use the token for HTTPS pushes
           git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
 
-          ARGS=""
+          ARGS=()
           if [ -n "${{ inputs.repo }}" ]; then
-            ARGS="--repo ${{ inputs.repo }}"
+            ARGS=(--repo "${{ inputs.repo }}")
           fi
 
-          PYTHONPATH=. python -m outcomeeng.distribution.distribute $ARGS
+          PYTHONPATH=. python -m outcomeeng.distribution.distribute "${ARGS[@]}"

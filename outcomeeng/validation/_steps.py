@@ -4,10 +4,10 @@
 list. Drift in the gate's composition is a regression the fixed tuple guards
 against.
 
-The compliance test enforces that `("ruff", "format", "--check")`,
-`("ruff", "check")`, the strict mypy package command, the pyright package
-command, and `("spx", "validation", "markdown")` appear in the declared step
-list.
+The compliance test enforces that the workflow lint, shell lint,
+`("ruff", "format", "--check")`, `("ruff", "check")`, the strict mypy package
+command, the pyright package command, and `("spx", "validation", "markdown")`
+appear in the declared step list.
 """
 
 from __future__ import annotations
@@ -26,6 +26,14 @@ from outcomeeng.validation._model import Step
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 
+ACTIONLINT_ARGV: Final = ("actionlint",)
+SHELLCHECK_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.shellcheck",
+)
 RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
 RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
 MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
@@ -98,6 +106,8 @@ STEPS: Final = (
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
     Step(label="fmt-check", argv=("dprint", "check")),
+    Step(label="actionlint", argv=ACTIONLINT_ARGV),
+    Step(label="shellcheck", argv=SHELLCHECK_ARGV),
     Step(label="ruff-format", argv=RUFF_FORMAT_ARGV),
     Step(label="ruff", argv=RUFF_CHECK_ARGV),
     Step(label="mypy", argv=MYPY_ARGV),
