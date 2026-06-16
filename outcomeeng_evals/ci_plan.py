@@ -94,6 +94,8 @@ def _pr_selection(
             return ()
         if _matches_any(changed_path, (eval_dir_pattern, eval_toml.as_posix())):
             return ()
+
+    for changed_path in changed_paths:
         if _matches_any(changed_path, owned_paths):
             return smoke_case_ids
     return None

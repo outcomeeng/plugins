@@ -260,7 +260,7 @@ def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
     ]
 
 
-def test_plan_subcommand_selects_smoke_cases_for_deleted_owned_path(
+def test_plan_subcommand_selects_full_suite_when_harness_change_follows_owned_path(
     tmp_path: Path,
 ) -> None:
     runner = CliRunner()
@@ -271,7 +271,10 @@ def test_plan_subcommand_selects_smoke_cases_for_deleted_owned_path(
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
-        "src/plugins/spec-tree/skills/managing-pr/SKILL.md\n",
+        (
+            "src/plugins/spec-tree/skills/managing-pr/SKILL.md\n"
+            "outcomeeng_evals/suite.py\n"
+        ),
         encoding="utf-8",
     )
 
@@ -293,7 +296,7 @@ def test_plan_subcommand_selects_smoke_cases_for_deleted_owned_path(
         {
             "eval_toml": str(eval_toml),
             "plugin_dir": "dist/claude/spec-tree",
-            "case_ids": ["happy-path"],
+            "case_ids": [],
         }
     ]
 
