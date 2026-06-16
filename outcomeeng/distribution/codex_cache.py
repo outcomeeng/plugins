@@ -331,11 +331,13 @@ def preserve_during_upgrade(
             # version resolve to non-current content. validate_install reports the
             # absent or incomplete current version.
             pruned_links.extend(_prune_all_symlinks(plugin_dir, dry_run=dry_run))
-            _prune_non_target_real_dirs(
-                plugin_dir,
-                current_version,
-                keep_versions=frozenset(),
-                dry_run=dry_run,
+            pruned_links.extend(
+                _prune_non_target_real_dirs(
+                    plugin_dir,
+                    current_version,
+                    keep_versions=frozenset(),
+                    dry_run=dry_run,
+                )
             )
             continue
 
@@ -343,11 +345,13 @@ def preserve_during_upgrade(
         pruned_links.extend(
             _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
         )
-        _prune_non_target_real_dirs(
-            plugin_dir,
-            current_real.name,
-            keep_versions=keep_versions,
-            dry_run=dry_run,
+        pruned_links.extend(
+            _prune_non_target_real_dirs(
+                plugin_dir,
+                current_real.name,
+                keep_versions=keep_versions,
+                dry_run=dry_run,
+            )
         )
         linked_versions.extend(
             _ensure_in_window_symlinks(
@@ -421,7 +425,8 @@ def _prune_non_target_real_dirs(
     *,
     keep_versions: frozenset[str],
     dry_run: bool,
-) -> None:
+) -> list[Path]:
+    pruned: list[Path] = []
     for entry in sorted(plugin_dir.iterdir()):
         if entry.is_symlink() or not entry.is_dir():
             continue
@@ -433,6 +438,8 @@ def _prune_non_target_real_dirs(
             continue
         if not dry_run:
             shutil.rmtree(entry)
+        pruned.append(entry)
+    return pruned
 
 
 def _prune_out_of_window_paths(
