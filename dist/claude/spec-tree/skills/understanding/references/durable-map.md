@@ -35,7 +35,7 @@ When evaluating a higher-level artifact that leads implementation:
 1. Preserve the declaration when the product or architecture model is coherent.
 2. Identify the first lower-level specs that must absorb the declaration.
 3. Distinguish declaration validity from implementation completeness.
-4. Treat lower-layer mismatch as downstream work unless the PR claims the lower layer is already passing for that assertion.
+4. Treat lower-layer mismatch as downstream work unless the changeset claims the lower layer is already passing for that assertion.
 5. Use node-local `PLAN.md` for concrete implementation steps that remain when tests or code are not part of the slice; a change that only aligns already-implemented truth records no plan.
 6. Use node-local `ISSUES.md` for known defects, contradictions, or unresolved gaps.
 7. Use `spx/EXCLUDE` only for nodes whose specs and tests exist while implementation is absent. Never use exclusion to make a PDR, ADR, product spec, or ancestor spec safe.
@@ -46,9 +46,9 @@ A current implementation shape is evidence about what code does now. It is not e
 
 <decision_to_spec_alignment>
 
-When a PR changes a higher-level artifact, the PR must also align the first affected lower-level specs so the declaration has an immediate path down the tree.
+When a changeset changes a higher-level artifact, the changeset must also align the first affected lower-level specs so the declaration has an immediate path down the tree.
 
-Minimum same-PR alignment contract:
+Minimum same-changeset alignment contract:
 
 - Product spec, PDR, or ADR change: update every directly affected child or target spec assertion that first receives the new truth.
 - Ancestor spec change: update descendant specs only when the changed assertion constrains them.
@@ -56,7 +56,7 @@ Minimum same-PR alignment contract:
 - `ISSUES.md` records known defects or contradictions. `PLAN.md` records pending node work.
 - Do not leave a higher-level declaration floating above the tree with no lower spec or node-local plan that carries the same understanding forward.
 
-This alignment is about declarations and coordination, not forced implementation. The first PR that declares new higher-level truth does not need to write every test or all code, but it must show where the truth enters the lower tree and where remaining work resumes.
+This alignment is about declarations and coordination, not forced implementation. The first changeset that declares new higher-level truth does not need to write every test or all code, but it must show where the truth enters the lower tree and where remaining work resumes.
 
 </decision_to_spec_alignment>
 
@@ -163,7 +163,7 @@ What happened: Claude reviewed a PDR that declared a cleaner product model than 
 
 Why it failed: Claude treated implementation incompleteness as evidence against the decision. Spec Tree truth flows down; a PDR can lead code and create downstream work.
 
-How to avoid: When a decision is ahead of implementation, preserve the product truth, identify the first affected lower specs, and name the follow-on work. Challenge incoherent product taxonomy, wrong artifact placement, missing affected-spec alignment, or a PR that falsely claims lower-layer passing evidence.
+How to avoid: When a decision is ahead of implementation, preserve the product truth, identify the first affected lower specs, and name the follow-on work. Challenge incoherent product taxonomy, wrong artifact placement, missing affected-spec alignment, or a changeset that falsely claims lower-layer passing evidence.
 
 **Failure 2: Claude treated missing implementation as evidence against product truth**
 
@@ -179,7 +179,7 @@ What happened: Claude authored or edited a product spec, ADR, PDR, or ancestor s
 
 Why it failed: Future work lost the understanding that produced the decision. The next session saw a high-level declaration with no first affected spec or node-local plan to continue from.
 
-How to avoid: In the same PR, update the first affected lower specs. When tests or code remain pending, add `PLAN.md` at the first affected lower node with the next implementation step and the governing higher-level artifact.
+How to avoid: In the same changeset, update the first affected lower specs. When tests or code remain pending, add `PLAN.md` at the first affected lower node with the next implementation step and the governing higher-level artifact.
 
 **Failure 4: Claude used `spx/EXCLUDE` as a conceptual escape hatch**
 

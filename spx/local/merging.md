@@ -50,7 +50,7 @@ A coordination-note-only changeset publishes straight to `main` with no pull req
 
 **Review predicate.** No CI review exists on this path. The local `changes-reviewer` review (converged at `REVIEW_READINESS`) is the `MERGE_READINESS` review predicate. `PRODUCTION_READINESS` holds — this repository declares no production-relevance mechanism (above).
 
-**Push command.** Once `REVIEW_READINESS` holds (spec-lane verification green and the local review converged), publish to trunk with the explicit destination ref:
+**Push command.** Once `REVIEW_READINESS` holds (spec-lane verification green and the local review converged), publish to the default branch on origin (`main` in this repository) with the explicit destination ref:
 
 ```bash
 git push origin HEAD:refs/heads/main

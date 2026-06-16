@@ -2,17 +2,17 @@
 name: standardizing-merging
 user-invocable: false
 description: >-
-  Shared vocabulary for the PR flow — pre-flight predicates, branch topology gate, push command, the three PR-authority gates (review / merge / production readiness), review classification, three review surfaces, action tokens, and repo-local overlay topics.
-  Loaded by /github-pr, /opening-pr, and /managing-pr.
+  Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, the three authority gates (review / merge / production readiness), review classification, integration review surfaces, action tokens, delivered-value boundary, and repo-local overlay topics.
+  Loaded by /merge, /github-pr, /opening-pr, and /managing-pr.
 allowed-tools: Read
 ---
 
 <objective>
-Defines the concepts, predicates, gates, commands, and tokens shared by the PR lifecycle — /github-pr as router, /opening-pr as the one-shot opening protocol, and /managing-pr as the per-heartbeat managing protocol. Carries no flow itself; ships vocabulary only.
+Defines the concepts, predicates, gates, commands, and tokens shared by the merge lifecycle — /merge as dispatcher, /github-pr as router, /opening-pr as the one-shot opening protocol, and /managing-pr as the per-heartbeat managing protocol. Carries no flow itself; ships vocabulary only.
 </objective>
 
 <reference_note>
-This is a reference skill. /github-pr, /opening-pr, and /managing-pr load this vocabulary automatically. Do not invoke directly.
+This is a reference skill. /merge, /github-pr, /opening-pr, and /managing-pr load this vocabulary automatically. Do not invoke directly.
 </reference_note>
 
 <repo_local_overlay>
@@ -30,6 +30,14 @@ If `spx/local/merging.md` is absent or silent on a topic, the defaults in this r
 
 The overlay cannot override the open-ready mandate — once `REVIEW_READINESS` holds the PR is created `ready_for_review`. There is no draft phase and no gated draft-to-ready promotion; a stacked PR is the one exception, held draft per `<branch_topology>` until its base merges.
 </repo_local_overlay>
+
+<delivered_value_boundary>
+
+For changes destined for a repository's default branch, value is delivered only when the selected merge lifecycle reaches the default branch on origin. A branch with committed changes ahead of its resolved base is unfinished even when the working tree is clean and deterministic verification, tests, local review, or audits have passed. Those signals are progress evidence for `REVIEW_READINESS` and later gates, never completion.
+
+When a status assessment finds a determined changeset with commits ahead of its resolved base, Claude reports the evidence it found and continues through the merge lifecycle unless the user explicitly limited the task to proposal, review, analysis, or local-only work, or the lifecycle emits an explicit `<action_tokens>` stop with no independent local action remaining. Terse follow-ups such as "so?", "continue", "ship it", "finish", and "go on" mean continue the already-governed lifecycle.
+
+</delivered_value_boundary>
 
 <branch_hygiene>
 
@@ -382,7 +390,7 @@ No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity string
 
 <success_criteria>
 
-The two flows that consume this vocabulary satisfy their contracts when, at minimum:
+The flows that consume this vocabulary satisfy their contracts when, at minimum:
 
 - `<branch_hygiene>` predicates hold before every push (initial and every follow-up).
 - `<branch_topology>` is classified before every push, with the matching gate passing.
@@ -396,6 +404,8 @@ The two flows that consume this vocabulary satisfy their contracts when, at mini
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
 - Every auditor verdict from a local auditor agent (per `<auditor_verdicts>`) is handled as an in-slice finding; `REJECTED` or `UNKNOWN` overall verdicts, `FAIL` or `UNKNOWN` rows, and `REJECT` findings are fixed or resolved in the slice, not deferred to `ISSUES.md`.
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: the current-head CI review has no unresolved valid `BLOCKING` or `DEBT` finding, every other required check is terminal-green, branch hygiene and PR-state hold on the freshly inspected head, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
+- A committed changeset ahead of its resolved base is treated as unfinished until it reaches the default branch on origin through the selected lifecycle, or stops at an explicit `<action_tokens>` emission with no independent local action remaining.
+- Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions.
 - Merge runs via rebase merge followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; Claude does not enforce it), not Claude's choice from the gate alone.
 - The lifecycle runs from the determined changeset autonomously when the overlay declares no pre-mutation confirmation; when the overlay opts in, the structured-question plan presentation precedes the first mutating action and Claude waits for confirmation.
