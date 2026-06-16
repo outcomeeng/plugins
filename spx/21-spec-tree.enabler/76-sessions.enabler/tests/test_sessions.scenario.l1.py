@@ -60,12 +60,22 @@ def _handoff(
     priority: str = "medium",
     goal: str = "Verify handoff behavior",
     next_step: str = "Inspect the session file",
+    git_ref: str | None = None,
 ) -> subprocess.CompletedProcess:
     # spx session handoff takes the JSON-prefix wire format: a single JSON
     # object of caller-supplied fields on the first line, then the body bytes
     # verbatim. It is run from an spx-accepted git context (cwd) so the result
-    # does not depend on the runner's ambient git state.
-    header = json.dumps({"priority": priority, "goal": goal, "next_step": next_step})
+    # does not depend on the runner's ambient git state. When git_ref is set it
+    # names the work branch the CLI records after verifying it exists on origin;
+    # omitted, the CLI derives git_ref from the git context.
+    fields: dict[str, str] = {
+        "priority": priority,
+        "goal": goal,
+        "next_step": next_step,
+    }
+    if git_ref is not None:
+        fields["git_ref"] = git_ref
+    header = json.dumps(fields)
     return subprocess.run(
         ["spx", "session", "handoff", "--sessions-dir", str(sessions_dir)],
         input=f"{header}\n{body}",
@@ -486,6 +496,35 @@ class TestHandoffGitContext:
             result = _handoff(sessions_dir, "# Session\n", cwd=worktree)
             assert result.returncode != 0
             assert "SessionHandoffBaseError" in result.stderr
+
+    def test_explicit_work_branch_ref_records_branch_name(self, tmp_path):
+        # From a linked worktree at the origin tip — the accepted pool-worktree
+        # state whose gate-derived git_ref is the tip SHA — an explicit ref
+        # naming a branch on origin records the branch name instead, so the
+        # handoff anchors at the feature branch rather than the base.
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            work_branch = env.push_work_branch("work/feature")
+            worktree = env.linked_at_origin_tip()
+            result = _handoff(
+                sessions_dir, "# Session\n", cwd=worktree, git_ref=work_branch
+            )
+            assert result.returncode == 0, result.stderr
+            git_ref = _read_git_ref(_parse_session_file(result.stdout))
+            assert git_ref == work_branch
+            assert git_ref != env.origin_tip
+
+    def test_explicit_work_branch_ref_absent_from_origin_is_refused(self, tmp_path):
+        # An explicit ref the CLI cannot resolve on origin is refused rather than
+        # recorded, so a handoff never anchors at a branch a cold agent cannot fetch.
+        sessions_dir = tmp_path / "sessions"
+        with handoff_git_env() as env:
+            worktree = env.linked_at_origin_tip()
+            result = _handoff(
+                sessions_dir, "# Session\n", cwd=worktree, git_ref="work/absent"
+            )
+            assert result.returncode != 0
+            assert "SessionWorkBranchNotOnOriginError" in result.stderr
 
 
 # ---------------------------------------------------------------------------

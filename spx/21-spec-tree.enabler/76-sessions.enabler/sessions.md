@@ -23,6 +23,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - Given a root worktree with a detached HEAD, when `spx session handoff` runs, then it creates the session and records `git_ref` as the HEAD commit SHA ([test](tests/test_sessions.scenario.l1.py))
 - Given a linked worktree with a clean tree detached at the `origin/<default-branch>` tip, when `spx session handoff` runs, then it creates the session and records `git_ref` as that tip commit SHA ([test](tests/test_sessions.scenario.l1.py))
 - Given a linked worktree in any other state — on a named branch, or detached away from the `origin/<default-branch>` tip — when `spx session handoff` runs, then it is refused with `SessionHandoffBaseError` ([test](tests/test_sessions.scenario.l1.py))
+- Given a linked worktree at the `origin/<default-branch>` tip and an explicit work-branch ref naming a branch on `origin` in the JSON header, when `spx session handoff` runs, then it records `git_ref` as that branch name rather than the tip SHA ([test](tests/test_sessions.scenario.l1.py))
+- Given an explicit work-branch ref naming a branch absent from `origin`, when `spx session handoff` runs, then it is refused with `SessionWorkBranchNotOnOriginError` ([test](tests/test_sessions.scenario.l1.py))
 
 ### Conformance
 
