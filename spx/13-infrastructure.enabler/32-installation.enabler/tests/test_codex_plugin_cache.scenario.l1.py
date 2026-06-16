@@ -67,17 +67,17 @@ class StaticHistory:
 
 @dataclass(frozen=True)
 class StaticInstalled:
-    """Interaction-protocol stub for the Codex installed-set provider.
+    """Interaction-protocol stub for the Codex installed-version provider.
 
     Stage 5 exception 2 (interaction-protocol DI): the real provider queries the
     `codex` binary, which is absent at l1, so the installed set is injected as a
-    typed Protocol returning a deterministic plugin-name set.
+    typed Protocol returning deterministic plugin-name to version data.
     """
 
-    names: frozenset[str]
+    versions: dict[str, str]
 
-    def installed_plugins(self, marketplace: str) -> frozenset[str]:
-        return self.names
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
+        return self.versions
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,7 @@ class RaisingInstalled:
     """Stub that fails the installed-set query (Stage 5 exception 1 -- failure
     simulation), proving preservation aborts before mutating the cache."""
 
-    def installed_plugins(self, marketplace: str) -> frozenset[str]:
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
         raise preserve_codex_plugin_cache.InstalledSetError(
             "installed-set query failed"
         )
@@ -107,6 +107,23 @@ def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None
     skill_file = _skill_file(cache_root, plugin, version)
     skill_file.parent.mkdir(parents=True)
     skill_file.write_text(text)
+    manifest = (
+        cache_root
+        / DEFAULT_MARKETPLACE
+        / plugin
+        / version
+        / preserve_codex_plugin_cache.CODEX_PLUGIN_MANIFEST
+    )
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+
+
+def _write_partial_hook_root(cache_root: Path, plugin: str, version: str) -> None:
+    hook_script = (
+        cache_root / DEFAULT_MARKETPLACE / plugin / version / "scripts" / "load-gate.py"
+    )
+    hook_script.parent.mkdir(parents=True)
+    hook_script.write_text("print('partial hook root')\n")
 
 
 def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
@@ -153,6 +170,108 @@ def test_chain_recovery_restores_in_window_published_version_as_symlink(
     )
     assert older_dir in result.linked_versions, (
         f"expected {older_dir} in result.linked_versions={result.linked_versions}"
+    )
+
+
+def test_stale_worktree_target_and_partial_root_replaced_by_codex_target(
+    tmp_path: Path,
+) -> None:
+    """Reproduces the active-session failure mode: the worktree manifest still says
+    `CURRENT_VERSION`, Codex reports `NEW_CURRENT_VERSION`, and a manual recovery
+    left `CURRENT_VERSION` as a partial real plugin root while an older
+    compatibility path points at it. Preservation rewrites both in-window paths as
+    direct symlinks to the complete Codex-reported version, leaving exactly one real
+    directory for the plugin.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
+    _write_partial_hook_root(cache_root, PLUGIN_NAME, CURRENT_VERSION)
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    installed_dir = plugin_dir / NEW_CURRENT_VERSION
+    stale_worktree_path = plugin_dir / CURRENT_VERSION
+    older_link = plugin_dir / OLDER_VERSION
+    older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset(
+                [OLDER_VERSION, CURRENT_VERSION, NEW_CURRENT_VERSION]
+            ),
+        },
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
+        runner=_quiet_runner,
+    )
+
+    assert stale_worktree_path.is_symlink(), (
+        f"expected partial root {stale_worktree_path} replaced by a symlink"
+    )
+    assert stale_worktree_path.resolve() == installed_dir, (
+        f"expected {stale_worktree_path} to resolve directly to {installed_dir}"
+    )
+    assert older_link.is_symlink(), f"expected {older_link} to remain a symlink"
+    assert older_link.resolve() == installed_dir, (
+        f"expected {older_link} to resolve directly to {installed_dir}"
+    )
+    real_versions = [
+        path.name
+        for path in plugin_dir.iterdir()
+        if path.is_dir() and not path.is_symlink()
+    ]
+    assert real_versions == [NEW_CURRENT_VERSION], (
+        f"expected exactly one real version directory, got {real_versions}"
+    )
+    assert stale_worktree_path in result.linked_versions
+
+
+def test_extra_real_version_directory_replaced_by_direct_symlink(
+    tmp_path: Path,
+) -> None:
+    """When a prior installed version remains as a complete real directory, the
+    preservation step converts that in-window path into a direct symlink to the
+    Codex-reported installed version so the plugin cache has one real root.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "stale real content")
+    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    stale_real_path = plugin_dir / CURRENT_VERSION
+    installed_dir = plugin_dir / NEW_CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION, NEW_CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+
+    preserve_codex_plugin_cache.preserve_during_upgrade(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
+        runner=_quiet_runner,
+    )
+
+    assert stale_real_path.is_symlink(), (
+        f"expected non-target real directory {stale_real_path} replaced"
+    )
+    assert stale_real_path.resolve() == installed_dir, (
+        f"expected {stale_real_path} to resolve directly to {installed_dir}"
+    )
+    real_versions = [
+        path.name
+        for path in plugin_dir.iterdir()
+        if path.is_dir() and not path.is_symlink()
+    ]
+    assert real_versions == [NEW_CURRENT_VERSION], (
+        f"expected exactly one real version directory, got {real_versions}"
     )
 
 
@@ -254,8 +373,9 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
 ) -> None:
     """A successful upgrade leaves only the older version as a real directory while
     the current working-tree version is in the published window but not materialized
-    as a real directory. Preservation creates no compatibility symlink for the current
-    version, so the current version path never resolves to the stale older directory.
+    as a real directory. Preservation creates no compatibility symlink for the
+    current version and removes the non-target real directory, so no cache path
+    resolves to stale content.
     """
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
@@ -284,8 +404,8 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
     assert result.linked_versions == (), (
         f"expected no compatibility symlinks created, got {result.linked_versions}"
     )
-    assert older_dir.is_dir() and not older_dir.is_symlink(), (
-        f"expected {older_dir} to remain an untouched real directory"
+    assert not older_dir.exists(), (
+        f"expected non-target real directory {older_dir} removed"
     )
 
 
@@ -294,8 +414,9 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
 ) -> None:
     """A prior run left a compatibility symlink at the current version pointing at an
     older real directory, and the current version still has no real directory. The
-    next preservation run removes the stale symlink so the current version resolves
-    to nothing rather than to the older directory's content.
+    next preservation run removes the stale symlink and the non-target real directory
+    so the current version resolves to nothing rather than to the older directory's
+    content.
     """
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
@@ -325,8 +446,8 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     assert current_link in result.pruned_links, (
         f"expected {current_link} in result.pruned_links={result.pruned_links}"
     )
-    assert older_dir.is_dir() and not older_dir.is_symlink(), (
-        f"expected {older_dir} to remain an untouched real directory"
+    assert not older_dir.exists(), (
+        f"expected non-target real directory {older_dir} removed"
     )
 
 
@@ -335,8 +456,8 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
 ) -> None:
     """A prior run left an older in-window version symlinked to a now-non-current
     real directory, and the new current version has no real directory. The next
-    preservation run removes every compatibility symlink for the plugin so no
-    version resolves to the non-current directory.
+    preservation run removes every compatibility symlink and the non-target real
+    directory for the plugin so no version resolves to the non-current directory.
     """
     cache_root = tmp_path / "cache"
     # CURRENT_VERSION is the prior current with a real directory; OLDER_VERSION is an
@@ -371,8 +492,8 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
     assert older_link in result.pruned_links, (
         f"expected {older_link} in result.pruned_links={result.pruned_links}"
     )
-    assert prior_real_dir.is_dir() and not prior_real_dir.is_symlink(), (
-        f"expected the real directory {prior_real_dir} to remain untouched"
+    assert not prior_real_dir.exists(), (
+        f"expected non-target real directory {prior_real_dir} removed"
     )
 
 
@@ -381,8 +502,8 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
 ) -> None:
     """Two compatibility symlinks — an older in-window entry and a current-version
     entry, both pointing at the same prior real directory — are all removed in one
-    pass when the declared current version has no real directory of its own, so the
-    "every symlink" invariant holds for more than one symlink.
+    pass when the declared current version has no real directory of its own, and the
+    non-target real directory is removed in the same pass.
     """
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
@@ -416,8 +537,8 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
     assert older_link in result.pruned_links and current_link in result.pruned_links, (
         f"expected both symlinks in result.pruned_links={result.pruned_links}"
     )
-    assert prior_real_dir.is_dir() and not prior_real_dir.is_symlink(), (
-        f"expected the real directory {prior_real_dir} to remain untouched"
+    assert not prior_real_dir.exists(), (
+        f"expected non-target real directory {prior_real_dir} removed"
     )
 
 
@@ -427,7 +548,8 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     """A working-tree plugin whose current version cannot be determined (absent from
     the history's current-version map, as when its manifest version is unreadable)
     takes the no-current-real-directory branch: its compatibility symlinks are pruned
-    and the loop exits cleanly without creating any link.
+    and the loop exits cleanly without creating any link or leaving a non-target real
+    directory.
     """
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "older content")
@@ -459,8 +581,8 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     assert result.linked_versions == (), (
         f"expected no links when the current version is undeterminable, got {result.linked_versions}"
     )
-    assert older_dir.is_dir() and not older_dir.is_symlink(), (
-        f"expected {older_dir} to remain an untouched real directory"
+    assert not older_dir.exists(), (
+        f"expected non-target real directory {older_dir} removed"
     )
 
 
@@ -490,7 +612,7 @@ def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> N
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
-        installed=StaticInstalled(frozenset()),
+        installed=StaticInstalled({}),
         runner=_quiet_runner,
     )
 
@@ -648,7 +770,7 @@ def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
-        installed=StaticInstalled(frozenset([PLUGIN_NAME])),
+        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
@@ -694,7 +816,7 @@ def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
-        installed=StaticInstalled(frozenset()),
+        installed=StaticInstalled({}),
         runner=_quiet_runner,
     )
 

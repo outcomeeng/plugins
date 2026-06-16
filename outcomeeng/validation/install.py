@@ -33,6 +33,7 @@ from pathlib import Path
 
 from outcomeeng.distribution.codex_cache import (
     CODEX_LIST_COMMAND,
+    CODEX_PLUGIN_MANIFEST,
     CommandRunner,
     run_command_capture,
 )
@@ -314,6 +315,47 @@ def check_version_present(
     return True
 
 
+def check_single_real_codex_version(
+    cache_root: Path,
+    marketplace: str,
+    plugin: str,
+    expected_version: str,
+    errors: list[str],
+) -> None:
+    """Assert the Codex cache has no extra real version roots for this plugin."""
+    plugin_dir = cache_root / marketplace / plugin
+    if not plugin_dir.is_dir():
+        return
+    real_versions = [
+        e for e in sorted(plugin_dir.iterdir()) if e.is_dir() and not e.is_symlink()
+    ]
+    if len(real_versions) <= 1:
+        return
+    found = ", ".join(entry.name for entry in real_versions)
+    errors.append(
+        f"MULTIPLE REAL  {plugin_dir}  "
+        f"(expected one real directory for {expected_version}; found {found})"
+    )
+
+
+def check_complete_codex_entries(
+    cache_root: Path,
+    marketplace: str,
+    plugin: str,
+    errors: list[str],
+) -> None:
+    """Assert every Codex version path resolves to a complete plugin root."""
+    plugin_dir = cache_root / marketplace / plugin
+    if not plugin_dir.is_dir():
+        return
+    for entry in sorted(plugin_dir.iterdir()):
+        if not entry.is_dir() and not entry.is_symlink():
+            continue
+        manifest = entry / CODEX_PLUGIN_MANIFEST
+        if not manifest.is_file():
+            errors.append(f"INCOMPLETE  {entry}  (missing {CODEX_PLUGIN_MANIFEST})")
+
+
 def check_any_real_version_present(
     cache_root: Path,
     marketplace: str,
@@ -395,6 +437,7 @@ def validate(
     claude_cache_override: Path | None = None,
     codex_cache_override: Path | None = None,
     codex_marketplace_version: Callable[[str], str | None] | None = None,
+    codex_resolved_versions: dict[str, str] | None = None,
 ) -> ValidationResult:
     resolved_root = repo_root if repo_root is not None else Path.cwd()
     resolved_now = now if now is not None else time.time()
@@ -411,6 +454,7 @@ def validate(
     published_for = codex_marketplace_version or (
         lambda plugin: read_codex_marketplace_version(marketplace, plugin)
     )
+    resolved_versions = codex_resolved_versions or {}
     working_tree_plugins = set(versions)
 
     collect_orphan_plugins(claude, marketplace, working_tree_plugins, warnings)
@@ -426,22 +470,33 @@ def validate(
                 claude, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-        # Codex: auto-upgrades on marketplace upgrade. The working-tree manifest
-        # version must be present as a real directory — UNLESS the working tree
-        # is strictly ahead of the version the Codex marketplace clone publishes
-        # (typical on a feature branch that bumped a manifest before merge). In
-        # that case the absent newer version is structural lag, not a fault, and
-        # the published version is what actually has to be in the cache.
+        # Codex: validates the version Codex reports as installed when available.
+        # If that live signal is unavailable, it falls back to the marketplace
+        # clone's published version for feature-branch lag tolerance.
         if (codex / marketplace / plugin).exists():
-            published = published_for(plugin)
-            if published is not None and is_strictly_ahead(version, published):
-                warnings.append(
-                    f"{plugin}  working-tree {version} ahead of marketplace "
-                    f"clone {published}; verifying clone version in cache"
-                )
-                check_version_present(codex, marketplace, plugin, published, errors)
+            target_version = resolved_versions.get(plugin)
+            if target_version is not None:
+                if target_version != version:
+                    warnings.append(
+                        f"{plugin}  working-tree {version} differs from Codex "
+                        f"resolved {target_version}; verifying Codex resolved "
+                        "version in cache"
+                    )
             else:
-                check_version_present(codex, marketplace, plugin, version, errors)
+                published = published_for(plugin)
+                if published is not None and is_strictly_ahead(version, published):
+                    target_version = published
+                    warnings.append(
+                        f"{plugin}  working-tree {version} ahead of marketplace "
+                        f"clone {published}; verifying clone version in cache"
+                    )
+                else:
+                    target_version = version
+            check_version_present(codex, marketplace, plugin, target_version, errors)
+            check_single_real_codex_version(
+                codex, marketplace, plugin, target_version, errors
+            )
+            check_complete_codex_entries(codex, marketplace, plugin, errors)
             check_no_stale_symlinks(
                 codex, marketplace, plugin, max_age_days, resolved_now, errors
             )
@@ -459,6 +514,7 @@ def main(argv: list[str] | None = None) -> int:
 
     repo_root = Path.cwd()
     versions = current_versions(repo_root)
+    reported_versions = codex_reported_versions(args.marketplace)
 
     print_cache(
         claude_cache_root(),
@@ -472,11 +528,14 @@ def main(argv: list[str] | None = None) -> int:
         "Codex",
         args.marketplace,
         versions,
-        current_override=codex_reported_versions(args.marketplace),
+        current_override=reported_versions,
     )
 
     result = validate(
-        args.marketplace, repo_root=repo_root, max_age_days=args.max_age_days
+        args.marketplace,
+        repo_root=repo_root,
+        max_age_days=args.max_age_days,
+        codex_resolved_versions=reported_versions,
     )
 
     for warning in result.warnings:

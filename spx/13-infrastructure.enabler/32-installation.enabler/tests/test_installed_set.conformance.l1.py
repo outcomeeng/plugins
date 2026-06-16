@@ -3,13 +3,13 @@
 The cache-preservation step scopes its work to the plugins Codex reports as
 installed for the marketplace, read from `codex plugin list --json
 --marketplace <mkt>`. These tests pin the parser to the Codex CLI's JSON
-contract: the `installed` array's `name` entries scoped to the queried
-marketplace, and a loud failure on any payload that does not match — so a
-changed CLI contract is detected rather than silently read as an empty
-installed set.
+contract: the `installed` array's `name` and `version` entries scoped to the
+queried marketplace, and a loud failure on any payload that does not match — so a
+changed CLI contract is detected rather than silently read as an empty installed
+set or stale target.
 
-The provider scenarios inject a runner stub (Stage 5 exception 1 -- failure
-simulation, and exception 7 -- contract probe) so the CLI boundary is exercised
+The provider scenarios inject a runner stub (Stage 5 exception 1 — failure
+simulation, and exception 7 — contract probe) so the CLI boundary is exercised
 without the real `codex` binary, which is absent in CI.
 """
 
@@ -41,128 +41,165 @@ class StubRunner:
         return self.result
 
 
-def _payload(installed: list[dict[str, str]]) -> str:
+def _payload(installed: list[dict[str, object]]) -> str:
     return json.dumps({"installed": installed, "available": []})
 
 
-def test_parse_extracts_installed_names_for_marketplace() -> None:
-    """A well-formed payload yields the `name` of every `installed` entry whose
-    marketplaceName matches the queried marketplace."""
+def test_parse_extracts_installed_versions_for_marketplace() -> None:
+    """A well-formed payload yields name to version for every in-scope entry."""
     payload = _payload(
         [
-            {"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE},
-            {"name": "rust", "marketplaceName": DEFAULT_MARKETPLACE},
-            {"name": "spec-tree", "marketplaceName": DEFAULT_MARKETPLACE},
+            {
+                "name": "prose",
+                "version": "0.4.0",
+                "marketplaceName": DEFAULT_MARKETPLACE,
+            },
+            {
+                "name": "rust",
+                "version": "0.2.11",
+                "marketplaceName": DEFAULT_MARKETPLACE,
+            },
+            {
+                "name": "spec-tree",
+                "version": "0.57.32",
+                "marketplaceName": DEFAULT_MARKETPLACE,
+            },
         ]
     )
 
-    names = codex_cache.parse_installed_plugins(payload, DEFAULT_MARKETPLACE)
+    versions = codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
 
-    assert names == frozenset({"prose", "rust", "spec-tree"})
+    assert versions == {
+        "prose": "0.4.0",
+        "rust": "0.2.11",
+        "spec-tree": "0.57.32",
+    }
 
 
 def test_parse_filters_out_other_marketplace_entries() -> None:
-    """An entry whose marketplaceName names a different marketplace is excluded,
-    so the installed set is scoped even if the caller's filter is absent."""
+    """An entry whose marketplaceName names a different marketplace is excluded."""
     payload = _payload(
         [
-            {"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE},
-            {"name": "foreign", "marketplaceName": OTHER_MARKETPLACE},
+            {
+                "name": "prose",
+                "version": "0.4.0",
+                "marketplaceName": DEFAULT_MARKETPLACE,
+            },
+            {
+                "name": "foreign",
+                "version": "9.9.9",
+                "marketplaceName": OTHER_MARKETPLACE,
+            },
         ]
     )
 
-    names = codex_cache.parse_installed_plugins(payload, DEFAULT_MARKETPLACE)
+    versions = codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
 
-    assert names == frozenset({"prose"})
+    assert versions == {"prose": "0.4.0"}
 
 
-def test_parse_empty_installed_array_is_a_valid_empty_set() -> None:
-    """A successful query with no installed plugins is a valid empty set, distinct
-    from a failed query -- it must not raise."""
-    names = codex_cache.parse_installed_plugins(_payload([]), DEFAULT_MARKETPLACE)
+def test_parse_empty_installed_array_is_a_valid_empty_map() -> None:
+    """A successful query with no installed plugins is a valid empty map."""
+    versions = codex_cache.parse_installed_plugin_versions(
+        _payload([]), DEFAULT_MARKETPLACE
+    )
 
-    assert names == frozenset()
+    assert versions == {}
 
 
 def test_parse_raises_on_missing_installed_key() -> None:
-    """A payload without an `installed` array is an unrecognized shape and raises,
-    rather than yielding a silent empty set that would prune every cache directory."""
+    """A payload without an `installed` array is an unrecognized shape."""
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins(
+        codex_cache.parse_installed_plugin_versions(
             json.dumps({"available": []}), DEFAULT_MARKETPLACE
         )
 
 
 def test_parse_raises_on_non_object_payload() -> None:
-    """A top-level JSON array (not an object) does not match the contract and raises."""
+    """A top-level JSON array does not match the contract and raises."""
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins(json.dumps([]), DEFAULT_MARKETPLACE)
+        codex_cache.parse_installed_plugin_versions(json.dumps([]), DEFAULT_MARKETPLACE)
 
 
 def test_parse_raises_on_invalid_json() -> None:
-    """Unparseable output raises rather than being swallowed into an empty set."""
+    """Unparseable output raises instead of becoming an empty map."""
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins("{not json", DEFAULT_MARKETPLACE)
+        codex_cache.parse_installed_plugin_versions("{not json", DEFAULT_MARKETPLACE)
 
 
 def test_parse_raises_on_installed_entry_without_name() -> None:
     """An installed entry lacking a string `name` is malformed and raises."""
-    payload = _payload([{"marketplaceName": DEFAULT_MARKETPLACE}])
+    payload = _payload([{"version": "0.4.0", "marketplaceName": DEFAULT_MARKETPLACE}])
 
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins(payload, DEFAULT_MARKETPLACE)
+        codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
 
 
 def test_parse_raises_on_installed_entry_with_non_string_name() -> None:
-    """An installed entry whose `name` is present but not a string is malformed and
-    raises — the present-but-wrong-type path, distinct from the absent-key path."""
-    payload = json.dumps(
-        {
-            "installed": [{"name": 42, "marketplaceName": DEFAULT_MARKETPLACE}],
-            "available": [],
-        }
+    """An installed entry whose `name` is present but not a string raises."""
+    payload = _payload(
+        [{"name": 42, "version": "0.4.0", "marketplaceName": DEFAULT_MARKETPLACE}]
     )
 
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins(payload, DEFAULT_MARKETPLACE)
+        codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
+
+
+def test_parse_raises_on_installed_entry_without_version() -> None:
+    """An installed entry lacking a string `version` is malformed and raises."""
+    payload = _payload([{"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE}])
+
+    with pytest.raises(codex_cache.InstalledSetError):
+        codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
+
+
+def test_parse_raises_on_installed_entry_with_non_string_version() -> None:
+    """An installed entry whose `version` is present but not a string raises."""
+    payload = _payload(
+        [{"name": "prose", "version": 4, "marketplaceName": DEFAULT_MARKETPLACE}]
+    )
+
+    with pytest.raises(codex_cache.InstalledSetError):
+        codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
 
 
 def test_parse_raises_on_non_object_installed_entry() -> None:
-    """An `installed` array element that is not an object does not match the contract
-    and raises rather than being skipped."""
+    """An `installed` array element that is not an object raises."""
     payload = json.dumps({"installed": ["not-an-object"], "available": []})
 
     with pytest.raises(codex_cache.InstalledSetError):
-        codex_cache.parse_installed_plugins(payload, DEFAULT_MARKETPLACE)
+        codex_cache.parse_installed_plugin_versions(payload, DEFAULT_MARKETPLACE)
 
 
 def test_parse_includes_entry_without_marketplace_name() -> None:
-    """An installed entry that omits `marketplaceName` is treated as in-scope and
-    included — absent attribution does not exclude an entry the `--marketplace` query
-    already scoped."""
-    names = codex_cache.parse_installed_plugins(
-        _payload([{"name": "prose"}]), DEFAULT_MARKETPLACE
+    """Absent marketplaceName is treated as in-scope for the scoped query."""
+    versions = codex_cache.parse_installed_plugin_versions(
+        _payload([{"name": "prose", "version": "0.4.0"}]), DEFAULT_MARKETPLACE
     )
 
-    assert names == frozenset({"prose"})
+    assert versions == {"prose": "0.4.0"}
 
 
-def test_provider_returns_names_on_successful_query() -> None:
-    """The provider runs the CLI through its injected runner and returns the parsed
-    installed names when the query exits zero."""
-    payload = _payload([{"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE}])
+def test_provider_returns_versions_on_successful_query() -> None:
+    """The provider runs the CLI and returns the parsed installed versions."""
+    payload = _payload(
+        [
+            {
+                "name": "prose",
+                "version": "0.4.0",
+                "marketplaceName": DEFAULT_MARKETPLACE,
+            }
+        ]
+    )
     runner = StubRunner(subprocess.CompletedProcess([], 0, stdout=payload))
 
     provider = codex_cache.CodexCliInstalled(runner=runner)
 
-    assert provider.installed_plugins(DEFAULT_MARKETPLACE) == frozenset({"prose"})
+    assert provider.installed_plugin_versions(DEFAULT_MARKETPLACE) == {"prose": "0.4.0"}
 
 
 def test_provider_raises_when_query_exits_nonzero() -> None:
-    """A non-zero exit from `codex plugin list` is a failed query: the provider
-    raises so preservation aborts rather than pruning against a degraded signal, and
-    the CLI's stderr diagnostic is carried in the error message so the operator need
-    not rerun the command to see why it failed."""
+    """A non-zero exit from `codex plugin list` is a failed query."""
     runner = StubRunner(
         subprocess.CompletedProcess([], 1, stdout="", stderr="marketplace not found")
     )
@@ -170,16 +207,13 @@ def test_provider_raises_when_query_exits_nonzero() -> None:
     provider = codex_cache.CodexCliInstalled(runner=runner)
 
     with pytest.raises(codex_cache.InstalledSetError) as exc_info:
-        provider.installed_plugins(DEFAULT_MARKETPLACE)
+        provider.installed_plugin_versions(DEFAULT_MARKETPLACE)
 
     assert "marketplace not found" in str(exc_info.value)
 
 
 def test_provider_invokes_the_codex_plugin_list_command() -> None:
-    """The provider invokes `codex plugin list --json --marketplace <mkt>` — the exact
-    command the spec's compliance assertion names. A wrong subcommand or a missing
-    `--json` / `--marketplace` flag is caught here rather than at runtime, where the
-    stub-ignored command would otherwise pass silently."""
+    """The provider invokes `codex plugin list --json --marketplace <mkt>`."""
     captured: list[list[str]] = []
 
     def recording_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -188,13 +222,19 @@ def test_provider_invokes_the_codex_plugin_list_command() -> None:
             command,
             0,
             stdout=_payload(
-                [{"name": "prose", "marketplaceName": DEFAULT_MARKETPLACE}]
+                [
+                    {
+                        "name": "prose",
+                        "version": "0.4.0",
+                        "marketplaceName": DEFAULT_MARKETPLACE,
+                    }
+                ]
             ),
         )
 
     provider = codex_cache.CodexCliInstalled(runner=recording_runner)
 
-    provider.installed_plugins(DEFAULT_MARKETPLACE)
+    provider.installed_plugin_versions(DEFAULT_MARKETPLACE)
 
     assert captured == [[*codex_cache.CODEX_LIST_COMMAND, DEFAULT_MARKETPLACE]], (
         f"expected the codex plugin list command, got {captured}"
