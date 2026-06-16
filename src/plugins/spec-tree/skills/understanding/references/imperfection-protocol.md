@@ -28,7 +28,7 @@ The closing protocol decides whether to fix now, record the issue in the right a
 
 <closing_protocol>
 
-Every turn ends with `AskUserQuestion`. This is the only valid way to close a turn — no plain-text closings, no trailing "let me know", no offers in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
+At the end of a turn, apply one test: can the user reasonably ask "What now?" If the work continues on its own — a scheduled wake-up will resume it, a workflow gate authorizes the next step autonomously, or the goal is unfinished with the next action Claude's — then "What now?" has no open answer: report status and continue the work (per "Handoff is not a voluntary close" below), with no question and no trailing "let me know", offer, or prose close. When the user faces a genuine fork, decision, or set of next directions that are theirs to choose, close with `AskUserQuestion` — never a plain-text closing, a trailing "let me know", or an offer in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
 
 **The closing protocol applies at task completion, not at every milestone.** A turn is a checkpoint when the user's stated goal is still unfulfilled. While the goal is unfulfilled, Claude continues working — reports brief status updates, surfaces blockers via `AskUserQuestion` only when input is genuinely required, and never proposes "separate session", "future session", or "next session" as an out. Recording future-session coordination is appropriate only when the user accepts that destination or runtime constraints require persistence.
 
