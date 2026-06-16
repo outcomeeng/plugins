@@ -17,8 +17,7 @@ the gap is named in the same ``just check`` a contributor runs before merge
 The floor rises only when a skill begins to depend on a newer capability. Because
 the pin can only reach a version published to the registry, a floor set to an
 unpublished version cannot be matched by any installable pin — the floor enforces
-publish-before-depend by construction, per
-``spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md``.
+publish-before-depend by construction.
 
 Usage::
 

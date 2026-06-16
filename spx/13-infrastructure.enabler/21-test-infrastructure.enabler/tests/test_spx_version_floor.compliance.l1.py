@@ -1,8 +1,6 @@
 """Compliance evidence for the spx version-floor gate step.
 
-Verifies the rule in
-`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`:
-a gate step fails when the `@outcomeeng/spx` version the CI workflow pins is
+The gate step fails when the `@outcomeeng/spx` version the CI workflow pins is
 below the marketplace's declared minimum (`REQUIRED_SPX_VERSION`), so a skill or
 test depending on an unpinned or unpublished spx capability fails the gate rather
 than shipping.
