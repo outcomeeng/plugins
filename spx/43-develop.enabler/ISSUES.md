@@ -57,15 +57,34 @@ subjects verbatim.
   imperative convention in `spx/local/skills.md`; orphaned `reviewing-changes/references/render/*` and
   `github-actions/scripts/workflow_inspect.py`. (`standardizing-skills` over the 500-line ceiling —
   resolved: split into `references/runtime-variables.md` and `references/script-standards.md`.)
-- **Standalone `you` / `the model`** beyond prose: the executing-Claude `you` sweep runs as a
-  per-plugin pass, converting executing-Claude `you`/`your` to imperative/declarative and keeping
-  user-facing intake/README/brand second-person. **Done:** `rust` (PR #219), `work` (PR #221),
-  `hdl` (PR #223) — all merged. **Remaining:** `develop`, `python`, `typescript` — the
-  `architecting-*` skills carry the same template `you` sites rust did (including the
-  `*Remember: Your decisions…*` line and the `<what_you_do_not_do>` tag), so those convert
-  identically; `typescript-simplifier.md` subagent role-framing (`You are an expert…`) is a
-  distinct subagent-voice concern. The `the model` survey is clean. Close this residual once the
-  develop/python/typescript pass merges.
+- **Standalone `you` / `the model`** beyond prose: **DONE — complete across all six plugins.** The
+  executing-Claude `you`/`your`/`yourself` sweep ran as a per-plugin pass, converting executing-Claude
+  second-person to imperative/declarative and keeping user-facing intake/README/brand second-person,
+  subagent role-framing example prompts (`You are a …`), and rule-doc quotes of the banned term.
+  Merged: `rust` (#219, + reflexive cleanup #229), `work` (#221), `hdl` (#223), `develop` (#225),
+  `python` (#226, + behavioral-claim parity #230), `typescript` (#228). A behavioral claim in
+  `auditing-python`/`auditing-typescript` ("what the auditor catches beyond automated tools") was
+  named to **"Claude"** (`Claude catches:`) per the `<voice>` behavioral-claim rule. Verify with the
+  PCRE survey `git grep -niP "\byou\b|\byour\b|\byourself\b" -- 'src/plugins/<plugin>/**/*.md'`:
+  `rust`/`python`/`typescript` return only keeps; `work`/`hdl`/`develop` return only intake/README/
+  role-framing/rule-quote keeps. The `the model` survey is clean. This completes the marketplace-wide
+  named-subject conformance for the executing-Claude axis.
+
+  **Tracked follow-ups (separate axes, not the `you` sweep — marketplace-wide, do as dedicated passes):**
+
+  - **Passive auditor-skill `description:` directiveness** — the `auditing-*` skills carry
+    `description: Use when asked by the user to invoke the … skill` (passive, ~77% activation). The
+    `<description_style>` standard mandates the directive `ALWAYS invoke … NEVER …` form (~100%).
+    A marketplace-wide pass over every `auditing-*` skill's description.
+  - **Uniform `<what_you_do_not_do>` → `<out_of_scope>` tag rename** — `architecting-rust` and
+    `architecting-typescript` both use the `<what_you_do_not_do>` section tag (kept identical across
+    the two for parity during the `you` sweep). A coordinated rename to `<out_of_scope>` across all
+    `architecting-*` skills removes the `you` substring from the structural tag without per-plugin drift.
+  - **`<failure_modes>` "the auditor" role-noun → "Claude"** — `auditing-python` (~10 sites) and
+    `auditing-typescript` (~9 sites) narrate failure modes with "The auditor …" as the subject. The
+    `<failure_mode_writing>` rule names **"Claude"** for failure modes; "the auditor" is a non-Claude
+    named subject. Pre-existing and identical across the two plugins; sweep both together to preserve
+    parity, gated by `develop:skill-auditor`.
 
 **Verification gate:** `develop:skill-auditor` (`/auditing-skills`) loads `standardizing-agent-prompts`;
 `develop:subagent-auditor` (`/auditing-subagents`) governs the agent-definition files. Run both on
