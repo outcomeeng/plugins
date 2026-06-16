@@ -35,11 +35,3 @@ Required handling when an eval-coverage sweep happens:
 - Run the eval to populate `history.jsonl`.
 
 Surfaced by the local `changes-reviewer` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
-
-## 4. Multi-worktree post-merge sync gap (FOLLOW-UP)
-
-The merge overlay's Post-merge section (`spx/local/merging.md`) and the root `AGENTS.md` Sync step describe detaching the current worktree onto the merged `main` and running `just sync-marketplace`. In a bare-repo worktree pool (per `spx/21-spec-tree.enabler/11-repository-layout.pdr.md`) that is insufficient: the marketplace source is the `main` worktree, a different worktree from the pool worktree where the agent did the work. After a merge the agent must additionally fast-forward the `main` worktree's branch (`git -C <main-worktree> merge --ff-only origin/main`) before `just sync-marketplace`, or the sync re-reads stale `dist/` from the source worktree.
-
-Observed on PR #143 (init-worktrees, 2026-06-08).
-
-**Resolution shape**: the Post-merge section of `spx/local/merging.md` (and the `AGENTS.md` Sync step) should state, for the multi-worktree case, that the marketplace-source worktree (the one holding the default branch) is fast-forwarded to `origin/<default>` before `sync-marketplace`. Consider having `just sync-marketplace` detect and fast-forward the default-branch source worktree itself.
