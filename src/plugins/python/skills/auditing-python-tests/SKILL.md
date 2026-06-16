@@ -1,7 +1,7 @@
 ---
 name: auditing-python-tests
 description: >-
-  ALWAYS invoke this skill when the user asks to audit Python test evidence, review Python tests for spec-tree evidence quality, or evaluate Python test infrastructure.
+  ALWAYS invoke this skill when auditing Python test evidence, reviewing Python tests for spec-tree evidence quality, or evaluating Python test infrastructure.
   NEVER audit Python test evidence without this skill.
 allowed-tools: Read, Grep, Glob, Bash
 ---

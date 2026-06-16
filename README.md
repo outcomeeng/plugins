@@ -259,20 +259,20 @@ Prose craft for external prose (/writing-prose, /auditing-prose) and internal te
 
 Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture
 
-| Type  | Name                                 | Purpose                                                                                                                                 |
-| ----- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/architecting-python`               | Writing ADRs for Python                                                                                                                 |
-| Skill | `/auditing-python`                   | Auditing, reviewing, or evaluating Python implementation code for design flaws and ADR compliance                                       |
-| Skill | `/auditing-python-architecture`      | Auditing ADRs for Python                                                                                                                |
-| Skill | `/auditing-python-tests`             | The user asks to audit Python test evidence, review Python tests for spec-tree evidence quality, or evaluate Python test infrastructure |
-| Skill | `/coding-python`                     | Writing or fixing implementation code for Python                                                                                        |
-| Skill | `/standardizing-python`              | Python code standards enforced across all skills                                                                                        |
-| Skill | `/standardizing-python-architecture` | Python ADR conventions enforced across architect and auditor skills                                                                     |
-| Skill | `/standardizing-python-tests`        | Python testing standards enforced across all skills                                                                                     |
-| Skill | `/testing-python`                    | Writing or fixing tests for Python                                                                                                      |
-| Agent | `python-architecture-auditor`        | Audit Python ADRs for conventions, testability, and voice                                                                               |
-| Agent | `python-code-auditor`                | Audit Python code for design flaws and ADR compliance                                                                                   |
-| Agent | `python-test-auditor`                | Audit Python test code for evidence quality using the 4-property model                                                                  |
+| Type  | Name                                 | Purpose                                                                                                                        |
+| ----- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Skill | `/architecting-python`               | Writing ADRs for Python                                                                                                        |
+| Skill | `/auditing-python`                   | Auditing, reviewing, or evaluating Python implementation code for design flaws and ADR compliance                              |
+| Skill | `/auditing-python-architecture`      | Auditing ADRs for Python                                                                                                       |
+| Skill | `/auditing-python-tests`             | Auditing Python test evidence, reviewing Python tests for spec-tree evidence quality, or evaluating Python test infrastructure |
+| Skill | `/coding-python`                     | Writing or fixing implementation code for Python                                                                               |
+| Skill | `/standardizing-python`              | Python code standards enforced across all skills                                                                               |
+| Skill | `/standardizing-python-architecture` | Python ADR conventions enforced across architect and auditor skills                                                            |
+| Skill | `/standardizing-python-tests`        | Python testing standards enforced across all skills                                                                            |
+| Skill | `/testing-python`                    | Writing or fixing tests for Python                                                                                             |
+| Agent | `python-architecture-auditor`        | Audit Python ADRs for conventions, testability, and voice                                                                      |
+| Agent | `python-code-auditor`                | Audit Python code for design flaws and ADR compliance                                                                          |
+| Agent | `python-test-auditor`                | Audit Python test code for evidence quality using the 4-property model                                                         |
 
 ### rust
 
