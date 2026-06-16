@@ -10,6 +10,10 @@ owned_paths = [
   "dist/claude/spec-tree/skills/managing-pr/**",
   "dist/claude/spec-tree/skills/standardizing-merging/**",
 ]
-smoke_cases = ["review-present-no-findings-holds", "review-absent-withholds", "valid-blocking-finding-withholds"]
+smoke_cases = [
+  "review-present-no-findings-holds",
+  "host-mergeable-review-check-in-progress-waits",
+  "host-mergeable-non-review-check-in-progress-waits",
+]
 threshold = 0.85
 trials = 1

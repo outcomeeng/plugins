@@ -148,7 +148,7 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
 
-Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent, or `/reviewing-changes` when the agent is not installed. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
+Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent, or `/reviewing-changes` when `changes-reviewer` is not installed. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
 
 Fix every valid finding it surfaces, then re-run. **Unaddressed valid finding → fix → re-run this step.** Loop until the review converges.
 

@@ -1,0 +1,28 @@
+title = "check-watch-fallback"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/13-plugin-and-runtime-conventions.adr.md",
+  "spx/15-merging.pdr.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**",
+  "src/plugins/spec-tree/skills/managing-pr/**",
+  "src/plugins/spec-tree/skills/opening-pr/**",
+  "src/plugins/spec-tree/skills/standardizing-merging/**",
+  "src/plugins/spec-tree/skills/tracking-tasks/**",
+  "dist/claude/spec-tree/skills/managing-pr/**",
+  "dist/claude/spec-tree/skills/opening-pr/**",
+  "dist/claude/spec-tree/skills/standardizing-merging/**",
+  "dist/claude/spec-tree/skills/tracking-tasks/**",
+  "dist/codex/spec-tree/skills/managing-pr/**",
+  "dist/codex/spec-tree/skills/opening-pr/**",
+  "dist/codex/spec-tree/skills/standardizing-merging/**",
+  "dist/codex/spec-tree/skills/tracking-tasks/**",
+]
+smoke_cases = [
+  "no-timer-pending-checks-uses-foreground-watch",
+  "no-timer-review-absent-with-check-running-uses-foreground-watch",
+  "no-timer-wait-token-misses-watch",
+]
+threshold = 0.85
+trials = 1
