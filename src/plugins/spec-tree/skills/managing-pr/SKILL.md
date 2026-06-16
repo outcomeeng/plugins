@@ -6,12 +6,12 @@ allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
 <objective>
-The managing protocol. Loaded by /github-pr for the loop body that runs per heartbeat fire: inspect → classify → sync to base → drive queue → re-review and push follow-ups → refresh heartbeat → evaluate the merge gates → act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /standardizing-merging `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
+The managing protocol. Loaded by /github-pr for the loop body that runs per heartbeat fire or after a no-timer foreground PR-check watcher completes: inspect → classify → sync to base → drive queue → re-review and push follow-ups → refresh tracking → evaluate the merge gates → act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /standardizing-merging `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
 </objective>
 
 <the_managing_flow>
 
-Walk these steps on every heartbeat fire. Routine steps — inspect, classify, rebase, re-review, push, refresh heartbeat — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds.
+Walk these steps on every heartbeat fire and after every foreground no-timer PR-check watcher completes. Routine steps — inspect, classify, rebase, re-review, push, refresh tracking — run directly. The only pauses are the autonomous merge (under `MERGE_READINESS ∧ PRODUCTION_READINESS`) and the action-token emissions when a gate withholds without an immediate no-timer watcher path.
 
 **Step 0 — Load references.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke /understanding first — a cold heartbeat re-entry that fires `/managing-pr <pr>` directly carries no loaded foundation. Then invoke /standardizing-merging (shared vocabulary), /committing-changes (commit format for any follow-up commits), and /tracking-tasks (runtime tracking rules) via the Skill tool.
 
@@ -38,7 +38,7 @@ gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateSta
 
 Then re-run /standardizing-merging `<branch_hygiene>` before the push — hygiene applies on every push, not only at creation. Push via /standardizing-merging `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form. The PR is ready throughout — a follow-up push goes to the ready PR and re-fires CI; there is no draft toggle.
 
-**Step 7 — Refresh the heartbeat.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, refresh the existing heartbeat. One heartbeat per PR.
+**Step 7 — Refresh tracking.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, refresh the existing heartbeat when the runtime supplies one. One heartbeat per PR. When no runtime heartbeat or timer exists, do not ask the operator to re-check the PR; Step 8 uses the foreground PR-check watcher when the current-head PR is still in check completion — including the early window where no review output has registered yet but another required check is non-terminal.
 
 **Step 8 — Evaluate the merge gates and act.** Apply /standardizing-merging `<authority_gates>`: `MERGE_READINESS`, then `PRODUCTION_READINESS`.
 
@@ -55,17 +55,31 @@ Reviewer-skipped-by-design exception steps:
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
 - A clean current-head CI review exists — present, complete and valid, and reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly, or with every such finding individually dropped as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved (a valid in-scope `BLOCKING`/`DEBT` finding is fixed in Step 5 — if one remains this pass, emit `FIX_FINDING:<item>`); the absence of a current-head review is `WAIT_FOR_REVIEW`, never clean.
-- Every other required check is terminal-green per /standardizing-merging `<authority_gates>`. If no current-head review has landed yet, emit `WAIT_FOR_REVIEW` (review-absence takes precedence); else if a required check is non-terminal, emit `WAIT_FOR_CHECKS`; if a required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
+- Every other required check is terminal-green per /standardizing-merging `<authority_gates>`. If no current-head review has landed yet, emit `WAIT_FOR_REVIEW` unless the no-timer watcher path below applies because the reviewing-kind check is non-terminal, the reviewing-kind check has not registered yet while another current-head check is non-terminal, or another required check is non-terminal; else if a required check is non-terminal, emit `WAIT_FOR_CHECKS` unless the no-timer watcher path below applies; if a required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
 
-When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
+If no runtime heartbeat or timer exists and the current-head PR is blocked by check completion — a non-terminal required check, a non-terminal reviewing-kind check, or absent review output while another current-head check is non-terminal — run the foreground fallback from /standardizing-merging `<heartbeat>` instead of ending on `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW`:
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
+```bash
+gh pr checks <pr-number> --watch --fail-fast --interval 30
+```
+
+After it exits, inspect the terminal result from `gh pr checks`, then immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action.
+
+When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRODUCTION_READINESS` also holds, run the mutation-point guard from /standardizing-merging `<authority_gates>` immediately before the merge command. The guard re-reads live PR state and returns either `MERGE_READY:<head-sha>` or one existing action token. Do not run `gh pr merge` unless the guard returns `MERGE_READY:<head-sha>` for the head SHA just inspected.
+
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /standardizing-merging `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
 
   Overlay-silent default (per /standardizing-merging `<merge_cleanup>`):
 
   ```bash
   base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
   branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+  git fetch origin "${base}" "${branch}"
+  gh pr view <pr-number> --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments
+  gh pr checks <pr-number>
+  gh api repos/<owner>/<repo>/pulls/<pr-number>/comments
+  # Continue only after the guard verdict is MERGE_READY:<head-sha>.
+  # mergeable / mergeStateStatus / gh acceptance are not authority.
   # explicit --delete-branch=false — never rely on gh's default for the omitted flag
   # (varies by version/config, unknowable across consumers); =false skips gh's switch to
   # "${base}", which would fail when "${base}" is checked out in another worktree
@@ -80,7 +94,7 @@ When `MERGE_READINESS` holds, evaluate `PRODUCTION_READINESS`:
   Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
 - **Production-relevant and not yet approved** → emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
 
-If `MERGE_READINESS` does not hold, emit exactly one token from /standardizing-merging `<action_tokens>` and rely on the /tracking-tasks heartbeat to re-fire.
+If `MERGE_READINESS` does not hold and the no-timer foreground watcher path does not apply, emit exactly one token from /standardizing-merging `<action_tokens>` and rely on /tracking-tasks to continue.
 
 **Exit when:** the PR is merged, closed, or the gate emits a terminal token (`POST_MERGE_VERIFY`). Stop the heartbeat through /tracking-tasks. Otherwise the next heartbeat fire re-enters Step 1.
 
@@ -94,8 +108,11 @@ For pre-flight, branch topology, push semantics, base sync, the authority gates,
 # PR identity
 gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,comments
 
-# Checks (one-shot — NEVER --watch per /standardizing-merging <heartbeat> and /tracking-tasks)
+# Checks (one-shot inspection)
 gh pr checks <pr-number>
+
+# No-timer PR-check fallback (foreground, once, then restart Step 1 inspection)
+gh pr checks <pr-number> --watch --fail-fast --interval 30
 
 # Post a PR-level comment (top of the conversation)
 gh pr comment <pr-number> --body-file - <<'EOF'
@@ -123,10 +140,16 @@ gh api graphql --silent \
   -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
   -F id=<review-thread-node-id>
 
-# Merge (when MERGE_READINESS and PRODUCTION_READINESS hold; per /standardizing-merging <authority_gates> + <merge_cleanup>)
+# Merge (only after MERGE_READINESS, PRODUCTION_READINESS, and the mutation-point guard hold;
+# per /standardizing-merging <authority_gates> + <merge_cleanup>)
 # Overlay-silent universal default: rebase merge, then worktree-safe manual branch deletion.
 base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
 branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
+git fetch origin "${base}" "${branch}"
+gh pr view <pr-number> --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments
+gh pr checks <pr-number>
+gh api repos/<owner>/<repo>/pulls/<pr-number>/comments
+# Continue only after the guard verdict is MERGE_READY:<head-sha>.
 gh pr merge <pr-number> --rebase --delete-branch=false   # explicit; see <merge_cleanup>
 git fetch origin "${base}"
 git switch --detach "origin/${base}"
@@ -143,6 +166,10 @@ git status --porcelain
 
 **Pushed a tree only one predicate had seen.** Claude re-ran deterministic verification after a review-driven fix, or re-ran the local review after a verification-driven fix, but not both on the final tree — each fix is a new diff the other predicate has not covered, so the pushed tree was never jointly gated. Step 6 iterates both predicates to a joint fixpoint: after every commit, re-run both until one tree passes verification *and* carries no unaddressed valid finding, then push only that tree.
 
+**Wait-token-only with no runtime timer.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn in a runtime with no heartbeat or timer, leaving the operator to re-check the PR manually while current-head checks were still running. Step 8 runs the foreground `gh pr checks <pr-number> --watch --fail-fast --interval 30` fallback when the PR is blocked by check completion, then restarts full inspection from Step 1 before acting.
+
+**Used GitHub mergeability as authority.** Claude merged while current-head PR review/check automation was still running because GitHub reported the PR as mergeable and accepted `gh pr merge`. Host mergeability is not the repository policy gate; it ignores the stricter requirement that current-head review output exists and all required checks are terminal-green. Run the mutation-point guard immediately before merge; if any current-head review/check predicate is absent or non-terminal, emit the wait token and refresh tracking.
+
 </failure_modes>
 
 <success_criteria>
@@ -155,9 +182,11 @@ The managing flow satisfies its contract when, at minimum:
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
 - The work queue fixes every valid in-scope finding the open-PR review surfaces — no deferral of in-scope work; a `DEBT` finding the author judges out of scope is recorded in `ISSUES.md` / `PLAN.md` with a recorded reason and tracked, not a merge blocker.
 - Every follow-up push re-establishes `REVIEW_READINESS` on the diff it would publish — the project's full deterministic-verification command passes, and the local `reviewing-changes` review (invoked at parity per /standardizing-merging `<local_review_invocation>`, with no caller narrowing) has converged with no valid finding unaddressed — re-runs /standardizing-merging `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
-- Merge fires autonomously when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, and the change is non-production-relevant or operator-approved.
+- Merge fires autonomously only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists (present, complete and valid, reporting no unresolved `BLOCKING` or `DEBT` finding — stated directly or with every such finding individually refuted as unbacked, a `DEBT` finding the author tracks out of scope with a recorded reason not unresolved — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, the inspected head SHA matches the fetched remote branch head and status-check head, and the change is non-production-relevant or operator-approved.
 - A production-relevant, unapproved change emits `AWAIT_APPROVAL:<reason>` and waits; Claude does the full `MERGE_READINESS` work regardless.
 - A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /standardizing-merging `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `WAIT_FOR_REVIEW` — the exception is scoped to the self-modifying-PR case only.
+- When no runtime heartbeat or timer exists and the current-head PR is blocked by check completion — a non-terminal required check, a non-terminal reviewing-kind check, or absent review output while another current-head check is non-terminal — the flow runs `gh pr checks <pr-number> --watch --fail-fast --interval 30` once in the foreground, inspects the terminal check result, and then re-runs the full Step 1/Step 2 inspection before deciding the next action.
+- `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
 - Each pass that does not fire an autonomous action emits exactly one token from /standardizing-merging `<action_tokens>`.
 - No `<self_reference>` violation per /standardizing-merging.
 

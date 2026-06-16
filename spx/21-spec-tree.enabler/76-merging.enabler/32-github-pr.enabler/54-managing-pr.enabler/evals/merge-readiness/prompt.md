@@ -1,36 +1,44 @@
 <!-- Prompt template for the merge-readiness eval.
-     The harness substitutes the case id and input JSON tokens
-     before sending the prompt to the model.
+     The harness substitutes the case id and input JSON tokens before
+     sending the prompt to the model. -->
 
-     Probe scope: the eval verifies the MERGE_READINESS gate composition —
-     whether /managing-pr's merge gate holds — given the current-head CI
-     review (whether one is present and, if so, its findings each already
-     judged valid or unbacked), the terminal-green status of every other
-     required check, and whether branch hygiene plus PR state hold. The
-     state-to-terminal-green mapping and production-relevance permission are
-     covered by deterministic mapping tests. -->
+Closed classification task. Do not invoke skills, do not inspect a repository, do not wait for more instructions, and do not run tools. Read the JSON state below and return the verdict JSON object only.
 
-You are simulating the agent that runs `/managing-pr` and evaluates the `MERGE_READINESS` gate from `spx/15-merging.pdr.md` on an open PR.
+Classify whether the PR may run a merge command at the mutation point.
 
-`MERGE_READINESS` holds when ALL predicates hold:
+Rules, in order:
 
-- **a clean current-head CI review exists** — a conforming current-head review must be present (`ci_review.present` is `true`); its absence (`present` is `false`) means the PR is waiting for review and never satisfies the gate, regardless of how few findings are reported. Each finding a present review carries has a `validity` (`valid` or `unbacked`) and a `severity` (`blocking`, `debt`, or `follow_up`). A present review is clean only when it has no `valid` `blocking`/`debt` finding left unfixed: an `unbacked` finding is dropped (whatever its severity), and a `valid` `follow_up` finding is outside this PR's scope — tracked in `ISSUES.md`/`PLAN.md`, never merge-blocking — so the review is still clean with one present. A `valid` `blocking`/`debt` finding is unresolved in-scope work the agent must fix before merge, so it withholds the gate;
-- **every other required check is terminal-green** — each check carries a precomputed `terminal_green` boolean for this eval;
-- **branch hygiene and PR state hold** — `branch_hygiene_pr_state` is `ok` when the upstream-safety branch-hygiene checks pass and the PR is `OPEN`, not draft, with the inspected head SHA matching origin and the branch rebased onto `origin/<base>`; it is `failed` when any of those does not hold (dirty tree, upstream tracking the default branch, still draft, head-SHA mismatch, or behind base).
+1. If `ci_review.present` is `false`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-absent"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
+2. Else if `reviewing_kind_check.state_category` is `"non_terminal"`, `"missing"`, or `"skipped_non_exception"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-nonterminal"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
+   If `reviewing_kind_check` is omitted, treat it as `"terminal_green"` when `ci_review.present` is `true`.
+3. Else if any review finding has `validity: "valid"` and `severity: "blocking"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`.
+4. Else if any review finding has `validity: "valid"`, `severity: "debt"`, and no `disposition: "tracked_out_of_scope"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`.
+5. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is omitted or `"non_terminal"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-not-terminal-green"`, `guard_verdict: "WAIT_FOR_CHECKS"`, `merge_command_allowed: false`.
+6. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is `"terminal_failure"` or `"absent"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-failed-or-absent"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
+7. Else if `branch_hygiene_pr_state` is `"failed"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
+8. Else if `head_consistency` is `"failed"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
+9. Else return:
+   `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head_sha>"`, `merge_command_allowed: true`.
 
-Decide the gate, checking the predicates in this order so the blocking predicate is reported deterministically: (1) if `ci_review.present` is `false`, withhold with blocking predicate `review-absent`; (2) else if any finding is `valid` with severity `blocking` or `debt`, withhold with `review-valid-finding` (a `valid` `follow_up` finding does not withhold — it is tracked, not blocking); (3) else if any other required check is not terminal-green, withhold with `check-not-terminal-green`; (4) else if `branch_hygiene_pr_state` is `failed`, withhold with `branch-hygiene`; (5) else the gate holds.
+Ignore `host_mergeability`. `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and `gh_pr_merge_would_accept: true` never authorize the merge command.
 
-Case id: substituted by the harness.
-
-The gate-state input (JSON-encoded):
+Case input:
 
 ```json
 {input_json}
 ```
 
-Verdict schema — two fields, both mandatory:
+Verdict fields:
 
-- `merge_readiness`: `"HOLD"` (merge predicates satisfied) or `"WITHHOLD"` (at least one unmet).
-- `blocking_predicate`: `"review-absent"`, `"review-valid-finding"`, `"check-not-terminal-green"`, `"branch-hygiene"`, or `"none"`.
-
-The grader checks both together — `HOLD` paired with `none` is correct when all predicates hold; `WITHHOLD` paired with `none` is wrong, because the gate withholds only on a named failing predicate.
+- `merge_readiness`: `"HOLD"` or `"WITHHOLD"`.
+- `blocking_predicate`: one of `"review-absent"`, `"review-nonterminal"`, `"review-valid-finding"`, `"check-not-terminal-green"`, `"check-failed-or-absent"`, `"branch-hygiene"`, `"head-mismatch"`, or `"none"`.
+- `guard_verdict`: `"MERGE_READY:<head_sha>"`, `"WAIT_FOR_REVIEW"`, `"WAIT_FOR_CHECKS"`, `"FIX_FINDING:<id>"`, or `"MERGE_BLOCKED:<reason>"`.
+- `merge_command_allowed`: `true` or `false`.

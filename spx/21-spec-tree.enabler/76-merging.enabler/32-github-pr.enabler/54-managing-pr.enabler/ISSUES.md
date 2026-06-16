@@ -43,17 +43,3 @@ The merge overlay's Post-merge section (`spx/local/merging.md`) and the root `AG
 Observed on PR #143 (init-worktrees, 2026-06-08).
 
 **Resolution shape**: the Post-merge section of `spx/local/merging.md` (and the `AGENTS.md` Sync step) should state, for the multi-worktree case, that the marketplace-source worktree (the one holding the default branch) is fast-forwarded to `origin/<default>` before `sync-marketplace`. Consider having `just sync-marketplace` detect and fast-forward the default-branch source worktree itself.
-
-## 5. `merge-readiness` eval data model carries the removed `follow_up` severity (FOLLOW-UP)
-
-The two-severity model (`spx/15-merging.pdr.md`, which absorbs the prior severity-disposition decision) carries only `blocking`/`debt`; the author judges disposition. The prose surfaces were aligned, but the `evals/merge-readiness/` data model still types each modeled `ci_review` finding's `severity` as `blocking | debt | follow_up` and uses a `valid follow_up` case to exercise "a valid finding that does not withhold the gate."
-
-Under two severities that case becomes "a `valid` `debt` finding the author tracked out of scope (with a recorded reason) does not withhold the gate" — which the eval's finding model cannot express without a disposition/scope field. This is a coordinated `prompt.md` + `cases.jsonl` schema change requiring a live eval re-run.
-
-Required handling when an eval-coverage sweep happens:
-
-- Add a `scope`/`disposition` field (e.g., `in_scope` | `tracked_out_of_scope`) to the modeled finding in `evals/merge-readiness/prompt.md` and `cases.jsonl`, drop `follow_up` from the `severity` enum, and re-key the "does not withhold" case onto a `valid` `debt` finding marked tracked-out-of-scope.
-- Model the bounded-vs-deferrable rule (`spx/15-merging.pdr.md`): a bounded `debt` fix is in-scope and withholds the gate until fixed; only a genuinely-separate-larger-concern `debt` is tracked out of scope and non-blocking.
-- Re-run the eval to repopulate `history.jsonl` and confirm the threshold holds.
-
-Surfaced during the two-severity propagation (2026-06-10).

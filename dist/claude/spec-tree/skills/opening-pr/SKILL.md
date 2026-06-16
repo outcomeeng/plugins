@@ -2,12 +2,12 @@
 name: opening-pr
 user-invocable: false
 description: >-
-  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first heartbeat. Loaded by /github-pr.
+  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first heartbeat or no-timer PR-check handoff. Loaded by /github-pr.
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
+The opening protocol. Loaded by /github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat when the runtime supplies one, or enter /managing-pr's no-timer foreground PR-check path → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
@@ -32,7 +32,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 *(a) Deterministic verification.* Run the project's full validation-and-testing command — the command the project documents in its `CLAUDE.md` / `AGENTS.md` (for example `just check` / `pnpm test`; an overlay MAY centralize it in `spx/local/merging.md`). It must report success; fix failures and re-run until green.
 
-*(b) Local review to convergence.* Run the changes-reviewer agent (preferred) on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main agent has been doing. Fall back to the `/review-changes` slash command when the agent is not installed; both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store. Invoke it per /standardizing-merging `<local_review_invocation>`: pass only the repository/worktree and the working diff range, with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize — the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process them by **validity and phase** per /standardizing-merging `<review_classification>` — this is the before-open phase:
+*(b) Local review to convergence.* Run the changes-reviewer agent (preferred) on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main context has been doing. Fall back to the `/review-changes` slash command when `changes-reviewer` is not installed; both invoke the same `reviewing-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store. Invoke it per /standardizing-merging `<local_review_invocation>`: pass only the repository/worktree and the working diff range, with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize — the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process them by **validity and phase** per /standardizing-merging `<review_classification>` — this is the before-open phase:
 
 - **Validate each finding** against its cited rule, the product-local / language / spec-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
 - **Apply every valid finding that belongs.** Fix it, commit via /committing-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
@@ -86,7 +86,7 @@ The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Schedule the first heartbeat.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, schedule the first review/check re-inspection through the runtime timer. Verify by capturing the URL or thread ID returned by the runtime tool. Fall back to explicit user confirmation only when the runtime cannot create one directly.
+**Step 6 — Schedule the first heartbeat or enter the no-timer path.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, schedule the first review/check re-inspection through the runtime timer when the runtime supplies one. Verify by capturing the URL or thread ID returned by the runtime tool. When no runtime heartbeat or timer exists, do not ask the operator to re-check the PR; continue into /managing-pr and use its foreground PR-check watcher path if the PR is blocked by check completion.
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
@@ -169,7 +169,7 @@ The opening flow has succeeded when:
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
 - The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- First heartbeat is scheduled per /standardizing-merging `<heartbeat>` and /tracking-tasks.
+- First heartbeat is scheduled per /standardizing-merging `<heartbeat>` and /tracking-tasks when the runtime supplies one; when no runtime heartbeat or timer exists, the flow enters /managing-pr's foreground PR-check watcher path for non-terminal check waits.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /standardizing-merging.
 

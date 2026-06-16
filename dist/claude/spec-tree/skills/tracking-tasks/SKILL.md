@@ -2,16 +2,16 @@
 name: tracking-tasks
 user-invocable: false
 description: >-
-  Runtime task-tracking standards for skills that schedule heartbeats or timers. Loaded by other skills, not invoked directly.
+  Runtime task-tracking standards for skills that schedule heartbeats or timers, plus the no-timer PR-check fallback. Loaded by other skills, not invoked directly.
 allowed-tools: Read
 ---
 
 <objective>
-Keep active repository work alive across external waits by routing heartbeat and timer creation through one shared tracking standard. `<when_to_load>` names the moments to reach for it.
+Keep active repository work alive across external waits by routing heartbeat and timer creation, plus the no-timer foreground PR-check fallback, through one shared tracking standard. `<when_to_load>` names the moments to reach for it.
 </objective>
 
 <reference_note>
-This is a reference skill. Skills that create, update, or delete a heartbeat or timer load it via the Skill tool; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool.
+This is a reference skill. Skills that create, update, or delete a heartbeat or timer, or need the no-timer PR-check fallback, load it via the Skill tool; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool and the foreground PR-check fallback when the tool is absent.
 </reference_note>
 
 <when_to_load>
@@ -20,6 +20,7 @@ Load `/tracking-tasks` before any workflow:
 - creates the first heartbeat for an opened PR
 - refreshes a heartbeat after a new commit, new run, new blocker, failed check, or pending review state
 - schedules a delayed CI, PR, rollout, host-load, or external-convergence re-check
+- waits for PR check completion when no runtime heartbeat or timer exists
 - deletes a heartbeat because acceptance is reached, the work item closed, or the only remaining action is operator approval
 - launches local background work the harness tracks — a backgrounded command or a subagent — and must choose between ending the turn for the completion notification and running it in the foreground with an adequate timeout
 
@@ -34,7 +35,7 @@ Load `/tracking-tasks` before any workflow:
 - On wake-up, reload the named workflow skills, `/tracking-tasks`, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
 - "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
-- Pending checks, pending review, high host load, or delayed external convergence require an updated heartbeat before ending the turn.
+- Pending checks, pending review, high host load, or delayed external convergence require an updated heartbeat before ending the turn when the runtime supplies one. If no runtime heartbeat or timer exists and the open PR is blocked by check completion, use the foreground PR-check fallback in `<runtime_timer>`.
 - Use one active heartbeat per work item. Refresh it instead of creating duplicates.
 - Delete a heartbeat only when no timer-backed repository action remains.
 
@@ -88,7 +89,7 @@ Delete tracking when the PR is merged and post-merge verification is green, the 
 </lifecycle>
 
 <runtime_timer>
-Use the runtime timer or heartbeat tool; never use shell waits, polling loops, watch commands, or background keep-alives. Select the tool by runtime:
+Use the runtime timer or heartbeat tool when available. Select the tool by runtime:
 
 - **Claude Code:** `ScheduleWakeup` for a single delayed re-check, or `/loop` for recurring re-inspection. The prompt names the owning skill and the pointers it handles per `<heartbeat_payload>`; the wake-up reloads the skill and reconstructs state from the durable artifacts and live state. `ScheduleWakeup`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive. Default the PR and CI cadence to four minutes (240 s) — under the five-minute prompt-cache TTL, so the next wake reuses the warm cache.
 - **Codex:** thread automation, which may open a fresh thread. The prompt names the repository, the skills to reload, and the pointers each handles, so a cold thread can resolve them; it does not carry the directive or the reasoning. Cadence is minute-based, typically every three minutes.
@@ -96,6 +97,16 @@ Use the runtime timer or heartbeat tool; never use shell waits, polling loops, w
 A scheduled heartbeat is the turn's continuation, not its close. When a scheduled wake-up is the next action, do not append a structured question to close the turn — the wake-up is the continuation. End such a turn by reporting status and the scheduled re-check, with no question and no trailing prose offer.
 
 For any thread heartbeat or automation tool, create or update the one work-item heartbeat — attached to the current thread when the work continues in the same conversation — at the owning workflow cadence above, following `<heartbeat_payload>` for prompt shape and `<lifecycle>` for the create, refresh, and delete triggers.
+
+If no runtime heartbeat or timer is available and the wait is an open GitHub PR blocked by check completion — a non-terminal required check, a non-terminal reviewing-kind check, or absent review output while another current-head check is non-terminal — use this foreground fallback in both Claude Code and Codex:
+
+```bash
+gh pr checks <pr-number> --watch --fail-fast --interval 30
+```
+
+Run it once, in the foreground, with a tool timeout large enough for the expected PR check duration. After it exits, immediately re-enter the owning PR flow's full inspection before deciding: PR state, check rollup, PR-level comments, formal reviews, and review-thread comments. The fallback replaces only the missing timer for PR check completion. It does not apply to local background commands, approval waits, credential waits, ambiguous human judgment, workflow-log streaming, or generic GitHub Actions run watching.
+
+Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded watcher, or a background keep-alive as a timer substitute. Never wrap the PR-check watcher in a loop.
 
 </runtime_timer>
 
@@ -129,7 +140,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 
 <failure_handling>
 
-- Queued, in-progress, and pending states: report material changes, refresh the heartbeat, and continue on the next wake-up.
+- Queued, in-progress, and pending states: report material changes, refresh the heartbeat, and continue on the next wake-up. If no runtime heartbeat or timer exists and the pending state is an open PR check wait, use the foreground PR-check fallback and then re-inspect the full merge gate.
 - Failed, cancelled, or timed-out checks: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md` (never into the prompt), and keep the work active unless the next step requires operator approval, credentials, or judgment.
 - Review feedback: fix safe local issues, run the governed local review and validation loop, push, then refresh tracking for current-head checks and review.
 - High host load: record the load condition, schedule the next load-aware checkpoint, and avoid starting heavy validation.
@@ -144,7 +155,8 @@ Tracking is correct when:
 - the continuation prompt carries only the skills to reload and the pointers each handles — never the directive, finding assessments, or rationale, which are reconstructed on wake-up; anything the next fire needs is written to a durable artifact
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision
-- shell waits, polling loops, watch commands, and duplicate heartbeats are absent
+- shell `sleep`, polling loops, `gh run watch`, background keep-alives, backgrounded watchers, and duplicate heartbeats are absent
+- no-timer PR check waits use exactly one foreground `gh pr checks <pr-number> --watch --fail-fast --interval 30` invocation and then re-inspect the full PR merge gate before acting
 - local background work the harness tracks ends the turn for its completion notification, or runs in the foreground with an adequate timeout — never a poll loop or a heartbeat that duplicates the notification
 - heartbeat deletion happens only at acceptance, closure, no remaining repository action, or approval-only boundary
 
