@@ -16,6 +16,7 @@ CAN drive a changeset from review-ready to merge under one policy, routed to the
 
 - The `/merge` dispatcher conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/merge/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_merge.conformance.l1.py))
 - The `/merge` dispatcher classifies the changeset through the canonical `changeset_scope` primitives (`detect_base_ref` for the base ref, `branch_scope` for the committed diff) via a co-located `scripts/classify_changeset.py`, never re-deriving the base ref or diff range inline in the skill body, per `spx/21-spec-tree.enabler/17-auditing.adr.md` ([test](tests/test_classify_changeset.scenario.l1.py))
+- The shipped `standardizing-merging` skill text preserves the production-readiness, terminal-green, and auditor-verdict policy clauses that the deterministic merge-policy helper maps, so the mapping evidence stays coupled to the installed flow ([test](tests/test_merge_gate_policy.conformance.l1.py))
 
 ### Compliance
 

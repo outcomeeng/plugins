@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Final
 
 import pytest
 from click.testing import CliRunner
@@ -21,6 +22,10 @@ from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
 EXIT_SUCCESS = 0
 EXIT_GENERAL_ERROR = 1
 EXIT_INVOCATION_ERROR = 2
+REPO_ROOT: Final = Path(__file__).resolve().parents[4]
+SPEC_TREE_EVALS_WORKFLOW: Final = (
+    REPO_ROOT / ".github" / "workflows" / "spec-tree-evals.yml"
+)
 
 
 def test_main_group_exposes_documented_subcommands() -> None:
@@ -253,6 +258,50 @@ def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
             "case_ids": ["happy-path"],
         }
     ]
+
+
+def test_plan_subcommand_selects_smoke_cases_for_deleted_owned_path(
+    tmp_path: Path,
+) -> None:
+    runner = CliRunner()
+    eval_toml = _write_planned_eval(
+        tmp_path,
+        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        smoke_cases=("happy-path",),
+    )
+    changed_paths = tmp_path / "changed.txt"
+    changed_paths.write_text(
+        "src/plugins/spec-tree/skills/managing-pr/SKILL.md\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "plan",
+            str(tmp_path),
+            "--mode",
+            "pr",
+            "--changed-paths-file",
+            str(changed_paths),
+        ],
+    )
+
+    assert result.exit_code == EXIT_SUCCESS
+    plan = json.loads(result.output)
+    assert plan == [
+        {
+            "eval_toml": str(eval_toml),
+            "plugin_dir": "dist/claude/spec-tree",
+            "case_ids": ["happy-path"],
+        }
+    ]
+
+
+def test_eval_workflow_collects_deleted_paths_for_planning() -> None:
+    workflow_text = SPEC_TREE_EVALS_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "--diff-filter=ACDMRT" in workflow_text
 
 
 def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -> None:
