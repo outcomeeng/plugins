@@ -295,7 +295,7 @@ Circular imports indicate architectural problems.
 ### Detecting Cycles
 
 ```python
-# If this fails with ImportError, you have a cycle
+# If this fails with ImportError, there is a cycle
 python -c "from mypackage import main"
 ```
 

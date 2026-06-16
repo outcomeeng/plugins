@@ -16,9 +16,9 @@ Different situations call for different tests. Start by understanding the situat
 
 ### Situation 1: Debugging During Development
 
-**When**: You're implementing a function and need to verify it works.
+**When**: implementing a function and verifying it works.
 
-**What you need**: A test with a KNOWN input and EXPECTED output that you can step through in a debugger.
+**What's needed**: A test with a KNOWN input and EXPECTED output, steppable in a debugger.
 
 **Example**:
 
@@ -34,15 +34,15 @@ def test_parse_user_basic() -> None:
     assert result.email == "john@example.com"
 ```
 
-**Key property**: You can set a breakpoint, see the exact input, step through, and understand what's happening.
+**Key property**: A breakpoint can be set to see the exact input, step through, and understand what's happening.
 
 ---
 
 ### Situation 2: Preventing Known Bugs
 
-**When**: You fixed a bug and want to ensure it never comes back.
+**When**: a bug is fixed and must never come back.
 
-**What you need**: A regression test that captures the exact scenario that caused the bug.
+**What's needed**: A regression test that captures the exact scenario that caused the bug.
 
 **Example**:
 
@@ -64,9 +64,9 @@ def test_parse_user_handles_unicode_name() -> None:
 
 ### Situation 3: Documenting Expected Behavior
 
-**When**: You want to document what the system SHOULD do (golden/known-good tests).
+**When**: documenting what the system SHOULD do (golden/known-good tests).
 
-**What you need**: Tests that serve as executable documentation of correct behavior.
+**What's needed**: Tests that serve as executable documentation of correct behavior.
 
 **Example**:
 
@@ -87,15 +87,15 @@ class TestUserValidation:
         assert is_valid_email("user@") is False
 ```
 
-**Key property**: Reading these tests tells you exactly what's valid and invalid.
+**Key property**: Reading these tests shows exactly what's valid and invalid.
 
 ---
 
 ### Situation 4: Exploring Edge Cases
 
-**When**: You've covered the obvious cases but want confidence about weird inputs.
+**When**: the obvious cases are covered but weird inputs need confidence.
 
-**What you need**: Property-based tests that explore the input space automatically.
+**What's needed**: Property-based tests that explore the input space automatically.
 
 **Example**:
 
@@ -113,15 +113,15 @@ def test_parse_user_never_crashes_on_any_name(name: str) -> None:
         pass  # Rejecting invalid input is fine
 ```
 
-**Key property**: Explores inputs you didn't think of. Finds edge cases automatically.
+**Key property**: Explores unanticipated inputs. Finds edge cases automatically.
 
 ---
 
 ### Situation 5: Proving `l2` or `l3` Behavior
 
-**When**: You need real local dependencies (`l2`) or remote/credentialed dependencies (`l3`) to prove the assertion.
+**When**: real local dependencies (`l2`) or remote/credentialed dependencies (`l3`) are needed to prove the assertion.
 
-**What you need**: Scenario or conformance tests that exercise real interactions.
+**What's needed**: Scenario or conformance tests that exercise real interactions.
 
 **Example**:
 
@@ -168,7 +168,7 @@ Tests evolve as code matures. Follow this progression:
 
 ### Phase 1: Debuggable Named Cases (Development)
 
-Start with 1-2 simple tests you can step through:
+Start with 1-2 simple tests that can be stepped through:
 
 ```python
 def test_calculate_total_single_item() -> None:
@@ -262,7 +262,7 @@ def test_calculate_total_always_non_negative(items: list[OrderLine]) -> None:
     assert total.amount >= 0
 ```
 
-**Purpose**: Find edge cases you didn't think of.
+**Purpose**: Find unanticipated edge cases.
 
 ---
 

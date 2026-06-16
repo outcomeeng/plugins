@@ -36,13 +36,13 @@ Standards are pre-loaded above. Check for `spx/local/python.md` at the repositor
 
 **Trust automated gates, then comprehend.**
 
-Phases 1-2 are mechanical prerequisites. If they fail, stop -- REJECTED. If they pass, do NOT re-check what linters and tests already verified. Your time is for Phase 3.
+Phases 1-2 are mechanical prerequisites. If they fail, stop -- REJECTED. If they pass, do NOT re-check what linters and tests already verified. Spend the audit's time on Phase 3.
 
 **Comprehension is the core value.**
 
-Automated tools catch syntax errors, type mismatches, and lint violations. You catch: functions that do more than their name says, dead parameters required by no Protocol, IO tangled with logic, and designs that will break under change. The predict/verify protocol (Phase 3) is how you find these.
+Automated tools catch syntax errors, type mismatches, and lint violations. Phase 3 catches: functions that do more than their name says, dead parameters required by no Protocol, IO tangled with logic, and designs that will break under change. The predict/verify protocol (Phase 3) is how these surface.
 
-**Test evidence is not your concern.**
+**Test evidence is out of scope.**
 
 `/auditing-python-tests` evaluates whether tests provide genuine evidence using the 4-property model (coupling, falsifiability, alignment, coverage). This skill verifies tests PASS, not whether they have evidentiary value. Do not duplicate that work.
 
@@ -98,7 +98,7 @@ For each function/method:
 
 1. **Read name and signature only** -- name, parameters, return type
 2. **Predict** what it does in one sentence
-3. **Read the body** -- validate your prediction
+3. **Read the body** -- validate the prediction
 4. **Investigate surprises:**
 
 | Surprise                               | What it suggests                                  |
