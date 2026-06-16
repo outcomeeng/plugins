@@ -190,7 +190,7 @@ class TestSessionStartDegradesWithoutSpx:
         result = run_session_start(
             {"session_id": "sess-z", "cwd": str(project_dir)},
             project_dir=project_dir,
-            env_overrides={"SPX_BIN": str(spx), "SPX_CLAIM_TIMEOUT_SECONDS": "0.3"},
+            env_overrides={"SPX_BIN": str(spx), "SPX_TIMEOUT_SECONDS": "0.3"},
         )
 
         assert result.returncode == 0

@@ -11,8 +11,9 @@ Two outputs on two channels, plus a delegated worktree-occupancy claim:
      CLAUDE_PROJECT_DIR  Claude Code product root, exposed to Bash tool calls.
      PROJECT_DIR         Short alias for CLAUDE_PROJECT_DIR.
 
-2. Stdout (injected into Claude's context) carries up to two directives, in
-   order: an understanding directive, then a base-staleness directive.
+2. Stdout (injected into Claude's context) carries up to three directives, in
+   order: an understanding directive, then a base-staleness directive, then a
+   queued-work directive.
 
    The understanding directive fires when the project directory is a spec tree
    (an `spx/*.product.md` exists), prompting the agent to load the methodology
@@ -25,8 +26,16 @@ Two outputs on two channels, plus a delegated worktree-occupancy claim:
    mutates git state, and stays silent when the worktree is current, is not a git
    repository, or has no resolvable default.
 
-   Each directive is emitted only when it applies; either, both, or neither may
-   appear. Diagnostics still go to stderr, never stdout.
+   The queued-work directive fires when the pool holds claimable handoff sessions,
+   surfacing them so queued work is visible to a fresh agent. It reads the
+   pool-global todo queue through a single `spx session todo` invocation — the
+   queue is shared across the worktree pool, so it is presented unfiltered by the
+   current worktree's branch. It surfaces work only and never claims or mutates a
+   session; claiming is left to `/spec-tree:pickup`. An absent, failing, or empty
+   spx is a silent no-op.
+
+   Each directive is emitted only when it applies; any, all, or none may appear.
+   Diagnostics still go to stderr, never stdout.
 
 3. The spx CLI records a worktree-occupancy claim for the running worktree via
    `spx worktree claim`, so another agent sharing the pool can tell the worktree
@@ -53,14 +62,15 @@ _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
 
 
-def _claim_timeout_seconds() -> float:
-    """Bound the worktree-claim subprocess so a hung spx never stalls session start.
+def _spx_timeout_seconds() -> float:
+    """Bound every spx subprocess so a hung spx never stalls session start.
 
-    `$SPX_CLAIM_TIMEOUT_SECONDS` overrides the default (tests set it low); a
+    Shared by the worktree-occupancy claim and the queued-work read.
+    `$SPX_TIMEOUT_SECONDS` overrides the default (tests set it low); a
     missing or malformed value falls back to the default.
     """
     try:
-        return float(os.environ.get("SPX_CLAIM_TIMEOUT_SECONDS") or "")
+        return float(os.environ.get("SPX_TIMEOUT_SECONDS") or "")
     except ValueError:
         return 5.0
 
@@ -116,20 +126,27 @@ def write_env_file(payload: dict, project_dir: str) -> None:
         warn(f"could not write $CLAUDE_ENV_FILE ({env_file}): {exc}")
 
 
+def _is_spec_tree(project_dir: str) -> bool:
+    """Return whether the project directory is a spec tree.
+
+    Detected by the presence of `spx/*.product.md` under the project directory —
+    a plain filesystem read of the durable `spx/` tree, never `.spx/` state or any
+    other heuristic.
+    """
+    if not project_dir:
+        return False
+    try:
+        return any(Path(project_dir).glob("spx/*.product.md"))
+    except OSError:
+        return False
+
+
 def understanding_directive(project_dir: str) -> str:
     """Return a foundation-priming directive when the project dir is a spec tree, else "".
 
-    A spec tree is detected by the presence of `spx/*.product.md` under the
-    project directory — a plain filesystem read of the durable tree, never `.spx/`
-    state or any other heuristic.
+    Fires only in a spec-tree repository (see `_is_spec_tree`).
     """
-    if not project_dir:
-        return ""
-    try:
-        product_specs = any(Path(project_dir).glob("spx/*.product.md"))
-    except OSError:
-        return ""
-    if not product_specs:
+    if not _is_spec_tree(project_dir):
         return ""
     return "\n".join(
         [
@@ -165,7 +182,7 @@ def claim_worktree(payload: dict, project_dir: str) -> None:
             check=False,
             capture_output=True,
             cwd=project_dir,
-            timeout=_claim_timeout_seconds(),
+            timeout=_spx_timeout_seconds(),
         )
     except (OSError, subprocess.TimeoutExpired):
         # spx absent, or a claim that stalls past the timeout — degrade silently.
@@ -224,6 +241,67 @@ def _format_directive(behind: int, tracking: str) -> str:
     )
 
 
+def queued_work_discoverability_directive(project_dir: str) -> str:
+    """Return a directive surfacing claimable handoff sessions, else "".
+
+    Fires only in a spec-tree repository (see `_is_spec_tree`) — handoff sessions
+    exist only there, so a non-spec-tree project never triggers the CLI read.
+    Reads the pool-global todo queue through a single
+    `spx session todo --fields ...` invocation. The session store is shared
+    across the worktree pool, so the queue is presented unfiltered by the current
+    worktree's branch. The directive surfaces queued work and never claims or
+    mutates a session — claiming is left to `/spec-tree:pickup`. An absent,
+    failing, or hung spx, a non-JSON or non-zero result, or an empty queue is a
+    silent no-op.
+    """
+    if not _is_spec_tree(project_dir):
+        return ""
+
+    spx = os.environ.get("SPX_BIN", "spx")
+    try:
+        result = subprocess.run(
+            [spx, "session", "todo", "--fields", "id,priority,goal,next_step,git_ref"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=project_dir,
+            timeout=_spx_timeout_seconds(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        # spx absent, or a query that stalls past the timeout — degrade silently.
+        return ""
+    if result.returncode != 0:
+        return ""
+
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return ""
+    todo = payload.get("todo") if isinstance(payload, dict) else None
+    if not isinstance(todo, list) or not todo:
+        return ""
+
+    return _format_discoverability_directive(todo)
+
+
+def _format_discoverability_directive(todo: list) -> str:
+    count = len(todo)
+    plural = "" if count == 1 else "s"
+    lines = [
+        f'<SPEC-TREE_SESSION_START queued="{count}"/>',
+        f"{count} claimable handoff session{plural} queued. Review and claim one with",
+        "/spec-tree:pickup. A queued session may be unrelated to this session's work, and",
+        "its branch may be unpushed, so treat each as a pointer to investigate, not a",
+        "guarantee of recoverable work:",
+    ]
+    for session in todo:
+        sid = (session.get("id") or "").strip()
+        goal = (session.get("goal") or "").strip()
+        next_step = (session.get("next_step") or "").strip()
+        lines.append(f"- {sid} — {goal} → {next_step}")
+    return "\n".join(lines)
+
+
 def main() -> int:
     try:
         payload = json.loads(sys.stdin.read())
@@ -247,6 +325,7 @@ def main() -> int:
     for directive in (
         understanding_directive(project_dir),
         base_staleness_directive(project_dir),
+        queued_work_discoverability_directive(project_dir),
     ):
         if directive:
             print(directive)
