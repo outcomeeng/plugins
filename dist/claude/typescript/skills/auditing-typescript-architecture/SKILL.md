@@ -3,7 +3,7 @@ name: auditing-typescript-architecture
 description: >-
   ALWAYS invoke this skill when auditing ADRs for TypeScript.
   NEVER audit a TypeScript ADR without this skill.
-allowed-tools: Read, Grep
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `typescript:standardizing-typescript-architecture` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

@@ -13,19 +13,6 @@ Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model
 
 </objective>
 
-<quick_start>
-
-**PREREQUISITE**: Invoke `/contextualizing` on the target spec node before auditing.
-
-1. Extract assertions and linked test files from the spec
-2. For each test file, check in order: coupling → falsifiability → alignment → coverage
-3. First property failure = REJECT for that assertion (skip remaining properties)
-4. All four properties hold for all assertions = APPROVED
-
-**Coupling is the gate.** If a test imports nothing from the codebase, skip all other checks — it is a tautology.
-
-</quick_start>
-
 <essential_principles>
 
 **COUPLING FIRST.**

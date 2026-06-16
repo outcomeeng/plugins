@@ -93,12 +93,17 @@ subjects verbatim.
 
   - **Audit-skill structural conformance — marketplace-wide.** `standardizing-skills` mandates
     `allowed-tools: Read, Grep, Glob, Bash` for every `auditing-*` skill and (per `<xml_structure>`)
-    omitting `<quick_start>` on validator/gate skills. Current non-conformance the deterministic gate
-    does not catch: `allowed-tools` absent in `develop/auditing-commands`, `develop/auditing-skills`,
-    `develop/auditing-subagents`, `spec-tree/auditing-tests`, and partial (`Read, Grep` only) in
-    `auditing-python-architecture`; `<quick_start>` carried by 7 audit skills (the 3 `develop`
-    auditors, `auditing-python`, `auditing-rust`, `auditing-typescript`, `auditing-tests`). Do as a
-    dedicated marketplace-wide pass so touched and untouched audit skills change uniformly. Also:
+    omitting `<quick_start>` on validator/gate skills. The touched-file portion is **fixed in this
+    PR** (the local `changes-reviewer` gate raised it as in-scope touched-file debt): `auditing-tests`
+    gained `allowed-tools` and dropped its `<quick_start>` (its `/contextualizing` prerequisite and
+    coupling-gate already live in `<essential_principles>`/`<audit_workflow>`/`<success_criteria>`),
+    and `auditing-python-architecture` + `auditing-typescript-architecture` completed their
+    `allowed-tools` (`Read, Grep` → `Read, Grep, Glob, Bash`). **Remaining (untouched files, dedicated
+    pass):** `allowed-tools` absent in `develop/auditing-commands`, `develop/auditing-skills`,
+    `develop/auditing-subagents`; `<quick_start>` carried by those 3 `develop` auditors plus the
+    complex code auditors `auditing-python`, `auditing-rust`, `auditing-typescript` (whether a
+    multi-phase code auditor is a "validator" that must omit `<quick_start>` is the unsettled design
+    call for that pass — the skill-auditor split on it). Also:
     `spec-tree/reviewing-pr` carries the same passive `Use when asked by the user …` description (not
     an `auditing-*` skill, so outside the voice axis above) — fold into the directive-description pass
     or this structural pass.

@@ -3,7 +3,7 @@ name: auditing-python-architecture
 description: >-
   ALWAYS invoke this skill when auditing ADRs for Python.
   NEVER audit a Python ADR without this skill.
-allowed-tools: Read, Grep
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 {!% require_skill 'python:standardizing-python-architecture' %!}
