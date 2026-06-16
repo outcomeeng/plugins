@@ -40,7 +40,7 @@ Phases 1-2 are mechanical prerequisites. If they fail, stop -- REJECTED. If they
 
 **Comprehension is the core value.**
 
-Automated tools catch syntax errors, type mismatches, and lint violations. Phase 3 catches: functions that do more than their name says, dead parameters required by no Protocol, IO tangled with logic, and designs that will break under change. The predict/verify protocol (Phase 3) is how these surface.
+Automated tools catch syntax errors, type mismatches, and lint violations. Claude catches: functions that do more than their name says, dead parameters required by no Protocol, IO tangled with logic, and designs that will break under change. The predict/verify protocol (Phase 3) is how these surface.
 
 **Test evidence is out of scope.**
 
