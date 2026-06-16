@@ -7,11 +7,11 @@ allowed-tools: Read
 ---
 
 <objective>
-Keep active repository work alive across external waits by routing heartbeat and timer creation through one shared tracking standard. Use this reference whenever a skill creates, refreshes, or deletes a delayed re-check for PR, CI, review, release, rollout, or verification work.
+Keep active repository work alive across external waits by routing heartbeat and timer creation through one shared tracking standard. `<when_to_load>` names the moments to reach for it.
 </objective>
 
 <reference_note>
-This is a reference skill. Load it from the owning workflow skill before creating, updating, or deleting a heartbeat, timer, wakeup, recurring re-check, or automation. The heartbeat is the runtime tool; this skill owns the rules for using that tool.
+This is a reference skill. Skills that create, update, or delete a heartbeat or timer load it via the Skill tool; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool.
 </reference_note>
 
 <when_to_load>
@@ -94,13 +94,7 @@ Use the runtime timer or heartbeat tool; never use shell waits, polling loops, w
 
 A scheduled heartbeat is the turn's continuation, not its close. When a scheduled wake-up is the next action, do not append a structured question to close the turn — the wake-up is the continuation. End such a turn by reporting status and the scheduled re-check, with no question and no trailing prose offer.
 
-For any thread heartbeat or automation tool:
-
-- create or update the existing work-item heartbeat
-- attach it to the current thread when the work continues in the same conversation
-- use the owning workflow cadence from the per-runtime default above
-- include a sparse prompt following `<heartbeat_payload>`
-- delete it as soon as `<lifecycle>` says no timer-backed repository action remains
+For any thread heartbeat or automation tool, create or update the one work-item heartbeat — attached to the current thread when the work continues in the same conversation — at the owning workflow cadence above, following `<heartbeat_payload>` for prompt shape and `<lifecycle>` for the create, refresh, and delete triggers.
 
 </runtime_timer>
 
