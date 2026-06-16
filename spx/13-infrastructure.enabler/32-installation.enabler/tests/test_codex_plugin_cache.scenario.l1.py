@@ -159,6 +159,7 @@ def test_chain_recovery_restores_in_window_published_version_as_symlink(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
+        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
@@ -394,6 +395,7 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
+        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
@@ -436,6 +438,7 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
+        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
@@ -482,6 +485,7 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
+        installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
@@ -527,6 +531,7 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
+        installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
         runner=_quiet_runner,
     )
 
