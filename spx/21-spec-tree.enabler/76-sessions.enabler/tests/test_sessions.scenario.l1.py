@@ -499,7 +499,7 @@ _COMPACT_WITH_FOUNDATION = textwrap.dedent("""\
 
     <SPEC_TREE_FOUNDATION>
     <SPEC_TREE_CONTEXT target="spx/21-spec-tree.enabler/76-sessions.enabler/">
-    <SESSION_SCOPE ids="2026-05-04_11-08-33">
+    <CLAIMED_SESSIONS ids="2026-05-04_11-08-33">
 
     ### Active spec-tree node
 

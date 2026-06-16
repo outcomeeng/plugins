@@ -25,27 +25,27 @@ Emit canonical pickup markers keyed by the claimed session id so later workflows
 **⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualizing` has been invoked on the target node.**
 </objective>
 
-<session_scope>
-Three rules govern a conversation's session scope:
+<claimed_sessions>
+Three rules govern a conversation's claimed-session set:
 
-1. **Scope grows only by user confirmation.** A session enters scope when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else extends scope.
+1. **The claimed-session set grows only by user confirmation.** A session joins the set when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else adds to it.
 
-2. **Closure has exactly one acceptable end state.** Every in-scope session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the in-scope sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
+2. **Closure has exactly one acceptable end state.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the claimed sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
-   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves scope but is archived, not returned to the todo queue.
+   - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
    - Run `spx session release <id>` to move the session from `doing/` back to `todo/` for another context to claim.
 
-   Neither action counts toward the closure workload for the in-scope set — the wrongly-claimed session leaves scope the moment the user confirms the quick exit.
+   Neither action counts toward the closure workload for the claimed-session set — the wrongly-claimed session leaves the set the moment the user confirms the quick exit.
 
 **Consequences of the three rules:**
 
-- Every successful `spx session pickup` adds that session id to the SESSION_SCOPE marker for this conversation. A later pickup does not replace earlier entries — scope is additive.
+- Every successful `spx session pickup` adds that session id to the CLAIMED_SESSIONS marker for this conversation. A later pickup does not replace earlier entries — the set is additive.
 - The pickup workflow MUST NOT archive, release, delete, or manually move any session. After the post-context checkpoint, leave the claimed session in `doing` unless the user explicitly invokes a closure workflow.
-- A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any in-scope session.
-- Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the in-scope set named in SESSION_SCOPE.
+- A newly created handoff session is a workflow artifact, not a substitute for the claimed session. Its existence never grants permission to close any claimed session.
+- Queue inspection alone is never permission. Archival comes from completing the handoff workflow against the claimed-session set named in CLAIMED_SESSIONS.
 
-</session_scope>
+</claimed_sessions>
 
 <session_management>
 All session management uses `spx session` CLI commands:
@@ -137,18 +137,18 @@ claimed
 </PICKUP_CLAIM>
 ```
 
-Then emit (or extend) the running session-scope marker. Scan the conversation for the most recent `<SESSION_SCOPE ids="...">` marker:
+Then emit (or extend) the running CLAIMED_SESSIONS marker. Scan the conversation for the most recent `<CLAIMED_SESSIONS ids="...">` marker:
 
-- **No prior scope marker** → emit `<SESSION_SCOPE ids="[claimed-session-id]">`.
-- **Prior scope marker exists** → emit a new marker whose `ids` attribute is the prior list with `[claimed-session-id]` appended (comma-separated, order preserved).
+- **No prior CLAIMED_SESSIONS marker** → emit `<CLAIMED_SESSIONS ids="[claimed-session-id]">`.
+- **Prior CLAIMED_SESSIONS marker exists** → emit a new marker whose `ids` attribute is the prior list with `[claimed-session-id]` appended (comma-separated, order preserved).
 
 ```text
-<SESSION_SCOPE ids="[first-pickup],[second-pickup],...,[claimed-session-id]">
-scope
-</SESSION_SCOPE>
+<CLAIMED_SESSIONS ids="[first-pickup],[second-pickup],...,[claimed-session-id]">
+the claimed sessions this conversation must close
+</CLAIMED_SESSIONS>
 ```
 
-The scope marker names every in-conversation pickup that Claude is responsible for closing. Handoff workflows read the MOST RECENT `<SESSION_SCOPE>` to determine which sessions to archive at closure. If multiple pickups happen in one conversation, later steps MUST key off this scope, not a single-session marker.
+The CLAIMED_SESSIONS marker names every in-conversation pickup that Claude is responsible for closing. Handoff workflows read the MOST RECENT `<CLAIMED_SESSIONS>` to determine which sessions to archive at closure. If multiple pickups happen in one conversation, later steps MUST key off this set, not a single-session marker.
 
 Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the current pickup (checkpoints, markers, error messages).
 
@@ -197,13 +197,13 @@ How to avoid: After `/contextualizing`, present the loaded state and stop. Use `
 
 Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. The next Claude context then had to read multiple handoff files to reconstruct the continuation.
 
-How to avoid: Emit (or extend) `<SESSION_SCOPE ids="...">` on every pickup so the latest marker names the full scope. Handoff workflow 04 reads the scope and archives every id. Closure ends with zero or one handoff incorporating everything — never a sidecar.
+How to avoid: Emit (or extend) `<CLAIMED_SESSIONS ids="...">` on every pickup so the latest marker names the full claimed-session set. Handoff workflow 04 reads the set and archives every id. Closure ends with zero or one handoff incorporating everything — never a sidecar.
 
 **Failure 3: Treated the existence of a new handoff session as permission to close a claimed session**
 
 Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
 
-How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive an in-scope session. Permission flows from the three scope rules: scope grows only by user confirmation; closure ends with zero or one handoff; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure ends with zero or one handoff; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
 
 </failure_modes>
 
@@ -212,15 +212,15 @@ A successful pickup:
 
 - [ ] Session claimed via `spx session pickup`
 - [ ] Canonical pickup claim marker emitted as `<PICKUP_CLAIM id="...">`
-- [ ] Running session-scope marker emitted as `<SESSION_SCOPE ids="...">` including the newly claimed session id
+- [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
 - [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
-- [ ] No new handoff session is treated as permission to archive, release, or replace an in-scope session
+- [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] Skills checklist presented BEFORE any work starts
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
-- [ ] Canonical post-context marker emitted with the same session id
+- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging

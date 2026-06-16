@@ -1,7 +1,7 @@
 <objective>
 Work through five perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
 
-Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, session scope.
+Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
 
 </objective>
 
@@ -64,39 +64,46 @@ Guide the next pickup from the state in prose. Do not pre-compute fixed if-then 
 
 </perspective_external_state>
 
-<perspective_session_scope>
-Resolve which sessions are in this conversation's scope and locate any mid-session handoff artifact to reconcile.
+<perspective_claimed_sessions>
+Resolve which sessions are in this conversation's claimed sessions and locate any mid-session handoff artifact to reconcile.
 
-Read `references/scope-resolution.md` and follow every step of the algorithm. After resolving, emit a marker into the conversation so workflow 04 reads scope from context rather than re-running the algorithm:
+Read `references/claimed-session-resolution.md` and follow every step of the algorithm. After resolving, emit a marker into the conversation so workflow 04 reads the claimed sessions from context rather than re-running the algorithm:
 
 ```text
-<RESOLVED_SCOPE ids="id-1,id-2,..." artifact_id="id-or-none">
-in_scope: id-1, id-2, ...
+<RESOLVED_CLAIMED_SESSIONS ids="id-1,id-2,..." artifact_id="id-or-none">
+claimed_sessions: id-1, id-2, ...
 mid_session_artifact: id-or-none
-</RESOLVED_SCOPE>
+</RESOLVED_CLAIMED_SESSIONS>
 ```
 
 Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_id="none"` when no mid-session artifact exists.
 
-For each in-scope session, fold every still-relevant fact into durable targets first (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by rewrite-in-place or archival.
+For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by rewrite-in-place or archival.
 
-A handoff replaces incorporated context. The existence of any session is not, by itself, permission to archive an in-scope session — permission flows from completing this workflow.
+A handoff replaces incorporated context. The existence of any session is not, by itself, permission to archive a claimed session — permission flows from completing this workflow.
 
-</perspective_session_scope>
+</perspective_claimed_sessions>
 
 <continuation_signal>
-Compute the continuation signal workflow 04 reads to decide session-file creation — the check that makes `--no-session` answerable to state rather than an unconditional skip. Unresolved in-scope continuation work is present when any of these holds for an in-scope anchored node:
+Compute the continuation signal workflow 04 reads to decide session-file creation — the check that makes `--no-session` answerable to state rather than an unconditional skip.
 
-- a node-local `PLAN.md` carries a pending step this session did not complete;
-- an `spx/EXCLUDE` entry names an in-scope node (specified but unimplemented);
+**The signal ranges over the nodes in scope this session (the anchored nodes from workflow 01), independently of `CLAIMED_SESSIONS`.** The claimed-session set decides only what gets archived; it never decides whether to hand off. An empty claimed-session set (no `/pickup` this conversation) therefore NEVER implies an absent signal — a fresh handoff whose anchored nodes carry unfinished work is `present` and requires a session file.
+
+The signal is `present` when any of these holds for a node anchored this session:
+
+- a node-local `PLAN.md` exists — it is next-session work driven by a plan;
+- a node-local `ISSUES.md` carries an unresolved entry — it is next-session work driven by a defect or deviation needing major refactoring;
+- an `spx/EXCLUDE` entry names an anchored node (specified but unimplemented);
 - a spec assertion touched this session is declared but not yet satisfied (no passing `[test]`/`[eval]`, or an unmet `[audit]`);
-- the path-forward perspective named concrete remaining steps, or an in-scope `ISSUES.md` records an open gap this session did not close.
+- the path-forward perspective named concrete remaining steps.
+
+A persisted `PLAN.md` or unresolved `ISSUES.md` IS continuation — both are work for a future session, differing only by driver (a plan vs a defect), never by whether they count. There is no "deferred notes but no session" state: if a note carries no future work, it is removed during closure, not kept while the session file is skipped. Small imperfections are fixed in-session, not deferred into a note.
 
 Emit the signal so workflow 04 reads it from context:
 
 ```text
 <CONTINUATION_SIGNAL state="present|absent">
-<one line: the unresolved work, or "no in-scope continuation remains">
+<one line: the unresolved work, or "no continuation remains">
 </CONTINUATION_SIGNAL>
 ```
 
@@ -107,7 +114,7 @@ Emit the signal so workflow 04 reads it from context:
 <success_criteria>
 
 - All five perspectives completed internally before proceeding to workflow 03.
-- `<RESOLVED_SCOPE>` marker emitted into the conversation.
+- `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation.
 - `<CONTINUATION_SIGNAL>` marker emitted into the conversation.
 - Stale PLAN.md or ISSUES.md items identified for proposal in workflow 03 (or fixed inline if safe).
 
