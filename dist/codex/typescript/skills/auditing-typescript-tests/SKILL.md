@@ -1,6 +1,8 @@
 ---
 name: auditing-typescript-tests
-description: Use when asked by the user to invoke the TypeScript test audit skill
+description: >-
+  ALWAYS invoke this skill when auditing TypeScript test evidence, reviewing TypeScript tests for spec-tree evidence quality, or evaluating TypeScript test infrastructure.
+  NEVER audit TypeScript test evidence without this skill.
 ---
 
 Invoke the `typescript:standardizing-typescript` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

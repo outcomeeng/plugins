@@ -1,7 +1,9 @@
 ---
 name: auditing-typescript-architecture
-description: Use when asked by the user to invoke the TypeScript architecture audit skill
-allowed-tools: Read, Grep
+description: >-
+  ALWAYS invoke this skill when auditing ADRs for TypeScript.
+  NEVER audit a TypeScript ADR without this skill.
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `typescript:standardizing-typescript-architecture` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -57,17 +59,17 @@ When reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed linters but had a design flaw.** The auditor trusted the tooling output (Phase 1 equivalent) and skimmed the `## Verification` rules. The ADR mandated DI for all external calls, but the Verification rules were so vague ("use good practices") that they couldn't catch anything. A Verification rule that cannot falsify non-conforming code is not a rule.
+**Approved code that passed linters but had a design flaw.** Claude trusted the tooling output (Phase 1 equivalent) and skimmed the `## Verification` rules. The ADR mandated DI for all external calls, but the Verification rules were so vague ("use good practices") that they couldn't catch anything. A Verification rule that cannot falsify non-conforming code is not a rule.
 
-**Rejected an ADR for a false positive.** The auditor flagged a parameter in a DI interface as "dead code" because it wasn't used in the example. The parameter was required by a Protocol contract that other implementations relied on. Before flagging dead parameters in interfaces, check if the interface is implemented elsewhere.
+**Rejected an ADR for a false positive.** Claude flagged a parameter in a DI interface as "dead code" because it wasn't used in the example. The parameter was required by a Protocol contract that other implementations relied on. Before flagging dead parameters in interfaces, check if the interface is implemented elsewhere.
 
 **Missed mocking hidden behind DI.** The ADR said "dependency injection" but described injecting `vi.fn()` as the controlled implementation. This is still mocking -- DI is the delivery mechanism, but `vi.fn()` is a mock. Correct DI injects a controlled *real* implementation (a simple function or object), not a mock framework spy.
 
-**Distracted by style while missing a logic flaw.** The auditor spent review time on naming conventions and formatting while a branch condition in the Verification rules was inverted -- the ALWAYS and NEVER were swapped. Comprehension (understanding what the ADR actually says) must come before style concerns.
+**Distracted by style while missing a logic flaw.** Claude spent review time on naming conventions and formatting while a branch condition in the Verification rules was inverted -- the ALWAYS and NEVER were swapped. Comprehension (understanding what the ADR actually says) must come before style concerns.
 
-**Accepted temporal language because it was in the Rationale section.** The auditor assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z."
+**Accepted temporal language because it was in the Rationale section.** Claude assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z."
 
-**Flagged a phantom section but missed the real problem.** The auditor correctly rejected a Testing Strategy section but didn't check whether `## Verification` had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (under `### Audit`).
+**Flagged a phantom section but missed the real problem.** Claude correctly rejected a Testing Strategy section but didn't check whether `## Verification` had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (under `### Audit`).
 
 </failure_modes>
 

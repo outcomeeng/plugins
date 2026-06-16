@@ -1,6 +1,8 @@
 ---
 name: auditing-rust
-description: Use when asked by the user to invoke the Rust code audit skill
+description: >-
+  ALWAYS invoke this skill when auditing, reviewing, or evaluating Rust implementation code for design flaws and ADR compliance.
+  NEVER audit Rust code without this skill.
 ---
 
 Invoke the `rust:standardizing-rust` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

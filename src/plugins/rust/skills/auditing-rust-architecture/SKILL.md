@@ -1,6 +1,8 @@
 ---
 name: auditing-rust-architecture
-description: Use when asked by the user to invoke the Rust architecture audit skill
+description: >-
+  ALWAYS invoke this skill when auditing ADRs for Rust.
+  NEVER audit a Rust ADR without this skill.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

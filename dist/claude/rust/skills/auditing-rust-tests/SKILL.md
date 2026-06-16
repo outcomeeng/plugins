@@ -1,6 +1,8 @@
 ---
 name: auditing-rust-tests
-description: Use when asked by the user to invoke the Rust test audit skill
+description: >-
+  ALWAYS invoke this skill when auditing Rust test evidence, reviewing Rust tests for spec-tree evidence quality, or evaluating Rust test infrastructure.
+  NEVER audit Rust test evidence without this skill.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 

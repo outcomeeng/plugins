@@ -1,6 +1,8 @@
 ---
 name: auditing-rust
-description: Use when asked by the user to invoke the Rust code audit skill
+description: >-
+  ALWAYS invoke this skill when auditing, reviewing, or evaluating Rust implementation code for design flaws and ADR compliance.
+  NEVER audit Rust code without this skill.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 

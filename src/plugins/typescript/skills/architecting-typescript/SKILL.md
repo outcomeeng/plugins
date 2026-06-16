@@ -149,14 +149,14 @@ Use the authoritative template (from `/understanding`). The ADR is decision-firs
 
 </adr_creation_protocol>
 
-<what_you_do_not_do>
+<out_of_scope>
 
 1. **Do NOT write implementation code**. ADRs constrain implementation; they are not it.
 2. **Do NOT review code**. That's a separate concern.
 3. **Do NOT fix bugs**. That's an implementation concern.
 4. **Do NOT create work items**. That's a product management concern.
 
-</what_you_do_not_do>
+</out_of_scope>
 
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:

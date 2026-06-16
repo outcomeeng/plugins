@@ -1,7 +1,9 @@
 ---
 name: auditing-python-architecture
-description: Use when asked by the user to invoke the Python architecture audit skill
-allowed-tools: Read, Grep
+description: >-
+  ALWAYS invoke this skill when auditing ADRs for Python.
+  NEVER audit a Python ADR without this skill.
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `python:standardizing-python-architecture` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -60,17 +62,17 @@ When reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Accepted temporal language because it was in the Rationale section.** The auditor assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z." The atemporal voice rule applies to ALL sections, no exceptions.
+**Accepted temporal language because it was in the Rationale section.** Claude assumed Rationale was exempt from atemporal voice because it explains "why." It is not exempt. "After evaluating options, we decided..." narrates decision history. Atemporal: "X was rejected because Y violates Z." The atemporal voice rule applies to ALL sections, no exceptions.
 
-**Approved ADR with "DI Protocol" but no testing strategy in Verification.** The auditor saw a Protocol definition in the decision statement and assumed testing was covered. The ADR had no Verification rules enabling specific levels -- the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; an ALWAYS rule requiring it as a parameter is.
+**Approved ADR with "DI Protocol" but no testing strategy in Verification.** Claude saw a Protocol definition in the decision statement and assumed testing was covered. The ADR had no Verification rules enabling specific levels -- the Protocol existed but nothing mandated its use. A Protocol definition is not a testability constraint; an ALWAYS rule requiring it as a parameter is.
 
-**Missed "respx.mock" in a code example.** The ADR's `## Verification` rules showed mocking in a code block illustrating the "correct approach." The auditor only checked prose for mocking language, not code examples. Check ALL content -- prose and code blocks.
+**Missed "respx.mock" in a code example.** The ADR's `## Verification` rules showed mocking in a code block illustrating the "correct approach." Claude only checked prose for mocking language, not code examples. Check ALL content -- prose and code blocks.
 
-**Accepted `l2` for a SaaS service.** The auditor didn't verify the "SaaS services jump `l1` to `l3`" rule and accepted `l2` for Trakt.tv API testing. SaaS services cannot run locally -- there is no `l2`. This is one of the most commonly violated principles.
+**Accepted `l2` for a SaaS service.** Claude didn't verify the "SaaS services jump `l1` to `l3`" rule and accepted `l2` for Trakt.tv API testing. SaaS services cannot run locally -- there is no `l2`. This is one of the most commonly violated principles.
 
-**Flagged a phantom section but missed the real problem.** The auditor correctly rejected a Testing Strategy section but didn't check whether `## Verification` had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (under `### Audit`).
+**Flagged a phantom section but missed the real problem.** Claude correctly rejected a Testing Strategy section but didn't check whether `## Verification` had equivalent testability constraints. Removing a phantom section is not enough -- the testability constraints must appear somewhere in the ADR (under `### Audit`).
 
-**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. The auditor missed this because they only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
+**Confused `sys.path` manipulation with a real import.** A test fixture inserted a fake module into `sys.path`, making it appear as a real dependency. Claude missed this because it only checked `import` statements, not runtime path manipulation. When reviewing ADR examples that reference imports, check for `sys.path` and `importlib` tricks.
 
 </failure_modes>
 

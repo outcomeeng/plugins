@@ -70,21 +70,43 @@ subjects verbatim.
   role-framing/rule-quote keeps. The `the model` survey is clean. This completes the marketplace-wide
   named-subject conformance for the executing-Claude axis.
 
-  **Tracked follow-ups (separate axes, not the `you` sweep — marketplace-wide, do as dedicated passes):**
+  **Tracked follow-ups — DONE (named-subject voice axes, branch `work/named-subject-voice-followups`):**
 
-  - **Passive auditor-skill `description:` directiveness** — the `auditing-*` skills carry
-    `description: Use when asked by the user to invoke the … skill` (passive, ~77% activation). The
-    `<description_style>` standard mandates the directive `ALWAYS invoke … NEVER …` form (~100%).
-    A marketplace-wide pass over every `auditing-*` skill's description.
-  - **Uniform `<what_you_do_not_do>` → `<out_of_scope>` tag rename** — `architecting-rust` and
-    `architecting-typescript` both use the `<what_you_do_not_do>` section tag (kept identical across
-    the two for parity during the `you` sweep). A coordinated rename to `<out_of_scope>` across all
-    `architecting-*` skills removes the `you` substring from the structural tag without per-plugin drift.
-  - **`<failure_modes>` "the auditor" role-noun → "Claude"** — `auditing-python` (~10 sites) and
-    `auditing-typescript` (~9 sites) narrate failure modes with "The auditor …" as the subject. The
-    `<failure_mode_writing>` rule names **"Claude"** for failure modes; "the auditor" is a non-Claude
-    named subject. Pre-existing and identical across the two plugins; sweep both together to preserve
-    parity, gated by `develop:skill-auditor`.
+  - **Passive auditor-skill `description:` directiveness — DONE.** Converted the 9 passive
+    `auditing-*` descriptions (`description: Use when asked by the user to invoke the … skill`,
+    ~77% activation) to the directive `ALWAYS invoke … NEVER …` folded-scalar form (~100%) per
+    `<description_style>`: `python` (auditing-python, auditing-python-architecture), `rust`
+    (auditing-rust, auditing-rust-architecture, auditing-rust-tests), `spec-tree` (auditing-tests),
+    `typescript` (auditing-typescript, auditing-typescript-architecture, auditing-typescript-tests).
+    The `develop`/`prose` auditors and `auditing-python-tests` were already directive.
+  - **Uniform `<what_you_do_not_do>` → `<out_of_scope>` tag rename — DONE.** Renamed the section
+    tag in the only two skills that carry it — `architecting-rust` and `architecting-typescript`
+    (identical sections, parity preserved). `architecting-python` has no such section.
+  - **`<failure_modes>` "the auditor" role-noun → "Claude" — DONE.** Converted every executing-
+    instance "The auditor"/"This auditor" subject to "Claude" per `<failure_mode_writing>` in
+    `auditing-python` (5 sites) and `auditing-typescript` (5 sites). The `develop:skill-auditor`
+    gate surfaced the identical pattern in `auditing-python-architecture` (6 sites) and
+    `auditing-typescript-architecture` (5 sites) — both swept in the same change to keep parity (the
+    axis under-enumerated the architecture auditors). The deterministic PCRE survey returns clean.
+
+  **New tracked follow-up (surfaced by the skill-auditor gate during the voice sweep — separate, structural):**
+
+  - **Audit-skill structural conformance — marketplace-wide.** `standardizing-skills` mandates
+    `allowed-tools: Read, Grep, Glob, Bash` for every `auditing-*` skill and (per `<xml_structure>`)
+    omitting `<quick_start>` on validator/gate skills. The touched-file portion is **fixed in this
+    PR** (the local `changes-reviewer` gate raised it as in-scope touched-file debt): `auditing-tests`
+    gained `allowed-tools` and dropped its `<quick_start>` (its `/contextualizing` prerequisite and
+    coupling-gate already live in `<essential_principles>`/`<audit_workflow>`/`<success_criteria>`),
+    and `auditing-python-architecture` + `auditing-typescript-architecture` completed their
+    `allowed-tools` (`Read, Grep` → `Read, Grep, Glob, Bash`). **Remaining (untouched files, dedicated
+    pass):** `allowed-tools` absent in `develop/auditing-commands`, `develop/auditing-skills`,
+    `develop/auditing-subagents`; `<quick_start>` carried by those 3 `develop` auditors plus the
+    complex code auditors `auditing-python`, `auditing-rust`, `auditing-typescript` (whether a
+    multi-phase code auditor is a "validator" that must omit `<quick_start>` is the unsettled design
+    call for that pass — the skill-auditor split on it). Also:
+    `spec-tree/reviewing-pr` carries the same passive `Use when asked by the user …` description (not
+    an `auditing-*` skill, so outside the voice axis above) — fold into the directive-description pass
+    or this structural pass.
 
 **Verification gate:** `develop:skill-auditor` (`/auditing-skills`) loads `standardizing-agent-prompts`;
 `develop:subagent-auditor` (`/auditing-subagents`) governs the agent-definition files. Run both on
