@@ -1,6 +1,8 @@
 ---
 name: auditing-rust-tests
-description: Use when asked by the user to invoke the Rust test audit skill
+description: >-
+  ALWAYS invoke this skill when auditing Rust test evidence, reviewing Rust tests for spec-tree evidence quality, or evaluating Rust test infrastructure.
+  NEVER audit Rust test evidence without this skill.
 ---
 
 Invoke the `rust:standardizing-rust` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

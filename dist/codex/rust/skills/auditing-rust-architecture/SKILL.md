@@ -1,6 +1,8 @@
 ---
 name: auditing-rust-architecture
-description: Use when asked by the user to invoke the Rust architecture audit skill
+description: >-
+  ALWAYS invoke this skill when auditing ADRs for Rust.
+  NEVER audit a Rust ADR without this skill.
 ---
 
 Invoke the `rust:standardizing-rust` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

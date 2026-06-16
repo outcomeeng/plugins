@@ -1,6 +1,8 @@
 ---
 name: auditing-tests
-description: Use when asked by the user to invoke the test evidence audit skill
+description: >-
+  ALWAYS invoke this skill when auditing test evidence against spec assertions.
+  NEVER audit spec-tree test evidence without this skill.
 ---
 
 <objective>

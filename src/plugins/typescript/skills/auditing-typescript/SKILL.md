@@ -1,6 +1,8 @@
 ---
 name: auditing-typescript
-description: Use when asked by the user to invoke the TypeScript code audit skill
+description: >-
+  ALWAYS invoke this skill when auditing, reviewing, or evaluating TypeScript implementation code for design flaws and ADR compliance.
+  NEVER audit TypeScript code without this skill.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -13,7 +15,7 @@ Adversarial code review through comprehension. Find design flaws that automated 
 This skill is read-only. It produces verdicts, not commits or fixes.
 
 **Test evidence quality is audited by skill `/auditing-typescript-tests`.** This skill audits implementation code, not test code.
-Almost every Typecsript file must be covered by tests. Invoke `/auditing-typescript-tests` separately as part of the overall auditing workflow.
+Almost every TypeScript file must be covered by tests. Invoke `/auditing-typescript-tests` separately as part of the overall auditing workflow.
 
 **Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 
@@ -163,13 +165,13 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed linters but had a design flaw.** The auditor trusted Phase 1 output and skimmed Phase 3. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
+**Approved code that passed linters but had a design flaw.** Claude trusted Phase 1 output and skimmed Phase 3. The code had a function named `validateConfig` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `writeFileSync`. Surprise."
 
-**Rejected code for a false positive.** The auditor flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` interface contract -- other implementations used it. Before flagging dead parameters, check if the function implements an interface or Protocol.
+**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` interface contract -- other implementations used it. Before flagging dead parameters, check if the function implements an interface or Protocol.
 
-**Tried to evaluate test evidence instead of delegating.** The auditor found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/auditing-typescript-tests`' job. This auditor should have verified tests PASS (Phase 2) and moved on to comprehending the implementation code.
+**Tried to evaluate test evidence instead of delegating.** Claude found `vi.fn()` in tests and spent time analyzing whether it broke coupling. That's `/auditing-typescript-tests`' job. Claude should have verified tests PASS (Phase 2) and moved on to comprehending the implementation code.
 
-**Distracted by style while missing a logic bug.** The auditor spent review time on naming conventions, import ordering, and JSDoc completeness. Meanwhile, a branch condition was inverted -- `if (isValid)` should have been `if (!isValid)`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
+**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and JSDoc completeness. Meanwhile, a branch condition was inverted -- `if (isValid)` should have been `if (!isValid)`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
 
 **Accepted code with tangled IO.** A `processOrders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (3.2) would have caught it: "Can core logic be tested without IO? No."
 

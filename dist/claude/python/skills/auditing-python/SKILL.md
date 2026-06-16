@@ -1,6 +1,8 @@
 ---
 name: auditing-python
-description: Use when asked by the user to invoke the Python code audit skill
+description: >-
+  ALWAYS invoke this skill when auditing, reviewing, or evaluating Python implementation code for design flaws and ADR compliance.
+  NEVER audit Python code without this skill.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -166,13 +168,13 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 
 These are real failures from past audits. Study them to avoid repeating them.
 
-**Approved code that passed ruff+mypy but had a design flaw.** The auditor trusted Phase 1 output and skimmed Phase 3. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
+**Approved code that passed ruff+mypy but had a design flaw.** Claude trusted Phase 1 output and skimmed Phase 3. The code had a function named `validate_config` that also wrote the config file -- SRP violation hidden behind a reasonable name. The predict/verify protocol would have caught it: "Given the name, I predict this validates. But the body also calls `Path.write_text()`. Surprise."
 
-**Rejected code for a false positive.** The auditor flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
+**Rejected code for a false positive.** Claude flagged a parameter as "dead code" because it wasn't used in the function body. The parameter was required by a `CommandHandler` Protocol contract -- other implementations used it. Before flagging dead parameters, check if the function implements a Protocol.
 
-**Tried to evaluate test evidence instead of delegating.** The auditor found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/auditing-python-tests`' job. This auditor should have verified tests PASS (Phase 2) and moved on to comprehending the implementation code.
+**Tried to evaluate test evidence instead of delegating.** Claude found `lambda cmd: (0, "", "")` in tests and spent time analyzing whether it severed coupling. That's `/auditing-python-tests`' job. Claude should have verified tests PASS (Phase 2) and moved on to comprehending the implementation code.
 
-**Distracted by style while missing a logic bug.** The auditor spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
+**Distracted by style while missing a logic bug.** Claude spent review time on naming conventions, import ordering, and docstring completeness. Meanwhile, a branch condition was inverted -- `if is_valid` should have been `if not is_valid`. Comprehension (understanding what the code does) must come before style. Style is the linter's job.
 
 **Accepted code with tangled IO.** A `process_orders` function both computed order totals AND sent confirmation emails. Tests passed and types were correct. But the function was untestable without an email server -- IO and logic were tangled. The design evaluation (3.2) would have caught it: "Can core logic be tested without IO? No."
 

@@ -262,8 +262,8 @@ Python engineering: /testing-python, /coding-python, /auditing-python, /architec
 | Type  | Name                                 | Purpose                                                                                                                                 |
 | ----- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Skill | `/architecting-python`               | Writing ADRs for Python                                                                                                                 |
-| Skill | `/auditing-python`                   | Asked by the user to invoke the Python code audit skill                                                                                 |
-| Skill | `/auditing-python-architecture`      | Asked by the user to invoke the Python architecture audit skill                                                                         |
+| Skill | `/auditing-python`                   | Auditing, reviewing, or evaluating Python implementation code for design flaws and ADR compliance                                       |
+| Skill | `/auditing-python-architecture`      | Auditing ADRs for Python                                                                                                                |
 | Skill | `/auditing-python-tests`             | The user asks to audit Python test evidence, review Python tests for spec-tree evidence quality, or evaluate Python test infrastructure |
 | Skill | `/coding-python`                     | Writing or fixing implementation code for Python                                                                                        |
 | Skill | `/standardizing-python`              | Python code standards enforced across all skills                                                                                        |
@@ -278,22 +278,22 @@ Python engineering: /testing-python, /coding-python, /auditing-python, /architec
 
 Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rust, /auditing-rust-architecture, rust-unsafe-auditor agent
 
-| Type  | Name                               | Purpose                                                               |
-| ----- | ---------------------------------- | --------------------------------------------------------------------- |
-| Skill | `/architecting-rust`               | Writing ADRs for Rust                                                 |
-| Skill | `/auditing-rust`                   | Asked by the user to invoke the Rust code audit skill                 |
-| Skill | `/auditing-rust-architecture`      | Asked by the user to invoke the Rust architecture audit skill         |
-| Skill | `/auditing-rust-tests`             | Asked by the user to invoke the Rust test audit skill                 |
-| Skill | `/coding-rust`                     | Writing or fixing implementation code for Rust                        |
-| Skill | `/standardizing-rust`              | Rust code standards enforced across all skills                        |
-| Skill | `/standardizing-rust-architecture` | Rust ADR conventions enforced across architect and auditor skills     |
-| Skill | `/standardizing-rust-tests`        | Rust test standards enforced across all skills                        |
-| Skill | `/testing-rust`                    | Writing or fixing tests for Rust                                      |
-| Agent | `rust-architecture-auditor`        | Audit Rust ADRs for conventions, testability, and voice               |
-| Agent | `rust-code-auditor`                | Audit Rust code for design flaws and ADR compliance                   |
-| Agent | `rust-simplifier`                  | Simplifies Rust code for clarity and maintainability                  |
-| Agent | `rust-test-auditor`                | Audit Rust test code for evidence quality using the 4-property model  |
-| Agent | `rust-unsafe-auditor`              | Specialized soundness audit for Rust unsafe blocks and FFI boundaries |
+| Type  | Name                               | Purpose                                                                                                                  |
+| ----- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Skill | `/architecting-rust`               | Writing ADRs for Rust                                                                                                    |
+| Skill | `/auditing-rust`                   | Auditing, reviewing, or evaluating Rust implementation code for design flaws and ADR compliance                          |
+| Skill | `/auditing-rust-architecture`      | Auditing ADRs for Rust                                                                                                   |
+| Skill | `/auditing-rust-tests`             | Auditing Rust test evidence, reviewing Rust tests for spec-tree evidence quality, or evaluating Rust test infrastructure |
+| Skill | `/coding-rust`                     | Writing or fixing implementation code for Rust                                                                           |
+| Skill | `/standardizing-rust`              | Rust code standards enforced across all skills                                                                           |
+| Skill | `/standardizing-rust-architecture` | Rust ADR conventions enforced across architect and auditor skills                                                        |
+| Skill | `/standardizing-rust-tests`        | Rust test standards enforced across all skills                                                                           |
+| Skill | `/testing-rust`                    | Writing or fixing tests for Rust                                                                                         |
+| Agent | `rust-architecture-auditor`        | Audit Rust ADRs for conventions, testability, and voice                                                                  |
+| Agent | `rust-code-auditor`                | Audit Rust code for design flaws and ADR compliance                                                                      |
+| Agent | `rust-simplifier`                  | Simplifies Rust code for clarity and maintainability                                                                     |
+| Agent | `rust-test-auditor`                | Audit Rust test code for evidence quality using the 4-property model                                                     |
+| Agent | `rust-unsafe-auditor`              | Specialized soundness audit for Rust unsafe blocks and FFI boundaries                                                    |
 
 ### spec-tree
 
@@ -306,7 +306,7 @@ Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomp
 | Skill   | `/audit-adr`             | ALWAYS use when auditing an ADR or after making changes to an ADR                                                                                                                                                                                                                                                                            |
 | Skill   | `/audit-pdr`             | ALWAYS use when auditing a PDR or after making changes to a PDR                                                                                                                                                                                                                                                                              |
 | Skill   | `/auditing`              | Auditing a code scope end-to-end — a diff, a branch, or a commit — partitioning by language and emitting one structured verdict                                                                                                                                                                                                              |
-| Skill   | `/auditing-tests`        | Asked by the user to invoke the test evidence audit skill                                                                                                                                                                                                                                                                                    |
+| Skill   | `/auditing-tests`        | Auditing test evidence against spec assertions                                                                                                                                                                                                                                                                                               |
 | Skill   | `/authoring`             | Adding, defining, or creating specs, decisions, or nodes                                                                                                                                                                                                                                                                                     |
 | Skill   | `/bootstrapping`         | Setting up a new spec tree or when /authoring detects an empty spx/ directory                                                                                                                                                                                                                                                                |
 | Skill   | `/changeset-scope`       | Deriving a changeset's base ref, branch slug, branch identity, or merge-base diff scope from git                                                                                                                                                                                                                                             |
@@ -354,21 +354,21 @@ Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomp
 
 TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent
 
-| Type  | Name                                     | Purpose                                                                    |
-| ----- | ---------------------------------------- | -------------------------------------------------------------------------- |
-| Skill | `/architecting-typescript`               | Writing ADRs for TypeScript                                                |
-| Skill | `/auditing-typescript`                   | Asked by the user to invoke the TypeScript code audit skill                |
-| Skill | `/auditing-typescript-architecture`      | Asked by the user to invoke the TypeScript architecture audit skill        |
-| Skill | `/auditing-typescript-tests`             | Asked by the user to invoke the TypeScript test audit skill                |
-| Skill | `/coding-typescript`                     | Writing or fixing implementation code for TypeScript                       |
-| Skill | `/standardizing-typescript`              | TypeScript code standards enforced across all skills                       |
-| Skill | `/standardizing-typescript-architecture` | TypeScript ADR conventions enforced across architect and auditor skills    |
-| Skill | `/standardizing-typescript-tests`        | TypeScript testing standards enforced across all skills                    |
-| Skill | `/testing-typescript`                    | Writing or fixing tests for TypeScript                                     |
-| Agent | `typescript-architecture-auditor`        | Audit TypeScript ADRs for conventions, testability, and voice              |
-| Agent | `typescript-code-auditor`                | Audit TypeScript code for design flaws and ADR compliance                  |
-| Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                 |
-| Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model |
+| Type  | Name                                     | Purpose                                                                                                                                    |
+| ----- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Skill | `/architecting-typescript`               | Writing ADRs for TypeScript                                                                                                                |
+| Skill | `/auditing-typescript`                   | Auditing, reviewing, or evaluating TypeScript implementation code for design flaws and ADR compliance                                      |
+| Skill | `/auditing-typescript-architecture`      | Auditing ADRs for TypeScript                                                                                                               |
+| Skill | `/auditing-typescript-tests`             | Auditing TypeScript test evidence, reviewing TypeScript tests for spec-tree evidence quality, or evaluating TypeScript test infrastructure |
+| Skill | `/coding-typescript`                     | Writing or fixing implementation code for TypeScript                                                                                       |
+| Skill | `/standardizing-typescript`              | TypeScript code standards enforced across all skills                                                                                       |
+| Skill | `/standardizing-typescript-architecture` | TypeScript ADR conventions enforced across architect and auditor skills                                                                    |
+| Skill | `/standardizing-typescript-tests`        | TypeScript testing standards enforced across all skills                                                                                    |
+| Skill | `/testing-typescript`                    | Writing or fixing tests for TypeScript                                                                                                     |
+| Agent | `typescript-architecture-auditor`        | Audit TypeScript ADRs for conventions, testability, and voice                                                                              |
+| Agent | `typescript-code-auditor`                | Audit TypeScript code for design flaws and ADR compliance                                                                                  |
+| Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                                                                                 |
+| Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model                                                                 |
 
 ### work
 
