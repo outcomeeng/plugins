@@ -409,6 +409,10 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
     assert not older_dir.exists(), (
         f"expected non-target real directory {older_dir} removed"
     )
+    assert older_dir in result.pruned_links, (
+        f"expected removed real directory {older_dir} in "
+        f"result.pruned_links={result.pruned_links}"
+    )
 
 
 def test_stale_current_version_symlink_is_removed_when_no_real_dir(
@@ -451,6 +455,10 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     )
     assert not older_dir.exists(), (
         f"expected non-target real directory {older_dir} removed"
+    )
+    assert older_dir in result.pruned_links, (
+        f"expected removed real directory {older_dir} in "
+        f"result.pruned_links={result.pruned_links}"
     )
 
 
@@ -499,6 +507,10 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
     assert not prior_real_dir.exists(), (
         f"expected non-target real directory {prior_real_dir} removed"
     )
+    assert prior_real_dir in result.pruned_links, (
+        f"expected removed real directory {prior_real_dir} in "
+        f"result.pruned_links={result.pruned_links}"
+    )
 
 
 def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absent(
@@ -544,6 +556,10 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
     )
     assert not prior_real_dir.exists(), (
         f"expected non-target real directory {prior_real_dir} removed"
+    )
+    assert prior_real_dir in result.pruned_links, (
+        f"expected removed real directory {prior_real_dir} in "
+        f"result.pruned_links={result.pruned_links}"
     )
 
 
@@ -700,6 +716,10 @@ def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> 
     )
     assert result.pruned_plugins == (), (
         f"dry run plans no prunes when the query is skipped, got {result.pruned_plugins}"
+    )
+    assert plugin_dir / NOT_INSTALLED_STALE_VERSION in result.pruned_links, (
+        "dry run must report the stale real directory it would prune without "
+        f"mutating it; got result.pruned_links={result.pruned_links}"
     )
 
 
