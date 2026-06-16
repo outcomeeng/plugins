@@ -1,18 +1,19 @@
 """Upgrade a Codex marketplace and reconcile the plugin cache against history.
 
-After the upgrade, the cache for each plugin in the working tree is reconciled
-against the set of versions published to the plugin's manifest within the
-configured window (default ten days). The symlink target is the cache directory
-named with the plugin's current working-tree version; in-window versions other
-than the current one become symlinks pointing at it, versions outside the window
-are removed, and plugins absent from the working tree have their cache directory
-pruned in full. When the upgrade leaves no real directory for the current
-version, every compatibility symlink for the plugin is removed and none is
-created -- a symlink to a non-current directory would resolve a version to stale
-content. The preservation set is derived from git history, not from the
-pre-upgrade cache snapshot. A single bypassed recipe invocation has no permanent
-effect -- the next invocation reconstructs the symlink set from the same
-authoritative source.
+After the upgrade, the cache for each installed plugin in the working tree is
+reconciled against the set of versions published to the plugin's manifest within
+the configured window (default ten days). The symlink target is the complete
+real cache directory named with the version Codex reports as installed for that
+plugin; in-window versions other than the installed one become symlinks pointing
+at it, versions outside the window are removed, and plugins absent from the
+working tree or absent from Codex's installed set have their cache directory
+pruned in full. When the upgrade leaves no complete real directory for the
+Codex-reported installed version, every compatibility symlink for the plugin is
+removed and none is created -- a symlink to a non-current directory would
+resolve a version to stale content. The preservation set is derived from git
+history, not from the pre-upgrade cache snapshot. A single bypassed recipe
+invocation has no permanent effect -- the next invocation reconstructs the
+symlink set from the same authoritative source.
 
 Usage::
 
@@ -37,6 +38,7 @@ DEFAULT_WINDOW_DAYS = 10
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
 CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
+CODEX_PLUGIN_MANIFEST = Path(".codex-plugin") / "plugin.json"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
@@ -95,8 +97,8 @@ class GitPluginHistory:
                 if version is not None:
                     versions.add(version)
         # Always include the current working-tree version, even if its commit
-        # falls outside the window. The current version is the published target,
-        # not a historical compatibility entry.
+        # falls outside the window. It belongs in the published-window set even
+        # when the live target comes from Codex's installed-version report.
         current = self._read_working_tree_version(manifest_rel)
         if current is not None:
             versions.add(current)
@@ -172,20 +174,21 @@ class InstalledSetError(RuntimeError):
 class InstalledPlugins(Protocol):
     """Source-of-truth for which plugins Codex considers installed."""
 
-    def installed_plugins(self, marketplace: str) -> frozenset[str]: ...
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]: ...
 
 
-def parse_installed_plugins(payload: str, marketplace: str) -> frozenset[str]:
-    """Extract the installed plugin names for `marketplace` from `codex plugin list
-    --json` output.
+def parse_installed_plugin_versions(payload: str, marketplace: str) -> dict[str, str]:
+    """Extract installed plugin name to version for `marketplace` from `codex plugin
+    list --json` output.
 
     The contract is the CLI's documented shape: a JSON object with an ``installed``
-    array whose entries each carry a string ``name`` and may carry a
-    ``marketplaceName``. Entries naming a different marketplace are excluded so the
-    set is scoped even when the caller omits the ``--marketplace`` filter. Any
+    array whose entries each carry string ``name`` and ``version`` fields and may
+    carry a ``marketplaceName``. Entries naming a different marketplace are excluded
+    so the set is scoped even when the caller omits the ``--marketplace`` filter. Any
     departure from the contract -- unparseable text, a non-object payload, a missing
-    or non-list ``installed`` key, or an entry without a string ``name`` -- raises
-    ``InstalledSetError`` rather than yielding a silent empty set.
+    or non-list ``installed`` key, or an entry without string ``name`` and
+    ``version`` fields -- raises ``InstalledSetError`` rather than yielding a silent
+    empty set or stale target.
     """
     try:
         data = json.loads(payload)
@@ -198,7 +201,7 @@ def parse_installed_plugins(payload: str, marketplace: str) -> frozenset[str]:
     installed = data.get("installed")
     if not isinstance(installed, list):
         raise InstalledSetError("codex plugin list output has no 'installed' array")
-    names: set[str] = set()
+    versions: dict[str, str] = {}
     for entry in installed:
         if not isinstance(entry, dict):
             raise InstalledSetError(
@@ -209,25 +212,31 @@ def parse_installed_plugins(payload: str, marketplace: str) -> frozenset[str]:
             raise InstalledSetError(
                 "codex plugin list 'installed' entry has no string 'name'"
             )
+        version = entry.get("version")
+        if not isinstance(version, str):
+            raise InstalledSetError(
+                "codex plugin list 'installed' entry has no string 'version'"
+            )
         entry_marketplace = entry.get("marketplaceName")
         if isinstance(entry_marketplace, str) and entry_marketplace != marketplace:
             continue
-        names.add(name)
-    return frozenset(names)
+        versions[name] = version
+    return versions
 
 
 @dataclass(frozen=True)
 class CodexCliInstalled:
-    """Default InstalledPlugins: queries the Codex CLI for its installed set.
+    """Default InstalledPlugins: queries the Codex CLI for installed versions.
 
-    Reads the authoritative installed set from `codex plugin list --json
-    --marketplace <marketplace>` rather than from `~/.codex/config.toml`, so a
-    changed CLI contract surfaces as a parse failure instead of a silent misread.
+    Reads the authoritative installed set and resolved versions from `codex plugin
+    list --json --marketplace <marketplace>` rather than from
+    `~/.codex/config.toml`, so a changed CLI contract surfaces as a parse failure
+    instead of a silent misread or stale target.
     """
 
     runner: CommandRunner = run_command_capture
 
-    def installed_plugins(self, marketplace: str) -> frozenset[str]:
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
         result = self.runner([*CODEX_LIST_COMMAND, marketplace])
         if result.returncode != 0:
             stderr = (result.stderr or "").strip()
@@ -236,7 +245,7 @@ class CodexCliInstalled:
                 f"codex plugin list exited {result.returncode} "
                 f"for marketplace {marketplace}{detail}"
             )
-        return parse_installed_plugins(result.stdout or "", marketplace)
+        return parse_installed_plugin_versions(result.stdout or "", marketplace)
 
 
 def preserve_during_upgrade(
@@ -286,13 +295,14 @@ def preserve_during_upgrade(
         # Query the installed set before the first prune so the recipe is
         # all-or-nothing: a failed or unrecognized query raises here and no cache
         # directory has been touched, so a degraded signal never drives a deletion.
-        installed_set = installed.installed_plugins(marketplace)
-        wanted = working_tree_plugins & installed_set
+        installed_versions = installed.installed_plugin_versions(marketplace)
+        wanted = working_tree_plugins & frozenset(installed_versions)
     else:
         # A dry run reports planned changes without querying the installed set, so
         # the preview needs no Codex CLI present and mutates nothing; it treats
         # every working-tree plugin as wanted. Absent an installed provider, no
         # scoping is applied either.
+        installed_versions = {}
         wanted = working_tree_plugins
 
     # A cache directory for any plugin outside the wanted set is pruned in full --
@@ -309,21 +319,35 @@ def preserve_during_upgrade(
             # Working-tree plugin absent from the Codex cache: nothing to reconcile.
             continue
         in_window = resolved_history.published_versions(plugin)
-        current_version = resolved_history.current_version(plugin)
+        current_version = installed_versions.get(
+            plugin
+        ) or resolved_history.current_version(plugin)
         current_real = _current_real_version_dir(plugin_dir, current_version)
         if current_real is None:
             # The upgrade exited successfully without materializing the current
-            # version as a real directory. No compatibility symlink can point at
-            # current content, so remove every compatibility symlink for the
-            # plugin -- leaving only real directories -- rather than let any
-            # version resolve to a non-current directory. validate_install reports
-            # the absent current version.
+            # version as a complete real directory. No compatibility symlink can
+            # point at current content, so remove every compatibility symlink and
+            # every non-target real directory for the plugin rather than let any
+            # version resolve to non-current content. validate_install reports the
+            # absent or incomplete current version.
             pruned_links.extend(_prune_all_symlinks(plugin_dir, dry_run=dry_run))
+            _prune_non_target_real_dirs(
+                plugin_dir,
+                current_version,
+                keep_versions=frozenset(),
+                dry_run=dry_run,
+            )
             continue
 
         keep_versions = in_window | {current_real.name}
         pruned_links.extend(
             _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
+        )
+        _prune_non_target_real_dirs(
+            plugin_dir,
+            current_real.name,
+            keep_versions=keep_versions,
+            dry_run=dry_run,
         )
         linked_versions.extend(
             _ensure_in_window_symlinks(
@@ -365,22 +389,50 @@ def _current_real_version_dir(
     if current_version is None:
         return None
     candidate = plugin_dir / current_version
-    if candidate.is_dir() and not candidate.is_symlink():
+    if (
+        candidate.is_dir()
+        and not candidate.is_symlink()
+        and _is_complete_plugin_root(candidate)
+    ):
         return candidate
     return None
+
+
+def _is_complete_plugin_root(path: Path) -> bool:
+    return (path / CODEX_PLUGIN_MANIFEST).is_file()
 
 
 def _prune_all_symlinks(plugin_dir: Path, *, dry_run: bool) -> list[Path]:
     pruned: list[Path] = []
     for entry in sorted(plugin_dir.iterdir()):
         if not entry.is_symlink():
-            # Real version directories are left alone -- only Codex creates or
-            # removes them, and removing them risks data loss.
+            # Real directories are pruned by the caller once the target version
+            # is known; this step only removes stale compatibility links.
             continue
         if not dry_run:
             entry.unlink()
         pruned.append(entry)
     return pruned
+
+
+def _prune_non_target_real_dirs(
+    plugin_dir: Path,
+    target_version: str | None,
+    *,
+    keep_versions: frozenset[str],
+    dry_run: bool,
+) -> None:
+    for entry in sorted(plugin_dir.iterdir()):
+        if entry.is_symlink() or not entry.is_dir():
+            continue
+        if target_version is not None and entry.name == target_version:
+            continue
+        if entry.name in keep_versions and target_version is not None:
+            # In-window, non-target versions must become symlinks to the target
+            # later in the reconciliation pass.
+            continue
+        if not dry_run:
+            shutil.rmtree(entry)
 
 
 def _prune_out_of_window_paths(
@@ -394,8 +446,11 @@ def _prune_out_of_window_paths(
         if entry.name in keep_versions:
             continue
         if not entry.is_symlink():
-            # Real version directory outside the keep set is left alone -- only
-            # Codex itself creates these, and removing them risks data loss.
+            if not entry.is_dir():
+                continue
+            if not dry_run:
+                shutil.rmtree(entry)
+            pruned.append(entry)
             continue
         if not dry_run:
             entry.unlink()
@@ -419,10 +474,9 @@ def _ensure_in_window_symlinks(
             continue
         if os.path.lexists(target_path):
             if not target_path.is_symlink():
-                # A real directory at an in-window version is left alone --
-                # the same data-loss concern as out-of-window real directories.
-                continue
-            if not dry_run:
+                if not dry_run:
+                    shutil.rmtree(target_path)
+            elif not dry_run:
                 target_path.unlink()
         if not dry_run:
             plugin_dir.mkdir(parents=True, exist_ok=True)

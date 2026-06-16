@@ -34,6 +34,15 @@ def _seed_cache(cache_root: Path, plugin: str, version: str) -> None:
     plugin_dir = cache_root / MARKETPLACE_NAME / plugin / version
     plugin_dir.mkdir(parents=True)
     (plugin_dir / "marker.txt").write_text("seed")
+    manifest = plugin_dir / validate_install.CODEX_PLUGIN_MANIFEST
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+
+
+def _seed_incomplete_cache(cache_root: Path, plugin: str, version: str) -> None:
+    plugin_dir = cache_root / MARKETPLACE_NAME / plugin / version
+    plugin_dir.mkdir(parents=True)
+    (plugin_dir / "marker.txt").write_text("seed")
 
 
 def test_lagging_codex_marketplace_version_emits_warning_not_error(
@@ -210,32 +219,87 @@ def test_main_reads_legacy_plugins_marketplace_clone_during_layout_migration(
     assert "warning:" in captured.err
 
 
-def test_codex_cache_missing_when_working_tree_older_is_an_error(
+def test_codex_cache_verifies_resolved_version_when_working_tree_is_older(
     tmp_path: Path,
 ) -> None:
-    """When the working-tree manifest is older than the marketplace clone (e.g., after
-    reverting a version bump) and the cache lacks that version, the missing directory
-    is an error — the ahead-only tolerance does not cover the inverse direction."""
+    """When the working-tree manifest is older than the version Codex resolves,
+    validate_install verifies the resolved version and reports the divergence as a
+    warning instead of requiring the working-tree version in the Codex cache."""
     repo_root = tmp_path / "repo"
     codex_cache = tmp_path / "codex_cache"
     older_version = "0.0.1"
     _write_manifest(repo_root, PLUGIN_NAME, older_version)
     _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
 
-    def published_version(plugin: str) -> str | None:
-        return PUBLISHED_VERSION if plugin == PLUGIN_NAME else None
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert result.errors == [], f"unexpected errors: {result.errors}"
+    assert len(result.warnings) == 1, (
+        f"expected one warning, got {len(result.warnings)}: {result.warnings}"
+    )
+    warning = result.warnings[0]
+    assert PLUGIN_NAME in warning
+    assert older_version in warning
+    assert PUBLISHED_VERSION in warning
+
+
+def test_codex_cache_multiple_real_version_dirs_is_an_error(
+    tmp_path: Path,
+) -> None:
+    """When a Codex plugin cache contains more than one real version directory,
+    validate_install reports the plugin path and both real versions."""
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    extra_version = "0.0.1"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, extra_version)
 
     result = validate_install.validate(
         MARKETPLACE_NAME,
         repo_root=repo_root,
         codex_cache_override=codex_cache,
         claude_cache_override=tmp_path / "empty_claude_cache",
-        codex_marketplace_version=published_version,
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
     )
 
-    assert result.warnings == [], f"unexpected warnings: {result.warnings}"
     assert len(result.errors) == 1
-    assert older_version in result.errors[0]
+    error = result.errors[0]
+    assert "MULTIPLE REAL" in error
+    assert str(codex_cache / MARKETPLACE_NAME / PLUGIN_NAME) in error
+    assert PUBLISHED_VERSION in error
+    assert extra_version in error
+
+
+def test_codex_cache_incomplete_entry_is_an_error(tmp_path: Path) -> None:
+    """When a Codex cache entry lacks the runtime manifest for its plugin root,
+    validate_install reports the incomplete path and missing manifest."""
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_incomplete_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 1
+    error = result.errors[0]
+    assert "INCOMPLETE" in error
+    assert (
+        str(codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / PUBLISHED_VERSION) in error
+    )
+    assert str(validate_install.CODEX_PLUGIN_MANIFEST) in error
 
 
 def test_orphan_plugin_in_cache_emits_warning(tmp_path: Path) -> None:
