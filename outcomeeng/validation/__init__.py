@@ -19,23 +19,27 @@ from outcomeeng.validation._model import (
 )
 from outcomeeng.validation._spawner import ProductionSpawner
 from outcomeeng.validation._steps import (
+    ACTIONLINT_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     PYTHON_SOURCE_PATHS,
     PYTEST_ARGV,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
+    SHELLCHECK_ARGV,
     SPX_MARKDOWN_ARGV,
     STEPS,
 )
 
 __all__ = [
+    "ACTIONLINT_ARGV",
     "MYPY_ARGV",
     "PYRIGHT_ARGV",
     "PYTHON_SOURCE_PATHS",
     "PYTEST_ARGV",
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
+    "SHELLCHECK_ARGV",
     "SPX_MARKDOWN_ARGV",
     "STEPS",
     "ProcessHandle",

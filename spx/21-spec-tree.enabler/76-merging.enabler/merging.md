@@ -6,16 +6,17 @@ CAN drive a changeset from review-ready to merge under one policy, routed to the
 
 ## Assertions
 
-### Scenarios
+### Mappings
 
-- Given a production-relevant change (per the project's recognition mechanism) that the operator has not approved, when `MERGE_READINESS` otherwise holds, then the merging flow withholds the merge and emits an explicit-approval action token; given a non-production-relevant change or operator approval, then it executes the merge ([eval](evals/production-readiness/eval.toml))
-- Given a required check's `statusCheckRollup` status and conclusion, when the gate classifies it, then it is terminal-green only when terminal (`status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}`) and successful (`conclusion == SUCCESS` or `state == SUCCESS`); a `SKIPPED`, `NEUTRAL`, `FAILURE`, `CANCELLED`, `TIMED_OUT`, still-running, or absent required check is not terminal-green and withholds `MERGE_READINESS` ([eval](evals/terminal-green/eval.toml))
-- Given an auditor verdict surfaces while the merging flow drives review feedback, when the overall verdict is `REJECTED` or `UNKNOWN`, a row status is `FAIL` or `UNKNOWN`, or a finding verdict is `REJECT`, then the flow treats the cited issue or audit uncertainty as in-slice unresolved work to fix or resolve before merge rather than deferred `ISSUES.md` / `PLAN.md` work ([eval](evals/auditor-verdict-handling/eval.toml))
+- A production-relevant change with no operator approval maps to `PRODUCTION_READINESS = WITHHOLD` and `merge_action = AWAIT_APPROVAL`; a non-production-relevant change, an operator-approved production-relevant change, or a project with no recognition mechanism maps to `PRODUCTION_READINESS = HOLD` and `merge_action = MERGE` ([test](tests/test_merge_gate_policy.mapping.l1.py))
+- A required check's `statusCheckRollup` status and conclusion map to terminal-green only when terminal (`status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}`) and successful (`conclusion == SUCCESS` or `state == SUCCESS`); a `SKIPPED`, `NEUTRAL`, `FAILURE`, `ACTION_REQUIRED`, `CANCELLED`, `TIMED_OUT`, still-running, or absent required check maps to a blocking classification and withholds `MERGE_READINESS` ([test](tests/test_merge_gate_policy.mapping.l1.py))
+- An auditor verdict surfaced while the merging flow drives review feedback maps to in-slice unresolved work when the overall verdict is `REJECTED` or `UNKNOWN`, a row status is `FAIL` or `UNKNOWN`, or a finding verdict is `REJECT`; out-of-PR verdicts map to `TRACK_OUT_OF_PR`, and non-blocking in-PR verdicts map to `NO_REPAIR` ([test](tests/test_merge_gate_policy.mapping.l1.py))
 
 ### Conformance
 
 - The `/merge` dispatcher conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/merge/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_merge.conformance.l1.py))
 - The `/merge` dispatcher classifies the changeset through the canonical `changeset_scope` primitives (`detect_base_ref` for the base ref, `branch_scope` for the committed diff) via a co-located `scripts/classify_changeset.py`, never re-deriving the base ref or diff range inline in the skill body, per `spx/21-spec-tree.enabler/17-auditing.adr.md` ([test](tests/test_classify_changeset.scenario.l1.py))
+- The shipped `standardizing-merging` skill text preserves the production-readiness, terminal-green, and auditor-verdict policy clauses that the deterministic merge-policy helper maps, so the mapping evidence stays coupled to the installed flow ([test](tests/test_merge_gate_policy.conformance.l1.py))
 
 ### Compliance
 

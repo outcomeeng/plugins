@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 
 DEFAULT_SUITE_THRESHOLD = 0.85
 DEFAULT_TRIALS_PER_CASE = 1
+DEFAULT_CI_POLICY = "full"
 # Upper bound on ``trials`` from an ``eval.toml``: a misconfigured value
 # like ``trials = 10000`` would otherwise fire that many subprocesses.
 # Mirrors the ``--workers`` CLI cap (16); 100 leaves ample headroom for
@@ -30,6 +32,17 @@ _REQUIRED_CASES = "cases"
 _REQUIRED_PROMPT = "prompt"
 _OPTIONAL_THRESHOLD = "threshold"
 _OPTIONAL_TRIALS = "trials"
+_OPTIONAL_PLUGIN_DIR = "plugin_dir"
+_OPTIONAL_OWNED_PATHS = "owned_paths"
+_OPTIONAL_SMOKE_CASES = "smoke_cases"
+_OPTIONAL_CI_POLICY = "ci_policy"
+
+
+class CiPolicy(StrEnum):
+    """How automated CI treats an eval suite."""
+
+    FULL = "full"
+    MANUAL = "manual"
 
 
 @dataclass(frozen=True)
@@ -41,6 +54,10 @@ class EvalDefinition:
     prompt_template_path: Path
     threshold: float
     trials: int
+    plugin_dir: Path | None
+    owned_paths: tuple[str, ...]
+    smoke_case_ids: tuple[str, ...]
+    ci_policy: CiPolicy
 
 
 def load_definition(toml_path: Path) -> EvalDefinition:
@@ -80,6 +97,10 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         min_value=1,
         max_value=MAX_TRIALS_PER_CASE,
     )
+    plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
+    owned_paths = _optional_str_tuple(raw, _OPTIONAL_OWNED_PATHS)
+    smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
+    ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
 
     return EvalDefinition(
         title=title,
@@ -87,6 +108,10 @@ def load_definition(toml_path: Path) -> EvalDefinition:
         prompt_template_path=prompt_path,
         threshold=threshold,
         trials=trials,
+        plugin_dir=plugin_dir,
+        owned_paths=owned_paths,
+        smoke_case_ids=smoke_case_ids,
+        ci_policy=ci_policy,
     )
 
 
@@ -156,3 +181,44 @@ def _optional_int(
         msg = f"field {key!r} must be <= {max_value}, got {value}"
         raise ValueError(msg)
     return int(value)
+
+
+def _optional_path(data: dict[str, Any], key: str) -> Path | None:
+    if key not in data:
+        return None
+    value = data[key]
+    if not isinstance(value, str) or not value:
+        msg = f"field {key!r} must be a non-empty string, got {type(value).__name__}"
+        raise ValueError(msg)
+    return Path(value)
+
+
+def _optional_str_tuple(data: dict[str, Any], key: str) -> tuple[str, ...]:
+    if key not in data:
+        return ()
+    value = data[key]
+    if not isinstance(value, list):
+        msg = f"field {key!r} must be a list of non-empty strings, got {type(value).__name__}"
+        raise ValueError(msg)
+    result: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item:
+            msg = f"field {key!r} must contain only non-empty strings"
+            raise ValueError(msg)
+        result.append(item)
+    return tuple(result)
+
+
+def _optional_ci_policy(data: dict[str, Any], key: str) -> CiPolicy:
+    if key not in data:
+        return CiPolicy(DEFAULT_CI_POLICY)
+    value = data[key]
+    if not isinstance(value, str):
+        msg = f"field {key!r} must be a string, got {type(value).__name__}"
+        raise ValueError(msg)
+    try:
+        return CiPolicy(value)
+    except ValueError as exc:
+        allowed = ", ".join(policy.value for policy in CiPolicy)
+        msg = f"field {key!r} must be one of: {allowed}"
+        raise ValueError(msg) from exc

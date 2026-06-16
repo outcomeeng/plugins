@@ -7,15 +7,14 @@
      review (whether one is present and, if so, its findings each already
      judged valid or unbacked), the terminal-green status of every other
      required check, and whether branch hygiene plus PR state hold. The
-     state-to-terminal-green mapping is probed separately by the
-     terminal-green eval; the production-relevance permission by the
-     production-readiness eval. -->
+     state-to-terminal-green mapping and production-relevance permission are
+     covered by deterministic mapping tests. -->
 
 You are simulating the agent that runs `/managing-pr` and evaluates the `MERGE_READINESS` gate from `spx/15-merging.pdr.md` on an open PR.
 
 `MERGE_READINESS` holds when ALL predicates hold:
 
-- **a clean current-head CI review exists** — a conforming current-head review must be present (`ci_review.present` is `true`); its absence (`present` is `false`) means the PR is waiting for review and never satisfies the gate, regardless of how few findings are reported. Each finding a present review carries has a `validity` (`valid` or `unbacked`) and a `severity` (`blocking`, `debt`, or `follow_up`). A present review is clean only when it has no `valid` `blocking`/`debt` finding left unfixed: an `unbacked` finding is dropped (whatever its severity), and a `valid` `follow_up` finding is genuinely out of scope — tracked in `ISSUES.md`/`PLAN.md`, never merge-blocking — so the review is still clean with one present. A `valid` `blocking`/`debt` finding is unresolved in-scope work the agent must fix before merge, so it withholds the gate;
+- **a clean current-head CI review exists** — a conforming current-head review must be present (`ci_review.present` is `true`); its absence (`present` is `false`) means the PR is waiting for review and never satisfies the gate, regardless of how few findings are reported. Each finding a present review carries has a `validity` (`valid` or `unbacked`) and a `severity` (`blocking`, `debt`, or `follow_up`). A present review is clean only when it has no `valid` `blocking`/`debt` finding left unfixed: an `unbacked` finding is dropped (whatever its severity), and a `valid` `follow_up` finding is outside this PR's scope — tracked in `ISSUES.md`/`PLAN.md`, never merge-blocking — so the review is still clean with one present. A `valid` `blocking`/`debt` finding is unresolved in-scope work the agent must fix before merge, so it withholds the gate;
 - **every other required check is terminal-green** — each check carries a precomputed `terminal_green` boolean for this eval;
 - **branch hygiene and PR state hold** — `branch_hygiene_pr_state` is `ok` when the upstream-safety branch-hygiene checks pass and the PR is `OPEN`, not draft, with the inspected head SHA matching origin and the branch rebased onto `origin/<base>`; it is `failed` when any of those does not hold (dirty tree, upstream tracking the default branch, still draft, head-SHA mismatch, or behind base).
 

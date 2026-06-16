@@ -72,6 +72,7 @@ def run_suite(
     trials_per_case: int = 1,
     suite_threshold: float = 0.85,
     workers: int = 1,
+    case_ids: tuple[str, ...] = (),
 ) -> SuiteResult:
     """Replay each case through ``runner``, grade trials, return aggregated result.
 
@@ -91,7 +92,7 @@ def run_suite(
     The guard fires before any runner work so the failure surfaces at the
     entry point rather than downstream in ``_pass_rate``.
     """
-    cases = load_cases(cases_path)
+    cases = _select_cases(load_cases(cases_path), case_ids=case_ids, path=cases_path)
     if not cases:
         msg = f"no cases in {cases_path}; cases.jsonl is empty or misconfigured"
         raise ValueError(msg)
@@ -120,6 +121,23 @@ def run_suite(
         threshold=suite_threshold,
         passed=pass_rate >= suite_threshold,
     )
+
+
+def _select_cases(
+    cases: list[Case],
+    *,
+    case_ids: tuple[str, ...],
+    path: Path,
+) -> list[Case]:
+    if not case_ids:
+        return cases
+    selected = [case for case in cases if case.id in case_ids]
+    selected_ids = {case.id for case in selected}
+    missing = [case_id for case_id in case_ids if case_id not in selected_ids]
+    if missing:
+        msg = f"{path}: requested case id(s) not found: {', '.join(missing)}"
+        raise ValueError(msg)
+    return selected
 
 
 def _safe_run_case(

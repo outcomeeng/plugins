@@ -16,7 +16,31 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-The CI workflow `.github/workflows/spec-tree-evals.yml` runs the eval suites: it discovers each `eval.toml` under the configured root and runs it through `outcomeeng-evals run` (the CLI has no `run --all`; the workflow loops over `discover` output), gating the job on each suite's exit code. It triggers on every `pull_request` touching the spec-tree plugin / its evals / the harness (gated by a collaborator-authorization job so untrusted PRs never receive secrets), on `push` to main, on a weekly `schedule`, and on `workflow_dispatch`. The runner derives `--bare` from the inherited environment by default per `eval-harness.md`: it passes `--bare` when `ANTHROPIC_API_KEY` is set (the only `--bare`-compatible auth source), otherwise it omits `--bare` so `CLAUDE_CODE_OAUTH_TOKEN` / `apiKeyHelper` / an OAuth login session is accepted. A developer with `ANTHROPIC_API_KEY` exported locally gets `--bare`-isolation from ambient `~/.claude/CLAUDE.md` and the cwd's `AGENTS.md` without further setup. For CI to take the isolated path, `secrets.ANTHROPIC_API_KEY` must be exposed to the job and forwarded into env — currently the workflow forwards only `CLAUDE_CODE_OAUTH_TOKEN`, so CI runs without `--bare` (which is correct for that auth source but does not provide isolation). See the workflow-env TODO below.
+The CI workflow `.github/workflows/spec-tree-evals.yml` runs planned eval
+suites. It discovers each `eval.toml` under the configured root, filters out
+`ci_policy = "manual"` suites, and chooses full-suite, smoke-case, or skipped
+execution from the trigger mode and changed paths. PRs run smoke cases when a
+changed file matches a suite's `owned_paths`, run a full suite when the suite
+definition or eval harness changed, and skip unrelated suites. `push` to main,
+the weekly schedule, and `workflow_dispatch` run every non-manual suite under
+the configured root. Each selected suite runs through `outcomeeng-evals run`,
+using the suite's `plugin_dir` or the workflow fallback, and the job gates on
+each selected suite's exit code.
+
+The workflow triggers on PRs touching declared eval ownership surfaces, pushes
+to `main` for the same surfaces, a weekly `schedule`, and `workflow_dispatch`.
+PR execution is gated by collaborator authorization so untrusted PRs never
+receive secrets. The runner derives `--bare` from the inherited environment by
+default per `eval-harness.md`: it passes `--bare` when `ANTHROPIC_API_KEY` is
+set (the only `--bare`-compatible auth source), otherwise it omits `--bare` so
+`CLAUDE_CODE_OAUTH_TOKEN` / `apiKeyHelper` / an OAuth login session is
+accepted. A developer with `ANTHROPIC_API_KEY` exported locally gets
+`--bare` isolation from ambient `~/.claude/CLAUDE.md` and the cwd's
+`AGENTS.md` without further setup. For CI to take the isolated path,
+`secrets.ANTHROPIC_API_KEY` must be exposed to the job and forwarded into env;
+currently the workflow forwards only `CLAUDE_CODE_OAUTH_TOKEN`, so CI runs
+without `--bare` (functional for that auth source but without CLI-level
+isolation). See the workflow-env TODO below.
 
 CI owns the canonical appends on main: `spec-tree-evals.yml`'s commit-back step pushes them with `[skip ci]` via the `OUTCOMEENG_EVAL_STORE` PAT. Developer-machine runs still append local rows that show up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
@@ -24,11 +48,13 @@ CI owns the canonical appends on main: `spec-tree-evals.yml`'s commit-back step 
 
 The eval CI workflow (`spec-tree-evals.yml`) scopes to trusted triggers: `push` to `main`, `schedule`, and `workflow_dispatch` run unconditionally; `pull_request` runs only after the `authorize` job confirms the PR is same-repo (not a fork) and its author has `admin`/`maintain`/`write` permission. Fork PRs are skipped because GitHub withholds secrets from `pull_request` events triggered by a fork, so the `claude` subprocess would never receive `CLAUDE_CODE_OAUTH_TOKEN`. `_subprocess_env` forwards the full job environment to the `claude` subprocess, so an eval crafted in an untrusted PR could otherwise exfiltrate job secrets; the mitigation is the trigger scoping plus the authorization gate, not env filtering (auth resolution requires the inherited env).
 
-## FOLLOW-UP: no PR-time guarantee that `dist/claude/spec-tree` matches `src/plugins/spec-tree`
+## FOLLOW-UP: no PR-time guarantee that `dist/claude/spec-tree` matches `src/plugins/spec-tree` (RESOLVED)
 
 `spec-tree-evals.yml` loads `--plugin-dir dist/claude/spec-tree` — the committed runtime tree, which is what consumers install, so grading the committed `dist` is the correct surface for the eval. But a PR that edits `src/plugins/spec-tree/**` while committing a stale `dist/` (a `--no-verify` bypass of the `build-skills` pre-commit hook) would have the eval grade the old runtime, hiding a source-only regression. The repo has no deterministic CI gate on PRs (`just check`'s `dist-diff` step runs only locally and in the pre-commit hook), so nothing on the PR independently enforces `dist == build(src)`.
 
 The right fix is a repo-wide deterministic CI gate (run `just check`, including `dist-diff`, on `pull_request`), not a `dist`-freshness step bolted onto the eval workflow — the eval's job is to grade the shipped artifact, not to police build freshness. Track here until that gate exists.
+
+Resolved 2026-06-16: `.github/workflows/check.yml` now runs `uv run python -m outcomeeng.validation` on `pull_request` and `push` to `main`; `outcomeeng.validation.STEPS` includes `build-skills` and `dist-diff`, so PR-time deterministic verification enforces `dist == build(src)`.
 
 `.github/workflows/spec-tree-evals.yml` commits the appended `history.jsonl`
 rows back to `main` using the org-level PAT secret `OUTCOMEENG_EVAL_STORE`

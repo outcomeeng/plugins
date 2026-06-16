@@ -60,12 +60,19 @@ MAX_WORKERS = 16
     show_default=True,
     help="Per-invocation timeout for the Claude subprocess.",
 )
+@click.option(
+    "--case-id",
+    "case_ids",
+    multiple=True,
+    help="Run only the named case id. Repeat to select multiple cases.",
+)
 def run_command(
     eval_toml: Path,
     plugin_dir: Path,
     workers: int,
     max_budget_usd: float,
     timeout_seconds: int,
+    case_ids: tuple[str, ...],
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
@@ -82,6 +89,7 @@ def run_command(
         trials_per_case=definition.trials,
         suite_threshold=definition.threshold,
         workers=workers,
+        case_ids=case_ids,
     )
 
     eval_dir = eval_toml.parent
