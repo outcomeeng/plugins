@@ -21,6 +21,7 @@ Load `/tracking-tasks` before any workflow:
 - refreshes a heartbeat after a new commit, new run, new blocker, failed check, or pending review state
 - schedules a delayed CI, PR, rollout, host-load, or external-convergence re-check
 - deletes a heartbeat because acceptance is reached, the work item closed, or the only remaining action is operator approval
+- launches local background work the harness tracks — a backgrounded command or a subagent — and must choose between ending the turn for the completion notification and running it in the foreground with an adequate timeout
 
 </when_to_load>
 
@@ -98,6 +99,16 @@ For any thread heartbeat or automation tool, create or update the one work-item 
 
 </runtime_timer>
 
+<local_background_work>
+A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a CI run, a PR review, a rollout, or host-load convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
+
+When a backgrounded shell command or a background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
+
+When the wait is short and ending the turn is overkill, run the command in the foreground with a timeout large enough to cover it — one bounded invocation, not a background launch followed by polling.
+
+Claude tends to launch a local background command and then poll it (`sleep N; check; repeat`) to "watch" it finish, treating the completion notification as unreliable. The notification is the resume path; the poll loop spawns a process tree per iteration that the harness does not reap, and across turns and concurrent agents it exhausts the host's process limit.
+</local_background_work>
+
 <prompt_template>
 The prompt is the skills to reload plus the pointers each handles — nothing the wake-up can reconstruct.
 
@@ -134,6 +145,7 @@ Tracking is correct when:
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision
 - shell waits, polling loops, watch commands, and duplicate heartbeats are absent
+- local background work the harness tracks ends the turn for its completion notification, or runs in the foreground with an adequate timeout — never a poll loop or a heartbeat that duplicates the notification
 - heartbeat deletion happens only at acceptance, closure, no remaining repository action, or approval-only boundary
 
 </success_criteria>
