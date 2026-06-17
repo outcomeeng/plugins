@@ -34,6 +34,7 @@ SHELLCHECK_ARGV: Final = (
     "-m",
     "outcomeeng.validation.shellcheck",
 )
+FMT_CHECK_ARGV: Final = ("dprint", "check")
 RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
 RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
 MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
@@ -112,7 +113,7 @@ STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
-    Step(label="fmt-check", argv=("dprint", "check")),
+    Step(label="fmt-check", argv=FMT_CHECK_ARGV),
     Step(label="actionlint", argv=ACTIONLINT_ARGV),
     Step(label="shellcheck", argv=SHELLCHECK_ARGV),
     Step(label="ruff-format", argv=RUFF_FORMAT_ARGV),

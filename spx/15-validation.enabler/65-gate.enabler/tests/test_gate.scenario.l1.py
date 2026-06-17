@@ -13,11 +13,21 @@ from __future__ import annotations
 import io
 from typing import Final
 
-from outcomeeng.validation import STEPS, Step, run
+from outcomeeng.validation import (
+    FAILURE_EXCERPT_LINE_LIMIT,
+    FULL_LOG_LABEL,
+    STEPS,
+    STEP_FAIL_STATUS,
+    STEP_PASS_STATUS,
+    Step,
+    run,
+)
 from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 PASS: Final = 0
 FAIL: Final = 2
+PASSING_OUTPUT: Final = "passing validator output"
+FAILING_OUTPUT_PREFIX: Final = "failing validator output line"
 
 
 def _three_no_op_steps() -> tuple[Step, ...]:
@@ -29,7 +39,7 @@ def _three_no_op_steps() -> tuple[Step, ...]:
 
 
 class TestPassingPipeline:
-    """All steps exit 0; expect headers, full timing summary, exit 0."""
+    """All steps exit 0; expect quiet live output and removed logs."""
 
     def test_exits_zero(self) -> None:
         spawner = RecordingSpawner(exit_codes=[PASS, PASS, PASS])
@@ -92,6 +102,35 @@ class TestPassingPipeline:
         for step in steps:
             assert step.label in summary
 
+    def test_pass_status_printed_per_step(self) -> None:
+        spawner = RecordingSpawner(exit_codes=[PASS, PASS, PASS])
+        sink = io.StringIO()
+        steps = _three_no_op_steps()
+
+        run(spawner=spawner, sink=sink, steps=steps)
+
+        output = sink.getvalue()
+        for step in steps:
+            assert f"{STEP_PASS_STATUS}  {step.label}" in output
+
+    def test_passing_step_output_goes_to_log_not_live_sink(self) -> None:
+        spawner = RecordingSpawner(
+            exit_codes=[PASS, PASS, PASS],
+            outputs=[PASSING_OUTPUT, PASSING_OUTPUT, PASSING_OUTPUT],
+        )
+        sink = io.StringIO()
+
+        run(spawner=spawner, sink=sink, steps=_three_no_op_steps())
+
+        assert PASSING_OUTPUT not in sink.getvalue()
+        assert spawner.written_outputs == [
+            PASSING_OUTPUT,
+            PASSING_OUTPUT,
+            PASSING_OUTPUT,
+        ]
+        for output_path in spawner.output_paths:
+            assert not output_path.exists()
+
 
 class TestFailingStep:
     """A step at position k exits non-zero; expect partial summary, exit k's status."""
@@ -141,6 +180,30 @@ class TestFailingStep:
         # The FAILED row appears at or after the failing step's label.
         failed_idx = summary.index("FAILED")
         assert steps[1].label in summary[failed_idx:]
+
+    def test_failing_step_prints_status_excerpt_and_log_path(self) -> None:
+        failing_output = "\n".join(
+            f"{FAILING_OUTPUT_PREFIX} {index}"
+            for index in range(FAILURE_EXCERPT_LINE_LIMIT + 2)
+        )
+        spawner = RecordingSpawner(
+            exit_codes=[PASS, FAIL, PASS],
+            outputs=[PASSING_OUTPUT, failing_output, PASSING_OUTPUT],
+        )
+        sink = io.StringIO()
+        steps = _three_no_op_steps()
+
+        run(spawner=spawner, sink=sink, steps=steps)
+
+        output = sink.getvalue()
+        failing_log_path = spawner.output_paths[1]
+        assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in output
+        assert FULL_LOG_LABEL in output
+        assert str(failing_log_path) in output
+        assert f"{FAILING_OUTPUT_PREFIX} 0" not in output
+        assert f"{FAILING_OUTPUT_PREFIX} {FAILURE_EXCERPT_LINE_LIMIT + 1}" in output
+        assert not spawner.output_paths[0].exists()
+        assert failing_log_path.read_text(encoding="utf-8") == failing_output
 
 
 class TestProductionStepListSmoke:

@@ -5,11 +5,11 @@ source code or module-level data:
 
 - The declared step list includes a `ruff format --check` step, a
   `ruff check` step, a `mypy --strict` package step, a `pyright` package step, a
-  `spx validation markdown` step, and a hook-safety step.
+  `spx validation markdown` step, a hook-safety step, and a `dprint check` step.
 - The production process spawner passes `start_new_session=True` so
   signal forwarding targets a process group.
 - The SIGKILL grace-period wait uses a single `time.monotonic()` deadline
-  per signal-handler invocation.
+  per signal-handler invocation, followed by a fixed-count post-kill reap check.
 - The orchestrator source contains no `gh run watch` literal and no
   `while True:` loop with an embedded `time.sleep` call.
 
@@ -30,6 +30,7 @@ from typing import Final
 from outcomeeng import validation as pkg
 from outcomeeng.validation import (
     HOOK_SAFETY_ARGV,
+    FMT_CHECK_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     RUFF_CHECK_ARGV,
@@ -50,6 +51,9 @@ class TestDeclaredSteps:
         assert len(STEPS) >= 1
         for step in STEPS:
             assert isinstance(step, Step)
+
+    def test_steps_includes_fmt_check(self) -> None:
+        assert any(step.argv == FMT_CHECK_ARGV for step in STEPS)
 
     def test_steps_includes_ruff_check(self) -> None:
         assert any(step.argv == RUFF_CHECK_ARGV for step in STEPS)
@@ -163,7 +167,7 @@ def _monotonic_call_count(func_source: str) -> int:
 
 
 class TestBoundedGracePeriod:
-    """Signal grace-period is bounded by exactly one time.monotonic() deadline."""
+    """Signal waits are bounded by one deadline and a fixed post-kill check."""
 
     def test_signal_handler_computes_one_monotonic_deadline(self) -> None:
         source = _signal_handler_source()
@@ -175,6 +179,10 @@ class TestBoundedGracePeriod:
             f"signal handler must use a single bounded deadline; "
             f"found {count} time.monotonic() calls"
         )
+
+    def test_signal_handler_uses_fixed_count_post_kill_reap_check(self) -> None:
+        source = _signal_handler_source()
+        assert "range(_POST_KILL_REAP_ATTEMPTS)" in source
 
 
 def _package_source_text() -> str:

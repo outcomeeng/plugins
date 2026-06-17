@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from outcomeeng.validation import ProcessHandle, ProcessSpawner
 
@@ -59,13 +60,21 @@ class RecordingSpawner:
     """
 
     exit_codes: Sequence[int]
+    outputs: Sequence[str] = ()
     spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
+    output_paths: list[Path] = field(default_factory=list)
+    written_outputs: list[str] = field(default_factory=list)
     handles: list[RecordingHandle] = field(default_factory=list)
     _next_pid: int = 10_000
 
-    def spawn(self, argv: Sequence[str]) -> ProcessHandle:
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
         index = len(self.spawn_calls)
         self.spawn_calls.append(tuple(argv))
+        self.output_paths.append(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output = self.outputs[index] if index < len(self.outputs) else ""
+        output_path.write_text(output, encoding="utf-8")
+        self.written_outputs.append(output)
         exit_code = self.exit_codes[index] if index < len(self.exit_codes) else 0
         handle = RecordingHandle(pid=self._next_pid + index, exit_code=exit_code)
         self.handles.append(handle)

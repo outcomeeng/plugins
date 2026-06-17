@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 
@@ -37,4 +38,4 @@ class ProcessHandle(Protocol):
 class ProcessSpawner(Protocol):
     """Spawns a child process and returns a ProcessHandle for it."""
 
-    def spawn(self, argv: Sequence[str]) -> ProcessHandle: ...
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle: ...

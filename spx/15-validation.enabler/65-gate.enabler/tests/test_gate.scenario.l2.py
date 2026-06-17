@@ -40,8 +40,8 @@ from outcomeeng.validation import (
 class PidPrintingSpawner:
     def __init__(self) -> None:
         self._inner = ProductionSpawner()
-    def spawn(self, argv):
-        handle = self._inner.spawn(argv)
+    def spawn(self, argv, output_path):
+        handle = self._inner.spawn(argv, output_path)
         sys.stderr.write(f"CHILD_PID={handle.pid}\n")
         sys.stderr.flush()
         return handle
