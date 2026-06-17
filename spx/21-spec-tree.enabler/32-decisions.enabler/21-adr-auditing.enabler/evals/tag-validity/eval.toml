@@ -1,0 +1,20 @@
+title = "adr-auditing-tag-validity"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/adr-auditing.md",
+  "spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/evals/tag-validity/**",
+  "src/plugins/spec-tree/skills/audit-adr/**",
+  "dist/claude/spec-tree/skills/audit-adr/**",
+]
+smoke_cases = [
+  "compliance-type-bare-mechanism-tag-rejected",
+  "eval-subsection-audit-tag-rejected",
+  "audit-subsection-eval-tag-rejected",
+  "testing-missing-tag-rejected",
+  "testing-multiple-tags-rejected",
+  "universal-scenario-tag-rejected",
+]
+threshold = 0.85
+trials = 1

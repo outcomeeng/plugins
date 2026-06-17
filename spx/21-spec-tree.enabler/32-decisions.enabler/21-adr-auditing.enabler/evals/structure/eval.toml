@@ -1,0 +1,13 @@
+title = "adr-auditing-structure"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/adr-auditing.md",
+  "spx/21-spec-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/evals/structure/**",
+  "src/plugins/spec-tree/skills/audit-adr/**",
+  "dist/claude/spec-tree/skills/audit-adr/**",
+]
+smoke_cases = ["missing-verification-section", "well-formed-adr-passes"]
+threshold = 0.85
+trials = 1

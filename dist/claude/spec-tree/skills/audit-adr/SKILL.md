@@ -1,6 +1,6 @@
 ---
 name: audit-adr
-description: ALWAYS use when auditing an ADR or after making changes to an ADR
+description: ALWAYS invoke this skill when auditing an ADR or after making changes to an ADR.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -92,7 +92,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 
 A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subsection, a missing tag, more than one tag, or an evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) is invalid.
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape → REJECT — "evidence-type-mismatch."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-tag." An evidence type that contradicts the claim's shape → REJECT — "evidence-type-mismatch."**
 
 </step>
 
@@ -121,13 +121,13 @@ The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `
   "rows": [
     { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+    { "name": "tag-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-mode-tag`, `evidence-type-mismatch`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (`missing-section`, `temporal-voice`, `invalid-tag`, `evidence-type-mismatch`); the `message` field carries the one-line detail.
 
 </verdict_format>
 

@@ -1,6 +1,6 @@
 ---
 name: audit-pdr
-description: ALWAYS use when auditing a PDR or after making changes to a PDR
+description: ALWAYS invoke this skill when auditing a PDR or after making changes to a PDR.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
