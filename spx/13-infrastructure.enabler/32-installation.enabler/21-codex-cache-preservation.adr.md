@@ -14,6 +14,7 @@ The managed Codex plugin set comes from `dist/codex/*/.codex-plugin/plugin.json`
 - The set of addable Codex plugins is the sorted set of plugin manifests under `dist/codex/*/.codex-plugin/plugin.json`.
 - The set of refreshed plugins is the working-tree plugin set intersected with the addable `dist/codex` plugin set.
 - Each refreshed plugin is reinstalled by `codex plugin add <plugin>@outcomeeng`; maintainer sync never runs `codex plugin marketplace upgrade outcomeeng`.
+- When Claude Code source repair removes an existing `outcomeeng` marketplace registration, maintainer sync snapshots installed `outcomeeng` Claude Code plugins first and restores each plugin's scope, project directory, and enabled state after re-adding the local marketplace source.
 - The post-refresh cache state is a pure function of the published git history, the working-tree manifests, the addable `dist/codex` manifests, and the Codex-reported installed versions.
 - For any installed plugin `P` whose Codex-reported installed version exists as a complete real directory after refresh, `~/.codex/plugins/cache/<marketplace>/P/` contains exactly one real version directory after reconciliation: the Codex-reported installed version. Every other in-window version path is a direct symlink to that directory, and every other real version directory is removed.
 - When all plugin adds complete successfully, for any plugin `P` outside the refreshed set, `~/.codex/plugins/cache/<marketplace>/P/` does not exist after reconciliation.
@@ -27,7 +28,7 @@ The managed Codex plugin set comes from `dist/codex/*/.codex-plugin/plugin.json`
 - ALWAYS: source reconciliation replaces a Git-backed Codex marketplace source for `outcomeeng` with the canonical local source before refresh ([conformance])
 - ALWAYS: source reconciliation replaces mismatched Claude Code or Codex local marketplace paths with the canonical local source before refresh ([conformance])
 - ALWAYS: an explicit canonical source root replaces stale local marketplace paths in both runtimes before refresh ([conformance])
-- ALWAYS: maintainer sync resolves the canonical local source from the default-branch worktree when a worktree pool contains feature worktrees ([conformance])
+- ALWAYS: Claude Code source repair preserves installed `outcomeeng` plugin selections by restoring each plugin's scope, project directory, and enabled state after re-adding the local marketplace source ([conformance])
 - ALWAYS: source reconciliation adds an absent Claude Code or Codex `outcomeeng` marketplace registration from the canonical local source before refresh ([conformance])
 - ALWAYS: the addable Codex plugin set is read from `dist/codex/*/.codex-plugin/plugin.json`, sorted by plugin name ([conformance])
 - Given generated Codex plugin manifests and an installed-set query, local refresh invokes `codex plugin add <plugin>@outcomeeng` for refreshed plugins in deterministic manifest order ([scenario])

@@ -32,6 +32,27 @@ CLAUDE_MARKETPLACE_REMOVE_COMMAND = (
     "marketplace",
     "remove",
 )
+CLAUDE_PLUGIN_LIST_COMMAND = (
+    "claude",
+    "plugin",
+    "list",
+    "--json",
+)
+CLAUDE_PLUGIN_INSTALL_COMMAND = (
+    "claude",
+    "plugin",
+    "install",
+)
+CLAUDE_PLUGIN_ENABLE_COMMAND = (
+    "claude",
+    "plugin",
+    "enable",
+)
+CLAUDE_PLUGIN_DISABLE_COMMAND = (
+    "claude",
+    "plugin",
+    "disable",
+)
 CODEX_MARKETPLACE_LIST_COMMAND = (
     "codex",
     "plugin",
@@ -81,6 +102,21 @@ class CodexDistPlugin:
 
 
 @dataclass(frozen=True)
+class ClaudeInstalledPlugin:
+    """Claude Code plugin selection that can be restored after source repair."""
+
+    name: str
+    marketplace: str
+    scope: str
+    enabled: bool
+    project_path: Path | None = None
+
+    @property
+    def ref(self) -> str:
+        return f"{self.name}@{self.marketplace}"
+
+
+@dataclass(frozen=True)
 class MarketplaceConfigRepairResult:
     """Result of reconciling runtime marketplace source configuration."""
 
@@ -89,13 +125,67 @@ class MarketplaceConfigRepairResult:
     commands: tuple[tuple[str, ...], ...]
 
 
-def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, check=False, text=True, capture_output=True)
+def run_command_capture(
+    command: list[str], *, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True, cwd=cwd)
 
 
 def parse_claude_marketplace_sources(payload: str) -> dict[str, MarketplaceSource]:
     """Parse ``claude plugin marketplace list --json`` output by marketplace name."""
     return _parse_marketplace_sources(payload, runtime="Claude Code")
+
+
+def parse_claude_installed_plugins(
+    payload: str, marketplace: str
+) -> tuple[ClaudeInstalledPlugin, ...]:
+    """Parse installed Claude Code plugin selections for one marketplace."""
+    try:
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise MarketplaceSourceError(
+            f"Claude Code plugin list output is not valid JSON: {exc}"
+        ) from exc
+    if not isinstance(data, list):
+        raise MarketplaceSourceError("Claude Code plugin list output is not an array")
+    plugins: list[ClaudeInstalledPlugin] = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            raise MarketplaceSourceError(
+                "Claude Code plugin list entry is not an object"
+            )
+        plugin_id = entry.get("id")
+        if not isinstance(plugin_id, str):
+            raise MarketplaceSourceError(
+                "Claude Code plugin list entry has no string id"
+            )
+        parsed = _parse_plugin_ref(plugin_id)
+        if parsed is None:
+            continue
+        name, plugin_marketplace = parsed
+        if plugin_marketplace != marketplace:
+            continue
+        scope = entry.get("scope")
+        if not isinstance(scope, str):
+            raise MarketplaceSourceError(
+                f"Claude Code plugin `{plugin_id}` has no string scope"
+            )
+        enabled = entry.get("enabled")
+        if not isinstance(enabled, bool):
+            raise MarketplaceSourceError(
+                f"Claude Code plugin `{plugin_id}` has no boolean enabled state"
+            )
+        project_path = _optional_path(entry.get("projectPath"))
+        plugins.append(
+            ClaudeInstalledPlugin(
+                name=name,
+                marketplace=plugin_marketplace,
+                scope=scope,
+                enabled=enabled,
+                project_path=project_path,
+            )
+        )
+    return tuple(plugins)
 
 
 def parse_codex_marketplace_sources(payload: str) -> dict[str, MarketplaceSource]:
@@ -149,12 +239,10 @@ def ensure_local_marketplace_sources(
     )
     commands: list[tuple[str, ...]] = []
     commands.extend(
-        _repair_runtime_source(
+        _repair_claude_runtime_source(
             marketplace,
             source=claude_sources.get(marketplace),
             root=root,
-            add_command=CLAUDE_MARKETPLACE_ADD_COMMAND,
-            remove_command=CLAUDE_MARKETPLACE_REMOVE_COMMAND,
             runner=runner,
         )
     )
@@ -346,6 +434,21 @@ def _string_field(entry: dict[str, object], names: tuple[str, ...]) -> str | Non
     return None
 
 
+def _optional_path(value: object) -> Path | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return Path(value).expanduser()
+
+
+def _parse_plugin_ref(plugin_id: str) -> tuple[str, str] | None:
+    if "@" not in plugin_id:
+        return None
+    name, marketplace = plugin_id.rsplit("@", maxsplit=1)
+    if not name or not marketplace:
+        return None
+    return name, marketplace
+
+
 def _required_source(
     sources: dict[str, MarketplaceSource], marketplace: str, *, runtime: str
 ) -> MarketplaceSource:
@@ -409,6 +512,75 @@ def _repair_runtime_source(
     return tuple(commands)
 
 
+def _repair_claude_runtime_source(
+    marketplace: str,
+    *,
+    source: MarketplaceSource | None,
+    root: Path,
+    runner: CommandRunner,
+) -> tuple[tuple[str, ...], ...]:
+    if _source_matches(source, root):
+        return ()
+    preserved = _claude_plugins_to_preserve(
+        marketplace,
+        should_preserve=source is not None,
+        runner=runner,
+    )
+    commands: list[tuple[str, ...]] = []
+    commands.extend(
+        _repair_runtime_source(
+            marketplace,
+            source=source,
+            root=root,
+            add_command=CLAUDE_MARKETPLACE_ADD_COMMAND,
+            remove_command=CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+            runner=runner,
+        )
+    )
+    commands.extend(_restore_claude_plugins(preserved, runner=runner))
+    return tuple(commands)
+
+
+def _claude_plugins_to_preserve(
+    marketplace: str,
+    *,
+    should_preserve: bool,
+    runner: CommandRunner,
+) -> tuple[ClaudeInstalledPlugin, ...]:
+    if not should_preserve:
+        return ()
+    result = _run_json_command([*CLAUDE_PLUGIN_LIST_COMMAND], runner=runner)
+    return parse_claude_installed_plugins(result.stdout or "", marketplace)
+
+
+def _restore_claude_plugins(
+    plugins: tuple[ClaudeInstalledPlugin, ...],
+    *,
+    runner: CommandRunner,
+) -> tuple[tuple[str, ...], ...]:
+    commands: list[tuple[str, ...]] = []
+    for plugin in plugins:
+        cwd = _claude_restore_cwd(plugin)
+        install = (*CLAUDE_PLUGIN_INSTALL_COMMAND, "--scope", plugin.scope, plugin.ref)
+        _run_json_command(list(install), runner=runner, cwd=cwd)
+        commands.append(install)
+        state_command = (
+            CLAUDE_PLUGIN_ENABLE_COMMAND
+            if plugin.enabled
+            else CLAUDE_PLUGIN_DISABLE_COMMAND
+        )
+        restore_state = (*state_command, "--scope", plugin.scope, plugin.ref)
+        _run_json_command(list(restore_state), runner=runner, cwd=cwd)
+        commands.append(restore_state)
+    return tuple(commands)
+
+
+def _claude_restore_cwd(plugin: ClaudeInstalledPlugin) -> Path | None:
+    if plugin.scope in {"project", "local"}:
+        return plugin.project_path
+    return None
+
+
 def _source_matches(source: MarketplaceSource | None, root: Path) -> bool:
     return (
         source is not None
@@ -422,8 +594,18 @@ def _run_json_command(
     command: list[str],
     *,
     runner: CommandRunner,
+    cwd: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    result = runner(command)
+    if cwd is None:
+        result = runner(command)
+    else:
+        try:
+            result = runner(command, cwd=cwd)  # type: ignore[call-arg]
+        except TypeError as exc:
+            raise MarketplaceSourceError(
+                f"command runner does not support working directory for "
+                f"{' '.join(command)}"
+            ) from exc
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
         detail = f": {stderr}" if stderr else ""
@@ -483,6 +665,10 @@ __all__ = [
     "CLAUDE_MARKETPLACE_ADD_COMMAND",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
     "CLAUDE_MARKETPLACE_REMOVE_COMMAND",
+    "CLAUDE_PLUGIN_DISABLE_COMMAND",
+    "CLAUDE_PLUGIN_ENABLE_COMMAND",
+    "CLAUDE_PLUGIN_INSTALL_COMMAND",
+    "CLAUDE_PLUGIN_LIST_COMMAND",
     "CODEX_MARKETPLACE_ADD_COMMAND",
     "CODEX_MARKETPLACE_LIST_COMMAND",
     "CODEX_MARKETPLACE_REMOVE_COMMAND",
@@ -491,6 +677,7 @@ __all__ = [
     "DIST_CODEX_PLUGINS_DIR",
     "SOURCE_TYPE_GIT",
     "SOURCE_TYPE_LOCAL",
+    "ClaudeInstalledPlugin",
     "CodexDistPlugin",
     "CommandRunner",
     "MarketplaceConfigRepairResult",
@@ -501,6 +688,7 @@ __all__ = [
     "ensure_local_marketplace_sources",
     "main",
     "parse_claude_marketplace_sources",
+    "parse_claude_installed_plugins",
     "parse_codex_marketplace_sources",
     "require_matching_local_sources",
     "run_command_capture",

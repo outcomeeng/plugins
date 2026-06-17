@@ -17,6 +17,10 @@ import pytest
 from outcomeeng.distribution.marketplace_sources import (
     CLAUDE_MARKETPLACE_ADD_COMMAND,
     CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+    CLAUDE_PLUGIN_DISABLE_COMMAND,
+    CLAUDE_PLUGIN_ENABLE_COMMAND,
+    CLAUDE_PLUGIN_INSTALL_COMMAND,
+    CLAUDE_PLUGIN_LIST_COMMAND,
     CODEX_PLUGIN_MANIFEST,
     CODEX_MARKETPLACE_ADD_COMMAND,
     CODEX_MARKETPLACE_REMOVE_COMMAND,
@@ -25,6 +29,7 @@ from outcomeeng.distribution.marketplace_sources import (
     MarketplaceSourceError,
     available_codex_plugins,
     ensure_local_marketplace_sources,
+    parse_claude_installed_plugins,
     parse_claude_marketplace_sources,
     parse_codex_marketplace_sources,
     require_matching_local_sources,
@@ -95,6 +100,41 @@ def test_parse_claude_marketplace_sources_normalizes_directory_source(
 
     assert sources[DEFAULT_MARKETPLACE].source_type == "local"
     assert sources[DEFAULT_MARKETPLACE].path == marketplace_root
+
+
+def test_parse_claude_installed_plugins_keeps_scope_state_and_project_path(
+    tmp_path: Path,
+) -> None:
+    project_path = tmp_path / "project"
+    payload = json.dumps(
+        [
+            {
+                "id": f"spec-tree@{DEFAULT_MARKETPLACE}",
+                "scope": "project",
+                "enabled": True,
+                "projectPath": str(project_path),
+            },
+            {
+                "id": f"rust@{DEFAULT_MARKETPLACE}",
+                "scope": "user",
+                "enabled": False,
+            },
+            {
+                "id": "github@claude-plugins-official",
+                "scope": "user",
+                "enabled": True,
+            },
+        ]
+    )
+
+    plugins = parse_claude_installed_plugins(payload, DEFAULT_MARKETPLACE)
+
+    assert [(plugin.name, plugin.scope, plugin.enabled) for plugin in plugins] == [
+        ("spec-tree", "project", True),
+        ("rust", "user", False),
+    ]
+    assert plugins[0].project_path == project_path
+    assert plugins[1].project_path is None
 
 
 def test_parse_codex_marketplace_sources_accepts_nested_git_source() -> None:
@@ -355,6 +395,7 @@ def test_source_reconciliation_explicit_root_replaces_stale_runtime_paths(
                     }
                 ]
             ),
+            (*CLAUDE_PLUGIN_LIST_COMMAND,): "[]",
         }
     )
 
@@ -369,10 +410,158 @@ def test_source_reconciliation_explicit_root_replaces_stale_runtime_paths(
     assert runner.calls == [
         ("claude", "plugin", "marketplace", "list", "--json"),
         ("codex", "plugin", "marketplace", "list", "--json"),
+        (*CLAUDE_PLUGIN_LIST_COMMAND,),
         (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
         (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
         (*CODEX_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
         (*CODEX_MARKETPLACE_ADD_COMMAND, str(result.root)),
+    ]
+
+
+def test_source_reconciliation_preserves_claude_plugin_installs_when_source_changes(
+    tmp_path: Path,
+) -> None:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    project_path = tmp_path / "consumer-project"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "source": "Directory",
+                        "path": str(stale_root),
+                    }
+                ]
+            ),
+            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "sourceType": "local",
+                        "path": str(canonical_root),
+                    }
+                ]
+            ),
+            (*CLAUDE_PLUGIN_LIST_COMMAND,): json.dumps(
+                [
+                    {
+                        "id": f"spec-tree@{DEFAULT_MARKETPLACE}",
+                        "scope": "project",
+                        "enabled": True,
+                        "projectPath": str(project_path),
+                    },
+                    {
+                        "id": f"rust@{DEFAULT_MARKETPLACE}",
+                        "scope": "user",
+                        "enabled": False,
+                    },
+                ]
+            ),
+        }
+    )
+
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=canonical_root,
+        runner=runner,
+    )
+
+    spec_tree_install = (
+        *CLAUDE_PLUGIN_INSTALL_COMMAND,
+        "--scope",
+        "project",
+        f"spec-tree@{DEFAULT_MARKETPLACE}",
+    )
+    spec_tree_enable = (
+        *CLAUDE_PLUGIN_ENABLE_COMMAND,
+        "--scope",
+        "project",
+        f"spec-tree@{DEFAULT_MARKETPLACE}",
+    )
+    rust_install = (
+        *CLAUDE_PLUGIN_INSTALL_COMMAND,
+        "--scope",
+        "user",
+        f"rust@{DEFAULT_MARKETPLACE}",
+    )
+    rust_disable = (
+        *CLAUDE_PLUGIN_DISABLE_COMMAND,
+        "--scope",
+        "user",
+        f"rust@{DEFAULT_MARKETPLACE}",
+    )
+    assert result.changed is True
+    assert runner.calls == [
+        ("claude", "plugin", "marketplace", "list", "--json"),
+        ("codex", "plugin", "marketplace", "list", "--json"),
+        (*CLAUDE_PLUGIN_LIST_COMMAND,),
+        (*CLAUDE_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+        (*CLAUDE_MARKETPLACE_ADD_COMMAND, str(result.root)),
+        spec_tree_install,
+        spec_tree_enable,
+        rust_install,
+        rust_disable,
+    ]
+    assert runner.cwd_by_call == [
+        None,
+        None,
+        None,
+        None,
+        None,
+        project_path,
+        project_path,
+        None,
+        None,
+    ]
+
+
+def test_source_reconciliation_failed_codex_add_surfaces_error(
+    tmp_path: Path,
+) -> None:
+    marketplace_root = tmp_path / "marketplace"
+    codex_add = (*CODEX_MARKETPLACE_ADD_COMMAND, str(marketplace_root))
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "source": "Directory",
+                        "path": str(marketplace_root),
+                    }
+                ]
+            ),
+            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "sourceType": "git",
+                        "url": "https://github.com/outcomeeng/plugins.git",
+                    }
+                ]
+            ),
+        },
+        returncode_by_command={codex_add: 17},
+        stderr_by_command={codex_add: "add failed"},
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        ensure_local_marketplace_sources(
+            DEFAULT_MARKETPLACE,
+            source_root=marketplace_root,
+            runner=runner,
+        )
+
+    message = str(exc_info.value)
+    assert "codex plugin marketplace add" in message
+    assert "add failed" in message
+    assert runner.calls == [
+        ("claude", "plugin", "marketplace", "list", "--json"),
+        ("codex", "plugin", "marketplace", "list", "--json"),
+        (*CODEX_MARKETPLACE_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
+        codex_add,
     ]
 
 
@@ -385,16 +574,22 @@ class RecordingCommandRunner:
     """
 
     stdout_by_command: dict[tuple[str, ...], str]
+    returncode_by_command: dict[tuple[str, ...], int] = field(default_factory=dict)
+    stderr_by_command: dict[tuple[str, ...], str] = field(default_factory=dict)
     calls: list[tuple[str, ...]] = field(default_factory=list)
+    cwd_by_call: list[Path | None] = field(default_factory=list)
 
-    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
+    def __call__(
+        self, command: list[str], *, cwd: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
         command_tuple = tuple(command)
         self.calls.append(command_tuple)
+        self.cwd_by_call.append(cwd)
         return subprocess.CompletedProcess(
             command,
-            0,
+            self.returncode_by_command.get(command_tuple, 0),
             stdout=self.stdout_by_command.get(command_tuple, ""),
-            stderr="",
+            stderr=self.stderr_by_command.get(command_tuple, ""),
         )
 
 
