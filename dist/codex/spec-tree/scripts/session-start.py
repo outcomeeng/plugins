@@ -60,6 +60,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from hook_runtime import session_id_from
+
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
 
@@ -96,7 +98,7 @@ def write_env_file(payload: dict, project_dir: str) -> None:
     No-ops (with a stderr diagnostic) when the session id or env file is absent,
     so a missing field never aborts the directives that follow.
     """
-    session_id = (payload.get("session_id") or "").strip()
+    session_id = session_id_from(payload)
     if not session_id:
         warn("missing or invalid .session_id; not exporting CLAUDE_SESSION_ID")
         return
@@ -179,7 +181,7 @@ def claim_worktree(payload: dict, project_dir: str) -> None:
     No-ops when no session identity or product directory is known, since the
     claim is keyed on the agent and targets its worktree.
     """
-    session_id = (payload.get("session_id") or "").strip()
+    session_id = session_id_from(payload)
     if not session_id or not project_dir:
         return
 

@@ -28,6 +28,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from hook_runtime import session_id_from
+
+_REPAIRABLE_WORKTREE_STATUSES = {"stale", "unclaimed"}
+
 
 def _timeout_seconds() -> float:
     """Bound the gate subprocess so a hung `spx` never stalls a tool call.
@@ -56,17 +60,87 @@ def _is_spec_tree(project_dir: str) -> bool:
         return False
 
 
-def _emit_deny(reason: str) -> None:
+def _emit_hook_output(output: dict[str, object]) -> None:
+    json.dump({"hookSpecificOutput": output}, sys.stdout)
+
+
+def _emit_deny(reason: str, additional_context: str = "") -> None:
     """Emit the `PreToolUse` deny decision the harness blocks the call on."""
-    json.dump(
+    output = {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": reason,
+    }
+    if additional_context:
+        output["additionalContext"] = additional_context
+    _emit_hook_output(output)
+
+
+def _emit_additional_context(additional_context: str) -> None:
+    """Emit model-visible context without blocking the tool call."""
+    _emit_hook_output(
         {
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "deny",
-                "permissionDecisionReason": reason,
-            }
-        },
-        sys.stdout,
+            "hookEventName": "PreToolUse",
+            "additionalContext": additional_context,
+        }
+    )
+
+
+def _run_spx(
+    spx: str, project_dir: str, args: list[str]
+) -> subprocess.CompletedProcess[str] | None:
+    try:
+        return subprocess.run(
+            [spx, *args],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=project_dir,
+            timeout=_timeout_seconds(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
+def _first_line(value: str) -> str:
+    return next((line.strip() for line in value.splitlines() if line.strip()), "")
+
+
+def _worktree_claim_context(payload: dict, project_dir: str, spx: str) -> str:
+    """Repair stale or unclaimed worktree occupancy through the spx CLI."""
+    session_id = session_id_from(payload)
+    if not session_id or not project_dir:
+        return ""
+
+    status_proc = _run_spx(spx, project_dir, ["worktree", "status", "--format", "json"])
+    if status_proc is None or status_proc.returncode != 0:
+        return ""
+
+    try:
+        status_payload = json.loads(status_proc.stdout or "")
+    except json.JSONDecodeError:
+        return ""
+    status = status_payload.get("status") if isinstance(status_payload, dict) else None
+    if status not in _REPAIRABLE_WORKTREE_STATUSES:
+        return ""
+
+    claim_proc = _run_spx(
+        spx, project_dir, ["worktree", "claim", "--session-id", session_id]
+    )
+    if claim_proc is not None and claim_proc.returncode == 0:
+        return (
+            "Spec Tree worktree occupancy was "
+            f"{status}; PreToolUse claimed this worktree for session {session_id}."
+        )
+    detail = ""
+    if claim_proc is not None:
+        detail = _first_line(claim_proc.stderr) or _first_line(claim_proc.stdout)
+    suffix = f" CLI reported: {detail}" if detail else ""
+    return (
+        "Spec Tree worktree occupancy is "
+        f"{status}, and automatic claim repair failed for session {session_id}. "
+        "Inspect `spx worktree status --format json` before assuming this "
+        f"worktree is claimed.{suffix}"
     )
 
 
@@ -85,7 +159,7 @@ def _gate_argv(payload: dict) -> list[str] | None:
 
     argv = [os.environ.get("SPX_BIN", "spx"), "gate", "check", "--tool", tool_name]
 
-    session_id = (payload.get("session_id") or "").strip()
+    session_id = session_id_from(payload)
     if session_id:
         argv += ["--session-id", session_id]
 
@@ -122,28 +196,31 @@ def main() -> int:
     if argv is None:
         return 0  # no tool name to gate on — allow
 
-    try:
-        proc = subprocess.run(
-            argv,
-            check=False,
-            capture_output=True,
-            text=True,
-            cwd=project_dir,
-            timeout=_timeout_seconds(),
-        )
-    except (OSError, subprocess.TimeoutExpired):
+    spx = os.environ.get("SPX_BIN", "spx")
+    claim_context = _worktree_claim_context(payload, project_dir, spx)
+
+    proc = _run_spx(spx, project_dir, argv[1:])
+    if proc is None:
+        if claim_context:
+            _emit_additional_context(claim_context)
         return 0  # spx absent or hung — degrade to allowing the call
 
     if proc.returncode != 0:
+        if claim_context:
+            _emit_additional_context(claim_context)
         return 0  # a non-zero exit is a CLI error, not a verdict — allow
 
     try:
         verdict = json.loads(proc.stdout or "")
     except json.JSONDecodeError:
+        if claim_context:
+            _emit_additional_context(claim_context)
         return 0  # unparseable verdict — degrade to allowing the call
 
     if isinstance(verdict, dict) and verdict.get("decision") == "deny":
-        _emit_deny(str(verdict.get("reason") or ""))
+        _emit_deny(str(verdict.get("reason") or ""), claim_context)
+    elif claim_context:
+        _emit_additional_context(claim_context)
     return 0
 
 

@@ -28,6 +28,19 @@ LOAD_GATE = _SCRIPTS / "load-gate.py"
 # passes a fake via ``env_overrides={"SPX_BIN": ...}`` (and
 # ``SPX_TIMEOUT_SECONDS`` to bound a deliberately slow fake).
 MISSING_SPX = "/nonexistent/spx"
+_SESSION_START_ENV_EXCLUDES = {
+    "CLAUDE_PROJECT_DIR",
+    "CLAUDE_ENV_FILE",
+    "CLAUDE_SESSION_ID",
+    "CODEX_THREAD_ID",
+    "SPX_BIN",
+}
+_PRETOOL_ENV_EXCLUDES = {
+    "CLAUDE_PROJECT_DIR",
+    "CLAUDE_SESSION_ID",
+    "CODEX_THREAD_ID",
+    "SPX_BIN",
+}
 
 
 def run_session_start(
@@ -48,7 +61,7 @@ def run_session_start(
     env = {
         key: value
         for key, value in os.environ.items()
-        if key not in ("CLAUDE_PROJECT_DIR", "CLAUDE_ENV_FILE", "SPX_BIN")
+        if key not in _SESSION_START_ENV_EXCLUDES
     }
     env["SPX_BIN"] = MISSING_SPX
     if env_file is not None:
@@ -74,7 +87,7 @@ def make_spec_tree(root: Path) -> None:
     a minimal one so a directive under test reaches its CLI read or its output.
     """
     spx = root / "spx"
-    spx.mkdir()
+    spx.mkdir(parents=True)
     (spx / "demo.product.md").write_text("# Demo product\n", encoding="utf-8")
 
 
@@ -96,7 +109,7 @@ def run_pretool_gate(
     env = {
         key: value
         for key, value in os.environ.items()
-        if key not in ("CLAUDE_PROJECT_DIR", "SPX_BIN")
+        if key not in _PRETOOL_ENV_EXCLUDES
     }
     env["SPX_BIN"] = MISSING_SPX
     if project_dir is not None:
