@@ -84,6 +84,25 @@ class StaticInstalled:
         return self.versions
 
 
+@dataclass
+class SequencedInstalled:
+    """Installed-version provider whose response changes after refresh.
+
+    Stage 5 exception 2 (interaction-protocol DI): the real Codex provider is
+    queried before and after `codex plugin add`. This spy returns deterministic
+    versions for each query so the test can prove reconciliation uses the
+    post-refresh installed set.
+    """
+
+    versions_by_call: tuple[dict[str, str], ...]
+    calls: list[str] = field(default_factory=list)
+
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
+        self.calls.append(marketplace)
+        index = min(len(self.calls) - 1, len(self.versions_by_call) - 1)
+        return self.versions_by_call[index]
+
+
 @dataclass(frozen=True)
 class RaisingInstalled:
     """Stub that fails the installed-set query (Stage 5 exception 1 -- failure
@@ -216,6 +235,63 @@ def test_local_refresh_reinstalls_installed_dist_plugins_without_upgrade(
     assert result.refresh_returncode == 0
     assert _skill_file(cache_root, "alpha", "0.1.0").is_file()
     assert _skill_file(cache_root, "zeta", "0.2.0").is_file()
+
+
+def test_local_refresh_requeries_installed_versions_before_reconciliation(
+    tmp_path: Path,
+) -> None:
+    """A successful local plugin add can move the installed version forward; cache
+    reconciliation uses the post-refresh installed set so the new version remains
+    the sole real directory.
+    """
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, PLUGIN_NAME, NEW_CURRENT_VERSION)
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    prior_dir = plugin_dir / CURRENT_VERSION
+    current_dir = plugin_dir / NEW_CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION, NEW_CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+    installed = SequencedInstalled(
+        (
+            {PLUGIN_NAME: CURRENT_VERSION},
+            {PLUGIN_NAME: NEW_CURRENT_VERSION},
+        )
+    )
+    runner = MaterializingAddRunner(
+        cache_root=cache_root,
+        versions={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=installed,
+        runner=runner,
+    )
+
+    assert installed.calls == [DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE], (
+        "expected installed versions to be queried before and after refresh; "
+        f"got {installed.calls}"
+    )
+    assert result.refresh_returncode == 0
+    assert current_dir.is_dir() and not current_dir.is_symlink(), (
+        f"expected {current_dir} to remain the real current directory"
+    )
+    assert prior_dir.is_symlink(), (
+        f"expected {prior_dir} to become a compatibility symlink"
+    )
+    assert prior_dir.resolve() == current_dir.resolve(), (
+        f"expected {prior_dir} to point at {current_dir}"
+    )
 
 
 def test_chain_recovery_restores_in_window_published_version_as_symlink(
@@ -449,6 +525,38 @@ def test_uncached_working_tree_plugin_does_not_emit_warning(
     captured = capsys.readouterr()
     output = f"{captured.out}{captured.err}"
     assert "warning:" not in output
+
+
+def test_cli_repo_root_still_runs_local_source_preflight(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A non-dry-run CLI invocation with `--repo-root` still verifies the live
+    Codex marketplace source before any installed-set query or cache mutation.
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    cache_root = tmp_path / "cache"
+
+    def _rejecting_local_root(marketplace: str) -> Path:
+        raise preserve_codex_plugin_cache.MarketplaceSourceError(
+            f"Codex marketplace `{marketplace}` must be registered as a local source"
+        )
+
+    exit_code = preserve_codex_plugin_cache.main(
+        [
+            DEFAULT_MARKETPLACE,
+            "--cache-root",
+            str(cache_root),
+            "--repo-root",
+            str(repo_root),
+        ],
+        marketplace_root_resolver=_rejecting_local_root,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "must be registered as a local source" in captured.err
 
 
 def test_upgrade_without_current_real_dir_creates_no_current_symlink(

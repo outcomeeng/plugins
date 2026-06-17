@@ -48,6 +48,7 @@ CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
+type MarketplaceRootResolver = Callable[[str], Path]
 
 
 class PluginHistory(Protocol):
@@ -313,6 +314,14 @@ def refresh_installed_plugins(
                     pruned_plugins=(),
                     refresh_returncode=refresh_result.returncode,
                 )
+        if wanted:
+            # Codex reports the post-add version as the installed target. Re-query
+            # after successful local refreshes so reconciliation targets the newly
+            # materialized real cache root instead of the pre-refresh snapshot.
+            installed_versions = installed.installed_plugin_versions(marketplace)
+            wanted = (
+                working_tree_plugins & frozenset(installed_versions) & addable_plugins
+            )
     else:
         # A dry run reports planned changes without querying the installed set, so
         # the preview needs no Codex CLI present and mutates nothing; it treats
@@ -517,7 +526,35 @@ def _is_symlink_to(path: Path, target: Path) -> bool:
         return False
 
 
-def main(argv: list[str] | None = None) -> int:
+def _resolve_refresh_repo_root(
+    marketplace: str,
+    *,
+    explicit_repo_root: Path | None,
+    dry_run: bool,
+    marketplace_root_resolver: MarketplaceRootResolver,
+) -> Path:
+    if dry_run:
+        return explicit_repo_root if explicit_repo_root is not None else Path.cwd()
+    configured_root = marketplace_root_resolver(marketplace)
+    if explicit_repo_root is not None and _normalized_path(
+        explicit_repo_root
+    ) != _normalized_path(configured_root):
+        raise MarketplaceSourceError(
+            f"--repo-root {explicit_repo_root} does not match configured local "
+            f"marketplace root {configured_root}"
+        )
+    return configured_root
+
+
+def _normalized_path(path: Path) -> Path:
+    return path.expanduser().resolve(strict=False)
+
+
+def main(
+    argv: list[str] | None = None,
+    *,
+    marketplace_root_resolver: MarketplaceRootResolver = configured_local_marketplace_root,
+) -> int:
     parser = argparse.ArgumentParser(
         description="Refresh local Codex plugins and reconcile the plugin cache"
     )
@@ -553,15 +590,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        marketplace_root = (
-            args.repo_root
-            if args.repo_root is not None or args.dry_run
-            else configured_local_marketplace_root(args.marketplace)
+        repo_root = _resolve_refresh_repo_root(
+            args.marketplace,
+            explicit_repo_root=args.repo_root,
+            dry_run=args.dry_run,
+            marketplace_root_resolver=marketplace_root_resolver,
         )
     except MarketplaceSourceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    repo_root = marketplace_root if marketplace_root is not None else Path.cwd()
     history = GitPluginHistory(repo_root=repo_root, window_days=args.window_days)
     # refresh_installed_plugins skips the query on a dry run, so a dry run never
     # shells out to the Codex CLI even though the provider is constructed here.
