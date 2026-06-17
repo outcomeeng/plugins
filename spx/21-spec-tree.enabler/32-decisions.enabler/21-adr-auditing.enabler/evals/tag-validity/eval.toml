@@ -8,6 +8,13 @@ owned_paths = [
   "src/plugins/spec-tree/skills/audit-adr/**",
   "dist/claude/spec-tree/skills/audit-adr/**",
 ]
-smoke_cases = ["compliance-type-bare-mechanism-tag-rejected", "universal-scenario-tag-rejected"]
+smoke_cases = [
+  "compliance-type-bare-mechanism-tag-rejected",
+  "eval-subsection-audit-tag-rejected",
+  "audit-subsection-eval-tag-rejected",
+  "testing-missing-tag-rejected",
+  "testing-multiple-tags-rejected",
+  "universal-scenario-tag-rejected",
+]
 threshold = 0.85
 trials = 1
