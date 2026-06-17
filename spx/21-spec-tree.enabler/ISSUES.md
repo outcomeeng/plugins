@@ -103,6 +103,13 @@ Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens
 
 ## 20. Hook output-contract vocabulary is not source-owned across hooks and their tests
 
+**Update:** the `session-start` and `load-gate` hooks are converted to
+`spx hooks session-start` / `spx hooks pre-tool-use` (`spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`);
+their tests now parse the JSON document by key value and the parent
+`13-agent-environment.enabler` wiring test parses `hooks.json`, so the inline-literal
+problem is resolved for them. This item is now scoped to the three still-Python hooks
+(`pre-compact`, `post-compact`, `enforce-gates`) and resolves fully when they convert.
+
 The five spec-tree hook scripts (`src/plugins/spec-tree/scripts/{session-start,post-compact,pre-compact,enforce-gates,load-gate}.py`) each define their stdout-contract vocabulary — markers such as `<SPEC-TREE_SESSION_START>` / `<SPEC-TREE_RESUMED>`, their attribute names, the `export CLAUDE_SESSION_ID=` env line, and `load-gate.py`'s `spx gate check` argv tokens (`gate`, `check`, `--tool`, `--session-id`, `--transcript`, `--path`, `--command`) and `PreToolUse` decision keys — inline, and their tests hand-write the same literals to assert on subprocess stdout and argv (e.g. `spx/21-spec-tree.enabler/76-sessions.enabler/tests/test_sessions.scenario.l1.py:559`, the `13-agent-environment.enabler` tests, and `spx/21-spec-tree.enabler/13-agent-environment.enabler/54-load-gating.enabler/tests/test_load_gating.scenario.l1.py`). `python:python-test-auditor` flagged this against `spx/15-test-infrastructure.pdr.md` "source contracts come first" on PR for the agent-environment base-staleness work, and again on the load-gating work.
 
 It is not fixed in place because the hook scripts are hyphenated standalone files invoked as `python3 .../<name>.py` — not importable modules — and they ship stdlib-only into consumer repos, so neither the test suite nor a shared constant module can import from them without restructuring how every hook is packaged. The tokens are also spec-declared contract vocabulary (named in `agent-environment.md` / `sessions.md`), so the spec is arguably their source of truth. A proper fix spans all five hooks plus their tests (extract an importable, shippable constants module each hook and each test imports, or generate the tokens from a shared source), which is larger than any single node's changeset and would otherwise leave the agent-environment tests inconsistent with the established, audit-passed sessions-test convention.

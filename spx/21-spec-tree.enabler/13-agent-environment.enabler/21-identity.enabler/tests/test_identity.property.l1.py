@@ -1,14 +1,14 @@
-"""Property tests for 21-identity.enabler (identity.md properties).
+"""Property test for 21-identity.enabler (identity.md properties).
 
-L1: the real `session-start.py` hook is run as a subprocess against real
-filesystem I/O in pytest tmp_path directories, with no test doubles.
+L1: runs ``spx hooks session-start`` as a subprocess. For any session UUID the env
+file receives that identity (whitespace trimmed), and the write is deterministic —
+the same payload yields the same env-file line every run.
 
-Assertions covered:
-  - For any session UUID, the env file receives that identity (whitespace
-    trimmed) as $CLAUDE_SESSION_ID — round-trips through the hook's shell-quoting.
-  - The hook writes the identity deterministically: the same payload yields the
-    same export line every run.
+Excluded until ``@outcomeeng/spx`` publishes ``spx hooks session-start``
+(``spx/EXCLUDE``).
 """
+
+from __future__ import annotations
 
 import shlex
 import tempfile
@@ -19,37 +19,39 @@ from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.hooks import run_session_start
 
-_EXPORT_PREFIX = "export CLAUDE_SESSION_ID="
+_KEY = "CLAUDE_SESSION_ID="
 
-# These properties spawn the real hook as a subprocess, so each example's runtime
-# is dominated by interpreter startup — wall-clock time that carries no
-# determinism signal. Disable hypothesis's per-example deadline: under host load
-# the subprocess startup exceeds the 200 ms default and raises a spurious
-# DeadlineExceeded/FlakyFailure, never a real defect in the hook's identity write.
+# The hook is a real subprocess, so each example's runtime is dominated by
+# interpreter startup — disable hypothesis's per-example deadline so host load
+# never raises a spurious DeadlineExceeded.
 _subprocess_property = settings(deadline=None)
 
-# Session ids are single-line tokens; exclude control characters (which include
-# newlines and nulls) so the value occupies one shell `export` line. shlex
-# quoting must still round-trip spaces, quotes, and other shell metacharacters.
+# Session ids are single-line tokens; exclude control characters so the value
+# occupies one env-file line.
 _session_ids = st.text(
     alphabet=st.characters(blacklist_categories=("Cs", "Cc")),
     min_size=1,
 ).filter(lambda value: value.strip() != "")
 
 
-def _exported_identity_line(env_file: Path) -> str:
+def _identity_line(env_file: Path) -> str:
     lines = [
         line
         for line in env_file.read_text(encoding="utf-8").splitlines()
-        if line.startswith(_EXPORT_PREFIX)
+        if _KEY in line
     ]
-    assert lines, "hook wrote no CLAUDE_SESSION_ID export line"
+    assert lines, "hook wrote no CLAUDE_SESSION_ID line"
     return lines[-1]
+
+
+def _recovered_identity(env_file: Path) -> str:
+    line = _identity_line(env_file)
+    return shlex.split(line[line.index(_KEY) + len(_KEY) :])[0]
 
 
 @_subprocess_property
 @given(session_id=_session_ids)
-def test_session_id_round_trips_through_env_file(session_id):
+def test_session_id_round_trips_through_env_file(session_id) -> None:
     with tempfile.TemporaryDirectory() as scratch:
         env_file = Path(scratch) / "claude.env"
         run_session_start(
@@ -57,17 +59,12 @@ def test_session_id_round_trips_through_env_file(session_id):
             env_file=env_file,
             project_dir=scratch,
         )
-        recovered = shlex.split(
-            _exported_identity_line(env_file)[len(_EXPORT_PREFIX) :]
-        )[0]
-    assert recovered == session_id.strip()
+        assert _recovered_identity(env_file) == session_id.strip()
 
 
 @_subprocess_property
 @given(session_id=_session_ids)
-def test_session_id_write_is_deterministic(session_id):
-    # The same payload must yield the same export line every run, so every Bash
-    # call in a session that sources the env file observes one stable identity.
+def test_session_id_write_is_deterministic(session_id) -> None:
     with tempfile.TemporaryDirectory() as scratch:
         first = Path(scratch) / "first.env"
         second = Path(scratch) / "second.env"
@@ -77,4 +74,4 @@ def test_session_id_write_is_deterministic(session_id):
                 env_file=env_file,
                 project_dir=scratch,
             )
-        assert _exported_identity_line(first) == _exported_identity_line(second)
+        assert _identity_line(first) == _identity_line(second)

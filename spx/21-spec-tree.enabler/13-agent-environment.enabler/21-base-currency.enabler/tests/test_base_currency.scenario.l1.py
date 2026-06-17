@@ -1,22 +1,26 @@
-"""Scenario tests for 21-base-currency.enabler (base-currency.md scenario).
+"""Scenario test for 21-base-currency.enabler (base-currency.md scenario).
 
-L1: the real `session-start.py` hook is run as a subprocess against real git
-repositories in pytest tmp_path directories, with no test doubles. Git fixtures
-come from `outcomeeng_testing.harnesses.git_context`.
+L1: runs ``spx hooks session-start`` as a subprocess against real git
+repositories in pytest ``tmp_path`` directories (fixtures from
+``outcomeeng_testing.harnesses.git_context``) and parses its JSON document.
 
-Assertion covered:
-  - A worktree behind its resolved default branch yields a base-staleness
-    directive on stdout naming the behind-count and the resolved default and
-    instructing fetch+rebase, never reset.
+Excluded until ``@outcomeeng/spx`` publishes ``spx hooks session-start``
+(``spx/EXCLUDE``).
 """
 
+from __future__ import annotations
+
 from outcomeeng_testing.harnesses.git_context import worktree_against_origin
-from outcomeeng_testing.harnesses.hooks import run_session_start
+from outcomeeng_testing.harnesses.hooks import (
+    directive_of_kind,
+    hook_document,
+    run_session_start,
+)
 
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
 
 
-def test_behind_default_emits_staleness_directive(tmp_path):
+def test_behind_default_emits_base_currency_directive(tmp_path) -> None:
     behind = 2
     default_branch = "main"
     with worktree_against_origin(behind=behind, default_branch=default_branch) as repo:
@@ -26,9 +30,7 @@ def test_behind_default_emits_staleness_directive(tmp_path):
             project_dir=repo,
         )
     assert result.returncode == 0
-    assert "<SPEC-TREE_SESSION_START" in result.stdout
-    assert f'behind="{behind}"' in result.stdout
-    assert f'default="origin/{default_branch}"' in result.stdout
-    assert "fetch" in result.stdout
-    assert "rebase" in result.stdout
-    assert "never" in result.stdout and "reset" in result.stdout
+    directive = directive_of_kind(hook_document(result), "base-currency")
+    assert directive is not None
+    assert directive["behind_count"] == behind
+    assert directive["default_branch"] == f"origin/{default_branch}"

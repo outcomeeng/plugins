@@ -8,7 +8,7 @@ An injected `SessionStart` directive loses a priority fight. After a compaction 
 
 Keying enforcement on the work category is circular: an agent cannot recognize "spec-tree work" until after the foundation that defines the category has loaded, so a rule gated on that recognition can never fire before the load it guards. A tracked-state flag needs no such recognition: it is a fact the system records, and the hook does the noticing by reading the tool's own path argument, so the agent's attention is never the trigger.
 
-The marker scan is scoped strictly after the most recent boundary because a marker preserved only in a pre-compaction summary is stale. Counting it would let the stale marker satisfy the gate and make the enforcement worthless; demanding a fresh marker after the boundary is what makes the gate durable across compaction. The hook delegates the transcript I/O and the verdict to the `spx` CLI per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`, so where the CLI is absent enforcement degrades to the informational `SessionStart` layer rather than failing.
+The marker scan is scoped strictly after the most recent boundary because a marker preserved only in a pre-compaction summary is stale. Counting it would let the stale marker satisfy the gate and make the enforcement worthless; demanding a fresh marker after the boundary is what makes the gate durable across compaction. The enforcement is `spx hooks pre-tool-use`, which owns the transcript I/O and the verdict per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`; `spx` is a precondition for spec-tree operation, so its absence surfaces as a runtime hook error rather than silent continuation.
 
 ## Invariants
 

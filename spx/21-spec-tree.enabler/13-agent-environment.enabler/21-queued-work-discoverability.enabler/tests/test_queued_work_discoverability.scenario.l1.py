@@ -1,46 +1,57 @@
-"""Scenario tests for 21-queued-work-discoverability.enabler (queued-work-discoverability.md scenario).
+"""Scenario test for 21-queued-work-discoverability.enabler (queued-work-discoverability.md scenario).
 
-L1: the real `session-start.py` hook is run as a subprocess against a fake `spx`
-CLI in a temp directory, with no test doubles. The fake comes from
-`outcomeeng_testing.harnesses.spx_cli` and answers `session todo` with a
-controlled projection.
+L1: runs ``spx hooks session-start`` against a spec-tree project whose pool holds
+``todo`` sessions, and parses the ``queued-work`` descriptor.
 
-Assertion covered:
-  - A pool holding one or more `todo` sessions yields a stdout directive listing
-    each claimable session's id, goal, and next step and naming /spec-tree:pickup.
+Excluded until ``@outcomeeng/spx`` publishes ``spx hooks session-start``
+(``spx/EXCLUDE``).
 """
 
-from outcomeeng_testing.harnesses.hooks import make_spec_tree, run_session_start
-from outcomeeng_testing.harnesses.spx_cli import fake_spx, sample_todo_session
+from __future__ import annotations
+
+from pathlib import Path
+
+from outcomeeng_testing.harnesses.hooks import (
+    directive_of_kind,
+    hook_document,
+    make_spec_tree,
+    run_session_start,
+)
 
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
 
-_TODO = [
-    sample_todo_session(id="2026-06-15_19-21-23", git_ref="feat/discoverability"),
-    sample_todo_session(
-        id="2026-06-14_16-58-25",
-        goal="Continue the named-subject voice sweep",
-        next_step="Branch from origin/main and survey",
-        git_ref="main",
-    ),
-]
+
+def _seed_todo(
+    project: Path, sid: str, goal: str, next_step: str, git_ref: str
+) -> None:
+    todo = project / ".spx" / "sessions" / "todo"
+    todo.mkdir(parents=True, exist_ok=True)
+    (todo / f"{sid}.md").write_text(
+        f"---\npriority: medium\ngit_ref: {git_ref}\n"
+        f"goal: {goal}\nnext_step: {next_step}\n---\n",
+        encoding="utf-8",
+    )
 
 
-def test_queued_sessions_emit_discoverability_directive(tmp_path):
+def test_queued_sessions_emit_discoverability_directive(tmp_path: Path) -> None:
     make_spec_tree(tmp_path)
-    with fake_spx(todo=_TODO) as spx:
-        result = run_session_start(
-            {"session_id": SESSION_ID, "cwd": str(tmp_path)},
-            env_file=tmp_path / "claude.env",
-            project_dir=tmp_path,
-            env_overrides=spx.env,
-        )
+    seeded = {
+        "2026-06-15_19-21-23": ("Ship discoverability", "Branch and survey"),
+        "2026-06-14_16-58-25": ("Voice sweep", "Branch from origin/main"),
+    }
+    for sid, (goal, next_step) in seeded.items():
+        _seed_todo(tmp_path, sid, goal, next_step, git_ref="feat/x")
+
+    result = run_session_start(
+        {"session_id": SESSION_ID, "cwd": str(tmp_path)},
+        env_file=tmp_path / "claude.env",
+        project_dir=tmp_path,
+    )
     assert result.returncode == 0
-    # Directive marker and command token asserted inline; their source-ownership
-    # is tracked cross-hook in spx/21-spec-tree.enabler/ISSUES.md item 20.
-    assert "<SPEC-TREE_SESSION_START" in result.stdout
-    assert "/spec-tree:pickup" in result.stdout
-    for session in _TODO:
-        assert session["id"] in result.stdout
-        assert session["goal"] in result.stdout
-        assert session["next_step"] in result.stdout
+    directive = directive_of_kind(hook_document(result), "queued-work")
+    assert directive is not None
+    listed = {entry["id"]: entry for entry in directive["sessions"]}
+    assert set(listed) == set(seeded)
+    for sid, (goal, next_step) in seeded.items():
+        assert listed[sid]["goal"] == goal
+        assert listed[sid]["next_step"] == next_step

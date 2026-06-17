@@ -1,33 +1,43 @@
-"""Mapping tests for 21-understanding-directive.enabler (understanding-directive.md mapping).
+"""Mapping test for 21-understanding-directive.enabler (understanding-directive.md mapping).
 
-L1: the real `session-start.py` hook is run as a subprocess against real
-filesystem I/O in pytest tmp_path directories, with no test doubles.
+L1: a project directory maps to the understanding directive — present when an
+``spx/*.product.md`` product spec exists, absent otherwise. Asserts on the parsed
+JSON descriptor, never by scanning stdout.
 
-Assertion covered:
-  - A project directory maps to the understanding-directive output: a directory
-    containing spx/*.product.md maps to a directive naming /spec-tree:understand;
-    a directory without one maps to no directive.
+Excluded until ``@outcomeeng/spx`` publishes ``spx hooks session-start``
+(``spx/EXCLUDE``).
 """
 
-import pytest
+from __future__ import annotations
 
-from outcomeeng_testing.harnesses.hooks import run_session_start
+from pathlib import Path
+
+from outcomeeng_testing.harnesses.hooks import (
+    directive_of_kind,
+    hook_document,
+    make_spec_tree,
+    run_session_start,
+)
 
 SESSION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 
-@pytest.mark.parametrize("has_product_spec", [True, False])
-def test_product_spec_presence_maps_to_directive(has_product_spec, tmp_path):
-    if has_product_spec:
-        spx = tmp_path / "spx"
-        spx.mkdir()
-        (spx / "demo.product.md").write_text("# Demo product\n", encoding="utf-8")
+def test_product_spec_maps_to_understanding_directive(tmp_path: Path) -> None:
+    make_spec_tree(tmp_path)
     result = run_session_start(
         {"session_id": SESSION_ID, "cwd": str(tmp_path)},
         env_file=tmp_path / "claude.env",
         project_dir=tmp_path,
     )
     assert result.returncode == 0
-    # Directive token asserted inline; source-ownership tracked cross-hook in
-    # spx/21-spec-tree.enabler/ISSUES.md item 20.
-    assert ("/spec-tree:understand" in result.stdout) is has_product_spec
+    assert directive_of_kind(hook_document(result), "understanding") is not None
+
+
+def test_no_product_spec_maps_to_no_understanding_directive(tmp_path: Path) -> None:
+    result = run_session_start(
+        {"session_id": SESSION_ID, "cwd": str(tmp_path)},
+        env_file=tmp_path / "claude.env",
+        project_dir=tmp_path,
+    )
+    assert result.returncode == 0
+    assert directive_of_kind(hook_document(result), "understanding") is None

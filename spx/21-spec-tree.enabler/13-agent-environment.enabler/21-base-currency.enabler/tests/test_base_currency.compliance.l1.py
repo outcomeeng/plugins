@@ -1,24 +1,28 @@
-"""Compliance tests for 21-base-currency.enabler (base-currency.md compliance).
+"""Compliance test for 21-base-currency.enabler (base-currency.md compliance).
 
-L1: the real `session-start.py` hook is run as a subprocess against real git
-repositories in pytest tmp_path directories, with no test doubles.
+L1: runs ``spx hooks session-start`` against real git repositories. Asserts the
+default branch is resolved from git's configured default (not a literal
+``origin/main``) and that the base-staleness check is read-only.
 
-Assertions covered:
-  - The hook resolves the default branch from git's configured default
-    (origin/HEAD), never a literal origin/main.
-  - The base-staleness check is read-only: no git fetch, no state-mutating git
-    command, and HEAD and refs are unchanged after the hook runs.
+Excluded until ``@outcomeeng/spx`` publishes ``spx hooks session-start``
+(``spx/EXCLUDE``).
 """
+
+from __future__ import annotations
 
 import subprocess
 
 from outcomeeng_testing.harnesses.git_context import worktree_against_origin
-from outcomeeng_testing.harnesses.hooks import run_session_start
+from outcomeeng_testing.harnesses.hooks import (
+    directive_of_kind,
+    hook_document,
+    run_session_start,
+)
 
 SESSION_ID = "cccccccc-dddd-eeee-ffff-000000000000"
 
 
-def _git_out(repo, *args):
+def _git_out(repo, *args) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), *args],
         check=True,
@@ -27,10 +31,9 @@ def _git_out(repo, *args):
     ).stdout
 
 
-def test_default_branch_resolved_from_git_not_literal_main(tmp_path):
-    # A non-main default: a hook that hardcoded origin/main would emit nothing
-    # here, and one that resolves the configured default names this branch. The
-    # expected branch is derived from the value provisioned, not hand-copied.
+def test_default_branch_resolved_from_git_not_literal_main(tmp_path) -> None:
+    # A non-main default: a resolver that hardcoded origin/main would emit no
+    # directive here; resolving the configured default names this branch.
     default = "trunk"
     with worktree_against_origin(behind=1, default_branch=default) as repo:
         result = run_session_start(
@@ -39,11 +42,12 @@ def test_default_branch_resolved_from_git_not_literal_main(tmp_path):
             project_dir=repo,
         )
     assert result.returncode == 0
-    assert f'default="origin/{default}"' in result.stdout
-    assert "origin/main" not in result.stdout
+    directive = directive_of_kind(hook_document(result), "base-currency")
+    assert directive is not None
+    assert directive["default_branch"] == f"origin/{default}"
 
 
-def test_base_staleness_check_is_read_only(tmp_path):
+def test_base_staleness_check_is_read_only(tmp_path) -> None:
     with worktree_against_origin(behind=2) as repo:
         head_before = _git_out(repo, "rev-parse", "HEAD")
         refs_before = _git_out(repo, "show-ref")
