@@ -160,12 +160,12 @@ def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
 
 def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None:
     skill_file = _skill_file(cache_root, plugin, version)
-    skill_file.parent.mkdir(parents=True)
+    skill_file.parent.mkdir(parents=True, exist_ok=True)
     skill_file.write_text(text)
     manifest = (
         cache_root / DEFAULT_MARKETPLACE / plugin / version / CODEX_PLUGIN_MANIFEST
     )
-    manifest.parent.mkdir(parents=True)
+    manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
 
@@ -202,10 +202,9 @@ def _quiet_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
 def test_local_refresh_reinstalls_installed_dist_plugins_without_upgrade(
     tmp_path: Path,
 ) -> None:
-    """Local refresh discovers addable plugins from `dist/codex`, intersects that
-    with the Codex installed set, refreshes those plugins in deterministic manifest
-    order, and never invokes the marketplace upgrade path that removes older cache
-    directories.
+    """Local refresh discovers managed plugins from `dist/codex`, refreshes those
+    plugins in deterministic manifest order, and never invokes the marketplace
+    upgrade path that removes older cache directories.
     """
     repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
@@ -571,14 +570,14 @@ def test_cli_repo_root_still_runs_local_source_preflight(
     assert "must be registered as a local source" in captured.err
 
 
-def test_upgrade_without_current_real_dir_creates_no_current_symlink(
+def test_refresh_without_current_real_dir_creates_no_current_symlink(
     tmp_path: Path,
 ) -> None:
-    """A successful upgrade leaves only the older version as a real directory while
-    the current working-tree version is in the published window but not materialized
-    as a real directory. Preservation creates no compatibility symlink for the
-    current version and removes the non-target real directory, so no cache path
-    resolves to stale content.
+    """A local refresh leaves only the older version as a real directory while the
+    current working-tree version is in the published window but not materialized as
+    a real directory. Preservation creates no compatibility symlink for the current
+    version and removes the non-target real directory, so no cache path resolves to
+    stale content.
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
@@ -817,12 +816,10 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     )
 
 
-def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> None:
-    """A working-tree plugin whose only cache entry is a stale real version directory,
-    and which Codex does not report as installed, has its entire cache directory pruned
-    -- not-installed is treated identically to a working-tree-absent orphan. Reproduces
-    the captured state where `python/0.18.6` lingered while `0.18.8` was never
-    materialized and `validate_install` reported MISSING for the current version.
+def test_unmanaged_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> None:
+    """A working-tree plugin whose only cache entry is a stale real version directory
+    and whose generated Codex manifest is absent from `dist/codex` has its entire
+    cache directory pruned as unmanaged.
     """
     repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
@@ -845,12 +842,14 @@ def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> N
         repo_root=repo_root,
         cache_root=cache_root,
         history=history,
-        installed=StaticInstalled({}),
+        installed=StaticInstalled(
+            {NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION}
+        ),
         runner=_quiet_runner,
     )
 
     assert not plugin_dir.exists(), (
-        f"expected the whole cache directory {plugin_dir} pruned for a not-installed "
+        f"expected the whole cache directory {plugin_dir} pruned for an unmanaged "
         f"plugin, leaving nothing for validate_install to flag"
     )
     assert NOT_INSTALLED_PLUGIN in result.pruned_plugins, (
@@ -1040,14 +1039,14 @@ def test_partial_plugin_add_failure_reconciles_successful_refresh(
     )
 
 
-def test_absent_cache_with_empty_installed_set_runs_no_plugin_add(
+def test_absent_cache_with_empty_installed_set_installs_managed_plugin(
     tmp_path: Path,
 ) -> None:
-    """An empty Codex installed set against an absent cache is a valid empty refresh:
-    no plugin add command runs, no registration repair is attempted, and no cache
-    mutation is needed.
+    """An empty Codex installed set does not suppress managed plugin refresh:
+    generated Codex plugins are installed from `dist/codex` even when the
+    pre-refresh installed-set report is empty.
     """
-    repo_root = tmp_path / "repo"
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
@@ -1068,21 +1067,20 @@ def test_absent_cache_with_empty_installed_set_runs_no_plugin_add(
         runner=runner,
     )
 
-    assert runner.calls == []
+    assert runner.calls == [
+        (*preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND, "spec-tree@outcomeeng")
+    ]
     assert result.refresh_returncode == 0
-    assert result.linked_versions == ()
+    assert _skill_file(cache_root, PLUGIN_NAME, CURRENT_VERSION).is_file()
     assert result.pruned_links == ()
     assert result.pruned_plugins == ()
 
 
-def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
+def test_managed_plugin_preserved_while_unmanaged_sibling_pruned(
     tmp_path: Path,
 ) -> None:
-    """With two working-tree plugins — one in the Codex installed set, one absent —
-    preservation keeps the installed plugin's cache and prunes the not-installed
-    sibling's. This pins the preserved set to the intersection of the working-tree
-    set and the installed set: pruning every plugin (ignoring the installed set) or
-    preserving every plugin (ignoring it) both fail this test.
+    """With two working-tree plugins, preservation keeps the generated Codex plugin
+    cache and prunes the sibling absent from `dist/codex`.
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
@@ -1111,31 +1109,39 @@ def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
         repo_root=repo_root,
         cache_root=cache_root,
         history=history,
-        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
+        installed=StaticInstalled(
+            {
+                PLUGIN_NAME: CURRENT_VERSION,
+                NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+            }
+        ),
         runner=_quiet_runner,
     )
 
-    assert installed_dir.is_dir(), (
-        f"installed plugin {installed_dir} must be preserved (it is in the intersection)"
-    )
+    assert installed_dir.is_dir(), f"managed plugin {installed_dir} must be preserved"
     assert PLUGIN_NAME not in result.pruned_plugins, (
         f"expected {PLUGIN_NAME} not pruned, got {result.pruned_plugins}"
     )
     assert not not_installed_dir.exists(), (
-        f"not-installed plugin {not_installed_dir} must be pruned (outside the intersection)"
+        f"unmanaged plugin {not_installed_dir} must be pruned"
     )
     assert NOT_INSTALLED_PLUGIN in result.pruned_plugins, (
         f"expected {NOT_INSTALLED_PLUGIN} in result.pruned_plugins={result.pruned_plugins}"
     )
 
 
-def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
-    """A successful query reporting an empty installed set prunes every plugin's cache
-    directory for the marketplace — an empty set is a valid prune-all instruction,
-    distinct from a failed query (which aborts).
+def test_empty_installed_set_refreshes_every_managed_plugin(tmp_path: Path) -> None:
+    """A successful query reporting an empty installed set refreshes every generated
+    Codex plugin instead of treating the empty report as a prune-all instruction.
     """
     repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, PLUGIN_NAME, CURRENT_VERSION)
+    _write_dist_codex_manifest(
+        repo_root,
+        NOT_INSTALLED_PLUGIN,
+        NOT_INSTALLED_CURRENT_VERSION,
+    )
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
     _write_skill(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "content b"
@@ -1160,13 +1166,24 @@ def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({}),
-        runner=_quiet_runner,
+        runner=MaterializingAddRunner(
+            cache_root=cache_root,
+            versions={
+                PLUGIN_NAME: CURRENT_VERSION,
+                NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION,
+            },
+        ),
     )
 
-    assert not dir_a.exists() and not dir_b.exists(), (
-        f"empty installed set must prune every cache dir; "
+    assert dir_a.is_dir() and dir_b.is_dir(), (
+        f"empty installed set must not prune managed cache dirs; "
         f"a={dir_a.exists()} b={dir_b.exists()}"
     )
-    assert PLUGIN_NAME in result.pruned_plugins and (
-        NOT_INSTALLED_PLUGIN in result.pruned_plugins
-    ), f"expected both plugins pruned, got {result.pruned_plugins}"
+    assert result.pruned_plugins == (), (
+        f"expected no managed plugins pruned, got {result.pruned_plugins}"
+    )
+    assert _skill_file(
+        cache_root,
+        NOT_INSTALLED_PLUGIN,
+        NOT_INSTALLED_CURRENT_VERSION,
+    ).is_file()

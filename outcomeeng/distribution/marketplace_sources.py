@@ -20,12 +20,36 @@ CLAUDE_MARKETPLACE_LIST_COMMAND = (
     "list",
     "--json",
 )
+CLAUDE_MARKETPLACE_ADD_COMMAND = (
+    "claude",
+    "plugin",
+    "marketplace",
+    "add",
+)
+CLAUDE_MARKETPLACE_REMOVE_COMMAND = (
+    "claude",
+    "plugin",
+    "marketplace",
+    "remove",
+)
 CODEX_MARKETPLACE_LIST_COMMAND = (
     "codex",
     "plugin",
     "marketplace",
     "list",
     "--json",
+)
+CODEX_MARKETPLACE_ADD_COMMAND = (
+    "codex",
+    "plugin",
+    "marketplace",
+    "add",
+)
+CODEX_MARKETPLACE_REMOVE_COMMAND = (
+    "codex",
+    "plugin",
+    "marketplace",
+    "remove",
 )
 DIST_CODEX_PLUGINS_DIR = Path("dist") / "codex"
 CODEX_PLUGIN_MANIFEST = Path(".codex-plugin") / "plugin.json"
@@ -54,6 +78,15 @@ class CodexDistPlugin:
     name: str
     version: str
     root: Path
+
+
+@dataclass(frozen=True)
+class MarketplaceConfigRepairResult:
+    """Result of reconciling runtime marketplace source configuration."""
+
+    root: Path
+    changed: bool
+    commands: tuple[tuple[str, ...], ...]
 
 
 def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -88,6 +121,57 @@ def configured_local_marketplace_root(
         marketplace,
         claude_sources=parse_claude_marketplace_sources(claude_result.stdout or ""),
         codex_sources=parse_codex_marketplace_sources(codex_result.stdout or ""),
+    )
+
+
+def ensure_local_marketplace_sources(
+    marketplace: str = DEFAULT_MARKETPLACE,
+    *,
+    source_root: Path | None = None,
+    runner: CommandRunner = run_command_capture,
+) -> MarketplaceConfigRepairResult:
+    """Reconcile Claude Code and Codex to one local marketplace source."""
+    claude_result = _run_json_command(
+        [*CLAUDE_MARKETPLACE_LIST_COMMAND],
+        runner=runner,
+    )
+    codex_result = _run_json_command(
+        [*CODEX_MARKETPLACE_LIST_COMMAND],
+        runner=runner,
+    )
+    claude_sources = parse_claude_marketplace_sources(claude_result.stdout or "")
+    codex_sources = parse_codex_marketplace_sources(codex_result.stdout or "")
+    root = _canonical_source_root(
+        marketplace,
+        explicit_root=source_root,
+        claude_sources=claude_sources,
+        codex_sources=codex_sources,
+    )
+    commands: list[tuple[str, ...]] = []
+    commands.extend(
+        _repair_runtime_source(
+            marketplace,
+            source=claude_sources.get(marketplace),
+            root=root,
+            add_command=CLAUDE_MARKETPLACE_ADD_COMMAND,
+            remove_command=CLAUDE_MARKETPLACE_REMOVE_COMMAND,
+            runner=runner,
+        )
+    )
+    commands.extend(
+        _repair_runtime_source(
+            marketplace,
+            source=codex_sources.get(marketplace),
+            root=root,
+            add_command=CODEX_MARKETPLACE_ADD_COMMAND,
+            remove_command=CODEX_MARKETPLACE_REMOVE_COMMAND,
+            runner=runner,
+        )
+    )
+    return MarketplaceConfigRepairResult(
+        root=root,
+        changed=bool(commands),
+        commands=tuple(commands),
     )
 
 
@@ -277,6 +361,63 @@ def _normalized_path(path: Path) -> Path:
     return path.expanduser().resolve(strict=False)
 
 
+def _canonical_source_root(
+    marketplace: str,
+    *,
+    explicit_root: Path | None,
+    claude_sources: dict[str, MarketplaceSource],
+    codex_sources: dict[str, MarketplaceSource],
+) -> Path:
+    if explicit_root is not None:
+        return _normalized_path(explicit_root)
+    claude = claude_sources.get(marketplace)
+    if (
+        claude is not None
+        and claude.source_type == SOURCE_TYPE_LOCAL
+        and claude.path is not None
+    ):
+        return _normalized_path(claude.path)
+    codex = codex_sources.get(marketplace)
+    if (
+        codex is not None
+        and codex.source_type == SOURCE_TYPE_LOCAL
+        and codex.path is not None
+    ):
+        return _normalized_path(codex.path)
+    return _normalized_path(Path.cwd())
+
+
+def _repair_runtime_source(
+    marketplace: str,
+    *,
+    source: MarketplaceSource | None,
+    root: Path,
+    add_command: tuple[str, ...],
+    remove_command: tuple[str, ...],
+    runner: CommandRunner,
+) -> tuple[tuple[str, ...], ...]:
+    if _source_matches(source, root):
+        return ()
+    commands: list[tuple[str, ...]] = []
+    if source is not None:
+        remove = (*remove_command, marketplace)
+        _run_json_command(list(remove), runner=runner)
+        commands.append(remove)
+    add = (*add_command, str(root))
+    _run_json_command(list(add), runner=runner)
+    commands.append(add)
+    return tuple(commands)
+
+
+def _source_matches(source: MarketplaceSource | None, root: Path) -> bool:
+    return (
+        source is not None
+        and source.source_type == SOURCE_TYPE_LOCAL
+        and source.path is not None
+        and _normalized_path(source.path) == root
+    )
+
+
 def _run_json_command(
     command: list[str],
     *,
@@ -298,8 +439,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "command",
-        choices=("root",),
-        help="Print the validated shared local marketplace root",
+        choices=("root", "ensure"),
+        help="Inspect or reconcile the shared local marketplace root",
     )
     parser.add_argument(
         "marketplace",
@@ -307,19 +448,44 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_MARKETPLACE,
         help="Marketplace name",
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print reconciliation result as JSON",
+    )
     args = parser.parse_args(argv)
     try:
-        root = configured_local_marketplace_root(args.marketplace)
+        if args.command == "root":
+            root = configured_local_marketplace_root(args.marketplace)
+            print(root)
+            return 0
+        result = ensure_local_marketplace_sources(args.marketplace)
     except MarketplaceSourceError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(root)
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "root": str(result.root),
+                    "changed": result.changed,
+                    "commands": [list(command) for command in result.commands],
+                }
+            )
+        )
+    else:
+        status = "repaired" if result.changed else "already configured"
+        print(f"{result.root} ({status})")
     return 0
 
 
 __all__ = [
+    "CLAUDE_MARKETPLACE_ADD_COMMAND",
     "CLAUDE_MARKETPLACE_LIST_COMMAND",
+    "CLAUDE_MARKETPLACE_REMOVE_COMMAND",
+    "CODEX_MARKETPLACE_ADD_COMMAND",
     "CODEX_MARKETPLACE_LIST_COMMAND",
+    "CODEX_MARKETPLACE_REMOVE_COMMAND",
     "CODEX_PLUGIN_MANIFEST",
     "DEFAULT_MARKETPLACE",
     "DIST_CODEX_PLUGINS_DIR",
@@ -327,10 +493,12 @@ __all__ = [
     "SOURCE_TYPE_LOCAL",
     "CodexDistPlugin",
     "CommandRunner",
+    "MarketplaceConfigRepairResult",
     "MarketplaceSource",
     "MarketplaceSourceError",
     "available_codex_plugins",
     "configured_local_marketplace_root",
+    "ensure_local_marketplace_sources",
     "main",
     "parse_claude_marketplace_sources",
     "parse_codex_marketplace_sources",

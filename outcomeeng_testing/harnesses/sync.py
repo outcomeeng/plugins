@@ -18,7 +18,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
-from outcomeeng.distribution.sync import ChangeProbe, StepRunner, ToolProbe
+from outcomeeng.distribution.sync import (
+    ChangeProbe,
+    ConfigRepairer,
+    StepRunner,
+    ToolProbe,
+)
 
 
 @dataclass
@@ -64,9 +69,27 @@ class ScriptedChangeProbe:
         return self.changed
 
 
-__all__ = ["RecordingRunner", "ScriptedChangeProbe", "ScriptedToolProbe"]
+@dataclass
+class ScriptedConfigRepairer:
+    """ConfigRepairer that reports whether runtime source config changed."""
+
+    changed: bool
+    calls: int = 0
+
+    def __call__(self) -> bool:
+        self.calls += 1
+        return self.changed
+
+
+__all__ = [
+    "RecordingRunner",
+    "ScriptedChangeProbe",
+    "ScriptedConfigRepairer",
+    "ScriptedToolProbe",
+]
 
 
 _: type[StepRunner] = RecordingRunner
 _2: type[ToolProbe] = ScriptedToolProbe
 _3: type[ChangeProbe] = ScriptedChangeProbe
+_4: type[ConfigRepairer] = ScriptedConfigRepairer

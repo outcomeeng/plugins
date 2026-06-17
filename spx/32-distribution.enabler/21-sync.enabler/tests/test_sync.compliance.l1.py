@@ -17,6 +17,7 @@ from outcomeeng.distribution.sync import REQUIRED_TOOLS, STEPS, sync
 from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
     ScriptedChangeProbe,
+    ScriptedConfigRepairer,
     ScriptedToolProbe,
 )
 
@@ -30,6 +31,7 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     runner = RecordingRunner()
+    config_repairer = ScriptedConfigRepairer(changed=False)
     tool_probe = ScriptedToolProbe(
         available=ALL_TOOLS_AVAILABLE - {missing_tool},
     )
@@ -40,10 +42,12 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code != 0
     assert runner.calls == []
+    assert config_repairer.calls == 0
     captured = capsys.readouterr()
     assert missing_tool in (captured.err + captured.out)
 
@@ -53,16 +57,19 @@ def test_tool_availability_is_checked_before_any_runner_call() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     sync(
         "abc123",
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     # Every required tool was probed.
     assert set(tool_probe.queries) >= set(REQUIRED_TOOLS)
+    assert config_repairer.calls == 1
     # No reordering: all step calls happened (none skipped).
     assert runner.calls == list(STEP_ARGVS)
 
@@ -72,15 +79,18 @@ def test_changes_present_runs_full_sequence_when_every_step_succeeds() -> None:
     runner = RecordingRunner(exit_codes=tuple(0 for _ in STEPS))
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         "abc123",
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 0
+    assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
 
 
@@ -93,12 +103,14 @@ def test_changes_present_stops_at_first_failing_step_without_skipping_earlier(
     runner = RecordingRunner(exit_codes=exit_codes)
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         "abc123",
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 7
