@@ -5,7 +5,7 @@ filesystem I/O in pytest tmp_path directories, with no test doubles.
 
 Assertion covered:
   - A project directory maps to the understanding-directive output: a directory
-    containing spx/*.product.md maps to a directive naming /spec-tree:understanding;
+    containing spx/*.product.md maps to a directive naming /spec-tree:understand;
     a directory without one maps to no directive.
 """
 
@@ -30,4 +30,4 @@ def test_product_spec_presence_maps_to_directive(has_product_spec, tmp_path):
     assert result.returncode == 0
     # Directive token asserted inline; source-ownership tracked cross-hook in
     # spx/21-spec-tree.enabler/ISSUES.md item 20.
-    assert ("/spec-tree:understanding" in result.stdout) is has_product_spec
+    assert ("/spec-tree:understand" in result.stdout) is has_product_spec

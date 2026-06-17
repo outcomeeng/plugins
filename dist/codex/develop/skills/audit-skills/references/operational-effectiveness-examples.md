@@ -2,7 +2,7 @@
 Examples of operational effectiveness issues to flag:
 
 <example name="unverifiable_success_criteria">
-❌ Flag as critical for complex skills. A `/applying` skill writing:
+❌ Flag as critical for complex skills. A `/apply` skill writing:
 
 ```xml
 <success_criteria>Outcome is complete when:
@@ -23,17 +23,17 @@ Examples of operational effectiveness issues to flag:
 - Test evidence audit verdict is APPROVED for every assertion (verify: same XML schema check; per-assertion `<verdict>APPROVED</verdict>` present)
 - Code audit verdict is APPROVED (verify: same XML schema check)
 - All tests pass: `just test` exits 0
-- Coverage delta is non-negative on assertion-relevant source files (verify: see the `coverage_protocol` procedure in `/auditing-tests` references)</success_criteria>
+- Coverage delta is non-negative on assertion-relevant source files (verify: see the `coverage_protocol` procedure in `/audit-tests` references)</success_criteria>
 ```
 
 **Why it works**: Each criterion names the file or command that produces the evidence, and each "green" is defined by a concrete output shape (`<verdict>APPROVED</verdict>`) rather than an adjective.
 </example>
 
 <example name="missing_verification_gates">
-❌ Flag as critical for multi-step skills. A `/applying` skill writing:
+❌ Flag as critical for multi-step skills. A `/apply` skill writing:
 
 ```xml
-<workflow>1. Load context with `/contextualizing`
+<workflow>1. Load context with `/contextualize`
 2. Author the spec
 3. Write tests for assertions
 4. Write implementation code
@@ -45,32 +45,32 @@ Examples of operational effectiveness issues to flag:
 ✅ Should be:
 
 ```xml
-<workflow>1. Load context with `/contextualizing` for the target node.
+<workflow>1. Load context with `/contextualize` for the target node.
 
 **GATE 0**: Before authoring, verify:
 - [ ] `<SPEC_TREE_FOUNDATION>` marker present in session
 - [ ] `<SPEC_TREE_CONTEXT>` manifest names every ancestor ADR/PDR
-If gate fails, re-run `/understanding` and `/contextualizing` before continuing.
+If gate fails, re-run `/understand` and `/contextualize` before continuing.
 
-2. Author the spec with typed assertions (`/authoring`).
-3. Author any ADR the spec depends on (`/architecting-<lang>`).
+2. Author the spec with typed assertions (`/author`).
+3. Author any ADR the spec depends on (`/architect-<lang>`).
 
 **GATE 1**: Before writing tests, verify:
 - [ ] Architecture auditor (the `<lang>-architecture-auditor` agent) returns APPROVED for every ADR touched
 - [ ] PDR auditor (the `pdr-auditor` agent) returns APPROVED if a PDR governs this subtree
 If a higher-layer artifact rejects, fix it before descending — the spec depends on the decision, not the other way around.
 
-4. Write tests driven by spec assertions (`/testing`).
+4. Write tests driven by spec assertions (`/test`).
 
 **GATE 2**: Before writing implementation, verify:
-- [ ] Test audit (`/auditing-tests`) returns APPROVED per assertion
+- [ ] Test audit (`/audit-tests`) returns APPROVED per assertion
 - [ ] Every test file uses canonical naming `<subject>.<evidence>.<level>[.<runner>]`
 If gate fails, fix tests before writing implementation — code derives from tests, never the reverse.
 
-5. Write implementation (`/coding-<lang>`).
+5. Write implementation (`/code-<lang>`).
 
 **GATE 3**: Before closing the outcome, verify:
-- [ ] Code audit (`/auditing-<lang>`) returns APPROVED
+- [ ] Code audit (`/audit-<lang>`) returns APPROVED
 - [ ] `just test` exits 0
 - [ ] `spx validation audit-verdict` exits 0 on every emitted verdict
 If gate fails, do not commit.</workflow>
@@ -85,7 +85,7 @@ Skill has detailed workflow but no `<failure_modes>` section.
 
 **Why it matters**: Agents will make the same mistakes that previous agents made. Failure modes capture hard-won operational knowledge.
 
-✅ A `/auditing-tests` skill should include:
+✅ A `/audit-tests` skill should include:
 
 ```xml
 <failure_modes>Failures from actual usage:
@@ -98,14 +98,14 @@ Skill has detailed workflow but no `<failure_modes>` section.
 **Failure 2: Missed mock-severed coupling**
 - What happened: Agent saw `import { database } from "../src/database"` at the top of a test and classified the coupling as Direct. Two lines later the file called `vi.mock("../src/database", () => ({ query: vi.fn().mockResolvedValue([]) }))`.
 - Why it failed: `vi.mock` (and `mock.patch`, `respx.mock`, and similar) replaces the module before any test code runs. The import statement is syntactic; the runtime coupling is severed. Schema changes, query bugs, and connection failures in the real `database` module are all invisible to this test.
-- How to avoid: After listing imports, scan the file for module-replacement primitives. Each match severs coupling for the named import. Unless one of the seven exception cases in `/testing` methodology applies, REJECT.</failure_modes>
+- How to avoid: After listing imports, scan the file for module-replacement primitives. Each match severs coupling for the named import. Unless one of the seven exception cases in `/test` methodology applies, REJECT.</failure_modes>
 ```
 
 **Why it works**: Future agents learn from past mistakes without repeating them, and each entry names a concrete signal in the file (an import, a `vi.mock` call) the next auditor can search for.
 </example>
 
 <example name="abstract_vs_concrete_examples">
-❌ Flag as recommendation. An `/auditing-tests` skill writing:
+❌ Flag as recommendation. An `/audit-tests` skill writing:
 
 ```xml
 <success_criteria>Audit verdict reflects test quality accurately.</success_criteria>
@@ -146,7 +146,7 @@ Output shape (full verdict): `<assertion>` element with `<verdict>APPROVED</verd
 <example name="procedural_without_operational">
 ❌ Flag as critical for complex skills. Example shape:
 
-A `/decomposing` skill has a 450-line `<workflow>` covering concern boundaries, node-type selection, ordering evidence, and sparse index assignment — but the operational sections look like this:
+A `/decompose` skill has a 450-line `<workflow>` covering concern boundaries, node-type selection, ordering evidence, and sparse index assignment — but the operational sections look like this:
 
 ```xml
 <success_criteria>Decomposition is complete when child nodes have been created.</success_criteria>

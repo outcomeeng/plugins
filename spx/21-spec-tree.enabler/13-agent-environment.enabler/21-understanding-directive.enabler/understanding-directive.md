@@ -8,11 +8,11 @@ CAN load the foundation before acting rather than proceeding from memory
 
 ### Scenarios
 
-- Given a `SessionStart` payload whose project directory contains a product spec (`spx/*.product.md`), when the hook runs, then stdout carries a `<SPEC-TREE_SESSION_START foundation="load"/>` directive that names `/spec-tree:understanding` and `/spec-tree:contextualizing` and points at the mechanical `PreToolUse` load gate as the enforcement ([test](tests/test_understanding_directive.scenario.l1.py))
+- Given a `SessionStart` payload whose project directory contains a product spec (`spx/*.product.md`), when the hook runs, then stdout carries a `<SPEC-TREE_SESSION_START foundation="load"/>` directive that names `/spec-tree:understand` and `/spec-tree:contextualize` and points at the mechanical `PreToolUse` load gate as the enforcement ([test](tests/test_understanding_directive.scenario.l1.py))
 
 ### Mappings
 
-- A project directory maps to the understanding-directive output: a directory containing `spx/*.product.md` maps to a directive naming `/spec-tree:understanding`; a directory without one maps to no directive ([test](tests/test_understanding_directive.mapping.l1.py))
+- A project directory maps to the understanding-directive output: a directory containing `spx/*.product.md` maps to a directive naming `/spec-tree:understand`; a directory without one maps to no directive ([test](tests/test_understanding_directive.mapping.l1.py))
 
 ### Compliance
 

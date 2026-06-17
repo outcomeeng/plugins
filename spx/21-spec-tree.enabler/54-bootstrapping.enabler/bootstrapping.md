@@ -2,7 +2,7 @@
 
 PROVIDES an interactive bootstrapping flow that scaffolds a product-root spec tree from user interviews
 SO THAT new projects
-CAN adopt the Spec Tree methodology while delegating top-level structure to `/decomposing spx/`
+CAN adopt the Spec Tree methodology while delegating top-level structure to `/decompose spx/`
 
 ## Assertions
 
@@ -16,10 +16,10 @@ CAN adopt the Spec Tree methodology while delegating top-level structure to `/de
 
 - ALWAYS: interview the user before creating the tree — never assume product scope ([review])
 - ALWAYS: detect brownfield — a product already implemented in code while `spx/` is absent or empty — and note it before the interview ([review])
-- ALWAYS: cover consumers, jobs, surfaces, actors and sidedness, constraints, success signals, and top-level intent in the interview, applying `/interviewing`'s methodology rather than a forked interview ([review])
+- ALWAYS: cover consumers, jobs, surfaces, actors and sidedness, constraints, success signals, and top-level intent in the interview, applying `/interview`'s methodology rather than a forked interview ([review])
 - ALWAYS: in brownfield, derive top-level intent from the product dimensions — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout ([review])
 - ALWAYS: create the product spec and `spx/CLAUDE.md` before any top-level child nodes — the root must exist before composition ([review])
 - ALWAYS: record top-level product intent, constraints, examples, and unresolved questions in `spx/PLAN.md` when the user provides candidate areas ([review])
-- ALWAYS: delegate top-level child composition to `/decomposing spx/` — bootstrapping records product intent, decomposition owns child boundaries, node types, ordering evidence, and indices ([review])
+- ALWAYS: delegate top-level child composition to `/decompose spx/` — bootstrapping records product intent, decomposition owns child boundaries, node types, ordering evidence, and indices ([review])
 - NEVER: create a spec tree without a product spec — the product spec is the root of all context ([review])
 - NEVER: assign top-level child indices or create top-level child nodes inside bootstrapping ([review])

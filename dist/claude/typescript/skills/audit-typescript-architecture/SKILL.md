@@ -9,7 +9,7 @@ allowed-tools: Read, Grep, Glob, Bash
 Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Review ADRs against `/typescript-architecture-standards` conventions, `/testing` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
+Review ADRs against `/typescript-architecture-standards` conventions, `/test` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.
 
 **Standards are pre-loaded above.** Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </objective>
@@ -19,11 +19,11 @@ Review ADRs against `/typescript-architecture-standards` conventions, `/testing`
 
 When reviewing ADRs for a spec-tree work item (enabler/outcome), ensure complete architectural context is loaded:
 
-1. **Invoke `spec-tree:contextualizing`** with the node path
+1. **Invoke `spec-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** -- must check for consistency with decision hierarchy
 3. **Verify ADR references ancestor decisions** -- node ADRs should reference relevant ancestor ADRs/PDRs
 
-**The `spec-tree:contextualizing` skill provides:**
+**The `spec-tree:contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - TRD with technical requirements
@@ -85,7 +85,7 @@ All canonical conventions are in `/typescript-architecture-standards`. Read it f
 
 **4. Mocking prohibition** -- No mocking language anywhere in the ADR. See `<di_patterns>` in `/typescript-architecture-standards` for what to check and correct ADR language.
 
-**5. Level accuracy** -- When the `## Verification` rules reference testing levels, verify against `/testing` definitions. See `<level_context>` in `/typescript-architecture-standards`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
+**5. Level accuracy** -- When the `## Verification` rules reference testing levels, verify against `/test` definitions. See `<level_context>` in `/typescript-architecture-standards`. Key rule: SaaS services jump `l1` to `l3` (no `l2`).
 
 **6. Anti-patterns** -- Check for content that does not belong in an ADR. See `<anti_patterns>` in `/typescript-architecture-standards` for the full table.
 
@@ -93,7 +93,7 @@ All canonical conventions are in `/typescript-architecture-standards`. Read it f
 
 <output_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 
@@ -132,7 +132,7 @@ Each finding's `rule` field carries the violation pattern (e.g., `phantom-sectio
 **Do:**
 
 - Reference `/typescript-architecture-standards` section names (e.g., `<testability_in_verification>`, `<atemporal_voice>`)
-- Reference `/testing` section names for level rules (e.g., "Stage 2 Five Factors")
+- Reference `/test` section names for level rules (e.g., "Stage 2 Five Factors")
 - Show correct architecture with code or markdown examples
 - Be direct about violations
 - Reject temporal language in ANY section -- the decision statement, Rationale, Verification

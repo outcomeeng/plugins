@@ -8,7 +8,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — stay in `/auditing-{lang}-architecture`, not here.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — stay in `/audit-{lang}-architecture`, not here.
 
 </objective>
 
@@ -20,7 +20,7 @@ An ADR's content is architecture — technology choices, data structures, implem
 
 **EVIDENCE TYPE MUST MATCH THE CLAIM.**
 
-Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance); `### Eval` → `[eval]`; `### Audit` → `[audit]`. `/testing` selects the type; this audit verifies the selection is correct against the claim's shape — an audit that accepts any present tag verifies nothing, and the evidence type is the assertion's whole worth. The decisive check is the quantifier: a universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction. A missing tag, a bare mechanism tag (`[review]`/`[test]`), a tag disagreeing with its subsection, more than one tag, or an evidence type the `/testing` router would not produce for the claim is a finding.
+Each rule under `## Verification` carries one tag matching its subsection — `### Testing` → an evidence type (scenario, mapping, conformance, property, compliance); `### Eval` → `[eval]`; `### Audit` → `[audit]`. `/test` selects the type; this audit verifies the selection is correct against the claim's shape — an audit that accepts any present tag verifies nothing, and the evidence type is the assertion's whole worth. The decisive check is the quantifier: a universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") is never `scenario`, because a scenario proves one case and cannot establish a claim about every case; `scenario` fits only a single existential interaction. A missing tag, a bare mechanism tag (`[review]`/`[test]`), a tag disagreeing with its subsection, more than one tag, or an evidence type the `/test` router would not produce for the claim is a finding.
 
 **ATEMPORAL VOICE.**
 
@@ -38,7 +38,7 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **Step 1: Load context**
 
-Invoke `/contextualizing` on the directory containing the ADR.
+Invoke `/contextualize` on the directory containing the ADR.
 
 Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the ADR directory.
 
@@ -88,7 +88,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
    - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])`;
    - under `### Audit` → `([audit])`.
-2. Under `### Testing`, the evidence type fits the claim's shape per the `/testing` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. Read the claim's quantifier: a universal (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`; a single existential interaction takes `scenario`. Within the universal branch the router yields one type by domain shape (finite source-owned → `mapping`; external/internal contract → `conformance`; rule exercised against violating cases → `compliance`; open or infinite → `property`). Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 
 A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subsection, a missing tag, more than one tag, or an evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) is invalid.
 
@@ -108,7 +108,7 @@ Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 
@@ -143,7 +143,7 @@ How to avoid: The ADR audit checks form — structure, voice, tag validity. Cont
 
 Claude saw a `### Testing` rule — a universal ALWAYS/NEVER claim — tagged `([scenario])`, and passed it because a tag was present and named one of the five evidence types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `/testing` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/testing`'s to decide.
+How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `/test` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
 
 </failure_modes>
 
@@ -151,11 +151,11 @@ How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `
 
 Audit is complete when:
 
-- [ ] `/contextualizing` invoked — `<SPEC_TREE_CONTEXT>` marker present
+- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
 - [ ] ADR read — all sections identified
 - [ ] Section structure: decision stated in the opening and `## Verification` present
 - [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/testing` (a universal is never `scenario`)
+- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/test` (a universal is never `scenario`)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has property, category, and detail
 

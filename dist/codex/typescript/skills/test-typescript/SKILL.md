@@ -37,7 +37,7 @@ Write or fix test files for a node specification. This skill handles both:
 
 **Output:** Test files written to `{node}/tests/` directory
 
-**Prerequisites:** Standards and the `/testing` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
+**Prerequisites:** Standards and the `/test` router are pre-loaded above. The router chooses evidence and level; this skill implements those decisions in TypeScript.
 
 **Command placeholders:** Resolve `<product-test-command>`, `<product-typecheck-command>`, `<product-lint-command>`, and optional `<product-lint-fix-command>` from repository docs, package scripts, Makefile, Justfile, or local agent instructions. When sources conflict, use this priority: local agent instructions, repository docs, Justfile, Makefile, package scripts, raw tool fallback. Fallback examples for repos without wrappers: `npx vitest run`, `npx tsc --noEmit`, `npx eslint src/ test/`, and `npx eslint src/ test/ --fix`. If a wrapper rejects a path suffix, run the closest supported focused command and record the exact command used.
 
@@ -78,7 +78,7 @@ Extract from the spec:
 
 **Step 2: Determine Evidence and Level**
 
-For each assertion, apply the `/testing` methodology:
+For each assertion, apply the `/test` methodology:
 
 | Evidence location               | Minimum level |
 | ------------------------------- | ------------- |
@@ -258,7 +258,7 @@ Tests run and fail for expected reasons (RED phase complete).
 Before declaring tests complete:
 
 - [ ] Each spec assertion has at least one test
-- [ ] Assertion type and level match `/testing` Stage 2
+- [ ] Assertion type and level match `/test` Stage 2
 - [ ] File names use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - [ ] No `vi.mock()` or `vi.fn()` replacing the dependency under test
 - [ ] Doubles are typed interfaces passed through DI
@@ -277,7 +277,7 @@ See `/typescript-test-standards` for:
 
 - **File naming** - Evidence, level, and runner axes
 - **Level tooling** - Vitest vs Playwright, l1/l2/l3 infrastructure
-- **Router mapping** - `/testing` Stage decisions to TypeScript patterns
+- **Router mapping** - `/test` Stage decisions to TypeScript patterns
 - **l1 patterns** - Pure functions, typed factories, temp dirs
 - **Exception implementations** - The 6 exception cases in TypeScript
 - **l2 patterns** - Typed harness factory and usage

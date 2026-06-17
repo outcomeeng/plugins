@@ -1,22 +1,22 @@
 # Marketplace PR Rules
 
-Loaded by `/opening-pr` when working in this repository. Marketplace-specific additions to the base PR workflow.
+Loaded by `/open-pr` when working in this repository. Marketplace-specific additions to the base PR workflow.
 
 ## Pre-flight additions
 
-In addition to `/opening-pr`'s branch hygiene, verify before opening:
+In addition to `/open-pr`'s branch hygiene, verify before opening:
 
 | Check                                                                        | If failing                                                 |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `just check` passes                                                          | STOP. Fix lint, format, and validation drift first.        |
-| Plugin manifest version bumped when the change warrants it                   | STOP. Bump per `spx/local/committing-changes.md`.          |
+| Plugin manifest version bumped when the change warrants it                   | STOP. Bump per `spx/local/commit-changes.md`.              |
 | Both marketplace catalogs updated when adding or removing a plugin           | STOP. `just check` enforces; run it.                       |
 | `AGENTS.md` skills, commands, and agents tables updated to match the change  | STOP. New or removed artifacts must appear in the catalog. |
 | `understanding/templates/spx-claude.md` updated when skill structure changes | STOP. New projects inherit this template.                  |
 
 ## Required body sections
 
-Append to the default template from `/opening-pr`:
+Append to the default template from `/open-pr`:
 
 ```text
 ## Versioning
@@ -39,4 +39,4 @@ Feature-branch PRs push with `git push -u origin HEAD:refs/heads/<branch>` (expl
 
 ## Self-reference
 
-The marketplace bans agent identity strings from branch names, commit messages, PR titles, and PR bodies (see the product-scope `self_reference_policy`). The base `/opening-pr` skill already enforces this — no further additions here.
+The marketplace bans agent identity strings from branch names, commit messages, PR titles, and PR bodies (see the product-scope `self_reference_policy`). The base `/open-pr` skill already enforces this — no further additions here.

@@ -64,16 +64,16 @@ Show the `<coordination>` section — cross-cutting context that does not belong
 - Environment or setup requirements
 - Open questions or pending decisions
 
-**Step 6: Invoke /contextualizing (MANDATORY)**
+**Step 6: Invoke /contextualize (MANDATORY)**
 
 NEVER offer the user a choice here. NEVER propose fixes, code, or any implementation work at this point.
 
-The ONLY valid next action after presenting the session is to invoke `/contextualizing` on the target node. The spec-tree methodology forbids all work without loaded context.
+The ONLY valid next action after presenting the session is to invoke `/contextualize` on the target node. The spec-tree methodology forbids all work without loaded context.
 
 If the session references multiple nodes, ask which node to start with. Otherwise, invoke immediately:
 
 ```text
-Skill tool → { "skill": "spec-tree:contextualizing", "args": "spx/{node-path}" }
+Skill tool → { "skill": "spec-tree:contextualize", "args": "spx/{node-path}" }
 ```
 
 After context is loaded, STOP and present a post-context checkpoint:
@@ -117,7 +117,7 @@ After emitting the checkpoint marker, report the result and the current session 
 - `spx session release` as a substitute for the close workflow — skips claimed-session accounting, reflection, and archival; use `/handoff --no-session` for proper closure.
 - Creating a replacement handoff to justify closing the claimed session — no new session is permission to close an existing one.
 
-NEVER invoke `/applying`, author ADRs/tests/code, or edit files before this checkpoint completes.
+NEVER invoke `/apply`, author ADRs/tests/code, or edit files before this checkpoint completes.
 
 **Step 7: Verify coordination claims before triaging**
 
@@ -134,11 +134,11 @@ This applies after the post-context checkpoint in Step 6 completes, or after the
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
-- [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
+- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
-- [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
+- [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Agent knows which skills to invoke and which to avoid
 

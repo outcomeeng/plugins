@@ -1,6 +1,6 @@
 # Marketplace Commit Rules
 
-This file is loaded by the `/committing-changes` skill when working in this repository. It contains rules specific to committing changes to the Outcome Engineering plugin marketplace.
+This file is loaded by the `/commit-changes` skill when working in this repository. It contains rules specific to committing changes to the Outcome Engineering plugin marketplace.
 
 ## Version Management
 
@@ -29,7 +29,7 @@ Plugins follow semantic versioning: `MAJOR.MINOR.PATCH`
 **MINOR version (0.3.x → 0.4.x):**
 
 - ✅ Adding new commands (e.g., new `/pickup` command)
-- ✅ Adding new skills (e.g., new `/designing-frontend` skill)
+- ✅ Adding new skills (e.g., new `/design-frontend` skill)
 - ✅ Major functional changes (e.g., atomic claim mechanism in `/pickup`)
 - ✅ Significant user experience improvements
 - 🎯 **Use sparingly** — only for substantial additions or changes
@@ -155,11 +155,11 @@ printf '%s\n' 'docs({plugin-name}): address review feedback' | git commit -F -
 | Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch   |
 | Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                  |
 | Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH            |
-| Add `/designing-frontend`               | 0.4.3 | 0.5.0 | New skill = MINOR                    |
+| Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                    |
 | Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
 | Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
 | Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface         |
-| Edit `spx/local/committing-changes.md`  | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin    |
+| Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin    |
 | Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin       |
 
 ## After Adding/Modifying Commands or Skills
@@ -179,7 +179,7 @@ printf '%s\n' 'docs({plugin-name}): address review feedback' | git commit -F -
    - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
 6. **Regenerate derived files**: Run `just build-skills` so `dist/claude/` and `dist/codex/` match the authored source.
 7. **Document changes**: Update `AGENTS.md` and generated docs when adding new commands/skills to the catalog-facing surfaces.
-8. **Update the spx/CLAUDE.md template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/understanding/templates/spx-claude.md`
+8. **Update the spx/CLAUDE.md template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/understand/templates/spx-claude.md`
 9. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
 
    ```bash

@@ -45,7 +45,7 @@ interface BuildDependencies {
 
 **Where:** "## Testing Strategy" section with level assignment table
 **Concern:** Section structure, Anti-patterns
-**Why this fails:** The authoritative ADR template has no Testing Strategy section. Level assignments are a downstream concern for `/testing`. Testability constraints belong under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules.
+**Why this fails:** The authoritative ADR template has no Testing Strategy section. Level assignments are a downstream concern for `/test`. Testability constraints belong under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules.
 
 **Correct approach:**
 

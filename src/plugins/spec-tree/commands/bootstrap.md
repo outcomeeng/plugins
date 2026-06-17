@@ -21,10 +21,10 @@ Bootstrap a new spec tree by interviewing the user and scaffolding spx/.
 </context>
 
 <process>
-Invoke the bootstrapping skill NOW:
+Invoke the bootstrap skill NOW:
 
 ```json
-Skill tool → { "skill": "spec-tree:bootstrapping" }
+Skill tool → { "skill": "spec-tree:bootstrap" }
 ```
 
 The skill interviews the user and scaffolds the initial tree.

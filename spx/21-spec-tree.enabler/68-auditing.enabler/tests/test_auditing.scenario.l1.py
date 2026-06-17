@@ -1,6 +1,6 @@
 """Scenario tests for the ``audit_orchestrator`` helpers and CLI.
 
-Covers the helpers the ``/auditing`` skill and the ``audit-orchestrator``
+Covers the helpers the ``/audit`` skill and the ``audit-orchestrator``
 agent delegate to so deterministic computations stay out of skill prose
 and agent prompts:
 
@@ -46,7 +46,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "auditing"
+    / "audit"
     / "scripts"
 )
 AUDIT_ORCHESTRATOR = SCRIPTS_DIR / "audit_orchestrator.py"
@@ -68,7 +68,7 @@ SAMPLE_LAST_RUN_AT = "2026-05-11T15:35:12Z"
 
 
 def _load_audit_orchestrator() -> ModuleType:
-    """Load src/plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
+    """Load src/plugins/spec-tree/skills/audit/scripts/audit_orchestrator.py.
 
     The module ships inside the spec-tree plugin's scripts/ directory; importlib
     loads it by absolute path so this test does not depend on package layout.
@@ -1967,7 +1967,7 @@ VERDICT_FINDING_B_DICT = _finding_to_json_dict(
 def _verdict(open_findings: list[dict[str, object]]) -> dict[str, object]:
     return {
         "schema_version": 1,
-        "skill": "auditing",
+        "skill": "audit",
         "target": "scope",
         "overall": "REJECTED" if open_findings else "APPROVED",
         "rows": [{"name": "row-1", "status": "FAIL", "findings": open_findings}],
@@ -2020,7 +2020,7 @@ def test_verdict_diff_walks_into_child_verdicts() -> None:
     module = _load_audit_orchestrator()
     prior_with_child = {
         "schema_version": 1,
-        "skill": "auditing",
+        "skill": "audit",
         "target": "scope",
         "overall": "REJECTED",
         "rows": [],
@@ -2029,7 +2029,7 @@ def test_verdict_diff_walks_into_child_verdicts() -> None:
     }
     current_no_child_finding = {
         "schema_version": 1,
-        "skill": "auditing",
+        "skill": "audit",
         "target": "scope",
         "overall": "APPROVED",
         "rows": [],

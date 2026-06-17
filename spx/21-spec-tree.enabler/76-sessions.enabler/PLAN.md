@@ -51,11 +51,11 @@ Relative symlink is deliberate — absolute paths break when the repo is checked
 
 ### Step 1 — Spec the new behavior
 
-**Target node**: `spx/41-validation.enabler/21-validation-cli.enabler/` already hosts the CLI dispatch spec. The session subcommands live under a different enabler — confirm by `/contextualizing spx/` in the `spx` repo on first entry.
+**Target node**: `spx/41-validation.enabler/21-validation-cli.enabler/` already hosts the CLI dispatch spec. The session subcommands live under a different enabler — confirm by `/contextualize spx/` in the `spx` repo on first entry.
 
-1. Invoke `/contextualizing` on the target enabler under the `spx` repo's spec tree. Resolve the authoritative node.
+1. Invoke `/contextualize` on the target enabler under the `spx` repo's spec tree. Resolve the authoritative node.
 2. Amend the spec to declare the two new assertions (pickup-creates-symlink, archive-removes-symlink) plus the per-session-dir scanning rule.
-3. **Audit gate**: run `/auditing-product-decisions` on any PDR changes and `/aligning` across the affected subtree.
+3. **Audit gate**: run `/audit-product-decisions` on any PDR changes and `/align` across the affected subtree.
 
 ### Step 2 — Tests first (TDD)
 
@@ -66,7 +66,7 @@ Per the spx repo's test-language ADR (TypeScript + Vitest), write tests in the t
 - `accumulator.property.l1.test.ts` — property: for any sequence of pickup(id_i) and archive(id_i) operations with a fixed runtime id, the set `{readlink(S) for S in .spx/sessions/$RUNTIME_ID/}` equals the set of picked-up-but-not-yet-archived ids.
 - `symlink-recovery.scenario.l1.test.ts` — pre-existing dangling symlink with a newly-claimed matching id; crash-between-move-and-symlink recovery.
 
-**Audit gate**: run `/auditing-tests` (via `/spec-tree:test-evidence-auditor` agent) to confirm coupling, falsifiability, alignment, coverage. Every new test must pass the 4-property evidence check.
+**Audit gate**: run `/audit-tests` (via `/spec-tree:test-evidence-auditor` agent) to confirm coupling, falsifiability, alignment, coverage. Every new test must pass the 4-property evidence check.
 
 ### Step 3 — Implementation
 

@@ -11,29 +11,29 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 `([scenario])`, `([mapping])`, `([conformance])`, `([property])`, or `([compliance])`
 
 - The evidence type is the **minimum**. The spec node enforcing the rule carries at least that evidence type and may add more (more cases, deeper levels, a second type).
-- The evidence type is chosen by invoking `/testing` against the rule's claim shape — never hand-picked. The template instructs the author to route through `/testing`.
+- The evidence type is chosen by invoking `/test` against the rule's claim shape — never hand-picked. The template instructs the author to route through `/test`.
 - The evidence-type tag is a claim-shape classification, not a test reference: it carries no path, so it does not violate the `what-goes-where` rule that decision records contain no `[test](path)` links. The path lives on the downstream spec assertion.
 - Evidence type and mechanism are distinct axes. The per-rule tag is one of the five **evidence types** above. The evidence **mechanism** (`[test]` / `[review]` / `[eval]`) is the downstream spec assertion's concern and never a per-rule tag — `([eval])` is not a decision-rule evidence type. The five-type set is therefore complete; a rule whose downstream enforcement runs through the eval lane still carries an evidence-type tag (typically `([compliance])`), and the `[eval]` mechanism attaches to the spec assertion that enforces it.
 
 ## Files
 
-- `src/plugins/spec-tree/skills/understanding/templates/decisions/decision-name.adr.md`
-- `src/plugins/spec-tree/skills/understanding/templates/decisions/decision-name.pdr.md`
-- `src/plugins/spec-tree/skills/understanding/examples/adr-example.md` (show per-rule evidence types)
-- `src/plugins/spec-tree/skills/understanding/examples/pdr-example.md` (show per-rule evidence types)
+- `src/plugins/spec-tree/skills/understand/templates/decisions/decision-name.adr.md`
+- `src/plugins/spec-tree/skills/understand/templates/decisions/decision-name.pdr.md`
+- `src/plugins/spec-tree/skills/understand/examples/adr-example.md` (show per-rule evidence types)
+- `src/plugins/spec-tree/skills/understand/examples/pdr-example.md` (show per-rule evidence types)
 - regenerate `dist/claude` + `dist/codex` via `just build-skills`
 
 ## Spec impact
 
-`templates.md` assertion "ALWAYS: define required sections for each artifact type" extends so the audit verifies each decision template's Compliance rules carry a per-rule evidence-type tag naming one of the five evidence types. Author the amended/added assertion through `/authoring`.
+`templates.md` assertion "ALWAYS: define required sections for each artifact type" extends so the audit verifies each decision template's Compliance rules carry a per-rule evidence-type tag naming one of the five evidence types. Author the amended/added assertion through `/author`.
 
 ## Implementation skills (in order)
 
-1. `spec-tree:understanding`
-2. `spec-tree:contextualizing` on `spx/21-spec-tree.enabler/21-templates.enabler`
-3. `spec-tree:authoring` for the `templates.md` assertion change
+1. `spec-tree:understand`
+2. `spec-tree:contextualize` on `spx/21-spec-tree.enabler/21-templates.enabler`
+3. `spec-tree:author` for the `templates.md` assertion change
 4. `develop:skill-standards` before editing template/example content
-5. `spec-tree:committing-changes`
+5. `spec-tree:commit-changes`
 
 ## Audit gates
 
@@ -44,4 +44,4 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 ## Related plans
 
 - `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the audits that enforce the evidence-type floor
-- `spx/21-spec-tree.enabler/35-evidence.enabler/PLAN.md` — the `/testing` router that picks the evidence type
+- `spx/21-spec-tree.enabler/35-evidence.enabler/PLAN.md` — the `/test` router that picks the evidence type

@@ -16,7 +16,7 @@ The contract spans two repositories. This marketplace repository owns the `/hand
 
 ### Audit
 
-- ALWAYS: `/handoff` writes a session document only after confirming the working tree is clean and the work branch's `@{upstream}` exists on origin and is not ahead of it; when that does not hold, it runs `/committing-changes` and pushes the work branch before writing the document ([audit])
+- ALWAYS: `/handoff` writes a session document only after confirming the working tree is clean and the work branch's `@{upstream}` exists on origin and is not ahead of it; when that does not hold, it runs `/commit-changes` and pushes the work branch before writing the document ([audit])
 - ALWAYS: `/handoff` passes the work branch to `spx session handoff` as an explicit work-branch ref so the recorded `git_ref` is the work branch, and `/pickup` fetches and checks out the branch `git_ref` names in a pool worktree before reading the spec tree — reading in place when `git_ref` is the default branch or a commit SHA; the session document carries no separate work-branch field ([audit])
 - ALWAYS: the `/handoff` skill frames the persistence precondition by what breaks when it is violated — unpushed work is invisible to a cold agent, and an occupied branch is one `/pickup` cannot claim — so the guarantee is understood, not merely prohibited ([audit])
 - NEVER: `/handoff` emits a chat-only or local-only session document, or any document pointing at uncommitted or unpushed work ([audit])

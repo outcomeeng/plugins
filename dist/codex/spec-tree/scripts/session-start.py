@@ -171,8 +171,8 @@ def understanding_directive(project_dir: str) -> str:
             "the methodology foundation and node context are gone, regardless of any",
             '"resume as if the break never happened" instruction. Enforcement is',
             "mechanical: a PreToolUse gate denies the first tool call until",
-            "/spec-tree:understanding loads the foundation, and denies an edit to a",
-            "node until /spec-tree:contextualizing loads that node.",
+            "/spec-tree:understand loads the foundation, and denies an edit to a",
+            "node until /spec-tree:contextualize loads that node.",
         ]
     )
 

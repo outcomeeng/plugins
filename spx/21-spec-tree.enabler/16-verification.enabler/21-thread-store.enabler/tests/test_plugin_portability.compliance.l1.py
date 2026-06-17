@@ -1,15 +1,15 @@
 """Plugin-portability compliance tests.
 
-Covers the Compliance clauses in ``../thread-store.md`` and
+Covers the Compliance clauses in ``../manage-thread-store.md`` and
 ``../21-backend-abstraction.adr.md`` that constrain the imports and
 module shape of thread-store scripts and the cross-skill rules that
 keep backend selection routed through the facade:
 
-- Every script under ``plugins/spec-tree/skills/thread-store/scripts/``
+- Every script under ``plugins/spec-tree/skills/manage-thread-store/scripts/``
   imports only the standard library and other thread-store scripts.
   No third-party packages, no ``outcomeeng_*`` modules.
 - No verification skill (any plugin under ``plugins/spec-tree/skills/`` other
-  than ``thread-store`` itself, plus future language-verification skills)
+  than ``manage-thread-store`` itself, plus future language-verification skills)
   imports a concrete backend module directly. Verification skill code reaches
   persistence only through the ``thread_store`` facade.
 - No backend module redefines the ``branch_slug`` function. Slug
@@ -30,7 +30,7 @@ import sys
 # Tree surgery that changes the enabler's depth must update this index.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[5]
 THREAD_STORE_SCRIPTS_DIR = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "thread-store" / "scripts"
+    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "manage-thread-store" / "scripts"
 )
 SPEC_TREE_SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
 SPEC_TREE_AGENTS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents"
@@ -137,7 +137,7 @@ class TestVerificationSkillsDoNotImportBackendsDirectly:
         for skill_dir in sorted(SPEC_TREE_SKILLS_DIR.iterdir()):
             if not skill_dir.is_dir():
                 continue
-            if skill_dir.name == "thread-store":
+            if skill_dir.name == "manage-thread-store":
                 # The thread-store skill is the implementation home for the
                 # facade; its own scripts legitimately reference the
                 # concrete backend modules.
@@ -167,7 +167,7 @@ class TestAgentsDoNotReferenceConcreteBackends:
 
     A future ``changes-reviewer`` agent that referenced ``fs_backend``
     in its body would fail this test; the rule directs agents to reach
-    persistence only through the CRUD CLIs exposed by ``thread-store``.
+    persistence only through the CRUD CLIs exposed by ``manage-thread-store``.
     """
 
     def test_no_agent_names_concrete_backend(self) -> None:

@@ -20,7 +20,7 @@ name: {AGENT_NAME}
 description: {AGENT_DESCRIPTION}
 model: sonnet
 skills:
-  - spec-tree:reviewing-changes
+  - spec-tree:review-changes
 tools: Read, Bash
 ---
 
@@ -41,7 +41,7 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
     assert parsed["model"] == "gpt-5.4-mini"
     instructions = parsed["developer_instructions"]
     assert AGENT_BODY in instructions
-    assert "spec-tree:reviewing-changes" in instructions
+    assert "spec-tree:review-changes" in instructions
     assert "Read" in instructions
     assert "Bash" in instructions
 

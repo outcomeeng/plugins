@@ -2,7 +2,7 @@
 
 ## Run-journal contract leads its lower layers (known non-conformance)
 
-`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` and `verification.md` declare the append-only run-journal contract in atemporal voice — the present-tense product truth, not a conditional. Truth flows down, so the lower layers that have not yet migrated are currently non-conformant by design, not defective: the shipped `reviewing-changes` skill still persists through thread-store's CRUD-overwrite facade; `spx/21-spec-tree.enabler/17-auditing.adr.md` and `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler` still encode the end-of-run verdict-toolchain and `.spx/audits` model. An audit of these surfaces against the new contract reports the migration in flight, expected per the durable-map future-product-truth rule — not a defect to fix in place. The migration itself is tracked in this node's `PLAN.md` and is gated on the `spx` CLI run-journal verbs. The spec assertions are NOT weakened with a "contingent on X" qualifier — that would inject temporal hedging the atemporal-voice rule forbids; this note carries the timeline instead.
+`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` and `verification.md` declare the append-only run-journal contract in atemporal voice — the present-tense product truth, not a conditional. Truth flows down, so the lower layers that have not yet migrated are currently non-conformant by design, not defective: the shipped `review-changes` skill still persists through thread-store's CRUD-overwrite facade; `spx/21-spec-tree.enabler/17-auditing.adr.md` and `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler` still encode the end-of-run verdict-toolchain and `.spx/audits` model. An audit of these surfaces against the new contract reports the migration in flight, expected per the durable-map future-product-truth rule — not a defect to fix in place. The migration itself is tracked in this node's `PLAN.md` and is gated on the `spx` CLI run-journal verbs. The spec assertions are NOT weakened with a "contingent on X" qualifier — that would inject temporal hedging the atemporal-voice rule forbids; this note carries the timeline instead.
 
 ## Downstream enforcement for `[audit]` decision-rule modes (deferred)
 
@@ -10,13 +10,13 @@
 
 Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an auditing skill checks against each rule, or refine the `decisions.md` flow rule so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes. This is a methodology question broader than the verification-taxonomy change that introduced the modes.
 
-Surfaced by the local `reviewing-changes` review on PR #103.
+Surfaced by the local `review-changes` review on PR #103.
 
 ## Missing `[eval]` evidence on verification skill judgment surfaces
 
-Every verification skill conforming to the contract in `verification.md` is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for `reviewing-changes`; no other verification skill has followed it.
+Every verification skill conforming to the contract in `verification.md` is an LLM-driven judgment producer. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions must carry `[eval]` evidence scored against curated cases through the `outcomeeng-evals` harness. PR #43 established the pattern for `review-changes`; no other verification skill has followed it.
 
-`/aligning` does not detect missing `[eval]` evidence — the check is by hand against `spx/15-spec-coverage.adr.md`.
+`/align` does not detect missing `[eval]` evidence — the check is by hand against `spx/15-spec-coverage.adr.md`.
 
 **Pattern for each verification skill** (per-skill checklist):
 
@@ -44,15 +44,15 @@ Every verification skill conforming to the contract in `verification.md` is an L
 - `32-auditing-nodes.enabler` (candidate future skill) — when authored, must adopt this pattern.
 - `spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler` — when implemented, eval evidence requirements are documented in its own PLAN.
 
-## `reviewing` vs `auditing` vocabulary confusion in `verification-kinds.md` and `reviewing-changes` prompt
+## `reviewing` vs `audit` vocabulary confusion in `verification-kinds.md` and `review-changes` prompt
 
-`src/plugins/spec-tree/skills/understanding/references/verification-kinds.md` correctly declares five verification types. The confusing boundary: `reviewing` is open-ended changeset judgment, while standards conformance is `auditing` and static/tool conformance is `validation`. The active `reviewing-changes` prompt currently implies standards comparisons the skill does not load enough context to perform.
+`src/plugins/spec-tree/skills/understand/references/verification-kinds.md` correctly declares five verification types. The confusing boundary: `reviewing` is open-ended changeset judgment, while standards conformance is `audit` and static/tool conformance is `validation`. The active `review-changes` prompt currently implies standards comparisons the skill does not load enough context to perform.
 
 **Fix:**
 
 1. Reconcile `verification-kinds.md` so the `reviewing` entry emphasizes open-ended changeset review over quality, risk, consistency, evidence, and architecture, without implying standards-conformance audit.
 2. Keep `spx/14-verification.pdr.md` on the five-type taxonomy; amend only if the grounding text needs the same boundary clarification.
-3. Reconcile the reviewing node with the active `reviewing-changes` prompt and schema so any remaining review taxonomy buckets match what `reviewing-changes` can actually judge.
+3. Reconcile the reviewing node with the active `review-changes` prompt and schema so any remaining review taxonomy buckets match what `review-changes` can actually judge.
 4. Gate the change with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, and `just docs-check`.
 
 Handle before applying the Python, TypeScript, and Rust test-standard drift fixes recorded in `docs/cross-language-test-standards-drift-audit.md`.

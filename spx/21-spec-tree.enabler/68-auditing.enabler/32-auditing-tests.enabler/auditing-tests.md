@@ -25,7 +25,7 @@ A test missing any property has zero evidentiary value regardless of code qualit
 
 ## Coupling Taxonomy
 
-The `/auditing-tests` skill in the spec-tree plugin classifies test coupling into distinct categories, each with a different audit response:
+The `/audit-tests` skill in the spec-tree plugin classifies test coupling into distinct categories, each with a different audit response:
 
 | Category           | Definition                                                                                      | Verdict                                                |
 | ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -87,7 +87,7 @@ The legitimate pattern: production defines a typed constant (object, dict, froze
 
 When the value originates outside the codebase — an HTTP status, a POSIX errno, a protocol opcode — both production and test import directly from the platform or library origin. Production never re-exports a library constant; tests import from where production imports from.
 
-When the audit rejects bare literals, the verdict reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-standards`, `/standardizing-python`, and `/standardizing-rust`.
+When the audit rejects bare literals, the verdict reports the positive pattern as the remediation. Language-specific structural rules (the constant-object syntax, the type derivation, the no-enums policy) live in `/typescript-standards`, `/python-standards`, and `/rust-standards`.
 
 ## Assertions
 
@@ -95,7 +95,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 - Given source code that does not expose a seam for the spec assertion, when audited, then the verdict targets the source file with finding category "untestable source" and remaining evidence checks are skipped ([test](tests/test_test_auditing.scenario.l1.py))
 - Given source code that exposes a seam for the spec assertion, when audited, then testability passes and the audit proceeds to coupling ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that imports only its test framework, when audited by `/auditing-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a test file that imports only its test framework, when audited by `/audit-tests`, then the verdict is REJECT with finding category "no coupling" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that imports a codebase module but mocks it entirely, when audited, then the verdict is REJECT with finding category "coupling severed" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file where testability passes, the test imports the correct module, and the test verifies behavior matching the spec assertion, when audited and all four evidence properties hold, then the verdict is APPROVED ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that imports the correct module but asserts on a property unrelated to the spec assertion, when audited, then the verdict is REJECT with finding category "misaligned" ([test](tests/test_test_auditing.scenario.l1.py))
@@ -115,7 +115,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ### Conformance
 
-- The `/auditing-tests` skill invokes `/contextualizing` on the target spec node before any audit phase ([test](tests/test_test_auditing.conformance.l1.py))
+- The `/audit-tests` skill invokes `/contextualize` on the target spec node before any audit phase ([test](tests/test_test_auditing.conformance.l1.py))
 
 ### Compliance
 

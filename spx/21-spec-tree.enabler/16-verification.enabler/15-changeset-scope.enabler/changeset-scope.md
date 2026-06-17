@@ -17,5 +17,5 @@ CAN derive every changeset's branch, slug, base ref, and changed-file set from o
 
 ### Compliance
 
-- ALWAYS: the changeset-derivation primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — resolve to one module, and the `branch_slug` re-export at `plugins/spec-tree/skills/thread-store/scripts/branch_slug.py` is identity-equal to the canonical symbol ([test](tests/test_changeset_scope.compliance.l1.py))
+- ALWAYS: the changeset-derivation primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — resolve to one module, and the `branch_slug` re-export at `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` is identity-equal to the canonical symbol ([test](tests/test_changeset_scope.compliance.l1.py))
 - ALWAYS: every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through the shared `remote_tracking_ref` helper — `branch_scope` for the auditing surface and `compute_diff` for the reviewing surface — so a stale local branch ref cannot widen the scope ([test](tests/test_changeset_scope.scenario.l1.py))

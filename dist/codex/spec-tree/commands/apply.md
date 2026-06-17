@@ -62,13 +62,13 @@ If the node is listed in `spx/EXCLUDE`, remove its line. The `spx` CLI will auto
 **3b. Load context**
 
 ```text
-Skill tool → { "skill": "spec-tree:contextualizing", "args": "spx/{node-path}" }
+Skill tool → { "skill": "spec-tree:contextualize", "args": "spx/{node-path}" }
 ```
 
 **3c. Run the TDD flow**
 
 ```text
-Skill tool → { "skill": "spec-tree:applying" }
+Skill tool → { "skill": "spec-tree:apply" }
 ```
 
 This runs the full 8-step flow: methodology, context, architect, audit, test, audit, implement, audit.
@@ -76,7 +76,7 @@ This runs the full 8-step flow: methodology, context, architect, audit, test, au
 **3d. Commit the applied node**
 
 ```text
-Skill tool → { "skill": "spec-tree:committing-changes" }
+Skill tool → { "skill": "spec-tree:commit-changes" }
 ```
 
 **3e. Move to next node**

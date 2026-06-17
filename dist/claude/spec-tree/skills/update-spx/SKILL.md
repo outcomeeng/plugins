@@ -10,23 +10,23 @@ Keep a product's spx-level directory guide current with the installed spec-tree 
 </objective>
 
 <context>
-The canonical template is the single copy in the understanding skill at `${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md`. Its frontmatter `template_version` is the installed version; the guide carries its own `template_version` plus the `languages` list. The guide is stale when its version is numerically below the installed one, or when its recorded `languages` no longer match the project's languages in use.
+The canonical template is the single copy in the understanding skill at `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Its frontmatter `template_version` is the installed version; the guide carries its own `template_version` plus the `languages` list. The guide is stale when its version is numerically below the installed one, or when its recorded `languages` no longer match the project's languages in use.
 
 The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `spx/AGENTS.md`, reads and writes follow the link; in a repo that ships only `spx/AGENTS.md`, target that file. Resolve the actual guide path before reading or writing.
 
-`/understanding` detects the project's languages and reports staleness once per session, and `/handoff` carries that marker into its persistence proposal. This skill applies the update.
+`/understand` detects the project's languages and reports staleness once per session, and `/handoff` carries that marker into its persistence proposal. This skill applies the update.
 </context>
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md`. Guide: the product's spx-level guide (`spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file), referred to below as `<guide>`.
+1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Guide: the product's spx-level guide (`spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file), referred to below as `<guide>`.
 
-2. **Determine the enabled languages.** Identify the languages the project uses — from `/understanding`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
+2. **Determine the enabled languages.** Identify the languages the project uses — from `/understand`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
 
 3. **Detect status.** Run, passing the determined languages so the check catches a language drift as well as a version gap:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --languages <languages> --check
+   python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --product <guide> --languages <languages> --check
    ```
 
    The output is one of `current`, `stale`, or `absent`. `stale` covers both a `template_version` behind the installed template and a recorded-language set that differs from `<languages>`.
@@ -37,7 +37,7 @@ The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `s
    - **`stale`** — re-render in place, scoped to the enabled languages:
 
      ```bash
-     python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md" --product <guide> --languages <languages> --write
+     python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --product <guide> --languages <languages> --write
      ```
 
      New template sections arrive, the guide is scoped to `<languages>`, and `template_version` is set to the installed version.
@@ -51,7 +51,7 @@ The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `s
 - NEVER edit the deterministic parse, compare, or render logic here — it lives in `scripts/update_spx.py`, governed by the node's Guide Render Model ADR.
 - NEVER hand-merge or section-diff the guide against the template — the guide is rendered from the template and the enabled-language list; re-render is the update mechanism.
 - NEVER substitute a product-specific string into the guide — the guide carries only template content and language filtering; the only per-product variation is the `languages` list.
-- The template has one home, the understanding skill's `templates/`. Read it through `${CLAUDE_SKILL_DIR}/../understanding/templates/spx-claude.md`; never copy it into this skill.
+- The template has one home, the understanding skill's `templates/`. Read it through `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`; never copy it into this skill.
 
 </constraints>
 

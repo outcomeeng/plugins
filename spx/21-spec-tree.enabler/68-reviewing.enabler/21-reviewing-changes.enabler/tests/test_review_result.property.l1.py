@@ -1,6 +1,6 @@
 """Property tests for the ``review_result`` policy module.
 
-Covers this clause in ``../reviewing-changes.md``:
+Covers this clause in ``../review-changes.md``:
 
 Properties
 - For every ``ReviewResult`` instance, ``from_json_dict(to_json_dict(r)) == r``

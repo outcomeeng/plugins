@@ -3,7 +3,7 @@
      sending the prompt to the model.
 
      Probe scope: the eval verifies the review-inspection contract in
-     /standardizing-merging and /managing-pr. Automated reviewers and
+     /merging-standards and /manage-pr. Automated reviewers and
      humans may post as formal reviews, PR-level issue comments, or
      review-thread comments on specific lines. A correct inspection must
      query all three surfaces. -->

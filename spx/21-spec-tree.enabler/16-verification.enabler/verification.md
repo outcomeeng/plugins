@@ -6,7 +6,7 @@ CAN compose against one append-only run-journal contract, one projection discipl
 
 ## Verification types
 
-The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understanding` foundation reference `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; reviewing and auditing implement it.
+The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understand` foundation reference `src/plugins/spec-tree/skills/understand/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; reviewing and auditing implement it.
 
 ## Assertions
 
@@ -22,7 +22,7 @@ Each rule enforces a guarantee of `spx/21-spec-tree.enabler/16-verification.enab
 - ALWAYS: a terminal seal makes a run's sequence final — no append succeeds on a sealed journal ([audit])
 - ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares a model identifier, `tools: Bash, Read, Skill`, and `skills:` listing the skill ([audit])
 - ALWAYS: every wrapper agent declares `model: sonnet` or `model: inherit` — omitting the field falls back to the session model (Opus 4.8), which is unacceptable for verification agents ([test](tests/test_agent_model_field.mapping.l1.py))
-- ALWAYS: every agentic verification skill derives its changeset scope through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler/changeset-scope.md`) ([audit])
+- ALWAYS: every agentic verification skill derives its changeset scope through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler/scope-changeset.md`) ([audit])
 - NEVER: an agentic verification skill reads authoritative run state from a rendered surface rather than from the journal ([audit])
 - NEVER: an agentic verification skill hand-validates the records it emitted — the channel's exit code is the validity signal ([audit])
 - NEVER: a wrapper agent hard-codes a storage path, backend, or surface in its prose — backend selection is bound at the edge and swappable without changing the agent ([audit])

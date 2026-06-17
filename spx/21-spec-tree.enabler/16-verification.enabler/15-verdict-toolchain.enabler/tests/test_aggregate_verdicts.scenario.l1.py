@@ -52,7 +52,7 @@ class TestPositionalChildren:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
         _write_child(a, _child(skill="audit-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -66,7 +66,7 @@ class TestPositionalChildren:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
         _write_child(a, _child(skill="audit-typescript", overall="FAIL"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -78,7 +78,7 @@ class TestPositionalChildren:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
         _write_child(a, _child(skill="audit-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="UNKNOWN"))
+        _write_child(b, _child(skill="audit-python", overall="UNKNOWN"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -95,7 +95,7 @@ class TestDirectoryEnumeration:
         )
         _write_child(
             children_dir / "b.json",
-            _child(skill="auditing-python", overall="PASS"),
+            _child(skill="audit-python", overall="PASS"),
         )
         # A non-JSON file is ignored.
         (children_dir / "notes.txt").write_text("ignored")
@@ -115,10 +115,10 @@ class TestWrapperMetadata:
     def test_skill_flag_sets_wrapper_skill(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
         _write_child(a, _child(skill="audit-typescript", overall="PASS"))
-        result = _run(str(a), "--skill", "auditing", "--target", "spx/root")
+        result = _run(str(a), "--skill", "audit", "--target", "spx/root")
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
-        assert wrapper["skill"] == "auditing"
+        assert wrapper["skill"] == "audit"
         assert wrapper["target"] == "spx/root"
 
     def test_metadata_flag_repeats(self, tmp_path: pathlib.Path) -> None:
@@ -198,7 +198,7 @@ class TestWrapperRows:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
         _write_child(a, _child(skill="audit-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(
             str(a),
             str(b),
@@ -263,7 +263,7 @@ class TestMixedVocabularyChildren:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
         _write_child(leaf, _child(skill="audit-typescript", overall="PASS"))
-        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        _write_child(nested, _child(skill="audit", overall="APPROVED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -275,7 +275,7 @@ class TestMixedVocabularyChildren:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
         _write_child(leaf, _child(skill="audit-typescript", overall="FAIL"))
-        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        _write_child(nested, _child(skill="audit", overall="APPROVED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -290,7 +290,7 @@ class TestMixedVocabularyChildren:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
         _write_child(leaf, _child(skill="audit-typescript", overall="PASS"))
-        _write_child(nested, _child(skill="auditing", overall="REJECTED"))
+        _write_child(nested, _child(skill="audit", overall="REJECTED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)

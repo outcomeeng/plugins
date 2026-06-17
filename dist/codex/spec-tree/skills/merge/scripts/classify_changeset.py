@@ -7,7 +7,7 @@ whole set so a large changeset is never misclassified from a truncated sample.
 
 Base-ref resolution and committed branch-scope derivation route through the
 canonical `changeset_scope` module — never re-implemented here — per the
-`changeset-scope` skill's contract.
+`scope-changeset` skill's contract.
 Working-tree status is /merge's own concern: `changeset_scope` owns committed
 diff scope against the remote-tracking base only, not the uncommitted index.
 
@@ -30,14 +30,14 @@ _COORDINATION_NOTE = re.compile(
     + "|".join(re.escape(name) for name in COORDINATION_NOTE_BASENAMES)
     + r")$"
 )
-_CHANGESET_SCOPE_RELPATH = ("changeset-scope", "scripts", "changeset_scope.py")
+_CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
 _PREVIEW_LIMIT = 40
 
 
 def _load_changeset_scope() -> ModuleType:
     """Load the sibling `changeset_scope` module via the co-location convention.
 
-    The module lives at `plugins/spec-tree/skills/changeset-scope/scripts/
+    The module lives at `plugins/spec-tree/skills/scope-changeset/scripts/
     changeset_scope.py`, resolved relative to this script so no path is
     hard-coded in agent prose. Cached in `sys.modules` so repeated loads in one
     process reuse the same module object.

@@ -1,6 +1,6 @@
 """Scenario tests for the ``validate_review_result.py`` CLI arbiter.
 
-Covers these clauses in ``../reviewing-changes.md``:
+Covers these clauses in ``../review-changes.md``:
 
 Scenarios
 - Given a JSON document conforming to the review-result schema on

@@ -28,7 +28,7 @@ TITLE = "shared-test-owned-constant-bag"
 CUSTOM_THRESHOLD = 0.95
 CUSTOM_TRIALS = 3
 PLUGIN_DIR = "dist/claude/spec-tree"
-OWNED_PATH = "src/plugins/spec-tree/skills/managing-pr/**"
+OWNED_PATH = "src/plugins/spec-tree/skills/manage-pr/**"
 SMOKE_CASE = "happy-path"
 
 

@@ -9,8 +9,8 @@ node and foundation marker out of the compact summary the harness injected.
 
 It then emits, via stdout, a `<SPEC-TREE_RESUMED .../>` marker and, when a
 foundation was active pre-compact, a plain instruction telling the agent its
-loaded skills are gone and to re-invoke /spec-tree:understanding and
-/spec-tree:contextualizing on the node, passing it as the argument (a bare
+loaded skills are gone and to re-invoke /spec-tree:understand and
+/spec-tree:contextualize on the node, passing it as the argument (a bare
 invocation loads nothing). The hook owns only this presentation; `.spx/`
 mechanics live in the spx CLI.
 
@@ -95,21 +95,21 @@ def reanchoring_instruction(active_node: str) -> list[str]:
         "and the node context you had are gone from this conversation — the summary is a",
         "record of them, not the live skills. Before any further spec-tree work, re-invoke:",
         "",
-        "  /spec-tree:understanding",
+        "  /spec-tree:understand",
     ]
     if active_node:
         lines += [
-            f"  /spec-tree:contextualizing {active_node}",
+            f"  /spec-tree:contextualize {active_node}",
             "",
-            "Run /spec-tree:contextualizing with the node path above — it is the node you",
+            "Run /spec-tree:contextualize with the node path above — it is the node you",
             "were working on, and a bare invocation without it loads nothing.",
         ]
     else:
         lines += [
-            "  /spec-tree:contextualizing <full-node-path>",
+            "  /spec-tree:contextualize <full-node-path>",
             "",
             "The summary did not preserve which node you were working on. Determine the full",
-            "node path and pass it to /spec-tree:contextualizing — a bare invocation loads nothing.",
+            "node path and pass it to /spec-tree:contextualize — a bare invocation loads nothing.",
         ]
     return lines
 

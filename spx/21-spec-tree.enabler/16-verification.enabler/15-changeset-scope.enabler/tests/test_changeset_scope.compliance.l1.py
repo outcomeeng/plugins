@@ -1,8 +1,8 @@
 """Compliance test: the changeset-derivation primitives have one home.
 
-Covers the Compliance assertion in ``../changeset-scope.md`` that the
+Covers the Compliance assertion in ``../scope-changeset.md`` that the
 derivation primitives resolve to one module and the ``branch_slug`` re-export at
-``plugins/spec-tree/skills/thread-store/scripts/branch_slug.py`` is
+``plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py`` is
 identity-equal to the canonical symbol in ``changeset_scope``.
 
 The re-export module loads the canonical module through the shared

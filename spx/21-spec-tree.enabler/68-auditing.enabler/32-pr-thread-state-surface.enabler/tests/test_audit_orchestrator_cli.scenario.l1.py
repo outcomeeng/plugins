@@ -59,7 +59,7 @@ def _finding_dict(
 def _verdict_dict(open_findings: list[dict[str, object]]) -> dict[str, object]:
     return {
         "schema_version": 1,
-        "skill": "auditing",
+        "skill": "audit",
         "target": "scope",
         "overall": "REJECTED" if open_findings else "APPROVED",
         "rows": [{"name": "row-1", "status": "FAIL", "findings": open_findings}],

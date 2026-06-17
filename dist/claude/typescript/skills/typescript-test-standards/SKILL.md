@@ -9,7 +9,7 @@ allowed-tools: Read
 <objective>
 Define TypeScript-specific test standards loaded by `/test-typescript`, `/code-typescript`, `/architect-typescript`, and `/audit-typescript-tests`.
 
-Read `/testing` first when deciding what evidence to create. Read `/typescript-standards` before this reference when writing or reviewing TypeScript test code. These standards apply to all TypeScript tests.
+Read `/test` first when deciding what evidence to create. Read `/typescript-standards` before this reference when writing or reviewing TypeScript test code. These standards apply to all TypeScript tests.
 </objective>
 
 <repo_local_overlay>
@@ -96,7 +96,7 @@ export default defineConfig({
 </level_tooling>
 
 <router_mapping>
-After `/testing` chooses the evidence and level, implement it with these TypeScript patterns:
+After `/test` chooses the evidence and level, implement it with these TypeScript patterns:
 
 | Router Decision                            | TypeScript implementation                                  |
 | ------------------------------------------ | ---------------------------------------------------------- |
@@ -120,7 +120,7 @@ Pure computation and filesystem tests at `l1` use direct function calls, typed f
 </l1_patterns>
 
 <exception_implementations>
-When `/testing` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
+When `/test` routes to Stage 5, implement the exception in TypeScript using the pattern from `<router_mapping>`. Read `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` for full TypeScript examples of exceptions 1–4 and 6.
 
 Exception 5 (combinatorial cost: configurable fake with real-shaped behavior) is listed in `<router_mapping>` but does not yet have a TypeScript example.
 </exception_implementations>
@@ -195,7 +195,7 @@ Forbidden patterns:
 - `jest.mock(...)` replacing the module that should provide evidence
 - `vi.spyOn(...).mockReturnValue(...)` replacing behavior that the test claims to verify
 
-Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/testing` Stage 5 exception, see `<router_mapping>` above
+Allowed doubles are explicit objects or classes passed through dependency injection and mapped to a `/test` Stage 5 exception, see `<router_mapping>` above
 
 ```typescript
 interface PaymentGateway {
@@ -479,7 +479,7 @@ test("API returns flag-gated payload", async ({ context }) => {
 | File                                                          | When to read                                                  |
 | ------------------------------------------------------------- | ------------------------------------------------------------- |
 | `${CLAUDE_SKILL_DIR}/references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
-| `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/testing`              |
+| `${CLAUDE_SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/test`                 |
 | `${CLAUDE_SKILL_DIR}/references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
 
 </reference_guides>
@@ -487,7 +487,7 @@ test("API returns flag-gated payload", async ({ context }) => {
 <success_criteria>
 TypeScript test guidance follows this standard when:
 
-- `/testing` determines the assertion type, execution level, and exception path before implementation
+- `/test` determines the assertion type, execution level, and exception path before implementation
 - Test filenames use `<subject>.<evidence>.<level>[.<runner>].test.ts`
 - Runner configuration uses explicit runner tokens instead of `.spec.ts`
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception

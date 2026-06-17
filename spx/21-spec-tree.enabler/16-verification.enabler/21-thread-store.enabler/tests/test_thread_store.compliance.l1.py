@@ -1,13 +1,13 @@
 """Compliance tests for facade-level rules.
 
 Covers the Compliance clauses on ``thread_store`` in
-``../thread-store.md`` that are universal rules rather than per-case
+``../manage-thread-store.md`` that are universal rules rather than per-case
 scenarios:
 
 - ``thread_store.write`` is atomic: an interruption between temp-write
   and rename leaves the prior content of the target intact.
 - ``branch_slug`` is the symbol re-exported from
-  ``plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py`` —
+  ``plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py`` —
   slug derivation has exactly one canonical implementation source.
 - The test harness at ``outcomeeng_testing/harnesses/thread_store.py``
   exposes the symbols the spec mandates.

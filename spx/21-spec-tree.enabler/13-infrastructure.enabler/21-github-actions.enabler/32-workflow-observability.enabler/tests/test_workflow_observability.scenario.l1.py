@@ -19,7 +19,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "github-actions"
+    / "inspect-github-actions"
     / "scripts"
 )
 MUTATION_GATE = SCRIPTS_DIR / "mutation_gate.py"

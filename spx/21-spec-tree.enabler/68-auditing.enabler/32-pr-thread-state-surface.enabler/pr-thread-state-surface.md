@@ -1,7 +1,7 @@
 # PR-Thread State Surface
 
 PROVIDES the pull-request comment thread as the durable cross-CI-run state surface for audit verdicts — the most recent comment carrying the `<!-- AUDIT_VERDICT_JSON_BEGIN --> ... <!-- AUDIT_VERDICT_JSON_END -->` delimiters is the prior verdict, recovered by `read_verdict.py` and consumed by `audit_orchestrator.py verdict-diff` to compute resolved and reopened by content identity
-SO THAT the CI-side `pr-review-orchestrator` agent and any future CI-side caller of `/spec-tree:auditing` can iterate auditably across pushes — surfacing what got fixed and what regressed across iterations
+SO THAT the CI-side `pr-review-orchestrator` agent and any future CI-side caller of `/spec-tree:audit` can iterate auditably across pushes — surfacing what got fixed and what regressed across iterations
 CAN ship without writing audit state to disk: PR-thread mode never writes to `.spx/audits/` (that surface belongs to the local `audit-orchestrator` agent), so a CI runner that exits between iterations preserves no state outside the PR thread itself
 
 ## Assertions

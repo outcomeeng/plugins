@@ -8,7 +8,7 @@ Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.
 
 **Remaining:** upstream `outcomeeng/methodology` repo still needs the multi-language principle added to `spec-tree-reference.md`.
 
-## 9. `committing-changes` references `just check`
+## 9. `commit-changes` references `just check`
 
 `skill-structure.md` line 457: "Run product validation (e.g., `just check`)." Should reference `spx` validation as the spec-tree quality gate. `just check` is the product's own concern, separate from spec-tree.
 
@@ -26,7 +26,7 @@ Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`
 
 - `plugins/{python,typescript}/skills/standardizing-*-tests/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
 - `plugins/typescript/skills/audit-typescript-tests/SKILL.md` and `plugins/develop/skills/audit-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
-- `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
+- `plugins/spec-tree/skills/author/SKILL.md` and `plugins/spec-tree/skills/test/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
 
 ## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks (RESOLVED)
 
@@ -38,9 +38,9 @@ Resolved 2026-06-15. `spx/13-infrastructure.enabler/21-test-infrastructure.enabl
 
 Surfaced by `claude-review` on PR 14 round 3 (2026-05-13).
 
-## 15. `committing-changes` example uses uppercase `L1` instead of canonical `l1`
+## 15. `commit-changes` example uses uppercase `L1` instead of canonical `l1`
 
-`plugins/spec-tree/skills/committing-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
+`plugins/spec-tree/skills/commit-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
 
 Surfaced by `claude-review` on PR 14 rounds 2–3 (2026-05-13).
 
@@ -92,7 +92,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 
 ## 19. Placeholder notation mixed across inline and code-block commands in standardizing-merging
 
-`plugins/spec-tree/skills/standardizing-merging/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Standardizing on a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
+`plugins/spec-tree/skills/merging-standards/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Standardizing on a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
 
 Required handling:
 

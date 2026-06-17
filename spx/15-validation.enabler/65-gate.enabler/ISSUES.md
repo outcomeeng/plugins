@@ -6,7 +6,7 @@
 
 The assertion was originally scoped to the steps that had drifted out of `just check` (lint and Markdown link checking); `fmt-check` has no such history, so its omission is deliberate rather than an oversight. Whether to extend the assertion and the compliance test to also lock the `fmt-check` step is a coverage decision, not a defect in the current gate.
 
-Surfaced by the local `reviewing-changes` gate on `build/python-ruff-formatting`.
+Surfaced by the local `review-changes` gate on `build/python-ruff-formatting`.
 
 ## `test_gate.scenario.l2.py` grace window flakes under the gate's own load
 

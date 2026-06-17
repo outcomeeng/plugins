@@ -26,8 +26,8 @@ CAN stay current with methodology changes without manual template tracking
 
 ### Compliance
 
-- ALWAYS: `/understanding` detects the project's enabled languages and flags the guide stale when its recorded `languages` or `template_version` fall behind the detected languages or the installed template — staleness detection runs once per session ([audit])
-- ALWAYS: `/handoff` checks for the staleness marker emitted by `/understanding` and includes it in the persistence proposal ([audit])
+- ALWAYS: `/understand` detects the project's enabled languages and flags the guide stale when its recorded `languages` or `template_version` fall behind the detected languages or the installed template — staleness detection runs once per session ([audit])
+- ALWAYS: `/handoff` checks for the staleness marker emitted by `/understand` and includes it in the persistence proposal ([audit])
 - NEVER: the render substitutes a product-specific string into the guide body — a brace-delimited token in the template passes through unchanged ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: an update keeps an unmodeled hand-prose edit to the guide body — a re-render reflects only the template and the recorded enabled languages ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: the canonical spx-level guide template instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([test](tests/test_update_spx.compliance.l1.py))

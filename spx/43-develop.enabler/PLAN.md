@@ -9,7 +9,7 @@ After the `skill-standards` refactor (commit 73b60cb + follow-up), the develop p
 - **Subagents cluster depends on skills** — `/create-subagents` already loads `/skill-standards` for XML structure principles. This is documented by the node-ordering: skills at 21, subagents higher.
 - **Commands cluster is independent** — `/create-commands` and `/audit-commands` share no standards with skills.
 
-But the "independent" framing hides a problem: commands and skills share ~30% of their underlying rules — `!` bash safety, Claude Code variable scopes (`${CLAUDE_PLUGIN_ROOT}` etc.), and `allowed-tools` semantics. Those rules currently live only in `/skill-standards`. Any future `/standardizing-commands` would either duplicate them (drift risk) or cross-reference `/skill-standards` (commands reading skill-structural standards is conceptually wrong).
+But the "independent" framing hides a problem: commands and skills share ~30% of their underlying rules — `!` bash safety, Claude Code variable scopes (`${CLAUDE_PLUGIN_ROOT}` etc.), and `allowed-tools` semantics. Those rules currently live only in `/skill-standards`. Any future `/command-standards` would either duplicate them (drift risk) or cross-reference `/skill-standards` (commands reading skill-structural standards is conceptually wrong).
 
 The right home is `/agent-prompt-standards`. It already covers cross-artifact prose conventions (voice, descriptions, constraint language, anti-patterns). Extending it to own the shared *mechanical* rules gives all three clusters — skills, commands, subagents — one source of truth for platform-level plumbing.
 
@@ -17,7 +17,7 @@ The right home is `/agent-prompt-standards`. It already covers cross-artifact pr
 
 - `/agent-prompt-standards` owns every rule that applies to prompt artifacts regardless of type (skills, commands, subagents).
 - `/skill-standards` sheds its cross-artifact content and keeps only skill-specific standards.
-- A new `/standardizing-commands` is created covering command-specific standards.
+- A new `/command-standards` is created covering command-specific standards.
 - Skills, commands, and subagents clusters all load `/agent-prompt-standards` first, then their type-specific reference.
 
 ## What moves where
@@ -50,7 +50,7 @@ The right home is `/agent-prompt-standards`. It already covers cross-artifact pr
 
 **Open question 1:** `<nested_code_fences>` and `<xml_tag_formatting>` are about markdown authoring for prompt bodies. They apply to skills, command bodies, subagent bodies alike. Promote to `/agent-prompt-standards` or leave in `/skill-standards` with cross-reference from commands/subagents?
 
-### Into new `/standardizing-commands`
+### Into new `/command-standards`
 
 | Section                                                                                                                         | Source                                                         |
 | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -69,7 +69,7 @@ After the extraction:
 
 - `/create-commands/SKILL.md` becomes a router + workflows, parallel to the post-refactor `/create-skills` (~100 lines).
 - `/create-commands/references/` keeps only workflow content (patterns for intent-based commands, pattern examples for dynamic context *usage*); deletes standards duplicates.
-- `/audit-commands/SKILL.md` `<critical_workflow>` reads `/agent-prompt-standards` + `/standardizing-commands` only. Drops any create-commands/references reads (if any exist — audit current state).
+- `/audit-commands/SKILL.md` `<critical_workflow>` reads `/agent-prompt-standards` + `/command-standards` only. Drops any create-commands/references reads (if any exist — audit current state).
 
 ## Scope tension — flag before executing
 
@@ -79,7 +79,7 @@ After the extraction:
 
 Option 2 expands that scope to include *platform-level runtime plumbing* (bash safety, variable scopes). Two ways to handle:
 
-- **(a) Rename and broaden.** Rename to `/standardizing-prompt-artifacts` or similar. Update the objective to cover prose craft + runtime plumbing. Cleanest semantics; touches every consumer that references the old name.
+- **(a) Rename and broaden.** Rename to `/prompt-artifact-standards` or similar. Update the objective to cover prose craft + runtime plumbing. Cleanest semantics; touches every consumer that references the old name.
 - **(b) Keep the name, broaden the scope silently.** Update the objective to include runtime plumbing but keep the name. Less churn; the name becomes slightly less accurate.
 
 **Recommendation:** (b) for the follow-up session. The skill name is already loaded by three clusters and referenced in audit workflows; renaming multiplies the scope. A crisp scope-expansion note in the objective (`"covers shared prose conventions AND runtime plumbing that apply across skills, commands, and subagents"`) is enough.

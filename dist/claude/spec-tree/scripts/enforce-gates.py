@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PostToolUse hook for the spec-tree:applying skill.
+"""PostToolUse hook for the spec-tree:apply skill.
 
 Fires after each Skill tool invocation. When the invoked skill is one of the
 applying flow's step skills (architecture, test, implementation), emits
@@ -18,13 +18,13 @@ import sys
 
 GATE_REMINDERS = {
     "architecting": "GATE: Architecture step complete. Invoke the architecture auditing skill NOW before proceeding to Step 5 (tests).",
-    "testing": "GATE: Testing step complete. Invoke the test auditing skill NOW before proceeding to Step 7 (implementation).",
+    "test": "GATE: Testing step complete. Invoke the test auditing skill NOW before proceeding to Step 7 (implementation).",
     "coding": "GATE: Implementation step complete. Invoke the code auditing skill NOW before declaring done.",
 }
 
 GATE_SKILL_PREFIXES = {
     "architecting": ("architecting-", "architect-"),
-    "testing": ("testing-", "test-"),
+    "test": ("testing-", "test-"),
     "coding": ("coding-", "code-"),
 }
 
@@ -35,7 +35,7 @@ def reminder_for_skill(skill: str) -> str | None:
     Matches by flow stage independent of language. A step skill is named with a
     stage prefix plus a language suffix, optionally ``<plugin>:`` prefixed, so
     every language plugin's step skills map without per-language enumeration. The
-    bare spec-tree ``testing`` skill has no language suffix and does not match.
+    bare spec-tree ``test`` skill has no language suffix and does not match.
     """
     name = skill.rsplit(":", 1)[-1]
     for gate, prefixes in GATE_SKILL_PREFIXES.items():

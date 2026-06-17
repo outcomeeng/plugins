@@ -1,12 +1,12 @@
 <objective>
 Work through five perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
 
-Lean on the imperfection ledger defined in `/understanding` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
+Lean on the imperfection ledger defined in `/understand` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
 
 </objective>
 
 <perspective_imperfections>
-Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained per `/understanding`'s `references/imperfection-protocol.md`. If for any reason the ledger has been pruned (e.g., context compaction), reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
+Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained per `/understand`'s `references/imperfection-protocol.md`. If for any reason the ledger has been pruned (e.g., context compaction), reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
 
 Classify each imperfection by nature to determine the persistence target. The destination is governed by the imperfection's nature, not its origin:
 
@@ -49,11 +49,11 @@ For each insight, propose the persistence target (workflow 03 confirms; workflow
 <perspective_next_context>
 Identify exactly where the next Claude context picks up:
 
-- **Critical skills** — always include `/understanding` and `/contextualizing {node}` for each anchored node, plus language-specific skills used
+- **Critical skills** — always include `/understand` and `/contextualize {node}` for each anchored node, plus language-specific skills used
 - **Missed skills** — any skill that should have been invoked but was not, and what problems skipping it caused
 - **Next skill invocation** — the specific skill the receiving Claude context invokes first, and why
 - **Node path** — full path to the resumption node (e.g., `spx/55-example.enabler/21-bar.outcome`)
-- **TDD flow position** — which step (1-8) per the `/applying` skill
+- **TDD flow position** — which step (1-8) per the `/apply` skill
 
 </perspective_next_context>
 

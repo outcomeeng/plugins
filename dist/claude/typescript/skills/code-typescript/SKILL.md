@@ -242,11 +242,11 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 **If working on a spec-tree work item** (enabler/outcome):
 
-1. **Invoke `spec-tree:contextualizing` FIRST** with the node path
+1. **Invoke `spec-tree:contextualize` FIRST** with the node path
 2. **If context loading fails**: ABORT - do not proceed until all required documents exist
 3. **If context loading succeeds**: Proceed with implementation using loaded context
 
-**The `spec-tree:contextualizing` skill provides:**
+**The `spec-tree:contextualize` skill provides:**
 
 - Complete ancestor hierarchy (product → all ancestor nodes → target)
 - All ADRs/PDRs at every level along the path
@@ -257,10 +257,10 @@ When implementation changes affect test-owned interfaces, harnesses, or fixture 
 
 ```bash
 # By node path
-spec-tree:contextualizing spx/55-example.enabler/21-commands.outcome
+spec-tree:contextualize spx/55-example.enabler/21-commands.outcome
 ```
 
-**If `spec-tree:contextualizing` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
+**If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
 **If NOT working on spec-tree work item**: Proceed directly to implementation mode with provided spec.
 </context_loading>

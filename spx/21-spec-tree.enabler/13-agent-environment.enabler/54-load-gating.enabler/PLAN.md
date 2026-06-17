@@ -17,7 +17,7 @@ The marketplace half is specced and (in this PR) implemented; the `spx` CLI half
 A `spx` subcommand (e.g. `spx gate`) that receives the forwarded locators and returns the verdict:
 
 - **Boundary linchpin.** Parse the transcript JSONL, find the most recent session-start / compaction boundary, and scan only the region after it. A `<SPEC_TREE_FOUNDATION>` or `<SPEC_TREE_CONTEXT>` marker preserved only in a pre-compaction summary must not satisfy a gate.
-- **Gate A (foundation).** Deny the first tool call after the boundary while no `<SPEC_TREE_FOUNDATION>` marker exists in the segment. Allowlist the `/spec-tree:understanding` invocation that emits the marker; let purely-external tools (web) pass.
+- **Gate A (foundation).** Deny the first tool call after the boundary while no `<SPEC_TREE_FOUNDATION>` marker exists in the segment. Allowlist the `/spec-tree:understand` invocation that emits the marker; let purely-external tools (web) pass.
 - **Gate B (context).** Deny `Edit`/`Write`/mutating `Bash` whose path resolves under a spec-tree node while no `<SPEC_TREE_CONTEXT target="<node>">` for the owning node exists in the segment. The owning node is the nearest ancestor directory of the path that is an `*.enabler` or `*.outcome`.
 - **Verdict shape.** Return a structured allow-or-deny with the denial message the hook surfaces (`PreToolUse` decision).
 - **Engagement.** Only act in a spec-tree repository (`spx/*.product.md` present); otherwise allow.

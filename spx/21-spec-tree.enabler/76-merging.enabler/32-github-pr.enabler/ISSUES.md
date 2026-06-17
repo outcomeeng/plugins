@@ -19,9 +19,9 @@ The eval lane can add scenarios mirroring the gate evals under
   `cases.jsonl`, and `prompt.md` exercising mode detection from arguments
   and git state, the existing-open-PR route, and the interview-first proposal
   boundary. The interview-first boundary is the case where this transport is
-  already selected — `/merge` chose GitHub-PR, or `/github-pr` was invoked directly —
+  already selected — `/merge` chose GitHub-PR, or `/manage-github-pr` was invoked directly —
   and the working tree is clean; transport selection is complete at that point,
-  so the `/github-pr` eval scope never covers transport-selection logic (that is
+  so the `/manage-github-pr` eval scope never covers transport-selection logic (that is
   `/merge`'s, declared in `merging.md`).
 - Run them in the canonical CI execution surface and commit `history.jsonl`.
 

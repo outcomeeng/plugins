@@ -23,11 +23,11 @@ Invoke the `typescript:typescript-architecture-standards` skill before proceedin
 
 When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualizing`** with the node path
+1. **Invoke `spec-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualizing` skill provides:**
+**The `spec-tree:contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes
@@ -88,7 +88,7 @@ Produce ADRs. The scope depends on the decision:
 - Append using: `new = floor((last + 99) / 2)`
 - First ADR in scope: use 21
 
-See `/authoring` skill for complete ordering rules.
+See `/author` skill for complete ordering rules.
 
 **Within-scope dependency order**: adr-21 must be decided before adr-37 (lower sparse integer index = dependency).
 
@@ -110,7 +110,7 @@ Execute these phases IN ORDER.
 6. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes
-7. Read `/authoring` skill for ADR template
+7. Read `/author` skill for ADR template
 
 **Phase 1: Identify Decisions Needed**
 
@@ -134,7 +134,7 @@ For each decision, consider:
 
 **Phase 3: Write ADRs**
 
-Use the authoritative template (from `/understanding`). The ADR is decision-first:
+Use the authoritative template (from `/understand`). The ADR is decision-first:
 
 1. **Title + decision**: `# {Decision Name}`, then the decision stated directly as permanent truth in 1-3 sentences -- what it governs and what it decides. No `Purpose` heading, no `Context` section; business impact and constraints fold into the decision statement and Rationale
 2. **Rationale**: Why this is right given the constraints; name a rejected alternative only when it sharpens the decision

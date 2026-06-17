@@ -20,7 +20,7 @@ This header is declared intent, not a vote. Default path is archive-all-listed. 
 </session_disposition_header>
 
 <spx_claude_staleness>
-When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understanding` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
+When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understand` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
 
 ```text
 ☑ [Imperfection → run /update-spx] spx/CLAUDE.md is [stale|absent] vs the installed template — reconcile via /update-spx
@@ -53,7 +53,7 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 ```text
 ☑ [Imperfection → code-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
 ☑ [Imperfection → typescript-standards-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
-☑ [Imperfection → spec-tree plugin] Invoke /contextualizing before suggesting handoff
+☑ [Imperfection → spec-tree plugin] Invoke /contextualize before suggesting handoff
 ☑ [Imperfection → CLAUDE.md] Require git mv for file moves
 ☑ [Imperfection → ISSUES.md in spx/55-example.enabler] Tests for assertion 3 missing
 ```

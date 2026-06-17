@@ -2,7 +2,7 @@
 
 ## Evidence-mechanism specialization is conflated with cross-cutting duplication
 
-The `/aligning` audit flags a child node's `[test]`-evidence compliance rule as a "cross-cutting invariant in child" finding when an ancestor decision record carries a `[review]`-evidence rule with overlapping content. The two rules are not the same artifact: `[review]` is human/agent semantic judgment, `[test]` is automated falsification. A child `[test]` rule that concretizes an ancestor `[review]` rule against a specific code surface is legitimate evidence-type specialization, not placement debt.
+The `/align` audit flags a child node's `[test]`-evidence compliance rule as a "cross-cutting invariant in child" finding when an ancestor decision record carries a `[review]`-evidence rule with overlapping content. The two rules are not the same artifact: `[review]` is human/agent semantic judgment, `[test]` is automated falsification. A child `[test]` rule that concretizes an ancestor `[review]` rule against a specific code surface is legitimate evidence-type specialization, not placement debt.
 
 ### Concrete example
 
@@ -18,11 +18,11 @@ The child node `spx/21-spec-tree.enabler/13-infrastructure.enabler/22-github-act
 
 The ADR rule binds marketplace-wide and is verified by audit. The child rule binds the three Python helpers under that node and is verified by automated grep. The child rule is a stronger guarantee at a smaller scope; the ancestor rule is a weaker guarantee at a broader scope. Removing either weakens the verification stack.
 
-The `/aligning` audit flagged both child rules as cross-cutting duplications of the ADR. That flag is incorrect — `<common_misplacements>` in `what-goes-where.md` governs *where content lives*, not *what evidence verifies it*. Two rules with the same content but different evidence types serve different purposes.
+The `/align` audit flagged both child rules as cross-cutting duplications of the ADR. That flag is incorrect — `<common_misplacements>` in `what-goes-where.md` governs *where content lives*, not *what evidence verifies it*. Two rules with the same content but different evidence types serve different purposes.
 
 ### What needs to change
 
-`/aligning`'s placement check (or the rule definition in `<common_misplacements>`) needs to recognize evidence-mechanism specialization:
+`/align`'s placement check (or the rule definition in `<common_misplacements>`) needs to recognize evidence-mechanism specialization:
 
 - Same content + same evidence at child and ancestor → cross-cutting duplication finding (current behavior, correct)
 - Same content + child `[test]` concretizing ancestor `[review]` → legitimate specialization (current behavior flags as duplication, incorrect)

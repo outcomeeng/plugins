@@ -1,6 +1,6 @@
 # Backend Abstraction
 
-Thread-store persists branch-scoped verification records through a single abstract `Backend` protocol that every concrete backend implements. The `thread_store` facade selects the backend at runtime from the `SPX_VERIFY_BACKEND` environment variable — default `local`, the filesystem backend rooted at the gitignored `.spx/reviews/<branch-slug>/` — and the CRUD CLIs (write, read, delete, list) are the only entry points a verification skill or its wrapper agent invokes. The `<branch-slug>` segment is produced by one canonical function that lives in `plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py` and is re-exported through `plugins/spec-tree/skills/thread-store/scripts/branch_slug.py` via `importlib`, never re-implemented, so audit and review surfaces address each branch identically.
+Thread-store persists branch-scoped verification records through a single abstract `Backend` protocol that every concrete backend implements. The `thread_store` facade selects the backend at runtime from the `SPX_VERIFY_BACKEND` environment variable — default `local`, the filesystem backend rooted at the gitignored `.spx/reviews/<branch-slug>/` — and the CRUD CLIs (write, read, delete, list) are the only entry points a verification skill or its wrapper agent invokes. The `<branch-slug>` segment is produced by one canonical function that lives in `plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` and is re-exported through `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` via `importlib`, never re-implemented, so audit and review surfaces address each branch identically.
 
 ## Rationale
 
@@ -15,13 +15,13 @@ State selection — which backend, against which slug — is a runtime concern o
 ### Testing
 
 - ALWAYS: a backend module implements every method of the `Backend` protocol (`thread_path`, `write`, `read`, `delete`, `list`); `thread_store.get_backend()` refuses a non-conforming backend, detecting partial implementations at registration ([compliance])
-- ALWAYS: the branch-slug function every backend uses is the symbol re-exported by `plugins/spec-tree/skills/thread-store/scripts/branch_slug.py` from `plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py` — slug derivation has one source ([compliance])
+- ALWAYS: the branch-slug function every backend uses is the symbol re-exported by `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` from `plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` — slug derivation has one source ([compliance])
 - ALWAYS: the canonical `branch_slug` function accepts `(branch_name, state_dir=None)`, returns at most `BRANCH_SLUG_MAX_LENGTH = 64` characters, contains no `/` and no `.`/`..` whole-segment values, and is deterministic for a given `(branch_name, state_dir)` pair ([property])
-- ALWAYS: every script under `plugins/spec-tree/skills/thread-store/scripts/` runs against `python3`, depends only on the standard library, and imports no `outcomeeng_*` module ([compliance])
+- ALWAYS: every script under `plugins/spec-tree/skills/manage-thread-store/scripts/` runs against `python3`, depends only on the standard library, and imports no `outcomeeng_*` module ([compliance])
 - ALWAYS: the facade's `write` is atomic — a crash mid-write leaves the prior content of the target intact ([compliance])
 - ALWAYS: the filesystem backend confines every write to its configured root, `.spx/reviews/<branch-slug>/` by default ([compliance])
 - NEVER: a verification skill or wrapper agent imports a concrete backend module directly — every read and write routes through the `thread_store` facade ([compliance])
-- NEVER: a CLI under `plugins/spec-tree/skills/thread-store/scripts/` calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any other direct filesystem primitive — every CLI invokes the facade ([compliance])
+- NEVER: a CLI under `plugins/spec-tree/skills/manage-thread-store/scripts/` calls `open()`, `pathlib.Path.write_*`, `os.remove`, or any other direct filesystem primitive — every CLI invokes the facade ([compliance])
 - NEVER: a backend module redefines the branch-slug rule — the rule lives in one function and is re-exported, never re-implemented ([compliance])
 - NEVER: the canonical `branch_slug` function returns a string longer than `BRANCH_SLUG_MAX_LENGTH = 64` characters, a string containing `/`, or a string whose segments resolve to `.` or `..` ([property])
 - NEVER: a backend write succeeds without atomic semantics — a partial write that survives a crash is forbidden, because every consumer expects the post-write read to return either the prior or the new content, never a torn record ([compliance])

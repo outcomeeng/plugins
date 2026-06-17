@@ -1,6 +1,6 @@
 """Scenario and mapping tests for the ``review_result`` policy module.
 
-Covers these clauses in ``../reviewing-changes.md``:
+Covers these clauses in ``../review-changes.md``:
 
 Scenarios
 - ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a
@@ -291,7 +291,7 @@ class TestRuleCitationForm:
         "rule",
         [
             "spx/21-spec-tree.enabler/spec-tree.md:ALWAYS:1",
-            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
+            "plugins/python/skills/python-standards/SKILL.md:atemporal-voice",
             "AGENTS.md:critical-rules",
             "CLAUDE.md:imperfection-protocol",
             "SKILL.md:render-templates-as-data",

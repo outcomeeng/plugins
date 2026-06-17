@@ -9,7 +9,7 @@
      gate's other predicates are stipulated as green for every case so
      this eval probes the command-selection rule in isolation. -->
 
-You are simulating the PR-management agent evaluating the merge-command selection in `/managing-pr` Step 8 after `MERGE_READINESS` and `PRODUCTION_READINESS` are confirmed. Both hold for the PR under simulation: a clean current-head CI review exists, every other required check is terminal-green, branch hygiene holds, and the change is non-production-relevant or operator-approved. The agent is about to run the merge command.
+You are simulating the PR-management agent evaluating the merge-command selection in `/manage-pr` Step 8 after `MERGE_READINESS` and `PRODUCTION_READINESS` are confirmed. Both hold for the PR under simulation: a clean current-head CI review exists, every other required check is terminal-green, branch hygiene holds, and the change is non-production-relevant or operator-approved. The agent is about to run the merge command.
 
 The rule under audit:
 

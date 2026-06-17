@@ -23,7 +23,7 @@ Assertions covered:
     and transcript path); post-compact re-anchors from `spx compact
     retrieve`, prefixing <SPEC-TREE_RESUMED> with the active node and, when
     a foundation was active, instructing the agent to re-invoke
-    /spec-tree:understanding and /spec-tree:contextualizing <node>. When the spx
+    /spec-tree:understand and /spec-tree:contextualize <node>. When the spx
     CLI returns no stash, post-compact falls back to parsing the active node and
     foundation marker out of the compact summary.
 """
@@ -616,33 +616,33 @@ class TestPostCompactEmitsReanchoringDirective:
     def test_foundation_present_emits_reanchoring_skills(self, tmp_path):
         result = _post_compact(tmp_path, "sess-a", _COMPACT_WITH_FOUNDATION)
         assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" in result.stdout
-        assert "/spec-tree:contextualizing" in result.stdout
+        assert "/spec-tree:understand" in result.stdout
+        assert "/spec-tree:contextualize" in result.stdout
 
     def test_contextualizing_carries_node_argument(self, tmp_path):
         result = _post_compact(tmp_path, "sess-b", _COMPACT_WITH_FOUNDATION)
         assert result.returncode == 0, result.stderr
         node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
-        assert f"/spec-tree:contextualizing {node}" in result.stdout
+        assert f"/spec-tree:contextualize {node}" in result.stdout
 
     def test_backticked_section_still_extracts_node(self, tmp_path):
         result = _post_compact(tmp_path, "sess-c", _COMPACT_BACKTICKED)
         assert result.returncode == 0, result.stderr
         node = "spx/21-spec-tree.enabler/76-sessions.enabler/"
         assert f'active-node="{node}"' in result.stdout
-        assert f"/spec-tree:contextualizing {node}" in result.stdout
+        assert f"/spec-tree:contextualize {node}" in result.stdout
 
     def test_marker_outside_markers_section_does_not_trigger(self, tmp_path):
         result = _post_compact(tmp_path, "sess-d", _COMPACT_MARKER_OUTSIDE_SECTION)
         assert result.returncode == 0, result.stderr
         assert result.stdout.strip() == "<SPEC-TREE_RESUMED/>"
-        assert "/spec-tree:understanding" not in result.stdout
+        assert "/spec-tree:understand" not in result.stdout
 
     def test_foundation_absent_omits_reanchoring_skills(self, tmp_path):
         result = _post_compact(tmp_path, "sess-b", _COMPACT_WITHOUT_FOUNDATION)
         assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" not in result.stdout
-        assert "/spec-tree:contextualizing" not in result.stdout
+        assert "/spec-tree:understand" not in result.stdout
+        assert "/spec-tree:contextualize" not in result.stdout
 
     def test_no_compact_summary_produces_no_output(self, tmp_path):
         payload = json.dumps({"session_id": "sess-c", "cwd": str(tmp_path)})
@@ -684,7 +684,7 @@ class TestPostCompactEmitsReanchoringDirective:
         """)
         result = _post_compact(tmp_path, "sess-e", summary_with_indented_marker)
         assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" not in result.stdout
+        assert "/spec-tree:understand" not in result.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -761,7 +761,7 @@ class TestPostCompactUsesSpxRetrieve:
         )
         assert result.returncode == 0, result.stderr
         assert f'active-node="{self._NODE}"' in result.stdout
-        assert f"/spec-tree:contextualizing {self._NODE}" in result.stdout
+        assert f"/spec-tree:contextualize {self._NODE}" in result.stdout
         argv = json.loads((spx.parent / "spx.argv").read_text())
         assert argv == ["compact", "retrieve", "--session-id", "sess-q"]
 
@@ -772,8 +772,8 @@ class TestPostCompactUsesSpxRetrieve:
             tmp_path, "sess-q", _COMPACT_WITH_FOUNDATION, spx_bin=str(spx)
         )
         assert result.returncode == 0, result.stderr
-        assert "/spec-tree:understanding" in result.stdout
+        assert "/spec-tree:understand" in result.stdout
         assert (
-            "/spec-tree:contextualizing spx/21-spec-tree.enabler/76-sessions.enabler"
+            "/spec-tree:contextualize spx/21-spec-tree.enabler/76-sessions.enabler"
             in result.stdout
         )

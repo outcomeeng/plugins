@@ -7,7 +7,7 @@ Assertion covered:
   - The hook detects a spec-tree repository by the presence of spx/*.product.md,
     never from .spx/ state or other heuristics.
 
-The `/spec-tree:understanding` directive token is asserted inline here; its
+The `/spec-tree:understand` directive token is asserted inline here; its
 source-ownership is tracked cross-hook in spx/21-spec-tree.enabler/ISSUES.md item 20.
 """
 
@@ -26,7 +26,7 @@ def test_spx_state_without_product_spec_does_not_trigger(tmp_path):
         project_dir=tmp_path,
     )
     assert result.returncode == 0
-    assert "/spec-tree:understanding" not in result.stdout
+    assert "/spec-tree:understand" not in result.stdout
 
 
 def test_product_spec_triggers_detection(tmp_path):
@@ -39,4 +39,4 @@ def test_product_spec_triggers_detection(tmp_path):
         project_dir=tmp_path,
     )
     assert result.returncode == 0
-    assert "/spec-tree:understanding" in result.stdout
+    assert "/spec-tree:understand" in result.stdout

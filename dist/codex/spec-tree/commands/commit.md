@@ -28,7 +28,7 @@ description: Commit following Conventional Commits
 **Call the Skill tool NOW** with the context above:
 
 ```json
-Skill tool → { "skill": "spec-tree:committing-changes" }
+Skill tool → { "skill": "spec-tree:commit-changes" }
 ```
 
 Do NOT proceed manually. The skill contains the commit protocol.

@@ -14,6 +14,6 @@ CAN produce atomic, well-described commits that map cleanly to spec tree changes
 
 ### Compliance
 
-- ALWAYS: `/committing-changes` presents payload-bearing `git commit` message input by supported harness environment — quoted heredoc to `git commit -F -` for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | git commit -F -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
+- ALWAYS: `/commit-changes` presents payload-bearing `git commit` message input by supported harness environment — quoted heredoc to `git commit -F -` for interactive Claude Code and Codex sessions, and one physical `printf '%s\n' ... | git commit -F -` line for programmatic runners that require single-line commands — per `spx/15-agent-tools.pdr.md` ([audit])
 - ALWAYS: include version bumps in the same commit as the changes that warrant them — separate version bump commits create misleading history ([review])
 - NEVER: commit files that likely contain secrets (.env, credentials) — warn the user if they request it ([review])

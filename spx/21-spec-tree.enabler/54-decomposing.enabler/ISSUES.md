@@ -1,6 +1,6 @@
 # ISSUES — Decomposing (archetype library)
 
-Known issues and deferred decisions for the archetype-library work under `/decomposing`. Coordination
+Known issues and deferred decisions for the archetype-library work under `/decompose`. Coordination
 note: verify each entry against the specs, decisions, and current intent before acting on it.
 
 ## Archetype manifest format: TOML now, ruamel.yaml the deferred alternative
@@ -34,14 +34,14 @@ plugin tree, or accept the toml+json split as permanent.
 ## Archetype library ships without a skill-level invocation path (router deferred)
 
 The archetype library (`references/archetypes/{toolchain,website,platform}/`) ships as reference
-material, but `/decomposing` has no step that consults it: no read directive, no classification phase,
+material, but `/decompose` has no step that consults it: no read directive, no classification phase,
 no mention of `archetype.toml` or `seed-tree.json`. The READMEs and `archetype.toml` recognition
 fields describe "the router" that matches a product's signals — that router does not exist yet. Until
 it lands, an agent is not pointed at these references by the skill; they are reachable only when an
 operator names them.
 
 This is intentional sequencing: the router (a classify → match → seed front phase in
-`/decomposing` keyed on `spx/` as the target, plus an `archetype.py` signal matcher and a thin
+`/decompose` keyed on `spx/` as the target, plus an `archetype.py` signal matcher and a thin
 `decomposer` agent) is the next build step after the library. The library was extracted first so the
 seeds it instantiates exist before the consumer that reads them.
 

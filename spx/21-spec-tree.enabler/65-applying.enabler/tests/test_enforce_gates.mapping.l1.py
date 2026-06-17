@@ -2,7 +2,7 @@
 
 The hook is the deterministic surface of the applying node: invoked by the harness
 as ``python3 scripts/enforce-gates.py`` with the PostToolUse payload on stdin, it
-emits an ``additionalContext`` gate reminder for architecting/testing/coding skills
+emits an ``additionalContext`` gate reminder for architecting/test/coding skills
 and nothing for any other skill. The test invokes the real script via subprocess —
 exactly as the harness does — and derives expected reminders from the script's own
 ``GATE_REMINDERS`` map so no expected value is owned by the test.
@@ -35,29 +35,29 @@ hook = _load_hook_module()
 # Source-owned domain: representative step skills for each gate, expected reminder
 # read from the script's own map (no test-owned constants).
 GATE_SKILLS = [
-    ("architecting-python", hook.GATE_REMINDERS["architecting"]),
+    ("architect-python", hook.GATE_REMINDERS["architecting"]),
     ("architect-typescript", hook.GATE_REMINDERS["architecting"]),
-    ("testing-python", hook.GATE_REMINDERS["testing"]),
-    ("test-typescript", hook.GATE_REMINDERS["testing"]),
-    ("coding-python", hook.GATE_REMINDERS["coding"]),
+    ("test-python", hook.GATE_REMINDERS["test"]),
+    ("test-typescript", hook.GATE_REMINDERS["test"]),
+    ("code-python", hook.GATE_REMINDERS["coding"]),
     ("code-typescript", hook.GATE_REMINDERS["coding"]),
     # Language-neutral: any <stage>-<language> step skill maps, including languages
     # the skill_map does not enumerate, and through a "plugin:" prefix.
-    ("architecting-rust", hook.GATE_REMINDERS["architecting"]),
-    ("testing-rust", hook.GATE_REMINDERS["testing"]),
-    ("coding-rust", hook.GATE_REMINDERS["coding"]),
-    ("python:coding-python", hook.GATE_REMINDERS["coding"]),
-    ("typescript:test-typescript", hook.GATE_REMINDERS["testing"]),
+    ("architect-rust", hook.GATE_REMINDERS["architecting"]),
+    ("test-rust", hook.GATE_REMINDERS["test"]),
+    ("code-rust", hook.GATE_REMINDERS["coding"]),
+    ("python:code-python", hook.GATE_REMINDERS["coding"]),
+    ("typescript:test-typescript", hook.GATE_REMINDERS["test"]),
 ]
 
 NON_GATE_SKILLS = [
-    "spec-tree:understanding",
-    "spec-tree:contextualizing",
-    "spec-tree:auditing-tests",
-    "prose:writing-prose",
+    "spec-tree:understand",
+    "spec-tree:contextualize",
+    "spec-tree:audit-tests",
+    "prose:write-prose",
     # The bare spec-tree testing/architecting skills are not <stage>-<language> step
     # skills and must not trip a gate reminder.
-    "spec-tree:testing",
+    "spec-tree:test",
     "architecting",
     "",
 ]

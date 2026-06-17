@@ -1,22 +1,22 @@
 """Compliance tests for cross-cutting reviewing-changes rules.
 
-Covers the Compliance clauses in ``../reviewing-changes.md`` that are
+Covers the Compliance clauses in ``../review-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
-- Every script under ``plugins/spec-tree/skills/reviewing-changes/scripts/``
+- Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
   performs filesystem effects only through ``thread_store`` — no script
   calls ``open()``, ``Path.write_*``, ``os.remove``, ``os.unlink``,
   ``shutil.rmtree``, or any other direct filesystem-write primitive.
 - The swappable prompt template lives at
-  ``plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md``
+  ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
   review-prompt.md``.
 - The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
-  listing ``spec-tree:reviewing-changes`` — tolerated absent during the
+  listing ``spec-tree:review-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
 - The per-section render templates live under
-  ``plugins/spec-tree/skills/reviewing-changes/references/render/`` and
+  ``plugins/spec-tree/skills/review-changes/references/render/`` and
   ``render_review.py`` loads them via stdlib ``string.Template`` —
   rendered shape is data the script substitutes, not f-string
   concatenation in code.
@@ -309,9 +309,9 @@ class TestWrapperAgentFrontmatter:
                 f"{WRAPPER_AGENT_PATH.name} 'tools:' must include {tool!r}; "
                 f"got: {tools_value!r}"
             )
-        # Skills field must list spec-tree:reviewing-changes.
-        assert "spec-tree:reviewing-changes" in frontmatter, (
-            f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:reviewing-changes"
+        # Skills field must list spec-tree:review-changes.
+        assert "spec-tree:review-changes" in frontmatter, (
+            f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:review-changes"
         )
 
 

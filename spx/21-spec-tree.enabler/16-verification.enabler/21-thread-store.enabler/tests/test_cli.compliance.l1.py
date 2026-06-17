@@ -1,6 +1,6 @@
 """Compliance tests for the CRUD CLI scripts.
 
-Covers the Compliance clauses in ``../thread-store.md`` and
+Covers the Compliance clauses in ``../manage-thread-store.md`` and
 ``../21-backend-abstraction.adr.md`` that constrain CLI behavior as
 universal rules:
 

@@ -5,7 +5,7 @@ description: >-
   model. Use after writing tests or before closing an outcome.
 tools: Read, Bash, Glob, Grep
 skills:
-  - python:auditing-python-tests
+  - python:audit-python-tests
 ---
 
 <role>

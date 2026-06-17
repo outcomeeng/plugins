@@ -5,7 +5,7 @@ description: >-
 tools: Read, Write, Edit, Bash, Grep, Glob, Skill
 model: inherit
 skills:
-  - spec-tree:applying
+  - spec-tree:apply
 ---
 
 <role>
@@ -32,20 +32,20 @@ Use the detected language for ALL Steps 3–8.
 
 <step name="execute-tdd-flow">
 
-The `spec-tree:applying` skill is preloaded in context. Follow its 8-step flow exactly.
+The `spec-tree:apply` skill is preloaded in context. Follow its 8-step flow exactly.
 
 For each step, invoke the **exact** Skill tool call:
 
-| Step | Gate? | TypeScript                                           | Python                                  |
-| ---- | ----- | ---------------------------------------------------- | --------------------------------------- |
-| 1    | —     | `Skill("spec-tree:understanding")`                   | same                                    |
-| 2    | —     | `Skill("spec-tree:contextualizing", args: "{node}")` | same                                    |
-| 3    | —     | `Skill("architect-typescript")`                      | `Skill("architecting-python")`          |
-| 4    | YES   | `Skill("audit-typescript-architecture")`             | `Skill("auditing-python-architecture")` |
-| 5    | —     | `Skill("test-typescript")`                           | `Skill("testing-python")`               |
-| 6    | YES   | `Skill("audit-typescript-tests")`                    | `Skill("auditing-python-tests")`        |
-| 7    | —     | `Skill("code-typescript")`                           | `Skill("coding-python")`                |
-| 8    | YES   | `Skill("audit-typescript")`                          | `Skill("auditing-python")`              |
+| Step | Gate? | TypeScript                                         | Python                               |
+| ---- | ----- | -------------------------------------------------- | ------------------------------------ |
+| 1    | —     | `Skill("spec-tree:understand")`                    | same                                 |
+| 2    | —     | `Skill("spec-tree:contextualize", args: "{node}")` | same                                 |
+| 3    | —     | `Skill("architect-typescript")`                    | `Skill("architect-python")`          |
+| 4    | YES   | `Skill("audit-typescript-architecture")`           | `Skill("audit-python-architecture")` |
+| 5    | —     | `Skill("test-typescript")`                         | `Skill("test-python")`               |
+| 6    | YES   | `Skill("audit-typescript-tests")`                  | `Skill("audit-python-tests")`        |
+| 7    | —     | `Skill("code-typescript")`                         | `Skill("code-python")`               |
+| 8    | YES   | `Skill("audit-typescript")`                        | `Skill("audit-python")`              |
 
 **Do NOT skip, reorder, or substitute any step.**
 

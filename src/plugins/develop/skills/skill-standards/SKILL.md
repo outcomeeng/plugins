@@ -28,11 +28,11 @@ When another skill loads this reference inside a repository, check for `spx/loca
 
 Skills follow a **reference pattern** to avoid duplication:
 
-1. **Foundational skill** (e.g., `/testing`) — core principles and domain-agnostic patterns.
+1. **Foundational skill** (e.g., `/test`) — core principles and domain-agnostic patterns.
 2. **Language-specific skills** (e.g., `/test-python`, `/test-typescript`) — reference the foundational skill, provide only language-specific implementations.
 3. **Reference skills** (e.g., `/typescript-standards`, `/skill-standards`) — standards loaded by other skills, never invoked directly.
 
-For language-specific skills that reference a foundation, use unqualified names (`/testing`) so they resolve to whichever foundational skill is installed.
+For language-specific skills that reference a foundation, use unqualified names (`/test`) so they resolve to whichever foundational skill is installed.
 
 **Skill invocation limitations:** Skills cannot automatically invoke other skills. They can:
 

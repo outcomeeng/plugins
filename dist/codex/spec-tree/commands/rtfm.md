@@ -38,10 +38,10 @@ Review what has been produced so far:
 
 ## Step 3: Start the proper flow
 
-Invoke the applying skill NOW:
+Invoke the apply skill NOW:
 
 ```text
-Skill tool → { "skill": "spec-tree:applying" }
+Skill tool → { "skill": "spec-tree:apply" }
 ```
 
 This runs the full 8-step TDD flow: methodology → context → architect → audit → test → audit → implement → audit. Follow it from Step 1.

@@ -1,7 +1,7 @@
 """Scenario tests for the ``thread_store`` facade.
 
 Covers the Scenario clauses on facade-level CRUD and ``get_backend()``
-env-var resolution in ``../thread-store.md``:
+env-var resolution in ``../manage-thread-store.md``:
 
 - write/read round-trips bytes verbatim under the filesystem backend
 - write overwrites in place (happy path)

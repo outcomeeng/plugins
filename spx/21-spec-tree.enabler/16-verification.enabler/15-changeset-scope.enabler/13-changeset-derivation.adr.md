@@ -1,6 +1,6 @@
 # Changeset Derivation Home and Remote-Ref Scoping
 
-The git-derived changeset primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — are defined once in `plugins/spec-tree/skills/changeset-scope/scripts/changeset_scope.py` and reached by the auditing, reviewing-changes, and thread-store skills through import or re-export, never re-definition. Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` (three-dot, merge-base) through the single `remote_tracking_ref` helper, never a bare local branch ref — `branch_scope` composes it for the auditing surface and `compute_diff` for the reviewing surface.
+The git-derived changeset primitives — `branch_slug`, `detect_current_branch`, `detect_base_ref`, `branch_scope`, `expand_diff_range`, `remote_tracking_ref` — are defined once in `plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py` and reached by the auditing, reviewing-changes, and thread-store skills through import or re-export, never re-definition. Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` (three-dot, merge-base) through the single `remote_tracking_ref` helper, never a bare local branch ref — `branch_scope` composes it for the auditing surface and `compute_diff` for the reviewing surface.
 
 ## Rationale
 
@@ -19,5 +19,5 @@ Rejected: keeping the derivation in the auditing skill with re-exports — it le
 ### Audit
 
 - ALWAYS: the changeset-derivation primitives are defined once in the changeset-scope skill's `scripts/changeset_scope.py`; the auditing, reviewing-changes, and thread-store skills reach them only by import or re-export ([audit])
-- ALWAYS: the `branch_slug` re-export at `plugins/spec-tree/skills/thread-store/scripts/branch_slug.py` resolves the symbol from the changeset-scope module and is identity-equal to the canonical definition ([audit])
+- ALWAYS: the `branch_slug` re-export at `plugins/spec-tree/skills/manage-thread-store/scripts/branch_slug.py` resolves the symbol from the changeset-scope module and is identity-equal to the canonical definition ([audit])
 - NEVER: a consumer skill re-implements a changeset-derivation primitive in its own `scripts/` ([audit])

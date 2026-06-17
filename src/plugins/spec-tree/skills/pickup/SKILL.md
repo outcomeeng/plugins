@@ -16,13 +16,13 @@ allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
 <objective>
 Load and claim a handoff session to continue work from a previous context without repeating earlier mistakes.
 
-After `/contextualizing`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
+After `/contextualize`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
 
 Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
 
 **Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handoff` workflow accounts for it explicitly.
 
-**⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualizing` has been invoked on the target node.**
+**⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.**
 </objective>
 
 <claimed_sessions>
@@ -187,11 +187,11 @@ Showing raw content:
 
 <failure_modes>
 
-**Failure 1: Claude resumed implementation immediately after `/contextualizing`**
+**Failure 1: Claude resumed implementation immediately after `/contextualize`**
 
-Claude loaded `/contextualizing`, then invoked `/applying` or started writing ADRs, tests, or code without a user checkpoint. The pre-context gate passed, but the workflow left the post-context transition as a suggestion instead of a requirement.
+Claude loaded `/contextualize`, then invoked `/apply` or started writing ADRs, tests, or code without a user checkpoint. The pre-context gate passed, but the workflow left the post-context transition as a suggestion instead of a requirement.
 
-How to avoid: After `/contextualizing`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/applying` or edit files before that checkpoint completes.
+How to avoid: After `/contextualize`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/apply` or edit files before that checkpoint completes.
 
 **Failure 2: Later handoff archived only the most recent doing session, orphaning earlier pickups**
 
@@ -219,10 +219,10 @@ A successful pickup:
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md checked and read if present
 - [ ] Persisted artifacts acknowledged
-- [ ] `/contextualizing` invoked on target node — NOT offered as an option, just done
+- [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
-- [ ] No `/applying`, ADR, test, code, or file-editing work starts before the checkpoint or override
+- [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Agent knows which skills to invoke and which to avoid
 

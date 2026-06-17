@@ -20,7 +20,7 @@ from outcomeeng.distribution import distribute as distribute_skills
 
 FRONTMATTER_WITH_DIRECTIVE = textwrap.dedent("""\
     ---
-    name: testing-python
+    name: test-python
     description: >-
       ALWAYS invoke this skill when writing Python tests.
       NEVER write tests without this skill.
@@ -66,7 +66,7 @@ class TestParseSkillFrontmatter:
 
         result = distribute_skills.parse_skill_frontmatter(skill_md)
 
-        assert result["name"] == "testing-python"
+        assert result["name"] == "test-python"
         assert "ALWAYS" in result["description"]
 
     def test_returns_empty_dict_without_frontmatter(self, tmp_path: Path) -> None:
@@ -339,7 +339,7 @@ class TestGenerateReadme:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(distribute_skills, "README_TEMPLATE", Path("/nonexistent"))
-        skills: list[dict] = [{"name": "testing", "description": "Test skill"}]
+        skills: list[dict] = [{"name": "test", "description": "Test skill"}]
 
         result = distribute_skills.generate_readme(
             self.REPO_NAME, self.REPO_CONFIG, skills, self.GITHUB_ORG
@@ -351,20 +351,20 @@ class TestGenerateReadme:
     def test_includes_skill_table(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(distribute_skills, "README_TEMPLATE", Path("/nonexistent"))
         skills: list[dict] = [
-            {"name": "testing", "description": "A simple test skill."},
-            {"name": "writing-prose", "description": "Write prose."},
+            {"name": "test", "description": "A simple test skill."},
+            {"name": "write-prose", "description": "Write prose."},
         ]
 
         result = distribute_skills.generate_readme(
             self.REPO_NAME, self.REPO_CONFIG, skills, self.GITHUB_ORG
         )
 
-        assert "| `testing` |" in result
-        assert "| `writing-prose` |" in result
+        assert "| `test` |" in result
+        assert "| `write-prose` |" in result
 
     def test_includes_install_command(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(distribute_skills, "README_TEMPLATE", Path("/nonexistent"))
-        skills: list[dict] = [{"name": "testing", "description": "desc"}]
+        skills: list[dict] = [{"name": "test", "description": "desc"}]
 
         result = distribute_skills.generate_readme(
             self.REPO_NAME, self.REPO_CONFIG, skills, self.GITHUB_ORG
@@ -380,7 +380,7 @@ class TestGenerateReadme:
         config = {
             "description": "TypeScript skills",
             "plugins": ["typescript"],
-            "prerequisites": ["outcomeeng/foundation (for /testing)"],
+            "prerequisites": ["outcomeeng/foundation (for /test)"],
         }
         skills: list[dict] = [{"name": "testing-ts", "description": "desc"}]
 
