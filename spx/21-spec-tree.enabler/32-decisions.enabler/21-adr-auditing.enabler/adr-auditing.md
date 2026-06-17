@@ -26,8 +26,8 @@ A `### Testing` rule's evidence-type tag is chosen from the rule's claim shape v
 
 - Given an ADR missing a required section, when audited by `/audit-adr`, then the verdict is REJECT with finding category "missing-section" ([eval](evals/structure/eval.toml))
 - Given an ADR with temporal language in any section, when audited by `/audit-adr`, then the verdict is REJECT with finding category "temporal-voice" ([eval](evals/voice/eval.toml))
-- Given an ADR whose Compliance rule carries a bare mechanism tag instead of an evidence-type tag, when audited by `/audit-adr`, then the verdict is REJECT with finding category "invalid-mode-tag" ([eval](evals/mode-validity/eval.toml))
-- Given an ADR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited by `/audit-adr`, then the verdict is REJECT with finding category "evidence-type-mismatch" ([eval](evals/mode-validity/eval.toml))
+- Given an ADR whose `### Testing` compliance-type rule carries a bare mechanism tag instead of an evidence-type tag, when audited by `/audit-adr`, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
+- Given an ADR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited by `/audit-adr`, then the verdict is REJECT with finding category "evidence-type-mismatch" ([eval](evals/tag-validity/eval.toml))
 - Given an ADR where all three properties hold, when audited by `/audit-adr`, then the verdict is APPROVED ([eval](evals/structure/eval.toml))
 
 ### Compliance
