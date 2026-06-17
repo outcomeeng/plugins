@@ -34,11 +34,15 @@ from pathlib import Path
 from typing import Protocol
 
 DEFAULT_MARKETPLACE = "outcomeeng"
+DEFAULT_MARKETPLACE_SOURCE = "outcomeeng/plugins"
 DEFAULT_WINDOW_DAYS = 10
+CODEX_ADD_COMMAND = ("codex", "plugin", "marketplace", "add")
+CODEX_REMOVE_COMMAND = ("codex", "plugin", "marketplace", "remove")
 CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
 CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 CODEX_PLUGIN_MANIFEST = Path(".codex-plugin") / "plugin.json"
+GIT_MARKETPLACE_NOT_CONFIGURED_FRAGMENT = "not configured as a Git marketplace"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
@@ -155,7 +159,12 @@ def default_cache_root() -> Path:
 
 
 def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, check=False, text=True)
+    result = subprocess.run(command, check=False, text=True, capture_output=True)
+    if result.stdout:
+        print(result.stdout, end="")
+    if result.stderr:
+        print(result.stderr, end="", file=sys.stderr)
+    return result
 
 
 def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -252,6 +261,7 @@ def preserve_during_upgrade(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     cache_root: Path | None = None,
+    marketplace_source: str = DEFAULT_MARKETPLACE_SOURCE,
     runner: CommandRunner = run_command,
     dry_run: bool = False,
     history: PluginHistory | None = None,
@@ -278,7 +288,9 @@ def preserve_during_upgrade(
     if dry_run:
         upgrade_result = subprocess.CompletedProcess(command, 0)
     else:
-        upgrade_result = runner(command)
+        upgrade_result = _upgrade_marketplace(
+            marketplace, marketplace_source, runner=runner
+        )
 
     if upgrade_result.returncode != 0:
         return CachePreservationResult(
@@ -296,6 +308,25 @@ def preserve_during_upgrade(
         # all-or-nothing: a failed or unrecognized query raises here and no cache
         # directory has been touched, so a degraded signal never drives a deletion.
         installed_versions = installed.installed_plugin_versions(marketplace)
+        if (
+            not installed_versions
+            and working_tree_plugins
+            and _marketplace_cache_has_no_plugins(marketplace_dir)
+        ):
+            upgrade_result = _repair_marketplace_registration(
+                marketplace,
+                marketplace_source,
+                remove_first=True,
+                runner=runner,
+            )
+            if upgrade_result.returncode != 0:
+                return CachePreservationResult(
+                    linked_versions=(),
+                    pruned_links=(),
+                    pruned_plugins=(),
+                    upgrade_returncode=upgrade_result.returncode,
+                )
+            installed_versions = installed.installed_plugin_versions(marketplace)
         wanted = working_tree_plugins & frozenset(installed_versions)
     else:
         # A dry run reports planned changes without querying the installed set, so
@@ -365,6 +396,56 @@ def preserve_during_upgrade(
         pruned_plugins=tuple(pruned_plugins),
         upgrade_returncode=upgrade_result.returncode,
     )
+
+
+def _upgrade_marketplace(
+    marketplace: str,
+    marketplace_source: str,
+    *,
+    runner: CommandRunner,
+) -> subprocess.CompletedProcess[str]:
+    command = [*CODEX_UPGRADE_COMMAND, marketplace]
+    result = runner(command)
+    if result.returncode == 0:
+        return result
+    if not _upgrade_reports_missing_git_marketplace(result):
+        return result
+    return _repair_marketplace_registration(
+        marketplace,
+        marketplace_source,
+        remove_first=False,
+        runner=runner,
+    )
+
+
+def _upgrade_reports_missing_git_marketplace(
+    result: subprocess.CompletedProcess[str],
+) -> bool:
+    output = "\n".join(part for part in (result.stdout, result.stderr) if part)
+    return GIT_MARKETPLACE_NOT_CONFIGURED_FRAGMENT in output
+
+
+def _repair_marketplace_registration(
+    marketplace: str,
+    marketplace_source: str,
+    *,
+    remove_first: bool,
+    runner: CommandRunner,
+) -> subprocess.CompletedProcess[str]:
+    if remove_first:
+        remove_result = runner([*CODEX_REMOVE_COMMAND, marketplace])
+        if remove_result.returncode != 0:
+            return remove_result
+    add_result = runner([*CODEX_ADD_COMMAND, marketplace_source])
+    if add_result.returncode != 0:
+        return add_result
+    return runner([*CODEX_UPGRADE_COMMAND, marketplace])
+
+
+def _marketplace_cache_has_no_plugins(marketplace_dir: Path) -> bool:
+    if not marketplace_dir.is_dir():
+        return True
+    return not any(child.is_dir() for child in marketplace_dir.iterdir())
 
 
 def _prune_orphan_plugins(
@@ -530,6 +611,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Git working tree root for the marketplace repository",
     )
     parser.add_argument(
+        "--marketplace-source",
+        default=DEFAULT_MARKETPLACE_SOURCE,
+        help="Git marketplace source used when registration repair is required",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Report planned changes without running upgrade or mutating cache",
@@ -543,6 +629,7 @@ def main(argv: list[str] | None = None) -> int:
         result = preserve_during_upgrade(
             args.marketplace,
             cache_root=args.cache_root,
+            marketplace_source=args.marketplace_source,
             dry_run=args.dry_run,
             history=history,
             installed=CodexCliInstalled(),
