@@ -183,6 +183,11 @@ def parse_claude_installed_plugins(
                 f"Claude Code plugin `{plugin_id}` has no boolean enabled state"
             )
         project_path = _optional_path(entry.get("projectPath"))
+        if scope in {"project", "local"} and project_path is None:
+            raise MarketplaceSourceError(
+                f"Claude Code plugin `{plugin_id}` with {scope} scope has no "
+                "projectPath"
+            )
         plugins.append(
             ClaudeInstalledPlugin(
                 name=name,

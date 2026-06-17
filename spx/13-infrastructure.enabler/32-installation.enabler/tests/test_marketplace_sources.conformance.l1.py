@@ -555,6 +555,60 @@ def test_source_reconciliation_preserves_claude_plugin_installs_when_source_chan
     ]
 
 
+def test_source_reconciliation_rejects_scoped_claude_plugin_without_project_path(
+    tmp_path: Path,
+) -> None:
+    canonical_root = tmp_path / "canonical-marketplace"
+    stale_root = tmp_path / "old-marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "source": "Directory",
+                        "path": str(stale_root),
+                    }
+                ]
+            ),
+            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "sourceType": "local",
+                        "path": str(canonical_root),
+                    }
+                ]
+            ),
+            (*CLAUDE_PLUGIN_LIST_COMMAND,): json.dumps(
+                [
+                    {
+                        "id": f"spec-tree@{DEFAULT_MARKETPLACE}",
+                        "scope": "project",
+                        "enabled": True,
+                    }
+                ]
+            ),
+        }
+    )
+
+    with pytest.raises(MarketplaceSourceError) as exc_info:
+        ensure_local_marketplace_sources(
+            DEFAULT_MARKETPLACE,
+            source_root=canonical_root,
+            runner=runner,
+        )
+
+    message = str(exc_info.value)
+    assert f"spec-tree@{DEFAULT_MARKETPLACE}" in message
+    assert "projectPath" in message
+    assert runner.calls == [
+        ("claude", "plugin", "marketplace", "list", "--json"),
+        ("codex", "plugin", "marketplace", "list", "--json"),
+        (*CLAUDE_PLUGIN_LIST_COMMAND,),
+    ]
+
+
 def test_source_reconciliation_failed_codex_add_surfaces_error(
     tmp_path: Path,
 ) -> None:
