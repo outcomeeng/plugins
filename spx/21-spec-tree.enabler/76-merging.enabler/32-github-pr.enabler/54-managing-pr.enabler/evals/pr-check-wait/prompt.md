@@ -3,7 +3,7 @@
      sending the prompt to the model.
 
      Probe scope: the eval verifies the PR check wait contract in
-     /standardizing-merging, /opening-pr, and /managing-pr. The PR lifecycle
+     /merging-standards, /open-pr, and /manage-pr. The PR lifecycle
      uses one foreground `gh pr checks` wait, then inspects the full merge gate
      before acting. -->
 

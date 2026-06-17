@@ -22,7 +22,7 @@ from outcomeeng_testing.harnesses.verdict_toolchain import (
 
 VALID_VERDICT_DICT: dict[str, object] = {
     "schema_version": 1,
-    "skill": "auditing-typescript",
+    "skill": "audit-typescript",
     "target": "spx/path/to/node",
     "overall": "FAIL",
     "rows": [
@@ -64,7 +64,7 @@ class TestJsonOnlyFormat:
         out = _run_emit(VALID_VERDICT_DICT, "json-only")
         parsed = json.loads(out)
         assert parsed["overall"] == "FAIL"
-        assert parsed["skill"] == "auditing-typescript"
+        assert parsed["skill"] == "audit-typescript"
 
     def test_no_markdown_carrier(self) -> None:
         out = _run_emit(VALID_VERDICT_DICT, "json-only")

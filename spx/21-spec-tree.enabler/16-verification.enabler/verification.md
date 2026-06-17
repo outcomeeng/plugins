@@ -6,7 +6,7 @@ CAN compose against one append-only run-journal contract, one projection discipl
 
 ## Verification types
 
-The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understanding` foundation reference `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; reviewing and auditing implement it.
+The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understand` foundation reference `src/plugins/spec-tree/skills/understand/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; reviewing and auditing implement it.
 
 ## Assertions
 

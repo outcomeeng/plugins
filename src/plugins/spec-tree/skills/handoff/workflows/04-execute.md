@@ -27,7 +27,7 @@ Closure is BLOCKED until session-owned files are committed.
    - methodology files approved in workflow 03
 2. Compare that list against `git status --short`.
 3. Stage only the session-owned files.
-4. Invoke `/committing-changes` to create the commit.
+4. Invoke `/commit-changes` to create the commit.
 
 **Dirty worktree rules**:
 

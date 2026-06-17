@@ -20,7 +20,7 @@ This header is declared intent, not a vote. Default path is archive-all-listed. 
 </session_disposition_header>
 
 <spx_claude_staleness>
-When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understanding` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
+When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understand` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
 
 ```text
 ☑ [Imperfection → run /update-spx] spx/CLAUDE.md is [stale|absent] vs the installed template — reconcile via /update-spx
@@ -40,7 +40,7 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
     "header": "Persist",
     "multiSelect": true,
     "options": [
-      { "label": "[Imperfection → destination] summary", "description": "→ target named by nature (e.g., 'coding-typescript refs', 'CLAUDE.md', 'standardizing-typescript', 'ISSUES.md in spx/{node}')" },
+      { "label": "[Imperfection → destination] summary", "description": "→ target named by nature (e.g., 'code-typescript refs', 'CLAUDE.md', 'typescript-standards', 'ISSUES.md in spx/{node}')" },
       { "label": "[Insight] summary", "description": "→ target: amend spec / PLAN.md in spx/{node} / remove stale PLAN.md" },
       { "label": "[Skip] N items", "description": "→ session file only (coordination context)" }
     ]
@@ -51,9 +51,9 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 **Imperfection labels MUST include the destination** from the `<perspective_imperfections>` taxonomy in `02-reflect.md`. Examples:
 
 ```text
-☑ [Imperfection → coding-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
-☑ [Imperfection → standardizing-typescript-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
-☑ [Imperfection → spec-tree plugin] Invoke /contextualizing before suggesting handoff
+☑ [Imperfection → code-typescript refs] fast-check v4: fc.stringOf → fc.string({ unit: ... })
+☑ [Imperfection → typescript-standards-arch] ADR audit: 'no ADR exists' is REJECT, not N/A
+☑ [Imperfection → spec-tree plugin] Invoke /contextualize before suggesting handoff
 ☑ [Imperfection → CLAUDE.md] Require git mv for file moves
 ☑ [Imperfection → ISSUES.md in spx/55-example.enabler] Tests for assertion 3 missing
 ```

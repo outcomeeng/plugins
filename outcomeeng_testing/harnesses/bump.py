@@ -13,7 +13,7 @@ each call appends a `"{kind}:{payload}"` string in invocation order.
 The shared log is the only observable ordering channel across distinct
 Protocol boundaries (per-probe `queries`/`writes` lists are local).
 
-Exception cases per `plugins/spec-tree/skills/testing/references/methodology.md`:
+Exception cases per `plugins/spec-tree/skills/test/references/methodology.md`:
 
 - Stage 5 #2 (Interaction protocols): bump's correctness depends on the
   sequence and presence of probe calls, manifest reads, and manifest

@@ -50,12 +50,12 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 ### Conformance
 
-- The `/audit-pdr` skill invokes `/contextualizing` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.conformance.l1.py))
+- The `/audit-pdr` skill invokes `/contextualize` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.conformance.l1.py))
 
 ### Compliance
 
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([review])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([review])
-- ALWAYS: verify each `### Testing` rule's evidence type fits the claim's quantifier per the `/testing` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([review])
+- ALWAYS: verify each `### Testing` rule's evidence type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([review])
 - ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([review])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([review])

@@ -6,7 +6,7 @@ description: >-
 model: sonnet
 tools: Read, Bash, Glob, Grep
 skills:
-  - rust:auditing-rust-tests
+  - rust:audit-rust-tests
 ---
 
 <role>

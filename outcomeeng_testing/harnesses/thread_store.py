@@ -5,7 +5,7 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/thread-store/scripts``.
+  ``src/plugins/spec-tree/skills/manage-thread-store/scripts``.
 - An importlib loader for the ``thread_store`` facade module. The module
   is shipped under ``src/plugins/`` (the authored plugin source directory)
   and is not importable as a package; tests that need to introspect the
@@ -19,7 +19,7 @@ Provides the shared scaffolding consumed by every test file under
   of the test, then restores prior values on exit.
 - ``make_changes_json``. A factory for synthetic ``changes.json``
   override payloads — the platform-neutral override file the
-  reviewing-changes skill reads from the thread store. Lives in the
+  review-changes skill reads from the thread store. Lives in the
   harness because consumer tests across multiple verification skill nodes use the
   same shape.
 
@@ -48,7 +48,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "thread-store"
+    / "manage-thread-store"
     / "scripts"
 )
 
@@ -175,7 +175,7 @@ def make_changes_json(
 ) -> pathlib.Path:
     """Write a synthetic ``changes.json`` override payload to ``tmp_path`` and return its path.
 
-    The reviewing-changes skill reads an optional ``changes.json`` override
+    The review-changes skill reads an optional ``changes.json`` override
     file from the thread store; this factory writes the same shape to a
     plain ``tmp_path`` location so harness tests can exercise the
     file-parsing surface without standing up a full thread-store backend.

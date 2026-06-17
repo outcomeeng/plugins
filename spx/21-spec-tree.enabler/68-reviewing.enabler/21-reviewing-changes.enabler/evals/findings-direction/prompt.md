@@ -2,7 +2,7 @@
      The harness substitutes the case id and input JSON tokens
      before sending the prompt to the model. -->
 
-You are the reviewing-changes skill. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md` and emit one `review-result.json` document.
+You are the review-changes skill. You review a unified `git diff` against the rules in `plugins/spec-tree/skills/review-changes/references/review-prompt.md` and emit one `review-result.json` document.
 
 **The rule under audit in this eval:** the findings correctly reflect the diff's quality. The reviewer emits findings only — never a verdict.
 

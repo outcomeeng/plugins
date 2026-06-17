@@ -25,7 +25,7 @@ verdict_mod = load_verdict_module()
 
 VALID_VERDICT_DICT = {
     "schema_version": 1,
-    "skill": "auditing-typescript",
+    "skill": "audit-typescript",
     "target": "spx/path/to/node",
     "overall": "PASS",
     "rows": [
@@ -90,7 +90,7 @@ class TestParseJsonAcceptsValidVerdict:
     def test_returns_verdict_dataclass(self) -> None:
         v = verdict_mod.parse_json(json.dumps(VALID_VERDICT_DICT))
         assert isinstance(v, verdict_mod.Verdict)
-        assert v.skill == "auditing-typescript"
+        assert v.skill == "audit-typescript"
         assert v.target == "spx/path/to/node"
         assert v.overall == verdict_mod.Status.PASS
         assert len(v.rows) == 2
@@ -347,7 +347,7 @@ class TestVerdictIsUnhashable:
     def _build_verdict(self, *, metadata: dict[str, str]) -> object:
         return verdict_mod.Verdict(
             schema_version=verdict_mod.SCHEMA_VERSION,
-            skill="auditing-x",
+            skill="audit-x",
             target="spx/path",
             overall=verdict_mod.Status.PASS,
             rows=(),

@@ -38,7 +38,7 @@ INCLUDE_DIRECTIVE_TEXT = (
     f"{BLOCK_DELIMITER_START} include '{INCLUDE_PATH}' {BLOCK_DELIMITER_END}"
 )
 
-SKILL_REF = "develop:standardizing-skills"
+SKILL_REF = "develop:skill-standards"
 REQUIRE_SKILL_DIRECTIVE_TEXT = (
     f"{BLOCK_DELIMITER_START} require_skill '{SKILL_REF}' {BLOCK_DELIMITER_END}"
 )

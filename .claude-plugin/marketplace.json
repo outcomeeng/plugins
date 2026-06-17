@@ -11,47 +11,47 @@
     {
       "name": "develop",
       "source": "./dist/claude/develop",
-      "description": "Plugin development: /creating-skills, /creating-commands, /creating-subagents"
+      "description": "Plugin development: /create-skills, /create-commands, /create-subagents"
     },
     {
       "name": "frontend",
       "source": "./dist/claude/frontend",
-      "description": "Frontend design: /designing-frontend skill"
+      "description": "Frontend design: /design-frontend skill"
     },
     {
       "name": "typescript",
       "source": "./dist/claude/typescript",
-      "description": "TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent"
+      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript, /architect-typescript, /audit-typescript-architecture, typescript-simplifier agent"
     },
     {
       "name": "python",
       "source": "./dist/claude/python",
-      "description": "Python engineering: /testing-python, /coding-python, /auditing-python, /architecting-python, /auditing-python-architecture"
+      "description": "Python engineering: /test-python, /code-python, /audit-python, /architect-python, /audit-python-architecture"
     },
     {
       "name": "prose",
       "source": "./dist/claude/prose",
-      "description": "Prose craft for external prose (/writing-prose, /auditing-prose) and internal team docs (/writing-internal-docs, /auditing-internal-docs)"
+      "description": "Prose craft for external prose (/write-prose, /audit-prose) and internal team docs (/write-internal-docs, /audit-internal-docs)"
     },
     {
       "name": "spec-tree",
       "source": "./dist/claude/spec-tree",
-      "description": "Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomposing, /refactoring, /aligning, /interviewing, /testing, /auditing-tests, /audit-adr, /audit-pdr, /applying, /committing-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
+      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-adr, /audit-pdr, /apply, /commit-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
     },
     {
       "name": "work",
       "source": "./dist/claude/work",
-      "description": "Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)"
+      "description": "Work deliverables: /draw-excalidraw (Excalidraw diagrams), /sanitize-powerpoint (PowerPoint deck cleanup)"
     },
     {
       "name": "hdl",
       "source": "./dist/claude/hdl",
-      "description": "HDL engineering: /reviewing-vhdl, /reviewing-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)"
+      "description": "HDL engineering: /review-vhdl, /review-systemverilog (idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 review)"
     },
     {
       "name": "rust",
       "source": "./dist/claude/rust",
-      "description": "Rust engineering: /testing-rust, /coding-rust, /auditing-rust, /architecting-rust, /auditing-rust-architecture, rust-unsafe-auditor agent"
+      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust, /architect-rust, /audit-rust-architecture, rust-unsafe-auditor agent"
     }
   ]
 }

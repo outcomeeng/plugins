@@ -229,12 +229,12 @@ def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
     runner = CliRunner()
     eval_toml = _write_planned_eval(
         tmp_path,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
-        "src/plugins/spec-tree/skills/managing-pr/SKILL.md\n",
+        "src/plugins/spec-tree/skills/manage-pr/SKILL.md\n",
         encoding="utf-8",
     )
 
@@ -267,13 +267,13 @@ def test_plan_subcommand_selects_full_suite_when_harness_change_follows_owned_pa
     runner = CliRunner()
     eval_toml = _write_planned_eval(
         tmp_path,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
     changed_paths.write_text(
         (
-            "src/plugins/spec-tree/skills/managing-pr/SKILL.md\n"
+            "src/plugins/spec-tree/skills/manage-pr/SKILL.md\n"
             "outcomeeng_evals/suite.py\n"
         ),
         encoding="utf-8",
@@ -312,7 +312,7 @@ def test_plan_subcommand_selects_full_suite_for_harness_change(tmp_path: Path) -
     runner = CliRunner()
     eval_toml = _write_planned_eval(
         tmp_path,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
@@ -347,7 +347,7 @@ def test_plan_subcommand_selects_full_suite_for_absolute_eval_definition_change(
     runner = CliRunner()
     eval_toml = _write_planned_eval(
         tmp_path,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"
@@ -388,7 +388,7 @@ def test_plan_subcommand_selects_full_suite_for_eval_definition_change(
     eval_root = Path("spx")
     eval_toml = _write_planned_eval(
         eval_root,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = Path("changed.txt")
@@ -425,13 +425,13 @@ def test_plan_subcommand_full_mode_excludes_manual_evals(tmp_path: Path) -> None
     automatic_eval = _write_planned_eval(
         tmp_path,
         rule="automatic",
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     _write_planned_eval(
         tmp_path,
         rule="manual",
-        owned_paths=("src/plugins/spec-tree/skills/reviewing-changes/**",),
+        owned_paths=("src/plugins/spec-tree/skills/review-changes/**",),
         smoke_cases=("manual-smoke",),
         ci_policy=CiPolicy.MANUAL,
     )
@@ -461,7 +461,7 @@ def test_plan_subcommand_skips_unrelated_pr_change(tmp_path: Path) -> None:
     runner = CliRunner()
     _write_planned_eval(
         tmp_path,
-        owned_paths=("src/plugins/spec-tree/skills/managing-pr/**",),
+        owned_paths=("src/plugins/spec-tree/skills/manage-pr/**",),
         smoke_cases=("happy-path",),
     )
     changed_paths = tmp_path / "changed.txt"

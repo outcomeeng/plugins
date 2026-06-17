@@ -1,6 +1,6 @@
 {
   "name": "hdl",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "HDL engineering: idiomatic VHDL-2008 and SystemVerilog IEEE 1800-2017 code review with synthesizability analysis",
   "author": {
     "name": "Simon Heimlicher",
@@ -25,7 +25,10 @@
     "longDescription": "Hardware-description-language review workflows for idiomatic VHDL-2008 and SystemVerilog code.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://outcome.engineering"
   }
 }

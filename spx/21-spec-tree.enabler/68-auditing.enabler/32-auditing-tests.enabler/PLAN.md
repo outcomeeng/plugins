@@ -2,7 +2,7 @@
 
 ## Why
 
-Current `/auditing-tests` workflow does not state the test-literal rule concretely, offers no positive pattern for agents to follow, and lacks a testability gate. Agents evade laundering detection by relocating literals into camelCase constant bags that escape existing casing-focused checks. Most code arriving for audit is not testable by the time tests are written, and the audit has no way to reject the source rather than the test.
+Current `/audit-tests` workflow does not state the test-literal rule concretely, offers no positive pattern for agents to follow, and lacks a testability gate. Agents evade laundering detection by relocating literals into camelCase constant bags that escape existing casing-focused checks. Most code arriving for audit is not testable by the time tests are written, and the audit has no way to reject the source rather than the test.
 
 ## Scope
 
@@ -15,7 +15,7 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
    - Production defines a constant (ideally a typed constant object), uses it at least once internally, and exports it.
    - Test imports the same symbol. One definition, single point of change.
    - When the value originates in a library or platform API, both production and test import from that origin directly. Production does not re-export library constants.
-   - Reference `/standardizing-typescript` and `/standardizing-python` for the language-specific HOW.
+   - Reference `/typescript-standards` and `/python-standards` for the language-specific HOW.
 
 3. **Testability gate — new Gate 1 step before coupling.**
    - Question: can the spec assertion be verified given the shape of the source code?
@@ -30,7 +30,7 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
 
 This skill conforms to the verification contract in `spx/21-spec-tree.enabler/16-verification.enabler/verification.md`. Its judgment surface — literal-laundering detection, testability gate findings, coupling-taxonomy categorization — is LLM-driven behavior. Per `spx/15-spec-coverage.adr.md`, judgment-surface assertions MUST carry `[eval]` evidence; `[review]` is a placement violation when the subject is runtime LLM behavior.
 
-PR #43 established the eval pattern for the first verification skill (`reviewing-changes`). Adopt the same shape here:
+PR #43 established the eval pattern for the first verification skill (`review-changes`). Adopt the same shape here:
 
 - One `evals/<rule-slug>/` directory per judgment claim, carrying `eval.toml`, `cases.jsonl`, `prompt.md`, and an append-only `history.jsonl` (committed; `runs/` gitignored).
 - Threshold `0.85` per marketplace precedent.
@@ -57,7 +57,7 @@ See `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the full cros
 
 - [x] `auditing-tests.md` declares assertions for the literal rule, the positive pattern, the testability gate, and the extended coupling taxonomy.
 - [ ] `tests/test_test_auditing.scenario.l1.py`, `tests/test_test_auditing.property.l1.py`, and `tests/test_test_auditing.conformance.l1.py` exercise at least one scenario per new assertion (laundered-indirect rejection, testability failure against source, library-origin positive case).
-- [ ] `/auditing-tests/SKILL.md` workflow restates the literal rule at each of: quick_start, coupling step, falsifiability step, rejection criteria.
+- [ ] `/audit-tests/SKILL.md` workflow restates the literal rule at each of: quick_start, coupling step, falsifiability step, rejection criteria.
 - [ ] Audit dry-run against a handful of existing test files in this repo produces the expected verdicts.
 
 ## Origin

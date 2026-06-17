@@ -5,7 +5,7 @@ description: >-
   writing implementation code or before closing an outcome.
 tools: Read, Bash, Glob, Grep
 skills:
-  - python:auditing-python
+  - python:audit-python
 ---
 
 <role>

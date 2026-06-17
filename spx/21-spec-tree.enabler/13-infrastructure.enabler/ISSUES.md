@@ -17,7 +17,7 @@ Objective: upskill Codex and Claude on
 
 ## Official agent skills for GitHub Actions
 
-There is **no single official Anthropic-published Skill named "github-actions"** — neither in [`anthropics/skills`](https://github.com/anthropics/skills) (their public skills repo) nor [`anthropics/claude-plugins-official`](https://github.com/anthropics/claude-plugins-official). What exists is GitHub's and OpenAI's own published Skills, plus narrower-scoped Anthropic skills that touch GitHub Actions (e.g. `claude-api`).
+There is **no single official Anthropic-published Skill named "inspect-github-actions"** — neither in [`anthropics/skills`](https://github.com/anthropics/skills) (their public skills repo) nor [`anthropics/claude-plugins-official`](https://github.com/anthropics/claude-plugins-official). What exists is GitHub's and OpenAI's own published Skills, plus narrower-scoped Anthropic skills that touch GitHub Actions (e.g. `claude-api`).
 
 The official material splits cleanly into two camps:
 
@@ -71,7 +71,7 @@ The current spec also reads like an end-user troubleshooting skill. Under `13-in
 
 ### Proposed revision
 
-Rewrite `21-github-actions.enabler/github-actions.md` around the complete skill surface and keep dependency-specific detail out of the parent spec:
+Rewrite `21-github-actions.enabler/inspect-github-actions.md` around the complete skill surface and keep dependency-specific detail out of the parent spec:
 
 ```markdown
 # GitHub Actions

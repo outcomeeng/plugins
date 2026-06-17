@@ -5,7 +5,7 @@ description: >-
   model. Use after writing tests or before closing an outcome.
 tools: Read, Bash, Glob, Grep
 skills:
-  - typescript:auditing-typescript-tests
+  - typescript:audit-typescript-tests
 ---
 
 <role>

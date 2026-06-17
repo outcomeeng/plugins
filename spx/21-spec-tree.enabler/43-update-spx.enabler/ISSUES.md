@@ -2,11 +2,11 @@
 
 Known follow-ups for the update-spx node. Coordination note; not spec truth.
 
-## Eval coverage for the /understanding and /handoff orchestration (FOLLOW-UP)
+## Eval coverage for the /understand and /handoff orchestration (FOLLOW-UP)
 
-The `/understanding` once-per-session staleness check (version drift and language drift, including detecting the project's enabled languages) and the `/handoff` staleness-marker proposal are LLM-driven skill orchestration, so the spec backs them with `[audit]` compliance assertions rather than `[test]` evidence — per `spx/15-spec-coverage.adr.md`, LLM-driven behavior takes `[eval]` where the producer emits a structured verdict and `[audit]` otherwise. The deterministic core (version compare, language filter, render) carries `[test]` evidence; the orchestration layer does not.
+The `/understand` once-per-session staleness check (version drift and language drift, including detecting the project's enabled languages) and the `/handoff` staleness-marker proposal are LLM-driven skill orchestration, so the spec backs them with `[audit]` compliance assertions rather than `[test]` evidence — per `spx/15-spec-coverage.adr.md`, LLM-driven behavior takes `[eval]` where the producer emits a structured verdict and `[audit]` otherwise. The deterministic core (version compare, language filter, render) carries `[test]` evidence; the orchestration layer does not.
 
-**Resolution shape**: add `[eval]` coverage for the orchestration behaviors — `/understanding` detecting the project's languages and emitting `<SPX_CLAUDE_STALE>` once per session against a version-drifted or language-drifted product, and `/handoff` carrying that marker into its persistence proposal — once an eval-harness path for skill-orchestration behavior is in place. Until then the `[audit]` lane stands. Surfaced by local review on `feat/update-spx` and `fix/spx-claude-template-render`.
+**Resolution shape**: add `[eval]` coverage for the orchestration behaviors — `/understand` detecting the project's languages and emitting `<SPX_CLAUDE_STALE>` once per session against a version-drifted or language-drifted product, and `/handoff` carrying that marker into its persistence proposal — once an eval-harness path for skill-orchestration behavior is in place. Until then the `[audit]` lane stands. Surfaced by local review on `feat/update-spx` and `fix/spx-claude-template-render`.
 
 ## Structure-diagram product line shows an illustration token (FOLLOW-UP)
 

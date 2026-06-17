@@ -4,7 +4,7 @@ PROVIDES frontend design skills for creating distinctive, production-grade inter
 SO THAT frontend developers using Claude Code
 CAN produce interfaces that follow established design principles and accessibility standards
 
-The frontend plugin contains `/designing-frontend` for creating UI components and layouts.
+The frontend plugin contains `/design-frontend` for creating UI components and layouts.
 
 ## Assertions
 

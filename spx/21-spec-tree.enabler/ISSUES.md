@@ -4,11 +4,11 @@ Issues discovered during contradiction analysis of `spx/EXCLUDE`, sync-exclude, 
 
 ## 8. Multi-language test discovery missing from methodology (PARTIAL)
 
-Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.md` spec (mapping assertions for pytest/vitest). The `status.yaml` reference in `testing-foundation.md` was removed in commit `391e9e5`.
+Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.md` spec (mapping assertions for pytest/vitest). The `status.yaml` reference in `test-foundation.md` was removed in commit `391e9e5`.
 
 **Remaining:** upstream `outcomeeng/methodology` repo still needs the multi-language principle added to `spec-tree-reference.md`.
 
-## 9. `committing-changes` references `just check`
+## 9. `commit-changes` references `just check`
 
 `skill-structure.md` line 457: "Run product validation (e.g., `just check`)." Should reference `spx` validation as the spec-tree quality gate. `just check` is the product's own concern, separate from spec-tree.
 
@@ -24,9 +24,9 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`, `*.integration.test.{ext}`, `*.e2e.test.{ext}`, `test_*.unit.{ext}`, `test_*.integration.{ext}`, `test_*.e2e.{ext}`) in spec assertions, spec-tree templates, examples, and methodology references was rewritten to the canonical `<subject>.<evidence>.<level>[.<runner>]` form, splitting mixed-evidence specs across one file per evidence type. Remaining mentions of the legacy tokens are scoped to:
 
-- `plugins/{python,typescript}/skills/standardizing-*-tests/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
-- `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` and `plugins/develop/skills/auditing-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
-- `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
+- `plugins/{python,typescript}/skills/{python,typescript}-test-standards/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
+- `plugins/typescript/skills/audit-typescript-tests/SKILL.md` and `plugins/develop/skills/audit-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
+- `plugins/spec-tree/skills/author/SKILL.md` and `plugins/spec-tree/skills/test/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
 
 ## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks (RESOLVED)
 
@@ -38,9 +38,9 @@ Resolved 2026-06-15. `spx/13-infrastructure.enabler/21-test-infrastructure.enabl
 
 Surfaced by `claude-review` on PR 14 round 3 (2026-05-13).
 
-## 15. `committing-changes` example uses uppercase `L1` instead of canonical `l1`
+## 15. `commit-changes` example uses uppercase `L1` instead of canonical `l1`
 
-`plugins/spec-tree/skills/committing-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
+`plugins/spec-tree/skills/commit-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
 
 Surfaced by `claude-review` on PR 14 rounds 2–3 (2026-05-13).
 
@@ -90,14 +90,14 @@ Required handling:
 
 Surfaced by `claude-review` on PR 25 (2026-05-14).
 
-## 19. Placeholder notation mixed across inline and code-block commands in standardizing-merging
+## 19. Placeholder notation mixed across inline and code-block commands in merging-standards
 
-`plugins/spec-tree/skills/standardizing-merging/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Standardizing on a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
+`plugins/spec-tree/skills/merging-standards/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Choosing a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
 
 Required handling:
 
 - Decide which form is canonical (angle-bracket everywhere vs. named placeholder inline).
-- Sweep `standardizing-merging/SKILL.md` and any other PR-flow skill that mixes the conventions.
+- Sweep `merging-standards/SKILL.md` and any other PR-flow skill that mixes the conventions.
 
 Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens scope across multiple PR-flow skills; the rebase-merge PR scope is intentionally narrow.
 

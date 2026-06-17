@@ -1,7 +1,7 @@
 {
   "name": "work",
-  "version": "0.4.2",
-  "description": "Work deliverables: /excalidrawing (Excalidraw diagrams), /sanitizing-powerpoint (PowerPoint deck cleanup)",
+  "version": "0.5.0",
+  "description": "Work deliverables: /draw-excalidraw (Excalidraw diagrams), /sanitize-powerpoint (PowerPoint deck cleanup)",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
@@ -9,7 +9,13 @@
   "homepage": "https://github.com/outcomeeng/plugins",
   "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
-  "keywords": ["excalidraw", "diagrams", "powerpoint", "pptx", "presentations"],
+  "keywords": [
+    "excalidraw",
+    "diagrams",
+    "powerpoint",
+    "pptx",
+    "presentations"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Work Deliverables",
@@ -17,7 +23,10 @@
     "longDescription": "Workflows for sanitizing PowerPoint decks and generating Excalidraw diagrams.",
     "developerName": "Outcome Engineering",
     "category": "Design",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://outcome.engineering"
   }
 }

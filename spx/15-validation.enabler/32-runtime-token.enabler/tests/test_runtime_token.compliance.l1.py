@@ -55,7 +55,7 @@ def test_enforced_by_default_only_ignored_files_exempt() -> None:
         / "plugins"
         / "develop"
         / "skills"
-        / "creating-skills"
+        / "create-skills"
         / "SKILL.md"
     )
 

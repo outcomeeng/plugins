@@ -4,7 +4,7 @@ PROVIDES skills that author or repair work deliverables alongside code — Excal
 SO THAT developers shipping documents and slide decks together with their codebase
 CAN generate diagrams and sanitize OPC-XML structure without leaving the editor
 
-The work plugin contains `/excalidrawing` for creating Excalidraw-format diagrams and `/sanitizing-powerpoint` for repairing PowerPoint `.pptx` decks at the OPC XML level. The `sanitizing-powerpoint` skill ships two stdlib Python helpers under `plugins/work/skills/sanitizing-powerpoint/scripts/`: `pptx_audit.py` reports findings across six dimensions read-only, and `pptx_repack.py` performs content-surgical repackaging with verification.
+The work plugin contains `/draw-excalidraw` for creating Excalidraw-format diagrams and `/sanitize-powerpoint` for repairing PowerPoint `.pptx` decks at the OPC XML level. The `sanitize-powerpoint` skill ships two stdlib Python helpers under `plugins/work/skills/sanitize-powerpoint/scripts/`: `pptx_audit.py` reports findings across six dimensions read-only, and `pptx_repack.py` performs content-surgical repackaging with verification.
 
 ## Assertions
 
@@ -20,7 +20,7 @@ The work plugin contains `/excalidrawing` for creating Excalidraw-format diagram
 
 ### Compliance
 
-- ALWAYS: `/excalidrawing` output is valid Excalidraw JSON — diagrams are consumed by the Excalidraw renderer ([review])
-- ALWAYS: `/sanitizing-powerpoint` presents audit findings to the user and gets per-fix approval before any edit — no auto-fix path exists ([review])
-- NEVER: `/sanitizing-powerpoint` modifies a `.pptx` while PowerPoint holds the deck open — PowerPoint overwrites external edits from memory on its next save ([review])
-- NEVER: `/sanitizing-powerpoint` edits only `docProps/app.xml` to remove a finding — PowerPoint regenerates that file from deck content on every save ([review])
+- ALWAYS: `/draw-excalidraw` output is valid Excalidraw JSON — diagrams are consumed by the Excalidraw renderer ([review])
+- ALWAYS: `/sanitize-powerpoint` presents audit findings to the user and gets per-fix approval before any edit — no auto-fix path exists ([review])
+- NEVER: `/sanitize-powerpoint` modifies a `.pptx` while PowerPoint holds the deck open — PowerPoint overwrites external edits from memory on its next save ([review])
+- NEVER: `/sanitize-powerpoint` edits only `docProps/app.xml` to remove a finding — PowerPoint regenerates that file from deck content on every save ([review])

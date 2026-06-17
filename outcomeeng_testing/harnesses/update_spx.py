@@ -42,7 +42,7 @@ CANONICAL_SPX_TEMPLATE_PATH = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "understanding"
+    / "understand"
     / "templates"
     / "spx-claude.md"
 )

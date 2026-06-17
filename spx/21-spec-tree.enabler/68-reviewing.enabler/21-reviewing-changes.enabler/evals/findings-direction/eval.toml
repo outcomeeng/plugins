@@ -4,8 +4,8 @@ prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
   "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**",
-  "src/plugins/spec-tree/skills/reviewing-changes/**",
-  "dist/claude/spec-tree/skills/reviewing-changes/**",
+  "src/plugins/spec-tree/skills/review-changes/**",
+  "dist/claude/spec-tree/skills/review-changes/**",
 ]
 smoke_cases = ["clean-docstring-typo-fix", "broken-off-by-one-loop-bound"]
 threshold = 0.85

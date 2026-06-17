@@ -1,6 +1,6 @@
 # ISSUES — work enabler
 
-Known unresolved gaps. `/contextualizing` reads this file at context-load time; remove entries as they resolve.
+Known unresolved gaps. `/contextualize` reads this file at context-load time; remove entries as they resolve.
 
 ## Audit dimensions 2–6 lack scenario assertions
 

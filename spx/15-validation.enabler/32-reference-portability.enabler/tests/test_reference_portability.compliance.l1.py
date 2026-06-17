@@ -24,7 +24,7 @@ from outcomeeng.validation.reference_portability import find_nonportable
 NONPORTABLE_SAMPLES = [
     "spx/13-plugin-and-runtime-conventions.adr.md",  # numbered product decision
     "spx/15-validation.enabler/65-gate.enabler",  # numbered product node
-    "src/plugins/spec-tree/skills/applying/SKILL.md",  # authored-source root
+    "src/plugins/spec-tree/skills/apply/SKILL.md",  # authored-source root
     "dist/claude/spec-tree/agents/applier.md",  # generated Claude runtime root
     "dist/codex/spec-tree/agents/applier.md",  # generated Codex runtime root
     "outcomeeng/validation/_steps.py",  # toolchain package path

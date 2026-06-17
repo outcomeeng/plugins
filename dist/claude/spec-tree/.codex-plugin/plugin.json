@@ -1,6 +1,6 @@
 {
   "name": "spec-tree",
-  "version": "0.57.35",
+  "version": "0.58.0",
   "description": "Spec Tree: git-native product structure for Outcome Engineering, with commit workflow, session management, and TDD flows driven by specs",
   "author": {
     "name": "Simon Heimlicher",
@@ -24,7 +24,7 @@
   "interface": {
     "displayName": "Spec Tree",
     "shortDescription": "Outcome Engineering with Spec Tree skills",
-    "longDescription": "Spec Tree methodology skills for contextualizing, authoring, decomposing, applying, and auditing durable specs.",
+    "longDescription": "Spec Tree methodology skills for context loading, authoring, decomposition, implementation, and auditing durable specs.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": ["Read", "Write"],

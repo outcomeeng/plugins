@@ -5,7 +5,7 @@ description: >-
 tools: Read, Bash, Glob, Grep
 model: sonnet
 skills:
-  - spec-tree:auditing-tests
+  - spec-tree:audit-tests
 ---
 
 <role>

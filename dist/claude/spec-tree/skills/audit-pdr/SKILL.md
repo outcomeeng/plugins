@@ -38,7 +38,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **Step 1: Load context**
 
-Invoke `/contextualizing` on the directory containing the PDR.
+Invoke `/contextualize` on the directory containing the PDR.
 
 Do not proceed without the `<SPEC_TREE_CONTEXT>` marker for the PDR directory.
 
@@ -99,12 +99,12 @@ For each product property:
 Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and `### Audit` subsections by verification type. For each rule:
 
 1. The rule carries exactly one tag, and the tag is valid for its subsection:
-   - under `### Testing` → a `/testing`-routed evidence type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
+   - under `### Testing` → a `/test`-routed evidence type: one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
    - under `### Eval` → `([eval])` — the rule governs a skill, agent, or classifier whose output has a parseable contract;
    - under `### Audit` → `([audit])` — the rule governs a Spec Tree decision, spec, skill, or agent that admits no deterministic test or graded eval.
 
    A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
-2. Under `### Testing`, the evidence type fits the claim's shape per the `/testing` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
+2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 3. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
@@ -155,7 +155,7 @@ Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/auditing/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any property is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings within each row carry severity `REJECT` for blocking violations and `WARNING`/`INFO` for non-blocking observations.
 
@@ -200,11 +200,11 @@ How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
 
 Audit is complete when:
 
-- [ ] `/contextualizing` invoked — `<SPEC_TREE_CONTEXT>` marker present
+- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
 - [ ] PDR read — all sections identified
 - [ ] Content classification: every statement classified as product behavior or flagged
 - [ ] Property quality: each property checked for observability and falsifiability
-- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/testing` (a universal is never `scenario`)
+- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/test` (a universal is never `scenario`)
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Consistency: compared against product spec and ancestor PDRs
 - [ ] Verdict issued: APPROVED or REJECT

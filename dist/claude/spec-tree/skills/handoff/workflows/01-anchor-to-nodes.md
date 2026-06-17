@@ -1,5 +1,5 @@
 <objective>
-Identify every spec-tree node worked on during this session. This anchors the handoff to durable locations in the spec tree so the next Claude context can load context via `/contextualizing`.
+Identify every spec-tree node worked on during this session. This anchors the handoff to durable locations in the spec tree so the next Claude context can load context via `/contextualize`.
 
 </objective>
 
@@ -9,7 +9,7 @@ List every spec-tree node touched in this session (any path matching `spx/**/*.e
 - Full path (e.g., `spx/55-example.enabler/21-bar.outcome`)
 - What was done (spec authored, tests written, code implemented, etc.)
 - Test status (passing, failing, not yet written)
-- TDD flow position if applicable (step 1-8 per `/applying` skill)
+- TDD flow position if applicable (step 1-8 per `/apply` skill)
 
 </process>
 
@@ -31,7 +31,7 @@ If NO spec-tree nodes were involved in this session, use `AskUserQuestion`:
 }
 ```
 
-If "Create a node now" → invoke `/authoring` to create the node, then return to this workflow.
+If "Create a node now" → invoke `/author` to create the node, then return to this workflow.
 
 </no_nodes_case>
 

@@ -15,7 +15,7 @@ import pathlib
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[4]
 HOOKS_JSON = REPO_ROOT / "src" / "plugins" / "spec-tree" / "hooks" / "hooks.json"
 APPLYING_SKILL = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "applying" / "SKILL.md"
+    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "apply" / "SKILL.md"
 )
 HOOK_COMMAND_FRAGMENT = "scripts/enforce-gates.py"
 

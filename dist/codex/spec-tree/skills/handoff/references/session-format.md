@@ -38,7 +38,7 @@ files:
 
 <nodes>
 Spec-tree nodes worked on. The receiving Claude context should invoke
-`/contextualizing` on each before starting work.
+`/contextualize` on each before starting work.
 
 - `spx/{path-to-node}`
   - Status: [tests passing | partially implemented | spec only | architected | etc.]
@@ -51,8 +51,8 @@ Spec-tree nodes worked on. The receiving Claude context should invoke
 <skills>
 
 ## Critical — invoke before starting work
-- `/understanding` — load spec tree methodology
-- `/contextualizing {node-path}` — load target context for each node above
+- `/understand` — load spec tree methodology
+- `/contextualize {node-path}` — load target context for each node above
 
 ## Missed — caused problems when skipped
 - [skill name] — [what went wrong and why it matters]

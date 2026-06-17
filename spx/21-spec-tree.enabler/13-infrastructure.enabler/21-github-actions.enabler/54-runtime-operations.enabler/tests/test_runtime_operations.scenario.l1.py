@@ -18,7 +18,7 @@ SKILL_MD = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "github-actions"
+    / "inspect-github-actions"
     / "SKILL.md"
 )
 

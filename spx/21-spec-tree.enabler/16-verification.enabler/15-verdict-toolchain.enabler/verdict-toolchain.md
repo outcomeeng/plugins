@@ -2,7 +2,7 @@
 
 PROVIDES a stdlib-only Python toolchain — the `verdict.py` module and the `emit_verdict.py`, `read_verdict.py`, `aggregate_verdicts.py`, and `pass_results.py` CLIs — that defines the canonical audit-verdict schema, renders it in three surface forms, parses any surface form back to JSON, aggregates child verdicts under the rollup rule, and captures pre-computed tool output into a results directory
 SO THAT every audit skill in the marketplace can emit one structured payload through one canonical toolchain — never hand-format markdown — and the orchestrator and dispatched skills share one verdict shape and one rollup rule
-CAN ship inside `plugins/spec-tree/skills/auditing/scripts/`, run from any consumer project against `python3` only, and stand alone as the deterministic core that the `/auditing` skill, the `auditor` agent, and every dispatched `auditing-{lang}*` skill route their verdict emission and parsing through
+CAN ship inside `plugins/spec-tree/skills/audit/scripts/`, run from any consumer project against `python3` only, and stand alone as the deterministic core that the `/audit` skill, the `auditor` agent, and every dispatched `audit-{lang}*` skill route their verdict emission and parsing through
 
 ## Assertions
 
@@ -25,6 +25,6 @@ CAN ship inside `plugins/spec-tree/skills/auditing/scripts/`, run from any consu
 - ALWAYS: `pass_results.py mkdir` creates a fresh `audit-results-*` directory via `tempfile.mkdtemp`, prints its path on stdout, and leaves cleanup to the caller — survives across orchestrator/dispatched-skill invocations ([test](tests/test_pass_results.scenario.l1.py))
 - ALWAYS: `pass_results.py add <dir> <command>` writes verbatim content from stdin (or `--file`) to `<dir>/<sanitized-command>`, replacing every path-resolving character — ASCII space, POSIX `/`, Windows `\`, and `:` — with underscores and preserving every other character (flags, `-`, `=`, dots) verbatim. The narrow filename contract keeps `directory / name` safe so a command containing `/path/to/check.py` cannot produce a nested subdirectory or escape the results directory. No JSON wrapping, no truncation ([test](tests/test_pass_results.scenario.l1.py))
 - ALWAYS: `pass_results.py add` resolves filename collisions by appending `.1`, `.2`, … until a free name is found — multiple invocations of the same command append, not overwrite ([test](tests/test_pass_results.scenario.l1.py))
-- NEVER: any script in this toolchain imports a third-party package, requires `uv`, or reads files outside `plugins/spec-tree/skills/auditing/scripts/` — stdlib only, plugin-internal only, per the Plugin Portability Constraints in `AGENTS.md` ([review])
+- NEVER: any script in this toolchain imports a third-party package, requires `uv`, or reads files outside `plugins/spec-tree/skills/audit/scripts/` — stdlib only, plugin-internal only, per the Plugin Portability Constraints in `AGENTS.md` ([review])
 - NEVER: an audit skill hand-formats a markdown verdict — every audit skill produces JSON and pipes it through `emit_verdict.py` with the requested `--format` ([review])
 - NEVER: a script in this toolchain references `outcomeeng_*` packages — those packages exist for marketplace build/test tooling and are not available in consumer projects that install spec-tree plugins ([review])

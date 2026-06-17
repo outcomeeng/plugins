@@ -51,22 +51,22 @@ class TestPositionalChildren:
     def test_combines_two_children(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
         assert wrapper["overall"] == "APPROVED"
         assert len(wrapper["children"]) == 2
-        assert wrapper["children"][0]["skill"] == "auditing-typescript"
+        assert wrapper["children"][0]["skill"] == "audit-typescript"
 
     def test_any_fail_child_makes_wrapper_rejected(
         self, tmp_path: pathlib.Path
     ) -> None:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="FAIL"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="FAIL"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -77,8 +77,8 @@ class TestPositionalChildren:
     ) -> None:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="UNKNOWN"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="UNKNOWN"))
         result = _run(str(a), str(b))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -91,11 +91,11 @@ class TestDirectoryEnumeration:
         children_dir.mkdir()
         _write_child(
             children_dir / "a.json",
-            _child(skill="auditing-typescript", overall="PASS"),
+            _child(skill="audit-typescript", overall="PASS"),
         )
         _write_child(
             children_dir / "b.json",
-            _child(skill="auditing-python", overall="PASS"),
+            _child(skill="audit-python", overall="PASS"),
         )
         # A non-JSON file is ignored.
         (children_dir / "notes.txt").write_text("ignored")
@@ -114,16 +114,16 @@ class TestDirectoryEnumeration:
 class TestWrapperMetadata:
     def test_skill_flag_sets_wrapper_skill(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
-        result = _run(str(a), "--skill", "auditing", "--target", "spx/root")
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
+        result = _run(str(a), "--skill", "audit", "--target", "spx/root")
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
-        assert wrapper["skill"] == "auditing"
+        assert wrapper["skill"] == "audit"
         assert wrapper["target"] == "spx/root"
 
     def test_metadata_flag_repeats(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(
             str(a),
             "--metadata",
@@ -138,7 +138,7 @@ class TestWrapperMetadata:
 
     def test_metadata_value_may_contain_equals(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(str(a), "--metadata", "url=https://example.com?a=b")
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -174,7 +174,7 @@ class TestWrapperRows:
         self, tmp_path: pathlib.Path
     ) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(
             str(a),
             "--row",
@@ -197,8 +197,8 @@ class TestWrapperRows:
     ) -> None:
         a = tmp_path / "a.json"
         b = tmp_path / "b.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
-        _write_child(b, _child(skill="auditing-python", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
+        _write_child(b, _child(skill="audit-python", overall="PASS"))
         result = _run(
             str(a),
             str(b),
@@ -220,7 +220,7 @@ class TestWrapperRows:
         """Backward compatibility: callers that pass no --row get the
         original children-only rollup with empty wrapper rows."""
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(str(a))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -229,7 +229,7 @@ class TestWrapperRows:
 
     def test_unknown_row_status_is_rejected(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(str(a), "--row", "automated-gates=APPROVED")
         # APPROVED is a root-level status, not a skill-level status; row
         # statuses must be PASS / FAIL / UNKNOWN.
@@ -238,7 +238,7 @@ class TestWrapperRows:
 
     def test_malformed_row_entry_is_rejected(self, tmp_path: pathlib.Path) -> None:
         a = tmp_path / "a.json"
-        _write_child(a, _child(skill="auditing-typescript", overall="PASS"))
+        _write_child(a, _child(skill="audit-typescript", overall="PASS"))
         result = _run(str(a), "--row", "no-equals-sign")
         assert result.returncode != 0
         assert "expected name=STATUS" in result.stderr
@@ -262,8 +262,8 @@ class TestMixedVocabularyChildren:
     ) -> None:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
-        _write_child(leaf, _child(skill="auditing-typescript", overall="PASS"))
-        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        _write_child(leaf, _child(skill="audit-typescript", overall="PASS"))
+        _write_child(nested, _child(skill="audit", overall="APPROVED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -274,8 +274,8 @@ class TestMixedVocabularyChildren:
     ) -> None:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
-        _write_child(leaf, _child(skill="auditing-typescript", overall="FAIL"))
-        _write_child(nested, _child(skill="auditing", overall="APPROVED"))
+        _write_child(leaf, _child(skill="audit-typescript", overall="FAIL"))
+        _write_child(nested, _child(skill="audit", overall="APPROVED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)
@@ -289,8 +289,8 @@ class TestMixedVocabularyChildren:
     ) -> None:
         leaf = tmp_path / "leaf.json"
         nested = tmp_path / "nested.json"
-        _write_child(leaf, _child(skill="auditing-typescript", overall="PASS"))
-        _write_child(nested, _child(skill="auditing", overall="REJECTED"))
+        _write_child(leaf, _child(skill="audit-typescript", overall="PASS"))
+        _write_child(nested, _child(skill="audit", overall="REJECTED"))
         result = _run(str(leaf), str(nested))
         assert result.returncode == 0
         wrapper = json.loads(result.stdout)

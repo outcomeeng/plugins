@@ -23,13 +23,13 @@ Create or extend a spec tree artifact. Handles product specs, decision records, 
 </context>
 
 <process>
-Invoke the authoring skill NOW:
+Invoke the author skill NOW:
 
 ```json
-Skill tool → { "skill": "spec-tree:authoring" }
+Skill tool → { "skill": "spec-tree:author" }
 ```
 
-The skill determines the artifact type from $ARGUMENTS and the conversation context. If no product spec exists, it redirects to `/bootstrapping`.
+The skill determines the artifact type from $ARGUMENTS and the conversation context. If no product spec exists, it redirects to `/bootstrap`.
 </process>
 
 <success_criteria>

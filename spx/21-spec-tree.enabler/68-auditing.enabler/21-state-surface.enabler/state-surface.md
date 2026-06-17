@@ -1,7 +1,7 @@
 # State Surface
 
 PROVIDES a worktree-local on-disk surface — `.spx/audits/<lang>/<branch-slug>.md` — that persists open and resolved audit findings, plus a TTL-bounded run lock at `<state-file>.lock` that serialises concurrent runs on the same branch
-SO THAT the local `audit-orchestrator` agent and any future caller of the `/auditing` skill's stateful orchestration mode
+SO THAT the local `audit-orchestrator` agent and any future caller of the `/audit` skill's stateful orchestration mode
 CAN iterate auditably across commits — re-running the audit carries forward open finding IDs, resolves findings that no longer apply, and reopens regressions under their original IDs — without persisting any audit state into the product tree
 
 ## Assertions
@@ -23,4 +23,4 @@ CAN iterate auditably across commits — re-running the audit carries forward op
 - ALWAYS: each state-transition writes the state file atomically — `save_state` writes to `<state-file>.tmp` and calls `os.replace`, so a crash mid-write leaves the prior state intact rather than corrupted ([test](tests/test_state_surface.scenario.l1.py))
 - ALWAYS: the run lock at `<state-file>.lock` releases on every exit path — context-manager `__exit__` removes the lock whether the run exits cleanly or via exception, so a crashed run does not block the next run for a full TTL window ([test](tests/test_state_surface.scenario.l1.py))
 - NEVER: a finding ID is reissued — `next_finding_id` strictly exceeds every ID ever assigned on the branch, including resolved IDs, so a regression always reopens its original ID instead of seeing a duplicate allocation ([test](tests/test_state_surface.scenario.l1.py))
-- NEVER: audit state is written to a path inside `spx/` or any other tracked product directory — the only persisted surface is `.spx/audits/`; the audit verdict itself remains in-conversation per the `/auditing` skill's stateless contract ([review])
+- NEVER: audit state is written to a path inside `spx/` or any other tracked product directory — the only persisted surface is `.spx/audits/`; the audit verdict itself remains in-conversation per the `/audit` skill's stateless contract ([review])

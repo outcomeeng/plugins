@@ -114,7 +114,7 @@ class TestGateEmitsCliVerdict:
         spx = _fake_spx(
             tmp_path / "bin",
             decision="deny",
-            reason="load /spec-tree:understanding first",
+            reason="load /spec-tree:understand first",
         )
 
         result = run_pretool_gate(
@@ -129,8 +129,7 @@ class TestGateEmitsCliVerdict:
         assert decision["hookEventName"] == "PreToolUse"
         assert decision["permissionDecision"] == "deny"
         assert (
-            decision["permissionDecisionReason"]
-            == "load /spec-tree:understanding first"
+            decision["permissionDecisionReason"] == "load /spec-tree:understand first"
         )
 
     def test_allow_verdict_emits_no_denial(self, tmp_path):

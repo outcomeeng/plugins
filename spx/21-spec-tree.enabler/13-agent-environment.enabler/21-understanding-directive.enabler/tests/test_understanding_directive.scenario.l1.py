@@ -5,7 +5,7 @@ filesystem I/O in pytest tmp_path directories, with no test doubles.
 
 Assertion covered:
   - A project directory containing a product spec yields a stdout directive
-    naming /spec-tree:understanding and /spec-tree:contextualizing.
+    naming /spec-tree:understand and /spec-tree:contextualize.
 """
 
 from pathlib import Path
@@ -32,8 +32,8 @@ def test_spec_tree_repo_emits_understanding_directive(tmp_path):
     # Directive marker and command tokens asserted inline; their source-ownership
     # is tracked cross-hook in spx/21-spec-tree.enabler/ISSUES.md item 20.
     assert '<SPEC-TREE_SESSION_START foundation="load"/>' in result.stdout
-    assert "/spec-tree:understanding" in result.stdout
-    assert "/spec-tree:contextualizing" in result.stdout
+    assert "/spec-tree:understand" in result.stdout
+    assert "/spec-tree:contextualize" in result.stdout
     # The directive points at the mechanical PreToolUse gate as the enforcement,
     # not at itself — SessionStart stdout alone is out-prioritized after compaction.
     assert "PreToolUse" in result.stdout

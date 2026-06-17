@@ -1,6 +1,6 @@
 # Verification
 
-This product adopts the verification taxonomy declared in the `/understanding` foundation reference `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md`: five types — validation, testing, reviewing, auditing, evaluating — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the tag an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing.
+This product adopts the verification taxonomy declared in the `/understand` foundation reference `src/plugins/spec-tree/skills/understand/references/verification-kinds.md`: five types — validation, testing, reviewing, auditing, evaluating — across two orthogonal axes, verdict mode (deterministic / agentic) and purpose (conformance / correctness). Three types back the tag an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing.
 
 Grounding for this product:
 
@@ -14,4 +14,4 @@ Grounding for this product:
 - ALWAYS: an activity declares its type and purpose ([audit])
 - NEVER: a type's verdict mode differs from the one its definition binds — the binding is fixed, not chosen per run ([audit])
 - NEVER: a model judges the verdict of a deterministic type — it may run inside the process, but the verdict is the deterministic score ([audit])
-- NEVER: the type set or the two verdict modes are extended — a new type amends `src/plugins/spec-tree/skills/understanding/references/verification-kinds.md` and this decision ([audit])
+- NEVER: the type set or the two verdict modes are extended — a new type amends `src/plugins/spec-tree/skills/understand/references/verification-kinds.md` and this decision ([audit])

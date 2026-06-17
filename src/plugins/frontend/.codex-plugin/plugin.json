@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Design and build beautiful web UI that doesn't look generic",
   "author": {
     "name": "Simon Heimlicher",
@@ -9,7 +9,10 @@
   "homepage": "https://github.com/outcomeeng/plugins",
   "repository": "https://github.com/outcomeeng/plugins",
   "license": "MIT",
-  "keywords": ["design", "frontend"],
+  "keywords": [
+    "design",
+    "frontend"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Frontend Design",
@@ -17,7 +20,10 @@
     "longDescription": "Frontend design workflows for building distinctive web UI without generic layouts.",
     "developerName": "Outcome Engineering",
     "category": "Design",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://outcome.engineering"
   }
 }

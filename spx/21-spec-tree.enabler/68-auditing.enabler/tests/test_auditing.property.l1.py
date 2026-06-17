@@ -27,7 +27,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "auditing"
+    / "audit"
     / "scripts"
 )
 AUDIT_ORCHESTRATOR = SCRIPTS_DIR / "audit_orchestrator.py"
@@ -43,7 +43,7 @@ _file_strategy = st.tuples(
 
 
 def _load_audit_orchestrator() -> ModuleType:
-    """Load src/plugins/spec-tree/skills/auditing/scripts/audit_orchestrator.py.
+    """Load src/plugins/spec-tree/skills/audit/scripts/audit_orchestrator.py.
 
     The module ships inside the spec-tree plugin's scripts/ directory rather
     than the outcomeeng Python package; importlib.util loads it by absolute

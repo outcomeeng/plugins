@@ -15,21 +15,21 @@ STANDARDIZING_MERGING_SKILLS: Final = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "standardizing-merging"
+    / "merging-standards"
     / "SKILL.md",
     REPO_ROOT
     / "dist"
     / "claude"
     / "spec-tree"
     / "skills"
-    / "standardizing-merging"
+    / "merging-standards"
     / "SKILL.md",
     REPO_ROOT
     / "dist"
     / "codex"
     / "spec-tree"
     / "skills"
-    / "standardizing-merging"
+    / "merging-standards"
     / "SKILL.md",
 )
 

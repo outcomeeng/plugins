@@ -24,13 +24,13 @@ allowed-tools: Read, Edit, Write, Bash(spx:*), Bash(git:*), Bash(pwd), Bash(ls:*
 </context>
 
 <precondition>
-**Handoff is not a voluntary close. Run this skill only when the session is genuinely over** — either the user's stated goal is met with no continuation remaining, or continuation by Claude now is impossible (the user halted the work, the context is exhausted, or an external blocker — operator input, a remote-state change Claude cannot effect — prevents the next action). Genuine completion is a valid reason to run this skill; it then archives the claimed session and decides session-file creation per the rules below. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, a branch with committed changes ahead of its resolved base for default-branch work, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A clean working tree, a merge, a passing gate, or a freshly written coordination note is not a reason to hand off while committed changes remain outside the default branch on origin. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understanding`.
+**Handoff is not a voluntary close. Run this skill only when the session is genuinely over** — either the user's stated goal is met with no continuation remaining, or continuation by Claude now is impossible (the user halted the work, the context is exhausted, or an external blocker — operator input, a remote-state change Claude cannot effect — prevents the next action). Genuine completion is a valid reason to run this skill; it then archives the claimed session and decides session-file creation per the rules below. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, a branch with committed changes ahead of its resolved base for default-branch work, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A clean working tree, a merge, a passing gate, or a freshly written coordination note is not a reason to hand off while committed changes remain outside the default branch on origin. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understand`.
 </precondition>
 
 <objective>
 Close the ongoing spec-tree session: commit session-owned work on its branch, persist issues and plans already made in coordination notes (these live in the affected spec tree nodes), commit them on the session branch or create a pure coordination branch, and push all branches to origin. Unless every node anchored this session carries no unresolved continuation, create a session file as an initialization prompt for the next session of Claude. If created, the session file comprises pointers to the persisted files (via origin branch) and external state such as the state of production infrastructure.
 
-The imperfection ledger started when invoking the `/understanding` skill (which loads the imperfection protocol) has captured insights and issues. With this skill, it is drained by triaging and persisting all remaining entries.
+The imperfection ledger started when invoking the `/understand` skill (which loads the imperfection protocol) has captured insights and issues. With this skill, it is drained by triaging and persisting all remaining entries.
 
 </objective>
 
@@ -43,7 +43,7 @@ A session file initializes Claude in the next session. Claude starts from a blan
 
 <what_not_to_add>
 
-- NEVER duplicate or summarize coordination notes — they load via `/contextualizing`
+- NEVER duplicate or summarize coordination notes — they load via `/contextualize`
 - NEVER summarize spec content — it is literally in the spec tree and is bound to become stale eventually
 - NEVER narrate or otherwise log session activity — git commit messages and PRs carry that
 
@@ -87,12 +87,12 @@ Full algorithm in `references/claimed-session-resolution.md`.
 <persistence_hierarchy>
 Persist to the HIGHEST applicable tier.
 
-| Tier | Where                                   | Durability                 | When to use                                                                                                                                                                                             |
-| ---- | --------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Methodology (skills, CLAUDE.md)         | Durable                    | Reusable patterns, gotchas, clarifications etc.                                                                                                                                                         |
-| 2    | Spec tree (`spx/`)                      | Durable                    | New or updated durable spec tree files such as decisions, specs and tests                                                                                                                               |
-| 3    | Coordination notes (PLAN.md, ISSUES.md) | Until resolved or disposed | Remaining steps, known gaps and defects — committed for cross-session coordination. CAUTION: coordination notes are prone to go stale; always reconcile before use, discoverable via `/contextualizing` |
-| 4    | Session file                            | Ephemeral                  | Coordination only: node list, skill checklist, external-infrastructure state, cross-cutting context                                                                                                     |
+| Tier | Where                                   | Durability                 | When to use                                                                                                                                                                                           |
+| ---- | --------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Methodology (skills, CLAUDE.md)         | Durable                    | Reusable patterns, gotchas, clarifications etc.                                                                                                                                                       |
+| 2    | Spec tree (`spx/`)                      | Durable                    | New or updated durable spec tree files such as decisions, specs and tests                                                                                                                             |
+| 3    | Coordination notes (PLAN.md, ISSUES.md) | Until resolved or disposed | Remaining steps, known gaps and defects — committed for cross-session coordination. CAUTION: coordination notes are prone to go stale; always reconcile before use, discoverable via `/contextualize` |
+| 4    | Session file                            | Ephemeral                  | Coordination only: node list, skill checklist, external-infrastructure state, cross-cutting context                                                                                                   |
 
 A Tier-3 coordination note holds remaining steps, known gaps and defects that Claude thought to be relevant and correct at one point in time. When in conflict with spec tree's durable product truth, they must be reconciled before use.
 

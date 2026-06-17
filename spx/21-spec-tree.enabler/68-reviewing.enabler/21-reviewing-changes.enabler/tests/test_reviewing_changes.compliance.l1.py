@@ -1,22 +1,22 @@
-"""Compliance tests for cross-cutting reviewing-changes rules.
+"""Compliance tests for cross-cutting review-changes rules.
 
 Covers the Compliance clauses in ``../reviewing-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
-- Every script under ``plugins/spec-tree/skills/reviewing-changes/scripts/``
+- Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
   performs filesystem effects only through ``thread_store`` — no script
   calls ``open()``, ``Path.write_*``, ``os.remove``, ``os.unlink``,
   ``shutil.rmtree``, or any other direct filesystem-write primitive.
 - The swappable prompt template lives at
-  ``plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md``
+  ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
   review-prompt.md``.
 - The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
-  listing ``spec-tree:reviewing-changes`` — tolerated absent during the
+  listing ``spec-tree:review-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
 - The per-section render templates live under
-  ``plugins/spec-tree/skills/reviewing-changes/references/render/`` and
+  ``plugins/spec-tree/skills/review-changes/references/render/`` and
   ``render_review.py`` loads them via stdlib ``string.Template`` —
   rendered shape is data the script substitutes, not f-string
   concatenation in code.
@@ -65,7 +65,7 @@ FORBIDDEN_ATTR_CALLS = {
 }
 FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink"}
 
-# Names of modules that ship under the reviewing-changes scripts/ directory
+# Names of modules that ship under the review-changes scripts/ directory
 # (sibling-imported via bare names) — these are not "third-party" or
 # "outcomeeng_*" violations.
 LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
@@ -94,7 +94,7 @@ PROMPT_FINGERPRINT_PHRASES = (
 
 
 def _script_files() -> list[pathlib.Path]:
-    """Return every ``.py`` file under the reviewing-changes ``scripts/`` dir."""
+    """Return every ``.py`` file under the review-changes ``scripts/`` dir."""
     if not SCRIPTS_DIR.is_dir():
         return []
     return [
@@ -176,7 +176,7 @@ class TestScriptsAreStdlibOnly:
                     continue
                 violations.append(f"{script.name}: import '{module}'")
         assert not violations, (
-            "reviewing-changes scripts import non-stdlib, non-local modules:\n"
+            "review-changes scripts import non-stdlib, non-local modules:\n"
             + "\n".join(violations)
         )
 
@@ -188,7 +188,7 @@ class TestScriptsAreStdlibOnly:
                 if module.startswith("outcomeeng_") or module == "outcomeeng":
                     violations.append(f"{script.name}: import '{module}'")
         assert not violations, (
-            "reviewing-changes scripts import outcomeeng_* modules "
+            "review-changes scripts import outcomeeng_* modules "
             "(forbidden by Plugin Portability Constraints):\n" + "\n".join(violations)
         )
 
@@ -267,7 +267,7 @@ class TestNoSecondSchemaRepresentation:
                     continue
                 violations.append(str(match.relative_to(SKILL_DIR)))
         assert not violations, (
-            "alternate schema representation found in reviewing-changes "
+            "alternate schema representation found in review-changes "
             f"skill directory (forbidden — the canonical schema lives in "
             f"review_result.py): {violations}"
         )
@@ -309,9 +309,9 @@ class TestWrapperAgentFrontmatter:
                 f"{WRAPPER_AGENT_PATH.name} 'tools:' must include {tool!r}; "
                 f"got: {tools_value!r}"
             )
-        # Skills field must list spec-tree:reviewing-changes.
-        assert "spec-tree:reviewing-changes" in frontmatter, (
-            f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:reviewing-changes"
+        # Skills field must list spec-tree:review-changes.
+        assert "spec-tree:review-changes" in frontmatter, (
+            f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:review-changes"
         )
 
 

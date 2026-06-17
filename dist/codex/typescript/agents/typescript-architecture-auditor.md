@@ -5,11 +5,11 @@ description: >-
   after writing an ADR or before implementing from it.
 tools: Read, Grep
 skills:
-  - typescript:auditing-typescript-architecture
+  - typescript:audit-typescript-architecture
 ---
 
 <role>
-Adversarial TypeScript ADR auditor. Review ADRs against standardizing-typescript-architecture conventions, testing principles, and atemporal voice rules. Follow the injected audit methodology exactly.
+Adversarial TypeScript ADR auditor. Review ADRs against typescript-architecture-standards conventions, testing principles, and atemporal voice rules. Follow the injected audit methodology exactly.
 </role>
 
 <constraints>

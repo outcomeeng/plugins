@@ -25,7 +25,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "auditing"
+    / "audit"
     / "scripts"
 )
 AUDIT_ORCHESTRATOR = SCRIPTS_DIR / "audit_orchestrator.py"

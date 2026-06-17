@@ -1,10 +1,10 @@
 # Marketplace Merge Rules
 
-Loaded by `/standardizing-merging` `<repo_local_overlay>` when working in this repository, and by `/merge` for transport selection. Marketplace-specific overrides to the base merge flow.
+Loaded by `/merging-standards` `<repo_local_overlay>` when working in this repository, and by `/merge` for transport selection. Marketplace-specific overrides to the base merge flow.
 
 ## Transport selection
 
-This repository uses the **GitHub-PR transport** by default — feature work, spec/decision/implementation/test/doc changes, and anything that needs review all ship as a pull request through `/github-pr`.
+This repository uses the **GitHub-PR transport** by default — feature work, spec/decision/implementation/test/doc changes, and anything that needs review all ship as a pull request through `/manage-github-pr`.
 
 A **coordination-note-only changeset** — every changed path is a `PLAN.md` or `ISSUES.md` — routes to the **direct-push transport** automatically, per `/merge`'s classification and the marketplace guidance that node-local coordination files may be committed directly so collaborators see the coordination state immediately. There is no explicit `transport:` override; the changeset heuristic governs.
 
@@ -20,7 +20,7 @@ Merge the moment `MERGE_READINESS` holds and **NEVER ask the operator whether to
 
 This repository declares **no** pre-mutation confirmation: drive a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow → Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
 
-Establishing *what* to ship when nothing is determined (the `/github-pr` Empty-mode `/interviewing` pass) is requirements work, not a pre-mutation confirmation, and proceeds regardless. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I proceed?".
+Establishing *what* to ship when nothing is determined (the `/manage-github-pr` Empty-mode `/interview` pass) is requirements work, not a pre-mutation confirmation, and proceeds regardless. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I proceed?".
 
 ## Merge command
 
@@ -36,11 +36,11 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 ## Deterministic verification
 
-The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/standardizing-merging` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push and before any `--force-with-lease` push that follows a base-sync rebase.
+The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/merging-standards` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push and before any `--force-with-lease` push that follows a base-sync rebase.
 
 ## Mention-reviewer trigger phrase
 
-`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate), per `/standardizing-merging` `<authority_gates>` reviewer-skipped-by-design exception. Any other skip cause (path filter, branch filter, manual skip) emits `WAIT_FOR_REVIEW` and does not post the trigger phrase.
+`@spec-tree` (the value `.github/workflows/spec-tree-review.yml` configures via `trigger_phrase`, with `SPEC_TREE_REVIEW_TRIGGER_PHRASE` as the repository-variable override). The managing flow posts `@spec-tree review` as a PR-level comment when the `spec-tree-review / spec-tree-review` workflow reports `conclusion: skipped` because the PR modifies the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate), per `/merging-standards` `<authority_gates>` reviewer-skipped-by-design exception. Any other skip cause (path filter, branch filter, manual skip) emits `WAIT_FOR_REVIEW` and does not post the trigger phrase.
 
 ## Direct-push transport
 

@@ -7,7 +7,7 @@ runtime-token validation lint (`outcomeeng/validation/runtime_tokens.py`,
 governed by `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`). The lint
 is default-on across `src/plugins/`, exempting only the files named in its
 `RUNTIME_TOKEN_IGNORE` set — the not-yet-converted files that still carry raw
-`AskUserQuestion` and the like (the spec-tree skills and `work/sanitizing-powerpoint`).
+`AskUserQuestion` and the like (the spec-tree skills and `work/sanitize-powerpoint`).
 
 Those exempt files ship raw runtime names into `dist/codex/` untranslated until each is
 converted to `tool(...)` tokens (or per-runtime conditionals) and removed from the ignore-list.

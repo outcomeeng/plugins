@@ -11,7 +11,7 @@
 
 You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol is:
 
-1. Invoke the `spec-tree:reviewing-changes` skill.
+1. Invoke the `spec-tree:review-changes` skill.
 2. Run `compute_diff.py` (no arguments — the script resolves the current thread and `base_ref` from env, an optional `changes.json` override in the thread, or git defaults; it aborts with stderr naming every source when none yields a value).
 3. Apply the swappable judgment-style prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md` to the diff.
 4. Emit a `review-result.json` document conforming to the schema in `review_result.py`.

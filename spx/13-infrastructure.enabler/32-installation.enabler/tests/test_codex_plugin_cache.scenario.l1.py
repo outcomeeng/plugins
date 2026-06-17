@@ -48,7 +48,7 @@ NOT_INSTALLED_CURRENT_VERSION = "0.18.8"
 class StaticHistory:
     """Explicit interaction-protocol stub for the plugin-history provider.
 
-    Maps to Stage 5 exception 2 in ``/testing``: tests cannot drive a real git
+    Maps to Stage 5 exception 2 in ``/test``: tests cannot drive a real git
     walker against a synthetic working tree at l1, so the dependency is injected
     as a typed Protocol with deterministic return values for the working-tree
     plugin set, each plugin's published-in-window versions, and each plugin's
@@ -153,7 +153,7 @@ def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
         / plugin
         / version
         / "skills"
-        / "contextualizing"
+        / "contextualize"
         / "SKILL.md"
     )
 

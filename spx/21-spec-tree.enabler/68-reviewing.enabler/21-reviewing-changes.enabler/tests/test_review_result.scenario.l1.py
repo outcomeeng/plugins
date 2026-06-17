@@ -291,7 +291,7 @@ class TestRuleCitationForm:
         "rule",
         [
             "spx/21-spec-tree.enabler/spec-tree.md:ALWAYS:1",
-            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
+            "plugins/python/skills/python-standards/SKILL.md:atemporal-voice",
             "AGENTS.md:critical-rules",
             "CLAUDE.md:imperfection-protocol",
             "SKILL.md:render-templates-as-data",

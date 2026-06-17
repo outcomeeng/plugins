@@ -1,4 +1,4 @@
-"""Test scaffolding for sanitizing-powerpoint: builds synthetic OPC PPTX archives and loads the marketplace scripts as importable modules."""
+"""Test scaffolding for sanitize-powerpoint: builds synthetic OPC PPTX archives and loads the marketplace scripts as importable modules."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ SCRIPTS_DIR: Path = (
     / "plugins"
     / "work"
     / "skills"
-    / "sanitizing-powerpoint"
+    / "sanitize-powerpoint"
     / "scripts"
 )
 PPTX_AUDIT: Path = SCRIPTS_DIR / "pptx_audit.py"

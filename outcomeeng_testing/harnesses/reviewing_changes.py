@@ -1,11 +1,11 @@
-"""Harness for reviewing-changes scenario, property, and compliance tests.
+"""Harness for review-changes scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
 ``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/reviewing-changes/scripts``.
+  ``src/plugins/spec-tree/skills/review-changes/scripts``.
 - ``REFERENCES_DIR`` and ``REVIEW_PROMPT_PATH``. Tests that assert the
   swappable prompt is a standalone reference file consume the path from
   one source.
@@ -44,7 +44,7 @@ from typing import Any
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "reviewing-changes"
+SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 SCRIPTS_DIR = SKILL_DIR / "scripts"
 REFERENCES_DIR = SKILL_DIR / "references"
@@ -72,7 +72,7 @@ FIXTURE_RULE_CITATION = (
 def load_review_result_module() -> ModuleType:
     """Load the ``review_result`` policy module via importlib.
 
-    The reviewing-changes scripts ship under ``src/plugins/`` (the authored
+    The review-changes scripts ship under ``src/plugins/`` (the authored
     plugin source directory) and are not importable as a package.
     Tests that introspect ``SCHEMA_VERSION``, the ``Severity`` /
     ``Concern`` enums, the frozen ``Finding`` /

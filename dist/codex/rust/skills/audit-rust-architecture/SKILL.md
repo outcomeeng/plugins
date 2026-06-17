@@ -1,0 +1,104 @@
+---
+name: audit-rust-architecture
+description: >-
+  ALWAYS invoke this skill when auditing ADRs for Rust.
+  NEVER audit a Rust ADR without this skill.
+---
+
+Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<objective>
+Review ADRs against `/rust-standards`, `/rust-architecture-standards`, `/test` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
+
+**Standards are pre-loaded above.**
+</objective>
+
+<context_loading>
+For spec-tree work items, load full ADR/PDR hierarchy first with `spec-tree:contextualize`, then review the target ADR against that hierarchy.
+
+After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</context_loading>
+
+<process>
+
+1. Read repo-local Rust overlays when present (`spx/local/rust.md`, `spx/local/rust-architecture.md`, `spx/local/rust-tests.md`)
+2. Verify an ADR exists for any real architectural choice
+3. Read the ADR completely
+4. Check section structure against the authoritative ADR template
+5. Check every section for temporal language
+6. Check `## Verification` (`### Audit`) for real testability constraints and absence of level tables
+7. Check for mocking language or invalid DI claims
+8. Check consistency with ancestor ADRs/PDRs when applicable
+9. Output APPROVED or REJECTED with a concern table
+
+</process>
+
+<principles_to_enforce>
+
+1. Section structure
+2. Testability in Verification
+3. Atemporal voice
+4. Mocking prohibition
+5. Level accuracy when testing levels are mentioned
+6. Anti-patterns
+7. Ancestor consistency for spec-tree work
+
+</principles_to_enforce>
+
+<failure_modes>
+
+- Vague Compliance rules that cannot falsify non-conforming code
+- False positives on DI parameters that belong to a real seam
+- "Dependency injection" paired with generated mocks
+- Temporal rationale that narrates decision history
+- Phantom sections removed without moving testability constraints into `## Verification`
+
+</failure_modes>
+
+<output_format>
+
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+
+The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
+
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-rust-architecture",
+  "target": "<adr-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "testability-in-verification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "ancestor-consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
+```
+
+Each finding's `rule` carries the violation pattern (e.g., `phantom-section`, `temporal-voice`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach Rust sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+
+</output_format>
+
+<example_reference>
+
+Read `references/example-audit.md` for a complete rejected architecture review in Rust terms.
+
+</example_reference>
+
+<success_criteria>
+
+- `/rust-standards` was read before `/rust-architecture-standards`
+- repo-local Rust test overlays were applied to level accuracy checks
+- every ADR section was checked for temporal language
+- `## Verification` (`### Audit`) contains real DI and no-mocking constraints
+- phantom sections were rejected
+- the verdict is structured and binary
+
+</success_criteria>

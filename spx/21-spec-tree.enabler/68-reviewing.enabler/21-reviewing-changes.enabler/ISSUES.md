@@ -19,14 +19,14 @@ Split out of the parity-contract change (PR `feat/local-review-parity`) because 
 
 ## 2. Local review may resolve its base from a stale local ref, not `origin/<base>`
 
-During the `fix/sessions-test-hermeticity` work, the `changes-reviewer` agent (driving the `reviewing-changes` skill) twice surfaced findings about code **already merged to `main`** — verification-taxonomy (#103) and merging-review (#104) changes that were not part of the changeset under review. The reviewer was invoked with base `origin/main`, yet its diff included those merged commits.
+During the `fix/sessions-test-hermeticity` work, the `changes-reviewer` agent (driving the `review-changes` skill) twice surfaced findings about code **already merged to `main`** — verification-taxonomy (#103) and merging-review (#104) changes that were not part of the changeset under review. The reviewer was invoked with base `origin/main`, yet its diff included those merged commits.
 
 The symptom correlated with the local `main` ref being stale: `main` pointed at `e880a61` while `origin/main` had advanced past #103/#104. Force-updating `git branch -f main origin/main` before each review made the false findings disappear. This points at a candidate defect: the diff base appears to resolve from the local `main` branch ref (or a merge-base computed against it) rather than from `origin/<base>` or the explicitly-passed base ref. In a multi-worktree checkout — where `main` is intentionally kept unattached and can lag `origin/main` — that reviews a superset diff and yields false findings against already-merged work.
 
 Required handling (investigate before fixing):
 
-- Invoke `/understanding` then `/contextualizing spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`.
-- Inspect how `reviewing-changes` computes its diff base (the `git diff <base>...<head>` resolution and any merge-base step).
+- Invoke `/understand` then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`.
+- Inspect how `review-changes` computes its diff base (the `git diff <base>...<head>` resolution and any merge-base step).
 - Confirm whether it dereferences a local branch ref (e.g., `main`) or uses `origin/<base>` (fetched) and the explicit base the caller passes.
 - If it keys off a local ref, resolve the base against `origin/<base>` (fetch first) or honor the caller-passed base verbatim, so a stale local ref cannot widen the reviewed diff. Add evidence that a stale local `main` does not change the reviewed diff.
 
@@ -36,7 +36,7 @@ Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
 
 ## 3. Local census markers diverge from the GH CI clean-review message (FOLLOW-UP)
 
-The local `reviewing-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
+The local `review-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
 
 This does not block its originating PR: the divergence is in the GH workflow (another repository), outside this repo's blast-radius, and no `MERGE_READINESS` predicate reads the local render — the gate reads the CI review surface.
 
@@ -59,8 +59,8 @@ prompt / global instructions (or is an outright hallucination), and the
 reviewer attributed it to the repository's `CLAUDE.md`.
 
 The current guard does not catch this. `references/review-prompt.md` defines
-the `standards` concern as "adherence to `CLAUDE.md` and the rules declared in
-standardizing-\* skills" (Category section), and the `## Rule citation` section
+the `standards` concern as "adherence to `CLAUDE.md` and standards skill rules"
+(Category section), and the `## Rule citation` section
 already forbids "Inventing a citation that does not name a real rule in the
 loaded context." But an agent that *recalls* a comment-length rule from its own
 system prompt believes the rule is real and present in `CLAUDE.md` — from its
@@ -72,11 +72,11 @@ review.
 Required handling (fix in the canonical prompt, then propagate to the built
 plugins and any restating workflow):
 
-- Edit `src/plugins/spec-tree/skills/reviewing-changes/references/review-prompt.md`
+- Edit `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md`
   `## Rule citation` section to add a strongly worded rule: a finding may cite a
   rule ONLY when the reviewer has located and read that exact text in a file
   that exists in the repository under review (`CLAUDE.md`, `AGENTS.md`, a loaded
-  standardizing-\* skill, or a governance doc on disk). The reviewer MUST NOT
+  standards skill, or a governance doc on disk). The reviewer MUST NOT
   cite any rule it recalls from its own system prompt, the user/global
   `CLAUDE.md`, prior sessions, or training, and MUST discard rather than report
   such a rule.
@@ -228,8 +228,8 @@ Surfaced from the operator review of `changes-reviewer` behavior on
 
 ## 7. Thread-store slug resolves a stale branch name in a reused worktree
 
-`reviewing-changes` persists `review-result.json` / `review.md` under a
-thread-store slug derived from the branch identity by the `changeset-scope` skill
+`review-changes` persists `review-result.json` / `review.md` under a
+thread-store slug derived from the branch identity by the `scope-changeset` skill
 (`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler`,
 governed by its `13-changeset-derivation.adr.md`). On `outcomeeng/plugins` PR #149
 (2026-06-09) the local `changes-reviewer` ran on branch
@@ -240,7 +240,7 @@ reference-portability work (PR #148). The reviewed diff (`origin/main...HEAD`) w
 correct, so the verdict was valid; only the slug/branch-identity was stale.
 
 This is the same class of defect as item 2 (stale local-ref resolution): the
-`changeset-scope` machinery resolved a stale ref rather than the current checkout.
+`scope-changeset` machinery resolved a stale ref rather than the current checkout.
 Item 2 affects the diff BASE (widening what is reviewed); this affects the
 SLUG/identity (which thread the artifacts land in). In a bare-repo worktree pool
 (`spx/21-spec-tree.enabler/11-repository-layout.pdr.md`) where a worktree is reused
@@ -253,7 +253,7 @@ consumer reading the thread store for branch B finds the wrong branch's record (
 none), and any cross-branch artifact lookup by slug is unreliable in the
 multi-worktree layout.
 
-**Required handling (investigate in `changeset-scope`, the governing node):**
+**Required handling (investigate in `scope-changeset`, the governing node):**
 
 - Confirm how the branch slug is derived — current checked-out branch vs a stale or
   cached ref — and key it off `git branch --show-current` (or the
@@ -261,7 +261,7 @@ multi-worktree layout.
   not leak the old slug.
 - Add evidence that a worktree reused across two branches persists each review
   under its own current-branch slug.
-- Reconcile with item 2 — both are `changeset-scope` stale-ref resolution; a single
+- Reconcile with item 2 — both are `scope-changeset` stale-ref resolution; a single
   fix to "resolve identity from the current checkout, never a stale ref" may cover
   both the base-ref and the slug symptoms.
 

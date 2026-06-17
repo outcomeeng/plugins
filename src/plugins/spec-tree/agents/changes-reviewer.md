@@ -5,12 +5,12 @@ description: >-
 tools: Bash, Read, Skill
 model: sonnet
 skills:
-  - spec-tree:reviewing-changes
+  - spec-tree:review-changes
 ---
 
 <role>
 
-Resolve the input scope into a `(from_ref, to_ref)` pair, export the refs as env vars when the input is non-empty, then invoke `spec-tree:reviewing-changes`. The skill owns the rest of the chain.
+Resolve the input scope into a `(from_ref, to_ref)` pair, export the refs as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.
 
 </role>
 
@@ -35,7 +35,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 2. **Export the refs for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>` and `SPX_VERIFY_HEAD_REF=<to_ref>`. For empty input, export nothing — the skill auto-resolves both refs.
 
-3. **Invoke `spec-tree:reviewing-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, and persists `review-result.json` and `review.md` to the current thread.
+3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, and persists `review-result.json` and `review.md` to the current thread.
 
 </workflow>
 

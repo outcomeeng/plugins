@@ -5,7 +5,7 @@ plus tmp files), owning argument and environment setup so tests assert on the
 hook's two real outputs — the harness env file and stdout — without a test
 double. It does not replace the hook's behavior.
 
-Exception case per `plugins/spec-tree/skills/testing/references/methodology.md`:
+Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 none.
 """
 

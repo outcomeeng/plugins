@@ -143,7 +143,7 @@ class TestCrudCliSlugIsOptional:
     to ``thread_store.current_slug()`` when ``--slug`` is omitted.
     Guards against an accidental regression where ``--slug`` is made
     ``required=True`` again. Mirrors the analogous
-    ``TestComputeDiffSlugIsOptional`` check in the reviewing-changes
+    ``TestComputeDiffSlugIsOptional`` check in the review-changes
     verification skill's compliance test.
     """
 
