@@ -18,12 +18,13 @@ CAN take a change from intent to merge through the governed commit, PR, review, 
 
 - The `/github-pr` skill conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/github-pr/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_github_pr.conformance.l1.py))
 - `/opening-pr` conforms to internal-protocol packaging — `user-invocable: false`, hidden from direct invocation and loaded only by `/github-pr`; it runs once per opening and is never an automation re-entry target, and no direct `/open-pr` command wrapper exists ([test](tests/test_github_pr.conformance.l1.py))
-- `/managing-pr` is loaded by `/github-pr` yet stays user-invocable rather than `user-invocable: false` — as the per-heartbeat loop body it is a heartbeat re-entry target, and an automation re-entry target must be user-invocable because a scheduled wakeup fires as a user-style prompt, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_github_pr.conformance.l1.py))
+- `/managing-pr` is loaded by `/github-pr` yet stays user-invocable rather than `user-invocable: false` — it is the direct open-PR management entry point for an existing PR number, PR URL, or branch that already has an open PR, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_github_pr.conformance.l1.py))
 
 ### Compliance
 
 - ALWAYS: the GitHub-PR transport's `/github-pr` orchestration is selected by `/merge`, not by itself — `/github-pr` assumes this transport and reads `spx/local/merging.md` only for the transport's configuration, never to decide whether a PR is the transport ([audit])
 - ALWAYS: drive the lifecycle from a determined changeset without an up-front operator proposal by default; only when the merge overlay opts into a pre-mutation confirmation, present the changeset and intended lifecycle through the runtime's structured-question tool and obtain confirmation before the first mutating action — branch creation, commit, push, PR open, or merge — per `spx/15-merging.pdr.md` ([review])
+- ALWAYS: GitHub-PR transport skills present `gh` payload input by supported harness environment and present GitHub PR check waiting as exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30`, per `spx/15-agent-tools.pdr.md` ([audit])
 - ALWAYS: drive the lifecycle by invoking the governing skills — `/applying` or the language coding skills for implementation, `/committing-changes`, `/opening-pr`, and `/managing-pr` — never reimplementing their protocols ([review])
 - NEVER: merge directly — the merge executes only through `/managing-pr`'s `MERGE_READINESS` ∧ `PRODUCTION_READINESS` authority, per `spx/15-merging.pdr.md` ([review])
 

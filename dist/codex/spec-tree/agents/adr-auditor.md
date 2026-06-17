@@ -1,8 +1,7 @@
 ---
 name: adr-auditor
 description: >-
-  Audit ADR evidence quality. Use after writing an ADR or before
-  implementing from it.
+  ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
 tools: Read, Glob, Grep
 model: sonnet
 skills:

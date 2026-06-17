@@ -1,4 +1,4 @@
-title = "check-watch-fallback"
+title = "pr-check-wait"
 cases = "cases.jsonl"
 prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
@@ -20,9 +20,9 @@ owned_paths = [
   "dist/codex/spec-tree/skills/tracking-tasks/**",
 ]
 smoke_cases = [
-  "no-timer-pending-checks-uses-foreground-watch",
-  "no-timer-review-absent-with-check-running-uses-foreground-watch",
-  "no-timer-wait-token-misses-watch",
+  "pending-checks-use-foreground-wait",
+  "review-absent-with-check-running-uses-foreground-wait",
+  "wait-token-misses-foreground-wait",
 ]
 threshold = 0.85
 trials = 1

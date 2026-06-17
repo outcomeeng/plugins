@@ -1,8 +1,7 @@
 ---
 name: test-evidence-auditor
 description: >-
-  Audit test evidence quality against spec assertions. Use after writing
-  tests for a spec node or before closing an outcome.
+  ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
 tools: Read, Bash, Glob, Grep
 model: sonnet
 skills:

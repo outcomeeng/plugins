@@ -10,3 +10,4 @@ CAN inspect and manipulate the tree through purpose-built surfaces rather than r
 
 - ALWAYS: source spec-tree structure and derived state from the SPX CLI's JSON projection — an interface surface never re-parses directory suffixes, assembles hierarchy, or derives node state itself ([audit])
 - ALWAYS: present the node states and the node and decision categories the spec-tree methodology defines, so every surface reads the tree consistently ([audit])
+- ALWAYS: interface surfaces that instruct Claude to call external tools present payload, wait, and mutation command forms by supported harness environment, per `spx/15-agent-tools.pdr.md` ([audit])
