@@ -52,8 +52,8 @@ The right home is `/agent-prompt-standards`. It already covers cross-artifact pr
 
 ### Into new `/standardizing-commands`
 
-| Section                                                                                                                         | Source                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Section                                                                                                                         | Source                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | Command frontmatter spec (`description`, `argument-hint`, `model`, `allowed-tools`)                                             | Extract from `create-commands/SKILL.md` + references           |
 | Command XML body tags (required: `<objective>`, `<process>`, `<success_criteria>`; conditional: `<context>`, `<examples>`, ...) | Extract from `create-commands/SKILL.md`                        |
 | Argument handling (`$ARGUMENTS`, `argument-hint` semantics)                                                                     | Extract from `create-commands/references/arguments.md`         |

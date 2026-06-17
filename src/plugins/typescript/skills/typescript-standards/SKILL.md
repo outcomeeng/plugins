@@ -497,4 +497,4 @@ import { tokenize } from "./tokens";
 | `console.log` in production      | `console.log('debug')`                      | no-console                                    |
 | Dead/commented code              | `// function old() { ... }`                 | manual review                                 |
 | Deep relative imports            | `from '../../../lib'`                       | manual review                                 |
-</rejection_criteria_summary>
+| </rejection_criteria_summary>    |                                             |                                               |

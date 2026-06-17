@@ -182,8 +182,8 @@ Per-language code, architecture, and test audits render for the product's enable
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill                               | Agent                             |
-| --------------------------- | ----------------------------------- | --------------------------------- |
+| User Says...                | Skill                            | Agent                             |
+| --------------------------- | -------------------------------- | --------------------------------- |
 | "Audit this code"           | `/audit-typescript`              | `typescript-code-auditor`         |
 | "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `typescript-architecture-auditor` |
 | "Audit these tests"         | `/audit-typescript-tests`        | `typescript-test-auditor`         |

@@ -33,13 +33,13 @@ What would you like to do?
 
 <routing>
 
-| Response                                 | Workflow                                                                                                                      |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 1, "create", "new", "build"              | `${CLAUDE_SKILL_DIR}/workflows/create-new-skill.md`                                                                           |
-| 2, "audit", "improve", "review", "check" | `${CLAUDE_SKILL_DIR}/workflows/audit-skill.md`                                                                                |
-| 3, "add workflow"                        | `${CLAUDE_SKILL_DIR}/workflows/add-workflow.md`                                                                               |
-| 3, "add reference"                       | `${CLAUDE_SKILL_DIR}/workflows/add-reference.md`                                                                              |
-| 3, "upgrade to router"                   | `${CLAUDE_SKILL_DIR}/workflows/upgrade-to-router.md`                                                                          |
+| Response                                 | Workflow                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| 1, "create", "new", "build"              | `${CLAUDE_SKILL_DIR}/workflows/create-new-skill.md`                                                                      |
+| 2, "audit", "improve", "review", "check" | `${CLAUDE_SKILL_DIR}/workflows/audit-skill.md`                                                                           |
+| 3, "add workflow"                        | `${CLAUDE_SKILL_DIR}/workflows/add-workflow.md`                                                                          |
+| 3, "add reference"                       | `${CLAUDE_SKILL_DIR}/workflows/add-reference.md`                                                                         |
+| 3, "upgrade to router"                   | `${CLAUDE_SKILL_DIR}/workflows/upgrade-to-router.md`                                                                     |
 | 4, "patterns", "understand", "help"      | Read `/skill-standards` for structure; then `${CLAUDE_SKILL_DIR}/references/reusability-patterns.md` for domain patterns |
 
 **Intent-based routing** (if user provides clear context):

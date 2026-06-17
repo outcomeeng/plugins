@@ -52,12 +52,12 @@ Steps 1–2 are language-independent. Steps 3–8 use the detected language. Ste
 | ---- | ------------------------ | ------------------------------------------------------------------ | --------------------------------------- |
 | 1    | Load methodology         | `Skill("spec-tree:understanding")`                                 | same                                    |
 | 2    | Load context             | `Skill("spec-tree:contextualizing", args: "{node-path}")`          | same                                    |
-| 3    | Architect                | `Skill("architect-typescript")`                                 | `Skill("architecting-python")`          |
-| 4    | Architecture audit       | `Skill("audit-typescript-architecture")`                        | `Skill("auditing-python-architecture")` |
-| 5    | Write tests              | `Skill("test-typescript")`                                      | `Skill("testing-python")`               |
-| 6    | Test audit               | `Skill("audit-typescript-tests")`                               | `Skill("auditing-python-tests")`        |
-| 7    | Implement                | `Skill("code-typescript")`                                       | `Skill("coding-python")`                |
-| 8    | Code audit               | `Skill("audit-typescript")`                                     | `Skill("auditing-python")`              |
+| 3    | Architect                | `Skill("architect-typescript")`                                    | `Skill("architecting-python")`          |
+| 4    | Architecture audit       | `Skill("audit-typescript-architecture")`                           | `Skill("auditing-python-architecture")` |
+| 5    | Write tests              | `Skill("test-typescript")`                                         | `Skill("testing-python")`               |
+| 6    | Test audit               | `Skill("audit-typescript-tests")`                                  | `Skill("auditing-python-tests")`        |
+| 7    | Implement                | `Skill("code-typescript")`                                         | `Skill("coding-python")`                |
+| 8    | Code audit               | `Skill("audit-typescript")`                                        | `Skill("auditing-python")`              |
 | 9    | Whole-changeset review † | `changes-reviewer` agent or `Skill("spec-tree:reviewing-changes")` | same                                    |
 
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).

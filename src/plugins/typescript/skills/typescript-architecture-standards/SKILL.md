@@ -184,6 +184,6 @@ The architect needs to understand testing levels to write effective Verification
 | `## Status` field             | Not in the authoritative ADR template          | Git history / commit metadata      |
 | File names to delete          | Temporal; becomes stale immediately            | Code review against ADR invariants |
 | Migration plans               | Temporal; narrates a transition                | Code review / work items           |
-| Implementation code           | ADRs constrain implementation, not provide it  | `/code-typescript`               |
+| Implementation code           | ADRs constrain implementation, not provide it  | `/code-typescript`                 |
 
 </anti_patterns>
