@@ -1,7 +1,8 @@
 ---
 name: reviewing-pr
-description: Use when asked by the user to invoke the PR review skill
-allowed-tools: Read, Bash, Glob, Grep, Skill
+description: >-
+  ALWAYS invoke this skill when reviewing a pull request or when the user asks to invoke the PR review skill.
+allowed-tools: Read, Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Glob, Grep, Skill
 ---
 
 <objective>
@@ -27,7 +28,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 <process>
 
 1. **Load shared standards.** Invoke `/standardizing-merging` via the Skill tool to load the two-severity / six-category taxonomy and comment format used to label every finding.
-2. **Read the change.** `gh pr view <number>` for the title, description, and linked issues; `gh pr diff <number>` for the diff. Read the repository's `CLAUDE.md` / `AGENTS.md` and any `REVIEW.md` override at the repository root so the review is grounded in the project's own style and conventions, not generic preferences.
+2. **Read the change.** `gh pr view <number>` for the title, description, and linked issues; `gh pr diff <number>` for the diff. Read the repository's `CLAUDE.md` / `AGENTS.md`, `REVIEW.template.md` when present, and any `REVIEW.md` repo-local override at the repository root so the review is grounded in the project's own style and conventions, not generic preferences.
 3. **Review across the six categories from `/standardizing-merging` `<review_classification>`:**
    - **`consistency`** — disagreement across layers (decisions / PDR / ADR ↔ spec ↔ tests ↔ implementation). Surface the disagreement; do not judge which side is right.
    - **`security`** — confidentiality, integrity, availability. Injection surfaces, leaked secrets, missing authorization checks.
@@ -38,7 +39,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 4. **Label every finding with one severity × one category from `/standardizing-merging` `<review_classification>`.** Severity is `BLOCKING` or `DEBT` — never `FOLLOW-UP`, never `P0` / `P1` / `critical` / `high` / `medium` / `low` / `minor` / `nit`, never the legacy classes `NEEDS-ANSWER` or `NOTE`. The bracketed dimension after the severity names the category. Cite `file:line` and explain *why* something is a concern, not just *that* it is. Reframe open questions as findings rather than asking; never emit bare commentary or praise that does not constitute a finding.
 5. **If the review has no `BLOCKING` or `DEBT` items, say so directly.** Do not manufacture lower-priority findings to prove that review happened.
 6. **Deliver the review.** Two invocation modes:
-   - **Standalone** (a developer asking for a review, or a workflow invoking only this skill): post the feedback with `gh pr comment <number> --body-file - <<'EOF' ... EOF` (via the `Bash` tool), piping the body on stdin so kilobyte-sized reviews are not truncated by shell-argument limits. One comment per run.
+   - **Standalone** (a developer asking for a review, or a workflow invoking only this skill): post one comment through `gh pr comment <number> --body-file -`, piping the body on stdin so kilobyte-sized reviews are not truncated by shell-argument limits. Choose the stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc; programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `gh pr comment <number> --body-file -`. In the `printf` form, literal apostrophes inside a line use `'"'"'`; do not use temporary files, helper files, command substitution, or post-hoc text substitution.
    - **Composed** (the `pr-reviewer` agent invokes this skill alongside `/auditing` and posts one combined comment): return the review prose as the skill's output. Do not post separately — the caller posts the single combined comment.
 
    **Mode selection is explicit.** The caller passes a `MODE:` line in the invocation prompt — `MODE: composed` for composed mode, `MODE: standalone` for standalone mode. The skill keys on that line; a free-text description of the desired behaviour may accompany it for human readability but is not what the skill matches on. Exactly one `MODE:` line must appear: if the invocation prompt contains no recognisable `MODE: composed` or `MODE: standalone` line, OR contains both `MODE: composed` AND `MODE: standalone` (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces a spurious extra PR comment when a caller's wording drifts, and the failure surfaces months later as duplicate comments; loud failure surfaces the drift on the next CI run.
@@ -64,7 +65,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 - Feedback covers the six categories (`consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`), with `file:line` citations and rationale.
 - Every finding is labeled with one severity × one category per `/standardizing-merging` `<review_classification>` — `BLOCKING` / `DEBT`, never `FOLLOW-UP`, never a severity rank, never a legacy class label.
 - A review with no `BLOCKING` or `DEBT` items says so directly rather than padding with lower-priority findings.
-- **Standalone mode**: the feedback was posted as one `gh pr comment --body-file -` on the target PR.
+- **Standalone mode**: the feedback was posted as one `gh pr comment --body-file -` on the target PR using the harness-appropriate stdin form.
 - **Composed mode**: the review prose was returned to the caller; no `gh pr comment` was issued by this skill.
 - No code, tests, or commits were produced; no structured audit verdict was emitted.
 

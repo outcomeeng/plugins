@@ -121,15 +121,15 @@ sync. Do not bump merely because another review commit was added.
 ❌ **WRONG** — version bump is separated from the first plugin change:
 
 ```bash
-git commit -m "refactor(skills): simplify descriptions"
-git commit -m "chore: bump versions"
+printf '%s\n' 'refactor(skills): simplify descriptions' | git commit -F -
+printf '%s\n' 'chore: bump versions' | git commit -F -
 ```
 
 ❌ **WRONG** — review feedback increments the already-selected PR version:
 
 ```bash
-git commit -m "docs(plugin): refine skill guidance"      # bumps 0.4.2 → 0.4.3
-git commit -m "docs(plugin): address review feedback"    # bumps 0.4.3 → 0.4.4
+printf '%s\n' 'docs(plugin): refine skill guidance' | git commit -F -      # bumps 0.4.2 → 0.4.3
+printf '%s\n' 'docs(plugin): address review feedback' | git commit -F -    # bumps 0.4.3 → 0.4.4
 ```
 
 ✅ **CORRECT** — first commit bumps once; review commits keep that version:
@@ -139,11 +139,11 @@ git commit -m "docs(plugin): address review feedback"    # bumps 0.4.3 → 0.4.4
 # 2. Update every manifest for the changed plugin
 # 3. Stage the plugin changes and manifest updates together
 git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/
-git commit -m "docs({plugin-name}): refine skill guidance"
+printf '%s\n' 'docs({plugin-name}): refine skill guidance' | git commit -F -
 
 # Later review feedback edits do not bump again.
 git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/
-git commit -m "docs({plugin-name}): address review feedback"
+printf '%s\n' 'docs({plugin-name}): address review feedback' | git commit -F -
 ```
 
 ## Version Bump Examples
@@ -184,7 +184,7 @@ git commit -m "docs({plugin-name}): address review feedback"
 
    ```bash
    git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/ src/plugins/{plugin-name}/.claude-plugin/plugin.json
-   git commit -m "type(scope): your changes including version bump"
+   printf '%s\n' 'type(scope): changes including version bump' | git commit -F -
    ```
 
    If `.codex-plugin/plugin.json` exists for that plugin, include it in the same

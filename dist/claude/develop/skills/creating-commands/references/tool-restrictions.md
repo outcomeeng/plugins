@@ -182,18 +182,18 @@ description: Create a git commit
 - Current branch: ! `git branch --show-current`
 - Recent commits: ! `git log --oneline -10`
 
-## Your task
+## Task
 
 Based on the above changes, create a single git commit.
 ```
 
 **Allowed bash commands**:
 
-- `git add .`
 - `git add file.js`
+- `git add src/file.js tests/file.test.js`
 - `git status`
 - `git status --short`
-- `git commit -m "message"`
+- `git commit -F -` with the message supplied on stdin
 - `git commit --amend`
 
 **Blocked commands**:

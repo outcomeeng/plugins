@@ -2,12 +2,12 @@
 name: opening-pr
 user-invocable: false
 description: >-
-  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first heartbeat or no-timer PR-check handoff. Loaded by /github-pr.
+  PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first management pass. Loaded by /github-pr.
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → schedule first heartbeat when the runtime supplies one, or enter /managing-pr's no-timer foreground PR-check path → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
+The opening protocol. Loaded by /github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → first management pass → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /managing-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
@@ -22,7 +22,7 @@ Production-relevance recognition and the merge command live in `spx/local/mergin
 
 Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
 
-**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary), /committing-changes (commit type/scope classification for the title), and /tracking-tasks (runtime tracking rules) via the Skill tool.
+**Step 0 — Load references.** Invoke /standardizing-merging (shared vocabulary) and /committing-changes (commit type/scope classification for the title) via the Skill tool.
 
 **Step 1 — Pre-flight.** Run /standardizing-merging `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition.
 
@@ -49,7 +49,9 @@ git push -u origin HEAD:refs/heads/"${branch}"
 
 If the product defines a custom branch-push command, follow CLAUDE.md / AGENTS.md instead — the explicit destination ref must remain part of any custom command.
 
-**Step 5 — Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `REVIEW_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed:
+**Step 5 — Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `REVIEW_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
+
+Interactive Claude Code and Codex sessions use a quoted heredoc:
 
 ```bash
 GIT_TERMINAL_PROMPT=0 gh pr create \
@@ -74,6 +76,12 @@ GIT_TERMINAL_PROMPT=0 gh pr create \
 EOF
 ```
 
+Programmatic runners that require one physical command line use `printf` with one argument per output line. The command below may wrap visually in a rendered view; keep it as one physical shell line, with `<branch>` resolved before composing the command:
+
+```bash
+printf '%s\n' '## Summary' '' '- <bullet>' '' '## Background' '' '<prose>' '' '## Test plan' '' '- [ ] <step>' '' '## Refs' '' '- <ref>' | GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /committing-changes>" --body-file - --head "<branch>"
+```
+
 Flag rationale:
 
 - No `--draft` — the PR opens ready per /standardizing-merging `<authority_gates>`; `REVIEW_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
@@ -82,11 +90,15 @@ Flag rationale:
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
 
-The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside the body — backticks, `$variables`, and `!` pass through literally. Use the unquoted form (`<<EOF`) only when the body must interpolate shell variables. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes.
+The single-quoted heredoc terminator (`<<'EOF'`) disables shell expansion inside the body — backticks, `$variables`, and `!` pass through literally. Use the unquoted form (`<<EOF`) only when the body must interpolate shell variables. In programmatic runner form, single-quoted `printf` arguments preserve those characters literally; a literal apostrophe inside one line uses `'"'"'`. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use temporary files, helper files, command substitution, or post-hoc text substitution to assemble or repair the body.
 
 Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
 
-**Step 6 — Schedule the first heartbeat or enter the no-timer path.** Per /standardizing-merging `<heartbeat>` and /tracking-tasks, schedule the first review/check re-inspection through the runtime timer when the runtime supplies one. Verify by capturing the URL or thread ID returned by the runtime tool. When no runtime heartbeat or timer exists, do not ask the operator to re-check the PR; continue into /managing-pr and use its foreground PR-check watcher path if the PR is blocked by check completion.
+**Step 6 — Start the first management pass.** Resolve the PR number, then invoke /managing-pr on that PR. If checks or the CI review are still pending, /managing-pr uses the exact foreground wait command from /standardizing-merging `<pr_check_wait>`:
+
+```bash
+gh pr checks <pr-number> --watch --fail-fast --interval 30
+```
 
 **Exit.** Surface the PR URL. The managing flow takes over.
 
@@ -162,14 +174,14 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 The opening flow has succeeded when:
 
-- /standardizing-merging, /committing-changes, and /tracking-tasks are loaded before the flow begins.
+- /standardizing-merging and /committing-changes are loaded before the flow begins.
 - /standardizing-merging `<branch_hygiene>` and `<branch_topology>` gates pass before push.
 - `REVIEW_READINESS` held before the PR opened: deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /standardizing-merging `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /committing-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).
 - The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `REVIEW_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
-- First heartbeat is scheduled per /standardizing-merging `<heartbeat>` and /tracking-tasks when the runtime supplies one; when no runtime heartbeat or timer exists, the flow enters /managing-pr's foreground PR-check watcher path for non-terminal check waits.
+- The first management pass starts after the PR opens, and any pending PR checks use /standardizing-merging `<pr_check_wait>`.
 - PR URL is surfaced to the user.
 - No `<self_reference>` violation per /standardizing-merging.
 

@@ -3,7 +3,7 @@ name: committing-changes
 description: >-
   ALWAYS invoke this skill when committing changes or when user says "commit".
   NEVER run git commit without this skill.
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 <objective>
@@ -116,12 +116,12 @@ Changed files:
 
 <verification_protocol>
 
-**Step 0: Run Product-Specific Validation (BEFORE Staging)**
+**Step 0: Confirm Product-Specific Validation (BEFORE Staging)**
 
-Before staging any files, check CLAUDE.md for product-specific validation commands and run them. This prevents having to re-stage after auto-fixes.
+Before staging any files, check CLAUDE.md for product-specific validation commands and confirm the active workflow has current green validation for the changeset. This skill is git-only: if validation is missing, stop and return the required command to the caller instead of committing.
 
 ```bash
-# Check CLAUDE.md for commands like:
+# CLAUDE.md may require commands like:
 just check        # Justfile task runner
 just validate
 pnpm run check    # pnpm scripts
@@ -134,9 +134,6 @@ make lint
 **Step 1: Selective Staging**
 
 ```bash
-# NEVER do this
-git add .
-
 # ALWAYS stage specific files
 git add path/to/file1.ts path/to/file2.ts
 ```
@@ -402,8 +399,8 @@ git diff --cached --name-only
 # Stage selectively
 git add path/to/specific/file.ts
 
-# Commit with multi-line message
-git commit -m "$(cat <<'EOF'
+# Commit with multi-line message in an interactive harness
+git commit -F - <<'EOF'
 feat(scope): subject line here
 
 Body explaining why this change was made.
@@ -411,7 +408,9 @@ Wrapped at 72 characters for readability.
 
 Refs: #123
 EOF
-)"
+
+# Commit with multi-line message in a programmatic runner that requires one physical line
+printf '%s\n' 'feat(scope): subject line here' '' 'Body explaining why this change was made.' 'Wrapped at 72 characters for readability.' '' 'Refs: #123' | git commit -F -
 
 # View recent commits for style reference
 git log --oneline -10

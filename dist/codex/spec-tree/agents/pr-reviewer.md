@@ -31,7 +31,7 @@ The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The scope for both skil
 
 4. **Compose the combined body.** Review prose first, then `---` on its own line, then the audit's `markdown+json` rendering verbatim. The `<!-- AUDIT_VERDICT_JSON_BEGIN --> ... <!-- AUDIT_VERDICT_JSON_END -->` delimiters MUST remain intact so downstream tooling can extract the verdict. NEVER wrap the JSON in a markdown fence. NEVER re-render the verdict.
 
-5. **Post one comment.** Pipe the composed body to `gh pr comment <number> --body-file -` via a single-quoted heredoc (`<<'EOF' ... EOF`). The heredoc avoids shell-argument truncation for kilobyte-scale combined bodies.
+5. **Post one comment.** Pipe the composed body to `gh pr comment <number> --body-file -` on stdin. Choose the stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc, and programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `gh pr comment <number> --body-file -`. In the `printf` form, literal apostrophes inside a line use `'"'"'`. Never use temporary files, helper files, command substitution, or post-hoc text substitution to assemble or repair the body.
 
 </workflow>
 

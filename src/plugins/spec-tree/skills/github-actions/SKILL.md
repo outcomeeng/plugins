@@ -2,7 +2,7 @@
 name: github-actions
 description: >-
   ALWAYS invoke this skill when the user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds. NEVER attempt CI workflow investigation through ad hoc gh CLI calls without this skill.
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(python3:*), Read, Grep, AskUserQuestion, ScheduleWakeup, Skill
+allowed-tools: Bash(python3:*gh_access.py*), Bash(git branch:*), Bash(git rev-parse:*), Bash(gh run view:*), Bash(gh run list:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh auth switch:*), Read, Grep, AskUserQuestion
 model: claude-haiku-4-5-20251001
 ---
 
@@ -110,12 +110,19 @@ gh run view "$RUN_ID" --job "$JOB_ID" --log
 
 <step name="check_for_followups">
 
-If the run is still in progress (`status` ∈ {`queued`, `in_progress`, `waiting`, `requested`, `pending`}) and the user wants to know when it finishes, take one of:
+If the run is still in progress (`status` ∈ {`queued`, `in_progress`, `waiting`, `requested`, `pending`}) and the user wants to know when it finishes:
 
-- Check once now with `gh run view "$RUN_ID" --json status,conclusion`, load `/tracking-tasks`, then schedule a runtime re-check for the next turn.
-- Ask the user to ping back when the run completes only when the runtime has no timer capability or the next action needs approval, credentials, or judgment.
+- When the run belongs to a pull request and the PR number is known, run the sanctioned PR-check wait:
 
-Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while !` loop. Either pattern fork-bombs the host across turns; the safety rules below prohibit both.
+  ```bash
+  gh pr checks <pr-number> --watch --fail-fast --interval 30
+  ```
+
+  The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. After it exits, re-run the selection/status step and report the terminal state.
+
+- When only a run ID, commit SHA, or branch is known, report the current run state and say the sanctioned wait form requires a PR number. Do not create a runtime timer.
+
+Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while !` loop. Do NOT create a runtime heartbeat or timer for PR checks. These safety rules prohibit those patterns.
 
 </step>
 
@@ -149,7 +156,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 - A failure triage request runs `gh run view --log-failed` first and surfaces failing job, failing step, and at least one error excerpt before any other log retrieval.
 - Auth-failure handling matches the TTY/non-TTY split: prompt-and-switch on TTY, manual remediation on non-TTY.
 - Conclusion field carries the literal value returned by `gh run view --json conclusion`, never a derivation.
-- In-progress run tracking loads `/tracking-tasks` before scheduling a runtime re-check.
+- In-progress PR-check waiting uses exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30`; run-only in-progress status is reported without a watcher or runtime timer.
 - No `gh run watch` invocation. No polling loops. No credential or workflow mutation outside an explicit user instruction.
 
 </success_criteria>

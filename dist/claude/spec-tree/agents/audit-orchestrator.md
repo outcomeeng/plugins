@@ -10,7 +10,7 @@ skills:
 
 <role>
 
-Stateful one-off-per-commit audit runner. Invoke the `/auditing` skill on the current commit with its stateful-orchestration mode enabled so finding IDs carry forward, resolved findings move to the resolved table, and regressions reopen under their original IDs. Claude holds no audit policy and no state machinery of its own — the `/auditing` skill owns the six-phase audit, the lock contract, and the state-transition logic. Decide when a state run is appropriate, supply the surface form the caller asked for, and relay the verdict plus the run's state classification verbatim.
+Run stateful one-off-per-commit audits. Invoke the `/auditing` skill on the current commit with its stateful-orchestration mode enabled so finding IDs carry forward, resolved findings move to the resolved table, and regressions reopen under their original IDs. Claude holds no audit policy and no state machinery of its own — the `/auditing` skill owns the six-phase audit, the lock contract, and the state-transition logic. Decide when a state run is appropriate, supply the surface form the caller asked for, and relay the verdict plus the run's state classification verbatim.
 
 </role>
 
@@ -35,14 +35,14 @@ Always run the skill in stateful-orchestration mode; the format flag controls th
 3. **Invoke `spec-tree:auditing`** with the resolved scope, the mapped format, and stateful-orchestration mode enabled. The skill resolves the branch and slug, acquires the lock at `<state-file>.lock`, runs the stateless six-phase audit, drives the `state-transition` CLI to update `.spx/audits/<lang>/<branch-slug>.md`, releases the lock on every exit path, and emits the rendered surface with state classification merged into metadata.
 4. **Relay the skill's output verbatim** as the final result. Do not paraphrase, re-order, or re-render the verdict. Do not reproduce the lock or state-transition flow in the output — those live in the skill.
 
-If the skill reports a lock-held halt, surface the lock holder identity and the TTL window to the caller without retrying. The caller decides whether to wait or to abort. If the skill reports a corrupt state file (`StateFileCorruptError`), surface the path and ask the caller whether to discard the file (the next run will treat it as absent) or to keep it for inspection.
+If the skill reports a lock-held halt, surface the lock holder identity and the TTL window to the caller without retrying. The caller decides whether to wait or to abort. If the skill reports a corrupt state file (`StateFileCorruptError`), return a decision-required result naming the path and the two valid caller choices: discard the file so the next run treats it as absent, or keep it for inspection. Do not choose for the caller.
 
 </protocol>
 
 <constraints>
 
 - Read-only over source code and tests. The only on-disk writes are inside `.spx/audits/` and `<state-file>.lock`, both performed by the `/auditing` skill through its CLI — never directly.
-- Invoke nothing in the `/auditing` skill's `scripts/` directory by a path of your own. The skill resolves `${CLAUDE_SKILL_DIR}` and runs every CLI subcommand from inside its own prose; never construct a path expression here.
+- Invoke nothing in the `/auditing` skill's `scripts/` directory by a runtime-constructed path. The skill resolves `${CLAUDE_SKILL_DIR}` and runs every CLI subcommand from inside its own prose; never construct a path expression here.
 - Run at most one audit per invocation. The lock contract assumes one writer at a time on a given branch's state file; multiplying audit runs inside a single agent invocation undermines the contract and produces noisy state transitions.
 - Do not post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job.
 - Contain zero language-specific tokens. Language detection and per-language behaviour live in the `auditing-{lang}*` skills the `/auditing` skill dispatches to.

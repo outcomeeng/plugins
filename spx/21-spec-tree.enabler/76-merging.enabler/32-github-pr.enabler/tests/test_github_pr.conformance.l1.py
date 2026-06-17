@@ -3,8 +3,8 @@
 Asserts the structural Conformance clauses in ``../github-pr.md``: the
 /github-pr orchestration ships as a portable Agent Skill (not a command) and is
 user-invocable; no /open-pr command wrapper exists; opening-pr stays internal
-(user-invocable: false); and managing-pr stays user-invocable because it is a
-heartbeat re-entry target (an automation re-entry fires as a user-style prompt).
+(user-invocable: false); and managing-pr stays user-invocable because it is the
+direct open-PR management entry point.
 
 Per ``spx/13-plugin-and-runtime-conventions.adr.md`` a skill, not a command, is
 the cross-runtime vehicle.
@@ -73,7 +73,7 @@ class TestGithubPrPackaging:
 
 
 class TestProtocolPackagingConstraints:
-    """opening-pr stays internal; managing-pr is user-invocable (heartbeat target); no /open-pr wrapper."""
+    """opening-pr stays internal; managing-pr is user-invocable; no /open-pr wrapper."""
 
     def test_open_pr_command_wrapper_is_absent(self) -> None:
         assert not OPEN_PR_COMMAND_FILE.exists(), (
@@ -88,12 +88,11 @@ class TestProtocolPackagingConstraints:
         )
 
     def test_managing_pr_protocol_is_user_invocable(self) -> None:
-        # managing-pr is the per-heartbeat loop body and a heartbeat re-entry
-        # target; an automation re-entry arrives as a user-style prompt, so the
-        # skill must be user-invocable, not user-invocable: false.
+        # managing-pr is the direct open-PR management entry point, so it stays
+        # user-invocable rather than hidden behind /github-pr only.
         frontmatter = _frontmatter(MANAGING_PR_SKILL_FILE.read_text(encoding="utf-8"))
         assert not re.search(
             r"^user-invocable:\s*false\b", frontmatter, re.MULTILINE
         ), (
-            "managing-pr must be user-invocable (no 'user-invocable: false') — it is a heartbeat re-entry target"
+            "managing-pr must be user-invocable (no 'user-invocable: false') because it is the direct open-PR management entry point"
         )

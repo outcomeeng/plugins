@@ -14,11 +14,11 @@ The sections below split into the per-transport blocks `/merge` and the lifecycl
 
 This repository declares **no** production-relevance recognition mechanism: every change is treated as not production-relevant, so `PRODUCTION_READINESS` holds by default and `MERGE_READINESS` holding is sufficient authority to merge autonomously. The marketplace ships methodology and plugin sources; a merge to `main` publishes the next marketplace version, which the post-merge sync step picks up — no per-PR human merge approval is required.
 
-The agent merges the moment `MERGE_READINESS` holds and **NEVER asks the operator whether to merge, for merge approval, or whether to hold for human review** — there is no merge-approval decision for the operator to make in this repository, so surfacing one (through the runtime's structured-question tool or in prose) violates this overlay. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I merge?".
+Merge the moment `MERGE_READINESS` holds and **NEVER ask the operator whether to merge, for merge approval, or whether to hold for human review** — there is no merge-approval decision for the operator to make in this repository, so surfacing one (through the runtime's structured-question tool or in prose) violates this overlay. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I merge?".
 
 ## Pre-mutation confirmation
 
-This repository declares **no** pre-mutation confirmation: the agent drives a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow → Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
+This repository declares **no** pre-mutation confirmation: drive a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow → Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
 
 Establishing *what* to ship when nothing is determined (the `/github-pr` Empty-mode `/interviewing` pass) is requirements work, not a pre-mutation confirmation, and proceeds regardless. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I proceed?".
 
@@ -56,7 +56,7 @@ A coordination-note-only changeset publishes straight to `main` with no pull req
 git push origin HEAD:refs/heads/main
 ```
 
-The agent never opens a PR and never waits on CI for this transport. Post-merge follows the section below; a coordination-note-only change touches no plugin distribution files, so `just sync-marketplace` exits without refreshing.
+For this transport, never open a PR and never wait on CI. Post-merge follows the section below; a coordination-note-only change touches no plugin distribution files, so `just sync-marketplace` exits without refreshing.
 
 ## Post-merge
 

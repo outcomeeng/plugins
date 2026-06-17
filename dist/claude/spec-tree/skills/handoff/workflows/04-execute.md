@@ -75,11 +75,27 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
+
+   **Choose the stdin form by harness.**
+
+   Interactive Claude Code or Codex sessions use a quoted heredoc. This keeps the canonical body readable and preserves apostrophes, `$`, backticks, and backslashes literally:
+
    ```bash
-   # stdin = JSON header on line 1, then the body verbatim; a leading
-   # '#' or '---' in the body is literal, never parsed as frontmatter.
-   # git_ref names the pushed work branch — the stable anchor /pickup checks out.
-   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '[canonical continuation body — <metadata> through <incorporated_sessions>]' | spx session handoff
+   spx session handoff <<'SPX_SESSION_HANDOFF'
+   {"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
+   <metadata>
+     timestamp: [UTC timestamp]
+     product: [Product name from cwd]
+     git_ref: [work branch]
+     git_status: clean
+   </metadata>
+   SPX_SESSION_HANDOFF
+   ```
+
+   Programmatic runners that require one physical command line use `printf` with one argument per output line, piped to stdin. The command below may wrap visually in a rendered view; keep it as one physical shell line. Literal apostrophes inside a line use the standard single-quote splice `'"'"'`. Do not use temporary files, helper files, command substitution, heredocs, backslash-newline continuations, `sed`, or `perl` to assemble or repair the body:
+
+   ```bash
+   printf '%s\n' '{"priority": "medium", "goal": "...", "next_step": "...", "git_ref": "<work-branch>", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}' '<metadata>' '  timestamp: [UTC timestamp]' '  product: [Product name from cwd]' '  git_ref: [work branch]' '  git_status: clean' '</metadata>' | spx session handoff
    ```
 3. Parse output for `<HANDOFF_ID>` and `<SESSION_FILE>`.
 4. Read `<SESSION_FILE>` to confirm it exists and contains the prefilled `created_at` and `agent_session_id` when available, and the `git_ref` work branch.
@@ -99,7 +115,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 <release_work_branch>
 A handoff RELEASES the work branch, and it is valid only when the work it points at is recoverable from origin. The precondition is: the working tree is clean AND the work branch is published to origin — its `@{upstream}` exists and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. A chat-only or local-only handoff is never valid.
 
-**Why this precondition exists.** A handoff promises a cold agent two things — the work is safe, and the agent can claim it — and running the handoff from the worktree that holds the work, released, enforces both at once:
+**Why this precondition exists.** A handoff promises cold Claude two things — the work is safe, and Claude can claim it — and running the handoff from the worktree that holds the work, released, enforces both at once:
 
 1. **The work is really pushed.** Detaching a pool worktree onto `origin/<default-branch>` is lossless only because the commits live on the branch ref and on origin, so the release forces the push — turning the promise from a claim into a proof. An unpushed branch is invisible to every other checkout and machine; a session document pointing at it dangles.
 2. **The branch is free to claim.** `/pickup` checks the work branch out in a pool worktree, and git refuses a branch already checked out elsewhere. A branch left occupied is precisely the one the next agent cannot use.

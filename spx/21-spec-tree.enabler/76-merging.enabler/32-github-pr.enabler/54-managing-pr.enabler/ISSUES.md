@@ -14,17 +14,7 @@ Required handling when an eval-coverage sweep happens:
 - Create `evals/reviewer-skipped/` with `eval.toml`, `cases.jsonl`, `prompt.md` per the cross-skill eval pattern.
 - Run the eval to populate `history.jsonl`.
 
-## 2. Heartbeat continuation-prompt payload shape is skill prose, not a spec assertion (FOLLOW-UP)
-
-`/tracking-tasks` `<heartbeat_payload>` and `/standardizing-merging` `<heartbeat>` define the continuation prompt as exactly the skills to reload plus the pointers each skill handles, with the directive, finding assessments, and rationale reconstructed on wake-up from the durable artifacts. The constraint lives only as skill prose and a `/tracking-tasks` success-criterion; no `managing-pr.md` assertion declares it and no eval verifies that a `/managing-pr` heartbeat prompt conforms to the two-item structure.
-
-To govern and verify the behavior when an eval-coverage sweep happens:
-
-- Add a compliance assertion to `managing-pr.md` declaring the heartbeat re-entry payload (skills + pointers, no reconstructable state).
-- Create `evals/heartbeat-payload/` (`eval.toml`, `cases.jsonl`, `prompt.md`).
-- Run the eval to populate `history.jsonl`.
-
-## 3. Worktree-safe branch-deletion default lacks eval coverage for the deletion mechanism (FOLLOW-UP)
+## 2. Worktree-safe branch-deletion default lacks eval coverage for the deletion mechanism (FOLLOW-UP)
 
 The `managing-pr.md` merge-command scenario declares two observable branch-deletion behaviors: the overlay-silent default runs the worktree-safe deletion sequence (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately), and an overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects. The `merge-command-overlay-precedence` eval verifies only the merge-strategy flag and its source; no case exercises the deletion mechanism.
 
