@@ -47,8 +47,15 @@ CODEX_PLUGIN_ADD_COMMAND = ("codex", "plugin", "add")
 CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 
-type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 type MarketplaceRootResolver = Callable[[str], Path]
+
+
+class CommandRunner(Protocol):
+    """Runs a Codex command, optionally from a scoped working directory."""
+
+    def __call__(
+        self, command: list[str], *, cwd: Path | None = None
+    ) -> subprocess.CompletedProcess[str]: ...
 
 
 class PluginHistory(Protocol):
@@ -162,8 +169,12 @@ def default_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
 
 
-def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, check=False, text=True, capture_output=True)
+def run_command(
+    command: list[str], *, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command, check=False, text=True, capture_output=True, cwd=cwd
+    )
     if result.stdout:
         print(result.stdout, end="")
     if result.stderr:
@@ -171,8 +182,10 @@ def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return result
 
 
-def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, check=False, text=True, capture_output=True)
+def run_command_capture(
+    command: list[str], *, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True, cwd=cwd)
 
 
 class InstalledSetError(RuntimeError):
@@ -274,14 +287,14 @@ def refresh_installed_plugins(
     """Refresh installed local Codex plugins and reconcile the cache against history.
 
     When an ``installed`` provider is supplied and this is not a dry run,
-    refresh is scoped to the plugins Codex reports as installed and the local
-    marketplace exposes under ``dist/codex``: a plugin present in the working tree
-    but absent from that refreshed set has its entire cache directory pruned, the
-    same treatment as a working-tree-absent orphan. The recipe's ``main`` supplies
-    the real ``CodexCliInstalled`` provider. A dry run skips the installed-set
-    query and plugin add commands, so the preview needs no Codex CLI present and
-    mutates nothing; when ``installed`` is ``None`` no scoping is applied either.
-    In both cases every working-tree plugin is treated as wanted.
+    refresh is scoped to generated Codex plugins exposed under ``dist/codex``.
+    The installed-set provider supplies resolved versions for post-refresh cache
+    reconciliation; it does not decide which generated plugins are refreshed.
+    The recipe's ``main`` supplies the real ``CodexCliInstalled`` provider. A dry
+    run skips the installed-set query and plugin add commands, so the preview
+    needs no Codex CLI present and mutates nothing; when ``installed`` is ``None``
+    no scoping is applied either. In both cases every working-tree plugin is
+    treated as wanted.
     """
     resolved_cache_root = cache_root if cache_root is not None else default_cache_root()
     resolved_repo_root = repo_root if repo_root is not None else Path.cwd()
@@ -304,7 +317,7 @@ def refresh_installed_plugins(
         addable_plugins = {
             plugin.name for plugin in available_codex_plugins(resolved_repo_root)
         }
-        wanted = working_tree_plugins & frozenset(installed_versions) & addable_plugins
+        wanted = working_tree_plugins & addable_plugins
         refreshed_plugins: set[str] = set()
         for plugin in sorted(wanted):
             refresh_result = runner(
@@ -320,9 +333,6 @@ def refresh_installed_plugins(
             # after successful local refreshes so reconciliation targets the newly
             # materialized real cache root instead of the pre-refresh snapshot.
             installed_versions = installed.installed_plugin_versions(marketplace)
-            wanted = (
-                working_tree_plugins & frozenset(installed_versions) & addable_plugins
-            )
             if refresh_returncode != 0:
                 wanted &= frozenset(refreshed_plugins)
         else:

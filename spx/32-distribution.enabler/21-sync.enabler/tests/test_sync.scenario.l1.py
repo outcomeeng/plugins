@@ -19,10 +19,17 @@ import subprocess
 
 import pytest
 
-from outcomeeng.distribution.sync import REQUIRED_TOOLS, STEPS, sync
+import outcomeeng.distribution.sync as sync_module
+from outcomeeng.distribution.sync import (
+    REQUIRED_TOOLS,
+    STEPS,
+    _worktree_path_for_branch,
+    sync,
+)
 from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
     ScriptedChangeProbe,
+    ScriptedConfigRepairer,
     ScriptedToolProbe,
 )
 
@@ -30,36 +37,122 @@ ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
 
 
-def test_no_distribution_changes_exits_zero_without_running_steps() -> None:
+def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins",
+            "HEAD 1111111111111111111111111111111111111111",
+            "branch refs/heads/main",
+            "",
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "branch refs/heads/work/manage-runtime-marketplaces",
+            "",
+        ],
+    )
+
+    assert _worktree_path_for_branch(listing, "main") == pathlib.Path(
+        "/repo/plugins",
+    )
+
+
+def test_real_source_root_selects_default_branch_worktree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins",
+            "HEAD 1111111111111111111111111111111111111111",
+            "branch refs/heads/main",
+            "",
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "branch refs/heads/work/manage-runtime-marketplaces",
+            "",
+        ],
+    )
+    feature_root = pathlib.Path("/repo/plugins-d")
+
+    monkeypatch.setattr(sync_module, "_real_default_branch_name", lambda: "main")
+    monkeypatch.setattr(
+        sync_module,
+        "_real_worktree_root_for_branch",
+        lambda branch: _worktree_path_for_branch(listing, branch),
+    )
+    monkeypatch.setattr(sync_module, "_real_git_toplevel", lambda: feature_root)
+
+    assert sync_module._real_source_root() == pathlib.Path("/repo/plugins")
+
+
+def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "detached",
+            "",
+        ],
+    )
+
+    assert _worktree_path_for_branch(listing, "main") is None
+
+
+def test_no_distribution_changes_exits_zero_after_config_reconciliation() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         "abc123",
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 0
     assert runner.calls == []
+    assert config_repairer.calls == 1
     assert change_probe.queries == ["abc123"]
+
+
+def test_config_repair_runs_refresh_without_distribution_changes() -> None:
+    runner = RecordingRunner()
+    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=True)
+
+    exit_code = sync(
+        "abc123",
+        runner=runner,
+        tool_probe=tool_probe,
+        change_probe=change_probe,
+        config_repairer=config_repairer,
+    )
+
+    assert exit_code == 0
+    assert config_repairer.calls == 1
+    assert change_probe.queries == ["abc123"]
+    assert runner.calls == list(STEP_ARGVS)
 
 
 def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=True)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         "abc123",
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 0
+    assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
 
 
@@ -75,15 +168,18 @@ def test_absent_base_ref_runs_all_steps_without_consulting_change_probe() -> Non
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         None,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 0
+    assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
     assert change_probe.queries == []
 
@@ -93,15 +189,18 @@ def test_empty_base_ref_treated_as_no_baseline(base_ref: str | None) -> None:
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
     change_probe = ScriptedChangeProbe(changed=False)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
     exit_code = sync(
         base_ref,
         runner=runner,
         tool_probe=tool_probe,
         change_probe=change_probe,
+        config_repairer=config_repairer,
     )
 
     assert exit_code == 0
+    assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
     assert change_probe.queries == []
 
@@ -126,10 +225,17 @@ def test_sync_detects_uncommitted_distribution_changes(
     monkeypatch.chdir(tmp_path)
     runner = RecordingRunner()
     tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    config_repairer = ScriptedConfigRepairer(changed=False)
 
-    exit_code = sync(base_ref, runner=runner, tool_probe=tool_probe)
+    exit_code = sync(
+        base_ref,
+        runner=runner,
+        tool_probe=tool_probe,
+        config_repairer=config_repairer,
+    )
 
     assert exit_code == 0
+    assert config_repairer.calls == 1
     assert runner.calls == list(STEP_ARGVS)
 
 

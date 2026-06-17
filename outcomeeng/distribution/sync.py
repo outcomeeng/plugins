@@ -1,17 +1,16 @@
 """Marketplace sync orchestration.
 
-Refreshes the local Claude marketplace and re-validates installed plugins
-when plugin distribution paths changed since a reference commit. Replaces
-the `just sync-marketplace` heredoc with an injectable, observable
-orchestration that tests verify through recording doubles.
+Reconciles local runtime marketplace configuration, refreshes the local Claude
+marketplace, and re-validates installed plugins when plugin distribution paths
+changed since a reference commit or configuration repair changed runtime state.
 
 The module's contract:
 
 - `REQUIRED_TOOLS` names the external binaries the orchestration shells out to.
 - `DISTRIBUTION_PATHS` names the repository paths whose change drives a sync.
-- `STEPS` is the ordered tuple of named subprocess calls executed when a sync runs.
-- `StepRunner`, `ToolProbe`, and `ChangeProbe` Protocols describe the injected
-  side-effecting boundaries; `sync()` accepts them as keyword arguments.
+- `STEPS` is the ordered tuple of named subprocess calls executed when a refresh runs.
+- `StepRunner`, `ToolProbe`, `ChangeProbe`, and `ConfigRepairer` Protocols describe
+  the injected side-effecting boundaries; `sync()` accepts them as keyword arguments.
 - `main()` wires real subprocess, `shutil.which`, and `git diff` adapters.
 """
 
@@ -23,7 +22,14 @@ import subprocess
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
+
+from outcomeeng.distribution.marketplace_sources import (
+    DEFAULT_MARKETPLACE,
+    MarketplaceSourceError,
+    ensure_local_marketplace_sources,
+)
 
 REQUIRED_TOOLS: tuple[str, ...] = ("claude", "codex", "uv")
 
@@ -103,25 +109,39 @@ class ChangeProbe(Protocol):
     def __call__(self, base_ref: str) -> bool: ...
 
 
+class ConfigRepairer(Protocol):
+    """Reconciles runtime marketplace source config; returns True if changed."""
+
+    def __call__(self) -> bool: ...
+
+
 def sync(
     base_ref: str | None,
     *,
     runner: StepRunner | None = None,
     tool_probe: ToolProbe | None = None,
     change_probe: ChangeProbe | None = None,
+    config_repairer: ConfigRepairer | None = None,
 ) -> int:
     """Run the marketplace sync orchestration. Returns the process exit code."""
     runner = runner or _real_runner
     tool_probe = tool_probe or _real_tool_probe
     change_probe = change_probe or _real_change_probe
+    config_repairer = config_repairer or _real_config_repairer
     for tool in REQUIRED_TOOLS:
         if not tool_probe(tool):
             print(f"Missing required tool: {tool}", file=sys.stderr)
             return 1
-    if base_ref and not change_probe(base_ref):
+    try:
+        config_changed = config_repairer()
+    except MarketplaceSourceError as exc:
+        print(f"Marketplace source configuration failed: {exc}", file=sys.stderr)
+        return 1
+    if base_ref and not change_probe(base_ref) and not config_changed:
         print(
             f"No plugin distribution changes since {base_ref}; "
-            "skipping marketplace sync",
+            "runtime marketplace sources already configured; "
+            "skipping marketplace refresh",
         )
         return 0
     for step in STEPS:
@@ -139,6 +159,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         runner=_real_runner,
         tool_probe=_real_tool_probe,
         change_probe=_real_change_probe,
+        config_repairer=_real_config_repairer,
     )
 
 
@@ -182,6 +203,85 @@ def _real_change_probe(base_ref: str) -> bool:
     return bool(untracked_result.stdout.strip())
 
 
+def _real_config_repairer() -> bool:
+    result = ensure_local_marketplace_sources(
+        DEFAULT_MARKETPLACE,
+        source_root=_real_source_root(),
+    )
+    return result.changed
+
+
+def _real_source_root() -> Path:
+    default_branch = _real_default_branch_name()
+    if default_branch is not None:
+        worktree_root = _real_worktree_root_for_branch(default_branch)
+        if worktree_root is not None:
+            return worktree_root
+    return _real_git_toplevel()
+
+
+def _real_default_branch_name() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return "main"
+    ref = result.stdout.strip()
+    if not ref:
+        return "main"
+    return ref.rsplit("/", maxsplit=1)[-1]
+
+
+def _real_worktree_root_for_branch(branch: str) -> Path | None:
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return _worktree_path_for_branch(result.stdout, branch)
+
+
+def _worktree_path_for_branch(porcelain: str, branch: str) -> Path | None:
+    current_path: Path | None = None
+    branch_ref = f"branch refs/heads/{branch}"
+    for line in porcelain.splitlines():
+        if line.startswith("worktree "):
+            current_path = Path(line.removeprefix("worktree "))
+            continue
+        if line == branch_ref and current_path is not None:
+            return current_path
+        if not line:
+            current_path = None
+    return None
+
+
+def _real_git_toplevel() -> Path:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return Path.cwd()
+    if result.returncode == 0 and result.stdout.strip():
+        return Path(result.stdout.strip())
+    return Path.cwd()
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="outcomeeng.distribution.sync",
@@ -207,6 +307,7 @@ __all__ = [
     "REQUIRED_TOOLS",
     "STEPS",
     "ChangeProbe",
+    "ConfigRepairer",
     "StepRunner",
     "SyncStep",
     "ToolProbe",
