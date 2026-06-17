@@ -162,7 +162,7 @@ The canonical schema is declared in `${CLAUDE_SKILL_DIR}/scripts/verdict.py` (`S
     {"name": "determinism-contract", "status": "PASS | FAIL | UNKNOWN", "findings": []}
   ],
   "children": [
-    { "skill": "auditing-typescript", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
+    { "skill": "audit-typescript", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
   ],
   "metadata": {"branch": "<branch>", "scope_hash": "<12-char-hex>"}
 }

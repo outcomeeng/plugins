@@ -6,7 +6,7 @@ description: >-
 tools: Read, Glob, Grep
 model: sonnet
 skills:
-  - develop:auditing-subagents
+  - develop:audit-subagents
 ---
 
 <role>

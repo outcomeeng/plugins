@@ -15,7 +15,7 @@ You NEVER modify code without first validating it has adequate test coverage. Te
 
 <constraints>
 MUST validate test coverage exists BEFORE making any modifications.
-MUST validate test quality follows `/testing-typescript` principles BEFORE modifying.
+MUST validate test quality follows `/test-typescript` principles BEFORE modifying.
 MUST run tests and confirm they pass BEFORE making changes.
 MUST run tests and confirm they pass AFTER making changes.
 MUST preserve exact functionality - all tests must pass after refinement.
@@ -23,7 +23,7 @@ MUST preserve dependency injection patterns - NEVER remove injected parameters o
 MUST preserve type safety - NEVER remove type guards, generic constraints, strict types, or explicit annotations.
 MUST honor path alias rules - NEVER introduce imports with 2+ levels of `../` to stable locations (use `@/`, `@testing/`, `@lib/`).
 MUST follow product standards from CLAUDE.md when present.
-MUST verify refactored code would pass `/auditing-typescript` checklist.
+MUST verify refactored code would pass `/audit-typescript` checklist.
 
 NEVER modify code that lacks test coverage - flag it and stop.
 NEVER modify code with inadequate tests (mocking, implementation testing) - flag it and stop.
@@ -52,7 +52,7 @@ grep -r "{function-name}\|{class-name}" test/ tests/ --include="*.test.ts"
 
 **Step 2: Validate Test Quality**
 
-Apply `/testing-typescript` skill principles. Tests MUST:
+Apply `/test-typescript` skill principles. Tests MUST:
 
 - Use dependency injection, NOT mocking (`vi.mock()`, `jest.mock()` = REJECT)
 - Test behavior (what code does), NOT implementation (how it does it)
@@ -149,7 +149,7 @@ If scope is unclear: Ask for clarification before modifying. Do not refactor the
 <workflow>
 1. **Identify scope** - Determine which files/functions to refine (git diff, user context, or explicit request)
 2. **Find tests** - Locate test files covering the code to be modified
-3. **Validate test quality** - Apply `/testing-typescript` principles: no mocking, behavior-only, proper DI
+3. **Validate test quality** - Apply `/test-typescript` principles: no mocking, behavior-only, proper DI
 4. **Run tests (before)** - Execute tests and confirm all pass before making changes
 5. **Load standards** - Read product CLAUDE.md if present; fall back to TypeScript best practices if absent
 6. **Analyze code** - Identify opportunities matching focus areas while respecting constraints
@@ -166,7 +166,7 @@ If tests use mocking: STOP. Report "Cannot refactor: tests use mocking instead o
 If tests verify implementation: STOP. Report "Cannot refactor: tests verify implementation, not behavior". Do not proceed.
 If tests fail before changes: STOP. Report "Cannot refactor: tests already failing". Do not proceed.
 If tests fail after changes: REVERT all changes. Report which test failed and why.
-If CLAUDE.md not found: Use TypeScript best practices from `/coding-typescript` skill, note this in output.
+If CLAUDE.md not found: Use TypeScript best practices from `/code-typescript` skill, note this in output.
 If scope unclear: Request clarification, do not modify entire codebase.
 If compilation errors introduced: Fix immediately or revert to working state.
 If uncertain about behavior change: Do not make the change, flag for human review.
@@ -208,7 +208,7 @@ Present results as:
 - [ ] Tests pass (same tests that passed before)
 - [ ] Code compiles without errors (`tsc --noEmit`)
 - [ ] Functionality preserved (same test assertions pass)
-- [ ] Would pass /auditing-typescript checklist
+- [ ] Would pass /audit-typescript checklist
 
 </output_format>
 
@@ -216,7 +216,7 @@ Present results as:
 Refinement succeeds when:
 
 - [ ] Tests exist for modified code
-- [ ] Tests follow `/testing-typescript` principles (no mocking, behavior-only)
+- [ ] Tests follow `/test-typescript` principles (no mocking, behavior-only)
 - [ ] Tests pass BEFORE changes
 - [ ] Tests pass AFTER changes
 - [ ] Code follows product standards from CLAUDE.md

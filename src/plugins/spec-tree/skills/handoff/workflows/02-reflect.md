@@ -12,7 +12,7 @@ Classify each imperfection by nature to determine the persistence target. The de
 
 | Nature                | Signal                                                       | Destination                                                                         |
 | --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `coding-*` skill references (e.g., `coding-typescript/references/`) |
+| **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `coding-*` skill references (e.g., `code-typescript/references/`) |
 | **Methodology**       | Skill invocation order, audit interpretation, process error  | Spec-tree plugin skill (amend skill instructions)                                   |
 | **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `CLAUDE.md`                                                                 |
 | **Interaction style** | Response format, verbosity, tone — NOT coding patterns       | Memory (`feedback` type)                                                            |

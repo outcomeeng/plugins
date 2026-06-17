@@ -25,7 +25,7 @@ tools:
 disallowedTools:
   - Bash
 skills:
-  - develop:auditing-subagents
+  - develop:audit-subagents
 unknownField: keep-me-visible
 ---
 

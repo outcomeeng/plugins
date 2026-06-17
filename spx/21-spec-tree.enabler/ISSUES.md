@@ -25,7 +25,7 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`, `*.integration.test.{ext}`, `*.e2e.test.{ext}`, `test_*.unit.{ext}`, `test_*.integration.{ext}`, `test_*.e2e.{ext}`) in spec assertions, spec-tree templates, examples, and methodology references was rewritten to the canonical `<subject>.<evidence>.<level>[.<runner>]` form, splitting mixed-evidence specs across one file per evidence type. Remaining mentions of the legacy tokens are scoped to:
 
 - `plugins/{python,typescript}/skills/standardizing-*-tests/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
-- `plugins/typescript/skills/auditing-typescript-tests/SKILL.md` and `plugins/develop/skills/auditing-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
+- `plugins/typescript/skills/audit-typescript-tests/SKILL.md` and `plugins/develop/skills/audit-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
 - `plugins/spec-tree/skills/authoring/SKILL.md` and `plugins/spec-tree/skills/testing/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
 
 ## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks (RESOLVED)

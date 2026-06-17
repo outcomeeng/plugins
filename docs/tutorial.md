@@ -148,7 +148,7 @@ Use `/testing` to write tests driven by spec assertions:
 > /testing
 ```
 
-The skill extracts typed assertions from the spec, determines what test evidence is needed, and generates test scaffolds. It delegates methodology decisions to the 5-stage testing router (what level, what doubles) and language patterns to `/testing-python` or `/testing-typescript`.
+The skill extracts typed assertions from the spec, determines what test evidence is needed, and generates test scaffolds. It delegates methodology decisions to the 5-stage testing router (what level, what doubles) and language patterns to `/testing-python` or `/test-typescript`.
 
 <!-- TODO: Add screenshot of /testing in action -->
 
@@ -164,11 +164,11 @@ This invokes the `/applying` skill, which orchestrates 8 steps:
 
 1. Load methodology (`/understanding`)
 2. Load work item context (`/contextualizing`)
-3. Architect — produce ADR via `/architecting-python` or `/architecting-typescript`
+3. Architect — produce ADR via `/architecting-python` or `/architect-typescript`
 4. Review architecture — loop until APPROVED
-5. Write tests — via `/testing-python` or `/testing-typescript`
+5. Write tests — via `/testing-python` or `/test-typescript`
 6. Review tests — loop until APPROVED
-7. Implement — via `/coding-python` or `/coding-typescript`
+7. Implement — via `/coding-python` or `/code-typescript`
 8. Review code — loop until APPROVED
 
 Without arguments, `/apply` determines work from conversation context or falls back to `spx/EXCLUDE`.

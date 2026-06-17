@@ -11,7 +11,7 @@
     {
       "name": "develop",
       "source": "./dist/claude/develop",
-      "description": "Plugin development: /creating-skills, /creating-commands, /creating-subagents"
+      "description": "Plugin development: /create-skills, /create-commands, /create-subagents"
     },
     {
       "name": "frontend",
@@ -21,7 +21,7 @@
     {
       "name": "typescript",
       "source": "./dist/claude/typescript",
-      "description": "TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent"
+      "description": "TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript, /architect-typescript, /audit-typescript-architecture, typescript-simplifier agent"
     },
     {
       "name": "python",

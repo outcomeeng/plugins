@@ -36,18 +36,18 @@ hook = _load_hook_module()
 # read from the script's own map (no test-owned constants).
 GATE_SKILLS = [
     ("architecting-python", hook.GATE_REMINDERS["architecting"]),
-    ("architecting-typescript", hook.GATE_REMINDERS["architecting"]),
+    ("architect-typescript", hook.GATE_REMINDERS["architecting"]),
     ("testing-python", hook.GATE_REMINDERS["testing"]),
-    ("testing-typescript", hook.GATE_REMINDERS["testing"]),
+    ("test-typescript", hook.GATE_REMINDERS["testing"]),
     ("coding-python", hook.GATE_REMINDERS["coding"]),
-    ("coding-typescript", hook.GATE_REMINDERS["coding"]),
+    ("code-typescript", hook.GATE_REMINDERS["coding"]),
     # Language-neutral: any <stage>-<language> step skill maps, including languages
     # the skill_map does not enumerate, and through a "plugin:" prefix.
     ("architecting-rust", hook.GATE_REMINDERS["architecting"]),
     ("testing-rust", hook.GATE_REMINDERS["testing"]),
     ("coding-rust", hook.GATE_REMINDERS["coding"]),
     ("python:coding-python", hook.GATE_REMINDERS["coding"]),
-    ("typescript:testing-typescript", hook.GATE_REMINDERS["testing"]),
+    ("typescript:test-typescript", hook.GATE_REMINDERS["testing"]),
 ]
 
 NON_GATE_SKILLS = [

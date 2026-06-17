@@ -209,21 +209,21 @@ Skills are available in both Claude Code and Codex. Commands and agents are Clau
 
 ### develop
 
-Plugin development: /creating-skills, /creating-commands, /creating-subagents
+Plugin development: /create-skills, /create-commands, /create-subagents
 
-| Type  | Name                           | Purpose                                                                                                                                  |
-| ----- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/auditing-commands`           | Auditing, reviewing, or evaluating slash command .md files                                                                               |
-| Skill | `/auditing-skills`             | Auditing, reviewing, or evaluating SKILL.md files                                                                                        |
-| Skill | `/auditing-subagents`          | Auditing, reviewing, or evaluating subagent configuration files                                                                          |
-| Skill | `/creating-commands`           | Creating or editing slash commands                                                                                                       |
-| Skill | `/creating-skills`             | Creating, editing, or improving SKILL.md files                                                                                           |
-| Skill | `/creating-subagents`          | Creating, editing, or configuring subagents                                                                                              |
-| Skill | `/standardizing-agent-prompts` | Agent prompt writing conventions enforced across all creator and auditor skills                                                          |
-| Skill | `/standardizing-skills`        | Skill authoring standards enforced across all creating and auditing skills                                                               |
-| Agent | `command-auditor`              | Auditing, reviewing, or evaluating slash command .md files for best practices compliance, or when the user asks to audit a command       |
-| Agent | `skill-auditor`                | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                  |
-| Agent | `subagent-auditor`             | Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent |
+| Type  | Name                      | Purpose                                                                                                                                  |
+| ----- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/agent-prompt-standards` | Agent prompt writing conventions enforced across all creator and auditor skills                                                          |
+| Skill | `/audit-commands`         | Auditing, reviewing, or evaluating slash command .md files                                                                               |
+| Skill | `/audit-skills`           | Auditing, reviewing, or evaluating SKILL.md files                                                                                        |
+| Skill | `/audit-subagents`        | Auditing, reviewing, or evaluating subagent configuration files                                                                          |
+| Skill | `/create-commands`        | Creating or editing slash commands                                                                                                       |
+| Skill | `/create-skills`          | Creating, editing, or improving SKILL.md files                                                                                           |
+| Skill | `/create-subagents`       | Creating, editing, or configuring subagents                                                                                              |
+| Skill | `/skill-standards`        | Skill authoring standards enforced across all creating and auditing skills                                                               |
+| Agent | `command-auditor`         | Auditing, reviewing, or evaluating slash command .md files for best practices compliance, or when the user asks to audit a command       |
+| Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                  |
+| Agent | `subagent-auditor`        | Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent |
 
 ### frontend
 
@@ -352,23 +352,23 @@ Spec Tree: /understanding, /contextualizing, /bootstrapping, /authoring, /decomp
 
 ### typescript
 
-TypeScript engineering: /testing-typescript, /coding-typescript, /auditing-typescript, /architecting-typescript, /auditing-typescript-architecture, typescript-simplifier agent
+TypeScript engineering: /test-typescript, /code-typescript, /audit-typescript, /architect-typescript, /audit-typescript-architecture, typescript-simplifier agent
 
-| Type  | Name                                     | Purpose                                                                                                                                    |
-| ----- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Skill | `/architecting-typescript`               | Writing ADRs for TypeScript                                                                                                                |
-| Skill | `/auditing-typescript`                   | Auditing, reviewing, or evaluating TypeScript implementation code for design flaws and ADR compliance                                      |
-| Skill | `/auditing-typescript-architecture`      | Auditing ADRs for TypeScript                                                                                                               |
-| Skill | `/auditing-typescript-tests`             | Auditing TypeScript test evidence, reviewing TypeScript tests for spec-tree evidence quality, or evaluating TypeScript test infrastructure |
-| Skill | `/coding-typescript`                     | Writing or fixing implementation code for TypeScript                                                                                       |
-| Skill | `/standardizing-typescript`              | TypeScript code standards enforced across all skills                                                                                       |
-| Skill | `/standardizing-typescript-architecture` | TypeScript ADR conventions enforced across architect and auditor skills                                                                    |
-| Skill | `/standardizing-typescript-tests`        | TypeScript testing standards enforced across all skills                                                                                    |
-| Skill | `/testing-typescript`                    | Writing or fixing tests for TypeScript                                                                                                     |
-| Agent | `typescript-architecture-auditor`        | Audit TypeScript ADRs for conventions, testability, and voice                                                                              |
-| Agent | `typescript-code-auditor`                | Audit TypeScript code for design flaws and ADR compliance                                                                                  |
-| Agent | `typescript-simplifier`                  | Simplifies TypeScript code for clarity and maintainability                                                                                 |
-| Agent | `typescript-test-auditor`                | Audit TypeScript test code for evidence quality using the 4-property model                                                                 |
+| Type  | Name                                 | Purpose                                                                                                                                    |
+| ----- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Skill | `/architect-typescript`              | Writing ADRs for TypeScript                                                                                                                |
+| Skill | `/audit-typescript`                  | Auditing, reviewing, or evaluating TypeScript implementation code for design flaws and ADR compliance                                      |
+| Skill | `/audit-typescript-architecture`     | Auditing ADRs for TypeScript                                                                                                               |
+| Skill | `/audit-typescript-tests`            | Auditing TypeScript test evidence, reviewing TypeScript tests for spec-tree evidence quality, or evaluating TypeScript test infrastructure |
+| Skill | `/code-typescript`                   | Writing or fixing implementation code for TypeScript                                                                                       |
+| Skill | `/test-typescript`                   | Writing or fixing tests for TypeScript                                                                                                     |
+| Skill | `/typescript-architecture-standards` | TypeScript ADR conventions enforced across architect and auditor skills                                                                    |
+| Skill | `/typescript-standards`              | TypeScript code standards enforced across all skills                                                                                       |
+| Skill | `/typescript-test-standards`         | TypeScript testing standards enforced across all skills                                                                                    |
+| Agent | `typescript-architecture-auditor`    | Audit TypeScript ADRs for conventions, testability, and voice                                                                              |
+| Agent | `typescript-code-auditor`            | Audit TypeScript code for design flaws and ADR compliance                                                                                  |
+| Agent | `typescript-simplifier`              | Simplifies TypeScript code for clarity and maintainability                                                                                 |
+| Agent | `typescript-test-auditor`            | Audit TypeScript test code for evidence quality using the 4-property model                                                                 |
 
 ### work
 

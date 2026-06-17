@@ -15,7 +15,7 @@ Current `/auditing-tests` workflow does not state the test-literal rule concrete
    - Production defines a constant (ideally a typed constant object), uses it at least once internally, and exports it.
    - Test imports the same symbol. One definition, single point of change.
    - When the value originates in a library or platform API, both production and test import from that origin directly. Production does not re-export library constants.
-   - Reference `/standardizing-typescript` and `/standardizing-python` for the language-specific HOW.
+   - Reference `/typescript-standards` and `/standardizing-python` for the language-specific HOW.
 
 3. **Testability gate — new Gate 1 step before coupling.**
    - Question: can the spec assertion be verified given the shape of the source code?

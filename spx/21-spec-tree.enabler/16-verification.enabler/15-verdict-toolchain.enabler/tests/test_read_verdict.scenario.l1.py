@@ -24,7 +24,7 @@ from outcomeeng_testing.harnesses.verdict_toolchain import (
 
 VALID_VERDICT_DICT: dict[str, object] = {
     "schema_version": 1,
-    "skill": "auditing-typescript",
+    "skill": "audit-typescript",
     "target": "spx/path",
     "overall": "PASS",
     "rows": [{"name": "scope", "status": "PASS", "findings": []}],

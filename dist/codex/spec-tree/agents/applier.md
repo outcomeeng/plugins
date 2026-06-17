@@ -40,12 +40,12 @@ For each step, invoke the **exact** Skill tool call:
 | ---- | ----- | ---------------------------------------------------- | --------------------------------------- |
 | 1    | —     | `Skill("spec-tree:understanding")`                   | same                                    |
 | 2    | —     | `Skill("spec-tree:contextualizing", args: "{node}")` | same                                    |
-| 3    | —     | `Skill("architecting-typescript")`                   | `Skill("architecting-python")`          |
-| 4    | YES   | `Skill("auditing-typescript-architecture")`          | `Skill("auditing-python-architecture")` |
-| 5    | —     | `Skill("testing-typescript")`                        | `Skill("testing-python")`               |
-| 6    | YES   | `Skill("auditing-typescript-tests")`                 | `Skill("auditing-python-tests")`        |
-| 7    | —     | `Skill("coding-typescript")`                         | `Skill("coding-python")`                |
-| 8    | YES   | `Skill("auditing-typescript")`                       | `Skill("auditing-python")`              |
+| 3    | —     | `Skill("architect-typescript")`                      | `Skill("architecting-python")`          |
+| 4    | YES   | `Skill("audit-typescript-architecture")`             | `Skill("auditing-python-architecture")` |
+| 5    | —     | `Skill("test-typescript")`                           | `Skill("testing-python")`               |
+| 6    | YES   | `Skill("audit-typescript-tests")`                    | `Skill("auditing-python-tests")`        |
+| 7    | —     | `Skill("code-typescript")`                           | `Skill("coding-python")`                |
+| 8    | YES   | `Skill("audit-typescript")`                          | `Skill("auditing-python")`              |
 
 **Do NOT skip, reorder, or substitute any step.**
 

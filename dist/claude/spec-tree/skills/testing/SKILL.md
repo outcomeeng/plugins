@@ -120,7 +120,7 @@ For each assertion needing a new test:
 4. Name the file using the canonical model in `${CLAUDE_SKILL_DIR}/references/methodology.md`.
 5. Scaffold the test structure based on assertion type and language-specific patterns.
 
-Delegate language-specific structure to `/testing-python` or `/testing-rust` or `/testing-typescript`.
+Delegate language-specific structure to `/testing-python` or `/testing-rust` or `/test-typescript`.
 
 **Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node's path to `spx/EXCLUDE`. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the entry when implementation begins. See `${CLAUDE_SKILL_DIR}/../understanding/references/excluded-nodes.md`.
 

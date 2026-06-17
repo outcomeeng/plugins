@@ -46,14 +46,14 @@ def _require_module_implemented() -> None:
         )
 
 
-SKILL_REF = "develop:standardizing-skills"
+SKILL_REF = "develop:skill-standards"
 PLUGIN_NAME = "develop"
-SKILL_NAME = "creating-skills"
+SKILL_NAME = "create-skills"
 FRAGMENT_SCOPE = "develop"
 FRAGMENT_TOPIC = "skill-standards"
 FRAGMENT_BODY = "Shared standards body."
 MISSING_FRAGMENT_BODY = "No fragment exists here."
-SKILL_BODY = "---\nname: creating-skills\n---\n\nBody"
+SKILL_BODY = "---\nname: create-skills\n---\n\nBody"
 STANDARD_JINJA_TEXT = "{% if standard %}unchanged{{ standard }}{% endif %}"
 
 
@@ -151,7 +151,7 @@ def test_skill_dir_escape_survives_jinja_pass(tmp_path: Path) -> None:
         f"Write `{CLAUDE_SKILL_DIR_TOKEN}/x.md` {SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE}"
     )
     body = (
-        "---\nname: creating-skills\n---\n\n"
+        "---\nname: create-skills\n---\n\n"
         f"{BLOCK_DELIMITER_START} if target == 'claude' {BLOCK_DELIMITER_END}"
         "c"
         f"{BLOCK_DELIMITER_START} endif {BLOCK_DELIMITER_END}\n"

@@ -32,7 +32,7 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 1. `spec-tree:understanding`
 2. `spec-tree:contextualizing` on `spx/21-spec-tree.enabler/21-templates.enabler`
 3. `spec-tree:authoring` for the `templates.md` assertion change
-4. `develop:standardizing-skills` before editing template/example content
+4. `develop:skill-standards` before editing template/example content
 5. `spec-tree:committing-changes`
 
 ## Audit gates

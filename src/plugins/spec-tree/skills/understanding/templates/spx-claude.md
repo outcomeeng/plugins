@@ -184,9 +184,9 @@ Per-language code, architecture, and test audits render for the product's enable
 
 | User Says...                | Skill                               | Agent                             |
 | --------------------------- | ----------------------------------- | --------------------------------- |
-| "Audit this code"           | `/auditing-typescript`              | `typescript-code-auditor`         |
-| "Audit ADRs for TypeScript" | `/auditing-typescript-architecture` | `typescript-architecture-auditor` |
-| "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
+| "Audit this code"           | `/audit-typescript`              | `typescript-code-auditor`         |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `typescript-architecture-auditor` |
+| "Audit these tests"         | `/audit-typescript-tests`        | `typescript-test-auditor`         |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->

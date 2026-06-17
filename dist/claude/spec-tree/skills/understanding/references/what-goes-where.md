@@ -34,7 +34,7 @@ ADR vs PDR is decided by content alone — ADR governs how the product is built 
 
 **Does NOT contain:** Outcomes, assertions, test references, or implementation code.
 
-**Verified by:** Architecture audit skills (e.g., `/auditing-typescript-architecture`).
+**Verified by:** Architecture audit skills (e.g., `/audit-typescript-architecture`).
 
 </adr>
 

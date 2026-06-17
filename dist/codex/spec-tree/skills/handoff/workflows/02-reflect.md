@@ -10,15 +10,15 @@ Review remaining imperfections from this session — items observed but not yet 
 
 Classify each imperfection by nature to determine the persistence target. The destination is governed by the imperfection's nature, not its origin:
 
-| Nature                | Signal                                                       | Destination                                                                         |
-| --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
-| **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `coding-*` skill references (e.g., `coding-typescript/references/`) |
-| **Methodology**       | Skill invocation order, audit interpretation, process error  | Spec-tree plugin skill (amend skill instructions)                                   |
-| **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `CLAUDE.md`                                                                 |
-| **Interaction style** | Response format, verbosity, tone — NOT coding patterns       | Memory (`feedback` type)                                                            |
-| **Domain knowledge**  | Who's doing what, external system locations, product context | Memory (`product`/`reference` type)                                                 |
-| **Spec correction**   | Assertion was wrong or incomplete                            | Amend the spec file directly                                                        |
-| **Task-specific**     | Only relevant to this session's work                         | Session file only                                                                   |
+| Nature                | Signal                                                       | Destination                                                                       |
+| --------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `coding-*` skill references (e.g., `code-typescript/references/`) |
+| **Methodology**       | Skill invocation order, audit interpretation, process error  | Spec-tree plugin skill (amend skill instructions)                                 |
+| **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `CLAUDE.md`                                                               |
+| **Interaction style** | Response format, verbosity, tone — NOT coding patterns       | Memory (`feedback` type)                                                          |
+| **Domain knowledge**  | Who's doing what, external system locations, product context | Memory (`product`/`reference` type)                                               |
+| **Spec correction**   | Assertion was wrong or incomplete                            | Amend the spec file directly                                                      |
+| **Task-specific**     | Only relevant to this session's work                         | Session file only                                                                 |
 
 **Fix-now rule**: if Claude can fix the imperfection right now (broken link, stale path, wrong filename, simple correction), fix it immediately using Edit/Grep — do not propose it in workflow 03. Note what was fixed for the persisted log.
 

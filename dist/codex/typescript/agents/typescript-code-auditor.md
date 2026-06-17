@@ -5,7 +5,7 @@ description: >-
   writing implementation code or before closing an outcome.
 tools: Read, Bash, Glob, Grep
 skills:
-  - typescript:auditing-typescript
+  - typescript:audit-typescript
 ---
 
 <role>

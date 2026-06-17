@@ -1,10 +1,10 @@
 # Marketplace Skill Authoring Overrides
 
-Loaded by `/standardizing-skills` `<repo_local_overlay>` when authoring or auditing skills in this repository. These specialize the base skill-authoring standards for the Outcome Engineering marketplace.
+Loaded by `/skill-standards` `<repo_local_overlay>` when authoring or auditing skills in this repository. These specialize the base skill-authoring standards for the Outcome Engineering marketplace.
 
-## Transition from gerund to imperative names for skills
+## Current Skill Names
 
-The use of gerund skill names is deprecated because the `slash command` type offered by Claude Code is officially deprecated and replaced by `skill` only. This marketplace is in a transition period.
-
-ALWAYS: New skills are named in imperative form
+ALWAYS: Invoked workflow skills are named in imperative form.
+ALWAYS: Reference skills are named as noun phrases ending in the domain they standardize.
+ALWAYS: Any material change to a skill implies renaming all skills in the entire plugin to match the latest develop rules.
 ALWAYS: New agents are named in actor form and ALWAYS differ from the skill name they implement. For example, `adr-auditor` implements `audit-adr`.
