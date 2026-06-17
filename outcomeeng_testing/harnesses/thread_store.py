@@ -5,7 +5,7 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/thread-store/scripts``.
+  ``src/plugins/spec-tree/skills/manage-thread-store/scripts``.
 - An importlib loader for the ``thread_store`` facade module. The module
   is shipped under ``src/plugins/`` (the authored plugin source directory)
   and is not importable as a package; tests that need to introspect the
@@ -48,7 +48,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "thread-store"
+    / "manage-thread-store"
     / "scripts"
 )
 

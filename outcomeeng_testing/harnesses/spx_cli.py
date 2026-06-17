@@ -19,7 +19,7 @@ single static executable serves every case:
 
 Any other subcommand (the hook's ``worktree claim``) is a logged no-op exiting
 zero. Exception case per
-``plugins/spec-tree/skills/testing/references/methodology.md``: none.
+``plugins/spec-tree/skills/test/references/methodology.md``: none.
 """
 
 from __future__ import annotations
@@ -137,7 +137,7 @@ def sample_todo_session(**overrides: str) -> dict[str, str]:
         "id": "2026-06-15_19-21-23",
         "priority": "medium",
         "goal": "Build the discoverability hook",
-        "next_step": "Invoke /understanding then /contextualizing",
+        "next_step": "Invoke /understand then /contextualize",
         "git_ref": "feat/session-start-discoverability",
     }
     record.update(overrides)

@@ -75,8 +75,8 @@ Use `/author` to create any spec-tree artifact. It detects what you want from th
 
 The skill:
 
-1. Loads the foundation methodology (`/understanding`)
-2. Loads context for the placement location (`/contextualizing`)
+1. Loads the foundation methodology (`/understand`)
+2. Loads context for the placement location (`/contextualize`)
 3. Reads the appropriate template
 4. Asks clarifying questions about genuine gaps
 5. Drafts the artifact in atemporal voice
@@ -109,7 +109,7 @@ The skill asks about the decision, alternatives considered, trade-offs accepted,
 When a node accumulates too many assertions (>7) or contains independent concerns, break it down:
 
 ```text
-> /decomposing
+> /decompose
 ```
 
 The skill:
@@ -121,14 +121,14 @@ The skill:
 5. Creates child directories with spec stubs
 6. Redistributes assertions from parent to children
 
-<!-- TODO: Add screenshot of /decomposing in action -->
+<!-- TODO: Add screenshot of /decompose in action -->
 
 ## 4. Check consistency
 
-Use `/aligning` to review specs for contradictions, gaps, or quality issues:
+Use `/align` to review specs for contradictions, gaps, or quality issues:
 
 ```text
-> /aligning
+> /align
 ```
 
 It checks:
@@ -138,19 +138,19 @@ It checks:
 - Content placement (architecture in ADRs, not in specs)
 - Assertion completeness (every outcome has typed assertions with test links)
 
-<!-- TODO: Add screenshot of /aligning in action -->
+<!-- TODO: Add screenshot of /align in action -->
 
 ## 5. Write tests
 
-Use `/testing` to write tests driven by spec assertions:
+Use `/test` to write tests driven by spec assertions:
 
 ```text
-> /testing
+> /test
 ```
 
-The skill extracts typed assertions from the spec, determines what test evidence is needed, and generates test scaffolds. It delegates methodology decisions to the 5-stage testing router (what level, what doubles) and language patterns to `/testing-python` or `/test-typescript`.
+The skill extracts typed assertions from the spec, determines what test evidence is needed, and generates test scaffolds. It delegates methodology decisions to the 5-stage testing router (what level, what doubles) and language patterns to `/test-python` or `/test-typescript`.
 
-<!-- TODO: Add screenshot of /testing in action -->
+<!-- TODO: Add screenshot of /test in action -->
 
 ## 6. Implement with TDD
 
@@ -160,15 +160,15 @@ The `/apply` command starts the full TDD flow — architecture, tests, then code
 > /apply spx/21-auth.outcome
 ```
 
-This invokes the `/applying` skill, which orchestrates 8 steps:
+This invokes the `/apply` skill, which orchestrates 8 steps:
 
-1. Load methodology (`/understanding`)
-2. Load work item context (`/contextualizing`)
-3. Architect — produce ADR via `/architecting-python` or `/architect-typescript`
+1. Load methodology (`/understand`)
+2. Load work item context (`/contextualize`)
+3. Architect — produce ADR via `/architect-python` or `/architect-typescript`
 4. Review architecture — loop until APPROVED
-5. Write tests — via `/testing-python` or `/test-typescript`
+5. Write tests — via `/test-python` or `/test-typescript`
 6. Review tests — loop until APPROVED
-7. Implement — via `/coding-python` or `/code-typescript`
+7. Implement — via `/code-python` or `/code-typescript`
 8. Review code — loop until APPROVED
 
 Without arguments, `/apply` determines work from conversation context or falls back to `spx/EXCLUDE`.
@@ -218,7 +218,7 @@ To resume in a new session:
 When the structure needs to change — moving nodes, re-scoping assertions, extracting shared enablers:
 
 ```text
-> /refactoring
+> /refactor
 ```
 
 Four operations:
@@ -230,7 +230,7 @@ Four operations:
 
 The skill analyzes impact (broken links, ADR/PDR scope changes), applies changes, and validates consistency afterward.
 
-<!-- TODO: Add screenshot of /refactoring in action -->
+<!-- TODO: Add screenshot of /refactor in action -->
 
 ## 10. Stop ad hoc work
 
@@ -249,11 +249,11 @@ This stops the current ad hoc work and restarts the proper TDD flow from Step 1.
 | **Setup**     | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx` |
 | **Bootstrap** | Create spec tree for your product                 | `/bootstrap`                     |
 | **Author**    | Create specs, decisions, nodes                    | `/author`                        |
-| **Decompose** | Break down large nodes                            | `/decomposing`                   |
-| **Align**     | Check consistency and quality                     | `/aligning`                      |
-| **Test**      | Write tests from spec assertions                  | `/testing`                       |
+| **Decompose** | Break down large nodes                            | `/decompose`                     |
+| **Align**     | Check consistency and quality                     | `/align`                         |
+| **Test**      | Write tests from spec assertions                  | `/test`                          |
 | **Implement** | TDD flow: architect → test → code                 | `/apply`                         |
 | **Commit**    | Selective staging, Conventional Commits           | `/commit`                        |
 | **Hand off**  | Save context for next session                     | `/handoff` → `/pickup`           |
-| **Refactor**  | Restructure the tree                              | `/refactoring`                   |
+| **Refactor**  | Restructure the tree                              | `/refactor`                      |
 | **Correct**   | Stop ad hoc work, restart methodology             | `/rtfm`                          |

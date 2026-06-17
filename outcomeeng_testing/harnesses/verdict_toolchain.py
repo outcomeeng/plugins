@@ -5,7 +5,7 @@ Provides the shared scaffolding consumed by every test file under
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. Without a single
   source, every test file walks ``__file__.parents[...]`` to find
-  ``src/plugins/spec-tree/skills/auditing/scripts``.
+  ``src/plugins/spec-tree/skills/audit/scripts``.
 - ``JSON_BLOCK_BEGIN`` / ``JSON_BLOCK_END``. The HTML-comment delimiters used
   by ``markdown+json`` are defined in ``verdict.py`` (the production module).
   Importing them here means tests cannot disagree with the producer/consumer
@@ -34,7 +34,7 @@ SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "auditing"
+    / "audit"
     / "scripts"
 )
 

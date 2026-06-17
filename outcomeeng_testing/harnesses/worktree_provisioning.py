@@ -19,7 +19,7 @@ directories, and teardown on every exit path); it owns no expected outputs and
 does not call the behavior under test. Tests construct the system-under-test's
 inputs from these handles and assert against its returned values.
 
-Exception case per ``plugins/spec-tree/skills/testing/references/methodology.md``:
+Exception case per ``plugins/spec-tree/skills/test/references/methodology.md``:
 none. These are real local git repositories (L1: git plus tmp dirs), not test
 doubles.
 """

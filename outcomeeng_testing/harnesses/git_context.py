@@ -18,7 +18,7 @@ worktree on a named branch with one commit and a clean working tree — and tear
 it down on every exit path. Tests pass the yielded path as the subprocess `cwd`
 so handoff sees a controlled, accepted context rather than the runner's.
 
-Exception case per `plugins/spec-tree/skills/testing/references/methodology.md`:
+Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 none. This is a real local git repository (L1: git plus tmp dirs), not a test
 double. The harness owns resource setup, teardown, and cleanup; it does not
 replace the behavior under test.
@@ -180,7 +180,7 @@ def worktree_against_origin(
     is current with the tip. The whole tree is removed on exit; read-only git
     objects that resist cleanup are ignored so teardown never fails the run.
 
-    Exception case per `plugins/spec-tree/skills/testing/references/methodology.md`:
+    Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
     none. This is a real local git repository (L1: git plus tmp dirs), not a test
     double. The harness owns resource setup, teardown, and cleanup; it does not
     replace the behavior under test.

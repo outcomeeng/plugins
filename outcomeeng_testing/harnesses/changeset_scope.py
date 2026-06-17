@@ -38,7 +38,7 @@ CHANGESET_SCOPE_SCRIPTS_DIR = (
     / "plugins"
     / "spec-tree"
     / "skills"
-    / "changeset-scope"
+    / "scope-changeset"
     / "scripts"
 )
 CHANGESET_SCOPE_MODULE_PATH = CHANGESET_SCOPE_SCRIPTS_DIR / "changeset_scope.py"

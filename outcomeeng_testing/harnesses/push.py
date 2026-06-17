@@ -5,7 +5,7 @@ Reuses `RecordingRunner` and `ScriptedToolProbe` from
 across the two orchestrators). Adds `ScriptedUpstreamProbe` for push's
 upstream-ref capture step.
 
-Exception case per `plugins/spec-tree/skills/testing/references/methodology.md`:
+Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 - Stage 5 #2 (Interaction protocols): push's correctness depends on the
   presence and ordering of git/upstream/sync calls.
 - Stage 5 #4 (Safety): real push mutates origin and triggers marketplace
