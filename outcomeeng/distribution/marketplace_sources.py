@@ -6,9 +6,10 @@ import argparse
 import json
 import subprocess
 import sys
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 DEFAULT_MARKETPLACE = "outcomeeng"
 SOURCE_TYPE_GIT = "git"
@@ -75,7 +76,13 @@ CODEX_MARKETPLACE_REMOVE_COMMAND = (
 DIST_CODEX_PLUGINS_DIR = Path("dist") / "codex"
 CODEX_PLUGIN_MANIFEST = Path(".codex-plugin") / "plugin.json"
 
-type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
+
+class CommandRunner(Protocol):
+    """Runs a runtime CLI command, optionally from a scoped working directory."""
+
+    def __call__(
+        self, command: list[str], *, cwd: Path | None = None
+    ) -> subprocess.CompletedProcess[str]: ...
 
 
 class MarketplaceSourceError(RuntimeError):
@@ -599,13 +606,7 @@ def _run_json_command(
     if cwd is None:
         result = runner(command)
     else:
-        try:
-            result = runner(command, cwd=cwd)  # type: ignore[call-arg]
-        except TypeError as exc:
-            raise MarketplaceSourceError(
-                f"command runner does not support working directory for "
-                f"{' '.join(command)}"
-            ) from exc
+        result = runner(command, cwd=cwd)
     if result.returncode != 0:
         stderr = (result.stderr or "").strip()
         detail = f": {stderr}" if stderr else ""

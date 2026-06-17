@@ -19,6 +19,7 @@ import subprocess
 
 import pytest
 
+import outcomeeng.distribution.sync as sync_module
 from outcomeeng.distribution.sync import (
     REQUIRED_TOOLS,
     STEPS,
@@ -53,6 +54,34 @@ def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
     assert _worktree_path_for_branch(listing, "main") == pathlib.Path(
         "/repo/plugins",
     )
+
+
+def test_real_source_root_selects_default_branch_worktree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins",
+            "HEAD 1111111111111111111111111111111111111111",
+            "branch refs/heads/main",
+            "",
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "branch refs/heads/work/manage-runtime-marketplaces",
+            "",
+        ],
+    )
+    feature_root = pathlib.Path("/repo/plugins-d")
+
+    monkeypatch.setattr(sync_module, "_real_default_branch_name", lambda: "main")
+    monkeypatch.setattr(
+        sync_module,
+        "_real_worktree_root_for_branch",
+        lambda branch: _worktree_path_for_branch(listing, branch),
+    )
+    monkeypatch.setattr(sync_module, "_real_git_toplevel", lambda: feature_root)
+
+    assert sync_module._real_source_root() == pathlib.Path("/repo/plugins")
 
 
 def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:

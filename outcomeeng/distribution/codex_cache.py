@@ -47,8 +47,15 @@ CODEX_PLUGIN_ADD_COMMAND = ("codex", "plugin", "add")
 CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 
-type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 type MarketplaceRootResolver = Callable[[str], Path]
+
+
+class CommandRunner(Protocol):
+    """Runs a Codex command, optionally from a scoped working directory."""
+
+    def __call__(
+        self, command: list[str], *, cwd: Path | None = None
+    ) -> subprocess.CompletedProcess[str]: ...
 
 
 class PluginHistory(Protocol):
@@ -162,8 +169,12 @@ def default_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
 
 
-def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, check=False, text=True, capture_output=True)
+def run_command(
+    command: list[str], *, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command, check=False, text=True, capture_output=True, cwd=cwd
+    )
     if result.stdout:
         print(result.stdout, end="")
     if result.stderr:
@@ -171,8 +182,10 @@ def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return result
 
 
-def run_command_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, check=False, text=True, capture_output=True)
+def run_command_capture(
+    command: list[str], *, cwd: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, check=False, text=True, capture_output=True, cwd=cwd)
 
 
 class InstalledSetError(RuntimeError):
