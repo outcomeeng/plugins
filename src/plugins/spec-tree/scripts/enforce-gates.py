@@ -2,7 +2,7 @@
 """PostToolUse hook for the spec-tree:applying skill.
 
 Fires after each Skill tool invocation. When the invoked skill is one of the
-applying flow's step skills (architecting, testing, coding), emits
+applying flow's step skills (architecture, test, implementation), emits
 ``additionalContext`` reminding the agent to run the matching audit gate before
 proceeding. Any other skill yields no output.
 
@@ -22,23 +22,25 @@ GATE_REMINDERS = {
     "coding": "GATE: Implementation step complete. Invoke the code auditing skill NOW before declaring done.",
 }
 
+GATE_SKILL_PREFIXES = {
+    "architecting": ("architecting-", "architect-"),
+    "testing": ("testing-", "test-"),
+    "coding": ("coding-", "code-"),
+}
+
 
 def reminder_for_skill(skill: str) -> str | None:
     """Map an invoked skill name to its audit-gate reminder, or None when no gate applies.
 
-    Matches by flow stage (architecting / testing / coding) independent of language —
-    a step skill is named ``<stage>-<language>`` (optionally ``<plugin>:`` prefixed),
-    so every language plugin's step skills map without per-language enumeration. The
-    bare spec-tree ``testing`` skill (no ``-<language>`` suffix) is not a step skill and
-    does not match.
+    Matches by flow stage independent of language. A step skill is named with a
+    stage prefix plus a language suffix, optionally ``<plugin>:`` prefixed, so
+    every language plugin's step skills map without per-language enumeration. The
+    bare spec-tree ``testing`` skill has no language suffix and does not match.
     """
     name = skill.rsplit(":", 1)[-1]
-    if name.startswith("architecting-"):
-        return GATE_REMINDERS["architecting"]
-    if name.startswith("testing-"):
-        return GATE_REMINDERS["testing"]
-    if name.startswith("coding-"):
-        return GATE_REMINDERS["coding"]
+    for gate, prefixes in GATE_SKILL_PREFIXES.items():
+        if name.startswith(prefixes):
+            return GATE_REMINDERS[gate]
     return None
 
 
