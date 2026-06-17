@@ -30,6 +30,5 @@ Resolution path: factor the Spec Tree fundamentals into a marketplace-wide PDR (
 
 Three small fixes against `plugins/typescript/skills/audit-typescript/SKILL.md`, to land with the audit-skill alignment work rather than with the eval-harness slice.
 
-- Line 25: typo "Typecsript" → "TypeScript".
 - Line 77: broken reference `${CLAUDE_SKILL_DIR}/rules/` — the directory does not exist; the skill ships `references/` only. Either correct the path to `references/` or create `rules/` if a separate location is intended.
 - Line 33: `quick_start` invokes `/test` and `/test-typescript`; these are test-evidence skills, but `audit-typescript` explicitly delegates test concerns to `audit-typescript-tests` elsewhere. Remove the test-skill invocations from `quick_start`.
