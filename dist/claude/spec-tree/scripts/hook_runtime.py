@@ -1,7 +1,4 @@
-"""Shared helpers for spec-tree hook scripts.
-
-stdlib only (python3); imported by plugin-root hook entrypoints.
-"""
+"""Shared helpers for spec-tree hook scripts."""
 
 from __future__ import annotations
 
@@ -9,12 +6,7 @@ import os
 
 
 def session_id_from(payload: dict) -> str:
-    """Return the current hook session identity.
-
-    Hook stdin's ``session_id`` is the portable runtime contract. Environment
-    fallbacks support manual runs and runtime drift without changing the primary
-    contract.
-    """
+    """Return the session id from hook stdin, falling back to runtime env vars."""
     value = payload.get("session_id")
     if isinstance(value, str) and value.strip():
         return value.strip()
