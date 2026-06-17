@@ -212,6 +212,62 @@ def _real_config_repairer() -> bool:
 
 
 def _real_source_root() -> Path:
+    default_branch = _real_default_branch_name()
+    if default_branch is not None:
+        worktree_root = _real_worktree_root_for_branch(default_branch)
+        if worktree_root is not None:
+            return worktree_root
+    return _real_git_toplevel()
+
+
+def _real_default_branch_name() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return "main"
+    ref = result.stdout.strip()
+    if not ref:
+        return "main"
+    return ref.rsplit("/", maxsplit=1)[-1]
+
+
+def _real_worktree_root_for_branch(branch: str) -> Path | None:
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return _worktree_path_for_branch(result.stdout, branch)
+
+
+def _worktree_path_for_branch(porcelain: str, branch: str) -> Path | None:
+    current_path: Path | None = None
+    branch_ref = f"branch refs/heads/{branch}"
+    for line in porcelain.splitlines():
+        if line.startswith("worktree "):
+            current_path = Path(line.removeprefix("worktree "))
+            continue
+        if line == branch_ref and current_path is not None:
+            return current_path
+        if not line:
+            current_path = None
+    return None
+
+
+def _real_git_toplevel() -> Path:
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],

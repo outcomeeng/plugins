@@ -19,7 +19,12 @@ import subprocess
 
 import pytest
 
-from outcomeeng.distribution.sync import REQUIRED_TOOLS, STEPS, sync
+from outcomeeng.distribution.sync import (
+    REQUIRED_TOOLS,
+    STEPS,
+    _worktree_path_for_branch,
+    sync,
+)
 from outcomeeng_testing.harnesses.sync import (
     RecordingRunner,
     ScriptedChangeProbe,
@@ -29,6 +34,38 @@ from outcomeeng_testing.harnesses.sync import (
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
+
+
+def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins",
+            "HEAD 1111111111111111111111111111111111111111",
+            "branch refs/heads/main",
+            "",
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "branch refs/heads/work/manage-runtime-marketplaces",
+            "",
+        ],
+    )
+
+    assert _worktree_path_for_branch(listing, "main") == pathlib.Path(
+        "/repo/plugins",
+    )
+
+
+def test_default_branch_worktree_selection_ignores_detached_worktrees() -> None:
+    listing = "\n".join(
+        [
+            "worktree /repo/plugins-d",
+            "HEAD 2222222222222222222222222222222222222222",
+            "detached",
+            "",
+        ],
+    )
+
+    assert _worktree_path_for_branch(listing, "main") is None
 
 
 def test_no_distribution_changes_exits_zero_after_config_reconciliation() -> None:
