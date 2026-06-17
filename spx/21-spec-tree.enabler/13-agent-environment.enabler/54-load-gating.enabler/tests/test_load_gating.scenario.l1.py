@@ -129,8 +129,7 @@ class TestGateEmitsCliVerdict:
         assert decision["hookEventName"] == "PreToolUse"
         assert decision["permissionDecision"] == "deny"
         assert (
-            decision["permissionDecisionReason"]
-            == "load /spec-tree:understand first"
+            decision["permissionDecisionReason"] == "load /spec-tree:understand first"
         )
 
     def test_allow_verdict_emits_no_denial(self, tmp_path):

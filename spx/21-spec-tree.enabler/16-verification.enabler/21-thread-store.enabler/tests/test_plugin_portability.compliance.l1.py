@@ -30,7 +30,13 @@ import sys
 # Tree surgery that changes the enabler's depth must update this index.
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[5]
 THREAD_STORE_SCRIPTS_DIR = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "manage-thread-store" / "scripts"
+    REPO_ROOT
+    / "src"
+    / "plugins"
+    / "spec-tree"
+    / "skills"
+    / "manage-thread-store"
+    / "scripts"
 )
 SPEC_TREE_SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
 SPEC_TREE_AGENTS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents"

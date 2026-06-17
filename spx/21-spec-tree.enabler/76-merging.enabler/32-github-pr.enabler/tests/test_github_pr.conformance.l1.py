@@ -69,7 +69,9 @@ class TestGithubPrPackaging:
         frontmatter = _frontmatter(GITHUB_PR_SKILL_FILE.read_text(encoding="utf-8"))
         assert not re.search(
             r"^user-invocable:\s*false\b", frontmatter, re.MULTILINE
-        ), "the /manage-github-pr skill must be user-invocable (no 'user-invocable: false')"
+        ), (
+            "the /manage-github-pr skill must be user-invocable (no 'user-invocable: false')"
+        )
 
 
 class TestProtocolPackagingConstraints:
