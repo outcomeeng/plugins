@@ -1,6 +1,6 @@
-"""Compliance tests for cross-cutting reviewing-changes rules.
+"""Compliance tests for cross-cutting review-changes rules.
 
-Covers the Compliance clauses in ``../review-changes.md`` that are
+Covers the Compliance clauses in ``../reviewing-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
 - Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
@@ -65,7 +65,7 @@ FORBIDDEN_ATTR_CALLS = {
 }
 FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink"}
 
-# Names of modules that ship under the reviewing-changes scripts/ directory
+# Names of modules that ship under the review-changes scripts/ directory
 # (sibling-imported via bare names) — these are not "third-party" or
 # "outcomeeng_*" violations.
 LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
@@ -94,7 +94,7 @@ PROMPT_FINGERPRINT_PHRASES = (
 
 
 def _script_files() -> list[pathlib.Path]:
-    """Return every ``.py`` file under the reviewing-changes ``scripts/`` dir."""
+    """Return every ``.py`` file under the review-changes ``scripts/`` dir."""
     if not SCRIPTS_DIR.is_dir():
         return []
     return [
@@ -176,7 +176,7 @@ class TestScriptsAreStdlibOnly:
                     continue
                 violations.append(f"{script.name}: import '{module}'")
         assert not violations, (
-            "reviewing-changes scripts import non-stdlib, non-local modules:\n"
+            "review-changes scripts import non-stdlib, non-local modules:\n"
             + "\n".join(violations)
         )
 
@@ -188,7 +188,7 @@ class TestScriptsAreStdlibOnly:
                 if module.startswith("outcomeeng_") or module == "outcomeeng":
                     violations.append(f"{script.name}: import '{module}'")
         assert not violations, (
-            "reviewing-changes scripts import outcomeeng_* modules "
+            "review-changes scripts import outcomeeng_* modules "
             "(forbidden by Plugin Portability Constraints):\n" + "\n".join(violations)
         )
 
@@ -267,7 +267,7 @@ class TestNoSecondSchemaRepresentation:
                     continue
                 violations.append(str(match.relative_to(SKILL_DIR)))
         assert not violations, (
-            "alternate schema representation found in reviewing-changes "
+            "alternate schema representation found in review-changes "
             f"skill directory (forbidden — the canonical schema lives in "
             f"review_result.py): {violations}"
         )

@@ -347,7 +347,7 @@ class TestVerdictIsUnhashable:
     def _build_verdict(self, *, metadata: dict[str, str]) -> object:
         return verdict_mod.Verdict(
             schema_version=verdict_mod.SCHEMA_VERSION,
-            skill="auditing-x",
+            skill="audit-x",
             target="spx/path",
             overall=verdict_mod.Status.PASS,
             rows=(),

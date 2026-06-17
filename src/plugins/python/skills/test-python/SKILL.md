@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'spec-tree:testing' %!}
+{!% require_skill 'spec-tree:test' %!}
 
 <objective>
 Write or fix Python test files for a spec-tree node. The workflow covers new test evidence and repair of rejected test evidence.

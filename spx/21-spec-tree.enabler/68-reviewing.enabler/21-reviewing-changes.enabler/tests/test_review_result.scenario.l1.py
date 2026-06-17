@@ -1,6 +1,6 @@
 """Scenario and mapping tests for the ``review_result`` policy module.
 
-Covers these clauses in ``../review-changes.md``:
+Covers these clauses in ``../reviewing-changes.md``:
 
 Scenarios
 - ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a

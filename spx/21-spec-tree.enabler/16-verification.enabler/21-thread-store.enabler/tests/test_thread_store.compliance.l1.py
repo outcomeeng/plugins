@@ -1,7 +1,7 @@
 """Compliance tests for facade-level rules.
 
 Covers the Compliance clauses on ``thread_store`` in
-``../manage-thread-store.md`` that are universal rules rather than per-case
+``../thread-store.md`` that are universal rules rather than per-case
 scenarios:
 
 - ``thread_store.write`` is atomic: an interruption between temp-write

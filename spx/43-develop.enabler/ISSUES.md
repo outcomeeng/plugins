@@ -11,7 +11,7 @@ authored canon is always "Claude".
 **Done (this sweep):** every executing-instance agent-subject in authored prompt prose — SKILL.md
 bodies, slash-command bodies, and skill `references/*.md` — is swept to imperative or "Claude".
 This includes the **compound** forms a naive `\bthe agent\b` grep misses: `the wrapper agent`
-(reviewing-changes, thread-store), `the calling agent` / `the calling agent or orchestrator` →
+(review-changes, thread-store), `the calling agent` / `the calling agent or orchestrator` →
 `the caller` (the verdict-emission boilerplate across `audit`, `audit-tests`, `audit-adr`,
 `audit-pdr`, `audit-skills`, `audit-commands`, `audit-subagents`, `audit-python`,
 `audit-python-architecture`, `audit-rust`, `audit-rust-architecture`,
@@ -36,7 +36,7 @@ orchestration domain content in `create-subagents/references/`; `coding agent` a
 *product* category and user-facing "your coding agent" (draw-excalidraw README); "a separate agent"
 delegation advice (large-diagrams); `local agent instructions` (a repo-file category, coding/test-typescript);
 the `<self_reference>` blocks that document banned output-artifact identity strings; and the
-rule-documentation lines in `agent-prompt-standards` / `auditing-*` that quote the banned
+rule-documentation lines in `agent-prompt-standards` / `audit-*` that quote the banned
 subjects verbatim.
 
 **Residuals (genuinely larger / distinct concern — tracked, not deferred-by-origin):**
@@ -73,10 +73,10 @@ subjects verbatim.
   **Tracked follow-ups — DONE (named-subject voice axes, branch `work/named-subject-voice-followups`):**
 
   - **Passive auditor-skill `description:` directiveness — DONE.** Converted the 9 passive
-    `auditing-*` descriptions (`description: Use when asked by the user to invoke the … skill`,
+    `audit-*` descriptions (`description: Use when asked by the user to invoke the … skill`,
     ~77% activation) to the directive `ALWAYS invoke … NEVER …` folded-scalar form (~100%) per
     `<description_style>`: `python` (audit-python, audit-python-architecture), `rust`
-    (audit-rust, audit-rust-architecture, audit-rust-tests), `spec-tree` (auditing-tests),
+    (audit-rust, audit-rust-architecture, audit-rust-tests), `spec-tree` (audit-tests),
     `typescript` (audit-typescript, audit-typescript-architecture, audit-typescript-tests).
     The `develop`/`prose` auditors and `audit-python-tests` were already directive.
   - **Uniform `<what_you_do_not_do>` → `<out_of_scope>` tag rename — DONE.** Renamed the section
@@ -92,7 +92,7 @@ subjects verbatim.
   **New tracked follow-up (surfaced by the skill-auditor gate during the voice sweep — separate, structural):**
 
   - **Audit-skill structural conformance — marketplace-wide.** `skill-standards` mandates
-    `allowed-tools: Read, Grep, Glob, Bash` for every `auditing-*` skill and (per `<xml_structure>`)
+    `allowed-tools: Read, Grep, Glob, Bash` for every `audit-*` skill and (per `<xml_structure>`)
     omitting `<quick_start>` on validator/gate skills. The touched-file portion is **fixed in this
     PR** (the local `changes-reviewer` gate raised it as in-scope touched-file debt): `audit-tests`
     gained `allowed-tools` and dropped its `<quick_start>` (its `/contextualize` prerequisite and
@@ -105,7 +105,7 @@ subjects verbatim.
     multi-phase code auditor is a "validator" that must omit `<quick_start>` is the unsettled design
     call for that pass — the skill-auditor split on it). Also:
     `spec-tree/review-pr` carries the same passive `Use when asked by the user …` description (not
-    an `auditing-*` skill, so outside the voice axis above) — fold into the directive-description pass
+    an `audit-*` skill, so outside the voice axis above) — fold into the directive-description pass
     or this structural pass.
 
 **Verification gate:** `develop:skill-auditor` (`/audit-skills`) loads `agent-prompt-standards`;

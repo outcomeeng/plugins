@@ -2,7 +2,7 @@
 
 The hook is the deterministic surface of the applying node: invoked by the harness
 as ``python3 scripts/enforce-gates.py`` with the PostToolUse payload on stdin, it
-emits an ``additionalContext`` gate reminder for architecting/test/coding skills
+emits an ``additionalContext`` gate reminder for architecture/test/code skills
 and nothing for any other skill. The test invokes the real script via subprocess —
 exactly as the harness does — and derives expected reminders from the script's own
 ``GATE_REMINDERS`` map so no expected value is owned by the test.
@@ -35,18 +35,18 @@ hook = _load_hook_module()
 # Source-owned domain: representative step skills for each gate, expected reminder
 # read from the script's own map (no test-owned constants).
 GATE_SKILLS = [
-    ("architect-python", hook.GATE_REMINDERS["architecting"]),
-    ("architect-typescript", hook.GATE_REMINDERS["architecting"]),
+    ("architect-python", hook.GATE_REMINDERS["architecture"]),
+    ("architect-typescript", hook.GATE_REMINDERS["architecture"]),
     ("test-python", hook.GATE_REMINDERS["test"]),
     ("test-typescript", hook.GATE_REMINDERS["test"]),
-    ("code-python", hook.GATE_REMINDERS["coding"]),
-    ("code-typescript", hook.GATE_REMINDERS["coding"]),
+    ("code-python", hook.GATE_REMINDERS["implementation"]),
+    ("code-typescript", hook.GATE_REMINDERS["implementation"]),
     # Language-neutral: any <stage>-<language> step skill maps, including languages
     # the skill_map does not enumerate, and through a "plugin:" prefix.
-    ("architect-rust", hook.GATE_REMINDERS["architecting"]),
+    ("architect-rust", hook.GATE_REMINDERS["architecture"]),
     ("test-rust", hook.GATE_REMINDERS["test"]),
-    ("code-rust", hook.GATE_REMINDERS["coding"]),
-    ("python:code-python", hook.GATE_REMINDERS["coding"]),
+    ("code-rust", hook.GATE_REMINDERS["implementation"]),
+    ("python:code-python", hook.GATE_REMINDERS["implementation"]),
     ("typescript:test-typescript", hook.GATE_REMINDERS["test"]),
 ]
 
@@ -55,10 +55,10 @@ NON_GATE_SKILLS = [
     "spec-tree:contextualize",
     "spec-tree:audit-tests",
     "prose:write-prose",
-    # The bare spec-tree testing/architecting skills are not <stage>-<language> step
+    # The bare spec-tree test/architect skills are not <stage>-<language> step
     # skills and must not trip a gate reminder.
     "spec-tree:test",
-    "architecting",
+    "architect",
     "",
 ]
 

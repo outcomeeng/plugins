@@ -9,9 +9,9 @@ Invoke the `python:python-standards` skill before proceeding. If that skill is u
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:testing` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:auditing-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 !`test -f spx/local/python.md && cat spx/local/python.md || true`
 

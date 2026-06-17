@@ -12,8 +12,8 @@ rows are committed back via the `OUTCOMEENG_EVAL_STORE` PAT.
 The root merge-gate policy probes moved out of LLM evals and into
 deterministic mapping tests at
 `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`.
-The CI eval workflow now covers the authored PR-management,
-PR-opening, reviewing-changes, and TypeScript test-ownership evals directly.
+The CI eval workflow now covers the authored PR management,
+PR opening, review-changes, and TypeScript test-ownership evals directly.
 
 Remaining before this plan is resolved:
 

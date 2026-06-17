@@ -9,7 +9,7 @@ Invoke the `python:python-standards` skill before proceeding. If that skill is u
 
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
-Invoke the `spec-tree:testing` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
 Write or fix Python test files for a spec-tree node. The workflow covers new test evidence and repair of rejected test evidence.

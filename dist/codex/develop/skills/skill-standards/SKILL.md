@@ -143,7 +143,7 @@ name: bootstrap # Users say "bootstrap the spec tree"
 
 # ❌ Nobody says these
 name: author-spec-tree-artifacts # Too verbose
-name: typescript-testing-framework # Wrong order
+name: typescript-unit-framework # Wrong order
 ```
 
 </naming_conventions>

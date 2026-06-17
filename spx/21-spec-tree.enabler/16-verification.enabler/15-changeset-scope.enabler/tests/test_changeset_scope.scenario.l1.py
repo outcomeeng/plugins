@@ -1,6 +1,6 @@
 """Scenario tests for the changeset-scope git-derivation primitives.
 
-Covers the Scenario assertions in ``../scope-changeset.md``:
+Covers the Scenario assertions in ``../changeset-scope.md``:
 
 - ``detect_base_ref`` returns the bare base-branch name from ``origin/HEAD``;
   strict raises ``BaseRefNotConfiguredError`` and non-strict returns

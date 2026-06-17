@@ -1,6 +1,6 @@
 """Compliance tests for the CRUD CLI scripts.
 
-Covers the Compliance clauses in ``../manage-thread-store.md`` and
+Covers the Compliance clauses in ``../thread-store.md`` and
 ``../21-backend-abstraction.adr.md`` that constrain CLI behavior as
 universal rules:
 
@@ -143,7 +143,7 @@ class TestCrudCliSlugIsOptional:
     to ``thread_store.current_slug()`` when ``--slug`` is omitted.
     Guards against an accidental regression where ``--slug`` is made
     ``required=True`` again. Mirrors the analogous
-    ``TestComputeDiffSlugIsOptional`` check in the reviewing-changes
+    ``TestComputeDiffSlugIsOptional`` check in the review-changes
     verification skill's compliance test.
     """
 

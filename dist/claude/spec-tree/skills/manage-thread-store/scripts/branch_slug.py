@@ -5,7 +5,7 @@ The canonical git-derivation primitives live in
 This module loads that file via ``importlib`` (the changeset-scope scripts
 are not a package — they ship as bare modules under a runtime-substituted
 plugin directory) and re-exports the symbols so the thread-store, auditing,
-and reviewing-changes surfaces share one slug and base-ref rule.
+and review-changes surfaces share one slug and base-ref rule.
 
 The re-exported symbols are identity-equal to their canonical
 counterparts. Tests assert this with ``branch_slug is canonical``.

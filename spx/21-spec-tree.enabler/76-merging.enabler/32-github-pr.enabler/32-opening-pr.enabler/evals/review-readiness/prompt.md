@@ -5,7 +5,7 @@
      Probe scope: the eval verifies the REVIEW_READINESS gate decision —
      whether /open-pr opens the PR ready_for_review — given the
      deterministic-verification result and the local-review state. The
-     reviewer's own behavior (reviewing-changes producing findings) has
+     reviewer's own behavior (review-changes producing findings) has
      its own evals under spx/21-spec-tree.enabler/68-reviewing.enabler/
      21-reviewing-changes.enabler/evals/. -->
 

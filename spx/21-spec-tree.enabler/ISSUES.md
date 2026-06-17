@@ -90,9 +90,9 @@ Required handling:
 
 Surfaced by `claude-review` on PR 25 (2026-05-14).
 
-## 19. Placeholder notation mixed across inline and code-block commands in standardizing-merging
+## 19. Placeholder notation mixed across inline and code-block commands in merging-standards
 
-`plugins/spec-tree/skills/merging-standards/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Standardizing on a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
+`plugins/spec-tree/skills/merging-standards/SKILL.md` uses angle-bracket placeholders (`<pr-number>`, `<branch>`, `<base>`) inside both code blocks and inline backtick snippets. The convention is consistent within the file but the inline form reads as runnable shell when copied without context. Choosing a single convention — angle-brackets in code blocks only, named placeholders inline — would improve copy-paste safety for a reader who pastes an inline snippet into a terminal.
 
 Required handling:
 

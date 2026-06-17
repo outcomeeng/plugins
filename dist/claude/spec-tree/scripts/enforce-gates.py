@@ -17,15 +17,15 @@ import json
 import sys
 
 GATE_REMINDERS = {
-    "architecting": "GATE: Architecture step complete. Invoke the architecture auditing skill NOW before proceeding to Step 5 (tests).",
-    "test": "GATE: Testing step complete. Invoke the test auditing skill NOW before proceeding to Step 7 (implementation).",
-    "coding": "GATE: Implementation step complete. Invoke the code auditing skill NOW before declaring done.",
+    "architecture": "GATE: Architecture step complete. Invoke the architecture audit skill NOW before proceeding to Step 5 (tests).",
+    "test": "GATE: Testing step complete. Invoke the test audit skill NOW before proceeding to Step 7 (implementation).",
+    "implementation": "GATE: Implementation step complete. Invoke the code audit skill NOW before declaring done.",
 }
 
 GATE_SKILL_PREFIXES = {
-    "architecting": ("architecting-", "architect-"),
-    "test": ("testing-", "test-"),
-    "coding": ("coding-", "code-"),
+    "architecture": ("architect-",),
+    "test": ("test-",),
+    "implementation": ("code-",),
 }
 
 

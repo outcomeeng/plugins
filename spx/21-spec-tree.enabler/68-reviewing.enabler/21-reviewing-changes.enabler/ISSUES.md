@@ -59,8 +59,8 @@ prompt / global instructions (or is an outright hallucination), and the
 reviewer attributed it to the repository's `CLAUDE.md`.
 
 The current guard does not catch this. `references/review-prompt.md` defines
-the `standards` concern as "adherence to `CLAUDE.md` and the rules declared in
-standardizing-\* skills" (Category section), and the `## Rule citation` section
+the `standards` concern as "adherence to `CLAUDE.md` and standards skill rules"
+(Category section), and the `## Rule citation` section
 already forbids "Inventing a citation that does not name a real rule in the
 loaded context." But an agent that *recalls* a comment-length rule from its own
 system prompt believes the rule is real and present in `CLAUDE.md` — from its
@@ -76,7 +76,7 @@ plugins and any restating workflow):
   `## Rule citation` section to add a strongly worded rule: a finding may cite a
   rule ONLY when the reviewer has located and read that exact text in a file
   that exists in the repository under review (`CLAUDE.md`, `AGENTS.md`, a loaded
-  standardizing-\* skill, or a governance doc on disk). The reviewer MUST NOT
+  standards skill, or a governance doc on disk). The reviewer MUST NOT
   cite any rule it recalls from its own system prompt, the user/global
   `CLAUDE.md`, prior sessions, or training, and MUST discard rather than report
   such a rule.

@@ -22,12 +22,12 @@ CONTRIBUTING TO faster iteration cycles and higher confidence in AI-assisted dev
 
 ### What's included
 
-- Spec Tree methodology (understanding, contextualizing, authoring, decomposing, refactoring, aligning)
+- Spec Tree methodology (`/understand`, `/contextualize`, `/author`, `/decompose`, `/refactor`, `/align`)
 - Shared Claude Code and Codex plugin surfaces from the same source tree
-- Testing and audit skills (testing, auditing-tests) as supersets of standalone methodology
-- TDD flow orchestration (coding) with language-specific delegation
-- Commit workflow (committing-changes) with Conventional Commits
-- Language-specific plugins (Python, TypeScript, Rust) for architecture, testing, coding, review
+- Testing and audit skills (`/test`, `/audit-tests`) as supersets of standalone methodology
+- TDD flow orchestration (`/apply`) with language-specific delegation
+- Commit workflow (`/commit-changes`) with Conventional Commits
+- Language-specific plugins (Python, TypeScript, Rust) for architecture, tests, code, and review
 - Session management (handoff, pickup) for conversation continuity
 - Pre-commit validation infrastructure for plugin and skill quality
 - Local plugin installation and update support for developer machines

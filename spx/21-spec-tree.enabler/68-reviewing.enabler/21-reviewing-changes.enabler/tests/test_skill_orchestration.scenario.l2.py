@@ -1,6 +1,6 @@
-"""End-to-end scenario tests for the reviewing-changes script chain.
+"""End-to-end scenario tests for the review-changes script chain.
 
-Covers the Scenario clauses in ``../review-changes.md`` that govern
+Covers the Scenario clauses in ``../reviewing-changes.md`` that govern
 how ``compute_diff.py`` resolves ``base_ref`` and how the end-to-end
 chain persists outputs:
 

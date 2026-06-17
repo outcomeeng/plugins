@@ -33,7 +33,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
    - **`security`** — confidentiality, integrity, availability. Injection surfaces, leaked secrets, missing authorization checks.
    - **`performance`** — unbounded loops, hot-path allocations, accidental quadratics, synchronous I/O on async paths — flagged only when it matters for this code path.
    - **`evidence`** — inadequate test or eval coverage of declared assertions; unmaintainable tests; tautology over real coupling.
-   - **`standards`** — adherence to `CLAUDE.md` and `standardizing-*` skill rules (naming, command tokens, file structure, language idioms).
+   - **`standards`** — adherence to `CLAUDE.md` and standards skill rules (naming, command tokens, file structure, language idioms).
    - **`architecture`** — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions).
 4. **Label every finding with one severity × one category from `/merging-standards` `<review_classification>`.** Severity is `BLOCKING` or `DEBT` — never `FOLLOW-UP`, never `P0` / `P1` / `critical` / `high` / `medium` / `low` / `minor` / `nit`, never the legacy classes `NEEDS-ANSWER` or `NOTE`. The bracketed dimension after the severity names the category. Cite `file:line` and explain *why* something is a concern, not just *that* it is. Reframe open questions as findings rather than asking; never emit bare commentary or praise that does not constitute a finding.
 5. **If the review has no `BLOCKING` or `DEBT` items, say so directly.** Do not manufacture lower-priority findings to prove that review happened.

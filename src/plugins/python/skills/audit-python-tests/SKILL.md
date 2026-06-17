@@ -10,9 +10,9 @@ allowed-tools: Read, Grep, Glob, Bash
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'spec-tree:testing' %!}
+{!% require_skill 'spec-tree:test' %!}
 
-{!% require_skill 'spec-tree:auditing-tests' %!}
+{!% require_skill 'spec-tree:audit-tests' %!}
 
 !`test -f spx/local/python.md && cat spx/local/python.md || true`
 

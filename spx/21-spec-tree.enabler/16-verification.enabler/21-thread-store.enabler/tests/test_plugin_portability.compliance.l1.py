@@ -1,6 +1,6 @@
 """Plugin-portability compliance tests.
 
-Covers the Compliance clauses in ``../manage-thread-store.md`` and
+Covers the Compliance clauses in ``../thread-store.md`` and
 ``../21-backend-abstraction.adr.md`` that constrain the imports and
 module shape of thread-store scripts and the cross-skill rules that
 keep backend selection routed through the facade:
@@ -133,7 +133,7 @@ class TestVerificationSkillsDoNotImportBackendsDirectly:
     ``thread_store`` facade, never by importing ``fs_backend`` (or any
     other concrete backend module) directly.
 
-    The current marketplace has no verification skills yet — reviewing-changes
+    The current marketplace has no verification skills yet — review-changes
     is declared but not implemented. The test passes trivially on an
     empty input and fails the moment a verification skill adds a forbidden import.
     """

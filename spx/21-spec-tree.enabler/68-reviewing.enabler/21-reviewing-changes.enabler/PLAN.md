@@ -1,4 +1,4 @@
-# PLAN — reviewing-changes skill follow-ups
+# PLAN — review-changes skill follow-ups
 
 ## Why
 
@@ -15,7 +15,7 @@ The verification skill was re-aligned with the `REVIEW.template.md` finding taxo
 
 ## Decisions (2026-05-17 interview)
 
-A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six imperfections; the interview that followed produced these agreed remediations. The next iteration on the verification skill implements them; PR strategy (one bundled PR vs split) is open.
+A `/contextualize` walk over `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` surfaced six imperfections; the interview that followed produced these agreed remediations. The next iteration on the verification skill implements them; PR strategy (one bundled PR vs split) is open.
 
 **D1. Input-mode dispatch lives in the existing `changes-reviewer`, extended with input-parsing prose.** No new wrapper. One smart entry point dispatches `changes-reviewer` via the Task tool with the raw input as the prompt; the Task dispatch IS the "separate context window". The agent's prose teaches it to recognize three input forms — (a) a PR reference (`#N`, URL), (b) a local branch reference, (c) a `from...to` git rev range (local or remote) — parse them, resolve to a `(from_ref, to_ref, slug)` triple, set up env (`SPX_VERIFY_BRANCH`, `SPX_VERIFY_BASE_REF`) or write a `changes.json` thread record accordingly, then invoke the skill chain. The current single-wrapper-per-skill shape per `verification.md` is preserved. No dedicated slash command per mode — the agent interprets what was given. Future verification skills (when authored) ship their own thin wrappers per the shared verification contract; that's verification-skill-author scope, not this iteration.
 
@@ -38,16 +38,14 @@ A contextualizing walk over `spx/.../32-reviewing-changes.enabler` surfaced six 
 
 ## Open items
 
-0. **Remove standards-audit implication from the active review prompt.** The active `review-changes` skill has `allowed-tools: Bash, Read`, loads only `references/review-prompt.md`, computes a diff, and validates/render/persists the result. It does not load Python, TypeScript, Rust, or other `standardizing-*` skills, and it does not invoke `/audit`. The prompt still says the diff is judged against "`CLAUDE.md` / `AGENTS.md` and the standardizing-* skills" and includes a `standards` concern. That wording makes reviewing sound like a standards-conformance audit it cannot actually perform.
+0. **Resolved — removed standards-audit implication from the active review prompt.** The active `review-changes` skill has `allowed-tools: Bash, Read`, loads only `references/review-prompt.md`, computes a diff, and validates/render/persists the result. It does not load Python, TypeScript, Rust, or other standards skills, and it does not invoke `/audit`. The prompt now names repository instructions and standards skills generically without the former skill-name pattern.
 
-   Required handling:
+   Resolution:
 
-   - Edit `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md` so the scope reflects what the skill loads: repository instructions and the diff context available to the reviewer.
-   - Remove `standardizing-*` from the prompt unless the skill is changed to load those references explicitly.
-   - Remove or narrow the `standards` concern so review findings do not impersonate `/audit` or language-specific audit verdicts.
-   - Update `spx/21-spec-tree.enabler/68-reviewing.enabler/reviewing.md` and this node's assertions if the six-concern taxonomy changes.
-   - Update generated `dist/claude/spec-tree/` and `dist/codex/spec-tree/` after source skill edits.
-   - Gate with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, `just docs-check`, and the relevant reviewing-changes tests or evals if the schema/prompt contract changes.
+   - Edited `src/plugins/spec-tree/skills/review-changes/references/review-prompt.md` so the scope reflects what the skill loads: repository instructions and the diff context available to the reviewer.
+   - Removed the former standards-skill name pattern from the prompt.
+   - Updated generated `dist/claude/spec-tree/` and `dist/codex/spec-tree/` after source skill edits.
+   - Gate with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, `just docs-check`, and the relevant review-changes tests or evals if the schema/prompt contract changes.
 
 1. **(Resolved by the reviewer-only change.)** This item tracked approve/comment calibration at trivial diffs. The review-result schema no longer carries a decision or verdict field — the reviewer emits findings only, and each consumer applies its own policy (by validity and phase, never by severity) — so the approve/comment boundary no longer exists.
 

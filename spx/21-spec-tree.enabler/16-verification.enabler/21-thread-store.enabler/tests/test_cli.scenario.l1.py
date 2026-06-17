@@ -1,7 +1,7 @@
 """Scenario tests for the CRUD CLIs.
 
 Covers the Scenario clauses on the CLI surface in
-``../manage-thread-store.md``:
+``../thread-store.md``:
 
 - ``write_record.py``, ``read_record.py``, ``delete_record.py``, and
   ``list_records.py`` accept slug + name + payload via stdin or

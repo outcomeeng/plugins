@@ -12,7 +12,7 @@ Do not hide remote complexity inside production modules. Route credentials, base
 
 - Read documented credentials or managed test-account helpers.
 - Fail loudly when selected evidence requires missing credentials.
-- Skip only when the suite explicitly marks the remote evidence optional for that command.
+- Never use `it.skip`, `it.skipIf`, or `test.skip`; when credentials or services are absent, throw with a clear diagnostic.
 - Keep remote contract assertions narrow and tied to the spec assertion.
 
 </test_shape>

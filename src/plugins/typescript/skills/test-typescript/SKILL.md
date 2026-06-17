@@ -9,7 +9,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
-{!% require_skill 'spec-tree:testing' %!}
+{!% require_skill 'spec-tree:test' %!}
 
 <objective>
 Write or fix test files for a node specification. This skill handles both:

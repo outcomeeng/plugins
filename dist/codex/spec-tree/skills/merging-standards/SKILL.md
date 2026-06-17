@@ -166,7 +166,7 @@ The local `review-changes` gate is the author-side, pre-push instance of the sam
 - **Pass only the repository/worktree and the diff range.** `review-changes` resolves the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, where `head_ref` defaults to `HEAD`); the caller supplies the repository/worktree and, only when it must be made explicit, the base ref. No file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
-- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the `standardizing-*` skills) and the shared taxonomy itself.
+- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the standards skills) and the shared taxonomy itself.
 
 Run it via the `changes-reviewer` agent — isolated context, so the verdict is not biased by what the operator's main context has been doing — or the `/review-changes` command when `changes-reviewer` is not installed; both drive the same `review-changes` skill chain. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 
@@ -315,7 +315,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 *How it does what it is supposed to do*
 
-- `standards` — adherence to CLAUDE.md and the rules declared in `standardizing-*` skills (naming conventions, command tokens, file structure, language idioms).
+- `standards` — adherence to CLAUDE.md and the rules declared in standards skills (naming conventions, command tokens, file structure, language idioms).
 - `architecture` — violation of structural principles declared by ADRs or PDRs (layer boundaries, separation of concerns, dependency directions, module-shape rules). A finding is an architecture one when the structure itself is at odds with a governance principle, even if every layer is internally consistent.
 
 **Finding labels.** Both `BLOCKING` and `DEBT` require an action in this PR and use `Reference:` + `Evidence:` + `Required:`.

@@ -1,7 +1,7 @@
 """Scenario tests for the filesystem backend.
 
 Covers the Scenario clause on the filesystem backend's ``thread_path``
-in ``../manage-thread-store.md``:
+in ``../thread-store.md``:
 
 - ``thread_path(slug)`` resolves to ``<root>/<slug>``
 - ``thread_path(slug)`` returns the same path across repeated calls

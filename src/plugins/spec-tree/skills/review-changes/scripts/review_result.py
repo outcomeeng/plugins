@@ -1,7 +1,7 @@
 """Reviewing-changes policy module — canonical schema.
 
 The single source of truth for the ``review-result`` shape that the
-reviewing-changes skill produces. Declares:
+review-changes skill produces. Declares:
 
 - ``SCHEMA_VERSION`` — the wire-format version constant.
 - ``Severity``, ``Concern`` enums (``StrEnum``) — the wire vocabularies

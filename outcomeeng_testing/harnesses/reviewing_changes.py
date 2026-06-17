@@ -1,4 +1,4 @@
-"""Harness for reviewing-changes scenario, property, and compliance tests.
+"""Harness for review-changes scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
 ``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
@@ -72,7 +72,7 @@ FIXTURE_RULE_CITATION = (
 def load_review_result_module() -> ModuleType:
     """Load the ``review_result`` policy module via importlib.
 
-    The reviewing-changes scripts ship under ``src/plugins/`` (the authored
+    The review-changes scripts ship under ``src/plugins/`` (the authored
     plugin source directory) and are not importable as a package.
     Tests that introspect ``SCHEMA_VERSION``, the ``Severity`` /
     ``Concern`` enums, the frozen ``Finding`` /

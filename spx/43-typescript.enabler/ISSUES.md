@@ -15,16 +15,16 @@ Known examples:
 
 Revisit condition: run a focused TypeScript skill-structure cleanup after the test-data policy and level-document rename changes are reviewed.
 
-## Methodology Restatement Inside TypeScript Standardizing Skills
+## Methodology Restatement Inside TypeScript Standards Skills
 
-The standardizing TypeScript skills (`typescript-standards`, `typescript-architecture-standards`, `typescript-test-standards`) currently restate Spec Tree fundamentals that belong to the methodology layer rather than to TypeScript:
+The TypeScript standards skills (`typescript-standards`, `typescript-architecture-standards`, `typescript-test-standards`) currently restate Spec Tree fundamentals that belong to the methodology layer rather than to TypeScript:
 
 - `typescript-architecture-standards/SKILL.md` includes `<adr_sections>` and `<atemporal_voice>` sections that duplicate `spx/21-spec-tree.enabler/spec-tree.md` and `plugins/spec-tree/skills/understand/references/durable-map.md`.
 - `<anti_patterns>` in the same skill mixes methodology-level prohibitions (no Status field, no Testing Strategy section) with TypeScript-specific anti-patterns.
 
 The TypeScript specs under `spx/43-typescript.enabler/25-typescript-standards.enabler/` cover only TypeScript-specific concerns. The skill content remains broader so that downstream agents can be evaluated for both Spec Tree adherence and TypeScript-plugin conformance.
 
-Resolution path: factor the Spec Tree fundamentals into a marketplace-wide PDR (or extend an existing one) so the standardizing-language skills can reference it instead of restating it. Until then, evaluations of these skills must check both layers.
+Resolution path: factor the Spec Tree fundamentals into a marketplace-wide PDR (or extend an existing one) so the language-standards skills can reference it instead of restating it. Until then, evaluations of these skills must check both layers.
 
 ## `audit-typescript` Spot Defects
 

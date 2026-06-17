@@ -1,7 +1,7 @@
 """Property tests for the re-exported ``branch_slug`` function.
 
 Covers the Property clauses on ``branch_slug`` in
-``../manage-thread-store.md``:
+``../thread-store.md``:
 
 - idempotence: ``branch_slug(branch_slug(x)) == branch_slug(x)``
 - injectivity: distinct branch names produce distinct slugs

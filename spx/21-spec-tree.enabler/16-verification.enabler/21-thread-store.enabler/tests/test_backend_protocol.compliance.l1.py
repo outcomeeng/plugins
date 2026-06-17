@@ -1,7 +1,7 @@
 """Compliance tests for the ``Backend`` protocol.
 
 Covers the Compliance clauses on backend protocol conformance in
-``../manage-thread-store.md``:
+``../thread-store.md``:
 
 - A conformant backend module exposes ``thread_path``, ``write``,
   ``read``, ``delete``, and ``list`` with the declared signatures.

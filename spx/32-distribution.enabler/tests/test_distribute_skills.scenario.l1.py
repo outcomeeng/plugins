@@ -382,7 +382,7 @@ class TestGenerateReadme:
             "plugins": ["typescript"],
             "prerequisites": ["outcomeeng/foundation (for /test)"],
         }
-        skills: list[dict] = [{"name": "testing-ts", "description": "desc"}]
+        skills: list[dict] = [{"name": "test-ts", "description": "desc"}]
 
         result = distribute_skills.generate_readme(
             "typescript", config, skills, self.GITHUB_ORG
