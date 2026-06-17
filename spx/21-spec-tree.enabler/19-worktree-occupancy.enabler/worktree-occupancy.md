@@ -12,6 +12,10 @@ The claim record at `.spx/worktrees/<name>.claim` carries the holding agent's se
 
 - Given a session starts in a pool worktree with the `spx` CLI present, when the `SessionStart` hook fires, then it records a worktree-occupancy claim for the running worktree by invoking `spx worktree claim` against that worktree ([test](tests/test_worktree_occupancy.scenario.l1.py))
 - Given a session starts and the `spx` CLI is absent, exits non-zero, or does not respond within the claim timeout, when the `SessionStart` hook fires, then it records no claim and degrades to a silent no-op ([test](tests/test_worktree_occupancy.scenario.l1.py))
+- Given a `SessionStart` hook writes the harness env file, when the running worktree claim succeeds or fails, then it exports `CLAUDE_WORKTREE_CLAIMED=1` only after a successful claim and `CLAUDE_WORKTREE_CLAIMED=0` otherwise, so later `PreToolUse` hooks can skip steady-state worktree status repair only after a confirmed claim ([test](tests/test_worktree_occupancy.scenario.l1.py))
+- Given a `PreToolUse` payload in a spec-tree repository and the environment already carries `CLAUDE_WORKTREE_CLAIMED=1`, when the gate hook fires, then it skips `spx worktree status --format json` and evaluates the tool gate directly ([test](tests/test_worktree_occupancy.scenario.l1.py))
+- Given a `PreToolUse` payload in a spec-tree repository and the running worktree status is `stale` or `unclaimed`, when the gate hook fires with a session id and the `spx` CLI present, then it invokes `spx worktree claim --session-id <session-id>` before evaluating the tool gate and adds model-visible context that claim repair was attempted ([test](tests/test_worktree_occupancy.scenario.l1.py))
+- Given a `PreToolUse` payload in a spec-tree repository and the running worktree status is `stale` or `unclaimed`, when the gate hook fires with a session id and `spx worktree claim` exits non-zero, then the hook emits model-visible context that the repair failed and still allows the tool call ([test](tests/test_worktree_occupancy.scenario.l1.py))
 
 ### Compliance
 

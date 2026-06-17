@@ -10,6 +10,10 @@ Two outputs on two channels, plus a delegated worktree-occupancy claim:
                          accumulation under .spx/sessions/$CLAUDE_SESSION_ID/.
      CLAUDE_PROJECT_DIR  Claude Code product root, exposed to Bash tool calls.
      PROJECT_DIR         Short alias for CLAUDE_PROJECT_DIR.
+     CLAUDE_WORKTREE_CLAIMED
+                         "1" only when SessionStart successfully claimed the
+                         worktree, otherwise "0" so later hooks never inherit a
+                         stale claimed marker.
 
 2. Stdout (injected into Claude's context) carries up to three directives, in
    order: an understanding directive, then a base-staleness directive, then a
@@ -60,6 +64,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from hook_runtime import session_id_from
+
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _TRACKING_PREFIX = "refs/remotes/"
 
@@ -90,13 +96,15 @@ def export_line(name: str, value: str) -> str:
     return f"export {name}={shlex.quote(value)}"
 
 
-def write_env_file(payload: dict, project_dir: str) -> None:
+def write_env_file(
+    payload: dict, project_dir: str, *, worktree_claimed: bool = False
+) -> None:
     """Append the session export lines to $CLAUDE_ENV_FILE.
 
     No-ops (with a stderr diagnostic) when the session id or env file is absent,
     so a missing field never aborts the directives that follow.
     """
-    session_id = (payload.get("session_id") or "").strip()
+    session_id = session_id_from(payload)
     if not session_id:
         warn("missing or invalid .session_id; not exporting CLAUDE_SESSION_ID")
         return
@@ -114,6 +122,9 @@ def write_env_file(payload: dict, project_dir: str) -> None:
     if project_dir:
         lines.append(export_line("CLAUDE_PROJECT_DIR", project_dir))
         lines.append(export_line("PROJECT_DIR", project_dir))
+        lines.append(
+            export_line("CLAUDE_WORKTREE_CLAIMED", "1" if worktree_claimed else "0")
+        )
     else:
         warn(
             "product directory unavailable; not exporting CLAUDE_PROJECT_DIR or PROJECT_DIR"
@@ -166,7 +177,7 @@ def understanding_directive(project_dir: str) -> str:
     )
 
 
-def claim_worktree(payload: dict, project_dir: str) -> None:
+def claim_worktree(payload: dict, project_dir: str) -> bool:
     """Record a worktree-occupancy claim for the running worktree via the spx CLI.
 
     The hook owns no `.spx/` state: it invokes `spx worktree claim`, and the CLI
@@ -175,17 +186,19 @@ def claim_worktree(payload: dict, project_dir: str) -> None:
     spx is a silent no-op — occupancy detection degrades, it does not error, and
     a bounded timeout keeps a stuck claim from stalling session start — and the
     claim's output never reaches stdout, which is injected into Claude's context.
+    Returns true only when the CLI confirms the claim, so the env file can mark
+    later `PreToolUse` calls as already claimed.
 
     No-ops when no session identity or product directory is known, since the
     claim is keyed on the agent and targets its worktree.
     """
-    session_id = (payload.get("session_id") or "").strip()
+    session_id = session_id_from(payload)
     if not session_id or not project_dir:
-        return
+        return False
 
     spx = os.environ.get("SPX_BIN", "spx")
     try:
-        subprocess.run(
+        result = subprocess.run(
             [spx, "worktree", "claim", "--session-id", session_id],
             check=False,
             capture_output=True,
@@ -194,7 +207,8 @@ def claim_worktree(payload: dict, project_dir: str) -> None:
         )
     except (OSError, subprocess.TimeoutExpired):
         # spx absent, or a claim that stalls past the timeout — degrade silently.
-        pass
+        return False
+    return result.returncode == 0
 
 
 def _git(project_dir: str, *args: str) -> subprocess.CompletedProcess | None:
@@ -327,8 +341,8 @@ def main() -> int:
             "CLAUDE_PROJECT_DIR unset; falling back to .cwd, which may not be the product root"
         )
 
-    write_env_file(payload, project_dir)
-    claim_worktree(payload, project_dir)
+    worktree_claimed = claim_worktree(payload, project_dir)
+    write_env_file(payload, project_dir, worktree_claimed=worktree_claimed)
 
     for directive in (
         understanding_directive(project_dir),

@@ -25,7 +25,12 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng_testing.harnesses.hooks import MISSING_SPX, run_session_start
+from outcomeeng_testing.harnesses.hooks import (
+    MISSING_SPX,
+    make_spec_tree,
+    run_pretool_gate,
+    run_session_start,
+)
 
 
 def _fake_spx(bindir: Path, *, returncode: int = 0) -> Path:
@@ -88,6 +93,59 @@ def _recorded_cwd(spx: Path) -> Path:
     return Path(Path(str(spx) + ".cwd").read_text())
 
 
+def _fake_spx_with_worktree_status(
+    bindir: Path,
+    *,
+    status: str,
+    claim_returncode: int = 0,
+    claim_stderr: str = "",
+) -> Path:
+    """Write a fake `spx` that records each hook-delegated subcommand."""
+    bindir.mkdir(parents=True, exist_ok=True)
+    spx = bindir / "spx"
+    spx.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, pathlib, sys\n"
+        "calls_path = pathlib.Path(__file__ + '.calls')\n"
+        "calls = json.loads(calls_path.read_text()) if calls_path.exists() else []\n"
+        "args = sys.argv[1:]\n"
+        "calls.append(args)\n"
+        "calls_path.write_text(json.dumps(calls))\n"
+        "if args[:3] == ['worktree', 'status', '--format']:\n"
+        f"    print(json.dumps({{'worktree': 'worktree', 'status': {status!r}}}))\n"
+        "    sys.exit(0)\n"
+        "if args[:2] == ['worktree', 'claim']:\n"
+        f"    sys.stderr.write({claim_stderr!r})\n"
+        f"    sys.exit({claim_returncode})\n"
+        "if args[:2] == ['gate', 'check']:\n"
+        "    print(json.dumps({'decision': 'allow', 'reason': ''}))\n"
+        "    sys.exit(0)\n"
+        "sys.exit(2)\n"
+    )
+    spx.chmod(0o755)
+    return spx
+
+
+def _calls(spx: Path) -> list[list[str]]:
+    return json.loads(Path(str(spx) + ".calls").read_text())
+
+
+def _pretool_payload(project_dir: Path, *, session_id: str = "sess-pretool") -> dict:
+    return {
+        "session_id": session_id,
+        "transcript_path": str(project_dir / "transcript.jsonl"),
+        "cwd": str(project_dir),
+        "tool_name": "Read",
+        "tool_input": {"file_path": "spx/thing.product.md"},
+    }
+
+
+def _hook_output(result: subprocess.CompletedProcess) -> dict | None:
+    if not result.stdout.strip():
+        return None
+    return json.loads(result.stdout)["hookSpecificOutput"]
+
+
 # ---------------------------------------------------------------------------
 # Assertion 1 — SessionStart records a claim for the running worktree
 # ---------------------------------------------------------------------------
@@ -112,6 +170,41 @@ class TestSessionStartRecordsWorktreeClaim:
         # The claim's output must never reach stdout, which is injected into the
         # agent's context; a non-git worktree yields no base-staleness directive.
         assert result.stdout == ""
+
+    def test_marks_env_file_after_successful_claim(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        project_dir.mkdir()
+        env_file = tmp_path / "env.sh"
+        spx = _fake_spx(tmp_path / "bin")
+
+        result = run_session_start(
+            {"session_id": "sess-env", "cwd": str(project_dir)},
+            env_file=env_file,
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx)},
+        )
+
+        assert result.returncode == 0
+        assert "export CLAUDE_WORKTREE_CLAIMED=1" in env_file.read_text(
+            encoding="utf-8"
+        )
+
+    def test_invokes_claim_with_codex_thread_identity_fallback(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        project_dir.mkdir()
+        spx = _fake_spx(tmp_path / "bin")
+        session_id = "019ed48b-0465-79b2-ba88-8bf2838cd71a"
+
+        result = run_session_start(
+            {"cwd": str(project_dir)},
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx), "CODEX_THREAD_ID": session_id},
+        )
+
+        assert result.returncode == 0
+        argv = _argv(spx)
+        assert argv[:2] == ["worktree", "claim"]
+        assert argv[argv.index("--session-id") + 1] == session_id
 
     # The guard `(payload.get("session_id") or "").strip()` reads every "no
     # session identity" shape as empty: an empty string, an absent key, and a
@@ -173,12 +266,21 @@ class TestSessionStartDegradesWithoutSpx:
     def test_nonzero_spx_is_silent_noop(self, tmp_path):
         project_dir = tmp_path / "worktree"
         project_dir.mkdir()
+        env_file = tmp_path / "env.sh"
         spx = _fake_spx(tmp_path / "bin", returncode=1)
 
-        result = _session_start(project_dir, "sess-y", spx_bin=str(spx))
+        result = run_session_start(
+            {"session_id": "sess-y", "cwd": str(project_dir)},
+            env_file=env_file,
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx)},
+        )
 
         assert result.returncode == 0
         assert result.stdout == ""
+        assert "export CLAUDE_WORKTREE_CLAIMED=0" in env_file.read_text(
+            encoding="utf-8"
+        )
 
     def test_hung_spx_is_silent_noop(self, tmp_path):
         project_dir = tmp_path / "worktree"
@@ -197,3 +299,164 @@ class TestSessionStartDegradesWithoutSpx:
         assert result.stdout == ""
         # The claim timed out and was killed mid-sleep: the spy never recorded.
         assert not Path(str(spx) + ".argv").exists()
+
+
+# ---------------------------------------------------------------------------
+# Assertion 3 — PreToolUse repairs stale or unclaimed occupancy
+# ---------------------------------------------------------------------------
+
+
+class TestPreToolUseRepairsWorktreeClaim:
+    def test_skips_worktree_status_after_session_start_claimed_worktree(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        make_spec_tree(project_dir)
+        spx = _fake_spx_with_worktree_status(tmp_path / "bin", status="stale")
+
+        result = run_pretool_gate(
+            _pretool_payload(project_dir),
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx), "CLAUDE_WORKTREE_CLAIMED": "1"},
+        )
+
+        assert result.returncode == 0
+        assert _calls(spx) == [
+            [
+                "gate",
+                "check",
+                "--tool",
+                "Read",
+                "--session-id",
+                "sess-pretool",
+                "--transcript",
+                str(project_dir / "transcript.jsonl"),
+                "--path",
+                "spx/thing.product.md",
+            ],
+        ]
+        assert _hook_output(result) is None
+
+    @pytest.mark.parametrize("status", ["stale", "unclaimed"])
+    def test_reclaims_stale_or_unclaimed_worktree_before_gate(self, tmp_path, status):
+        project_dir = tmp_path / "worktree"
+        make_spec_tree(project_dir)
+        spx = _fake_spx_with_worktree_status(tmp_path / "bin", status=status)
+        session_id = "019ed48b-0465-79b2-ba88-8bf2838cd71a"
+
+        result = run_pretool_gate(
+            _pretool_payload(project_dir, session_id=session_id),
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx)},
+        )
+
+        assert result.returncode == 0
+        assert _calls(spx) == [
+            ["worktree", "status", "--format", "json"],
+            ["worktree", "claim", "--session-id", session_id],
+            [
+                "gate",
+                "check",
+                "--tool",
+                "Read",
+                "--session-id",
+                session_id,
+                "--transcript",
+                str(project_dir / "transcript.jsonl"),
+                "--path",
+                "spx/thing.product.md",
+            ],
+        ]
+        output = _hook_output(result)
+        assert output is not None
+        assert output["hookEventName"] == "PreToolUse"
+        assert session_id in output["additionalContext"]
+        assert status in output["additionalContext"]
+
+    def test_reclaims_using_codex_thread_identity_fallback(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        make_spec_tree(project_dir)
+        spx = _fake_spx_with_worktree_status(tmp_path / "bin", status="stale")
+        session_id = "019ed48b-0465-79b2-ba88-8bf2838cd71a"
+        payload = _pretool_payload(project_dir)
+        payload.pop("session_id")
+
+        result = run_pretool_gate(
+            payload,
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx), "CODEX_THREAD_ID": session_id},
+        )
+
+        assert result.returncode == 0
+        assert _calls(spx) == [
+            ["worktree", "status", "--format", "json"],
+            ["worktree", "claim", "--session-id", session_id],
+            [
+                "gate",
+                "check",
+                "--tool",
+                "Read",
+                "--session-id",
+                session_id,
+                "--transcript",
+                str(project_dir / "transcript.jsonl"),
+                "--path",
+                "spx/thing.product.md",
+            ],
+        ]
+        output = _hook_output(result)
+        assert output is not None
+        assert session_id in output["additionalContext"]
+
+    def test_surfaces_failed_claim_diagnostic(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        make_spec_tree(project_dir)
+        spx = _fake_spx_with_worktree_status(
+            tmp_path / "bin",
+            status="stale",
+            claim_returncode=1,
+            claim_stderr="Error: worktree controlling process could not be resolved\n",
+        )
+        session_id = "019ed48b-0465-79b2-ba88-8bf2838cd71a"
+
+        result = run_pretool_gate(
+            _pretool_payload(project_dir, session_id=session_id),
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx)},
+        )
+
+        assert result.returncode == 0
+        output = _hook_output(result)
+        assert output is not None
+        assert "automatic claim repair failed" in output["additionalContext"]
+        assert (
+            "worktree controlling process could not be resolved"
+            in output["additionalContext"]
+        )
+
+    def test_leaves_occupied_worktree_claim_untouched(self, tmp_path):
+        project_dir = tmp_path / "worktree"
+        make_spec_tree(project_dir)
+        spx = _fake_spx_with_worktree_status(tmp_path / "bin", status="occupied")
+
+        result = run_pretool_gate(
+            _pretool_payload(project_dir),
+            project_dir=project_dir,
+            env_overrides={"SPX_BIN": str(spx)},
+        )
+
+        assert result.returncode == 0
+        assert _calls(spx) == [
+            ["worktree", "status", "--format", "json"],
+            [
+                "gate",
+                "check",
+                "--tool",
+                "Read",
+                "--session-id",
+                "sess-pretool",
+                "--transcript",
+                str(project_dir / "transcript.jsonl"),
+                "--path",
+                "spx/thing.product.md",
+            ],
+        ]
+        assert _hook_output(result) is None
