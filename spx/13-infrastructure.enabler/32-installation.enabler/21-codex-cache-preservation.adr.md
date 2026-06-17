@@ -16,7 +16,8 @@ The installed set remains Codex's authority: the workflow reads `codex plugin li
 - Each refreshed plugin is reinstalled by `codex plugin add <plugin>@outcomeeng`; maintainer sync never runs `codex plugin marketplace upgrade outcomeeng`.
 - The post-refresh cache state is a pure function of the published git history, the working-tree manifests, the addable `dist/codex` manifests, and the Codex-reported installed versions.
 - For any installed plugin `P` whose Codex-reported installed version exists as a complete real directory after refresh, `~/.codex/plugins/cache/<marketplace>/P/` contains exactly one real version directory after reconciliation: the Codex-reported installed version. Every other in-window version path is a direct symlink to that directory, and every other real version directory is removed.
-- For any plugin `P` outside the refreshed set, `~/.codex/plugins/cache/<marketplace>/P/` does not exist after reconciliation.
+- When all plugin adds complete successfully, for any plugin `P` outside the refreshed set, `~/.codex/plugins/cache/<marketplace>/P/` does not exist after reconciliation.
+- When a plugin add exits non-zero, cache entries for plugins whose adds were not attempted remain untouched.
 
 ## Verification
 
@@ -29,7 +30,8 @@ The installed set remains Codex's authority: the workflow reads `codex plugin li
 - ALWAYS: local refresh invokes `codex plugin add <plugin>@outcomeeng` for refreshed installed plugins in deterministic manifest order ([scenario])
 - NEVER: local refresh invokes `codex plugin marketplace upgrade outcomeeng` ([scenario])
 - ALWAYS: compatibility symlinks for plugin versions outside the window are pruned during the same recipe invocation that creates current-window symlinks ([property])
-- ALWAYS: plugins outside the refreshed set have their entire cache directory pruned ([property])
+- ALWAYS: plugins outside the refreshed set have their entire cache directory pruned after all plugin adds complete successfully ([property])
+- ALWAYS: a non-zero plugin add reconciles successfully refreshed plugins and leaves cache entries for plugins whose adds were not attempted untouched ([scenario])
 - ALWAYS: the compatibility-symlink target is the complete real cache directory whose name equals the plugin's Codex-reported installed version ([property])
 - NEVER: leave or create a compatibility symlink for a plugin whose Codex-reported installed version is absent as a complete real cache directory after refresh ([compliance])
 - ALWAYS: incomplete in-window compatibility roots are replaced with direct symlinks to the complete Codex-reported installed version directory ([property])
