@@ -35,9 +35,8 @@ from pathlib import Path
 from typing import Protocol
 
 from outcomeeng.distribution.marketplace_sources import (
-    CODEX_PLUGIN_MANIFEST,
-    DEFAULT_MARKETPLACE,
-    DIST_CODEX_PLUGINS_DIR,
+    CODEX_PLUGIN_MANIFEST as _CODEX_PLUGIN_MANIFEST,
+    DEFAULT_MARKETPLACE as _DEFAULT_MARKETPLACE,
     MarketplaceSourceError,
     available_codex_plugins,
     configured_local_marketplace_root,
@@ -262,7 +261,7 @@ class CodexCliInstalled:
 
 
 def refresh_installed_plugins(
-    marketplace: str = DEFAULT_MARKETPLACE,
+    marketplace: str = _DEFAULT_MARKETPLACE,
     *,
     cache_root: Path | None = None,
     repo_root: Path | None = None,
@@ -420,7 +419,7 @@ def _current_real_version_dir(
 
 
 def _is_complete_plugin_root(path: Path) -> bool:
-    return (path / CODEX_PLUGIN_MANIFEST).is_file()
+    return (path / _CODEX_PLUGIN_MANIFEST).is_file()
 
 
 def _prune_all_symlinks(plugin_dir: Path, *, dry_run: bool) -> list[Path]:
@@ -525,7 +524,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "marketplace",
         nargs="?",
-        default=DEFAULT_MARKETPLACE,
+        default=_DEFAULT_MARKETPLACE,
         help="Marketplace name to refresh",
     )
     parser.add_argument(
@@ -598,10 +597,7 @@ def main(argv: list[str] | None = None) -> int:
 __all__ = [
     "CODEX_LIST_COMMAND",
     "CODEX_PLUGIN_ADD_COMMAND",
-    "CODEX_PLUGIN_MANIFEST",
-    "DEFAULT_MARKETPLACE",
     "DEFAULT_WINDOW_DAYS",
-    "DIST_CODEX_PLUGINS_DIR",
     "CacheRefreshResult",
     "CodexCliInstalled",
     "CommandRunner",

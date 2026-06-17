@@ -23,7 +23,11 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution import codex_cache as preserve_codex_plugin_cache
-from outcomeeng.distribution.codex_cache import DEFAULT_MARKETPLACE
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DEFAULT_MARKETPLACE,
+    DIST_CODEX_PLUGINS_DIR,
+)
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"
@@ -140,11 +144,7 @@ def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None
     skill_file.parent.mkdir(parents=True)
     skill_file.write_text(text)
     manifest = (
-        cache_root
-        / DEFAULT_MARKETPLACE
-        / plugin
-        / version
-        / preserve_codex_plugin_cache.CODEX_PLUGIN_MANIFEST
+        cache_root / DEFAULT_MARKETPLACE / plugin / version / CODEX_PLUGIN_MANIFEST
     )
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
@@ -165,12 +165,7 @@ def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
 
 
 def _write_dist_codex_manifest(repo_root: Path, plugin: str, version: str) -> None:
-    manifest = (
-        repo_root
-        / preserve_codex_plugin_cache.DIST_CODEX_PLUGINS_DIR
-        / plugin
-        / preserve_codex_plugin_cache.CODEX_PLUGIN_MANIFEST
-    )
+    manifest = repo_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
@@ -814,7 +809,13 @@ def test_plugin_add_failure_returns_before_cache_prune(tmp_path: Path) -> None:
     """A non-zero local plugin add returns before cache pruning: the result carries
     the refresh return code, and no cache directory is pruned.
     """
+    repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(
+        repo_root,
+        NOT_INSTALLED_PLUGIN,
+        NOT_INSTALLED_CURRENT_VERSION,
+    )
     _write_skill(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
@@ -832,6 +833,7 @@ def test_plugin_add_failure_returns_before_cache_prune(tmp_path: Path) -> None:
 
     result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled(
