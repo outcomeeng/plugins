@@ -31,6 +31,7 @@ from pathlib import Path
 from hook_runtime import session_id_from
 
 _REPAIRABLE_WORKTREE_STATUSES = {"stale", "unclaimed"}
+_WORKTREE_CLAIMED_ENV = "CLAUDE_WORKTREE_CLAIMED"
 
 
 def _timeout_seconds() -> float:
@@ -106,10 +107,16 @@ def _first_line(value: str) -> str:
     return next((line.strip() for line in value.splitlines() if line.strip()), "")
 
 
+def _worktree_already_claimed() -> bool:
+    return os.environ.get(_WORKTREE_CLAIMED_ENV) == "1"
+
+
 def _worktree_claim_context(payload: dict, project_dir: str, spx: str) -> str:
     """Repair stale or unclaimed worktree occupancy through the spx CLI."""
     session_id = session_id_from(payload)
     if not session_id or not project_dir:
+        return ""
+    if _worktree_already_claimed():
         return ""
 
     status_proc = _run_spx(spx, project_dir, ["worktree", "status", "--format", "json"])
