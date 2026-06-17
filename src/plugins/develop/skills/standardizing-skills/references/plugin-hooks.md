@@ -6,9 +6,9 @@ Plugin hook patterns for injecting session identity and runtime context into age
 
 <session_identity>
 
-**The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern is the canonical way to make session identity available to all Bash tool calls in a session.**
+**The hook stdin `session_id` field is the canonical hook-script identity source. The `SessionStart` hook + `$CLAUDE_ENV_FILE` pattern is the Claude Code way to make that identity available to later Bash tool calls in a session.**
 
-Claude Code injects `$CLAUDE_ENV_FILE` into `SessionStart` hooks. Writing `export VAR=value` lines to that file persists the variable for every subsequent Bash tool call in the session. Codex does not use this mechanism — it injects `$CODEX_THREAD_ID` directly as an env var.
+Claude Code and Codex command hooks receive a JSON payload on stdin that includes `session_id`, `transcript_path`, `cwd`, `hook_event_name`, and `model`; `SessionStart` also receives `source`. Claude Code injects `$CLAUDE_ENV_FILE` into `SessionStart` hooks. Writing `export VAR=value` lines to that file persists the variable for every subsequent Bash tool call in the session. Codex does not use `$CLAUDE_ENV_FILE`; hook scripts still read the documented `session_id` from stdin, while later shell commands may also see `$CODEX_THREAD_ID` in the runtime environment.
 
 Hook script (`scripts/session-start.py` — Python, stdlib only, no `jq`):
 
@@ -44,7 +44,7 @@ Hook declaration (`hooks/hooks.json`):
 
 After this hook fires, `$CLAUDE_SESSION_ID` is available in all Bash tool calls for the session — no file-system heuristics or index files needed.
 
-**Comparison by runtime:**
+**Comparison by runtime for later shell commands:**
 
 | Runtime     | Env var              | Source                                     |
 | ----------- | -------------------- | ------------------------------------------ |
