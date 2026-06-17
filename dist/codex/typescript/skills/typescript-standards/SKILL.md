@@ -27,8 +27,6 @@ These standards apply to ALL TypeScript code, including tests and scripts. `/typ
 When another skill loads this reference inside a repository, it must also check for `spx/local/typescript.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
----
-
 <type_safety>
 
 TypeScript strict mode enforces type safety. All violations are caught by tsc at compile time.
@@ -117,8 +115,6 @@ function handle(value: string | number): void {
 
 </type_safety>
 
----
-
 <production_constants>
 
 Production code must name domain-significant literals and export reusable constants from the module that owns them.
@@ -172,8 +168,6 @@ For test values, fixture placement, and inline diagnostics, follow `/typescript-
 
 </production_constants>
 
----
-
 <source_of_truth_registries>
 
 Closed sets must have one runtime source of truth. Use `as const` registries or tuples, then derive unions and schemas from that declaration instead of duplicating string unions by hand.
@@ -196,8 +190,6 @@ The tuple cast is only for `z.enum`'s non-empty tuple signature. Keep the runtim
 Hand-maintained unions that can drift from the runtime registry are rejected.
 
 </source_of_truth_registries>
-
----
 
 <script_boundaries>
 
@@ -236,8 +228,6 @@ const options = parseArgsWithRepoStandard(process.argv.slice(2));
 Imported orchestrator modules should still follow the normal codebase standards for configuration, logging, and specification coverage.
 
 </script_boundaries>
-
----
 
 <error_handling>
 
@@ -301,8 +291,6 @@ throw new ValidationError(
 
 </error_handling>
 
----
-
 <security>
 
 ```typescript
@@ -343,8 +331,6 @@ Context matters for security rules—a CLI tool invoked by the user has differen
 | (manual)    | `child_process.exec()` with untrusted input |
 
 </security>
-
----
 
 <code_hygiene>
 
@@ -391,8 +377,6 @@ function handle(input: string): void {
 `scripts/` entrypoints are the exception: console output is acceptable there because they are terminal boundaries. Imported modules should still use the repo's normal logging pattern.
 
 </code_hygiene>
-
----
 
 <import_hygiene>
 
@@ -473,8 +457,6 @@ import { tokenize } from "./tokens";
 
 </import_hygiene>
 
----
-
 <rejection_criteria_summary>
 
 | Issue                            | Example                                     | Rule/Tool                                     |
@@ -496,4 +478,5 @@ import { tokenize } from "./tokens";
 | `console.log` in production      | `console.log('debug')`                      | no-console                                    |
 | Dead/commented code              | `// function old() { ... }`                 | manual review                                 |
 | Deep relative imports            | `from '../../../lib'`                       | manual review                                 |
-| </rejection_criteria_summary>    |                                             |                                               |
+
+</rejection_criteria_summary>

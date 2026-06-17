@@ -303,7 +303,7 @@ You can also edit subagent files directly:
 - Prompt caching optimization
 - Complete examples
 
-**Writing effective prompts**: [${CLAUDE_SKILL_DIR}/references/writing-subagent-prompts.md](references/writing-subagent-prompts.md)
+**Writing effective prompts**: [${CLAUDE_SKILL_DIR}/references/write-subagent-prompts.md](references/write-subagent-prompts.md)
 
 - Core principles and XML structure
 - Description field optimization for routing

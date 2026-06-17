@@ -51,7 +51,7 @@ About to load context for an existing target and explain why lower-index sibling
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
    - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualize`, `/handoff`)
-   - `spx/local/*.md` — product-specific overlays for `/coding-*`, `/architecting-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
+   - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
 4. Check for local lifecycle routing:
    - Changes destined for the default branch route through `/merge`, the transport dispatcher. It reads `spx/local/merging.md`, classifies the changeset, selects the merge transport, and delegates to the selected transport's skills.
    - If `spx/local/merging.md` exists at the repository root, read it. Its declarations refine transport selection and lifecycle configuration.

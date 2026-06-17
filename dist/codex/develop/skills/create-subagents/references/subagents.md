@@ -189,18 +189,19 @@ Use `/agents` command to see full list of available tools.
 <decision_framework>
 **When to use each model**:
 
-| Task Type             | Recommended Model | Rationale                               |
-| --------------------- | ----------------- | --------------------------------------- |
-| Simple validation     | Haiku             | Fast, cheap, sufficient capability      |
-| Code execution        | Haiku             | 73.3% SWE-bench, very fast              |
-| Complex analysis      | Sonnet            | Superior reasoning, worth the cost      |
-| Multi-step planning   | Sonnet            | Best for breaking down complexity       |
-| Quality validation    | Sonnet            | Critical checkpoint, needs intelligence |
-| Batch processing      | Haiku             | Cost efficiency for high volume         |
-| Critical security     | Sonnet            | High stakes require best model          |
-| Output synthesis      | Sonnet            | Ensuring coherence across inputs        |
-| </decision_framework> |                   |                                         |
-| </model_selection>    |                   |                                         |
+| Task Type           | Recommended Model | Rationale                               |
+| ------------------- | ----------------- | --------------------------------------- |
+| Simple validation   | Haiku             | Fast, cheap, sufficient capability      |
+| Code execution      | Haiku             | 73.3% SWE-bench, very fast              |
+| Complex analysis    | Sonnet            | Superior reasoning, worth the cost      |
+| Multi-step planning | Sonnet            | Best for breaking down complexity       |
+| Quality validation  | Sonnet            | Critical checkpoint, needs intelligence |
+| Batch processing    | Haiku             | Cost efficiency for high volume         |
+| Critical security   | Sonnet            | High stakes require best model          |
+| Output synthesis    | Sonnet            | Ensuring coherence across inputs        |
+
+</decision_framework>
+</model_selection>
 
 <invocation>
 <automatic>

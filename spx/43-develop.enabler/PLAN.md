@@ -95,7 +95,7 @@ Option 2 expands that scope to include *platform-level runtime plumbing* (bash s
 5. **Rewrite `/create-commands/SKILL.md`** as a router — same shape as the post-refactor `/create-skills/SKILL.md`. Preserve the workflows and references that are genuinely command-authoring workflow (not standards).
 6. **Delete obsolete `/create-commands/references/` content** — the standards sections that moved out.
 7. **Rewrite `/audit-commands/SKILL.md` `<critical_workflow>`** — reads `/agent-prompt-standards` and `/command-standards` only.
-8. **Update subagents** — `/create-subagents/SKILL.md:250` and `/create-subagents/references/writing-subagent-prompts.md:12` currently cross-reference `/skill-standards` for XML structure. After the refactor, the XML structure rules they need (nested code fences, XML tag formatting) may live in `/agent-prompt-standards`. Update the cross-references accordingly.
+8. **Update subagents** — `/create-subagents/SKILL.md:250` and `/create-subagents/references/write-subagent-prompts.md:12` currently cross-reference `/skill-standards` for XML structure. After the refactor, the XML structure rules they need (nested code fences, XML tag formatting) may live in `/agent-prompt-standards`. Update the cross-references accordingly.
 9. **Update spec tree** — this enabler (`43-develop.enabler/`) gains a sibling pair alongside `21-skills.enabler/`:
    - `21-commands.enabler/commands.md` (independent of skills)
    - `32-subagents.enabler/subagents.md` (depends on skills via XML rules; and depends on commands? probably not — confirm)

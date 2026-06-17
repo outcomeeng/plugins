@@ -42,7 +42,7 @@ This ensures subagents follow proper structure, configuration, pure XML formatti
 
 1. Both skills are already injected above. Read the create-subagents reference files:
    - `${SKILL_DIR}/../create-subagents/references/subagents.md`
-   - `${SKILL_DIR}/../create-subagents/references/writing-subagent-prompts.md`
+   - `${SKILL_DIR}/../create-subagents/references/write-subagent-prompts.md`
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Before penalizing any missing section, search entire file for equivalent content under different tag names
 4. Read the subagent configuration file at `$ARGUMENTS`
