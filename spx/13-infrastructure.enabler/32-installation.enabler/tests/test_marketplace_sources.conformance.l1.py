@@ -290,6 +290,44 @@ def test_source_reconciliation_adds_absent_runtime_sources(tmp_path: Path) -> No
     ]
 
 
+def test_source_reconciliation_accepts_matching_runtime_sources(
+    tmp_path: Path,
+) -> None:
+    marketplace_root = tmp_path / "marketplace"
+    runner = RecordingCommandRunner(
+        stdout_by_command={
+            ("claude", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "source": "Directory",
+                        "path": str(marketplace_root),
+                    }
+                ]
+            ),
+            ("codex", "plugin", "marketplace", "list", "--json"): json.dumps(
+                [
+                    {
+                        "name": DEFAULT_MARKETPLACE,
+                        "sourceType": "local",
+                        "path": str(marketplace_root),
+                    }
+                ]
+            ),
+        }
+    )
+
+    result = ensure_local_marketplace_sources(DEFAULT_MARKETPLACE, runner=runner)
+
+    assert result.root == marketplace_root.resolve(strict=False)
+    assert result.changed is False
+    assert result.commands == ()
+    assert runner.calls == [
+        ("claude", "plugin", "marketplace", "list", "--json"),
+        ("codex", "plugin", "marketplace", "list", "--json"),
+    ]
+
+
 def test_source_reconciliation_replaces_git_backed_codex_source(
     tmp_path: Path,
 ) -> None:
