@@ -33,9 +33,14 @@ from pathlib import Path
 
 from outcomeeng.distribution.codex_cache import (
     CODEX_LIST_COMMAND,
-    CODEX_PLUGIN_MANIFEST,
     CommandRunner,
     run_command_capture,
+)
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DIST_CODEX_PLUGINS_DIR,
+    MarketplaceSourceError,
+    configured_local_marketplace_root,
 )
 
 DEFAULT_MARKETPLACE = "outcomeeng"
@@ -43,6 +48,7 @@ DEFAULT_MAX_AGE_DAYS = 10
 SECONDS_PER_DAY = 24 * 60 * 60
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
 CLAUDE_DIST_PLUGINS_DIR = Path("dist") / "claude"
+CLAUDE_PLUGIN_MANIFEST = Path(".claude-plugin") / "plugin.json"
 
 # Listing display tokens — the marker the listing places on the resolved version,
 # and the kind label for a synthesized current row that has no cache directory.
@@ -58,30 +64,44 @@ def codex_cache_root() -> Path:
     return Path.home() / ".codex" / "plugins" / "cache"
 
 
-def codex_marketplace_clone_root(marketplace: str) -> Path:
-    return Path.home() / ".codex" / ".tmp" / "marketplaces" / marketplace
+def codex_marketplace_source_root(
+    marketplace: str, *, runner: CommandRunner = run_command_capture
+) -> Path | None:
+    """Return the configured shared local marketplace root when available."""
+    try:
+        return configured_local_marketplace_root(marketplace, runner=runner)
+    except (MarketplaceSourceError, OSError):
+        return None
 
 
-def read_codex_marketplace_version(marketplace: str, plugin: str) -> str | None:
-    """Return the version the Codex marketplace clone publishes for `plugin`.
+def read_codex_marketplace_version(
+    marketplace: str,
+    plugin: str,
+    *,
+    marketplace_root: Path | None = None,
+    runner: CommandRunner = run_command_capture,
+) -> str | None:
+    """Return the version the configured local Codex marketplace source publishes.
 
-    The clone tracks the marketplace's published branch (typically `main`).
-    A working-tree manifest on a feature branch can declare a different
-    version than the clone has fetched; the divergence signals a
-    structural lag in either direction.
+    The source root tracks the maintainer marketplace worktree, usually the
+    default-branch checkout Claude and Codex share. A working-tree manifest on a
+    feature worktree can declare a different version than the source root exposes;
+    the divergence signals maintainer lag between the feature worktree and the
+    published local marketplace source.
 
     Returns None for any failure mode — missing file, OSError on read,
     invalid JSON, or a manifest whose top-level shape is not a dict.
     Callers fall back to strict validation when None is returned.
     """
-    clone_root = codex_marketplace_clone_root(marketplace)
+    source_root = marketplace_root or codex_marketplace_source_root(
+        marketplace, runner=runner
+    )
+    if source_root is None:
+        return None
     candidates = (
-        clone_root
-        / CLAUDE_DIST_PLUGINS_DIR
-        / plugin
-        / ".claude-plugin"
-        / "plugin.json",
-        clone_root / "plugins" / plugin / ".claude-plugin" / "plugin.json",
+        source_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST,
+        source_root / CLAUDE_DIST_PLUGINS_DIR / plugin / CLAUDE_PLUGIN_MANIFEST,
+        source_root / "plugins" / plugin / CLAUDE_PLUGIN_MANIFEST,
     )
     data: object | None = None
     for manifest in candidates:
@@ -437,6 +457,7 @@ def validate(
     claude_cache_override: Path | None = None,
     codex_cache_override: Path | None = None,
     codex_marketplace_version: Callable[[str], str | None] | None = None,
+    codex_marketplace_root: Path | None = None,
     codex_resolved_versions: dict[str, str] | None = None,
 ) -> ValidationResult:
     resolved_root = repo_root if repo_root is not None else Path.cwd()
@@ -452,7 +473,11 @@ def validate(
     claude = claude_cache_override or claude_cache_root()
     codex = codex_cache_override or codex_cache_root()
     published_for = codex_marketplace_version or (
-        lambda plugin: read_codex_marketplace_version(marketplace, plugin)
+        lambda plugin: read_codex_marketplace_version(
+            marketplace,
+            plugin,
+            marketplace_root=codex_marketplace_root,
+        )
     )
     resolved_versions = (
         codex_resolved_versions if codex_resolved_versions is not None else {}
@@ -474,8 +499,8 @@ def validate(
 
         # Codex: validates the version Codex reports as installed when available.
         # If that live signal is unavailable and cache content exists, it falls
-        # back to the marketplace clone's published version for feature-branch lag
-        # tolerance.
+        # back to the configured local marketplace source version for feature-
+        # worktree lag tolerance.
         codex_plugin_dir = codex / marketplace / plugin
         target_version = resolved_versions.get(plugin)
         published = published_for(plugin)
@@ -490,8 +515,8 @@ def validate(
             if published is not None and is_strictly_ahead(version, published):
                 target_version = published
                 warnings.append(
-                    f"{plugin}  working-tree {version} ahead of marketplace "
-                    f"clone {published}; verifying clone version in cache"
+                    f"{plugin}  working-tree {version} ahead of local marketplace "
+                    f"source {published}; verifying marketplace version in cache"
                 )
             else:
                 target_version = version
@@ -521,6 +546,7 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path.cwd()
     versions = current_versions(repo_root)
     reported_versions = codex_reported_versions(args.marketplace)
+    marketplace_root = codex_marketplace_source_root(args.marketplace)
 
     print_cache(
         claude_cache_root(),
@@ -541,6 +567,7 @@ def main(argv: list[str] | None = None) -> int:
         args.marketplace,
         repo_root=repo_root,
         max_age_days=args.max_age_days,
+        codex_marketplace_root=marketplace_root,
         codex_resolved_versions=reported_versions,
     )
 

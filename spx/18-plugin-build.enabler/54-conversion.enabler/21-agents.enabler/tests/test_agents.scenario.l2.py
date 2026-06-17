@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from outcomeeng.distribution.sync import STEPS
 
-CODEX_CACHE_STEP = "codex_cache_preserve"
+CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
 AGENT_INSTALL_STEP = "codex_agent_install"
 INSTALL_VALIDATE_STEP = "install_validate"
 AGENT_INSTALL_MODULE = "outcomeeng.distribution.agents"
@@ -13,7 +13,9 @@ AGENT_INSTALL_MODULE = "outcomeeng.distribution.agents"
 def test_sync_installs_codex_agents_before_installed_plugin_validation() -> None:
     step_names = tuple(step.name for step in STEPS)
 
-    assert step_names.index(CODEX_CACHE_STEP) < step_names.index(AGENT_INSTALL_STEP)
+    assert step_names.index(CODEX_LOCAL_REFRESH_STEP) < step_names.index(
+        AGENT_INSTALL_STEP
+    )
     assert step_names.index(AGENT_INSTALL_STEP) < step_names.index(
         INSTALL_VALIDATE_STEP
     )

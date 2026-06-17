@@ -1,17 +1,18 @@
-"""Upgrade a Codex marketplace and reconcile the plugin cache against history.
+"""Refresh installed Codex plugins and reconcile compatibility cache links.
 
-After the upgrade, the cache for each installed plugin in the working tree is
-reconciled against the set of versions published to the plugin's manifest within
-the configured window (default ten days). The symlink target is the complete
-real cache directory named with the version Codex reports as installed for that
-plugin; in-window versions other than the installed one become symlinks pointing
-at it, versions outside the window are removed, and plugins absent from the
-working tree or absent from Codex's installed set have their cache directory
-pruned in full. When the upgrade leaves no complete real directory for the
+The maintainer refresh path requires Codex to use the same local marketplace
+source as Claude Code, reinstalls each installed plugin from that local source,
+then reconciles the cache for each refreshed plugin against the set of versions
+published to the plugin's manifest within the configured window (default ten
+days). The symlink target is the complete real cache directory named with the
+version Codex reports as installed for that plugin; in-window versions other
+than the installed one become symlinks pointing at it, versions outside the
+window are removed, and plugins absent from the refreshed set have their cache
+directory pruned in full. When refresh leaves no complete real directory for the
 Codex-reported installed version, every compatibility symlink for the plugin is
 removed and none is created -- a symlink to a non-current directory would
 resolve a version to stale content. The preservation set is derived from git
-history, not from the pre-upgrade cache snapshot. A single bypassed recipe
+history, not from the pre-refresh cache snapshot. A single bypassed recipe
 invocation has no permanent effect -- the next invocation reconstructs the
 symlink set from the same authoritative source.
 
@@ -33,16 +34,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-DEFAULT_MARKETPLACE = "outcomeeng"
-DEFAULT_MARKETPLACE_SOURCE = "outcomeeng/plugins"
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DEFAULT_MARKETPLACE,
+    DIST_CODEX_PLUGINS_DIR,
+    MarketplaceSourceError,
+    available_codex_plugins,
+    configured_local_marketplace_root,
+)
+
 DEFAULT_WINDOW_DAYS = 10
-CODEX_ADD_COMMAND = ("codex", "plugin", "marketplace", "add")
-CODEX_REMOVE_COMMAND = ("codex", "plugin", "marketplace", "remove")
-CODEX_UPGRADE_COMMAND = ("codex", "plugin", "marketplace", "upgrade")
+CODEX_PLUGIN_ADD_COMMAND = ("codex", "plugin", "add")
 CODEX_LIST_COMMAND = ("codex", "plugin", "list", "--json", "--marketplace")
 SOURCE_PLUGINS_DIR = Path("src") / "plugins"
-CODEX_PLUGIN_MANIFEST = Path(".codex-plugin") / "plugin.json"
-GIT_MARKETPLACE_NOT_CONFIGURED_FRAGMENT = "not configured as a Git marketplace"
 
 type CommandRunner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
@@ -145,13 +149,13 @@ def _parse_manifest_version(text: str) -> str | None:
 
 
 @dataclass(frozen=True)
-class CachePreservationResult:
-    """Observable results from one marketplace upgrade wrapper run."""
+class CacheRefreshResult:
+    """Observable results from one local Codex refresh wrapper run."""
 
     linked_versions: tuple[Path, ...]
     pruned_links: tuple[Path, ...]
     pruned_plugins: tuple[str, ...]
-    upgrade_returncode: int
+    refresh_returncode: int
 
 
 def default_cache_root() -> Path:
@@ -257,48 +261,35 @@ class CodexCliInstalled:
         return parse_installed_plugin_versions(result.stdout or "", marketplace)
 
 
-def preserve_during_upgrade(
+def refresh_installed_plugins(
     marketplace: str = DEFAULT_MARKETPLACE,
     *,
     cache_root: Path | None = None,
-    marketplace_source: str = DEFAULT_MARKETPLACE_SOURCE,
+    repo_root: Path | None = None,
     runner: CommandRunner = run_command,
     dry_run: bool = False,
     history: PluginHistory | None = None,
     installed: InstalledPlugins | None = None,
-) -> CachePreservationResult:
-    """Run the marketplace upgrade and reconcile the cache against history.
+) -> CacheRefreshResult:
+    """Refresh installed local Codex plugins and reconcile the cache against history.
 
     When an ``installed`` provider is supplied and this is not a dry run,
-    preservation is scoped to the plugins Codex reports as installed: a plugin
-    present in the working tree but absent from the installed set has its entire
-    cache directory pruned, the same treatment as a working-tree-absent orphan.
-    The recipe's ``main`` supplies the real ``CodexCliInstalled`` provider. A dry
-    run skips the installed-set query, so the preview needs no Codex CLI present
-    and mutates nothing; when ``installed`` is ``None`` no scoping is applied
-    either. In both cases every working-tree plugin is treated as wanted.
+    refresh is scoped to the plugins Codex reports as installed and the local
+    marketplace exposes under ``dist/codex``: a plugin present in the working tree
+    but absent from that refreshed set has its entire cache directory pruned, the
+    same treatment as a working-tree-absent orphan. The recipe's ``main`` supplies
+    the real ``CodexCliInstalled`` provider. A dry run skips the installed-set
+    query and plugin add commands, so the preview needs no Codex CLI present and
+    mutates nothing; when ``installed`` is ``None`` no scoping is applied either.
+    In both cases every working-tree plugin is treated as wanted.
     """
     resolved_cache_root = cache_root if cache_root is not None else default_cache_root()
+    resolved_repo_root = repo_root if repo_root is not None else Path.cwd()
     resolved_history = (
-        history if history is not None else GitPluginHistory(repo_root=Path.cwd())
+        history
+        if history is not None
+        else GitPluginHistory(repo_root=resolved_repo_root)
     )
-    command = [*CODEX_UPGRADE_COMMAND, marketplace]
-
-    upgrade_result: subprocess.CompletedProcess[str]
-    if dry_run:
-        upgrade_result = subprocess.CompletedProcess(command, 0)
-    else:
-        upgrade_result = _upgrade_marketplace(
-            marketplace, marketplace_source, runner=runner
-        )
-
-    if upgrade_result.returncode != 0:
-        return CachePreservationResult(
-            linked_versions=(),
-            pruned_links=(),
-            pruned_plugins=(),
-            upgrade_returncode=upgrade_result.returncode,
-        )
 
     marketplace_dir = resolved_cache_root / marketplace
     working_tree_plugins = resolved_history.working_tree_plugins()
@@ -308,26 +299,21 @@ def preserve_during_upgrade(
         # all-or-nothing: a failed or unrecognized query raises here and no cache
         # directory has been touched, so a degraded signal never drives a deletion.
         installed_versions = installed.installed_plugin_versions(marketplace)
-        if (
-            not installed_versions
-            and working_tree_plugins
-            and _marketplace_cache_has_no_plugins(marketplace_dir)
-        ):
-            upgrade_result = _repair_marketplace_registration(
-                marketplace,
-                marketplace_source,
-                remove_first=True,
-                runner=runner,
+        addable_plugins = {
+            plugin.name for plugin in available_codex_plugins(resolved_repo_root)
+        }
+        wanted = working_tree_plugins & frozenset(installed_versions) & addable_plugins
+        for plugin in sorted(wanted):
+            refresh_result = runner(
+                [*CODEX_PLUGIN_ADD_COMMAND, f"{plugin}@{marketplace}"]
             )
-            if upgrade_result.returncode != 0:
-                return CachePreservationResult(
+            if refresh_result.returncode != 0:
+                return CacheRefreshResult(
                     linked_versions=(),
                     pruned_links=(),
                     pruned_plugins=(),
-                    upgrade_returncode=upgrade_result.returncode,
+                    refresh_returncode=refresh_result.returncode,
                 )
-            installed_versions = installed.installed_plugin_versions(marketplace)
-        wanted = working_tree_plugins & frozenset(installed_versions)
     else:
         # A dry run reports planned changes without querying the installed set, so
         # the preview needs no Codex CLI present and mutates nothing; it treats
@@ -355,7 +341,7 @@ def preserve_during_upgrade(
         ) or resolved_history.current_version(plugin)
         current_real = _current_real_version_dir(plugin_dir, current_version)
         if current_real is None:
-            # The upgrade exited successfully without materializing the current
+            # The refresh completed without materializing the current
             # version as a complete real directory. No compatibility symlink can
             # point at current content, so remove every compatibility symlink and
             # every non-target real directory for the plugin rather than let any
@@ -390,62 +376,12 @@ def preserve_during_upgrade(
             )
         )
 
-    return CachePreservationResult(
+    return CacheRefreshResult(
         linked_versions=tuple(linked_versions),
         pruned_links=tuple(pruned_links),
         pruned_plugins=tuple(pruned_plugins),
-        upgrade_returncode=upgrade_result.returncode,
+        refresh_returncode=0,
     )
-
-
-def _upgrade_marketplace(
-    marketplace: str,
-    marketplace_source: str,
-    *,
-    runner: CommandRunner,
-) -> subprocess.CompletedProcess[str]:
-    command = [*CODEX_UPGRADE_COMMAND, marketplace]
-    result = runner(command)
-    if result.returncode == 0:
-        return result
-    if not _upgrade_reports_missing_git_marketplace(result):
-        return result
-    return _repair_marketplace_registration(
-        marketplace,
-        marketplace_source,
-        remove_first=False,
-        runner=runner,
-    )
-
-
-def _upgrade_reports_missing_git_marketplace(
-    result: subprocess.CompletedProcess[str],
-) -> bool:
-    output = "\n".join(part for part in (result.stdout, result.stderr) if part)
-    return GIT_MARKETPLACE_NOT_CONFIGURED_FRAGMENT in output
-
-
-def _repair_marketplace_registration(
-    marketplace: str,
-    marketplace_source: str,
-    *,
-    remove_first: bool,
-    runner: CommandRunner,
-) -> subprocess.CompletedProcess[str]:
-    if remove_first:
-        remove_result = runner([*CODEX_REMOVE_COMMAND, marketplace])
-        if remove_result.returncode != 0:
-            return remove_result
-    add_result = runner([*CODEX_ADD_COMMAND, marketplace_source])
-    if add_result.returncode != 0:
-        return add_result
-    return runner([*CODEX_UPGRADE_COMMAND, marketplace])
-
-
-def _marketplace_cache_has_no_plugins(marketplace_dir: Path) -> bool:
-    if not marketplace_dir.is_dir():
-        return True
-    return not any(child.is_dir() for child in marketplace_dir.iterdir())
 
 
 def _prune_orphan_plugins(
@@ -584,13 +520,13 @@ def _is_symlink_to(path: Path, target: Path) -> bool:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Upgrade a Codex marketplace and reconcile the plugin cache"
+        description="Refresh local Codex plugins and reconcile the plugin cache"
     )
     parser.add_argument(
         "marketplace",
         nargs="?",
         default=DEFAULT_MARKETPLACE,
-        help="Marketplace name to upgrade",
+        help="Marketplace name to refresh",
     )
     parser.add_argument(
         "--cache-root",
@@ -607,29 +543,34 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--repo-root",
         type=Path,
-        default=Path.cwd(),
+        default=None,
         help="Git working tree root for the marketplace repository",
-    )
-    parser.add_argument(
-        "--marketplace-source",
-        default=DEFAULT_MARKETPLACE_SOURCE,
-        help="Git marketplace source used when registration repair is required",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Report planned changes without running upgrade or mutating cache",
+        help="Report planned changes without refreshing plugins or mutating cache",
     )
     args = parser.parse_args(argv)
 
-    history = GitPluginHistory(repo_root=args.repo_root, window_days=args.window_days)
-    # preserve_during_upgrade skips the query on a dry run, so a dry run never
+    try:
+        marketplace_root = (
+            args.repo_root
+            if args.repo_root is not None or args.dry_run
+            else configured_local_marketplace_root(args.marketplace)
+        )
+    except MarketplaceSourceError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    repo_root = marketplace_root if marketplace_root is not None else Path.cwd()
+    history = GitPluginHistory(repo_root=repo_root, window_days=args.window_days)
+    # refresh_installed_plugins skips the query on a dry run, so a dry run never
     # shells out to the Codex CLI even though the provider is constructed here.
     try:
-        result = preserve_during_upgrade(
+        result = refresh_installed_plugins(
             args.marketplace,
             cache_root=args.cache_root,
-            marketplace_source=args.marketplace_source,
+            repo_root=repo_root,
             dry_run=args.dry_run,
             history=history,
             installed=CodexCliInstalled(),
@@ -638,20 +579,43 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    if result.upgrade_returncode != 0:
+    if result.refresh_returncode != 0:
         print(
-            f"error: marketplace upgrade failed with exit code {result.upgrade_returncode}",
+            f"error: Codex plugin refresh failed with exit code {result.refresh_returncode}",
             file=sys.stderr,
         )
-        return result.upgrade_returncode
+        return result.refresh_returncode
 
     print(
-        "Codex cache preservation: "
+        "Codex local refresh: "
         f"{len(result.linked_versions)} compatibility link(s), "
         f"{len(result.pruned_links)} pruned link(s), "
         f"{len(result.pruned_plugins)} pruned plugin(s)"
     )
     return 0
+
+
+__all__ = [
+    "CODEX_LIST_COMMAND",
+    "CODEX_PLUGIN_ADD_COMMAND",
+    "CODEX_PLUGIN_MANIFEST",
+    "DEFAULT_MARKETPLACE",
+    "DEFAULT_WINDOW_DAYS",
+    "DIST_CODEX_PLUGINS_DIR",
+    "CacheRefreshResult",
+    "CodexCliInstalled",
+    "CommandRunner",
+    "GitPluginHistory",
+    "InstalledPlugins",
+    "InstalledSetError",
+    "PluginHistory",
+    "default_cache_root",
+    "main",
+    "parse_installed_plugin_versions",
+    "refresh_installed_plugins",
+    "run_command",
+    "run_command_capture",
+]
 
 
 if __name__ == "__main__":
