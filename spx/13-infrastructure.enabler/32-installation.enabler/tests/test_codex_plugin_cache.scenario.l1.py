@@ -958,6 +958,66 @@ def test_plugin_add_failure_returns_before_cache_prune(tmp_path: Path) -> None:
     )
 
 
+def test_partial_plugin_add_failure_reconciles_successful_refresh(
+    tmp_path: Path,
+) -> None:
+    """When one plugin add succeeds before a later plugin add fails, the successful
+    plugin is reconciled before the non-zero refresh result returns.
+    """
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, "alpha", "0.2.0")
+    _write_dist_codex_manifest(repo_root, "zeta", "0.2.0")
+    _write_skill(cache_root, "alpha", "0.1.0", "prior alpha content")
+    _write_skill(cache_root, "zeta", "0.1.0", "prior zeta content")
+    alpha_dir = cache_root / DEFAULT_MARKETPLACE / "alpha"
+    alpha_prior_dir = alpha_dir / "0.1.0"
+    alpha_current_dir = alpha_dir / "0.2.0"
+    zeta_dir = cache_root / DEFAULT_MARKETPLACE / "zeta"
+    zeta_prior_dir = zeta_dir / "0.1.0"
+    history = StaticHistory(
+        plugins=frozenset(["alpha", "zeta"]),
+        versions_by_plugin={
+            "alpha": frozenset(["0.1.0", "0.2.0"]),
+            "zeta": frozenset(["0.1.0", "0.2.0"]),
+        },
+        current_by_plugin={"alpha": "0.2.0", "zeta": "0.2.0"},
+    )
+
+    def _failing_second_runner(
+        command: list[str],
+    ) -> subprocess.CompletedProcess[str]:
+        plugin_ref = command[len(preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND)]
+        plugin, _, _ = plugin_ref.partition("@")
+        if plugin == "alpha":
+            _write_skill(cache_root, "alpha", "0.2.0", "current alpha content")
+            return subprocess.CompletedProcess(command, 0)
+        return subprocess.CompletedProcess(command, 1)
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({"alpha": "0.2.0", "zeta": "0.2.0"}),
+        runner=_failing_second_runner,
+    )
+
+    assert result.refresh_returncode == 1
+    assert alpha_current_dir.is_dir() and not alpha_current_dir.is_symlink(), (
+        f"expected successful refresh target {alpha_current_dir} to stay real"
+    )
+    assert alpha_prior_dir.is_symlink(), (
+        f"expected {alpha_prior_dir} to be repaired before returning failure"
+    )
+    assert alpha_prior_dir.resolve() == alpha_current_dir.resolve(), (
+        f"expected {alpha_prior_dir} to point at {alpha_current_dir}"
+    )
+    assert zeta_prior_dir.is_dir() and not zeta_prior_dir.is_symlink(), (
+        f"expected failed plugin cache {zeta_prior_dir} to remain untouched"
+    )
+
+
 def test_absent_cache_with_empty_installed_set_runs_no_plugin_add(
     tmp_path: Path,
 ) -> None:

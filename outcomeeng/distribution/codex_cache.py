@@ -293,6 +293,8 @@ def refresh_installed_plugins(
 
     marketplace_dir = resolved_cache_root / marketplace
     working_tree_plugins = resolved_history.working_tree_plugins()
+    refresh_returncode = 0
+    prune_orphan_plugins = True
 
     if installed is not None and not dry_run:
         # Query the installed set before the first prune so the recipe is
@@ -303,18 +305,17 @@ def refresh_installed_plugins(
             plugin.name for plugin in available_codex_plugins(resolved_repo_root)
         }
         wanted = working_tree_plugins & frozenset(installed_versions) & addable_plugins
+        refreshed_plugins: set[str] = set()
         for plugin in sorted(wanted):
             refresh_result = runner(
                 [*CODEX_PLUGIN_ADD_COMMAND, f"{plugin}@{marketplace}"]
             )
             if refresh_result.returncode != 0:
-                return CacheRefreshResult(
-                    linked_versions=(),
-                    pruned_links=(),
-                    pruned_plugins=(),
-                    refresh_returncode=refresh_result.returncode,
-                )
-        if wanted:
+                refresh_returncode = refresh_result.returncode
+                prune_orphan_plugins = False
+                break
+            refreshed_plugins.add(plugin)
+        if refreshed_plugins:
             # Codex reports the post-add version as the installed target. Re-query
             # after successful local refreshes so reconciliation targets the newly
             # materialized real cache root instead of the pre-refresh snapshot.
@@ -322,6 +323,10 @@ def refresh_installed_plugins(
             wanted = (
                 working_tree_plugins & frozenset(installed_versions) & addable_plugins
             )
+            if refresh_returncode != 0:
+                wanted &= frozenset(refreshed_plugins)
+        else:
+            wanted = frozenset()
     else:
         # A dry run reports planned changes without querying the installed set, so
         # the preview needs no Codex CLI present and mutates nothing; it treats
@@ -333,7 +338,11 @@ def refresh_installed_plugins(
     # A cache directory for any plugin outside the wanted set is pruned in full --
     # a working-tree-absent orphan and a not-installed plugin are pruned by the
     # same rule.
-    pruned_plugins = _prune_orphan_plugins(marketplace_dir, wanted, dry_run=dry_run)
+    pruned_plugins = (
+        _prune_orphan_plugins(marketplace_dir, wanted, dry_run=dry_run)
+        if prune_orphan_plugins
+        else []
+    )
 
     linked_versions: list[Path] = []
     pruned_links: list[Path] = []
@@ -388,7 +397,7 @@ def refresh_installed_plugins(
         linked_versions=tuple(linked_versions),
         pruned_links=tuple(pruned_links),
         pruned_plugins=tuple(pruned_plugins),
-        refresh_returncode=0,
+        refresh_returncode=refresh_returncode,
     )
 
 
