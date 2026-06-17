@@ -2,11 +2,11 @@
 
 ## Plugin: `spec-tree`
 
-All skills in this document belong to the `spec-tree` plugin. Skill names have no suffix — they are invoked as `/understanding`, `/authoring`, etc. (or fully qualified as `spec-tree:understanding`).
+All skills in this document belong to the `spec-tree` plugin. Skill names have no suffix — they are invoked as `/understand`, `/author`, etc. (or fully qualified as `spec-tree:understand`).
 
 ## Design principles
 
-Three methodology steps drive all work. Audit gates operate within each step. See `plugins/spec-tree/skills/understanding/references/durable-map.md` for the authoritative reference.
+Three methodology steps drive all work. Audit gates operate within each step. See `plugins/spec-tree/skills/understand/references/durable-map.md` for the authoritative reference.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
 2. **Spec** — write tests that make assertions verifiable. Node becomes Specified.
@@ -17,13 +17,13 @@ Planning is transient — `PLAN.md` coordination notes left by `/handoff`, not d
 Within these steps:
 
 - Foundation skills load once per conversation using marker pattern (no persistent state).
-- `understanding` is the single shared library: methodology, structure, templates.
-- `contextualizing` handles deterministic context injection from tree structure.
+- `understand` is the single shared library: methodology, structure, templates.
+- `contextualize` handles deterministic context injection from tree structure.
 - Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
-- `testing` and `auditing-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
-- `applying` orchestrates the full declare → spec → apply flow with audit gates at each step.
-- `committing-changes` enforces Conventional Commits with selective staging and atomic commits.
-- `pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `opening-pr` and `managing-pr` are internal protocols loaded by `pr`.
+- `test` and `audit-tests` are supersets of their `test` plugin counterparts, adding tree-specific concerns. No cross-plugin dependency at runtime.
+- `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
+- `commit-changes` enforces Conventional Commits with selective staging and atomic commits.
+- `manage-github-pr` routes shipping intent through committing, PR opening, PR management, merge, and closure. `open-pr` and `manage-pr` are internal protocols loaded by `manage-github-pr`.
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
 
@@ -168,7 +168,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 7a. Extract typed assertions from spec nodes and determine what test evidence is demanded.
 7b. Analyze evidence gaps across a subtree — which assertions lack test links, which links are broken.
-7c. Generate test scaffolds from assertion types, delegating methodology to `test/testing` and language patterns to language-specific skills.
+7c. Generate test scaffolds from assertion types, delegating methodology to `test/test` and language patterns to language-specific skills.
 7d. Load deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests.
 
 #### 8. Review test evidence against spec assertions
@@ -200,88 +200,88 @@ Skills for building and maintaining the durable map — specs, decisions, assert
 
 Foundation skills load once per conversation. They emit conversation markers so other skills can detect whether foundation context is present.
 
-| Skill             | Owns                                                                                              | Marker                             | Status      |
-| ----------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- |
-| `understanding`   | Methodology, durable map worldview, decomposition semantics, ordering rules, all shared templates | `<SPEC_TREE_FOUNDATION>`           | Implemented |
-| `contextualizing` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<SPEC_TREE_CONTEXT target="...">` | Implemented |
+| Skill           | Owns                                                                                              | Marker                             | Status      |
+| --------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- |
+| `understand`    | Methodology, durable map worldview, decomposition semantics, ordering rules, all shared templates | `<SPEC_TREE_FOUNDATION>`           | Implemented |
+| `contextualize` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<SPEC_TREE_CONTEXT target="...">` | Implemented |
 
 #### Action layer
 
 Action skills do the work. Before starting, they check conversation history for foundation markers and invoke missing foundations.
 
-| Skill           | Use case | Scope                                                           | Status      |
-| --------------- | -------- | --------------------------------------------------------------- | ----------- |
-| `bootstrapping` | 2        | Interview user, scaffold new spec tree                          | Implemented |
-| `authoring`     | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
-| `decomposing`   | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
-| `refactoring`   | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
-| `aligning`      | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
+| Skill       | Use case | Scope                                                           | Status      |
+| ----------- | -------- | --------------------------------------------------------------- | ----------- |
+| `bootstrap` | 2        | Interview user, scaffold new spec tree                          | Implemented |
+| `author`    | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
+| `decompose` | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
+| `refactor`  | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
+| `align`     | 6        | Clarify, augment, align, deconflict while preserving truth      | Implemented |
 
 ### Spec
 
 Skills for writing tests that make assertions verifiable. Each builds on a standalone `test` plugin counterpart, adding tree-specific concerns.
 
-| Skill            | Use case | Scope                                                        | Builds on             | Status      |
-| ---------------- | -------- | ------------------------------------------------------------ | --------------------- | ----------- |
-| `testing`        | 7        | Write tests driven by spec assertions, evidence gap analysis | `test/testing`        | Implemented |
-| `auditing-tests` | 8        | Adversarial review of test evidence against spec assertions  | `test/auditing-tests` | Implemented |
+| Skill         | Use case | Scope                                                        | Builds on          | Status      |
+| ------------- | -------- | ------------------------------------------------------------ | ------------------ | ----------- |
+| `test`        | 7        | Write tests driven by spec assertions, evidence gap analysis | `test/test`        | Implemented |
+| `audit-tests` | 8        | Adversarial review of test evidence against spec assertions  | `test/audit-tests` | Implemented |
 
-`spec-tree:testing` is a **superset** of `test/testing`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:testing`; a non-spec-tree user invokes `test/testing`. No cross-plugin dependency at runtime.
+`spec-tree:test` is a **superset** of `test/test`. It incorporates the full testing methodology (5 stages, 5 factors, 7 exceptions) and adds spec-tree-specific concerns: assertion extraction from spec nodes, evidence gap analysis across subtrees, test scaffold generation driven by assertion type, and deterministic context loading from the tree. A spec-tree user invokes `spec-tree:test`; a non-spec-tree user invokes `test/test`. No cross-plugin dependency at runtime.
 
-`spec-tree:auditing-tests` is a **superset** of `test/auditing-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
+`spec-tree:audit-tests` is a **superset** of `test/audit-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
 
 ### Apply
 
-Skills for writing implementation code and committing results. `applying` is an orchestrator that spans all three steps (declare → spec → apply) with audit gates — it exists because agents skip declaring prerequisites without guardrails.
+Skills for writing implementation code and committing results. `apply` is an orchestrator that spans all three steps (declare → spec → apply) with audit gates — it exists because Claude skips declaring prerequisites without guardrails.
 
-| Skill                | Use case | Scope                                                                   | Status      |
-| -------------------- | -------- | ----------------------------------------------------------------------- | ----------- |
-| `applying`           | 9        | Orchestrator: declare → spec → apply with audit gates                   | Implemented |
-| `committing-changes` | 10       | Conventional Commits with selective staging and atomic commits          | Implemented |
-| `pr`                 | 10       | Route shipping intent through commit, PR open, PR management, and merge | Implemented |
-| `opening-pr`         | 10       | Internal PR-opening protocol loaded by `pr`                             | Implemented |
-| `managing-pr`        | 10       | Internal open-PR management and merge protocol loaded by `pr`           | Implemented |
+| Skill              | Use case | Scope                                                                       | Status      |
+| ------------------ | -------- | --------------------------------------------------------------------------- | ----------- |
+| `apply`            | 9        | Orchestrator: declare → spec → apply with audit gates                       | Implemented |
+| `commit-changes`   | 10       | Conventional Commits with selective staging and atomic commits              | Implemented |
+| `manage-github-pr` | 10       | Route shipping intent through commit, PR open, PR management, and merge     | Implemented |
+| `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`                   | Implemented |
+| `manage-pr`        | 10       | Internal open-PR management and merge protocol loaded by `manage-github-pr` | Implemented |
 
 ### Commands
 
 Commands provide dynamic context injection and invoke the corresponding skill.
 
-| Command    | Step    | Invokes              | Purpose                                                       |
-| ---------- | ------- | -------------------- | ------------------------------------------------------------- |
-| `/clarify` | declare | —                    | Gather requirements through questioning before acting         |
-| `/handoff` | —       | —                    | Create timestamped handoff for session continuity             |
-| `/pickup`  | —       | —                    | Load handoff document to continue previous work               |
-| `/apply`   | *all*   | `applying`           | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
-| `/rtfm`    | *all*   | `applying`           | Stop ad hoc work, restart proper TDD flow                     |
-| `/commit`  | apply   | `committing-changes` | Git commit with auto-injected branch/status/diff              |
+| Command    | Step    | Invokes          | Purpose                                                       |
+| ---------- | ------- | ---------------- | ------------------------------------------------------------- |
+| `/clarify` | declare | —                | Gather requirements through questioning before acting         |
+| `/handoff` | —       | —                | Create timestamped handoff for session continuity             |
+| `/pickup`  | —       | —                | Load handoff document to continue previous work               |
+| `/apply`   | *all*   | `apply`          | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
+| `/rtfm`    | *all*   | `apply`          | Stop ad hoc work, restart proper TDD flow                     |
+| `/commit`  | apply   | `commit-changes` | Git commit with auto-injected branch/status/diff              |
 
 ## Ownership model
 
 ### Declare
 
-- **`understanding`** is the single shared library for all Spec Tree knowledge:
+- **`understand`** is the single shared library for all Spec Tree knowledge:
   - Durable map worldview (specs are permanent product documentation)
   - Decomposition semantics (enabler vs outcome, nesting depth, when to extract shared enablers)
   - Structure and sparse integer ordering rules
   - All shared templates (product, ADR, PDR, enabler, outcome)
   - Template access instructions
-- **`contextualizing`** owns deterministic context injection:
+- **`contextualize`** owns deterministic context injection:
   - Walks the tree from product root to target node
   - At each directory along the path, injects all lower-index siblings' specs
   - Validates artifact existence along the path
   - Returns context manifest or abort with remediation
-  - Bootstrap mode: returns empty manifest with `bootstrap=true` when authoring into an empty tree (no abort)
-- **Action skills** (`authoring`, `decomposing`, `refactoring`, `aligning`) do not duplicate foundation content. They reference `understanding` for templates and methodology.
+  - Bootstrap mode: returns empty manifest with `bootstrap=true` when creating into an empty tree (no abort)
+- **Action skills** (`author`, `decompose`, `refactor`, `align`) do not duplicate foundation content. They reference `understand` for templates and methodology.
 
 ### Spec
 
-- **`testing`** owns spec-tree test writing (superset of `test/testing`):
+- **`test`** owns spec-tree test writing (superset of `test/test`):
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
   - Extracts typed assertions from spec nodes, determines what evidence is demanded
   - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are broken
   - Generates test scaffolds from assertion types (Scenario → example-based, Property → property-based, etc.)
   - Loads deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests
-- **`auditing-tests`** owns spec-tree test review (audit gate within spec step):
+- **`audit-tests`** owns spec-tree test review (audit gate within spec step):
   - Incorporates full adversarial review protocol (4 phases, binary verdict)
   - Tree-level coverage: are all assertions across a subtree covered? Orphaned test files?
   - Cross-cutting assertion review: evidence at the right place for ancestor-level assertions
@@ -289,43 +289,43 @@ Commands provide dynamic context injection and invoke the corresponding skill.
 
 ### Apply
 
-- **`applying`** orchestrates the full declare → spec → apply flow:
-  - Spans all three steps because agents skip declaring prerequisites without guardrails
+- **`apply`** orchestrates the full declare → spec → apply flow:
+  - Spans all three steps because Claude skips declaring prerequisites without guardrails
   - Delegates to language-specific plugins (Python or TypeScript) for architecture, testing, and implementation
   - Three review gates that loop until approved — no exceptions
-- **`committing-changes`** owns the git commit workflow:
+- **`commit-changes`** owns the git commit workflow:
   - Conventional Commits format with selective staging
   - Classifies changes by concern, one concern per commit
   - Runs product validation before committing
-- **`pr`** owns shipping orchestration:
+- **`manage-github-pr`** owns shipping orchestration:
   - Detects instructed, existing-changeset, empty, and open-PR modes
-  - Reads local lifecycle routing from `spx/local/merging.md` via `understanding`
+  - Reads local lifecycle routing from `spx/local/merging.md` via `understand`
   - Invokes the implementation, commit, opening, managing, merge, and closure skills
-- **`opening-pr`** and **`managing-pr`** own internal PR lifecycle protocols:
-  - `opening-pr` evaluates `REVIEW_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
-  - `managing-pr` inspects reviews/checks, drives follow-up pushes, evaluates merge gates, merges, and runs post-merge cleanup
+- **`open-pr`** and **`manage-pr`** own internal PR lifecycle protocols:
+  - `open-pr` evaluates `REVIEW_READINESS`, pushes, opens the ready PR, and schedules the first heartbeat
+  - `manage-pr` inspects reviews/checks, drives follow-up pushes, evaluates merge gates, merges, and runs post-merge cleanup
 
 ## Marker-based state detection
 
-Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`committing-changes`) operate independently; `pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
+Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `/pickup` emitting `<PICKUP_ID>` for `/handoff` to find.
 
-| Marker                                   | Emitted by        | Checked by                         | Meaning                              |
-| ---------------------------------------- | ----------------- | ---------------------------------- | ------------------------------------ |
-| `<SPEC_TREE_FOUNDATION>`                 | `understanding`   | Declare action skills, spec skills | Methodology and templates are loaded |
-| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualizing` | Declare action skills, spec skills | Target artifacts are loaded          |
+| Marker                                   | Emitted by      | Checked by                         | Meaning                              |
+| ---------------------------------------- | --------------- | ---------------------------------- | ------------------------------------ |
+| `<SPEC_TREE_FOUNDATION>`                 | `understand`    | Declare action skills, spec skills | Methodology and templates are loaded |
+| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualize` | Declare action skills, spec skills | Target artifacts are loaded          |
 
 **Decision rule:**
 
-- No `<SPEC_TREE_FOUNDATION>` in conversation: invoke `understanding`
-- No `<SPEC_TREE_CONTEXT>` matching current target: invoke `contextualizing`
-- Target path changed since last `<SPEC_TREE_CONTEXT>`: re-invoke `contextualizing`
+- No `<SPEC_TREE_FOUNDATION>` in conversation: invoke `understand`
+- No `<SPEC_TREE_CONTEXT>` matching current target: invoke `contextualize`
+- Target path changed since last `<SPEC_TREE_CONTEXT>`: re-invoke `contextualize`
 
 ## Template ownership
 
-`understanding` owns all templates. Action skills access them via the foundation skill's base directory:
+`understand` owns all templates. Action skills access them via the foundation skill's base directory:
 
 ```text
-${UNDERSTANDING_DIR}/
+${UNDERSTAND_DIR}/
 ├── SKILL.md
 ├── references/
 │   ├── durable-map.md
@@ -344,21 +344,21 @@ ${UNDERSTANDING_DIR}/
         └── outcome-name.md
 ```
 
-Action skills reference templates with: `Read: ${UNDERSTANDING_DIR}/templates/nodes/outcome-name.md`
+Action skills reference templates with: `Read: ${UNDERSTAND_DIR}/templates/nodes/outcome-name.md`
 
 ## Conversational flow contract
 
 Declare action skills follow this interaction contract:
 
 1. **Intake** -- Ask for target path/scope and intended operation.
-2. **Foundation gate** -- Check for `<SPEC_TREE_FOUNDATION>` marker; invoke `understanding` if absent.
-3. **Target context gate** -- Check for `<SPEC_TREE_CONTEXT>` matching target; invoke `contextualizing` if absent or mismatched. Context is injected deterministically from tree structure. Abort with explicit remediation if required artifacts are missing.
+2. **Foundation gate** -- Check for `<SPEC_TREE_FOUNDATION>` marker; invoke `understand` if absent.
+3. **Target context gate** -- Check for `<SPEC_TREE_CONTEXT>` matching target; invoke `contextualize` if absent or mismatched. Context is injected deterministically from tree structure. Abort with explicit remediation if required artifacts are missing.
 4. **Plan** -- Present concise execution plan and expected outputs.
 5. **Execute** -- Perform workflow steps. Keep user in the loop at major decision points.
 6. **Evidence gate** -- Verify spec assertions have test evidence. (Placeholder — not yet active.)
 7. **Deliver** -- Summarize changes, decisions, and next actions.
 
-`applying` has its own 8-step flow that reuses steps 1–3 internally. `committing-changes` has no dependency on spec-tree foundations.
+`apply` has its own 8-step flow that reuses steps 1–3 internally. `commit-changes` has no dependency on spec-tree foundations.
 
 ## Mode-specific flows
 
@@ -366,12 +366,12 @@ Declare action skills follow this interaction contract:
 
 Each flow documents only what is unique to that mode. All declare action skills share the standard preflight (steps 1–3) and postflight (steps 6–7) from the conversational flow contract above.
 
-#### `understanding`
+#### `understand`
 
 1. Load Spec Tree methodology, structure semantics, and template index.
 2. Emit `<SPEC_TREE_FOUNDATION>` marker with loaded module summary.
 
-#### `contextualizing`
+#### `contextualize`
 
 1. Intake target path/scope and operation type.
 2. Walk tree from product root to target node.
@@ -381,25 +381,25 @@ Each flow documents only what is unique to that mode. All declare action skills 
 6. If operation is `author` and no artifacts exist at target level, return empty manifest with `bootstrap=true` instead of aborting.
 7. Emit `<SPEC_TREE_CONTEXT target="full/path">` with context manifest: collected specs, open decisions, readiness status.
 
-#### `bootstrapping`
+#### `bootstrap`
 
-1. Check for existing product spec — redirect to `authoring` if tree already exists.
+1. Check for existing product spec — redirect to `author` if tree already exists.
 2. Interview user for product identity, hypothesis, and scope.
 3. Identify top-level nodes (3–7 concerns), classify as enabler or outcome.
 4. Present scaffold plan and wait for confirmation.
 5. Create `spx/` with product spec, CLAUDE.md, and top-level node stubs.
-6. Recommend next steps (fill assertions with `authoring`, decompose with `decomposing`).
+6. Recommend next steps (fill assertions with `author`, decompose with `decompose`).
 
-#### `authoring`
+#### `author`
 
-1. Detect empty tree → invoke `bootstrapping` if no product spec exists.
+1. Detect empty tree → invoke `bootstrap` if no product spec exists.
 2. Intake node type (enabler or outcome), intended location, and path.
 3. Clarify user intent and unresolved product decisions.
-4. Draft artifact using templates from `understanding` and Spec Tree rules.
+4. Draft artifact using templates from `understand` and Spec Tree rules.
 5. Validate atemporal voice, consistency, and testability (assertions link to test files for outcomes).
 6. Return draft, open decisions, and recommended next steps (decomposition or test creation).
 
-#### `decomposing`
+#### `decompose`
 
 1. Intake source node and target decomposition depth.
 2. Apply decomposition methodology (enabler vs outcome, scope, sparse integer ordering).
@@ -407,7 +407,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 4. Validate decomposition quality (no excessive nesting, correct node types, no misplaced assertions).
 5. Return decomposition output with rationale for splits and boundaries.
 
-#### `refactoring`
+#### `refactor`
 
 1. Intake structural change request (move, re-scope, extract shared enabler).
 2. Analyze impact across hierarchy and decision records.
@@ -415,7 +415,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 4. Apply refactoring updates.
 5. Validate cross-node consistency after structural changes.
 
-#### `aligning`
+#### `align`
 
 1. Intake alignment request (clarify, augment, deconflict).
 2. Analyze contradictions, gaps, or ambiguities across affected nodes.
@@ -425,9 +425,9 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 ### Spec
 
-#### `testing`
+#### `test`
 
-Superset of `test/testing`. Incorporates the full methodology, adds tree-specific concerns.
+Superset of `test/test`. Incorporates the full methodology, adds tree-specific concerns.
 
 1. Load methodology and tree context via foundation skills.
 2. Extract typed assertions from target spec node(s) — Scenario, Property, Mapping, Conformance, Compliance.
@@ -436,34 +436,34 @@ Superset of `test/testing`. Incorporates the full methodology, adds tree-specifi
 5. For assertions lacking tests, generate scaffolds using assertion type to select test pattern. Delegate methodology decisions (level, doubles) to the 5-stage router. Delegate language patterns to language-specific skills.
 6. Report evidence summary: which assertions have tests, which don't, which are stale.
 
-#### `auditing-tests`
+#### `audit-tests`
 
-Superset of `test/auditing-tests`. Incorporates the full adversarial review protocol, adds tree-specific concerns.
+Superset of `test/audit-tests`. Incorporates the full adversarial review protocol, adds tree-specific concerns.
 
 1. Load methodology and tree context via foundation skills.
-2. Execute the 4 foundational review phases from `test/auditing-tests` (spec structure, evidentiary integrity, lower-level assumptions, ADR/PDR compliance).
+2. Execute the 4 foundational review phases from `test/audit-tests` (spec structure, evidentiary integrity, lower-level assumptions, ADR/PDR compliance).
 3. Tree-level coverage: walk subtree, verify all assertions across all nodes have test evidence.
 4. Cross-cutting assertion review: for assertions at ancestor nodes, verify evidence is provided at the appropriate place.
 5. Orphan detection: identify test files not linked from any assertion.
-6. Decision record compliance from full ancestor chain loaded via `contextualizing` (not just manually found ADRs/PDRs).
+6. Decision record compliance from full ancestor chain loaded via `contextualize`.
 7. Binary verdict: APPROVED or REJECT. No middle ground.
 
 ### Apply
 
-#### `applying`
+#### `apply`
 
-Orchestrates the full declare → spec → apply flow. Spans all three steps because agents skip declaring prerequisites without guardrails.
+Orchestrates the full declare → spec → apply flow. Spans all three steps because Claude skips declaring prerequisites without guardrails.
 
-1. Load methodology via `understanding` (once per session).
-2. Load work item context via `contextualizing` (every node).
-3. Architect: produce ADR via language-specific `/architecting-[language]` skill.
-4. Review architecture via `/auditing-[language]-architecture` — loop until APPROVED.
-5. Test: write tests via `/testing-[language]` skill.
-6. Review tests via `/auditing-[language]-tests` — loop until APPROVED.
-7. Implement: write code via `/coding-[language]` skill.
-8. Review code via `/auditing-[language]` — loop until APPROVED.
+1. Load methodology via `understand` (once per session).
+2. Load work item context via `contextualize` (every node).
+3. Architect: produce ADR via language-specific `/architect-[language]` skill.
+4. Review architecture via `/audit-[language]-architecture` — loop until APPROVED.
+5. Test: write tests via `/test-[language]` skill.
+6. Review tests via `/audit-[language]-tests` — loop until APPROVED.
+7. Implement: write code via `/code-[language]` skill.
+8. Review code via `/audit-[language]` — loop until APPROVED.
 
-#### `committing-changes`
+#### `commit-changes`
 
 1. Run product validation (e.g., `just check`).
 2. Review changes: `git status`, `git diff`.
@@ -472,28 +472,28 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 5. Write Conventional Commits message (imperative, under 50 chars).
 6. Commit, then repeat from step 4 for remaining concerns.
 
-#### `pr`
+#### `manage-github-pr`
 
 1. Detect mode from arguments, branch state, working tree, commits ahead of base, and existing PR state.
-2. Load `understanding` when the foundation marker is absent so local lifecycle routing is known.
+2. Load `understand` when the foundation marker is absent so local lifecycle routing is known.
 3. Present the lifecycle proposal through the runtime's structured-question tool before mutation.
 4. Invoke implementation skills when the requested work is not yet in the tree.
-5. Invoke `committing-changes`, then the internal `opening-pr` and `managing-pr` protocols unless the local lifecycle overlay declares a different route.
+5. Invoke `commit-changes`, then the internal `open-pr` and `manage-pr` protocols unless the local lifecycle overlay declares a different route.
 6. Invoke `handoff --no-session` after merge unless the route stops earlier.
 
-#### `opening-pr`
+#### `open-pr`
 
-Internal protocol loaded by `pr`.
+Internal protocol loaded by `manage-github-pr`.
 
-1. Load `standardizing-merging`, `committing-changes`, and `tracking-tasks`.
+1. Load `merging-standards`, `commit-changes`, and `task-tracking-standards`.
 2. Establish branch hygiene and topology.
 3. Establish `REVIEW_READINESS` through deterministic verification and local review convergence.
 4. Push with explicit destination ref.
 5. Open the PR ready and schedule the first heartbeat.
 
-#### `managing-pr`
+#### `manage-pr`
 
-Internal protocol loaded by `pr`.
+Internal protocol loaded by `manage-github-pr`.
 
 1. Identify the open PR and inspect review, check, comment, and base-drift state.
 2. Classify and act on review findings by validity and phase.

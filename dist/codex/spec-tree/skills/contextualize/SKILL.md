@@ -209,6 +209,8 @@ Local skill overlays: {comma-separated list from spx/local/} | none
 Lifecycle overlays read: spx/local/merging.md | none
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; local verification, review, audit, and commits are progress, not completion, while the branch carries changes ahead of its resolved base
 Governed next workflow: /merge after local verification when the work changes files and is destined for the default branch, unless explicitly scoped to proposal, analysis, review, or local-only work, or stopped at an explicit lifecycle gate with no independent local action remaining
+Progress verdict rule: status and progress answers must classify the lifecycle as complete, continuing, or blocked; a clean worktree, committed branch, or passing local gate cannot classify default-branch work as complete while changes remain ahead of the resolved base
+Continuation action: if the lifecycle is continuing, proceed to the governed next workflow instead of ending the turn; if blocked, report the exact gate, evidence, and operator decision required
 Lower-index siblings read: {list}
 Same-index siblings (independent): {list}
 Higher-index siblings listed: {list}
@@ -264,6 +266,10 @@ Claude wrote "see 15-build.adr.md" or "continue in 32-parser.enabler" without th
 
 Claude loaded `/understand`, completed edits, passed deterministic verification, committed the branch, then stopped because the context packet carried document context but no branch-lifecycle state. Context loading now reads `spx/local/merging.md` when present and records the default-branch completion boundary plus `/merge` continuation in `<SPEC_TREE_CONTEXT>`, so local readiness is not mistaken for delivered value.
 
+**Failure 7: Treated status reporting as permission to stop**
+
+Claude answered a progress question by reporting the clean worktree and local verification, then ended the turn while the branch still carried changes destined for the default branch. Context loading now requires a progress verdict and continuation action: complete only after the change reaches the default branch on origin, continuing when `/merge` remains available, or blocked when an explicit lifecycle gate leaves no independent local action.
+
 </failure_modes>
 
 <success_criteria>
@@ -283,6 +289,7 @@ Context loading is complete when:
 - [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
+- [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
 - [ ] No ABORT conditions triggered (or appropriate error shown with remediation)

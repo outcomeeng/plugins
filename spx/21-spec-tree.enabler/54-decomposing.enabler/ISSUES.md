@@ -46,6 +46,6 @@ This is intentional sequencing: the router (a classify → match → seed front 
 seeds it instantiates exist before the consumer that reads them.
 
 **Trigger to revisit:** the router step is built. **Resolution shape:** add the classify/seed front
-phase to `decomposing/SKILL.md`, the `archetype.py` matcher, the `decomposer` agent, and `[eval]`
+phase to `decompose/SKILL.md`, the `archetype.py` matcher, the `decomposer` agent, and `[eval]`
 classification cases; at that point the recognition fields and seed trees become reachable from the
 skill and this entry is removed.

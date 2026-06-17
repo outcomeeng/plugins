@@ -172,7 +172,7 @@ Read the appropriate template from `${CLAUDE_SKILL_DIR}/../understand/templates/
 
 - Every node, ADR, and PDR reference must use the full path from `spx/`.
 - Never write a bare node name, bare decision filename, or numeric prefix by itself.
-- Use `spx/55-example.enabler/21-decomposing.enabler/decompose.md`, not `decomposing.md` or `54-decomposing.enabler`.
+- Use `spx/55-example.enabler/21-parser.enabler/parser.md`, not `parser.md` or `54-parser.enabler`.
 
 </step>
 

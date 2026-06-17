@@ -62,14 +62,14 @@ ADRs do not assign testing levels. They establish constraints that *make levels 
 ```text
 **Testing Strategy                    <-- NOT a valid ADR section**
 
-**Level Assignments                  <-- downstream concern for /testing**
+**Level Assignments                  <-- downstream concern for /test**
 
 | Component        | Level | Justification                   |
 | ---------------- | ----- | ------------------------------- |
 | Command building | `l1`  | Pure function, no external deps |
 | Hugo invocation  | `l2`  | Needs real Hugo binary          |
 
-**Escalation Rationale               <-- downstream concern for /testing**
+**Escalation Rationale               <-- downstream concern for /test**
 
 - `l1` -> `l2`: Hugo binary required for acceptance
 ```

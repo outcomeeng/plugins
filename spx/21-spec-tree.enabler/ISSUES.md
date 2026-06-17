@@ -4,7 +4,7 @@ Issues discovered during contradiction analysis of `spx/EXCLUDE`, sync-exclude, 
 
 ## 8. Multi-language test discovery missing from methodology (PARTIAL)
 
-Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.md` spec (mapping assertions for pytest/vitest). The `status.yaml` reference in `testing-foundation.md` was removed in commit `391e9e5`.
+Multi-language discovery is documented in `excluded-nodes.md` and `sync-exclude.md` spec (mapping assertions for pytest/vitest). The `status.yaml` reference in `test-foundation.md` was removed in commit `391e9e5`.
 
 **Remaining:** upstream `outcomeeng/methodology` repo still needs the multi-language principle added to `spec-tree-reference.md`.
 
@@ -97,7 +97,7 @@ Surfaced by `claude-review` on PR 25 (2026-05-14).
 Required handling:
 
 - Decide which form is canonical (angle-bracket everywhere vs. named placeholder inline).
-- Sweep `standardizing-merging/SKILL.md` and any other PR-flow skill that mixes the conventions.
+- Sweep `merging-standards/SKILL.md` and any other PR-flow skill that mixes the conventions.
 
 Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens scope across multiple PR-flow skills; the rebase-merge PR scope is intentionally narrow.
 

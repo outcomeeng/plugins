@@ -4,7 +4,7 @@
 
 - No mocking. Ever.
 - Reality is the oracle. Prefer real systems whenever they are cheap, deterministic, safe, and observable enough to prove the behavior.
-- Test doubles are exceptions, not defaults. The seven exception cases in `testing-router.md` are the only legitimate reasons to avoid the real dependency.
+- Test doubles are exceptions, not defaults. The seven exception cases in `test-router.md` are the only legitimate reasons to avoid the real dependency.
 - Route every assertion through all five stages. Do not skip ahead.
 - Name tests by subject, evidence mode, execution level, and optional runner.
 
@@ -105,7 +105,7 @@ Follow this progression when deciding how to place evidence:
    - Observability gaps
    - Contract probes
 
-The detailed routing rules live in [testing-router.md](./testing-router.md). The naming rules live in [testing-naming.md](./testing-naming.md).
+The detailed routing rules live in [test-router.md](./test-router.md). The naming rules live in [test-naming.md](./test-naming.md).
 
 ## Anti-patterns
 
@@ -123,4 +123,4 @@ Avoid these patterns:
 
 Keep tests next to the governing spec work, and name them for what they prove and how painful they are to run.
 
-See [testing-naming.md](./testing-naming.md) for the naming contract.
+See [test-naming.md](./test-naming.md) for the naming contract.

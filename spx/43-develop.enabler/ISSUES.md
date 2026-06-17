@@ -54,8 +54,8 @@ subjects verbatim.
   consumer's toolchain and the vendored excalidraw setup — distinct from the bundled-stdlib-helper
   case fixed here.
 - **Skill-auditor WARNINGs** (worth-improving, not blocking): spec-tree review-change skill name vs the
-  imperative convention in `spx/local/skills.md`; orphaned `reviewing-changes/references/render/*` and
-  `github-actions/scripts/workflow_inspect.py`. (`skill-standards` over the 500-line ceiling —
+  imperative convention in `spx/local/skills.md`; orphaned `review-changes/references/render/*` and
+  `inspect-github-actions/scripts/workflow_inspect.py`. (`skill-standards` over the 500-line ceiling —
   resolved: split into `references/runtime-variables.md` and `references/script-standards.md`.)
 - **Standalone `you` / `the model`** beyond prose: **DONE — complete across all six plugins.** The
   executing-Claude `you`/`your`/`yourself` sweep ran as a per-plugin pass, converting executing-Claude
