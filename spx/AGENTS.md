@@ -1,7 +1,7 @@
 ---
 template_version: "0.18.15"
 template_source: spec-tree
-languages: [python, typescript]
+languages: [python]
 ---
 
 # spx/ Directory Guide (Spec Tree)
@@ -177,23 +177,9 @@ Per-language code, architecture, and test audits render for the product's enable
 | "Audit ADRs for Python" | `/auditing-python-architecture` | `python-architecture-auditor` |
 | "Audit these tests"     | `/auditing-python-tests`        | `python-test-auditor`         |
 
-| User Says...                | Skill                               | Agent                             |
-| --------------------------- | ----------------------------------- | --------------------------------- |
-| "Audit this code"           | `/auditing-typescript`              | `typescript-code-auditor`         |
-| "Audit ADRs for TypeScript" | `/auditing-typescript-architecture` | `typescript-architecture-auditor` |
-| "Audit these tests"         | `/auditing-typescript-tests`        | `typescript-test-auditor`         |
-
 ## Test Naming Convention
 
 Test level is encoded in the filename. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
-
-### TypeScript
-
-| Level | Pattern                           | Example                        |
-| ----- | --------------------------------- | ------------------------------ |
-| 1     | `{subject}.{evidence}.l1.test.ts` | `parsing.scenario.l1.test.ts`  |
-| 2     | `{subject}.{evidence}.l2.test.ts` | `cli.scenario.l2.test.ts`      |
-| 3     | `{subject}.{evidence}.l3.test.ts` | `workflow.scenario.l3.test.ts` |
 
 ### Python
 
