@@ -49,7 +49,7 @@ STEPS: tuple[SyncStep, ...] = (
         argv=("claude", "plugin", "marketplace", "update", "outcomeeng"),
     ),
     SyncStep(
-        name="codex_cache_preserve",
+        name="codex_local_refresh",
         argv=(
             "uv",
             "run",

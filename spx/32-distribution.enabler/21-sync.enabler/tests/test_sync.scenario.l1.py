@@ -63,6 +63,13 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
     assert runner.calls == list(STEP_ARGVS)
 
 
+def test_sync_declares_codex_local_refresh_step() -> None:
+    step_names = tuple(step.name for step in STEPS)
+
+    assert "codex_local_refresh" in step_names
+    assert "codex_cache_preserve" not in step_names
+
+
 def test_absent_base_ref_runs_all_steps_without_consulting_change_probe() -> None:
     """When no base_ref is supplied there is no diff baseline; sync proceeds."""
     runner = RecordingRunner()

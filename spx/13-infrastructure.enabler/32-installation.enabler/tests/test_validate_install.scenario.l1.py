@@ -1,10 +1,9 @@
 """Level 1 installation scenarios for validate_install's feature-branch lag tolerance.
 
-When a working-tree plugin manifest bumps to a new version on a feature branch but
-the Codex marketplace clone (which tracks the marketplace's published branch) is
-still on the prior version, the new version directory is absent from the Codex
-cache by design. validate_install demotes that absence to a warning rather than
-treating it as a hard error.
+When a working-tree plugin manifest bumps to a new version on a feature branch
+but the configured local marketplace source is still on the prior version, the
+new version directory is absent from the Codex cache by design. validate_install
+demotes that absence to a warning rather than treating it as a hard error.
 """
 
 from __future__ import annotations
@@ -15,6 +14,10 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DIST_CODEX_PLUGINS_DIR,
+)
 from outcomeeng.validation import install as validate_install
 
 MARKETPLACE_NAME = "outcomeeng"
@@ -45,12 +48,63 @@ def _seed_incomplete_cache(cache_root: Path, plugin: str, version: str) -> None:
     (plugin_dir / "marker.txt").write_text("seed")
 
 
+def _write_local_codex_marketplace_manifest(
+    marketplace_root: Path, plugin: str, version: str
+) -> None:
+    manifest = (
+        marketplace_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST
+    )
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+
+
+def test_read_codex_marketplace_version_uses_configured_local_source_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Codex marketplace version lookup reads the configured local marketplace
+    root rather than the historical Git clone path under the Codex home directory.
+    """
+    home = tmp_path / "home"
+    marketplace_root = tmp_path / "marketplace"
+    monkeypatch.setenv("HOME", str(home))
+    _write_local_codex_marketplace_manifest(
+        marketplace_root,
+        PLUGIN_NAME,
+        PUBLISHED_VERSION,
+    )
+    old_clone_manifest = (
+        home
+        / ".codex"
+        / ".tmp"
+        / "marketplaces"
+        / MARKETPLACE_NAME
+        / DIST_CODEX_PLUGINS_DIR
+        / PLUGIN_NAME
+        / CODEX_PLUGIN_MANIFEST
+    )
+    old_clone_manifest.parent.mkdir(parents=True)
+    old_clone_manifest.write_text(
+        json.dumps({"name": PLUGIN_NAME, "version": WORKING_TREE_VERSION})
+    )
+
+    version = validate_install.read_codex_marketplace_version(
+        MARKETPLACE_NAME,
+        PLUGIN_NAME,
+        marketplace_root=marketplace_root,
+    )
+
+    assert version == PUBLISHED_VERSION
+
+
 def test_lagging_codex_marketplace_version_emits_warning_not_error(
     tmp_path: Path,
 ) -> None:
-    """When the Codex marketplace clone publishes an older version than the working tree,
-    the missing newer-version directory is reported as a warning that names the plugin
-    and both versions; the validation result records zero errors."""
+    """When the local marketplace source publishes an older version than the
+    working tree, the missing newer-version directory is reported as a warning
+    that names the plugin and both versions; the validation result records zero
+    errors.
+    """
     repo_root = tmp_path / "repo"
     codex_cache = tmp_path / "codex_cache"
     _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
@@ -181,9 +235,10 @@ def test_absent_codex_cache_without_installed_set_signal_is_clean(
 def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
     tmp_path: Path,
 ) -> None:
-    """When the Codex marketplace clone has no manifest for the plugin (the lookup
-    returns None), validate_install applies strict validation against the working-tree
-    version — no warning, and a missing directory is an error."""
+    """When the local marketplace source has no manifest for the plugin (the lookup
+    returns None), validate_install applies strict validation against the
+    working-tree version: no warning, and a missing directory is an error.
+    """
     repo_root = tmp_path / "repo"
     codex_cache = tmp_path / "codex_cache"
     _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
@@ -205,39 +260,37 @@ def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
     assert WORKING_TREE_VERSION in result.errors[0]
 
 
-def test_main_exits_zero_when_working_tree_ahead_of_marketplace_clone(
+def test_main_exits_zero_when_working_tree_ahead_of_local_marketplace_source(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """End-to-end through main(): when the working tree advances past the marketplace
-    clone, the script exits zero and writes a warning to stderr naming the plugin and
-    both versions."""
-    home = tmp_path / "home"
+    """End-to-end through main(): when the working tree advances past the local
+    marketplace source, the script exits zero and writes a warning naming the
+    plugin and both versions.
+    """
     repo = tmp_path / "repo"
     repo.mkdir()
-    monkeypatch.setenv("HOME", str(home))
     monkeypatch.chdir(repo)
 
     _write_manifest(repo, PLUGIN_NAME, WORKING_TREE_VERSION)
-    codex_cache = home / ".codex" / "plugins" / "cache"
+    codex_cache = tmp_path / "codex_cache"
     _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
-
-    clone_manifest = (
-        home
-        / ".codex"
-        / ".tmp"
-        / "marketplaces"
-        / MARKETPLACE_NAME
-        / "dist"
-        / "claude"
-        / PLUGIN_NAME
-        / ".claude-plugin"
-        / "plugin.json"
+    marketplace_root = tmp_path / "marketplace"
+    _write_local_codex_marketplace_manifest(
+        marketplace_root,
+        PLUGIN_NAME,
+        PUBLISHED_VERSION,
     )
-    clone_manifest.parent.mkdir(parents=True)
-    clone_manifest.write_text(
-        json.dumps({"name": PLUGIN_NAME, "version": PUBLISHED_VERSION})
+    monkeypatch.setattr(
+        validate_install,
+        "codex_marketplace_source_root",
+        lambda marketplace: marketplace_root,
+    )
+    monkeypatch.setattr(
+        validate_install,
+        "codex_cache_root",
+        lambda: codex_cache,
     )
 
     exit_code = validate_install.main([MARKETPLACE_NAME])
@@ -250,39 +303,42 @@ def test_main_exits_zero_when_working_tree_ahead_of_marketplace_clone(
     assert "warning:" in captured.err
 
 
-def test_main_reads_legacy_plugins_marketplace_clone_during_layout_migration(
+def test_main_reads_legacy_plugins_layout_from_local_marketplace_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """When the installed Codex marketplace clone is still on the pre-dist layout,
+    """When the configured local marketplace root still uses the pre-dist layout,
     validate_install reads `plugins/<plugin>/.claude-plugin/plugin.json` and keeps
-    feature-branch lag as a warning rather than an error.
+    feature-worktree lag as a warning rather than an error.
     """
-    home = tmp_path / "home"
     repo = tmp_path / "repo"
     repo.mkdir()
-    monkeypatch.setenv("HOME", str(home))
     monkeypatch.chdir(repo)
 
     _write_manifest(repo, PLUGIN_NAME, WORKING_TREE_VERSION)
-    codex_cache = home / ".codex" / "plugins" / "cache"
+    codex_cache = tmp_path / "codex_cache"
     _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
-
-    clone_manifest = (
-        home
-        / ".codex"
-        / ".tmp"
-        / "marketplaces"
-        / MARKETPLACE_NAME
+    marketplace_root = tmp_path / "marketplace"
+    legacy_manifest = (
+        marketplace_root
         / "plugins"
         / PLUGIN_NAME
-        / ".claude-plugin"
-        / "plugin.json"
+        / validate_install.CLAUDE_PLUGIN_MANIFEST
     )
-    clone_manifest.parent.mkdir(parents=True)
-    clone_manifest.write_text(
+    legacy_manifest.parent.mkdir(parents=True)
+    legacy_manifest.write_text(
         json.dumps({"name": PLUGIN_NAME, "version": PUBLISHED_VERSION})
+    )
+    monkeypatch.setattr(
+        validate_install,
+        "codex_marketplace_source_root",
+        lambda marketplace: marketplace_root,
+    )
+    monkeypatch.setattr(
+        validate_install,
+        "codex_cache_root",
+        lambda: codex_cache,
     )
 
     exit_code = validate_install.main([MARKETPLACE_NAME])

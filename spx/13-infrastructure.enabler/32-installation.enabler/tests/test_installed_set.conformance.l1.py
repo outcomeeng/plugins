@@ -22,7 +22,7 @@ from dataclasses import dataclass
 import pytest
 
 from outcomeeng.distribution import codex_cache
-from outcomeeng.distribution.codex_cache import DEFAULT_MARKETPLACE
+from outcomeeng.distribution.marketplace_sources import DEFAULT_MARKETPLACE
 
 OTHER_MARKETPLACE = "elsewhere"
 

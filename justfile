@@ -70,18 +70,22 @@ hooks-install:
 hooks-run:
     lefthook run pre-commit
 
-# Validate SKILL.md frontmatter in installed Claude and Codex marketplace caches
+# Validate SKILL.md frontmatter in the installed Claude cache and configured Codex marketplace source
 check-installed marketplace="outcomeeng":
     #!/usr/bin/env bash
     set -euo pipefail
-    claude_files=$(find ~/.claude/plugins/cache/{{marketplace}} -name "SKILL.md")
-    codex_files=$(find ~/.codex/.tmp/marketplaces/{{marketplace}} -name "SKILL.md")
-    claude_count=$(echo "$claude_files" | grep -c . || true)
-    codex_count=$(echo "$codex_files" | grep -c . || true)
+    claude_root=~/.claude/plugins/cache/{{marketplace}}
+    codex_root=$(uv run python -m outcomeeng.distribution.marketplace_sources root {{marketplace}})
+    claude_count=$(find "$claude_root" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')
+    codex_count=$(find "$codex_root/dist/codex" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')
     echo "━━━ Claude Code install ($claude_count files) ━━━"
-    echo "$claude_files" | xargs uv run python -m outcomeeng.validation.skill_frontmatter
+    if [ "$claude_count" -gt 0 ]; then
+        find "$claude_root" -name "SKILL.md" -print0 | xargs -0 uv run python -m outcomeeng.validation.skill_frontmatter
+    fi
     echo "━━━ Codex install ($codex_count files) ━━━"
-    echo "$codex_files" | xargs uv run python -m outcomeeng.validation.skill_frontmatter
+    if [ "$codex_count" -gt 0 ]; then
+        find "$codex_root/dist/codex" -name "SKILL.md" -print0 | xargs -0 uv run python -m outcomeeng.validation.skill_frontmatter
+    fi
     echo "✔ installed skills valid"
 
 # Refresh local Claude and Codex marketplace installs after plugin distribution changes

@@ -23,7 +23,11 @@ from pathlib import Path
 import pytest
 
 from outcomeeng.distribution import codex_cache as preserve_codex_plugin_cache
-from outcomeeng.distribution.codex_cache import DEFAULT_MARKETPLACE
+from outcomeeng.distribution.marketplace_sources import (
+    CODEX_PLUGIN_MANIFEST,
+    DEFAULT_MARKETPLACE,
+    DIST_CODEX_PLUGINS_DIR,
+)
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"
@@ -80,6 +84,25 @@ class StaticInstalled:
         return self.versions
 
 
+@dataclass
+class SequencedInstalled:
+    """Installed-version provider whose response changes after refresh.
+
+    Stage 5 exception 2 (interaction-protocol DI): the real Codex provider is
+    queried before and after `codex plugin add`. This spy returns deterministic
+    versions for each query so the test can prove reconciliation uses the
+    post-refresh installed set.
+    """
+
+    versions_by_call: tuple[dict[str, str], ...]
+    calls: list[str] = field(default_factory=list)
+
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
+        self.calls.append(marketplace)
+        index = min(len(self.calls) - 1, len(self.versions_by_call) - 1)
+        return self.versions_by_call[index]
+
+
 @dataclass(frozen=True)
 class RaisingInstalled:
     """Stub that fails the installed-set query (Stage 5 exception 1 -- failure
@@ -92,63 +115,34 @@ class RaisingInstalled:
 
 
 @dataclass
-class SequenceInstalled:
-    """Installed-version stub returning one snapshot per query.
+class MaterializingAddRunner:
+    """Runner stub that materializes cache roots for local Codex plugin adds.
 
-    Stage 5 exception 2 (interaction-protocol DI): the repair path must prove it
-    re-reads Codex's installed set after marketplace registration repair without
-    invoking the real CLI.
-    """
-
-    snapshots: list[dict[str, str]]
-    calls: list[str] = field(default_factory=list)
-
-    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
-        self.calls.append(marketplace)
-        if not self.snapshots:
-            raise AssertionError("installed set queried more often than expected")
-        return self.snapshots.pop(0)
-
-
-@dataclass
-class RepairingMarketplaceRunner:
-    """Runner stub that materializes the plugin cache on a chosen upgrade call.
-
-    Stage 5 exception 2 (interaction-protocol DI): the production repair path
-    drives the `codex` CLI and observes its filesystem side effect. The l1 test
-    injects a command runner that records commands and materializes the same
-    side effect deterministically.
+    Stage 5 exception 2 (interaction-protocol DI): the production path invokes
+    `codex plugin add <plugin>@<marketplace>` and observes Codex's filesystem
+    side effect. The l1 test records the command sequence and materializes the
+    same side effect deterministically.
     """
 
     cache_root: Path
-    materialize_on_upgrade_call: int
-    first_upgrade_returncode: int = 0
-    first_upgrade_stderr: str = ""
+    versions: dict[str, str]
     calls: list[tuple[str, ...]] = field(default_factory=list)
-    upgrade_calls: int = 0
 
     def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
         command_tuple = tuple(command)
         self.calls.append(command_tuple)
-        upgrade_command = (
-            *preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND,
-            DEFAULT_MARKETPLACE,
-        )
-        if command_tuple == upgrade_command:
-            self.upgrade_calls += 1
-            if self.upgrade_calls == self.materialize_on_upgrade_call:
-                _write_skill(
-                    self.cache_root,
-                    PLUGIN_NAME,
-                    CURRENT_VERSION,
-                    "current content",
-                )
-            if self.upgrade_calls == 1:
-                return subprocess.CompletedProcess(
-                    command,
-                    self.first_upgrade_returncode,
-                    stderr=self.first_upgrade_stderr,
-                )
+        add_prefix = preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND
+        if command_tuple[: len(add_prefix)] == add_prefix:
+            plugin_ref = command_tuple[len(add_prefix)]
+            plugin, separator, marketplace = plugin_ref.partition("@")
+            if separator != "@" or marketplace != DEFAULT_MARKETPLACE:
+                return subprocess.CompletedProcess(command, 64)
+            _write_skill(
+                self.cache_root,
+                plugin,
+                self.versions[plugin],
+                f"{plugin} materialized content",
+            )
         return subprocess.CompletedProcess(command, 0)
 
 
@@ -169,11 +163,7 @@ def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None
     skill_file.parent.mkdir(parents=True)
     skill_file.write_text(text)
     manifest = (
-        cache_root
-        / DEFAULT_MARKETPLACE
-        / plugin
-        / version
-        / preserve_codex_plugin_cache.CODEX_PLUGIN_MANIFEST
+        cache_root / DEFAULT_MARKETPLACE / plugin / version / CODEX_PLUGIN_MANIFEST
     )
     manifest.parent.mkdir(parents=True)
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
@@ -193,8 +183,121 @@ def _write_manifest(repo_root: Path, plugin: str, version: str) -> None:
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
 
+def _write_dist_codex_manifest(repo_root: Path, plugin: str, version: str) -> None:
+    manifest = repo_root / DIST_CODEX_PLUGINS_DIR / plugin / CODEX_PLUGIN_MANIFEST
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(json.dumps({"name": plugin, "version": version}))
+
+
+def _repo_with_dist_codex_plugin(tmp_path: Path, plugin: str, version: str) -> Path:
+    repo_root = tmp_path / "repo"
+    _write_dist_codex_manifest(repo_root, plugin, version)
+    return repo_root
+
+
 def _quiet_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(command, 0)
+
+
+def test_local_refresh_reinstalls_installed_dist_plugins_without_upgrade(
+    tmp_path: Path,
+) -> None:
+    """Local refresh discovers addable plugins from `dist/codex`, intersects that
+    with the Codex installed set, refreshes those plugins in deterministic manifest
+    order, and never invokes the marketplace upgrade path that removes older cache
+    directories.
+    """
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, "zeta", "0.2.0")
+    _write_dist_codex_manifest(repo_root, "alpha", "0.1.0")
+    history = StaticHistory(
+        plugins=frozenset(["alpha", "zeta"]),
+        versions_by_plugin={
+            "alpha": frozenset(["0.1.0"]),
+            "zeta": frozenset(["0.2.0"]),
+        },
+        current_by_plugin={"alpha": "0.1.0", "zeta": "0.2.0"},
+    )
+    runner = MaterializingAddRunner(
+        cache_root=cache_root,
+        versions={"alpha": "0.1.0", "zeta": "0.2.0"},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({"zeta": "0.2.0", "alpha": "0.1.0"}),
+        runner=runner,
+    )
+
+    assert runner.calls == [
+        (*preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND, "alpha@outcomeeng"),
+        (*preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND, "zeta@outcomeeng"),
+    ]
+    assert all("upgrade" not in call for call in runner.calls)
+    assert result.refresh_returncode == 0
+    assert _skill_file(cache_root, "alpha", "0.1.0").is_file()
+    assert _skill_file(cache_root, "zeta", "0.2.0").is_file()
+
+
+def test_local_refresh_requeries_installed_versions_before_reconciliation(
+    tmp_path: Path,
+) -> None:
+    """A successful local plugin add can move the installed version forward; cache
+    reconciliation uses the post-refresh installed set so the new version remains
+    the sole real directory.
+    """
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, PLUGIN_NAME, NEW_CURRENT_VERSION)
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    prior_dir = plugin_dir / CURRENT_VERSION
+    current_dir = plugin_dir / NEW_CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION, NEW_CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+    installed = SequencedInstalled(
+        (
+            {PLUGIN_NAME: CURRENT_VERSION},
+            {PLUGIN_NAME: NEW_CURRENT_VERSION},
+        )
+    )
+    runner = MaterializingAddRunner(
+        cache_root=cache_root,
+        versions={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=installed,
+        runner=runner,
+    )
+
+    assert installed.calls == [DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE], (
+        "expected installed versions to be queried before and after refresh; "
+        f"got {installed.calls}"
+    )
+    assert result.refresh_returncode == 0
+    assert current_dir.is_dir() and not current_dir.is_symlink(), (
+        f"expected {current_dir} to remain the real current directory"
+    )
+    assert prior_dir.is_symlink(), (
+        f"expected {prior_dir} to become a compatibility symlink"
+    )
+    assert prior_dir.resolve() == current_dir.resolve(), (
+        f"expected {prior_dir} to point at {current_dir}"
+    )
 
 
 def test_chain_recovery_restores_in_window_published_version_as_symlink(
@@ -204,6 +307,7 @@ def test_chain_recovery_restores_in_window_published_version_as_symlink(
     directory. After preservation, the older published version path is a symlink
     pointing at the current version directory.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
     older_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
@@ -216,8 +320,9 @@ def test_chain_recovery_restores_in_window_published_version_as_symlink(
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
@@ -245,6 +350,7 @@ def test_stale_worktree_target_and_partial_root_replaced_by_codex_target(
     direct symlinks to the complete Codex-reported version, leaving exactly one real
     directory for the plugin.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
     _write_partial_hook_root(cache_root, PLUGIN_NAME, CURRENT_VERSION)
@@ -263,8 +369,9 @@ def test_stale_worktree_target_and_partial_root_replaced_by_codex_target(
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
@@ -299,6 +406,7 @@ def test_extra_real_version_directory_replaced_by_direct_symlink(
     preservation step converts that in-window path into a direct symlink to the
     Codex-reported installed version so the plugin cache has one real root.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "stale real content")
     _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
@@ -313,8 +421,9 @@ def test_extra_real_version_directory_replaced_by_direct_symlink(
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    preserve_codex_plugin_cache.preserve_during_upgrade(
+    preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
@@ -355,7 +464,7 @@ def test_out_of_window_compatibility_symlink_is_removed(tmp_path: Path) -> None:
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
@@ -386,7 +495,7 @@ def test_orphan_plugin_cache_directory_is_pruned(tmp_path: Path) -> None:
         current_by_plugin={},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
@@ -430,6 +539,38 @@ def test_uncached_working_tree_plugin_does_not_emit_warning(
     assert "warning:" not in output
 
 
+def test_cli_repo_root_still_runs_local_source_preflight(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A non-dry-run CLI invocation with `--repo-root` still verifies the live
+    Codex marketplace source before any installed-set query or cache mutation.
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    cache_root = tmp_path / "cache"
+
+    def _rejecting_local_root(marketplace: str) -> Path:
+        raise preserve_codex_plugin_cache.MarketplaceSourceError(
+            f"Codex marketplace `{marketplace}` must be registered as a local source"
+        )
+
+    exit_code = preserve_codex_plugin_cache.main(
+        [
+            DEFAULT_MARKETPLACE,
+            "--cache-root",
+            str(cache_root),
+            "--repo-root",
+            str(repo_root),
+        ],
+        marketplace_root_resolver=_rejecting_local_root,
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "must be registered as a local source" in captured.err
+
+
 def test_upgrade_without_current_real_dir_creates_no_current_symlink(
     tmp_path: Path,
 ) -> None:
@@ -439,6 +580,7 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
     current version and removes the non-target real directory, so no cache path
     resolves to stale content.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
@@ -452,8 +594,9 @@ def test_upgrade_without_current_real_dir_creates_no_current_symlink(
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
@@ -485,6 +628,7 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     so the current version resolves to nothing rather than to the older directory's
     content.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
@@ -499,8 +643,9 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
@@ -531,6 +676,7 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
     preservation run removes every compatibility symlink and the non-target real
     directory for the plugin so no version resolves to the non-current directory.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     # CURRENT_VERSION is the prior current with a real directory; OLDER_VERSION is an
     # in-window compatibility symlink pointing at it; NEW_CURRENT_VERSION is the new
@@ -550,8 +696,9 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
         current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
@@ -582,6 +729,7 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
     pass when the declared current version has no real directory of its own, and the
     non-target real directory is removed in the same pass.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
@@ -600,8 +748,9 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
         current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
@@ -647,7 +796,7 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
         current_by_plugin={},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
@@ -675,6 +824,7 @@ def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> N
     the captured state where `python/0.18.6` lingered while `0.18.8` was never
     materialized and `validate_install` reported MISSING for the current version.
     """
+    repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
     _write_skill(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
@@ -690,8 +840,9 @@ def test_not_installed_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> N
         current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({}),
@@ -727,7 +878,7 @@ def test_installed_set_query_failure_aborts_without_pruning(tmp_path: Path) -> N
     )
 
     with pytest.raises(preserve_codex_plugin_cache.InstalledSetError):
-        preserve_codex_plugin_cache.preserve_during_upgrade(
+        preserve_codex_plugin_cache.refresh_installed_plugins(
             DEFAULT_MARKETPLACE,
             cache_root=cache_root,
             history=history,
@@ -762,7 +913,7 @@ def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> 
         current_by_plugin={NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
         cache_root=cache_root,
         history=history,
@@ -784,13 +935,17 @@ def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> 
     )
 
 
-def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> None:
-    """A non-zero upgrade returns before the installed-set query is attempted: a
-    raising installed provider is never invoked (no raise), the result carries the
-    upgrade return code, and no cache directory is pruned — the upgrade failure
-    short-circuits the recipe regardless of the installed provider.
+def test_plugin_add_failure_returns_before_cache_prune(tmp_path: Path) -> None:
+    """A non-zero local plugin add returns before cache pruning: the result carries
+    the refresh return code, and no cache directory is pruned.
     """
+    repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(
+        repo_root,
+        NOT_INSTALLED_PLUGIN,
+        NOT_INSTALLED_CURRENT_VERSION,
+    )
     _write_skill(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
@@ -806,112 +961,118 @@ def test_upgrade_failure_returns_before_installed_set_query(tmp_path: Path) -> N
     def _failing_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(command, 1)
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
-        installed=RaisingInstalled(),
+        installed=StaticInstalled(
+            {NOT_INSTALLED_PLUGIN: NOT_INSTALLED_CURRENT_VERSION}
+        ),
         runner=_failing_runner,
     )
 
-    assert result.upgrade_returncode == 1, (
-        f"expected the upgrade return code to propagate, got {result.upgrade_returncode}"
+    assert result.refresh_returncode == 1, (
+        f"expected the refresh return code to propagate, got {result.refresh_returncode}"
     )
     assert plugin_dir.is_dir(), (
-        f"expected {plugin_dir} untouched: an upgrade failure returns before any prune"
+        f"expected {plugin_dir} untouched: a refresh failure returns before any prune"
     )
 
 
-def test_absent_cache_with_empty_installed_set_repairs_marketplace_registration(
+def test_partial_plugin_add_failure_reconciles_successful_refresh(
     tmp_path: Path,
 ) -> None:
-    """A zero-exit upgrade that leaves no marketplace cache and no installed plugins
-    is repaired by re-registering the marketplace, rerunning the upgrade, and
-    re-reading the installed set before compatibility reconciliation.
+    """When one plugin add succeeds before a later plugin add fails, the successful
+    plugin is reconciled before the non-zero refresh result returns.
     """
+    repo_root = tmp_path / "repo"
+    cache_root = tmp_path / "cache"
+    _write_dist_codex_manifest(repo_root, "alpha", "0.2.0")
+    _write_dist_codex_manifest(repo_root, "zeta", "0.2.0")
+    _write_skill(cache_root, "alpha", "0.1.0", "prior alpha content")
+    _write_skill(cache_root, "zeta", "0.1.0", "prior zeta content")
+    alpha_dir = cache_root / DEFAULT_MARKETPLACE / "alpha"
+    alpha_prior_dir = alpha_dir / "0.1.0"
+    alpha_current_dir = alpha_dir / "0.2.0"
+    zeta_dir = cache_root / DEFAULT_MARKETPLACE / "zeta"
+    zeta_prior_dir = zeta_dir / "0.1.0"
+    history = StaticHistory(
+        plugins=frozenset(["alpha", "zeta"]),
+        versions_by_plugin={
+            "alpha": frozenset(["0.1.0", "0.2.0"]),
+            "zeta": frozenset(["0.1.0", "0.2.0"]),
+        },
+        current_by_plugin={"alpha": "0.2.0", "zeta": "0.2.0"},
+    )
+
+    def _failing_second_runner(
+        command: list[str],
+    ) -> subprocess.CompletedProcess[str]:
+        plugin_ref = command[len(preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND)]
+        plugin, _, _ = plugin_ref.partition("@")
+        if plugin == "alpha":
+            _write_skill(cache_root, "alpha", "0.2.0", "current alpha content")
+            return subprocess.CompletedProcess(command, 0)
+        return subprocess.CompletedProcess(command, 1)
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({"alpha": "0.2.0", "zeta": "0.2.0"}),
+        runner=_failing_second_runner,
+    )
+
+    assert result.refresh_returncode == 1
+    assert alpha_current_dir.is_dir() and not alpha_current_dir.is_symlink(), (
+        f"expected successful refresh target {alpha_current_dir} to stay real"
+    )
+    assert alpha_prior_dir.is_symlink(), (
+        f"expected {alpha_prior_dir} to be repaired before returning failure"
+    )
+    assert alpha_prior_dir.resolve() == alpha_current_dir.resolve(), (
+        f"expected {alpha_prior_dir} to point at {alpha_current_dir}"
+    )
+    assert zeta_prior_dir.is_dir() and not zeta_prior_dir.is_symlink(), (
+        f"expected failed plugin cache {zeta_prior_dir} to remain untouched"
+    )
+
+
+def test_absent_cache_with_empty_installed_set_runs_no_plugin_add(
+    tmp_path: Path,
+) -> None:
+    """An empty Codex installed set against an absent cache is a valid empty refresh:
+    no plugin add command runs, no registration repair is attempted, and no cache
+    mutation is needed.
+    """
+    repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION])},
         current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
     )
-    installed = SequenceInstalled([{}, {PLUGIN_NAME: CURRENT_VERSION}])
-    runner = RepairingMarketplaceRunner(
+    runner = MaterializingAddRunner(
         cache_root=cache_root,
-        materialize_on_upgrade_call=2,
+        versions={PLUGIN_NAME: CURRENT_VERSION},
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
-        installed=installed,
+        installed=StaticInstalled({}),
         runner=runner,
     )
 
-    assert runner.calls == [
-        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
-        (*preserve_codex_plugin_cache.CODEX_REMOVE_COMMAND, DEFAULT_MARKETPLACE),
-        (
-            *preserve_codex_plugin_cache.CODEX_ADD_COMMAND,
-            preserve_codex_plugin_cache.DEFAULT_MARKETPLACE_SOURCE,
-        ),
-        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
-    ]
-    assert installed.calls == [DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE]
-    assert _skill_file(cache_root, PLUGIN_NAME, CURRENT_VERSION).is_file()
-    assert result.upgrade_returncode == 0
-    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
-    assert result.linked_versions == (older_path,)
-    assert older_path.is_symlink()
-    assert older_path.readlink() == Path(CURRENT_VERSION)
-
-
-def test_not_configured_git_marketplace_upgrade_adds_source_and_retries(
-    tmp_path: Path,
-) -> None:
-    """A missing Git marketplace registration is repaired by adding the marketplace
-    source and retrying the upgrade before cache reconciliation.
-    """
-    cache_root = tmp_path / "cache"
-    history = StaticHistory(
-        plugins=frozenset([PLUGIN_NAME]),
-        versions_by_plugin={PLUGIN_NAME: frozenset([OLDER_VERSION, CURRENT_VERSION])},
-        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
-    )
-    installed = SequenceInstalled([{PLUGIN_NAME: CURRENT_VERSION}])
-    runner = RepairingMarketplaceRunner(
-        cache_root=cache_root,
-        materialize_on_upgrade_call=2,
-        first_upgrade_returncode=1,
-        first_upgrade_stderr=(
-            "Error: marketplace `outcomeeng` is not configured as a Git marketplace\n"
-        ),
-    )
-
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
-        DEFAULT_MARKETPLACE,
-        cache_root=cache_root,
-        history=history,
-        installed=installed,
-        runner=runner,
-    )
-
-    assert runner.calls == [
-        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
-        (
-            *preserve_codex_plugin_cache.CODEX_ADD_COMMAND,
-            preserve_codex_plugin_cache.DEFAULT_MARKETPLACE_SOURCE,
-        ),
-        (*preserve_codex_plugin_cache.CODEX_UPGRADE_COMMAND, DEFAULT_MARKETPLACE),
-    ]
-    assert installed.calls == [DEFAULT_MARKETPLACE]
-    assert _skill_file(cache_root, PLUGIN_NAME, CURRENT_VERSION).is_file()
-    assert result.upgrade_returncode == 0
-    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
-    assert result.linked_versions == (older_path,)
-    assert older_path.is_symlink()
-    assert older_path.readlink() == Path(CURRENT_VERSION)
+    assert runner.calls == []
+    assert result.refresh_returncode == 0
+    assert result.linked_versions == ()
+    assert result.pruned_links == ()
+    assert result.pruned_plugins == ()
 
 
 def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
@@ -923,6 +1084,7 @@ def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
     set and the installed set: pruning every plugin (ignoring the installed set) or
     preserving every plugin (ignoring it) both fail this test.
     """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "installed content")
     _write_skill(
@@ -944,8 +1106,9 @@ def test_installed_plugin_preserved_while_not_installed_sibling_pruned(
         },
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
@@ -971,6 +1134,7 @@ def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
     directory for the marketplace — an empty set is a valid prune-all instruction,
     distinct from a failed query (which aborts).
     """
+    repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
     _write_skill(
@@ -990,8 +1154,9 @@ def test_empty_installed_set_prunes_every_plugin_cache(tmp_path: Path) -> None:
         },
     )
 
-    result = preserve_codex_plugin_cache.preserve_during_upgrade(
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
         DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
         cache_root=cache_root,
         history=history,
         installed=StaticInstalled({}),
