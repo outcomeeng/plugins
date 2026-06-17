@@ -12,10 +12,6 @@ test *args:
 test-v *args:
     uv run python -m pytest -v {{args}}
 
-# Run TypeScript tests via vitest
-test-ts *args:
-    pnpm test {{args}}
-
 # Check plugin and marketplace manifests
 check-manifests:
     uv run python -m outcomeeng.validation.plugins .

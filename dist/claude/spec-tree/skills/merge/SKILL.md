@@ -1,14 +1,14 @@
 ---
 name: merge
 description: >-
-  ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into trunk, or runs /merge.
-  NEVER select a merge transport or drive a changeset to trunk without this skill.
+  ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
+  NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
 allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
 <objective>
-Dispatch a changeset to its merge transport. /merge reads the project's transport selection from `spx/local/merging.md`, classifies the changeset, selects exactly one transport, and delegates to that transport's skills. The merging policy — the three authority gates and the finding-disposition rule — is transport-neutral and lives in /standardizing-merging; /merge owns transport selection only, never the gates and never a transport's internal protocol.
+Dispatch a changeset to its merge transport so it can reach the default branch on origin. /merge reads the project's transport selection from `spx/local/merging.md`, classifies the changeset, selects exactly one transport, and delegates to that transport's skills. The merging policy — the three authority gates, delivered-value boundary, and finding-disposition rule — is transport-neutral and lives in /standardizing-merging; /merge owns transport selection only, never the gates and never a transport's internal protocol.
 </objective>
 
 <context>
@@ -63,20 +63,20 @@ It prints the total and non-coordination-note counts over the full changed-file 
 </workflow>
 
 <direct_push_lifecycle>
-The direct-push transport publishes a verified changeset straight to the remote trunk with no pull request, under the same three gates as every transport, with the review predicate bound to the local review since no CI review exists, per /standardizing-merging `<authority_gates>`. The project's `spx/local/merging.md` direct-push block binds the push command and the post-merge step.
+The direct-push transport publishes a verified changeset straight to the default branch on origin with no pull request, under the same three gates as every transport, with the review predicate bound to the local review since no CI review exists, per /standardizing-merging `<authority_gates>`. The project's `spx/local/merging.md` direct-push block binds the push command and the post-merge step.
 
-**Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose (the changeset, that the transport is direct-push to trunk with no PR, and that the flow runs through the push and post-merge steps) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
+**Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose (the changeset, that the transport is direct-push to the default branch on origin with no PR, and that the flow runs through the push and post-merge steps) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
 
-**Step D2 — Commit.** Invoke `/committing-changes`. Branch hygiene from /standardizing-merging `<branch_hygiene>` does not apply unchanged here — direct-push publishes to trunk, so the working changeset is committed on the trunk-tracking checkout or a short-lived branch per the overlay's direct-push configuration.
+**Step D2 — Commit.** Invoke `/committing-changes`. Branch hygiene from /standardizing-merging `<branch_hygiene>` does not apply unchanged here — direct-push publishes to the default branch on origin, so the working changeset is committed on the default-branch-tracking checkout or a short-lived branch per the overlay's direct-push configuration.
 
 **Step D3 — Establish `REVIEW_READINESS`.** Both predicates per /standardizing-merging `<authority_gates>`:
 
 - *Deterministic verification passes* — run the project's full validation-and-testing command from `spx/local/merging.md` or the project's `CLAUDE.md` / `AGENTS.md`. Fix failures and re-run until green.
 - *Local review converged* — run the `changes-reviewer` agent (or `/review-changes` when `changes-reviewer` is absent) per /standardizing-merging `<local_review_invocation>`: pass only the repository/worktree and the diff range, with no interpretive scope, severity pre-filter, or emphasis steering. Act on findings by validity and phase per `<review_classification>`; iterate to convergence. This local review is the direct-push transport's `MERGE_READINESS` review predicate — it is the only review the transport has.
 
-**Step D4 — Base-sync, then merge (push to trunk).** Before publishing, base-sync per /standardizing-merging `<base_sync>`: fetch `origin/<trunk>` and, if the changeset is behind it, rebase onto it automatically from observable git state — never asking the operator — then re-establish `REVIEW_READINESS` (deterministic verification and the local review) on the rebased tree before the push; a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE` and waits. With `REVIEW_READINESS` held on the tree the push will publish, `MERGE_READINESS` for direct-push holds when the converged local review reports no unresolved valid `BLOCKING` or `DEBT` finding and every required check the overlay defines is terminal-green (a project with no CI on trunk defines none). `PRODUCTION_READINESS` holds when the change is not production-relevant per the overlay's recognition mechanism, or the operator has approved. Once both hold, publish to the remote trunk with the overlay's direct-push command (the explicit destination ref form from /standardizing-merging `<push_semantics>` is preserved). The transport never opens a pull request and never waits on a CI review.
+**Step D4 — Base-sync, then merge (push to the default branch on origin).** Before publishing, base-sync per /standardizing-merging `<base_sync>`: fetch `origin/<default>` and, if the changeset is behind it, rebase onto it automatically from observable git state — never asking the operator — then re-establish `REVIEW_READINESS` (deterministic verification and the local review) on the rebased tree before the push; a rebase conflict that cannot be resolved autonomously emits `SYNC_BASE` and waits. With `REVIEW_READINESS` held on the tree the push will publish, `MERGE_READINESS` for direct-push holds when the converged local review reports no unresolved valid `BLOCKING` or `DEBT` finding and every required check the overlay defines is terminal-green (a project with no CI on the default branch defines none). `PRODUCTION_READINESS` holds when the change is not production-relevant per the overlay's recognition mechanism, or the operator has approved. Once both hold, publish to the default branch on origin with the overlay's direct-push command (the explicit destination ref form from /standardizing-merging `<push_semantics>` is preserved). The transport never opens a pull request and never waits on a CI review.
 
-**Step D5 — Post-merge, then continue or close.** Run the overlay's post-merge step (for example a marketplace sync). If in-scope parts of the user's stated goal remain, continue with them — a push to trunk is not a license to stop. Invoke `/handoff` only when the session is genuinely over — the goal is met with no in-scope work remaining, or continuation by Claude is impossible (per `/understanding` `references/imperfection-protocol.md` `<closing_protocol>` and the `/handoff` precondition); the skill then decides session-file creation per continuation state and never receives `--no-session` on the user's behalf.
+**Step D5 — Post-merge, then continue or close.** Run the overlay's post-merge step (for example a marketplace sync). If in-scope parts of the user's stated goal remain, continue with them — a push to the default branch on origin is not a license to stop. Invoke `/handoff` only when the session is genuinely over — the goal is met with no in-scope work remaining, or continuation by Claude is impossible (per `/understanding` `references/imperfection-protocol.md` `<closing_protocol>` and the `/handoff` precondition); the skill then decides session-file creation per continuation state and never receives `--no-session` on the user's behalf.
 
 </direct_push_lifecycle>
 
@@ -107,6 +107,6 @@ The direct-push transport publishes a verified changeset straight to the remote 
 - The GitHub-PR path delegated to `/github-pr` without reimplementing its lifecycle; the direct-push path drove `<direct_push_lifecycle>` invoking the governing skills.
 - By default the flow proceeded autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, a proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The three gates and the finding-disposition rule stayed transport-neutral; only the predicate bindings differed by transport.
-- The changeset reached trunk through the selected transport's authority, and the session closed through that transport's closure, or the flow stopped at an explicit gate surfaced to the user.
+- The changeset reached the default branch on origin through the selected transport's authority, and the session closed through that transport's closure, or the flow stopped at an explicit gate surfaced to the user.
 
 </success_criteria>

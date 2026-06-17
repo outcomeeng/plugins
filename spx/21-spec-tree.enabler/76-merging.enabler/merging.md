@@ -1,8 +1,8 @@
 # Merging
 
-PROVIDES the transport-neutral merging policy — the three authority gates and the finding-disposition rule — and the `/merge` transport dispatcher
+PROVIDES the transport-neutral merging policy — the three authority gates, the finding-disposition rule, and the delivered-value boundary — and the `/merge` transport dispatcher
 SO THAT every product that installs the spec-tree plugin
-CAN drive a changeset from review-ready to merge under one policy, routed to the project's selected transport (a GitHub pull request or a direct push to trunk), per `spx/15-merging.pdr.md`
+CAN drive a changeset from review-ready to the default branch on origin under one policy, routed to the project's selected transport, per `spx/15-merging.pdr.md`
 
 ## Assertions
 
@@ -22,6 +22,7 @@ CAN drive a changeset from review-ready to merge under one policy, routed to the
 
 - ALWAYS: `/merge` reads the changeset and the `spx/local/merging.md` transport selector, selects exactly one transport per the precedence (overlay-declared, else coordination-note-only → direct-push, else GitHub-PR), and — on the direct-push path it executes itself — presents a pre-mutation confirmation before the first mutation only when the overlay opts into it, otherwise states the selection and proceeds autonomously ([audit])
 - ALWAYS: `/merge` delegates the GitHub-PR transport to `/github-pr` (which owns the commit → open → manage → close protocols) and drives the direct-push transport through `/committing-changes` and the `changes-reviewer` review, never reimplementing a transport's internal protocol inline ([audit])
+- ALWAYS: `/merge` treats a branch with committed changes ahead of its resolved base as unfinished and drives the selected transport until the changeset reaches the default branch on origin or stops at an explicit merge lifecycle gate; a clean working tree or passing local gate is progress, not completion ([eval](evals/local-completion-boundary/eval.toml))
 
 - ALWAYS: the merging skills expose exactly three gates — `REVIEW_READINESS`, `MERGE_READINESS`, `PRODUCTION_READINESS` — named with the single word "gate"; every condition a gate reads is a predicate, never a gate, per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: the merging policy — the three gates and the finding-disposition rule — is transport-neutral, and `/merge` selects the transport from `spx/local/merging.md`: a coordination-note-only changeset routes to the direct-push transport, an overlay-declared transport is honored, else the GitHub-PR transport is the default; `/merge` then delegates to that transport's skills, per `spx/15-merging.pdr.md` ([audit])
@@ -33,6 +34,7 @@ CAN drive a changeset from review-ready to merge under one policy, routed to the
 - ALWAYS: the merging skills re-establish both `REVIEW_READINESS` predicates before every push — opening and follow-up — running deterministic verification and the local `changes-reviewer` review on the diff that push would publish, per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: the merging skills rebase a behind-base branch automatically from observable git state and never ask the operator whether to rebase — the only base-sync operator touch-point is a rebase conflict the agent cannot resolve autonomously, per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: the merging flow drives a determined changeset from intent to merge without an up-front operator proposal by default; a project opts into a pre-mutation confirmation through `spx/local/merging.md`, and only then does the flow present the changeset and intended lifecycle through the runtime's structured-question tool and wait before the first mutation, per `spx/15-merging.pdr.md` ([review])
+- ALWAYS: local-readiness status assessments may report the evidence they found, then continue through `/merge` when committed changes remain ahead of the resolved base, unless the user explicitly limited the task to local-only work or an explicit lifecycle gate blocks continuation, per `spx/15-merging.pdr.md` ([eval](evals/local-completion-boundary/eval.toml))
 - NEVER: treat the pre-mutation confirmation as a default or a fourth gate — it is an opt-in overlay touch-point that leaves `REVIEW_READINESS`, `MERGE_READINESS`, `PRODUCTION_READINESS`, and the finding-disposition rule unchanged, per `spx/15-merging.pdr.md` ([review])
 - ALWAYS: the merging skills invoke the local `changes-reviewer` review at parity with the integration-time reviewer — passing only the repository/worktree and the diff range, never a caller-supplied interpretive scope, severity pre-filter, or emphasis steering — per `spx/15-merging.pdr.md` ([review])
 - NEVER: gate any of the three gates on a review finding's severity label, or use a time-based settle as a `MERGE_READINESS` predicate — validity, phase, and scope decide; a `DEBT` finding the author tracks out of scope with a recorded reason is non-blocking because of scope, not its label, per `spx/15-merging.pdr.md` ([review])
