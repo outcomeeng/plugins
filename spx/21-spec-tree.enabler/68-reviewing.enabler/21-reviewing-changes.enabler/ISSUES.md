@@ -268,3 +268,36 @@ multi-worktree layout.
 Surfaced during the PR #149 local review (2026-06-09), branch
 `work/changes-reviewer-followups`; artifacts landed under
 `work__handoff-lint-enforcement`.
+
+## 8. The persisted review carries no head identity, so a re-review can return a stale verdict
+
+`review-result.json` records findings, acknowledgements, and a summary, but no
+identity of the diff it reviewed — no head OID and no base OID. The thread store
+keys the record by branch slug alone (`thread_store.current_slug()`), so a second
+review of the same branch at a new head overwrites the same `(slug, name)` only if
+the chain actually recomputes; nothing in the record lets a consumer tell which
+head a persisted verdict reflects.
+
+**Impact (merge-safety).** The `MERGE_READINESS` review predicate requires a
+*current-head* review. For the CI review the head SHA comes from the PR/check
+rollup; for the local `changes-reviewer` review there is no head stamp at all, so
+"the local review reflects the current head" is unverifiable. A `changes-reviewer`
+invocation that finds an existing `review-result.json` and returns it without
+recomputing yields a verdict against a *different* diff than the current tree —
+observed on `outcomeeng/plugins` PR #260 (2026-06-18), where the agent re-read the
+pre-fix record and reported the prior diff's findings. Had that stale verdict been
+*clean*, the path would authorize merging a diff no review ever saw.
+
+**Required handling — a safety property the thread-store replacement must keep.**
+The thread-store backend is being replaced; whatever replaces it must:
+
+- Stamp the resolved head OID (and base OID) into the review record when
+  `compute_diff` runs.
+- Make `changes-reviewer` / `review-changes` always recompute against the current
+  head and refuse to return a record whose stamped head ≠ the current head.
+- Let the `MERGE_READINESS` evaluation read that stamp to confirm the local review
+  is current, at parity with how the CI review's currency is established.
+
+Same stale-ref family as items 2 and 7 (base ref, slug); this one is the
+record-identity gap and the only one with a direct merge-safety consequence.
+Surfaced during the PR #260 local review (2026-06-18).
