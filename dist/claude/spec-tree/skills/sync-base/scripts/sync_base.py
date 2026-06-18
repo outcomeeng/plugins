@@ -214,11 +214,7 @@ def sync_base(
             f"branch {branch} is already current with {remote_ref}",
         )
 
-    # A dirty working tree blocks the rebase: git refuses to replay commits over
-    # uncommitted changes to tracked files. This is a precondition the caller
-    # clears by committing — not a rebase conflict — so report it distinctly and
-    # leave the tree untouched rather than attempting a rebase that cannot start.
-    # Untracked files do not block a rebase, so they are excluded.
+    # precondition: git refuses to replay over uncommitted tracked changes; untracked excluded
     dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
     if dirty.returncode != 0:
         return SyncBaseResult(
@@ -248,9 +244,7 @@ def sync_base(
             f"rebased {branch} onto {remote_ref}",
         )
 
-    # A conflict (or any rebase failure) leaves a partial rebase in progress.
-    # Abort it so the branch and working tree return to their pre-rebase state;
-    # never fall back to git reset.
+    # abort the partial rebase to restore the pre-rebase tree; never git reset
     _git(repo, "rebase", "--abort")
     return SyncBaseResult(
         SyncStatus.CONFLICT,
