@@ -1,10 +1,17 @@
 ---
 name: audit-tests
 description: >-
-  ALWAYS invoke this skill when auditing test evidence against spec assertions.
-  NEVER audit spec-tree test evidence without this skill.
+  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
+  Dispatch test-evidence-auditor to audit test evidence against spec assertions;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash
 ---
+
+<dispatch_gate>
+
+This audit runs in the test-evidence-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the test-evidence-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 
@@ -251,25 +258,25 @@ Gate-skipped rows use `status: "UNKNOWN"`. Skills with no Gate 0 or Gate 2 omit 
 
 **Failure 1: Accepted a tautological test file**
 
-Three reviewers approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. The tests pass if the entire codebase is deleted. Every reviewer was distracted by clean types, good structure, and comprehensive scenarios. None checked the imports.
+Claude approved a test file that imported only vitest. It declared OKLCH color constants and verified they satisfied contrast thresholds — pure math with zero connection to any CSS file, theme, or component. The tests pass if the entire codebase is deleted. Claude was distracted by clean types, good structure, and comprehensive scenarios, and never checked the imports.
 
 How to avoid: Step 3a checks imports FIRST. Zero codebase imports = instant REJECT.
 
 **Failure 2: Accepted mocking as legitimate coupling**
 
-Reviewer saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
+Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
 
 How to avoid: Step 3b checks for mocking AFTER confirming coupling. Import + mock = coupling severed.
 
 **Failure 3: Guessed coverage instead of measuring**
 
-Reviewer said "this test covers the parser's edge cases" based on reading the test code. The test exercised paths already fully covered by other tests and added zero new coverage.
+Claude said "this test covers the parser's edge cases" based on reading the test code. The test exercised paths already fully covered by other tests and added zero new coverage.
 
 How to avoid: Step 3d runs the actual coverage command. Report numbers, not impressions.
 
 **Failure 4: Distracted by code quality signals**
 
-Reviewer spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
+Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
 
 How to avoid: Essential principles — no mechanical detection. Check the four evidence properties only.
 

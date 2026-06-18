@@ -1,14 +1,21 @@
 ---
 name: audit-rust
 description: >-
-  ALWAYS invoke this skill when auditing, reviewing, or evaluating Rust implementation code for design flaws and ADR compliance.
-  NEVER audit Rust code without this skill.
+  Rust implementation-code audit methodology preloaded by the rust-code-auditor agent.
+  Dispatch rust-code-auditor to audit Rust code for design flaws and ADR compliance;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
 {!% require_skill 'rust:rust-standards' %!}
 
 {!% require_skill 'rust:rust-test-standards' %!}
+
+<dispatch_gate>
+
+This audit runs in the rust-code-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the rust-code-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Review Rust implementation code after the mechanical checks pass. Find design flaws, boundary violations, and ADR or PDR drift that automated gates do not catch. This skill is read-only.

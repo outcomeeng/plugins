@@ -1,12 +1,19 @@
 ---
 name: audit-python-architecture
 description: >-
-  ALWAYS invoke this skill when auditing ADRs for Python.
-  NEVER audit a Python ADR without this skill.
+  Python ADR audit methodology preloaded by the python-architecture-auditor agent.
+  Dispatch python-architecture-auditor to audit ADRs for Python;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the python-architecture-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the python-architecture-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Review ADRs against `/python-architecture-standards` conventions, `/test` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only -- it produces verdicts, not code changes.

@@ -1,14 +1,22 @@
 ---
 name: audit-commands
 description: >-
-  ALWAYS invoke this skill when auditing, reviewing, or evaluating slash command .md files.
-  NEVER audit slash commands without this skill.
+  Slash-command audit methodology preloaded by the command-auditor agent. Dispatch
+  command-auditor to audit slash command files; the main conversation reaches this
+  audit only through that agent.
 argument-hint: <command-path>
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `develop:create-commands` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the command-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the command-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Evaluate slash command .md files against best practices for structure, YAML configuration, argument usage, dynamic context, tool restrictions, and effectiveness. Then provide actionable findings with contextual judgment, not arbitrary scores.

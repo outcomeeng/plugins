@@ -1,8 +1,9 @@
 ---
 name: audit-python-tests
 description: >-
-  ALWAYS invoke this skill when auditing Python test evidence, reviewing Python tests for spec-tree evidence quality, or evaluating Python test infrastructure.
-  NEVER audit Python test evidence without this skill.
+  Python test-evidence audit methodology preloaded by the python-test-auditor agent.
+  Dispatch python-test-auditor to audit Python test evidence;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -13,6 +14,12 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `spec-tree:audit-tests` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the python-test-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the python-test-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 !`test -f spx/local/python.md && cat spx/local/python.md || true`
 

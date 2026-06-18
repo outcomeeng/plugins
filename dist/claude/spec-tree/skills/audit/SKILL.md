@@ -1,8 +1,18 @@
 ---
 name: audit
-description: ALWAYS invoke this skill when auditing a code scope end-to-end — a diff, a branch, or a commit — partitioning by language and emitting one structured verdict. NEVER assemble audit findings by hand or run language audits piecemeal without this orchestrator.
+description: >-
+  Generic end-to-end code-scope audit orchestration preloaded by the auditor,
+  audit-orchestrator, pr-reviewer, and pr-review-orchestrator agents. Dispatch the
+  audit agent that fits the scope; the main conversation reaches a generic audit
+  only through one of those agents.
 allowed-tools: Read, Bash, Glob, Grep
 ---
+
+<dispatch_gate>
+
+This orchestration runs in an audit agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the audit agent that fits the scope (auditor for a one-off, audit-orchestrator for a stateful local run, pr-reviewer or pr-review-orchestrator for a pull request) instead of running it here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 

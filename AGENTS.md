@@ -259,6 +259,8 @@ The shortcut is valid only when the agent has already inspected the session cont
 
 ## When to Dispatch Agents vs Invoke Skills
 
+⚠️ **An audit verdict is produced in an isolated agent context — ALWAYS dispatch the corresponding auditor agent; NEVER invoke an audit skill (`audit-tests`, `audit-adr`, `audit-pdr`, the per-language `audit-{lang}*`, or the generic `audit`) in the main conversation to produce a verdict.** The auditor agent's separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. Each audit skill carries a `<dispatch_gate>` and a dispatch-steering description that redirect a main-conversation invocation to its agent; the tool surface exposing an audit skill directly is not license to run it in place. This is `spx/14-verification.pdr.md` Product property 3, declared as `[audit]` assertions there. The only audit skills with no agent to dispatch (the prose audits `audit-prose`, `audit-internal-docs`) are outside this rule.
+
 Auditor must be dispatched as subagents. Each auditor agent preloads the corresponding skill via the `skills:` frontmatter field.
 
 - **Run multiple audits in parallel** → dispatch subagents, collect verdicts
