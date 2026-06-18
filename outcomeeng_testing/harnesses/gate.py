@@ -12,6 +12,7 @@ Recording doubles let `l1` tests assert on those interactions.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -82,6 +83,36 @@ class RecordingSpawner:
 
 
 @dataclass
+class SignalRaisingSpawner:
+    """A ProcessSpawner that raises a real signal during spawn()."""
+
+    signum: int
+    spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
+    output_paths: list[Path] = field(default_factory=list)
+
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
+        self.spawn_calls.append(tuple(argv))
+        self.output_paths.append(output_path)
+        os.kill(os.getpid(), self.signum)
+        msg = "signal handler returned without interrupting"
+        raise RuntimeError(msg)
+
+
+@dataclass
+class SpawnFailingSpawner:
+    """A ProcessSpawner that fails before it can return a handle."""
+
+    message: str
+    spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
+    output_paths: list[Path] = field(default_factory=list)
+
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
+        self.spawn_calls.append(tuple(argv))
+        self.output_paths.append(output_path)
+        raise OSError(self.message)
+
+
+@dataclass
 class HangingHandle:
     """A ProcessHandle that never exits on its own — for signal-handling tests.
 
@@ -114,10 +145,18 @@ class HangingHandle:
             self._killed = True
 
 
-__all__ = ["HangingHandle", "RecordingHandle", "RecordingSpawner"]
+__all__ = [
+    "HangingHandle",
+    "RecordingHandle",
+    "RecordingSpawner",
+    "SignalRaisingSpawner",
+    "SpawnFailingSpawner",
+]
 
 
 # The double classes implement the Protocols structurally.
 _: type[ProcessSpawner] = RecordingSpawner
 _2: type[ProcessHandle] = RecordingHandle
 _3: type[ProcessHandle] = HangingHandle
+_4: type[ProcessSpawner] = SignalRaisingSpawner
+_5: type[ProcessSpawner] = SpawnFailingSpawner

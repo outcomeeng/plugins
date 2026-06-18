@@ -39,6 +39,7 @@ STEP_PASS_STATUS: Final = "PASS"
 STEP_FAIL_STATUS: Final = "FAIL"
 RUN_PASS_STATUS: Final = "pass"
 RUN_FAIL_STATUS: Final = "fail"
+SPAWN_FAILURE_EXIT_CODE: Final = 1
 PHASE_PREFLIGHT: Final = "preflight"
 PHASE_RECIPE: Final = "recipe"
 PHASE_COMPLETE: Final = "complete"
@@ -67,10 +68,11 @@ _current_handle_ref: list[ProcessHandle | None] = [None]
 class _ForwardedSignal(RuntimeError):
     """A handled process signal interrupted the running recipe step."""
 
-    def __init__(self, signum: int) -> None:
+    def __init__(self, signum: int, *, child_handle_available: bool) -> None:
         super().__init__(f"received signal {signum}")
         self.signum = signum
         self.exit_code = 128 + signum
+        self.child_handle_available = child_handle_available
 
 
 def _forwarding_signal_handler(signum: int, _frame: FrameType | None) -> None:
@@ -83,21 +85,21 @@ def _forwarding_signal_handler(signum: int, _frame: FrameType | None) -> None:
     """
     handle = _current_handle_ref[0]
     if handle is None:
-        raise _ForwardedSignal(signum)
+        raise _ForwardedSignal(signum, child_handle_available=False)
     if handle.poll() is not None:
-        raise _ForwardedSignal(signum)
+        raise _ForwardedSignal(signum, child_handle_available=True)
     handle.send_signal_to_group(signal.SIGTERM)
     deadline = time.monotonic() + _GRACE_SECONDS
     while time.monotonic() < deadline:
         if handle.poll() is not None:
-            raise _ForwardedSignal(signum)
+            raise _ForwardedSignal(signum, child_handle_available=True)
         time.sleep(_POLL_INTERVAL)
     handle.send_signal_to_group(signal.SIGKILL)
     for _ in range(_POST_KILL_REAP_ATTEMPTS):
         if handle.poll() is not None:
             break
         time.sleep(_POLL_INTERVAL)
-    raise _ForwardedSignal(signum)
+    raise _ForwardedSignal(signum, child_handle_available=True)
 
 
 def _write_timing_summary(
@@ -254,6 +256,44 @@ def _recipe_summary(
     }
 
 
+def _consume_pending_forwarded_signal() -> int | None:
+    pending = signal.sigpending()
+    for sig in _FORWARDED_SIGNALS:
+        if sig in pending:
+            return int(signal.sigwait((sig,)))
+    return None
+
+
+def _spawn_with_deferred_signal_forwarding(
+    spawner: ProcessSpawner,
+    step: Step,
+    log_path: Path,
+) -> ProcessHandle:
+    previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, _FORWARDED_SIGNALS)
+    pending_signal: int | None = None
+    try:
+        handle = spawner.spawn(step.argv, log_path)
+        _current_handle_ref[0] = handle
+    except Exception:
+        pending_signal = _consume_pending_forwarded_signal()
+        signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+        if pending_signal is not None:
+            raise _ForwardedSignal(
+                pending_signal,
+                child_handle_available=False,
+            ) from None
+        raise
+    pending_signal = _consume_pending_forwarded_signal()
+    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+    if pending_signal is not None:
+        _forwarding_signal_handler(pending_signal, None)
+    return handle
+
+
+def _write_spawn_failure_log(log_path: Path, exc: Exception) -> None:
+    log_path.write_text(f"<failed to spawn process: {exc}>\n", encoding="utf-8")
+
+
 def _execute_recipe(
     spawner: ProcessSpawner,
     sink: TextIO,
@@ -282,12 +322,20 @@ def _execute_recipe(
                 step_start = time.monotonic()
                 log_path = _create_log_path(step_index, step.label)
                 created_log_paths.append(log_path)
-                handle = spawner.spawn(step.argv, log_path)
-                _current_handle_ref[0] = handle
                 try:
+                    handle = _spawn_with_deferred_signal_forwarding(
+                        spawner,
+                        step,
+                        log_path,
+                    )
                     exit_code = handle.wait()
                 except _ForwardedSignal as interrupt:
+                    if not interrupt.child_handle_available:
+                        raise
                     exit_code = interrupt.exit_code
+                except Exception as exc:
+                    _write_spawn_failure_log(log_path, exc)
+                    exit_code = SPAWN_FAILURE_EXIT_CODE
                 finally:
                     _current_handle_ref[0] = None
                 elapsed = round(time.monotonic() - step_start)

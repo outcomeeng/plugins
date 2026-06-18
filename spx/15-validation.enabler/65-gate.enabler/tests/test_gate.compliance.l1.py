@@ -58,12 +58,16 @@ from outcomeeng.validation import (
     Step,
     run_check,
     run_recipe,
+    test_recipe,
 )
 from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 STATIC_ANALYSIS_ARGVS: Final = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS: Final = 0
 HIGH_VOLUME_CHILD_OUTPUT: Final = "\n".join("captured child output" for _ in range(200))
+PYTEST_TARGET_ARG: Final = (
+    "spx/15-validation.enabler/65-gate.enabler/tests/test_gate.compliance.l1.py"
+)
 
 
 class TestDeclaredSteps:
@@ -107,6 +111,20 @@ class TestDeclaredSteps:
 
     def test_test_recipe_executes_only_pytest_evidence_step(self) -> None:
         assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)
+
+    def test_test_recipe_without_args_returns_declared_recipe(self) -> None:
+        assert test_recipe() == TEST_RECIPE
+
+    def test_test_recipe_appends_pytest_args_to_pytest_step(self) -> None:
+        recipe = test_recipe((PYTEST_TARGET_ARG,))
+
+        assert recipe.name == TEST_RECIPE.name
+        assert recipe.verification_type == TEST_RECIPE.verification_type
+        assert recipe.purpose == TEST_RECIPE.purpose
+        assert recipe.preflight_steps == TEST_RECIPE.preflight_steps
+        assert recipe.steps == (
+            Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
+        )
 
 
 class TestVerificationVocabulary:
@@ -314,7 +332,7 @@ class TestNoForbiddenWaitPatterns:
 
 
 class TestProductionSpawnerSessionFlag:
-    """The production ProcessSpawner adapter passes start_new_session=True."""
+    """The production ProcessSpawner adapter starts a signal-safe child group."""
 
     def test_popen_call_includes_start_new_session_true(self) -> None:
         importers = _subprocess_importers()
@@ -342,3 +360,31 @@ class TestProductionSpawnerSessionFlag:
             assert isinstance(value, ast.Constant) and value.value is True, (
                 "start_new_session must be the literal True"
             )
+
+    def test_popen_call_restores_child_signal_mask(self) -> None:
+        importers = _subprocess_importers()
+        assert len(importers) == 1, (
+            "production spawner module must be the sole subprocess importer"
+        )
+        spawner_path = importers[0]
+        source = spawner_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        popen_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Attribute) and node.func.attr == "Popen")
+                or (isinstance(node.func, ast.Name) and node.func.id == "Popen")
+            )
+        ]
+        assert popen_calls, "production spawner must call subprocess.Popen"
+        for call in popen_calls:
+            kwargs = {kw.arg: kw.value for kw in call.keywords}
+            assert "preexec_fn" in kwargs, "Popen call must pass preexec_fn"
+            preexec_fn = kwargs["preexec_fn"]
+            assert isinstance(preexec_fn, ast.Name)
+            assert preexec_fn.id == "_restore_child_signal_mask"
+        assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
+        for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
+            assert f"signal.{signal_name}" in source

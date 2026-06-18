@@ -12,14 +12,18 @@ from __future__ import annotations
 
 import io
 import json
+import signal
 from pathlib import Path
 from typing import Final, cast
+
+import pytest
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
     FAILURE_EXCERPT_LINE_LIMIT,
     FULL_LOG_LABEL,
     PHASE_COMPLETE,
+    PHASE_PREFLIGHT,
     PHASE_RECIPE,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
@@ -29,6 +33,7 @@ from outcomeeng.validation import (
     RECIPE_VALIDATION,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
+    SPAWN_FAILURE_EXIT_CODE,
     STEPS,
     SUMMARY_KEY_EXIT_CODE,
     SUMMARY_KEY_EXCERPT,
@@ -53,12 +58,18 @@ from outcomeeng.validation import (
     run_check,
     run_recipe,
 )
-from outcomeeng_testing.harnesses.gate import RecordingSpawner
+from outcomeeng_testing.harnesses.gate import (
+    RecordingSpawner,
+    SignalRaisingSpawner,
+    SpawnFailingSpawner,
+)
 
 PASS: Final = 0
 FAIL: Final = 2
 PASSING_OUTPUT: Final = "passing validator output"
 FAILING_OUTPUT_PREFIX: Final = "failing validator output line"
+FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+SPAWN_FAILURE_MESSAGE: Final = "missing executable"
 
 
 def _three_no_op_steps() -> tuple[Step, ...]:
@@ -370,6 +381,34 @@ class TestFailingStep:
         assert steps[1][SUMMARY_KEY_LOG_PATH] == str(failing_log_path)
         assert failing_log_path.read_text(encoding="utf-8") == failing_output
 
+    def test_spawn_failure_retains_log_and_records_summary(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        summary_path = tmp_path / "spawn-failure-summary.json"
+        recipe = _single_step_recipe(RECIPE_VALIDATION)
+        spawner = SpawnFailingSpawner(message=SPAWN_FAILURE_MESSAGE)
+        sink = io.StringIO()
+
+        exit_code = run_recipe(
+            spawner=spawner,
+            sink=sink,
+            recipe=recipe,
+            summary_path=summary_path,
+        )
+
+        summary = _read_summary(summary_path)
+        steps = _summary_steps(summary)
+        failing_log_path = spawner.output_paths[0]
+        assert exit_code == SPAWN_FAILURE_EXIT_CODE
+        assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+        assert summary[SUMMARY_KEY_PHASE] == PHASE_PREFLIGHT
+        assert summary[SUMMARY_KEY_EXIT_CODE] == SPAWN_FAILURE_EXIT_CODE
+        assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+        assert steps[0][SUMMARY_KEY_LOG_PATH] == str(failing_log_path)
+        assert SPAWN_FAILURE_MESSAGE in str(steps[0][SUMMARY_KEY_EXCERPT])
+        assert SPAWN_FAILURE_MESSAGE in failing_log_path.read_text(encoding="utf-8")
+
 
 class TestCheckWrapper:
     """The check wrapper composes primitive summaries without its own type."""
@@ -437,6 +476,33 @@ class TestCheckWrapper:
             RECIPE_VALIDATION,
             RECIPE_TEST,
         ]
+
+    @pytest.mark.parametrize("signum", FORWARDED_SIGNALS)
+    def test_records_signal_before_child_handle_is_available(
+        self,
+        signum: signal.Signals,
+        tmp_path: Path,
+    ) -> None:
+        summary_path = tmp_path / "signal-summary.json"
+        spawner = SignalRaisingSpawner(signum=signum)
+        sink = io.StringIO()
+
+        exit_code = run_check(
+            spawner=spawner,
+            sink=sink,
+            recipes=(VALIDATION_RECIPE,),
+            summary_path=summary_path,
+        )
+
+        summary = _read_summary(summary_path)
+
+        expected_exit_code = 128 + signum
+        assert exit_code == expected_exit_code
+        assert summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+        assert summary[SUMMARY_KEY_PHASE] == PHASE_RECIPE
+        assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
+        assert summary[SUMMARY_KEY_EXIT_CODE] == expected_exit_code
+        assert summary[SUMMARY_KEY_STEPS] == []
 
 
 class TestProductionStepListSmoke:

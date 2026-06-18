@@ -20,6 +20,7 @@ from outcomeeng.validation._engine import (
     PHASE_RECIPE,
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
+    SPAWN_FAILURE_EXIT_CODE,
     SUMMARY_KEY_ARGV,
     SUMMARY_KEY_DURATION_SECONDS,
     SUMMARY_KEY_EXIT_CODE,
@@ -81,6 +82,7 @@ from outcomeeng.validation._steps import (
     VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
+    test_recipe,
 )
 
 __all__ = [
@@ -110,6 +112,7 @@ __all__ = [
     "RECIPE_VALIDATION",
     "RUN_FAIL_STATUS",
     "RUN_PASS_STATUS",
+    "SPAWN_FAILURE_EXIT_CODE",
     "SHELLCHECK_ARGV",
     "SPX_MARKDOWN_ARGV",
     "STEPS",
@@ -136,6 +139,7 @@ __all__ = [
     "VALIDATION_STEPS",
     "VERIFICATION_TYPE_TESTING",
     "VERIFICATION_TYPE_VALIDATION",
+    "test_recipe",
     "ProcessHandle",
     "ProcessSpawner",
     "ProductionSpawner",
