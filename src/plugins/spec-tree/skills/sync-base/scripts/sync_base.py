@@ -12,6 +12,14 @@ touch-point is a rebase conflict that cannot be resolved autonomously or a
 hard git failure; on a conflict the rebase is aborted (leaving the branch and
 working tree intact) and the ``SYNC_BASE`` action token is surfaced.
 
+A working tree with uncommitted changes to tracked files blocks the rebase
+before it starts. This is reported as the distinct ``dirty_tree`` outcome with
+no rebase attempted, no ``SYNC_BASE`` token, and the working tree left
+untouched: a dirty tree is a precondition the caller clears by committing
+through the commit workflow, not a rebase conflict, and synchronization never
+commits or stashes on the caller's behalf. Untracked files do not block a
+rebase and are not a dirty tree.
+
 The base ref and its remote-tracking form are resolved through the shared
 changeset-scope primitives, never re-derived here. The primitives ship under a
 runtime-substituted plugin skill directory and are not importable by package
@@ -75,6 +83,7 @@ class SyncStatus(str, Enum):
     ALREADY_CURRENT = "already_current"
     REBASED = "rebased"
     CONFLICT = "conflict"
+    DIRTY_TREE = "dirty_tree"
     GIT_FAILURE = "git_failure"
 
 
@@ -83,6 +92,7 @@ _EXIT_CODES = {
     SyncStatus.ALREADY_CURRENT: 0,
     SyncStatus.REBASED: 0,
     SyncStatus.CONFLICT: 3,
+    SyncStatus.DIRTY_TREE: 4,
     SyncStatus.GIT_FAILURE: 1,
 }
 
@@ -202,6 +212,30 @@ def sync_base(
             remote_ref,
             branch,
             f"branch {branch} is already current with {remote_ref}",
+        )
+
+    # A dirty working tree blocks the rebase: git refuses to replay commits over
+    # uncommitted changes to tracked files. This is a precondition the caller
+    # clears by committing — not a rebase conflict — so report it distinctly and
+    # leave the tree untouched rather than attempting a rebase that cannot start.
+    # Untracked files do not block a rebase, so they are excluded.
+    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    if dirty.returncode != 0:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            remote_ref,
+            branch,
+            f"cannot inspect working tree state: {dirty.stderr.strip()}",
+        )
+    if dirty.stdout.strip():
+        return SyncBaseResult(
+            SyncStatus.DIRTY_TREE,
+            base_ref,
+            remote_ref,
+            branch,
+            f"working tree of {branch} has uncommitted changes to tracked files; "
+            f"commit them before rebasing onto {remote_ref}",
         )
 
     rebased = _git(repo, "rebase", remote_ref)

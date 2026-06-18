@@ -10,6 +10,9 @@ Covers the Compliance assertions in ``../sync-base.md``:
   tree at the old base and drop the branch's commit.
 - sync-base surfaces no operator decision for a routine, clean rebase — the
   ``SYNC_BASE`` action token appears only on a conflict.
+- sync-base neither commits nor stashes a dirty working tree and does not
+  surface it as a ``SYNC_BASE`` conflict — a dirty tree is a distinct
+  precondition the caller clears through the commit workflow.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories seeded under ``tmp_path``.
@@ -19,11 +22,15 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 from outcomeeng_testing.harnesses.changeset_scope import load_changeset_scope_module
 from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_conflicting_repo,
+    build_dirty_behind_base_repo,
     load_sync_base_module,
+    working_tree_has_tracked_changes,
 )
 
 
@@ -73,3 +80,27 @@ def test_clean_rebase_surfaces_no_operator_token_only_conflict_does(
     conflict = module.sync_base(build_conflicting_repo(conflict_root).repo)
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.action_token == module.SYNC_BASE_TOKEN
+
+
+@pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
+def test_dirty_tree_is_neither_committed_stashed_nor_a_conflict(
+    tmp_path: pathlib.Path, stage: bool
+) -> None:
+    # An unstaged change and a staged-but-uncommitted change are both dirty: in
+    # neither case does sync-base commit, stash, or surface a SYNC_BASE conflict.
+    module = load_sync_base_module()
+    handle = build_dirty_behind_base_repo(_root(tmp_path), stage=stage)
+
+    result = module.sync_base(handle.repo)
+
+    # A dirty tree is reported as its own precondition, never as a SYNC_BASE
+    # conflict, and synchronization does not clear it.
+    assert result.status is module.SyncStatus.DIRTY_TREE
+    assert result.action_token is None
+    # The edit is still an uncommitted tracked change: sync-base neither
+    # committed it (the tree would be clean) nor stashed it (the edit would be
+    # gone). Both the dirty state and the edit's content confirm it is untouched.
+    assert working_tree_has_tracked_changes(handle.repo)
+    assert handle.dirty_marker in (handle.repo / handle.dirty_file).read_text(
+        encoding="utf-8"
+    )

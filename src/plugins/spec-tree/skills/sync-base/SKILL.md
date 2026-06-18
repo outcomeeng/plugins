@@ -6,7 +6,7 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-Bring the current branch current with its fetched base by rebasing, so context loading reads current product truth, verification scopes against a current base, and a merge integrates onto the latest base. The mechanism is rebase, never `git reset`: rebase replays the branch's own commits onto the advanced base; reset repoints the branch while leaving the working tree at the old base, silently reverting merged work. A clean rebase runs with no operator interaction; a conflict that cannot be resolved autonomously surfaces the `SYNC_BASE` token and stops.
+Bring the current branch current with its fetched base by rebasing, so context loading reads current product truth, verification scopes against a current base, and a merge integrates onto the latest base. The mechanism is rebase, never `git reset`: rebase replays the branch's own commits onto the advanced base; reset repoints the branch while leaving the working tree at the old base, silently reverting merged work. A clean rebase runs with no operator interaction; a conflict that cannot be resolved autonomously surfaces the `SYNC_BASE` token and stops; uncommitted changes to tracked files yield `dirty_tree`, which the caller clears by committing and re-running.
 </objective>
 
 <workflow>
@@ -19,12 +19,15 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/sync_base.py" [repo] [--base <branch>]
 
 It resolves the base ref and `origin/<base>` through the shared changeset-scope primitives, fetches the base, and rebases the branch when it is behind. The base defaults to `origin/HEAD`; pass `--base <branch>` when the changeset tracks a non-default base (a stacked pull request whose base is another feature branch). It prints a JSON result (`status`, `base_ref`, `remote_ref`, `branch`, `detail`, `action_token`) and exits:
 
-| `status`          | exit | meaning                                                                                                | how Claude acts                                                                                        |
-| ----------------- | ---- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `already_current` | 0    | the branch is not behind the base                                                                      | proceed                                                                                                |
-| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                            | proceed, then re-run any verification or review the rebase invalidated                                 |
-| `conflict`        | 3    | the rebase conflicts; it is aborted with the branch and tree intact, and `action_token` is `SYNC_BASE` | stop and surface `SYNC_BASE` for the operator to resolve the conflict — never fall back to `git reset` |
-| `git_failure`     | 1    | detached HEAD, an unresolved base, or a failed fetch                                                   | report `detail`; do not rebase                                                                         |
+| `status`          | exit | meaning                                                                                                                                                          | how Claude acts                                                                                                      |
+| ----------------- | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `already_current` | 0    | the branch is not behind the base                                                                                                                                | proceed                                                                                                              |
+| `rebased`         | 0    | the branch was rebased onto `origin/<base>`                                                                                                                      | proceed, then re-run any verification or review the rebase invalidated                                               |
+| `conflict`        | 3    | the rebase conflicts; it is aborted with the branch and tree intact, and `action_token` is `SYNC_BASE`                                                           | stop and surface `SYNC_BASE` for the operator to resolve the conflict — never fall back to `git reset`               |
+| `dirty_tree`      | 4    | the branch is behind, but uncommitted changes to tracked files block the rebase; no rebase is attempted and the tree is left untouched; `action_token` is absent | commit the working changes through `/commit-changes`, then re-run sync-base — never stash, never surface `SYNC_BASE` |
+| `git_failure`     | 1    | detached HEAD, an unresolved base, or a failed fetch                                                                                                             | report `detail`; do not rebase                                                                                       |
+
+Resolve `dirty_tree` autonomously rather than asking the operator: sync-base never commits or stashes on the caller's behalf, so commit policy stays with `/commit-changes`.
 
 Pass `--no-fetch` only when the remote-tracking ref is already current and a fetch would be redundant.
 
@@ -34,6 +37,8 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 
 - Rebase, never reset — a behind-base branch is brought current only by replaying its own commits onto `origin/<base>`.
 - No operator decision for a clean rebase — the only operator touch-point is a `SYNC_BASE` conflict or a hard git failure.
+- A dirty tree is a precondition, never a conflict — uncommitted tracked changes yield `dirty_tree`, cleared by committing, never by stashing and never surfaced as `SYNC_BASE`.
+- sync-base only fetches and rebases — it never commits or stashes the working tree.
 - One base derivation — the base ref and `origin/<base>` come from the changeset-scope primitives, never re-derived here.
 
 </invariants>
@@ -41,7 +46,8 @@ Pass `--no-fetch` only when the remote-tracking ref is already current and a fet
 <success_criteria>
 
 - A behind-base branch ends rebased onto `origin/<base>` with its own commits preserved, or stopped at a `SYNC_BASE` conflict with the branch and working tree intact.
-- No `git reset` synchronizes a branch.
+- A behind-base branch with uncommitted tracked changes ends reported as `dirty_tree` with the working tree untouched and no `SYNC_BASE` token, leaving the caller to commit and re-run.
+- No `git reset` synchronizes a branch, and no commit or stash clears a dirty tree from inside sync-base.
 - A clean rebase completes with no operator prompt.
 
 </success_criteria>
