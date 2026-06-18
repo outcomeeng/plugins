@@ -6,6 +6,7 @@ import tomllib
 from pathlib import Path
 from typing import Any, Final, cast
 
+# PyYAML ships without inline types; this test casts parsed workflow structure below.
 import yaml  # type: ignore[import-untyped]
 
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
