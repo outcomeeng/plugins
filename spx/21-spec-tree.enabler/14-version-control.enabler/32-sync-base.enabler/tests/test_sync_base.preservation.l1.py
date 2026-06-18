@@ -48,9 +48,9 @@ def test_non_overlapping_rebase_preserves_local_review(
 
     assert result.status is module.SyncStatus.REBASED
     assert proof is not None
-    # The base advanced over base.txt; the branch changed feature.txt — disjoint.
-    assert "base.txt" in proof.base_delta_paths
-    assert "feature.txt" in proof.branch_paths_after
+    # The base advanced over base_file; the branch changed feature_file — disjoint.
+    assert handle.base_file in proof.base_delta_paths
+    assert handle.feature_file in proof.branch_paths_after
     assert proof.path_overlap == []
     assert proof.branch_patch_changed is False
     # The reuse signal a caller reads before considering its governance check.
