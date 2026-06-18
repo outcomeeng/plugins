@@ -1,7 +1,9 @@
 ---
 name: review-changes
 description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading thread-store records directly.
-allowed-tools: Bash Read
+allowed-tools:
+  - Bash
+  - Read
 ---
 
 <objective>
