@@ -11,7 +11,9 @@ Rewrite the hook command in `src/plugins/spec-tree/hooks/hooks.json` to the inli
 - an environment kill switch that disables the hook without editing config or leaving the session;
 - no dependency on a version-pinned cache path.
 
-`session-start.py` already returns 0 on every error path; the gap is the command shape in `hooks.json`, not the script body. Verify against the hook-safety validator once it exists (see `spx/15-validation.enabler/PLAN.md`).
+The same change wires the hook-safety validator CLI into the `spx/15-validation.enabler/65-gate.enabler` `STEPS` pipeline — that step is deferred from `spx/15-validation.enabler/PLAN.md` precisely because the current hook trips the validator, so it lands together with this hook rewrite once the hook conforms.
+
+`session-start.py` already returns 0 on every error path; the gap is the command shape in `hooks.json`, not the script body. Verify against the hook-safety validator (`python3 -m outcomeeng.validation.hook_safety`).
 
 ## Governing decision
 

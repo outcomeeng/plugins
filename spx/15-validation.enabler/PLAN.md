@@ -2,16 +2,13 @@
 
 Created by `spx/15-hook-safety.pdr.md` (Hook Safety Contract). That PDR declares `[compliance]` testing rules over every plugin's hook configuration; this enabler is their implementation home, alongside the existing plugin-manifest, skill-frontmatter, and reference-portability validators.
 
-## Next implementation step
+## Status
 
-Add a hook-safety validation check (a `32-*.enabler` child here) that scans every plugin's hook config across `dist/claude` and `dist/codex` and fails on:
+The validator node `spx/15-validation.enabler/32-hook-safety.enabler` is built: `outcomeeng/validation/hook_safety.py` (an allowlist of non-blocking events plus checks for an explicit `timeout`, a guarded command shape, and version-pinned cache paths) with `[compliance]` and `scenario` evidence under the node's `tests/`. The pytest gate enforces it.
 
-- a hook registered on any blocking-capable event (PreToolUse, UserPromptSubmit, UserPromptExpansion, PermissionRequest, PostToolBatch, Stop, SubagentStop, PreCompact, or any other event where exit 2 / a deny-or-block decision / a timeout denies the agent's action);
-- a hook entry with no explicit `timeout`;
-- a hook command that is a bare script-file invocation at a substituted path with no inline fallback to a successful empty result;
-- a hook command naming a version-pinned plugin cache path.
+## Remaining step
 
-Tests are `[compliance]` evidence exercised against violating hook-config fixtures, per `spx/15-test-language.adr.md`. The check joins the `spx/15-validation.enabler/65-gate.enabler` pipeline.
+Wire the validator CLI (`python3 -m outcomeeng.validation.hook_safety`) into the `spx/15-validation.enabler/65-gate.enabler` `STEPS` pipeline so the gate scans the live `dist/claude` and `dist/codex` trees on every run. This step is deferred to the change that rewrites the spec-tree `SessionStart` hook to the inline-guard form (see `spx/21-spec-tree.enabler/PLAN.md`): the validator already flags the current hook (no explicit `timeout`, bare substituted-path invocation), so adding the gate step before the hook conforms would fail `just check`. Wire the step and the hook fix together.
 
 ## Scope: deterministic validator vs audit
 
