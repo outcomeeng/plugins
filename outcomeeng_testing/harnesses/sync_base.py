@@ -331,6 +331,23 @@ def build_conflicting_repo(root: pathlib.Path) -> ConflictRepo:
     )
 
 
+UNTRACKED_FILE = "scratch.local"
+
+
+def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
+    """Build a behind-base clone whose only working-tree change is an untracked file.
+
+    An untracked file (not ``git add``ed) does not block a rebase, so sync-base
+    must rebase rather than report ``dirty_tree``. The untracked path does not
+    collide with the base advance, so the replay proceeds and leaves it in place.
+    Proves the ``--untracked-files=no`` scope of the dirty check is necessary:
+    without it the untracked file would read as dirty and force ``dirty_tree``.
+    """
+    behind = build_behind_base_repo(root)
+    (behind.repo / UNTRACKED_FILE).write_text("scratch\n", encoding="utf-8")
+    return behind
+
+
 def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
     """Report whether the working tree has uncommitted changes to tracked files.
 
