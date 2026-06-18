@@ -11,7 +11,7 @@
       {
         "id": "q3",
         "text": "Where should the tree-editing surface live?",
-        "options": ["interviewing (generic)", "calling spec-tree skill"],
+        "options": ["interview (generic)", "calling spec-tree skill"],
         "choice": null
       }
     ],
@@ -26,10 +26,10 @@
   "tree": [
     {
       "id": "n1",
-      "slug": "interviewing",
+      "slug": "interview",
       "kind": "enabler",
       "order": 10,
-      "title": "Live interviewing",
+      "title": "Live interview",
       "children": [
         {
           "id": "n2",

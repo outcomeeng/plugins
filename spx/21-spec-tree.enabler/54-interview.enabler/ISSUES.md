@@ -1,10 +1,10 @@
-# Issues: interviewing
+# Issues: interview
 
-Reconcile against `interviewing.md`, `src/plugins/spec-tree/skills/interview/SKILL.md`, and any calling skill before acting.
+Reconcile against `interview.md`, `src/plugins/spec-tree/skills/interview/SKILL.md`, and any calling skill before acting.
 
 ## 1. `AskUserQuestion` trigger makes operational yes/no prompts look like interviews
 
-The interviewing skill frontmatter says `Triggers: AskUserQuestion, seeking draft approval, stuck on scope or design. NEVER ask without this skill.` That wording can be read as a routing rule that any structured question must load `/interview`, including mechanical workflow prompts such as how to handle a guide-template drift note. The spec's intended surface is narrower: `/interview` provides requirements-gathering methodology for artifact creation or modification, with pre-analysis, decide-first reasoning, coverage tracking, and materially distinct options.
+The interview skill frontmatter says `Triggers: AskUserQuestion, seeking draft approval, stuck on scope or design. NEVER ask without this skill.` That wording can be read as a routing rule that any structured question must load `/interview`, including mechanical workflow prompts such as how to handle a guide-template drift note. The spec's intended surface is narrower: `/interview` provides requirements-gathering methodology for artifact creation or modification, with pre-analysis, decide-first reasoning, coverage tracking, and materially distinct options.
 
 Suggested fix:
 

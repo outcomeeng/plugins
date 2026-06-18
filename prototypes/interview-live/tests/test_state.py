@@ -1,6 +1,6 @@
 """Unit tests for the pure state/conflict core.
 
-These encode the assertions the eventual interviewing outcome node will declare:
+These encode the assertions the eventual interview outcome node will declare:
 the question lifecycle (planned -> current -> settled), structural tree
 integrity under move/add/remove/rename, the conflict cases, and revision
 monotonicity. Run: ``python3 -m unittest discover -s tests`` from the prototype
