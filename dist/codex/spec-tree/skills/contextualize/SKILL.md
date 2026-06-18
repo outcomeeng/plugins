@@ -40,6 +40,18 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0.
 
 </step>
 
+<step name="sync_base">
+
+**Step SYNC: Bring the branch current with its base**
+
+Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale branch — a branch behind its base reads superseded specs and decisions. `/sync-base` fetches the base and rebases automatically from observable git state; never ask the operator whether to rebase. Act on its result:
+
+- `already_current` or `rebased` → proceed to Step 0.
+- `conflict` → STOP and surface `SYNC_BASE`. The branch cannot be brought current autonomously, and reading stale-or-conflicted context is the failure this gate prevents; context loading resumes once the operator resolves the conflict.
+- `git_failure` → sync does not apply (a detached HEAD with no branch to rebase — the common case in a bare-repository worktree pool, where a worktree may be parked detached — or no configured remote). Proceed to Step 0; context loading is not a merge gate and does not block on a non-rebasable checkout.
+
+</step>
+
 <step name="locate">
 
 **Step 0: Locate target node**

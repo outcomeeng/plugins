@@ -17,7 +17,7 @@ A contract phrased in facts and derivations — append, read, cursor, seal, rend
 - ALWAYS: a correction to a prior finding is expressed as a later event referencing the original, never as a mutation of a persisted event ([audit])
 - ALWAYS: a terminal seal makes a run's sequence final — no append succeeds on a sealed journal ([audit])
 - ALWAYS: a thin wrapper agent under `src/plugins/spec-tree/agents/` drives each agentic verification skill, holds no verification or I/O policy, and declares a model identifier, `tools: Bash, Read, Skill`, and `skills:` listing the skill ([audit])
-- ALWAYS: an agentic verification run derives its changeset scope — branch, slug, base ref, changed-file set — through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler/changeset-scope.md`) ([audit])
+- ALWAYS: an agentic verification run derives its changeset scope — branch, slug, base ref, changed-file set — through the shared changeset-scope primitives (`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/changeset-scope.md`) ([audit])
 - NEVER: the skill reads authoritative run state from a rendered surface — a pull-request comment body or a rendered report — rather than from the journal ([audit])
 - NEVER: the skill hand-validates the records it emitted — the channel's exit code is the validity signal ([audit])
 - NEVER: the skill or wrapper agent hard-codes a storage path, backend, or surface in its prose ([audit])

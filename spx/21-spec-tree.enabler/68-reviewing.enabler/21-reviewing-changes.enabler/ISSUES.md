@@ -230,7 +230,7 @@ Surfaced from the operator review of `changes-reviewer` behavior on
 
 `review-changes` persists `review-result.json` / `review.md` under a
 thread-store slug derived from the branch identity by the `scope-changeset` skill
-(`spx/21-spec-tree.enabler/16-verification.enabler/15-changeset-scope.enabler`,
+(`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler`,
 governed by its `13-changeset-derivation.adr.md`). On `outcomeeng/plugins` PR #149
 (2026-06-09) the local `changes-reviewer` ran on branch
 `work/changes-reviewer-followups`, yet persisted its artifacts under the slug

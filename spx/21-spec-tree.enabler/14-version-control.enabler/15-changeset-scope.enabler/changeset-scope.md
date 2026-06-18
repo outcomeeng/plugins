@@ -1,7 +1,7 @@
 # Changeset Scope
 
 PROVIDES the canonical git-derived changeset primitives — branch identity, addressing slug, base-ref resolution, and merge-base diff scope
-SO THAT the auditing skill, the review-changes skill, and the thread-store skill
+SO THAT the auditing skill, the review-changes skill, the thread-store skill, and base synchronization
 CAN derive every changeset's branch, slug, base ref, and changed-file set from one source rather than re-implementing or re-exporting git derivation across skills
 
 ## Assertions
