@@ -19,6 +19,7 @@ from __future__ import annotations
 import pathlib
 
 from outcomeeng_testing.harnesses.sync_base import (
+    build_alternate_base_repo,
     build_behind_base_repo,
     build_conflicting_repo,
     build_current_repo,
@@ -110,3 +111,24 @@ def test_explicit_base_ref_overrides_origin_head(
     assert result.status is module.SyncStatus.GIT_FAILURE
     assert result.base_ref == "not-a-branch"
     assert result.remote_ref == module.remote_tracking_ref("not-a-branch")
+
+
+def test_explicit_valid_base_rebases_onto_that_base_not_origin_head(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_alternate_base_repo(_root(tmp_path))
+
+    # The feature is current with the origin/HEAD default, so syncing onto the
+    # default does nothing...
+    default_result = module.sync_base(handle.repo, base_ref=handle.default_ref)
+    assert default_result.status is module.SyncStatus.ALREADY_CURRENT
+
+    # ...but it is behind the caller-supplied alternate base, so syncing onto
+    # that base rebases the feature onto origin/<alternate> and brings the
+    # alternate's advance into the working tree.
+    result = module.sync_base(handle.repo, base_ref=handle.alternate_ref)
+    assert result.status is module.SyncStatus.REBASED
+    assert result.remote_ref == handle.alternate_remote_ref
+    assert (handle.repo / handle.alternate_file).exists()
+    assert (handle.repo / handle.feature_file).exists()

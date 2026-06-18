@@ -175,6 +175,57 @@ def build_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     )
 
 
+ALTERNATE_BRANCH = "release"
+ALTERNATE_FILE = "release.txt"
+
+
+@dataclass(frozen=True)
+class AlternateBaseRepo:
+    """A working clone current with the default base but behind an alternate base.
+
+    ``default_ref`` is ``origin/HEAD``; the feature contains every commit on it.
+    ``alternate_ref`` is a second pushed branch advanced past the feature's fork
+    point and not yet fetched by the working clone, so synchronizing onto it
+    rebases while synchronizing onto the default does nothing — proving a
+    caller-supplied base targets that base, not ``origin/HEAD``.
+    """
+
+    repo: pathlib.Path
+    default_ref: str
+    alternate_ref: str
+    alternate_remote_ref: str
+    feature_branch: str
+    feature_file: str
+    alternate_file: str
+
+
+def build_alternate_base_repo(root: pathlib.Path) -> AlternateBaseRepo:
+    """Build a working clone current with the default base but behind an alternate."""
+    origin = _init_origin_with_base(root)
+    pusher = root / "pusher"
+    _git(pusher, "switch", "-q", "-c", ALTERNATE_BRANCH)
+    _git(pusher, "push", "-q", "origin", ALTERNATE_BRANCH)
+
+    repo = _working_clone_on_feature(root, origin)
+    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+
+    _git(pusher, "switch", "-q", ALTERNATE_BRANCH)
+    _commit_file(
+        pusher, ALTERNATE_FILE, "alternate advance\n", "advance alternate base"
+    )
+    _git(pusher, "push", "-q", "origin", ALTERNATE_BRANCH)
+
+    return AlternateBaseRepo(
+        repo=repo,
+        default_ref=BASE_BRANCH,
+        alternate_ref=ALTERNATE_BRANCH,
+        alternate_remote_ref=f"origin/{ALTERNATE_BRANCH}",
+        feature_branch=FEATURE_BRANCH,
+        feature_file=FEATURE_FILE,
+        alternate_file=ALTERNATE_FILE,
+    )
+
+
 @dataclass(frozen=True)
 class CurrentRepo:
     """A working clone whose feature branch already contains every base commit."""
