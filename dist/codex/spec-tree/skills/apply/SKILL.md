@@ -6,7 +6,9 @@ description: >-
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare → spec → apply) because agents skip declaring prerequisites without guardrails.
+Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node, plus a terminal tenth that carries default-branch work through `/merge`. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare → spec → apply) because without guardrails Claude skips declaring prerequisites.
+
+For work destined for the default branch, the flow is complete only when the change reaches the default branch on origin through `/merge` (Step 10). An APPROVED Step 8 audit, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are local readiness, not delivered value. Step 10 governs when that continuation is scoped out.
 
 </objective>
 
@@ -18,6 +20,7 @@ Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequen
 4. Test → audit until APPROVED (Steps 5–6)
 5. Implement → audit until APPROVED (Steps 7–8)
 6. Whole-changeset review when the change reaches beyond the target node (Step 9)
+7. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
 
 </quick_start>
 
@@ -46,7 +49,7 @@ When the scope is cross-node, every audit gate — Steps 4, 6, and 8 — runs at
 
 <skill_map>
 
-Steps 1–2 are language-independent. Steps 3–8 use the detected language. Step 9 is language-independent and runs only when the change reaches beyond the target node.
+Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
 | Step | Purpose                  | TypeScript                                                      | Python                               |
 | ---- | ------------------------ | --------------------------------------------------------------- | ------------------------------------ |
@@ -59,8 +62,10 @@ Steps 1–2 are language-independent. Steps 3–8 use the detected language. Ste
 | 7    | Implement                | `Skill("code-typescript")`                                      | `Skill("code-python")`               |
 | 8    | Code audit               | `Skill("audit-typescript")`                                     | `Skill("audit-python")`              |
 | 9    | Whole-changeset review † | `changes-reviewer` agent or `Skill("spec-tree:review-changes")` | same                                 |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                      | same                                 |
 
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
+‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
 
 **Invoke the exact Skill tool call shown.** Never substitute, skip, or reorder.
 
@@ -154,16 +159,31 @@ Fix every valid finding it surfaces, then re-run. **Unaddressed valid finding �
 
 </step>
 
+<step number="10" name="Merge" condition="the change is destined for the default branch">
+
+Skip this step only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change — then state that scope and stop. For every other change, the work is destined for the default branch, and the flow is NOT complete at Step 9.
+
+Local readiness is not delivered value. An APPROVED Step 8 audit, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are progress. Delivered value is the change merged to the default branch on origin.
+
+Invoke `/merge`. It selects the transport and drives the change to the default branch under its own authority gates — this flow neither re-implements the merge protocol nor re-decides those gates. The `/merge` lifecycle owns commit, push, integration review, and merge.
+
+The flow is complete only when the change reaches the default branch on origin, or an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base is never the endpoint for default-branch work.
+
+Claude tends to report the flow done the moment Step 9 converges and tests pass — while nothing has been committed, pushed, reviewed at integration time, or merged. That treatment of local readiness as completion is the exact failure this step exists to prevent.
+
+</step>
+
 </steps>
 
 <review_gates>
 
-Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or `REJECT`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node.
+Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or `REJECT`. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work — not a REJECT-loop gate, but a hard precondition for declaring the flow complete.
 
 - Before starting Step 5: scan the conversation for the Step 4 verdict. If `APPROVED` is not present, stop — invoke Step 4.
 - Before starting Step 7: scan the conversation for the Step 6 verdict. If `APPROVED` is not present, stop — invoke Step 6.
 - Before considering implementation complete: scan the conversation for the Step 8 verdict. If `APPROVED` is not present, stop — invoke Step 8.
 - Before declaring the flow complete: if the change touches anything beyond the target node, scan for a converged Step 9 review. If it is absent or has unaddressed valid findings, stop — invoke Step 9.
+- Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
 On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the findings, re-invoke the same skill, and scan again.
 
@@ -193,5 +213,6 @@ Scan the conversation for these markers before declaring done:
 - [ ] Step 8 audit skill emitted `APPROVED`
 - [ ] If the change touched anything beyond the target node: the last Step 9 `changes-reviewer` run reported no `BLOCKING` or `DEBT` finding, or every such finding was fixed or individually refuted as unbacked
 - [ ] All tests pass
+- [ ] For default-branch work: the change reached the default branch on origin through Step 10's `/merge`, unless the user scoped the work to a proposal, analysis, review, or local-only change, or an explicit merge lifecycle gate blocks with no independent local action remaining — a clean working tree, a local commit, or a branch ahead of base does not satisfy this
 
 </success_criteria>
