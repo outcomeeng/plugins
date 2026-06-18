@@ -10,6 +10,7 @@ The typescript plugin contains 9 skills following the foundational + language-sp
 
 ### Compliance
 
+- ALWAYS: the `audit-typescript*` skills are reached only by dispatching their auditor agent (`typescript-code-auditor`, `typescript-test-auditor`, `typescript-architecture-auditor`); the main conversation does not invoke them in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: follow the foundational + language-specific pattern — core principles in `/test`, TypeScript-specific patterns in `/test-typescript` ([review])
 - ALWAYS: use dependency injection instead of mocking — reality is the oracle ([review])
 - ALWAYS: the TypeScript plugin's testing skills (`/typescript-test-standards`, `/test-typescript`, `/audit-typescript-tests`) teach the `spx/15-test-infrastructure.pdr.md` contract: source contracts come first, test infrastructure lives at the path-mapped `@testing/` root (`@testing/harnesses/*`, `@testing/generators/*`, `@testing/fixtures/*`), generators vary, fixtures stay inert, harnesses manage resources, and audits inspect the full test-infrastructure chain ([review])

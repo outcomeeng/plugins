@@ -11,7 +11,7 @@ The orchestrator embeds no language-specific knowledge, following the working pr
 ### Testing
 
 - ALWAYS: `save_state` writes the state file atomically (`<state-file>.tmp` plus `os.replace`) and `RunLock` releases its lock on every context-manager exit path including exceptions ([compliance])
-- ALWAYS: a regression — the same `(file_line, root_cause)` returning after a resolved-then-reopened cycle — reopens the original finding ID and does not advance `next_finding_id` ([scenario])
+- ALWAYS: a regression — the same `(file_line, root_cause)` returning after a resolved-then-reopened cycle — reopens the original finding ID and does not advance `next_finding_id` ([compliance])
 - ALWAYS: `compute_verdict_diff` keys finding identity on the tuple `(file, line, rule, message)`, excluding `id` and `severity` so a regenerated or re-severitied finding matches its prior counterpart by content ([property])
 
 ### Audit
@@ -20,6 +20,8 @@ The orchestrator embeds no language-specific knowledge, following the working pr
 - ALWAYS: every marketplace plugin that defines a programming language ships `audit-{lang}`, `audit-{lang}-tests`, and `audit-{lang}-architecture` ([audit])
 - ALWAYS: the audit-specific scope-hash, lock, and state-transition computations live in `audit_orchestrator.py`, which imports the shared git-derivation primitives from the changeset-scope skill's `changeset_scope.py`, and the canonical verdict schema and rollup live in the sibling `verdict.py` — the boundaries that make the computations testable ([audit])
 - ALWAYS: the four wrapper agents reach the audit policy, the `scripts/` toolchain, and the `audit_orchestrator.py` CLI only by invoking the `/audit` skill (and, for `pr-reviewer`, the review-prompt skill) ([audit])
+- ALWAYS: the main conversation reaches a generic audit only by dispatching one of the four wrapper agents — the dispatched agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([audit])
+- NEVER: the main conversation invokes the `/audit` skill in place to produce a verdict — the isolated wrapper-agent context, not the main conversation, is where an audit runs ([audit])
 - ALWAYS: the `/audit` skill partitions multi-language scopes by file extension and runs the orchestration protocol once per language partition ([audit])
 - ALWAYS: the `audit-orchestrator` agent persists its working set under `.spx/audits/<lang>/<branch-slug>.md` and acquires `<state-file>.lock` before reading or writing state ([audit])
 - ALWAYS: the `pr-review-orchestrator` agent persists no on-disk audit state — its durable cross-CI-run surface is the PR comment thread, recovered each run by `read_verdict.py` matching the `<!-- AUDIT_VERDICT_JSON_BEGIN -->` delimiter ([audit])

@@ -108,6 +108,22 @@ subjects verbatim.
     an `audit-*` skill, so outside the voice axis above) — fold into the directive-description pass
     or this structural pass.
 
+    **Update (agent-only-audit-dispatch change):** the missing `allowed-tools` on
+    `develop/audit-skills`, `develop/audit-commands`, and `develop/audit-subagents` is now **fixed**
+    — all three gained `allowed-tools: Read, Grep, Glob, Bash` as touched-file debt while their
+    descriptions were converted to the agent-preloaded dispatch-steering form. The `<quick_start>`
+    question for the 3 develop auditors plus the complex code auditors remains for the dedicated pass.
+
+  - **Verdict-toolchain path portability — marketplace-wide.** Every `audit-*` skill's
+    `<output_format>` / `<verdict_format>` cites the JSON schema as the bare path
+    `plugins/spec-tree/skills/audit/scripts/verdict.py` and names `emit_verdict.py` as the renderer.
+    The `develop:skill-auditor` gate flagged this as a consumer-portability concern (an installed
+    consumer tree resolves `plugins/` differently); the inline JSON schema block in each skill is
+    already self-contained, so the citation is removable. The deterministic `check-skills` /
+    reference-portability gates do not flag it, and the pattern is identical across ~15 skills
+    (touched and untouched), so the coherent fix is one marketplace-wide pass, not a per-touched-file
+    edit. Out of scope for the agent-only-audit-dispatch change; tracked here for that pass.
+
 **Verification gate:** `develop:skill-auditor` (`/audit-skills`) loads `agent-prompt-standards`;
 `develop:subagent-auditor` (`/audit-subagents`) governs the agent-definition files. Run both on
 changed targets; the deterministic PCRE `git grep` confirms the named-subject axis specifically.

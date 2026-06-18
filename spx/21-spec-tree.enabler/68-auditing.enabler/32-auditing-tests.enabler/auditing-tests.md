@@ -119,6 +119,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ### Compliance
 
+- ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: check what the test imports from the codebase as the first audit phase after testability passes — coupling is prerequisite to all other evidence analysis ([review])

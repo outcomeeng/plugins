@@ -10,6 +10,7 @@ The rust plugin contains 9 skills following the foundational + language-specific
 
 ### Compliance
 
+- ALWAYS: the `audit-rust*` skills are reached only by dispatching their auditor agent (`rust-code-auditor`, `rust-test-auditor`, `rust-architecture-auditor`, `rust-unsafe-auditor`); the main conversation does not invoke them in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: follow the foundational + language-specific pattern — core principles in `/test`, Rust-specific patterns in `/test-rust` ([review])
 - ALWAYS: use dependency injection instead of mocking — reality is the oracle ([review])
 - ALWAYS: the Rust plugin's testing skills (`/rust-test-standards`, `/test-rust`, `/audit-rust-tests`) teach that test infrastructure (harnesses, generators, fixtures) lives in a separate workspace-member crate (e.g., `product-testing/` at workspace root, Cargo package `product-testing`, Rust import path `product_testing`), declared as a `[dev-dependencies]` entry of consumers, with modules `product_testing::harnesses::*`, `product_testing::generators::*`, `product_testing::fixtures::*` — per `spx/15-test-infrastructure.pdr.md` ([review])
