@@ -20,6 +20,10 @@
       --accent-tok: oklch(0.550 0.130 250);
       --accent-wash: oklch(0.955 0.025 250);
       --st-specified: oklch(0.580 0.100 245);
+      --st-declared: oklch(0.700 0.020 255);
+      --st-passing: oklch(0.600 0.130 145);
+      --st-failing: oklch(0.580 0.190 25);
+      --st-unknown: oklch(0.820 0.010 255);
       --cat-outcome: oklch(0.560 0.110 80);
       --cat-outcome-w: oklch(0.950 0.045 85);
       --cat-adr: oklch(0.520 0.130 300);
@@ -208,6 +212,32 @@
       color: var(--cat-pdr);
       background: var(--cat-pdr-w);
     }
+    .state-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      background: var(--st-unknown);
+      border: 1px solid oklch(0.5 0.02 255 / 0.25);
+    }
+    .state-dot.declared {
+      background: var(--st-declared);
+    }
+    .state-dot.specified {
+      background: var(--st-specified);
+    }
+    .state-dot.passing {
+      background: var(--st-passing);
+    }
+    .state-dot.failing {
+      background: var(--st-failing);
+    }
+    .idx {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--muted);
+      flex: 0 0 auto;
+    }
     .title {
       flex: 1;
       padding: 2px 4px;
@@ -395,10 +425,24 @@
       const row = document.createElement("div");
       row.className = "row";
 
+      // Derived state (declared/specified/passing/failing) from the SPX
+      // projection; nodes created in-session carry none and render neutral.
+      const dot = document.createElement("span");
+      dot.className = "state-dot" + (node.state ? " " + node.state : "");
+      dot.title = node.state || "no state";
+      row.appendChild(dot);
+
       const kind = document.createElement("span");
       kind.className = "kind " + node.kind;
       kind.textContent = node.kind[0];
       row.appendChild(kind);
+
+      if (node.order != null) {
+        const idx = document.createElement("span");
+        idx.className = "idx";
+        idx.textContent = node.order;
+        row.appendChild(idx);
+      }
 
       const title = document.createElement("span");
       title.className = "title";
