@@ -1,4 +1,4 @@
-# Interviewing
+# Interview
 
 PROVIDES a domain-agnostic structured interview methodology — pre-analysis, decide-first reasoning, one-question-at-a-time coverage tracking, pushback, and structured options
 SO THAT every spec-tree skill that gathers requirements

@@ -1,14 +1,14 @@
 # Live interview — transport spike
 
 A standalone prototype of a real-time, bidirectional interview loop for the
-`spec-tree` `interviewing` skill, modelled on impeccable's `live` mode but
+`spec-tree` `interview` skill, modelled on impeccable's `live` mode but
 reimplemented in **Python 3.11 stdlib only** (the portability floor shipped
 skill scripts must meet — no Node, no third-party packages).
 
 This is a spike, deliberately **outside** `src/plugins/`: nothing here ships,
 nothing touches `dist/` or `just check`. It exists to de-risk the transport and
 the conflict model before any spec node is authored, and to carry the tests
-that the eventual `interviewing` outcome node will turn into `[test]` evidence.
+that the eventual `interview` outcome node will turn into `[test]` evidence.
 
 ## What it demonstrates
 
@@ -33,7 +33,7 @@ that the eventual `interviewing` outcome node will turn into `[test]` evidence.
 ## Run the tests
 
 ```bash
-cd prototypes/interviewing-live
+cd prototypes/interview-live
 python3 -m unittest discover -s tests -v
 ```
 
@@ -43,7 +43,7 @@ stop it; no process outlives a test.
 ## Drive it by hand
 
 ```bash
-cd prototypes/interviewing-live
+cd prototypes/interview-live
 python3 boot.py --port 0          # prints {openUrl, token, ...}; blocks (run backgrounded)
 # open the printed openUrl in a browser
 
@@ -84,7 +84,7 @@ client prints today. `state.py`, `server.py`'s HTTP+SSE core, and `shell.html`
 are unchanged across both models — which is why the launch decision can be
 deferred until the core is proven.
 
-## Folding into the `interviewing` spec node
+## Folding into the `interview` spec node
 
 The tests in `tests/` are written as the seed for `[test]`-lane evidence. When
 this graduates from a spike to a node:
@@ -93,5 +93,5 @@ this graduates from a spike to a node:
 - the question lifecycle and tree-integrity assertions move into the node's spec.
 - per CLAUDE.md, shipped script tests live in `outcomeeng_testing/`, not in a
   `tests/` dir inside the skill (which would ship to consumers).
-- the domain-agnostic loop stays in `interviewing`; spec-tree node semantics
+- the domain-agnostic loop stays in `interview`; spec-tree node semantics
   (enabler/outcome rules, sparse ordering) come from the calling spec-tree skill.
