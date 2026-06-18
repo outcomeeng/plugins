@@ -4,19 +4,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng.distribution.orchestration import (
+from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
+    DIST_DIFF_ARGV,
+    DIST_DIFF_MODULE_NAME,
+    ORCHESTRATION_VALIDATION_ARGV,
+)
+from outcomeeng.distribution.orchestration import (
     BUILD_RECIPE_NAME,
     CLAUDE_MARKETPLACE_PATH,
     CLAUDE_RUNTIME_ROOT,
     CODEX_MARKETPLACE_PATH,
     CODEX_RUNTIME_ROOT,
-    DIST_DIFF_ARGV,
-    DIST_DIFF_MODULE_NAME,
     JUSTFILE_PATH,
     LEFTHOOK_BUILD_COMMAND,
     LEFTHOOK_PATH,
-    ORCHESTRATION_VALIDATION_ARGV,
     claude_marketplace_plugin_root,
     claude_marketplace_plugin_sources,
     check_build_orchestration,

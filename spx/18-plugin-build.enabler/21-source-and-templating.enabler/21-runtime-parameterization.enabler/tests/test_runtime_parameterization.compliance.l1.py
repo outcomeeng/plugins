@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
     IMPLEMENTED,
     RuntimeTokenError,
-    Target,
     build,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader

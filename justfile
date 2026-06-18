@@ -4,13 +4,17 @@
 help:
     @just --list
 
-# Run Python tests
+# Run deterministic [test] evidence
 test *args:
-    uv run python -m pytest {{args}}
+    python3 -m outcomeeng.validation test -- {{args}}
 
-# Run Python tests with verbose output
+# Run deterministic [test] evidence with verbose pytest output captured by the recipe runner
 test-v *args:
-    uv run python -m pytest -v {{args}}
+    python3 -m outcomeeng.validation test -- -v {{args}}
+
+# Run deterministic validation only
+validation:
+    python3 -m outcomeeng.validation validation
 
 # Check plugin and marketplace manifests
 check-manifests:
@@ -41,26 +45,9 @@ fmt *args:
 fmt-check:
     dprint check
 
-# Run all checks with timing summary (signal-safe Python orchestrator)
+# Run validation, then test, through the signal-safe recipe orchestrator
 check:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Preflight: a healthy uv environment must import the toolchain before the gate
-    # runs. A stale .venv — most often one built on a Python the system no longer
-    # provides after an upgrade — makes every `uv run` step fail with an opaque
-    # error. Catch that here and point at the hard reset instead.
-    if ! uv_err="$(uv run python -c 'import outcomeeng' 2>&1)"; then
-        echo "✗ uv environment is broken: 'uv run python -c \"import outcomeeng\"' failed."
-        echo "$uv_err" | sed 's/^/    /'
-        echo ""
-        echo "  The .venv is likely stale or built on a Python that is no longer"
-        echo "  available (e.g. after a system Python upgrade). Hard-reset it with:"
-        echo ""
-        echo "      just reset-uv"
-        echo ""
-        exit 1
-    fi
-    uv run python -m outcomeeng.validation
+    python3 -m outcomeeng.validation check
 
 # Install lefthook git hooks
 hooks-install:

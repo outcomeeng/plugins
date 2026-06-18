@@ -9,38 +9,21 @@ from typing import Any, Final, cast
 
 import yaml  # type: ignore[import-untyped]
 
-from outcomeeng.distribution.build import DIST_DIR_NAME, Target
+from outcomeeng.distribution.contracts import (
+    BUILD_COMMAND_ARGV as _BUILD_COMMAND_ARGV,
+    DIST_DIR_NAME as _DIST_DIR_NAME,
+    DIST_DIFF_ARGV as _DIST_DIFF_ARGV,
+    SOURCE_ROOT_NAME as _SOURCE_ROOT_NAME,
+    Target as _Target,
+)
 
-SOURCE_ROOT_NAME: Final = "src"
-SOURCE_PLUGINS_DIR: Final = Path(SOURCE_ROOT_NAME) / "plugins"
+SOURCE_PLUGINS_DIR: Final = Path(_SOURCE_ROOT_NAME) / "plugins"
 
-DIST_ROOT_NAME: Final = DIST_DIR_NAME
-CLAUDE_DIST_PLUGINS_DIR: Final = Path(DIST_ROOT_NAME) / Target.CLAUDE.value
-CODEX_DIST_PLUGINS_DIR: Final = Path(DIST_ROOT_NAME) / Target.CODEX.value
+DIST_ROOT_NAME: Final = _DIST_DIR_NAME
+CLAUDE_DIST_PLUGINS_DIR: Final = Path(DIST_ROOT_NAME) / _Target.CLAUDE.value
+CODEX_DIST_PLUGINS_DIR: Final = Path(DIST_ROOT_NAME) / _Target.CODEX.value
 
 BUILD_RECIPE_NAME: Final = "build-skills"
-BUILD_MODULE_NAME: Final = "outcomeeng.distribution.build"
-BUILD_COMMAND_ARGV: Final = (
-    "uv",
-    "run",
-    "--no-cache",
-    "python",
-    "-m",
-    BUILD_MODULE_NAME,
-    SOURCE_ROOT_NAME,
-    DIST_ROOT_NAME,
-)
-DIST_DIFF_MODULE_NAME: Final = "outcomeeng.distribution.dist_diff"
-DIST_DIFF_ARGV: Final = ("uv", "run", "python", "-m", DIST_DIFF_MODULE_NAME)
-ORCHESTRATION_VALIDATION_ARGV: Final = (
-    "uv",
-    "run",
-    "python",
-    "-m",
-    "outcomeeng.validation.build_orchestration",
-    ".",
-)
-
 JUSTFILE_PATH: Final = Path("justfile")
 LEFTHOOK_PATH: Final = Path("lefthook.yml")
 CLAUDE_MARKETPLACE_PATH: Final = Path(".claude-plugin") / "marketplace.json"
@@ -53,7 +36,7 @@ CATALOG_PATHS: Final = {
 CLAUDE_RUNTIME_ROOT: Final = f"./{CLAUDE_DIST_PLUGINS_DIR.as_posix()}"
 CODEX_RUNTIME_ROOT: Final = f"./{CODEX_DIST_PLUGINS_DIR.as_posix()}"
 LEFTHOOK_BUILD_COMMAND: Final = (
-    f"just {BUILD_RECIPE_NAME} && {' '.join(DIST_DIFF_ARGV)}"
+    f"just {BUILD_RECIPE_NAME} && {' '.join(_DIST_DIFF_ARGV)}"
 )
 
 
@@ -146,10 +129,10 @@ def check_build_orchestration(root: Path) -> list[str]:
     recipe_names = just_recipe_names(justfile)
     if recipe_names.count(BUILD_RECIPE_NAME) != 1:
         errors.append(f"{JUSTFILE_PATH}: expected one {BUILD_RECIPE_NAME} recipe")
-    if BUILD_COMMAND_ARGV not in just_recipe_commands(justfile):
+    if _BUILD_COMMAND_ARGV not in just_recipe_commands(justfile):
         errors.append(
             f"{JUSTFILE_PATH}: {BUILD_RECIPE_NAME} must run "
-            f"{' '.join(BUILD_COMMAND_ARGV)}"
+            f"{' '.join(_BUILD_COMMAND_ARGV)}"
         )
 
     lefthook_config = load_lefthook_config(root / LEFTHOOK_PATH)

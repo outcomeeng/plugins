@@ -1,31 +1,43 @@
-"""The fixed step list for the marketplace's quality gate.
+"""The fixed recipe definitions for the marketplace verification gate.
 
-`STEPS` is intentionally a module-level constant rather than a config-driven
-list. Drift in the gate's composition is a regression the fixed tuple guards
-against.
+The primitive recipe step lists are intentionally module-level constants rather
+than config-driven lists. Drift in recipe composition is a regression the fixed
+tuples guard against.
 
 The compliance test enforces that the workflow lint, shell lint,
 `("ruff", "format", "--check")`, `("ruff", "check")`, the strict mypy package
 command, the pyright package command, and `("spx", "validation", "markdown")`
-appear in the declared step list.
+appear in the validation recipe. Pytest-backed `[test]` evidence belongs to
+the test recipe.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.build import TEXT_FILE_SUFFIXES
-from outcomeeng.distribution.orchestration import (
+from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
     DIST_DIFF_ARGV,
     ORCHESTRATION_VALIDATION_ARGV,
+    TEXT_FILE_SUFFIXES,
 )
-from outcomeeng.validation._model import Step
+from outcomeeng.validation._model import Recipe, Step
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 
+RECIPE_VALIDATION: Final = "validation"
+RECIPE_TEST: Final = "test"
+RECIPE_CHECK: Final = "check"
+RECIPE_AD_HOC: Final = "ad-hoc"
+VERIFICATION_TYPE_VALIDATION: Final = "validation"
+VERIFICATION_TYPE_TESTING: Final = "testing"
+PURPOSE_CONFORMANCE: Final = "conformance"
+PURPOSE_CORRECTNESS: Final = "correctness"
+
+UV_IMPORT_PREFLIGHT_ARGV: Final = ("uv", "run", "python", "-c", "import outcomeeng")
 ACTIONLINT_ARGV: Final = ("actionlint",)
 SHELLCHECK_ARGV: Final = (
     "uv",
@@ -92,11 +104,7 @@ def _reference_files() -> tuple[str, ...]:
 def runtime_token_files() -> tuple[str, ...]:
     # Authored source the build renders or inlines: plugin content and the
     # shared fragments plugin files include. A raw runtime token in either ships
-    # into a generated target, so both are enforced. The suffix set is the build's
-    # own TEXT_FILE_SUFFIXES — the files the build renders — so the lint's coverage
-    # cannot drift from what the build emits. Public — the runtime-token node's
-    # compliance test scans exactly this set so its "every authored file is
-    # enforced" claim cannot drift from what the gate feeds the validator.
+    # into a generated target, so both are enforced.
     roots = (_REPO_ROOT / "src" / "plugins", _REPO_ROOT / "src" / "_shared")
     return tuple(
         sorted(
@@ -109,7 +117,11 @@ def runtime_token_files() -> tuple[str, ...]:
     )
 
 
-STEPS: Final = (
+PREFLIGHT_STEPS: Final = (
+    Step(label="preflight-uv-import", argv=UV_IMPORT_PREFLIGHT_ARGV),
+)
+
+VALIDATION_STEPS: Final = (
     Step(label="build-skills", argv=BUILD_COMMAND_ARGV),
     Step(label="dist-diff", argv=DIST_DIFF_ARGV),
     Step(label="build-orchestration", argv=ORCHESTRATION_VALIDATION_ARGV),
@@ -185,5 +197,39 @@ STEPS: Final = (
     ),
     Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
     Step(label="spx-version", argv=SPX_VERSION_FLOOR_ARGV),
-    Step(label="pytest", argv=PYTEST_ARGV),
 )
+
+TEST_STEPS: Final = (Step(label="pytest", argv=PYTEST_ARGV),)
+
+VALIDATION_RECIPE: Final = Recipe(
+    name=RECIPE_VALIDATION,
+    verification_type=VERIFICATION_TYPE_VALIDATION,
+    purpose=PURPOSE_CONFORMANCE,
+    preflight_steps=PREFLIGHT_STEPS,
+    steps=VALIDATION_STEPS,
+)
+
+TEST_RECIPE: Final = Recipe(
+    name=RECIPE_TEST,
+    verification_type=VERIFICATION_TYPE_TESTING,
+    purpose=PURPOSE_CORRECTNESS,
+    preflight_steps=PREFLIGHT_STEPS,
+    steps=TEST_STEPS,
+)
+
+CHECK_RECIPES: Final = (VALIDATION_RECIPE, TEST_RECIPE)
+STEPS: Final = (*VALIDATION_STEPS, *TEST_STEPS)
+
+
+def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:
+    """Return the test recipe with caller-provided pytest arguments appended."""
+
+    if not pytest_args:
+        return TEST_RECIPE
+    return Recipe(
+        name=TEST_RECIPE.name,
+        verification_type=TEST_RECIPE.verification_type,
+        purpose=TEST_RECIPE.purpose,
+        preflight_steps=TEST_RECIPE.preflight_steps,
+        steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *pytest_args)),),
+    )

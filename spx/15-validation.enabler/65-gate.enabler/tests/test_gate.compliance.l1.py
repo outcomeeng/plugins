@@ -23,8 +23,11 @@ governed by these assertions.
 from __future__ import annotations
 
 import ast
+import io
+import json
 import inspect
 from pathlib import Path
+from typing import cast
 from typing import Final
 
 from outcomeeng import validation as pkg
@@ -32,19 +35,39 @@ from outcomeeng.validation import (
     HOOK_SAFETY_ARGV,
     FMT_CHECK_ARGV,
     MYPY_ARGV,
+    PURPOSE_CONFORMANCE,
+    PURPOSE_CORRECTNESS,
     PYRIGHT_ARGV,
+    PYTEST_ARGV,
+    RECIPE_CHECK,
+    RECIPE_TEST,
+    RECIPE_VALIDATION,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
     SPX_MARKDOWN_ARGV,
     STEPS,
+    SUMMARY_KEY_PURPOSE,
+    SUMMARY_KEY_RECIPE,
+    SUMMARY_KEY_VERIFICATION_TYPE,
+    TEST_RECIPE,
+    TEST_STEPS,
+    VALIDATION_RECIPE,
+    VALIDATION_STEPS,
+    VERIFICATION_TYPE_TESTING,
+    VERIFICATION_TYPE_VALIDATION,
     Step,
+    run_check,
+    run_recipe,
 )
+from outcomeeng_testing.harnesses.gate import RecordingSpawner
 
 STATIC_ANALYSIS_ARGVS: Final = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
+PASS: Final = 0
+HIGH_VOLUME_CHILD_OUTPUT: Final = "\n".join("captured child output" for _ in range(200))
 
 
 class TestDeclaredSteps:
-    """STEPS must include the declared static-analysis and markdown validators."""
+    """Validation recipe includes validators; test recipe owns pytest."""
 
     def test_steps_is_non_empty_tuple_of_step(self) -> None:
         assert isinstance(STEPS, tuple)
@@ -52,22 +75,93 @@ class TestDeclaredSteps:
         for step in STEPS:
             assert isinstance(step, Step)
 
+    def test_validation_recipe_reports_validation_conformance(self) -> None:
+        assert VALIDATION_RECIPE.name == RECIPE_VALIDATION
+        assert VALIDATION_RECIPE.verification_type == VERIFICATION_TYPE_VALIDATION
+        assert VALIDATION_RECIPE.purpose == PURPOSE_CONFORMANCE
+
+    def test_test_recipe_reports_testing_correctness(self) -> None:
+        assert TEST_RECIPE.name == RECIPE_TEST
+        assert TEST_RECIPE.verification_type == VERIFICATION_TYPE_TESTING
+        assert TEST_RECIPE.purpose == PURPOSE_CORRECTNESS
+
     def test_steps_includes_fmt_check(self) -> None:
-        assert any(step.argv == FMT_CHECK_ARGV for step in STEPS)
+        assert any(step.argv == FMT_CHECK_ARGV for step in VALIDATION_STEPS)
 
     def test_steps_includes_ruff_check(self) -> None:
-        assert any(step.argv == RUFF_CHECK_ARGV for step in STEPS)
+        assert any(step.argv == RUFF_CHECK_ARGV for step in VALIDATION_STEPS)
 
     def test_steps_includes_ruff_format(self) -> None:
-        assert any(step.argv == RUFF_FORMAT_ARGV for step in STEPS)
+        assert any(step.argv == RUFF_FORMAT_ARGV for step in VALIDATION_STEPS)
 
     def test_steps_include_mypy_strict_and_pyright(self) -> None:
-        step_argvs = {step.argv for step in STEPS}
+        step_argvs = {step.argv for step in VALIDATION_STEPS}
         assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
         assert "--strict" in MYPY_ARGV
 
     def test_steps_includes_spx_validation_markdown(self) -> None:
-        assert any(step.argv == SPX_MARKDOWN_ARGV for step in STEPS)
+        assert any(step.argv == SPX_MARKDOWN_ARGV for step in VALIDATION_STEPS)
+
+    def test_validation_recipe_excludes_pytest_step(self) -> None:
+        assert PYTEST_ARGV not in {step.argv for step in VALIDATION_STEPS}
+
+    def test_test_recipe_executes_only_pytest_evidence_step(self) -> None:
+        assert TEST_STEPS == (Step(label="pytest", argv=PYTEST_ARGV),)
+
+
+class TestVerificationVocabulary:
+    """The check wrapper remains orchestration, not a verification type."""
+
+    def test_check_name_is_wrapper_only(self) -> None:
+        assert RECIPE_CHECK not in {
+            VALIDATION_RECIPE.verification_type,
+            TEST_RECIPE.verification_type,
+        }
+
+    def test_check_summary_has_no_verification_type(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        summary_path = tmp_path / "check-summary.json"
+        spawner = RecordingSpawner(
+            exit_codes=[PASS]
+            * (len(VALIDATION_RECIPE.preflight_steps) + len(VALIDATION_RECIPE.steps))
+        )
+        sink = io.StringIO()
+
+        exit_code = run_check(
+            spawner=spawner,
+            sink=sink,
+            recipes=(VALIDATION_RECIPE,),
+            summary_path=summary_path,
+        )
+
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        assert isinstance(summary, dict)
+        typed_summary = cast("dict[str, object]", summary)
+        assert exit_code == PASS
+        assert typed_summary[SUMMARY_KEY_RECIPE] == RECIPE_CHECK
+        assert typed_summary[SUMMARY_KEY_VERIFICATION_TYPE] is None
+        assert typed_summary[SUMMARY_KEY_PURPOSE] is None
+
+
+class TestBoundedLiveOutput:
+    """Passing child output is captured and omitted from the live sink."""
+
+    def test_passing_child_output_is_not_streamed_line_by_line(self) -> None:
+        recipe = TEST_RECIPE
+        spawner = RecordingSpawner(
+            exit_codes=[PASS, PASS],
+            outputs=[HIGH_VOLUME_CHILD_OUTPUT, HIGH_VOLUME_CHILD_OUTPUT],
+        )
+        sink = io.StringIO()
+
+        exit_code = run_recipe(spawner=spawner, sink=sink, recipe=recipe)
+
+        output = sink.getvalue()
+        assert exit_code == PASS
+        assert HIGH_VOLUME_CHILD_OUTPUT not in output
+        assert len(output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
 
     def test_steps_includes_hook_safety(self) -> None:
         assert any(step.argv == HOOK_SAFETY_ARGV for step in STEPS)

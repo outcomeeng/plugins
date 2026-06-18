@@ -1,13 +1,13 @@
-"""Signal-safe quality-gate orchestrator for the marketplace.
+"""Signal-safe verification recipe orchestrator for the marketplace.
 
 Public surface:
 
-- `Step` — frozen dataclass naming a step's label and argv
-- `STEPS` — the declared step list
+- `Step` and `Recipe` — frozen dataclasses naming steps and recipe metadata
+- `VALIDATION_RECIPE`, `TEST_RECIPE`, `CHECK_RECIPES` — declared recipe surfaces
 - `*_ARGV` and output-label constants — source-owned values imported by tests
 - `ProcessHandle`, `ProcessSpawner` — DI Protocols for subprocess creation
 - `ProductionSpawner` — real `subprocess.Popen` adapter
-- `run` — orchestration entry point
+- `run_recipe`, `run_check`, `run` — orchestration entry points
 """
 
 from __future__ import annotations
@@ -15,51 +15,135 @@ from __future__ import annotations
 from outcomeeng.validation._engine import (
     FAILURE_EXCERPT_LINE_LIMIT,
     FULL_LOG_LABEL,
+    PHASE_COMPLETE,
+    PHASE_PREFLIGHT,
+    PHASE_RECIPE,
+    RUN_FAIL_STATUS,
+    RUN_PASS_STATUS,
+    SUMMARY_KEY_ARGV,
+    SUMMARY_KEY_DURATION_SECONDS,
+    SUMMARY_KEY_EXIT_CODE,
+    SUMMARY_KEY_EXCERPT,
+    SUMMARY_KEY_LABEL,
+    SUMMARY_KEY_LOG_PATH,
+    SUMMARY_KEY_PHASE,
+    SUMMARY_KEY_PURPOSE,
+    SUMMARY_KEY_RECIPE,
+    SUMMARY_KEY_RECIPES,
+    SUMMARY_KEY_STATUS,
+    SUMMARY_KEY_STEPS,
+    SUMMARY_KEY_SUMMARY_PATH,
+    SUMMARY_KEY_VERIFICATION_TYPE,
+    SUMMARY_PATH_LABEL,
     STEP_FAIL_STATUS,
     STEP_PASS_STATUS,
     run,
+    run_check,
+    run_recipe,
 )
 from outcomeeng.validation._model import (
     ProcessHandle,
     ProcessSpawner,
+    Recipe,
     Step,
 )
 from outcomeeng.validation._spawner import ProductionSpawner
+from outcomeeng.validation._summary_schema import (
+    AD_HOC_SUMMARY_SCHEMA,
+    CHECK_SUMMARY_SCHEMA,
+    GATE_SUMMARY_SCHEMA,
+    PRIMITIVE_SUMMARY_SCHEMA,
+    assert_json_schema,
+)
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
-    HOOK_SAFETY_ARGV,
+    CHECK_RECIPES,
     FMT_CHECK_ARGV,
+    HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     PYTHON_SOURCE_PATHS,
     PYTEST_ARGV,
+    PURPOSE_CONFORMANCE,
+    PURPOSE_CORRECTNESS,
+    RECIPE_AD_HOC,
+    RECIPE_CHECK,
+    RECIPE_TEST,
+    RECIPE_VALIDATION,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
     SHELLCHECK_ARGV,
     SPX_MARKDOWN_ARGV,
     STEPS,
+    TEST_RECIPE,
+    TEST_STEPS,
+    VALIDATION_RECIPE,
+    VALIDATION_STEPS,
+    VERIFICATION_TYPE_TESTING,
+    VERIFICATION_TYPE_VALIDATION,
 )
 
 __all__ = [
     "ACTIONLINT_ARGV",
-    "HOOK_SAFETY_ARGV",
+    "AD_HOC_SUMMARY_SCHEMA",
+    "CHECK_RECIPES",
+    "CHECK_SUMMARY_SCHEMA",
     "FMT_CHECK_ARGV",
     "FAILURE_EXCERPT_LINE_LIMIT",
     "FULL_LOG_LABEL",
+    "GATE_SUMMARY_SCHEMA",
+    "HOOK_SAFETY_ARGV",
     "MYPY_ARGV",
+    "PHASE_COMPLETE",
+    "PHASE_PREFLIGHT",
+    "PHASE_RECIPE",
     "PYRIGHT_ARGV",
     "PYTHON_SOURCE_PATHS",
     "PYTEST_ARGV",
+    "PURPOSE_CONFORMANCE",
+    "PURPOSE_CORRECTNESS",
     "RUFF_CHECK_ARGV",
     "RUFF_FORMAT_ARGV",
+    "RECIPE_CHECK",
+    "RECIPE_AD_HOC",
+    "RECIPE_TEST",
+    "RECIPE_VALIDATION",
+    "RUN_FAIL_STATUS",
+    "RUN_PASS_STATUS",
     "SHELLCHECK_ARGV",
     "SPX_MARKDOWN_ARGV",
     "STEPS",
+    "SUMMARY_KEY_ARGV",
+    "SUMMARY_KEY_DURATION_SECONDS",
+    "SUMMARY_KEY_EXIT_CODE",
+    "SUMMARY_KEY_EXCERPT",
+    "SUMMARY_KEY_LABEL",
+    "SUMMARY_KEY_LOG_PATH",
+    "SUMMARY_KEY_PHASE",
+    "SUMMARY_KEY_PURPOSE",
+    "SUMMARY_KEY_RECIPE",
+    "SUMMARY_KEY_RECIPES",
+    "SUMMARY_KEY_STATUS",
+    "SUMMARY_KEY_STEPS",
+    "SUMMARY_KEY_SUMMARY_PATH",
+    "SUMMARY_KEY_VERIFICATION_TYPE",
+    "SUMMARY_PATH_LABEL",
     "STEP_FAIL_STATUS",
     "STEP_PASS_STATUS",
+    "TEST_RECIPE",
+    "TEST_STEPS",
+    "VALIDATION_RECIPE",
+    "VALIDATION_STEPS",
+    "VERIFICATION_TYPE_TESTING",
+    "VERIFICATION_TYPE_VALIDATION",
     "ProcessHandle",
     "ProcessSpawner",
     "ProductionSpawner",
+    "PRIMITIVE_SUMMARY_SCHEMA",
+    "Recipe",
     "Step",
+    "assert_json_schema",
     "run",
+    "run_check",
+    "run_recipe",
 ]

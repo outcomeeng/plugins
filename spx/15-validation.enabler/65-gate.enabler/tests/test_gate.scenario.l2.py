@@ -11,6 +11,7 @@ Marked `l2` because the assertion requires a real OS process group, real
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -20,6 +21,8 @@ from pathlib import Path
 from typing import Final
 
 import pytest
+
+from outcomeeng.validation import ProductionSpawner, SUMMARY_PATH_LABEL
 
 POLL_INTERVAL_SECONDS: Final = 0.05
 ORCHESTRATOR_STARTUP_SECONDS: Final = 3.0
@@ -117,7 +120,50 @@ def test_signal_terminates_process_group_within_grace(
 
         orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
         assert orchestrator.returncode == 128 + delivered_signal
+        assert orchestrator.stdout is not None
+        stdout_text = orchestrator.stdout.read().decode()
+        summary_line = next(
+            line
+            for line in stdout_text.splitlines()
+            if line.startswith(SUMMARY_PATH_LABEL)
+        )
+        summary_path = Path(summary_line.removeprefix(SUMMARY_PATH_LABEL).strip())
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        assert summary["status"] == "fail"
+        assert summary["exit_code"] == 128 + delivered_signal
+        assert summary["steps"][0]["status"] == "fail"
+        assert summary["steps"][0]["exit_code"] == 128 + delivered_signal
+        assert "log_path" in summary["steps"][0]
     finally:
         if orchestrator.poll() is None:
             os.killpg(os.getpgid(orchestrator.pid), signal.SIGKILL)
             orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
+
+
+def test_production_spawner_captures_child_output(tmp_path: Path) -> None:
+    output_path = tmp_path / "child.log"
+
+    handle = ProductionSpawner().spawn(
+        (sys.executable, "-c", "print('captured')"),
+        output_path,
+    )
+
+    assert handle.wait() == 0
+    assert output_path.read_text(encoding="utf-8") == "captured\n"
+
+
+def test_production_spawner_signal_to_group_terminates_child(tmp_path: Path) -> None:
+    output_path = tmp_path / "sleep.log"
+    handle = ProductionSpawner().spawn(
+        (sys.executable, "-c", "import time; time.sleep(30)"),
+        output_path,
+    )
+
+    try:
+        assert handle.poll() is None
+        handle.send_signal_to_group(signal.SIGTERM)
+        assert handle.wait() != 0
+    finally:
+        if handle.poll() is None:
+            handle.send_signal_to_group(signal.SIGKILL)
+            handle.wait()
