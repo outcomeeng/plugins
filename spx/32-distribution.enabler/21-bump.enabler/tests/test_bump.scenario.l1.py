@@ -18,6 +18,8 @@ Behaviour is observed through recording doubles in
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from outcomeeng.distribution.bump import (
@@ -29,6 +31,7 @@ from outcomeeng.distribution.bump import (
     ManifestRecord,
     Mode,
     Segment,
+    _real_change_probe,
     bump,
 )
 from outcomeeng_testing.generators.bump import (
@@ -44,6 +47,7 @@ from outcomeeng_testing.harnesses.bump import (
     ScriptedChangeProbe,
     ScriptedContentProbe,
     ScriptedManifestReader,
+    build_repo_with_untracked_new_skill,
 )
 
 BASE_REF = "origin/main"
@@ -521,3 +525,18 @@ def test_explicit_segment_patch_overrides_detected_minor_with_warning(
     # Warning surfaces the discrepancy on stderr.
     assert plugin in captured.err
     assert "minor" in captured.err
+
+
+def test_real_change_probe_detects_untracked_new_skill_as_added(
+    tmp_path: pathlib.Path,
+) -> None:
+    handle = build_repo_with_untracked_new_skill(tmp_path / "repo")
+
+    changes = _real_change_probe(handle.base_ref, cwd=handle.repo)
+
+    by_path = {change.path: change for change in changes.get(handle.plugin, ())}
+    # The tracked modification is detected, as it always was...
+    assert by_path[handle.tracked_modified_path].status is FileStatus.MODIFIED
+    # ...and the untracked new skill is now detected, tagged Added, rather than
+    # missed by the diff against the base.
+    assert by_path[handle.untracked_added_path].status is FileStatus.ADDED

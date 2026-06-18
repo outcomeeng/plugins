@@ -371,8 +371,10 @@ def _replace_version(content: str, new_version: str) -> str:
     return new_content
 
 
-def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
-    result = subprocess.run(
+def _real_change_probe(
+    base_ref: str, *, cwd: Path | None = None
+) -> Mapping[str, tuple[ChangedPath, ...]]:
+    diff = subprocess.run(
         [
             "git",
             "diff",
@@ -383,17 +385,34 @@ def _real_change_probe(base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]:
             base_ref,
             "--",
         ],
+        cwd=cwd,
         capture_output=True,
         text=True,
         check=True,
     )
-    changes: dict[str, list[ChangedPath]] = {}
-    parsed_changes = tuple(
+    tracked = tuple(
         change
-        for line in result.stdout.splitlines()
+        for line in diff.stdout.splitlines()
         if (change := _parse_diff_line(line)) is not None
     )
-    for parsed_change in parsed_changes:
+    # `git diff` against the base sees only tracked changes; a new skill,
+    # command, or agent that is not yet committed is untracked and invisible to
+    # it. Enumerate untracked, non-ignored files under the plugins prefix and
+    # tag each Added, so the segment reflects the change the branch will commit.
+    others = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", SOURCE_PLUGINS_DIR],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    untracked = tuple(
+        ChangedPath(status=FileStatus.ADDED, path=path)
+        for line in others.stdout.splitlines()
+        if (path := line.strip())
+    )
+    changes: dict[str, list[ChangedPath]] = {}
+    for parsed_change in (*tracked, *untracked):
         parts = parsed_change.path.split("/")
         source_parts = SOURCE_PLUGINS_DIR.split("/")
         if (
