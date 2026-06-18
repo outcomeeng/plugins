@@ -162,7 +162,7 @@ Integrate base movement only by rebase through `/sync-base`. The same prohibitio
 
 The local `review-changes` gate is the author-side, pre-push instance of the same reviewing kind the CI review runs post-push — the two are the same class of gate on opposite sides of each push. Invoke it the way CI invokes its reviewer, passing nothing that narrows it:
 
-- **Pass only the repository/worktree and the diff range.** `review-changes` resolves the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, where `head_ref` defaults to `HEAD`); the caller supplies the repository/worktree and, only when it must be made explicit, the base ref. No file list, no changed-area summary, no "the important part is …".
+- **Let the review resolve its own scope.** `review-changes` self-discovers the worktree it runs in and computes the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, `head_ref` defaulting to `HEAD` and `base_ref` to `origin/HEAD`). The caller makes the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and passes nothing else — no file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
 - **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the standards skills) and the shared taxonomy itself.
@@ -388,7 +388,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - A managing-flow pass that finds the branch behind `origin/<base>` rebases it per `<base_sync>` before driving the work queue.
 - The PR opens `ready_for_review` once `REVIEW_READINESS` holds — deterministic verification passes and the local review has converged — with no draft phase as a gating mechanism (a stacked PR held draft per `<branch_topology>` is the one exception).
 - Both `REVIEW_READINESS` predicates — deterministic verification and a converged local review — are re-established on the diff every push publishes: the opening push and every content-changing follow-up push; a push that only rebased onto an advanced base re-establishes them scoped by the `<base_sync>` preservation proof.
-- The local `review-changes` gate is invoked per `<local_review_invocation>` — only the repository/worktree and diff range are passed, with no interpretive scope, severity pre-filter, or emphasis steering.
+- The local `review-changes` gate is invoked per `<local_review_invocation>` — the review resolves its own scope, with no interpretive scope, severity pre-filter, or emphasis steering added.
 - Waiting for CI review or checks uses the exact PR-check wait command from `<pr_check_wait>`.
 - All three surfaces in `<review_inspection>` are inspected after every push, with `comments` always present in the `gh pr view --json` field list.
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and acted on by validity and phase, never by severity.
