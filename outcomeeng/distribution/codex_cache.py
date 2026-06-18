@@ -2,19 +2,24 @@
 
 The maintainer refresh path requires Codex to use the same local marketplace
 source as Claude Code, reinstalls each installed plugin from that local source,
-then reconciles the cache for each refreshed plugin against the set of versions
-published to the plugin's manifest within the configured window (default ten
-days). The symlink target is the complete real cache directory named with the
-version Codex reports as installed for that plugin; in-window versions other
-than the installed one become symlinks pointing at it, versions outside the
-window are removed, and plugins absent from the refreshed set have their cache
-directory pruned in full. When refresh leaves no complete real directory for the
-Codex-reported installed version, every compatibility symlink for the plugin is
-removed and none is created -- a symlink to a non-current directory would
-resolve a version to stale content. The preservation set is derived from git
-history, not from the pre-refresh cache snapshot. A single bypassed recipe
-invocation has no permanent effect -- the next invocation reconstructs the
-symlink set from the same authoritative source.
+then reconciles the cache for each refreshed plugin. The symlink target is the
+complete real cache directory named with the version Codex reports as installed
+for that plugin. Every version already present in the cache other than the
+installed one becomes a symlink pointing at it -- a present version is never
+removed for falling outside the publication window, so a session started on it
+keeps resolving its advertised skill cache path. Versions published within the
+configured window (default ten days) but absent from the cache are recreated as
+symlinks for chain recovery, and plugins absent from the refreshed set have
+their cache directory pruned in full. Each preserved symlink's modification time
+is refreshed on every run so a stale-symlink check measures time since the last
+reconciliation, not time since publication. When refresh leaves no complete real
+directory for the Codex-reported installed version, every compatibility symlink
+for the plugin is removed and none is created -- a symlink to a non-current
+directory would resolve a version to stale content. The preservation set is
+derived from the versions present in the cache and the published git history,
+not from a hardcoded list. A single bypassed recipe invocation has no permanent
+effect -- the next invocation reconstructs the symlink set from the same
+authoritative source.
 
 Usage::
 
@@ -385,21 +390,22 @@ def refresh_installed_plugins(
             )
             continue
 
-        keep_versions = in_window | {current_real.name}
-        pruned_links.extend(
-            _prune_out_of_window_paths(plugin_dir, keep_versions, dry_run=dry_run)
-        )
-        pruned_links.extend(
-            _prune_non_target_real_dirs(
-                plugin_dir,
-                current_real.name,
-                keep_versions=keep_versions,
-                dry_run=dry_run,
-            )
-        )
+        # Preserve every version already present in the cache by retargeting it to
+        # a symlink at the installed version, and recreate any in-window version
+        # absent from the cache (chain recovery). A present version is never pruned
+        # for falling outside the publication window, so a session started on that
+        # version keeps resolving its advertised skill cache path.
+        # Only versioned directories and symlinks are cache entries; skip a stray
+        # regular file (e.g. .DS_Store) so it is never treated as a version.
+        present_versions = {
+            entry.name
+            for entry in plugin_dir.iterdir()
+            if entry.is_symlink() or entry.is_dir()
+        }
+        ensure_versions = (present_versions | in_window) - {current_real.name}
         linked_versions.extend(
-            _ensure_in_window_symlinks(
-                plugin_dir, current_real, in_window, dry_run=dry_run
+            _ensure_compatibility_symlinks(
+                plugin_dir, current_real, ensure_versions, dry_run=dry_run
             )
         )
 
@@ -486,42 +492,27 @@ def _prune_non_target_real_dirs(
     return pruned
 
 
-def _prune_out_of_window_paths(
-    plugin_dir: Path,
-    keep_versions: frozenset[str],
-    *,
-    dry_run: bool,
-) -> list[Path]:
-    pruned: list[Path] = []
-    for entry in sorted(plugin_dir.iterdir()):
-        if entry.name in keep_versions:
-            continue
-        if not entry.is_symlink():
-            if not entry.is_dir():
-                continue
-            if not dry_run:
-                shutil.rmtree(entry)
-            pruned.append(entry)
-            continue
-        if not dry_run:
-            entry.unlink()
-        pruned.append(entry)
-    return pruned
-
-
-def _ensure_in_window_symlinks(
+def _ensure_compatibility_symlinks(
     plugin_dir: Path,
     current_real: Path,
-    in_window: frozenset[str],
+    versions: set[str],
     *,
     dry_run: bool,
 ) -> list[Path]:
     linked: list[Path] = []
-    for version in sorted(in_window):
+    for version in sorted(versions):
         if version == current_real.name:
             continue
         target_path = plugin_dir / version
         if _is_symlink_to(target_path, current_real):
+            # Already correct. Refresh the symlink's own modification time so a
+            # stale-symlink check measures time since this reconciliation rather
+            # than time since the version was published -- without the refresh an
+            # infrequently-bumped plugin's preserved links would age past the
+            # stale cutoff and fail validation.
+            if not dry_run:
+                os.utime(target_path, follow_symlinks=False)
+            linked.append(target_path)
             continue
         if os.path.lexists(target_path):
             if not target_path.is_symlink():
