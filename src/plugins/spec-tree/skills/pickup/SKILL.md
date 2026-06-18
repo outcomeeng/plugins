@@ -88,7 +88,7 @@ Sessions are organized in `.spx/sessions/` in the **root worktree** (gitignored,
 └── archive/   # Completed
 ```
 
-Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS` includes a token in this format (or with a trailing `.md` suffix as in `YYYY-MM-DD_HH-MM-SS.md`), treat that token as the session identifier and act on it with `spx session show <id>` or `spx session pickup <id>` before validating any accompanying cache paths or markdown link targets. Priority order: `high` > `medium` > `low` (oldest first within same priority). The CLI handles atomic operations — NEVER touch session files manually except to read them. Multiple agents can run `/pickup` simultaneously; the CLI prevents race conditions.
+Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS` includes a token in this format (or with a trailing `.md` suffix as in `YYYY-MM-DD_HH-MM-SS.md`), treat that token as the session identifier and act on it with `spx session show <id>` or `spx session pickup <id>` before validating any accompanying cache paths or markdown link targets. Priority order: `high` > `medium` > `low` (oldest first within same priority). The CLI handles atomic operations — NEVER touch session files manually except to read them. Multiple Claude sessions can run `/pickup` simultaneously; the CLI prevents race conditions.
 
 </session_management>
 
@@ -154,6 +154,8 @@ Use the `id` attribute on `<PICKUP_CLAIM>` as the canonical identifier for the c
 
 Once claimed, follow `${CLAUDE_SKILL_DIR}/workflows/pickup.md` to process the session.
 
+The workflow invokes `/understand` immediately after claim markers and before it processes session details. Node-local `PLAN.md` and `ISSUES.md` content is read by `/contextualize`, not by pre-context pickup steps.
+
 </claim>
 
 <error_handling>
@@ -167,7 +169,7 @@ Use `/handoff` to create a handoff document.
 **Only doing sessions exist**:
 
 ```
-Found only doing sessions — these are claimed by active agents.
+Found only doing sessions — these are claimed by active Claude sessions.
 ```
 
 Present options via `AskUserQuestion`:
@@ -215,15 +217,16 @@ A successful pickup:
 - [ ] Running CLAIMED_SESSIONS marker emitted as `<CLAIMED_SESSIONS ids="...">` including the newly claimed session id
 - [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
-- [ ] Skills checklist presented BEFORE any work starts
+- [ ] `/understand` invoked immediately after claim markers and before session details are processed
+- [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
 - [ ] Each anchored node's status presented
-- [ ] PLAN.md / ISSUES.md checked and read if present
+- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Agent knows which skills to invoke and which to avoid
+- [ ] Claude knows which skills to invoke and which to avoid
 
 </success_criteria>

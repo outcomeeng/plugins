@@ -12,5 +12,6 @@ CAN select the supported flags and read the current session queue at the moment 
 - ALWAYS: the `/pickup` skill declares `argument-hint: "[--list] [--auto-continue]"` in its frontmatter ([test](tests/test_skill_surface.compliance.l1.py))
 - ALWAYS: the `/handoff` skill injects `spx session list` into its context block, surfacing the session queue at invocation ([test](tests/test_skill_surface.compliance.l1.py))
 - ALWAYS: the `/pickup` skill injects `spx session todo` into its context block, surfacing available sessions at invocation ([test](tests/test_skill_surface.compliance.l1.py))
+- ALWAYS: the `/pickup` workflow invokes `/understand` before processing session details, and leaves node-local `PLAN.md` / `ISSUES.md` content reads to `/contextualize` before those coordination notes steer work ([test](tests/test_skill_surface.compliance.l1.py))
 - NEVER: expose the `/handoff` or `/pickup` session workflows through a slash-command shim — session workflows are reached only through their skills ([test](tests/test_skill_surface.compliance.l1.py))
 - ALWAYS: `--prune` deletes archive sessions only after the canonical continuation is written ([review])
