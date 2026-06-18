@@ -113,16 +113,19 @@ class Preservation:
     """Git facts a caller reads to decide which pre-push readiness survives a sync.
 
     Emitted only on a clean outcome (``rebased`` or ``already_current``). All
-    OIDs are full, unabbreviated hashes. ``base_delta_paths`` are the files the
-    base advanced over; ``branch_paths_before``/``branch_paths_after`` are the
-    branch's own changed paths against the old and new base. ``path_overlap`` is
-    their intersection with the base delta. ``branch_patch_changed`` is whether
-    the branch's patch identity differs across the sync. ``branch_diff_unchanged``
-    is the git-only reuse signal: the branch patch is unchanged and nothing in
-    the base delta overlaps the branch — a caller still ANDs its own
-    governance-surface check before reusing a prior local review. A field is
-    ``None`` when a required OID could not be resolved (for example no pre-fetch
-    remote-tracking ref), in which case ``branch_diff_unchanged`` is ``False``.
+    OIDs are full, unabbreviated hashes. ``old_base_oid`` is the branch's fork
+    point from the base — the merge-base of the pre-rebase HEAD and the current
+    base — so ``base_delta_paths`` reports the files the base advanced over since
+    the branch diverged, accurate whether or not the caller pre-fetched.
+    ``branch_paths_before``/``branch_paths_after`` are the branch's own changed
+    paths against the fork point and the new base. ``path_overlap`` is the base
+    delta's intersection with the branch's paths. ``branch_patch_changed`` is
+    whether the branch's patch identity differs across the sync.
+    ``branch_diff_unchanged`` is the git-only reuse signal: the branch patch is
+    unchanged and nothing in the base delta overlaps the branch — a caller still
+    ANDs its own governance-surface check before reusing a prior local review. A
+    field is ``None`` when a required OID could not be resolved, in which case
+    ``branch_diff_unchanged`` is ``False``.
 
     This proof scopes pre-push local verification only; it never satisfies a
     merge gate. Validation-lane mapping over ``base_delta_paths`` and the
@@ -220,6 +223,13 @@ def _git(
 def _rev(repo: pathlib.Path, ref: str) -> str | None:
     """Resolve ``ref`` to a full OID, or ``None`` when it does not resolve."""
     result = _git(repo, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}")
+    oid = result.stdout.strip()
+    return oid if result.returncode == 0 and oid else None
+
+
+def _merge_base(repo: pathlib.Path, a: str, b: str) -> str | None:
+    """Return the merge-base OID of ``a`` and ``b``, or ``None`` when none exists."""
+    result = _git(repo, "merge-base", a, b)
     oid = result.stdout.strip()
     return oid if result.returncode == 0 and oid else None
 
@@ -351,10 +361,9 @@ def sync_base(
             "detached HEAD: no branch to rebase",
         )
 
-    # Capture pre-fetch base and pre-rebase HEAD for the preservation proof, so a
-    # clean outcome can report what the base advanced over and whether the
-    # branch's own changes survived unchanged.
-    old_base_oid = _rev(repo, remote_ref)
+    # Capture the pre-rebase HEAD for the preservation proof; the base fork point
+    # is derived after the fetch (below) so the base delta stays accurate even
+    # when the caller already fetched the base.
     old_head_oid = _rev(repo, "HEAD")
 
     if fetch:
@@ -390,6 +399,15 @@ def sync_base(
             f"cannot compute commits behind {remote_ref}: {behind.stderr.strip()}",
         )
     new_base_oid = _rev(repo, remote_ref)
+    # Anchor the base delta at the branch's fork point from the base — the
+    # merge-base of the pre-rebase HEAD and the current base. This is stable
+    # whether or not the caller pre-fetched, where the pre-fetch remote ref would
+    # already equal the post-fetch base and report an empty base delta.
+    old_base_oid = (
+        _merge_base(repo, old_head_oid, new_base_oid)
+        if old_head_oid and new_base_oid
+        else None
+    )
     if int(behind.stdout.strip() or "0") == 0:
         return SyncBaseResult(
             SyncStatus.ALREADY_CURRENT,

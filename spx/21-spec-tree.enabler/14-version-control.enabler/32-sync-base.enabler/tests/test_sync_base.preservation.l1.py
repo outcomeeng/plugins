@@ -25,6 +25,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_current_repo,
     build_overlapping_base_repo,
     build_rename_base_repo,
+    fetch_base,
     load_sync_base_module,
 )
 
@@ -91,6 +92,28 @@ def test_already_current_preserves_all_readiness(
     assert proof.branch_diff_unchanged is True
     # HEAD is untouched by an already-current sync.
     assert proof.old_head_oid == proof.new_head_oid
+
+
+def test_base_delta_accurate_when_caller_prefetched(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_behind_base_repo(_root(tmp_path))
+    # The caller already fetched the base before invoking sync-base, so the
+    # remote-tracking ref already points at the advanced base.
+    fetch_base(handle.repo)
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    # Anchoring the base delta at the branch's fork point keeps it accurate: the
+    # base advance is reported even though a pre-fetch remote ref equals the new
+    # base and would have reported an empty delta.
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert proof.path_overlap == []
+    assert proof.branch_diff_unchanged is True
 
 
 def test_base_rename_surfaces_both_paths_in_base_delta(
