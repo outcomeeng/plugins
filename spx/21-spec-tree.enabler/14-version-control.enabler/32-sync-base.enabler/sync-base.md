@@ -18,6 +18,7 @@ CAN read product truth, verify, and integrate against a current base without re-
 - Given a clean rebase whose base advance changed only files the branch does not touch, when sync-base runs, then the readiness-preservation proof reports no path overlap between the base delta and the branch's changed paths and an unchanged branch patch identity — the signal a caller reads to reuse a prior local review ([test](tests/test_sync_base.preservation.l1.py))
 - Given a clean rebase whose base advance changed a file the branch also changed, when sync-base runs, then the readiness-preservation proof reports the path overlap, so a caller does not reuse a prior local review or a narrowed validation lane ([test](tests/test_sync_base.preservation.l1.py))
 - Given a branch already current with its base, when sync-base runs, then the preservation proof reports an empty base delta and an unchanged branch patch identity, so a caller preserves all prior readiness ([test](tests/test_sync_base.preservation.l1.py))
+- Given a caller that already fetched the base before sync-base runs, when a clean rebase completes, then the proof reports the base advance in `base_delta_paths` — anchored at the branch's fork point rather than the pre-fetch remote ref — so the base delta stays accurate and the caller's lane mapping is not misled by an empty delta ([test](tests/test_sync_base.preservation.l1.py))
 
 ### Compliance
 

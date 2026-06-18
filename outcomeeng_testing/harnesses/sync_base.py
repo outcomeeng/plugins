@@ -351,6 +351,16 @@ def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     return behind
 
 
+def fetch_base(repo: pathlib.Path, base_ref: str = BASE_BRANCH) -> None:
+    """Fetch the base into ``repo`` to simulate a caller that pre-fetched.
+
+    After this the working clone's ``origin/<base>`` already points at the
+    advanced base, so a preservation proof that anchored the base delta at the
+    pre-fetch remote ref would report an empty delta.
+    """
+    _git(repo, "fetch", "origin", base_ref)
+
+
 def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
     """Report whether the working tree has uncommitted changes to tracked files.
 
