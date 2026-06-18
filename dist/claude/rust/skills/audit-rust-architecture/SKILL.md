@@ -1,14 +1,21 @@
 ---
 name: audit-rust-architecture
 description: >-
-  ALWAYS invoke this skill when auditing ADRs for Rust.
-  NEVER audit a Rust ADR without this skill.
+  Rust ADR audit methodology preloaded by the rust-architecture-auditor agent.
+  Dispatch rust-architecture-auditor to audit ADRs for Rust;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the rust-architecture-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the rust-architecture-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Review ADRs against `/rust-standards`, `/rust-architecture-standards`, `/test` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.

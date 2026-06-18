@@ -1,12 +1,19 @@
 ---
 name: audit-typescript
 description: >-
-  ALWAYS invoke this skill when auditing, reviewing, or evaluating TypeScript implementation code for design flaws and ADR compliance.
-  NEVER audit TypeScript code without this skill.
+  TypeScript implementation-code audit methodology preloaded by the typescript-code-auditor agent.
+  Dispatch typescript-code-auditor to audit TypeScript code for design flaws and ADR compliance;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the typescript-code-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the typescript-code-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 

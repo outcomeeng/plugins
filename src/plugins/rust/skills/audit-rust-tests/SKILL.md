@@ -1,8 +1,9 @@
 ---
 name: audit-rust-tests
 description: >-
-  ALWAYS invoke this skill when auditing Rust test evidence, reviewing Rust tests for spec-tree evidence quality, or evaluating Rust test infrastructure.
-  NEVER audit Rust test evidence without this skill.
+  Rust test-evidence audit methodology preloaded by the rust-test-auditor agent.
+  Dispatch rust-test-auditor to audit Rust test evidence;
+  the main conversation reaches this audit only through that agent.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -13,6 +14,12 @@ allowed-tools: Read, Grep, Glob, Bash
 {!% require_skill 'spec-tree:test' %!}
 
 {!% require_skill 'spec-tree:audit-tests' %!}
+
+<dispatch_gate>
+
+This audit runs in the rust-test-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the rust-test-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Rust test audit. Three gates run in strict sequence:

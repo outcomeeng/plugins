@@ -1,14 +1,22 @@
 ---
 name: audit-skills
 description: >-
-  ALWAYS invoke this skill when auditing, reviewing, or evaluating SKILL.md files.
-  NEVER audit skills without this skill.
+  SKILL.md audit methodology preloaded by the skill-auditor agent. Dispatch
+  skill-auditor to audit SKILL.md files; the main conversation reaches this audit
+  only through that agent.
 argument-hint: <skill-path>
+allowed-tools: Read, Grep, Glob, Bash
 ---
 
 Invoke the `develop:skill-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
+
+<dispatch_gate>
+
+This audit runs in the skill-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the skill-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+
+</dispatch_gate>
 
 <objective>
 Evaluate SKILL.md files against best practices for structure, conciseness, progressive disclosure, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.

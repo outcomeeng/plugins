@@ -199,6 +199,15 @@ description: >-
 
 **Protocol and loop-body skills** that a parent skill loads, or that a timer fires by exact name (a heartbeat re-entry target), keep a passive description while staying user-invocable — they are never reached by description-match, so a directive description would only cause false auto-activations. See the gate-by-role rules in `<frontmatter>`.
 
+**Agent-preloaded audit skills** — an `audit-*` skill a dedicated `*-auditor` agent preloads through its `skills:` field — keep a passive, dispatch-steering description and carry a `<dispatch_gate>` at the top of the body. The auditor agent's own directive description is the description-match entry point; a directive `ALWAYS invoke this skill` on the audit skill only pulls the main conversation into running the audit in its own context — the very bias the dispatched agent's isolated context exists to remove. The skill keeps its `allowed-tools` and stays user-invocable so the auditor agent can preload it; NEVER block the main conversation with `disable-model-invocation`, which also blocks that preload and skill-to-skill loading — the passive description plus the dispatch gate carry the rule instead.
+
+```yaml
+description: >-
+  Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
+  Dispatch test-evidence-auditor to audit test evidence; the main conversation
+  reaches this audit only through that agent.
+```
+
 **Conflict resolution:** If Claude picks the wrong skill, descriptions are too similar. Make trigger terms distinct — "sales data in Excel" vs "log files and system metrics".
 
 </descriptions>
@@ -238,20 +247,21 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Conditional tags** (include when the skill's complexity or purpose calls for them):
 
-| Tag                    | When to include                                                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point. |
-| `<context>`            | Background needed before starting.                                                                                                             |
-| `<workflow>`           | Sequential steps (non-router skills).                                                                                                          |
-| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                   |
-| `<validation>`         | Verification checks.                                                                                                                           |
-| `<examples>`           | Input/output pairs.                                                                                                                            |
-| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                      |
-| `<security_checklist>` | Skills with security implications.                                                                                                             |
-| `<testing>`            | Testing workflows or validation steps.                                                                                                         |
-| `<common_patterns>`    | Reusable recipes.                                                                                                                              |
-| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                          |
-| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                           |
+| Tag                    | When to include                                                                                                                                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<quick_start>`        | On-demand tool skills with a meaningful fast path. **Omit** for foundation, gate, validator, and reference skills — completeness is the point.                                                              |
+| `<dispatch_gate>`      | Agent-preloaded audit skills. A hard stop at the top of the body that halts a main-conversation invocation and directs it to dispatch the corresponding auditor agent. **Omit** for every other skill type. |
+| `<context>`            | Background needed before starting.                                                                                                                                                                          |
+| `<workflow>`           | Sequential steps (non-router skills).                                                                                                                                                                       |
+| `<advanced_features>`  | Progressive disclosure for deep-dive topics.                                                                                                                                                                |
+| `<validation>`         | Verification checks.                                                                                                                                                                                        |
+| `<examples>`           | Input/output pairs.                                                                                                                                                                                         |
+| `<anti_patterns>`      | Common mistakes to avoid.                                                                                                                                                                                   |
+| `<security_checklist>` | Skills with security implications.                                                                                                                                                                          |
+| `<testing>`            | Testing workflows or validation steps.                                                                                                                                                                      |
+| `<common_patterns>`    | Reusable recipes.                                                                                                                                                                                           |
+| `<reference_guides>`   | Pointers to detailed reference files.                                                                                                                                                                       |
+| `<failure_modes>`      | Named failures from actual usage — what happened, why, how to avoid.                                                                                                                                        |
 
 This table is representative, not exhaustive: a skill may add semantically named domain sections beyond it (this file's `<frontmatter>`, `<descriptions>`, and reference-pointer sections such as `<platform_constraints>` and `<script_standards>` are examples).
 
