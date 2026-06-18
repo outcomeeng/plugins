@@ -16,6 +16,9 @@ Exposes:
   same file divergently, so the rebase conflicts.
 - ``build_dirty_behind_base_repo``. A behind-base clone with an uncommitted edit
   to a tracked file, so the rebase precondition fails before any replay.
+- ``build_overlapping_base_repo``. A behind-base clone where base and branch edit
+  one file in distinct regions, so the rebase auto-merges and the base delta
+  overlaps the branch's changed paths.
 - ``detach_head``. Detaches HEAD so the branch cannot be resolved.
 
 The harness owns the git lifecycle and the invented payload (file names and
@@ -356,6 +359,41 @@ def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
     was neither committed (the tree would be clean) nor stashed (the edit gone).
     """
     return bool(_git(repo, "status", "--porcelain", "--untracked-files=no"))
+
+
+@dataclass(frozen=True)
+class OverlappingBaseRepo:
+    """A behind-base clone where base and branch both edit one file, no conflict.
+
+    The branch appends a line to ``overlap_file`` and the base prepends a
+    different line to the same file, so the rebase auto-merges (distinct
+    regions) and the base-delta paths overlap the branch's changed paths.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    feature_branch: str
+    overlap_file: str
+
+
+def build_overlapping_base_repo(root: pathlib.Path) -> OverlappingBaseRepo:
+    """Build a behind-base clone whose base advance overlaps the branch's file."""
+    origin = _init_origin_with_base(root)
+    repo = _working_clone_on_feature(root, origin)
+    _commit_file(repo, INITIAL_FILE, "hello\nfeature line\n", "feature edits readme")
+
+    pusher = root / "pusher"
+    _commit_file(pusher, INITIAL_FILE, "base line\nhello\n", "base edits readme top")
+    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+
+    return OverlappingBaseRepo(
+        repo=repo,
+        base_ref=BASE_BRANCH,
+        remote_ref=f"origin/{BASE_BRANCH}",
+        feature_branch=FEATURE_BRANCH,
+        overlap_file=INITIAL_FILE,
+    )
 
 
 def detach_head(repo: pathlib.Path) -> None:
