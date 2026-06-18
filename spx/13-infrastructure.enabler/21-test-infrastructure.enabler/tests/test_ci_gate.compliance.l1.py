@@ -27,7 +27,14 @@ MAIN_BRANCH: Final = "main"
 JUST_BINARY: Final = "just"
 
 # Shell constructs that deliberately convert failures into success.
-SOFT_PASS_SHELL_SNIPPETS: Final = ("||", "set +e", "exit 0", "if !", "if ")
+SOFT_PASS_SHELL_SNIPPETS: Final = (
+    "|| true",
+    "|| :",
+    "|| exit 0",
+    "set +e",
+    "exit 0",
+    "if !",
+)
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
 
 
