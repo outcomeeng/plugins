@@ -8,6 +8,7 @@ CAN operate with complete, verified context before any work begins
 
 ### Compliance
 
+- ALWAYS: bring a behind-base branch current through sync-base (`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md`) before reading product or spec context, so loaded context reflects current product truth rather than a stale branch ([review])
 - ALWAYS: read all ancestor specs, lower-index sibling specs, and governing ADRs/PDRs for a target with a complete ancestor chain ([review])
 - ALWAYS: abort with the missing file path and remediation guidance when a required ancestor spec is absent ([review])
 - ALWAYS: return an empty bootstrap manifest when authoring against an empty tree with only a product spec ([review])

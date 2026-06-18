@@ -1,7 +1,7 @@
 ---
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Grep, Skill
 ---
 
 <objective>
@@ -38,6 +38,18 @@ This is full injection — every collected document is read into the conversatio
 
 Check conversation for `<SPEC_TREE_FOUNDATION>` marker.
 If absent → STOP. Invoke `/understand` first, then resume from Step 0.
+
+</step>
+
+<step name="sync_base">
+
+**Step SYNC: Bring the branch current with its base**
+
+Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale branch — a branch behind its base reads superseded specs and decisions. `/sync-base` fetches the base and rebases automatically from observable git state; never ask the operator whether to rebase. Act on its result:
+
+- `already_current` or `rebased` → proceed to Step 0.
+- `conflict` → STOP and surface `SYNC_BASE`. The branch cannot be brought current autonomously, and reading stale-or-conflicted context is the failure this gate prevents; context loading resumes once the operator resolves the conflict.
+- `git_failure` → distinguish by the reported `detail`. A detached HEAD with no branch to rebase (the common case in a bare-repository worktree pool, where a worktree may be parked detached) or no configured remote is not applicable — proceed to Step 0; context loading is not a merge gate and does not block on a non-rebasable checkout. A failed fetch or an unresolved base on a configured remote leaves the branch's currency unestablished — it may still be behind its base — so surface the `detail` and that the loaded context may be stale before proceeding; never silently treat unverified currency as current.
 
 </step>
 
