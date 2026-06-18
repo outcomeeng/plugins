@@ -24,7 +24,7 @@ from types import FrameType
 from typing import Final, TextIO
 
 from outcomeeng.validation._model import ProcessHandle, ProcessSpawner, Recipe, Step
-from outcomeeng.validation._steps import RECIPE_AD_HOC
+from outcomeeng.validation._steps import RECIPE_AD_HOC, RECIPE_CHECK
 
 _FORWARDED_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
 _GRACE_SECONDS: Final = 2.0
@@ -415,7 +415,7 @@ def run_check(
 ) -> int:
     """Run primitive recipes in order and stop at the first failed recipe."""
 
-    resolved_summary_path = summary_path or _create_summary_path("check")
+    resolved_summary_path = summary_path or _create_summary_path(RECIPE_CHECK)
     old_handlers = _install_signal_handlers()
     recipe_summaries: list[dict[str, object]] = []
     total_start = time.monotonic()
@@ -445,7 +445,7 @@ def run_check(
             if isinstance(steps, list):
                 wrapper_steps.extend(steps)
         wrapper_summary: dict[str, object] = {
-            SUMMARY_KEY_RECIPE: "check",
+            SUMMARY_KEY_RECIPE: RECIPE_CHECK,
             SUMMARY_KEY_VERIFICATION_TYPE: None,
             SUMMARY_KEY_PURPOSE: None,
             SUMMARY_KEY_PHASE: phase,

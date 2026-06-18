@@ -1,8 +1,8 @@
 name: Quality Gate
 
-# Runs the full quality gate (`just check`, i.e. `uv run python -m
-# outcomeeng.validation` — the `check` recipe's preflight plus validation and
-# test primitive recipes) on every path to `main`, so a deterministic-
+# Runs the full quality gate (`just check`, i.e. `python3 -m
+# outcomeeng.validation check` — the `check` recipe's preflight plus validation
+# and test primitive recipes) on every path to `main`, so a deterministic-
 # verification failure cannot reach `main` unseen. Governed by
 # spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md.
 
