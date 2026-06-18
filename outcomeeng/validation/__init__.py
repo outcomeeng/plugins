@@ -20,6 +20,7 @@ from outcomeeng.validation._model import (
 from outcomeeng.validation._spawner import ProductionSpawner
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
+    HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     PYTHON_SOURCE_PATHS,
@@ -33,6 +34,7 @@ from outcomeeng.validation._steps import (
 
 __all__ = [
     "ACTIONLINT_ARGV",
+    "HOOK_SAFETY_ARGV",
     "MYPY_ARGV",
     "PYRIGHT_ARGV",
     "PYTHON_SOURCE_PATHS",

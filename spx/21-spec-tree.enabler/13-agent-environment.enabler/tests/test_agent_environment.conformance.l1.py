@@ -31,4 +31,9 @@ def test_session_start_runs_the_session_start_script() -> None:
     commands = [
         hook["command"] for entry in hooks["SessionStart"] for hook in entry["hooks"]
     ]
-    assert commands == ["python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py"]
+    # Exactly one SessionStart command, wired to scripts/session-start.py. The command
+    # is the inline guard the Hook Safety Contract requires (timeout, kill switch, and a
+    # valid-empty-result floor live in hooks.json and spx/15-hook-safety.pdr.md), so the
+    # conformance check pins the script wiring, not the exact guard shell text.
+    assert len(commands) == 1
+    assert "${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py" in commands[0]

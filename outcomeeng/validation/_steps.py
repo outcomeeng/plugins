@@ -46,6 +46,13 @@ SPX_VERSION_FLOOR_ARGV: Final = (
     "-m",
     "outcomeeng.validation.spx_version",
 )
+HOOK_SAFETY_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.hook_safety",
+)
 PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
 
 # Shipped authored text under src/plugins/ where a non-portable reference can hide.
@@ -159,6 +166,10 @@ STEPS: Final = (
             "outcomeeng.validation.runtime_tokens",
             *runtime_token_files(),
         ),
+    ),
+    Step(
+        label="hook-safety",
+        argv=HOOK_SAFETY_ARGV,
     ),
     Step(
         label="docs-check",
