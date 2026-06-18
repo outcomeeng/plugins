@@ -445,9 +445,12 @@ def test_extra_real_version_directory_replaced_by_direct_symlink(
     )
 
 
-def test_out_of_window_compatibility_symlink_is_removed(tmp_path: Path) -> None:
+def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
+    tmp_path: Path,
+) -> None:
     """A compatibility symlink for a version absent from the published window is
-    removed during preservation; the current version directory remains real.
+    preserved — retargeted to the installed version directory — not removed, so a
+    live session advertising that version is never stranded by age.
     """
     cache_root = tmp_path / "cache"
     _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
@@ -455,6 +458,114 @@ def test_out_of_window_compatibility_symlink_is_removed(tmp_path: Path) -> None:
     older_link = plugin_dir / OLDER_VERSION
     current_dir = plugin_dir / CURRENT_VERSION
     older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        # OLDER_VERSION is outside the published window: only CURRENT_VERSION is
+        # in-window. Preservation must still keep the present OLDER symlink.
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert older_link.is_symlink(), (
+        f"expected {older_link} to be preserved as a symlink, not removed for age"
+    )
+    assert older_link.resolve() == current_dir, (
+        f"expected {older_link} to resolve to {current_dir}, got {older_link.resolve()}"
+    )
+    assert current_dir.is_dir() and not current_dir.is_symlink(), (
+        f"expected {current_dir} to remain a real directory"
+    )
+    assert older_link in result.linked_versions, (
+        f"expected {older_link} in result.linked_versions={result.linked_versions}"
+    )
+    assert older_link not in result.pruned_links, (
+        f"expected {older_link} NOT pruned; got pruned_links={result.pruned_links}"
+    )
+
+
+def test_out_of_window_real_directory_retargeted_to_installed_version(
+    tmp_path: Path,
+) -> None:
+    """The session-stranding fix: a version present as a complete real directory but
+    published outside the window — the version a long-lived session was started on —
+    is retargeted to a direct symlink at the newer installed version rather than
+    removed, so the session keeps resolving its advertised skill cache path.
+    """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "session-held content")
+    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "installed content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_dir = plugin_dir / OLDER_VERSION
+    installed_dir = plugin_dir / NEW_CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        # OLDER_VERSION is outside the published window: its manifest commit aged
+        # past the window while a session still resolves it. Only the installed
+        # version is in-window.
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([NEW_CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: NEW_CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({PLUGIN_NAME: NEW_CURRENT_VERSION}),
+        runner=_quiet_runner,
+    )
+
+    assert older_dir.is_symlink(), (
+        f"expected out-of-window real directory {older_dir} retargeted to a symlink, "
+        "not removed"
+    )
+    assert older_dir.resolve() == installed_dir, (
+        f"expected {older_dir} to resolve to {installed_dir}, got {older_dir.resolve()}"
+    )
+    real_versions = [
+        path.name
+        for path in plugin_dir.iterdir()
+        if path.is_dir() and not path.is_symlink()
+    ]
+    assert real_versions == [NEW_CURRENT_VERSION], (
+        f"expected exactly one real version directory, got {real_versions}"
+    )
+    assert older_dir in result.linked_versions, (
+        f"expected {older_dir} in result.linked_versions={result.linked_versions}"
+    )
+    assert older_dir not in result.pruned_links, (
+        f"expected {older_dir} NOT pruned; got pruned_links={result.pruned_links}"
+    )
+
+
+def test_preserved_symlink_mtime_refreshed_each_reconciliation(
+    tmp_path: Path,
+) -> None:
+    """A preserved compatibility symlink whose modification time predates the run has
+    its mtime refreshed, so a stale-symlink check measures time since the last
+    reconciliation rather than time since the version was published.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_link = plugin_dir / OLDER_VERSION
+    current_dir = plugin_dir / CURRENT_VERSION
+    older_link.symlink_to(CURRENT_VERSION, target_is_directory=True)
+    # Backdate the symlink's own mtime to 1970 so a refresh is observable.
+    stale_mtime = 1000.0
+    os.utime(older_link, (stale_mtime, stale_mtime), follow_symlinks=False)
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={
@@ -470,14 +581,57 @@ def test_out_of_window_compatibility_symlink_is_removed(tmp_path: Path) -> None:
         runner=_quiet_runner,
     )
 
-    assert not os.path.lexists(older_link), (
-        f"expected {older_link} to be removed (version outside window)"
+    assert older_link.is_symlink() and older_link.resolve() == current_dir, (
+        f"expected {older_link} preserved pointing at {current_dir}"
+    )
+    assert older_link.lstat().st_mtime > stale_mtime, (
+        f"expected {older_link} mtime refreshed above {stale_mtime}, got "
+        f"{older_link.lstat().st_mtime}"
+    )
+    assert older_link in result.linked_versions, (
+        f"expected {older_link} in result.linked_versions={result.linked_versions}"
+    )
+
+
+def test_regular_file_in_cache_dir_is_tolerated(tmp_path: Path) -> None:
+    """A stray regular file in a plugin cache directory (for example a `.DS_Store`
+    OS metadata file) is left untouched: only versioned directories and symlinks are
+    treated as cache entries, so reconciliation never attempts to replace a regular
+    file and never aborts on it.
+    """
+    cache_root = tmp_path / "cache"
+    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    stray_file = plugin_dir / ".DS_Store"
+    stray_file.write_text("os metadata")
+    current_dir = plugin_dir / CURRENT_VERSION
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([CURRENT_VERSION]),
+        },
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert stray_file.is_file() and not stray_file.is_symlink(), (
+        f"expected stray file {stray_file} left untouched, not replaced"
+    )
+    assert stray_file.read_text() == "os metadata", (
+        f"expected {stray_file} content preserved"
     )
     assert current_dir.is_dir() and not current_dir.is_symlink(), (
-        f"expected {current_dir} to remain a real directory"
+        f"expected {current_dir} to remain the real current directory"
     )
-    assert older_link in result.pruned_links, (
-        f"expected {older_link} in result.pruned_links={result.pruned_links}"
+    assert stray_file not in result.linked_versions, (
+        f"expected {stray_file} never treated as a version; got "
+        f"linked_versions={result.linked_versions}"
     )
 
 
