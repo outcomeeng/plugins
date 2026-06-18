@@ -7,6 +7,10 @@ Covers the Scenario assertions in ``../sync-base.md``:
 - A branch already current with its fetched base performs no rebase.
 - A rebase conflict stops with the ``SYNC_BASE`` action token, leaving the
   branch and working tree intact.
+- A dirty working tree behind its base reports the distinct ``dirty_tree``
+  outcome without rebasing, leaving the uncommitted edit untouched.
+- A behind-base tree carrying only an untracked file rebases normally — an
+  untracked file does not block a rebase and is not a dirty tree.
 - A detached HEAD with no branch to rebase reports a hard git failure.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
@@ -18,11 +22,15 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
+
 from outcomeeng_testing.harnesses.sync_base import (
     build_alternate_base_repo,
     build_behind_base_repo,
     build_conflicting_repo,
     build_current_repo,
+    build_dirty_behind_base_repo,
+    build_untracked_only_behind_base_repo,
     detach_head,
     load_sync_base_module,
 )
@@ -81,6 +89,48 @@ def test_rebase_conflict_stops_with_sync_base_token_intact(
     assert (handle.repo / handle.conflict_file).read_text(
         encoding="utf-8"
     ) == "feature edit\n"
+
+
+@pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
+def test_dirty_tree_behind_base_reports_dirty_tree_without_rebasing(
+    tmp_path: pathlib.Path, stage: bool
+) -> None:
+    # Both an unstaged and a staged-but-uncommitted tracked change block the
+    # rebase and must report dirty_tree — git refuses to replay over either.
+    module = load_sync_base_module()
+    handle = build_dirty_behind_base_repo(_root(tmp_path), stage=stage)
+
+    result = module.sync_base(handle.repo)
+
+    # A dirty tree is a distinct precondition, not a conflict: no SYNC_BASE.
+    assert result.status is module.SyncStatus.DIRTY_TREE
+    assert result.action_token is None
+    assert result.branch == handle.feature_branch
+    # The rebase never ran, so the base advance did not enter the working tree...
+    assert not (handle.repo / handle.base_file).exists()
+    # ...and the uncommitted edit is left untouched — not committed, not stashed.
+    assert handle.dirty_marker in (handle.repo / handle.dirty_file).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_untracked_only_behind_base_rebases_not_dirty_tree(
+    tmp_path: pathlib.Path,
+) -> None:
+    # Untracked files do not block a rebase, so they are not a dirty tree: a
+    # behind-base branch carrying only an untracked file rebases normally. This
+    # proves the dirty check's --untracked-files=no scope is necessary — without
+    # it the untracked file would read as dirty and force dirty_tree.
+    module = load_sync_base_module()
+    handle = build_untracked_only_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.action_token is None
+    # The rebase ran: the base advance is present and the feature commit survived.
+    assert (handle.repo / handle.base_file).exists()
+    assert (handle.repo / handle.feature_file).exists()
 
 
 def test_detached_head_reports_hard_git_failure(

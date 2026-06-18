@@ -14,6 +14,8 @@ Exposes:
   every base commit, so synchronization performs no rebase.
 - ``build_conflicting_repo``. The feature branch and the advanced base edit the
   same file divergently, so the rebase conflicts.
+- ``build_dirty_behind_base_repo``. A behind-base clone with an uncommitted edit
+  to a tracked file, so the rebase precondition fails before any replay.
 - ``detach_head``. Detaches HEAD so the branch cannot be resolved.
 
 The harness owns the git lifecycle and the invented payload (file names and
@@ -175,6 +177,56 @@ def build_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
     )
 
 
+DIRTY_MARKER = "uncommitted change\n"
+
+
+@dataclass(frozen=True)
+class DirtyBehindBaseRepo:
+    """A working clone behind ``origin/<base>`` with an uncommitted tracked edit.
+
+    ``dirty_file`` is a tracked file carrying an uncommitted modification, so
+    ``git rebase`` refuses to start. ``dirty_marker`` is the appended content the
+    test asserts survives untouched. ``base_file`` is the base advance that would
+    only enter the working tree if a rebase ran — its absence proves none did.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    feature_branch: str
+    dirty_file: str
+    dirty_marker: str
+    base_file: str
+
+
+def build_dirty_behind_base_repo(
+    root: pathlib.Path, *, stage: bool = False
+) -> DirtyBehindBaseRepo:
+    """Build a behind-base working clone with an uncommitted change to a tracked file.
+
+    ``stage=True`` stages the change (``git add``) without committing, so the
+    dirty state is staged-but-uncommitted rather than unstaged. Both forms block
+    a rebase and both must report ``dirty_tree``; ``git status --porcelain
+    --untracked-files=no`` reports either.
+    """
+    behind = build_behind_base_repo(root)
+    dirty_path = behind.repo / behind.feature_file
+    dirty_path.write_text(
+        dirty_path.read_text(encoding="utf-8") + DIRTY_MARKER, encoding="utf-8"
+    )
+    if stage:
+        _git(behind.repo, "add", behind.feature_file)
+    return DirtyBehindBaseRepo(
+        repo=behind.repo,
+        base_ref=behind.base_ref,
+        remote_ref=behind.remote_ref,
+        feature_branch=behind.feature_branch,
+        dirty_file=behind.feature_file,
+        dirty_marker=DIRTY_MARKER,
+        base_file=behind.base_file,
+    )
+
+
 ALTERNATE_BRANCH = "release"
 ALTERNATE_FILE = "release.txt"
 
@@ -277,6 +329,33 @@ def build_conflicting_repo(root: pathlib.Path) -> ConflictRepo:
         feature_branch=FEATURE_BRANCH,
         conflict_file=INITIAL_FILE,
     )
+
+
+UNTRACKED_FILE = "scratch.local"
+
+
+def build_untracked_only_behind_base_repo(root: pathlib.Path) -> BehindBaseRepo:
+    """Build a behind-base clone whose only working-tree change is an untracked file.
+
+    An untracked file (not ``git add``ed) does not block a rebase, so sync-base
+    must rebase rather than report ``dirty_tree``. The untracked path does not
+    collide with the base advance, so the replay proceeds and leaves it in place.
+    Proves the ``--untracked-files=no`` scope of the dirty check is necessary:
+    without it the untracked file would read as dirty and force ``dirty_tree``.
+    """
+    behind = build_behind_base_repo(root)
+    (behind.repo / UNTRACKED_FILE).write_text("scratch\n", encoding="utf-8")
+    return behind
+
+
+def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
+    """Report whether the working tree has uncommitted changes to tracked files.
+
+    A non-empty ``git status --porcelain --untracked-files=no`` means a tracked
+    file is modified or staged — the state that blocks a rebase. Proves an edit
+    was neither committed (the tree would be clean) nor stashed (the edit gone).
+    """
+    return bool(_git(repo, "status", "--porcelain", "--untracked-files=no"))
 
 
 def detach_head(repo: pathlib.Path) -> None:
