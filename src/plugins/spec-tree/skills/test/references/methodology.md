@@ -32,6 +32,16 @@ Every test must answer these questions:
 
 If all three cannot be answered, stop.
 
+## Source-contract-first gate
+
+Before writing or repairing evidence, read the spec assertion, the existing or planned test, and the code under test. State the production contract the test will exercise:
+
+- source-owned values: protocol tokens, status values, command names, route names, schema fields, rule identifiers, message identifiers, registries, constructors, typed factories, or public vocabulary
+- observable behavior: pure functions, constructors, dataclasses, enums, schemas, protocols, typed collaborators, emitted artifacts, or side-effect boundaries
+- oracle: expected output derived from the input, an independent reference, a source-owned contract, or a real system response
+
+If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or mock away behavior the assertion claims to verify.
+
 ## The evidence trap
 
 Agents often skip the evidence question. They see code and decide to test the shape of the code instead of the behavior that matters.

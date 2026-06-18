@@ -36,7 +36,11 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 ## Deterministic verification
 
-The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/merging-standards` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push. A follow-up push that only rebased onto an advanced base may run a narrower lane instead, per the readiness preservation below; a follow-up push that changed the branch's own content always re-runs the full `just check`.
+The marketplace's local deterministic-verification predicate is changeset-scoped. Run the narrow validation and testing lane that covers the files touched by the diff, and reserve local full-repository `just check` for changes that alter shared validation/test infrastructure, package manager files, generated catalog output, distribution build machinery, or broad implementation surfaces whose touched-scope commands cannot cover the contract.
+
+For Markdown-only skill/spec/doc changes, use the documented narrow lane: `just check-skills` and `just docs-check` for skill content, or `spx validation markdown` and `spx spec status --format json` for spec-only changes. For changed implementation or test files, run the focused node/package/module tests plus the narrow validation commands that cover those files.
+
+CI owns the full-repository deterministic regression pass. A passing local touched-scope run is the `REVIEW_READINESS` deterministic predicate; the PR checks then run the full repository gate on the hosted surface. Capture verbose command output to `$TMPDIR` and inspect only the exit status, summary, and failing sections unless a failure requires the retained log.
 
 ## Base-sync readiness preservation
 
@@ -47,9 +51,10 @@ After a clean rebase, `/sync-base` returns a readiness-preservation proof (`pres
 **Validation lane.** Choose the narrowest lane that covers every `base_delta_paths` entry:
 
 - All entries under `spx/` or matching `*.md` (specs, decisions, coordination notes, docs), and `path_overlap` empty → the spec/markdown lane: `spx validation markdown` and `spx spec status --format json`.
-- Any entry under `src/`, `dist/`, `outcomeeng*/`, `.github/`, a package or lockfile, `justfile`/`Justfile`, or validation config; or any entry this overlay does not classify; or `path_overlap` non-empty; or `branch_patch_changed` true → the full `just check`.
+- Any entry under `src/plugins/` or `dist/` that is only skill Markdown/reference content, and `path_overlap` empty → the skill/doc lane: `just check-skills` and `just docs-check`.
+- Any entry under `src/`, `outcomeeng*/`, `.github/`, a package or lockfile, `justfile`/`Justfile`, or validation config; any entry this overlay does not classify; `path_overlap` non-empty; or `branch_patch_changed` true → widen to the focused node/package/module test lane plus the narrow validation lane that covers the changed files, reserving full `just check` for the escalation cases above.
 
-When in doubt, the full gate is the safe default — the narrower lane is an optimization, never a relaxation of `REVIEW_READINESS`.
+When in doubt, widen the local lane only as far as the changed contract requires — the narrower lane is an optimization, never a relaxation of `REVIEW_READINESS`.
 
 ## Mention-reviewer trigger phrase
 
