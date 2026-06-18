@@ -36,7 +36,20 @@ gh pr view <pr-number> --json state,mergedAt,mergeCommit
 
 ## Deterministic verification
 
-The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/merging-standards` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push and before any `--force-with-lease` push that follows a base-sync rebase.
+The marketplace's full deterministic-verification command is `just check`. It is the `REVIEW_READINESS` deterministic-verification predicate of `/merging-standards` `<authority_gates>`: run it (green) before opening the PR, and re-run it before any follow-up push. A follow-up push that only rebased onto an advanced base may run a narrower lane instead, per the readiness preservation below; a follow-up push that changed the branch's own content always re-runs the full `just check`.
+
+## Base-sync readiness preservation
+
+After a clean rebase, `/sync-base` returns a readiness-preservation proof (`preservation` in its JSON: full before/after OIDs, `base_delta_paths`, `branch_paths_after`, `path_overlap`, `branch_patch_changed`, `branch_diff_unchanged`). This overlay maps those git facts to the marketplace's verification lanes and governance surfaces; `/merging-standards` `<base_sync>` and `/manage-pr` consume the mapping. The proof scopes pre-push local verification only — current-head PR checks and the current-head CI review remain required for `MERGE_READINESS`.
+
+**Governance surfaces.** A prior local review is reusable across a rebase only when `branch_diff_unchanged` is true **and** no `base_delta_paths` entry is a governance surface — a file the `changes-reviewer` judges against: `AGENTS.md`, `CLAUDE.md`, `REVIEW.template.md`, any `spx/local/*.md`, or any standards reference under `src/plugins/*/skills/*-standards/` and `src/plugins/*/skills/**/SKILL.md`. When the base delta touches any of these, re-run the local review even if the branch patch is unchanged.
+
+**Validation lane.** Choose the narrowest lane that covers every `base_delta_paths` entry:
+
+- All entries under `spx/` or matching `*.md` (specs, decisions, coordination notes, docs), and `path_overlap` empty → the spec/markdown lane: `spx validation markdown` and `spx spec status --format json`.
+- Any entry under `src/`, `dist/`, `outcomeeng*/`, `.github/`, a package or lockfile, `justfile`/`Justfile`, or validation config; or any entry this overlay does not classify; or `path_overlap` non-empty; or `branch_patch_changed` true → the full `just check`.
+
+When in doubt, the full gate is the safe default — the narrower lane is an optimization, never a relaxation of `REVIEW_READINESS`.
 
 ## Mention-reviewer trigger phrase
 
