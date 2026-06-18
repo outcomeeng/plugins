@@ -53,8 +53,8 @@ def _finding_strategy() -> st.SearchStrategy[dict[str, Any]]:
         severity=st.sampled_from(_severity_values()),
         file=st.from_regex(r"[a-z_]{1,12}\.py", fullmatch=True),
         line=st.integers(min_value=1, max_value=10_000),
-        # Rule citation form: a path-style string starting with one of the
-        # accepted prefixes (see review_result._RULE_CITATION_PREFIXES).
+        # Rule citation form: a full path-style string accepted by the
+        # review_result._RULE_CITATION_PATTERNS validator.
         rule=st.from_regex(
             r"spx/[a-z]{1,8}\.md:(ALWAYS|NEVER|MUST):[1-9][0-9]?",
             fullmatch=True,

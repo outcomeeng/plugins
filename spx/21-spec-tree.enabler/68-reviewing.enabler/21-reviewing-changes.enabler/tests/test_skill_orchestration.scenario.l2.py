@@ -27,6 +27,7 @@ import os
 import pathlib
 import subprocess
 import sys
+from typing import cast
 
 import pytest
 
@@ -36,6 +37,8 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     RENDER_REVIEW_SCRIPT,
     VALIDATE_REVIEW_RESULT_SCRIPT,
     make_review_result_dict,
+    run_compute_diff_in_process,
+    run_render_review_in_process,
 )
 from outcomeeng_testing.harnesses.thread_store import (
     READ_RECORD_SCRIPT,
@@ -197,7 +200,7 @@ class TestSkillOrchestrationChain:
         assert write_rr.returncode == 0, write_rr.stderr
 
         # 8. render_review.py reads the review-result and writes review.md.
-        render_result = run_script(RENDER_REVIEW_SCRIPT, "--slug", slug, env=env)
+        render_result = run_render_review_in_process(slug=slug, env=env)
         assert render_result.returncode == 0, render_result.stderr
         rendered_markdown = render_result.stdout
 
@@ -352,19 +355,12 @@ class TestComputeDiffBaseRefDerivation:
         return repo, store_root, base_ref
 
     def _slug_for(self, branch: str) -> str:
-        return load_branch_slug_module().branch_slug(branch)
+        return cast(str, load_branch_slug_module().branch_slug(branch))
 
     def _run_compute_diff(
         self, repo: pathlib.Path, env: dict[str, str], slug: str
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(  # noqa: S603 — script path is from the harness
-            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
-            cwd=repo,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        return run_compute_diff_in_process(repo=repo, env=env, slug=slug)
 
     def test_env_base_ref_works_without_changes_json(
         self, tmp_path: pathlib.Path
@@ -376,6 +372,31 @@ class TestComputeDiffBaseRefDerivation:
         result = self._run_compute_diff(repo, env, slug)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
+
+    def test_includes_committed_staged_unstaged_and_untracked_diffs(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, store_root, base_ref = self._setup_repo_and_store(tmp_path)
+        slug = self._slug_for("feature/x")
+        env = _make_env_for_temp_store(store_root, cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+
+        (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
+        _run_git("add", "STAGED.md", cwd=repo)
+        (repo / "README.md").write_text("hello\nworld\nunstaged\n", encoding="utf-8")
+        (repo / "UNTRACKED.md").write_text("untracked\n", encoding="utf-8")
+
+        result = self._run_compute_diff(repo, env, slug)
+        assert result.returncode == 0, result.stderr
+        assert "### Committed diff" in result.stdout
+        assert "### Staged diff" in result.stdout
+        assert "### Unstaged diff" in result.stdout
+        assert "### Untracked files" in result.stdout
+        assert "world" in result.stdout
+        assert "STAGED.md" in result.stdout
+        assert "unstaged" in result.stdout
+        assert "UNTRACKED.md" in result.stdout
+        assert "untracked" in result.stdout
 
     def test_git_origin_head_works_without_changes_or_env(
         self, tmp_path: pathlib.Path
@@ -473,19 +494,12 @@ class TestComputeDiffHeadRefDerivation:
         return repo, store_root, base_ref, secondary
 
     def _slug_for(self, branch: str) -> str:
-        return load_branch_slug_module().branch_slug(branch)
+        return cast(str, load_branch_slug_module().branch_slug(branch))
 
     def _run_compute_diff(
         self, repo: pathlib.Path, env: dict[str, str], slug: str
     ) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(  # noqa: S603 — script path is from the harness
-            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
-            cwd=repo,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        return run_compute_diff_in_process(repo=repo, env=env, slug=slug)
 
     def test_env_head_ref_selects_alternate_head(self, tmp_path: pathlib.Path) -> None:
         repo, store_root, base_ref, secondary = self._setup_repo_with_secondary(
@@ -587,7 +601,7 @@ class TestComputeDiffStaleLocalBase:
     """
 
     def _slug_for(self, branch: str) -> str:
-        return load_branch_slug_module().branch_slug(branch)
+        return cast(str, load_branch_slug_module().branch_slug(branch))
 
     def test_git_derived_base_excludes_already_merged_commit(
         self, tmp_path: pathlib.Path
@@ -601,14 +615,7 @@ class TestComputeDiffStaleLocalBase:
         env.pop("SPX_VERIFY_BASE_REF", None)
         slug = self._slug_for(stale.feature_branch)
 
-        result = subprocess.run(  # noqa: S603 — script path is from the harness
-            [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug],
-            cwd=stale.repo,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        result = run_compute_diff_in_process(repo=stale.repo, env=env, slug=slug)
         assert result.returncode == 0, result.stderr
         # The feature change is in scope; the already-merged commit is not —
         # auto-derivation must scope against origin/<base>, not the stale local

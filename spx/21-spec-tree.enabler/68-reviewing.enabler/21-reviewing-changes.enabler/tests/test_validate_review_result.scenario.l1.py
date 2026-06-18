@@ -25,9 +25,8 @@ import pathlib
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_RULE_CITATION,
-    VALIDATE_REVIEW_RESULT_SCRIPT,
     make_review_result_dict,
-    run_script,
+    run_validate_review_result_in_process,
 )
 
 
@@ -36,13 +35,13 @@ class TestConformingDocument:
 
     def test_conforming_via_stdin_exits_zero(self) -> None:
         payload = json.dumps(make_review_result_dict())
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=payload)
+        result = run_validate_review_result_in_process(stdin=payload)
         assert result.returncode == 0, result.stderr
 
     def test_conforming_via_file_flag_exits_zero(self, tmp_path: pathlib.Path) -> None:
         payload_path = tmp_path / "review.json"
         payload_path.write_text(json.dumps(make_review_result_dict()), encoding="utf-8")
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, "--file", str(payload_path))
+        result = run_validate_review_result_in_process("--file", str(payload_path))
         assert result.returncode == 0, result.stderr
 
 
@@ -52,14 +51,14 @@ class TestMissingKeyRejection:
     def test_missing_summary_key_exits_nonzero_naming_the_key(self) -> None:
         document = make_review_result_dict()
         del document["summary"]
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
+        result = run_validate_review_result_in_process(stdin=json.dumps(document))
         assert result.returncode != 0
         assert "summary" in result.stderr
 
     def test_missing_findings_key_exits_nonzero_naming_the_key(self) -> None:
         document = make_review_result_dict()
         del document["findings"]
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
+        result = run_validate_review_result_in_process(stdin=json.dumps(document))
         assert result.returncode != 0
         assert "findings" in result.stderr
 
@@ -81,7 +80,7 @@ class TestUnknownEnumValueRejection:
             "action": "a",
         }
         document = make_review_result_dict(findings=[bad_finding])
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
+        result = run_validate_review_result_in_process(stdin=json.dumps(document))
         assert result.returncode != 0
         assert "blocker" in result.stderr
         assert "blocking" in result.stderr
@@ -100,7 +99,7 @@ class TestUnknownEnumValueRejection:
             "action": "a",
         }
         document = make_review_result_dict(findings=[bad_finding])
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=json.dumps(document))
+        result = run_validate_review_result_in_process(stdin=json.dumps(document))
         assert result.returncode != 0
         assert "marketing" in result.stderr
         assert "consistency" in result.stderr
@@ -110,6 +109,6 @@ class TestMalformedJsonRejection:
     """Malformed JSON exits non-zero with a parser-derived diagnostic."""
 
     def test_malformed_json_exits_nonzero(self) -> None:
-        result = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin="{not json")
+        result = run_validate_review_result_in_process(stdin="{not json")
         assert result.returncode != 0
         assert result.stderr.strip() != ""
