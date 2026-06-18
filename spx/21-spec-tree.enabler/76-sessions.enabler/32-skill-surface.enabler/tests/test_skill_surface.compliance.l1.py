@@ -10,8 +10,10 @@ from outcomeeng_testing.harnesses.skill_surface import (
     COMMANDS_DIR,
     HANDOFF_SKILL,
     PICKUP_SKILL,
+    PICKUP_WORKFLOW,
     argument_hint,
     context_block,
+    file_text,
 )
 
 
@@ -29,6 +31,29 @@ class TestContextInjection:
 
     def test_pickup_injects_session_todo(self) -> None:
         assert "spx session todo" in context_block(PICKUP_SKILL)
+
+
+class TestPickupWorkflowOrdering:
+    def test_pickup_loads_foundation_before_session_details(self) -> None:
+        workflow = file_text(PICKUP_WORKFLOW)
+
+        understand_index = workflow.index(
+            'Skill tool -> { "skill": "spec-tree:understand" }'
+        )
+        skills_checklist_index = workflow.index("**Step 3: Present skills checklist**")
+
+        assert understand_index < skills_checklist_index
+
+    def test_pickup_defers_coordination_note_reads_to_contextualize(self) -> None:
+        workflow = file_text(PICKUP_WORKFLOW)
+
+        no_read_index = workflow.index(
+            "Do not read `PLAN.md` or `ISSUES.md` content in this step"
+        )
+        contextualize_index = workflow.index('{ "skill": "spec-tree:contextualize"')
+        context_reads_index = workflow.index("`/contextualize` reads the note content")
+
+        assert no_read_index < contextualize_index < context_reads_index
 
 
 class TestNoSlashCommandShims:

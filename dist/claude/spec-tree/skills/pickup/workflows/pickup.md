@@ -2,7 +2,19 @@
 
 <process>
 
-**Step 2: Present skills checklist**
+**Step 2: Load Spec Tree foundation**
+
+This step comes immediately after the session is claimed and the canonical claim markers are emitted. It comes before reading or presenting session details, checking out a work branch, inspecting anchored nodes, or touching node-local coordination notes.
+
+Invoke `/understand` now:
+
+```text
+Skill tool -> { "skill": "spec-tree:understand" }
+```
+
+If `<SPEC_TREE_FOUNDATION>` is already present, the skill may skip its body. Do not process the session's `<skills>`, `<nodes>`, `<persisted>`, or `<coordination>` sections until this foundation step has completed.
+
+**Step 3: Present skills checklist**
 
 This step comes BEFORE loading node context. The skills checklist tells Claude what to invoke and what to avoid.
 
@@ -17,7 +29,7 @@ The previous Claude context skipped these skills and it caused problems. List ea
 **Next action — where to resume**
 Show the recommended skill and TDD flow position.
 
-**Step 2b: Check out the work branch**
+**Step 4: Check out the work branch**
 
 Read the `git_ref` field from the session frontmatter. When it names a feature branch on origin — a branch name such as `work/…`, not the default branch and not a bare commit SHA — fetch and check that branch out **before** loading node context. The spec-tree state the session points at lives on that branch, and `/handoff`'s persistence precondition guarantees it exists on origin:
 
@@ -27,26 +39,26 @@ git fetch origin <git_ref>
 
 Then check it out per the checkout kind:
 
-- **Bare-repository worktree pool** — claim the branch in a **free** pool worktree, never the main checkout. A pool worktree is free only when no live agent holds it: read its occupancy with `spx worktree status <pool-worktree>` and enter only a worktree the command reports unclaimed or stale (a claim whose holding agent is dead). Git cleanliness is not freedom — a clean, detached worktree can still be actively held by an agent between commits or mid-think. Run `git -C <pool-worktree> switch <git_ref>`, or `git worktree add` a fresh one, then record occupancy with `spx worktree claim <pool-worktree>` so no other agent reuses the worktree while you hold it — no runtime hook claims it for you. When `spx worktree status` is unavailable or errors, occupancy is unreadable; `git worktree add` a fresh worktree rather than reuse an existing one, so no held worktree is entered.
+- **Bare-repository worktree pool** — claim the branch in a **free** pool worktree, never the main checkout. A pool worktree is free only when no live Claude session holds it: read its occupancy with `spx worktree status <pool-worktree>` and enter only a worktree the command reports unclaimed or stale (a claim whose holding Claude session is dead). Git cleanliness is not freedom — a clean, detached worktree can still be actively held by Claude between commits or mid-think. Run `git -C <pool-worktree> switch <git_ref>`, or `git worktree add` a fresh one, then record occupancy with `spx worktree claim <pool-worktree>` so no other Claude session reuses the worktree while Claude holds it — no runtime hook claims it. When `spx worktree status` is unavailable or errors, occupancy is unreadable; `git worktree add` a fresh worktree rather than reuse an existing one, so no held worktree is entered.
 - **Single working tree** — `git switch <git_ref>` from a clean tree.
 
-**Foreign-pool guardrail.** Operate only inside a pool Claude participates in. A worktree in a `.spx/` pool Claude does not participate in — another product's checkout — is off-limits regardless of how free its git state looks; treat it as occupied. The claim protocol coordinates only agents that share one pool.
+**Foreign-pool guardrail.** Operate only inside a pool Claude participates in. A worktree in a `.spx/` pool Claude does not participate in — another product's checkout — is off-limits regardless of how free its git state looks; treat it as occupied. The claim protocol coordinates only Claude sessions that share one pool.
 
 When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this step and read the spec tree from there.
 
-**Step 3: Load node context**
+**Step 5: Inspect anchored nodes**
 
 For each node in the `<nodes>` section:
 
-1. **Present status**: Show what was done and what remains.
-2. **Check for coordination notes**:
+1. **Present status from the session file**: Show what the handoff recorded as done and remaining.
+2. **Check for coordination note paths only**:
    ```bash
    Glob: "spx/{node-path}/PLAN.md"
    Glob: "spx/{node-path}/ISSUES.md"
    ```
-   If found, read and present them — these carry stale-prone coordination the previous Claude context persisted as a hedge. Verify each against the current specs, decisions, tests, implementation, and user intent before acting on it; flag any item the durable layers have overtaken.
+   If found, list their paths. Do not read `PLAN.md` or `ISSUES.md` content in this step. `/contextualize` reads node-local coordination notes after product context and ancestry are loaded; acting on note content before then violates the spec-tree context guarantee.
 
-**Step 4: Present persisted artifacts**
+**Step 6: Present persisted artifacts**
 
 Show the `<persisted>` section:
 
@@ -55,7 +67,7 @@ Show the `<persisted>` section:
 - What insights were written to CLAUDE.md/memory/skills
 - What coordination notes were written and where
 
-**Step 5: Present coordination context**
+**Step 7: Present coordination context**
 
 Show the `<coordination>` section — cross-cutting context that does not belong to any single node. This may include:
 
@@ -64,7 +76,7 @@ Show the `<coordination>` section — cross-cutting context that does not belong
 - Environment or setup requirements
 - Open questions or pending decisions
 
-**Step 6: Invoke /contextualize (MANDATORY)**
+**Step 8: Invoke /contextualize (MANDATORY)**
 
 NEVER offer the user a choice here. NEVER propose fixes, code, or any implementation work at this point.
 
@@ -81,6 +93,8 @@ After context is loaded, STOP and present a post-context checkpoint:
 - Target node and its current state
 - Recommended next action from the handoff
 - Persisted artifacts or coordination items that could change the next move
+
+`/contextualize` reads the note content for any found `PLAN.md` or `ISSUES.md`. Treat those notes as stale-prone inputs and verify them against the loaded specs, decisions, assertions, tests, implementation, and current user intent before they steer work.
 
 If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume with the recommended next action.
 
@@ -119,20 +133,21 @@ After emitting the checkpoint marker, report the result and the current session 
 
 NEVER invoke `/apply`, author ADRs/tests/code, or edit files before this checkpoint completes.
 
-**Step 7: Verify coordination claims before triaging**
+**Step 9: Verify coordination claims before triaging**
 
 When the coordination section reports failing tests, known bugs, or specific errors, run them first before proposing fixes. The coordination section is a point-in-time snapshot; commits may have landed between handoff-write and pickup-claim that resolved listed failures. Running the tests is cheap (one command); triaging a non-existent failure wastes time and risks mis-diagnosis.
 
-This applies after the post-context checkpoint in Step 6 completes, or after the explicit `--auto-continue` override is acknowledged.
+This applies after the post-context checkpoint in Step 8 completes, or after the explicit `--auto-continue` override is acknowledged.
 
 </process>
 
 <success_criteria>
 
-- [ ] Skills checklist presented BEFORE any work starts
-- [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 2b)
+- [ ] `/understand` invoked immediately after claim markers and before session details are processed
+- [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
+- [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 4)
 - [ ] Each anchored node's status presented
-- [ ] PLAN.md / ISSUES.md checked and read if present
+- [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
@@ -140,6 +155,6 @@ This applies after the post-context checkpoint in Step 6 completes, or after the
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Agent knows which skills to invoke and which to avoid
+- [ ] Claude knows which skills to invoke and which to avoid
 
 </success_criteria>
