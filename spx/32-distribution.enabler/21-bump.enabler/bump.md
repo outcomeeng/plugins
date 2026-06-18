@@ -22,6 +22,7 @@ The `outcomeeng.distribution.bump` module enumerates plugin directories under `s
 - Given no explicit `--segment` and a changed plugin whose changes add a new `skills/{slug}/SKILL.md`, when bump runs, then that plugin's version is incremented at the `minor` segment ([test](tests/test_bump.scenario.l1.py))
 - Given no explicit `--segment` and a changed plugin whose only changes are modifications of existing files, when bump runs, then that plugin's version is incremented at the `patch` segment ([test](tests/test_bump.scenario.l1.py))
 - Given explicit `--segment patch` and a changed plugin whose auto-detection would yield `minor`, when bump runs, then that plugin's version is written at the `patch` segment and a stderr warning names the plugin and its detected segment ([test](tests/test_bump.scenario.l1.py))
+- Given a working tree with an untracked, non-ignored new skill under `src/plugins/{name}/**` alongside a tracked modification, when change detection runs, then the untracked file is reported `Added` and the modification `Modified` — an uncommitted distribution-surface addition is detected, not missed ([test](tests/test_bump.scenario.l1.py))
 
 ### Mappings
 

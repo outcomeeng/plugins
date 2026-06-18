@@ -25,6 +25,9 @@ Exception cases per `plugins/spec-tree/skills/test/references/methodology.md`:
 
 from __future__ import annotations
 
+import os
+import pathlib
+import subprocess
 from dataclasses import dataclass, field
 
 from collections.abc import Mapping
@@ -126,12 +129,98 @@ class RecordingManifestWriter:
             self.event_log.append(f"writer:{path}")
 
 
+CHANGE_DETECT_PLUGIN = "demo"
+_PLUGIN_ROOT = f"src/plugins/{CHANGE_DETECT_PLUGIN}"
+TRACKED_MODIFIED_PATH = f"{_PLUGIN_ROOT}/skills/existing/SKILL.md"
+MANIFEST_PATH = f"{_PLUGIN_ROOT}/.claude-plugin/plugin.json"
+UNTRACKED_ADDED_PATH = f"{_PLUGIN_ROOT}/skills/new-skill/SKILL.md"
+
+
+@dataclass(frozen=True)
+class UntrackedSkillRepo:
+    """A real git repo whose working tree carries a tracked edit plus an
+    untracked new skill under a plugin directory.
+
+    ``base_ref`` is the committed base. ``tracked_modified_path`` was committed
+    at the base and then modified (an unstaged ``M`` against the base);
+    ``untracked_added_path`` is a brand-new structural file that was never
+    committed or staged — invisible to ``git diff`` against the base.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    plugin: str
+    tracked_modified_path: str
+    untracked_added_path: str
+
+
+def _run_git(repo: pathlib.Path, *args: str) -> None:
+    """Run a git command with isolated config and a fixed identity."""
+    env = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.invalid",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.invalid",
+    }
+    subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+        ["git", *args],  # noqa: S607
+        cwd=repo,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+
+def _write(repo: pathlib.Path, rel: str, content: str) -> None:
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def build_repo_with_untracked_new_skill(repo: pathlib.Path) -> UntrackedSkillRepo:
+    """Commit a plugin base, then leave a tracked edit and an untracked new skill.
+
+    Sequence: initialise the repo; commit a plugin manifest and one existing
+    skill as the base; modify the existing skill (tracked, unstaged); add a new
+    skill file without staging it (untracked). A ``git diff`` against the base
+    sees only the modification; the untracked new skill is recoverable only
+    through ``git ls-files --others``.
+    """
+    repo.mkdir(parents=True, exist_ok=True)
+    _run_git(repo, "init", "-q", "-b", "main")
+    _run_git(repo, "config", "commit.gpgsign", "false")
+    _write(repo, MANIFEST_PATH, '{\n  "name": "demo",\n  "version": "0.1.0"\n}\n')
+    _write(repo, TRACKED_MODIFIED_PATH, "---\nname: existing\n---\n\nv1\n")
+    _run_git(repo, "add", "-A")
+    _run_git(repo, "commit", "-q", "-m", "base")
+    base_ref = "HEAD"
+
+    (repo / TRACKED_MODIFIED_PATH).write_text(
+        "---\nname: existing\n---\n\nv2\n", encoding="utf-8"
+    )
+    _write(repo, UNTRACKED_ADDED_PATH, "---\nname: new-skill\n---\n\nnew\n")
+
+    return UntrackedSkillRepo(
+        repo=repo,
+        base_ref=base_ref,
+        plugin=CHANGE_DETECT_PLUGIN,
+        tracked_modified_path=TRACKED_MODIFIED_PATH,
+        untracked_added_path=UNTRACKED_ADDED_PATH,
+    )
+
+
 __all__ = [
     "RecordingManifestWriter",
     "RecordingToolProbe",
     "ScriptedChangeProbe",
     "ScriptedContentProbe",
     "ScriptedManifestReader",
+    "UntrackedSkillRepo",
+    "build_repo_with_untracked_new_skill",
 ]
 
 
