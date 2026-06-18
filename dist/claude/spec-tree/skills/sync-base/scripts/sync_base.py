@@ -228,9 +228,12 @@ def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
     """Return the sorted changed paths for a diff spec, or ``None`` on failure.
 
     ``spec`` is a two-dot (``a..b``, net base advance) or three-dot
-    (``base...head``, branch's own changes) range.
+    (``base...head``, branch's own changes) range. ``--no-renames`` keeps a
+    rename as a delete of the old path plus an add of the new path, so a base
+    rename of a path the branch also touched surfaces as a path overlap rather
+    than hiding behind the new name and licensing a false reuse.
     """
-    result = _git(repo, "diff", "--name-only", spec)
+    result = _git(repo, "diff", "--name-only", "--no-renames", spec)
     if result.returncode != 0:
         return None
     return sorted(p for p in result.stdout.splitlines() if p)

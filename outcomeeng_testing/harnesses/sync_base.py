@@ -396,6 +396,48 @@ def build_overlapping_base_repo(root: pathlib.Path) -> OverlappingBaseRepo:
     )
 
 
+RENAMED_FILE = "renamed.txt"
+
+
+@dataclass(frozen=True)
+class RenameBaseRepo:
+    """A behind-base clone whose base advance renames a file the branch ignores.
+
+    The base renames ``INITIAL_FILE`` to ``RENAMED_FILE``; the branch changes an
+    unrelated file, so the rebase is clean. With ``--no-renames`` the base delta
+    reports both the old and the new path, the property a caller relies on to
+    catch a base rename of a path the branch also touched.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    feature_branch: str
+    old_path: str
+    new_path: str
+
+
+def build_rename_base_repo(root: pathlib.Path) -> RenameBaseRepo:
+    """Build a behind-base clone whose base advance is a rename."""
+    origin = _init_origin_with_base(root)
+    repo = _working_clone_on_feature(root, origin)
+    _commit_file(repo, FEATURE_FILE, "feature change\n", FEATURE_COMMIT_MESSAGE)
+
+    pusher = root / "pusher"
+    _git(pusher, "mv", INITIAL_FILE, RENAMED_FILE)
+    _git(pusher, "commit", "-q", "-m", "rename initial file")
+    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+
+    return RenameBaseRepo(
+        repo=repo,
+        base_ref=BASE_BRANCH,
+        remote_ref=f"origin/{BASE_BRANCH}",
+        feature_branch=FEATURE_BRANCH,
+        old_path=INITIAL_FILE,
+        new_path=RENAMED_FILE,
+    )
+
+
 def detach_head(repo: pathlib.Path) -> None:
     """Detach HEAD so the branch cannot be resolved for a rebase."""
     sha = _git(repo, "rev-parse", "HEAD")

@@ -24,6 +24,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_current_repo,
     build_overlapping_base_repo,
+    build_rename_base_repo,
     load_sync_base_module,
 )
 
@@ -90,6 +91,23 @@ def test_already_current_preserves_all_readiness(
     assert proof.branch_diff_unchanged is True
     # HEAD is untouched by an already-current sync.
     assert proof.old_head_oid == proof.new_head_oid
+
+
+def test_base_rename_surfaces_both_paths_in_base_delta(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_sync_base_module()
+    handle = build_rename_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    # A base rename reports both the old and new path (--no-renames), so a base
+    # rename of a path the branch also touched cannot hide behind the new name.
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.old_path in proof.base_delta_paths
+    assert handle.new_path in proof.base_delta_paths
 
 
 def test_proof_carries_schema_version_and_full_oids_no_lane_name(
