@@ -5,8 +5,7 @@ behind the remote-tracking base ref ``origin/<base>``, and rebases the
 branch's own commits onto that ref. The mechanism is rebase, never
 ``git reset``: rebase replays the branch's commits onto the advanced base,
 preserving the branch's work, where ``reset`` would repoint the branch while
-leaving the working tree at the old base and silently revert merged changes
-(see ``32-sync-base.enabler/13-base-sync-mechanism.adr.md``).
+leaving the working tree at the old base and silently revert merged changes.
 
 A clean rebase runs without operator interaction. The only operator
 touch-point is a rebase conflict that cannot be resolved autonomously or a
