@@ -78,18 +78,18 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
     }
 )
 
-# Phrases that are vocative LLM-facing instructions — they only appear in
-# a prompt body, never in orchestration prose or code. If any of these
-# show up in SKILL.md or a .py file, the prompt body has leaked from the
-# reference file into a place it should not live.
+# Phrases that mark judgment-style review prompt content — they only
+# appear in a prompt body, never in orchestration prose or code. If any
+# of these show up in SKILL.md or a .py file, the prompt body has leaked
+# from the reference file into a place it should not live.
 #
 # Schema vocabulary (``blocking``, ``request_changes``, ``acknowledgements``)
 # is excluded because those tokens legitimately appear in rendering code
 # (e.g., to switch on severity) and in skill-prose orchestration
 # (referring to the schema the agent emits).
 PROMPT_FINGERPRINT_PHRASES = (
-    "You are reviewing",
-    "Inspect every line",
+    "Review a labeled diff bundle",
+    "Inspect every section",
 )
 
 
@@ -210,15 +210,15 @@ class TestSwappablePromptIsAStandaloneFile:
         )
 
     def test_prompt_fingerprint_phrases_appear_only_in_reference_file(self) -> None:
-        """LLM-vocative prompt phrases live only in ``references/review-prompt.md``.
+        """Prompt fingerprint phrases live only in ``references/review-prompt.md``.
 
-        Vocative phrases like "You are reviewing" or "Apply each of the
-        eight concerns" address the model directly and only make sense in
-        prompt content. They must not leak into orchestration prose
-        (SKILL.md) or code (``*.py``). Schema vocabulary tokens like
-        ``must_fix`` are excluded from this check because they
-        legitimately appear in renderers and in skill prose that names
-        the schema vocabulary the agent emits.
+        Prompt-specific phrases such as "Review a labeled diff bundle" or
+        "Apply each of the eight concerns" only make sense in prompt
+        content. They must not leak into orchestration prose (SKILL.md) or
+        code (``*.py``). Schema vocabulary tokens like ``must_fix`` are
+        excluded from this check because they legitimately appear in
+        renderers and in skill prose that names the schema vocabulary the
+        reviewer emits.
 
         The reference file itself must contain every fingerprint phrase —
         otherwise the phrases stopped being valid LLM-prompt markers and
@@ -243,7 +243,7 @@ class TestSwappablePromptIsAStandaloneFile:
                 if phrase in source:
                     leaked.append(f"{script.name}: contains '{phrase}'")
         assert not leaked, (
-            "LLM-vocative prompt phrases leaked outside "
+            "Prompt fingerprint phrases leaked outside "
             f"{REVIEW_PROMPT_PATH.name}:\n" + "\n".join(leaked)
         )
 
