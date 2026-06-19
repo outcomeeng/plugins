@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py"
+            "command": "if [ \"${SPECTREE_SESSION_HOOK_DISABLED:-}\" = \"1\" ]; then echo '{}'; else python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py\" 2>/dev/null || echo '{}'; fi",
+            "timeout": 5
           }
         ]
       }

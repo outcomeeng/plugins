@@ -4,13 +4,13 @@ PROVIDES a stable per-agent session identity and a per-runtime session directory
 SO THAT session management nodes (sessions, pickup, handoff)
 CAN scope work to the current agent without file-system heuristics or race conditions
 
-The spec-tree plugin's only runtime hook is a `SessionStart` hook that writes the agent session identity into the harness-provided `$CLAUDE_ENV_FILE`; it performs no other behavior, holds no `.spx/` state, inspects no git state, and runs no subprocess, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`. This node holds the hook-wide constraint that spans its children.
+The spec-tree plugin's only runtime hook is a `SessionStart` hook whose only positive effect is writing the agent session identity into the harness-provided `$CLAUDE_ENV_FILE`; on the disabled-or-failed path it exits with a valid empty result and writes nothing. It holds no `.spx/` state, inspects no git state, and spawns no subprocess of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`. This node holds the hook-wide constraint that spans its children.
 
 ## Assertions
 
 ### Scenarios
 
-- Given a `SessionStart` payload, when the hook runs, then its only effect is writing `CLAUDE_SESSION_ID` to `$CLAUDE_ENV_FILE` — it emits no stdout directive and creates no `.spx/` state (no worktree claim, no session directory) ([test](tests/test_agent_environment.scenario.l1.py))
+- Given a `SessionStart` payload, when the `session-start.py` script runs on the normal path, then its only effect is writing `CLAUDE_SESSION_ID` to `$CLAUDE_ENV_FILE` — it emits no stdout directive and creates no `.spx/` state (no worktree claim, no session directory) ([test](tests/test_agent_environment.scenario.l1.py))
 
 ### Conformance
 
@@ -18,4 +18,4 @@ The spec-tree plugin's only runtime hook is a `SessionStart` hook that writes th
 
 ### Compliance
 
-- ALWAYS: the `SessionStart` hook's only effect is writing the agent session identity to `$CLAUDE_ENV_FILE`; it reads or writes no `.spx/` state, inspects no git state, parses no transcript, and runs no subprocess, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([review])
+- ALWAYS: on the normal path the `SessionStart` hook's only effect is writing the agent session identity to `$CLAUDE_ENV_FILE`, and on the disabled-or-failed path it exits with a valid empty result and writes nothing; the `session-start.py` script reads or writes no `.spx/` state, inspects no git state, parses no transcript, and spawns no subprocess of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([review])

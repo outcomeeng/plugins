@@ -4,8 +4,8 @@ Verifies architectural compliance rules that can be falsified by inspecting
 source code or module-level data:
 
 - The declared step list includes a `ruff format --check` step, a
-  `ruff check` step, a `mypy --strict` package step, a `pyright` package step, and a
-  `spx validation markdown` step.
+  `ruff check` step, a `mypy --strict` package step, a `pyright` package step, a
+  `spx validation markdown` step, and a hook-safety step.
 - The production process spawner passes `start_new_session=True` so
   signal forwarding targets a process group.
 - The SIGKILL grace-period wait uses a single `time.monotonic()` deadline
@@ -29,6 +29,7 @@ from typing import Final
 
 from outcomeeng import validation as pkg
 from outcomeeng.validation import (
+    HOOK_SAFETY_ARGV,
     MYPY_ARGV,
     PYRIGHT_ARGV,
     RUFF_CHECK_ARGV,
@@ -63,6 +64,9 @@ class TestDeclaredSteps:
 
     def test_steps_includes_spx_validation_markdown(self) -> None:
         assert any(step.argv == SPX_MARKDOWN_ARGV for step in STEPS)
+
+    def test_steps_includes_hook_safety(self) -> None:
+        assert any(step.argv == HOOK_SAFETY_ARGV for step in STEPS)
 
 
 def _package_modules() -> list[Path]:
