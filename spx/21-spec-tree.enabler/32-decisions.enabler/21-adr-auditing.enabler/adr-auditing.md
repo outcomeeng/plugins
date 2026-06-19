@@ -14,7 +14,7 @@ Evidence requires three properties checked in order:
 2. **Atemporal voice** — the ADR states architecture truth, never history
 3. **Per-rule tag validity and evidence-type fit** — every rule under `## Verification` carries exactly one tag valid for its subsection: `### Testing` rules carry one of the five evidence types (scenario, mapping, conformance, property, compliance), `### Eval` rules carry `[eval]`, and `### Audit` rules carry `[audit]`; and a `### Testing` rule's evidence type fits the claim's quantifier — a universal (ALWAYS/NEVER) is never `scenario`
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are out of scope here and stay in `audit-{lang}-architecture`.
+Section structure, atemporal voice, and tag validity are judged from the canonical decision template (`spx/21-spec-tree.enabler/21-templates.enabler`), never a transcribed copy of it. Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed by invoking `audit-{lang}-architecture` for the language detected in scope; that skill carries only those language-specific concerns and never re-judges structure, voice, or tags.
 
 ## Per-rule Tag Validity Model
 
@@ -33,5 +33,7 @@ A `### Testing` rule's evidence-type tag is chosen from the rule's claim shape v
 ### Compliance
 
 - ALWAYS: check structure, voice, and tag validity in order ([review])
+- ALWAYS: judge section structure, atemporal voice, and tag validity from the canonical decision template, never from a transcribed copy of it ([review])
+- ALWAYS: compose language-specific ADR concerns by invoking `audit-{lang}-architecture` for the language detected in scope, rather than dispatching a separate language-specific auditor agent ([review])
 - ALWAYS: verify each `### Testing` rule's evidence type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([review])
 - NEVER: classify ADR content as product-behavior-versus-architecture — an ADR's content is architecture by definition; that classification is the PDR audit's concern ([review])
