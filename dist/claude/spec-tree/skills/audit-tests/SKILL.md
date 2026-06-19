@@ -90,13 +90,20 @@ Read the test file's import statements. Classify each import:
 
 If codebase imports exist, classify using the coupling taxonomy in `${CLAUDE_SKILL_DIR}/references/evidence-model.md`:
 
-| Category   | Definition                                                  | Verdict                                    |
-| ---------- | ----------------------------------------------------------- | ------------------------------------------ |
-| Direct     | Test imports the module under test                          | Proceed                                    |
-| Indirect   | Test imports a harness wrapping the module                  | Proceed — verify harness has real coupling |
-| Transitive | Test imports a consumer of the module                       | Proceed — verify test level matches        |
-| False      | Imports module but never calls assertion-relevant functions | REJECT                                     |
-| Partial    | Calls functions but on wrong inputs or wrong code paths     | REJECT                                     |
+| Category           | Definition                                                                                 | Verdict                                         |
+| ------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Direct             | Test imports the module under test                                                         | Proceed                                         |
+| Indirect           | Test imports a harness wrapping the module                                                 | Proceed — verify harness has real coupling      |
+| Transitive         | Test imports a consumer of the module                                                      | Proceed — verify test level matches             |
+| Laundered indirect | Imports a test-support module that exists only to expose hardcoded values back to the test | REJECT — laundering                             |
+| False              | Imports module but never calls assertion-relevant functions                                | REJECT                                          |
+| Partial            | Calls functions but on wrong inputs or wrong code paths                                    | REJECT                                          |
+| None               | Test imports only its test framework                                                       | REJECT — tautology                              |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                   | REJECT — couples to authored text, not behavior |
+
+Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader helper that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
+
+**A test whose evidence is reading an authored prose or documentation body and asserting on its content → REJECT — "prose-coupling."** The claim verifies that prose was authored, not that code behaves; its verification type belongs in `[eval]` (a graded judgment over a producer's structured verdict) or `[audit]` (a semantic constraint), and the spec assertion is retagged accordingly. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
 
 </step>
 
@@ -192,7 +199,7 @@ Scan all findings across all assertions. If any assertion has a property failure
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery). Skills never hand-format markdown verdicts — deterministic rendering lives in the verdict toolchain.
+Emit the verdict as JSON conforming to the canonical schema in `${CLAUDE_SKILL_DIR}/../audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery). Skills never hand-format markdown verdicts — deterministic rendering lives in the verdict toolchain.
 
 The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
 
@@ -279,6 +286,12 @@ How to avoid: Step 3d runs the actual coverage command. Report numbers, not impr
 Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
 
 How to avoid: Essential principles — no mechanical detection. Check the four evidence properties only.
+
+**Failure 5: Approved a prose-body substring test as direct coupling**
+
+Claude audited a test that read an authored skill body and asserted that policy substrings were present, and rated coupling PASS — "direct coupling to the artifact; the text is the thing under test" — and falsifiability PASS — "removing the clause from the skill body breaks the test." The test exercises no code; only an edit to the authored prose falsifies it, so it carries no behavioral evidence, yet the four-property model rationalized it as conformance.
+
+How to avoid: Step 3a — after identifying what a test reads, classify by whether the subject is executable behavior or authored prose/documentation, not by whether the path resolves to a repository file. A read of an authored prose or documentation body asserted for its content is prose-coupling → REJECT, however the path is resolved and whatever harness mediates the read.
 
 </failure_modes>
 

@@ -89,6 +89,20 @@ it("has correct chroma", () => {
 
 This test passes if every file in the codebase is deleted.
 
+**Prose-coupling** — Test reads an authored prose or documentation body — a skill body, a spec body, a prompt, any text the product authors and maintains — and asserts substrings of its content. The test couples to the document's text, never to executable behavior: it passes whatever the document literally contains, and no code runs.
+
+```python
+SKILL = repo_root / "src" / "plugins" / "x" / "skills" / "y" / "SKILL.md"
+
+
+def test_skill_declares_the_policy() -> None:
+    assert (
+        "PRODUCTION_READINESS" in SKILL.read_text()
+    )  # the prose was authored, not behavior
+```
+
+This holds full-chain: a harness that exposes the authored path as a constant, or a reader helper that performs the `read_text` inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised. The only mutation that falsifies such a test is an edit to the authored prose, never a change to code, so it carries no behavioral evidence. REJECT — the claim belongs in `[eval]` or `[audit]`, and the spec assertion is retagged. Reading an authored *source-code* file for a structural lint that exercises a rule against it is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
+
 </coupling_taxonomy>
 
 <coupling_verification>

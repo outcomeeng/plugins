@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.16"
+template_version: "0.18.17"
 template_source: spec-tree
 languages: [python]
 ---
@@ -51,7 +51,7 @@ Coordination notes (`PLAN.md`, `ISSUES.md`) carry cross-session working context.
 6. **Decision records win by hierarchy**: If a spec contradicts an ADR or PDR in its ancestry, the spec is wrong. Rewrite the spec to align with the decision record before any implementation work.
 7. **Decision records updated in-place**: When a decision changes, update the ADR/PDR directly. No "superseded" workflow.
 8. **Coordination notes**: PLAN.md and ISSUES.md in node directories are committed coordination notes created during development or when closing a session via the `/handoff` skill. They are committed to git only to carry coordination across sessions and worktrees; they never hold spec assertions or decisions. They are not durable product truth and go stale unless acted upon, so verify a note before it steers work — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent. `/contextualize` reads them automatically. Remove a resolved note; for ISSUES.md entries, either delete the fixed entry or convert unresolved product work into a spec node. These files are an escape hatch to make coordination visible and are committed independently from implementation work because other actors need to incorporate them into their decisions immediately.
-9. **Agent-facing tool interfaces**: Skills and agents that instruct Claude to call `spx`, `gh`, or another CLI present payload, wait, and mutation command forms by supported harness environment. See `spx/15-agent-tools.pdr.md`.
+9. **Agent-facing tool interfaces**: Skills and agents that instruct Claude to call `spx`, `gh`, or another CLI present payload, wait, and mutation command forms by supported harness environment. Follow the product's agent-facing tool-interface decision record when one is present.
 
 ---
 
@@ -169,6 +169,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit this PDR"                           | `/audit-pdr`     | `pdr-auditor`           |
 | "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
+| "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
 
 Per-language code, architecture, and test audits render for the product's enabled languages:
 
@@ -177,6 +178,8 @@ Per-language code, architecture, and test audits render for the product's enable
 | "Audit this code"       | `/audit-python`              | `python-code-auditor`         |
 | "Audit ADRs for Python" | `/audit-python-architecture` | `python-architecture-auditor` |
 | "Audit these tests"     | `/audit-python-tests`        | `python-test-auditor`         |
+
+---
 
 ## Test Naming Convention
 

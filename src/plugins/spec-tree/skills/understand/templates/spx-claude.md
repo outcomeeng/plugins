@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.16"
+template_version: "0.18.17"
 template_source: spec-tree
 ---
 
@@ -168,6 +168,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit this PDR"                           | `/audit-pdr`     | `pdr-auditor`           |
 | "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
+| "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
 
 Per-language code, architecture, and test audits render for the product's enabled languages:
 
