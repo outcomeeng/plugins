@@ -12,12 +12,18 @@ The verification isolation separates the **author context** (the context that pr
 
 ## Staging (decided)
 
-Two PRs, each internally coherent with no behavioral regression:
+Two PRs, each internally coherent with no behavioral regression. The PR-1 description below matches what PR 1 actually ships — the composition *mechanism* is PR-2 work, not PR-1.
 
-- **PR 1 (this branch `feat/adr-audit-verifier-composition`)** — the spec foundation (committed `293687e6`) **plus** the composition mechanism: the generic `audit-adr` / `audit-tests` / `audit` skills compose the matching `audit-{lang}*` skill by language partition, and the generic auditor agents (`adr-auditor`, `test-evidence-auditor`, the `/audit` family) gain the `Skill` tool to do so. The per-language auditor agents still exist in PR 1 (redundant, harmless) so nothing regresses. The `audit-{lang}*` dispatch-gates are updated transitionally to permit either entry point (the per-language agent OR a composing generic auditor).
-- **PR 2** — remove the now-redundant language auditor agents (10 files), render the `spx-claude.md` template to generic-only (template_version 0.19.0), salvage the `rust-unsafe-auditor` unsafe-checker methodology into `audit-rust`, simplify the dispatch-gates to generic-only, and complete the 16-verification conformance (`tools: Bash, Read, Skill`, `scripts/` arbiters, thread-store persistence, eval suites). The PR-2 WIP (agent removals + template render) is saved in git stash `wip-agent-removal-and-template (for PR2)`.
+- **PR 1 (this branch `feat/adr-audit-verifier-composition`)** — the spec foundation (Phase A: `verification.pdr` author≠verifier principle reconciled with the merged verification-ownership contract, `17-auditing.adr` collapse architecture, `adr-auditing.md`, the three language specs) **plus one composition increment**: `audit-adr` reads the canonical ADR template for section structure and drops a structural finding that contradicts it. The composition *mechanism* (generic auditors invoking `audit-{lang}*` skills) is NOT in PR 1 — the `17-auditing.adr` composition assertions lead implementation and are satisfied in PR 2 (future product truth, tracked here). spec-tree bumped to 0.59.9.
+- **PR 2** — the composition mechanism and the agent collapse together (indivisible; landing the agent removals alone would regress language-specific auditing):
+  - Generic `audit-adr` / `audit-tests` / `audit` skills compose the matching `audit-{lang}*` skill by language partition; **add `Skill` to those skills' `allowed-tools` and to `adr-auditor` / `test-evidence-auditor` `tools`** (the allowlist update the spec's composition assertions require).
+  - Simplify each `audit-{lang}-architecture` skill to language-only concerns (defer section structure, atemporal voice, and tag validity to the composing auditor), updating its dispatch-gate, process, and verdict schema together.
+  - Remove the 10 redundant language auditor agents; render `spx-claude.md` to generic-only (template_version 0.19.0); salvage the `rust-unsafe-auditor` unsafe-checker methodology into `audit-rust`.
+  - Complete the 16-verification conformance for the surviving generic auditors (`tools: Bash, Read, Skill`, `scripts/` arbiters, thread-store persistence, eval suites).
 
-The committed spec foundation declares the PR-2 end state (no language auditor agents); that is future product truth leading implementation, with this PLAN recording the downstream PR-2 work.
+  PR-2 WIP is durably preserved as branch refs `wip/composition-partial` (partial audit-adr Step 5b + adr-auditor `Skill` tool + python-arch gate) and `wip/pr2-agent-removal-template` (the 10 agent removals + template render), with `.wip.patch` backstops in `/tmp/pr2-wip-backstop/`.
+
+The committed spec foundation declares the PR-2 end state (no language auditor agents, composition active); that is future product truth leading implementation, with this PLAN recording the downstream PR-2 work.
 
 ## Sequence (audit gate after each spec/structural step)
 
@@ -31,8 +37,8 @@ Phase A committed as the spec layer (specs lead; agent removal + skill compositi
 - [ ] B1. Update shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` Quick Reference tables: generic auditors only; bump template_version.
 - [ ] B2. Re-render product `spx/CLAUDE.md`/`AGENTS.md` via `/update-spx`.
 - [ ] C1. Remove language auditor agents: python/typescript/rust × {architecture,code,test} (+ resolve `rust-unsafe-auditor`).
-- [ ] C2. Generic audit skills (`audit-adr`, `audit-tests`, `/audit` orchestrator) compose `audit-{lang}*` by partition.
-- [ ] C3. `audit-{lang}*` skills: drop "dispatch the {lang}-auditor agent" dispatch_gate prose; `audit-{lang}-architecture` drops duplicated structure/voice/tag checks.
+- [~] C2. Generic audit skills compose `audit-{lang}*` by partition, AND add `Skill` to `audit-adr`/`audit-tests`/`audit` `allowed-tools` and to `adr-auditor`/`test-evidence-auditor` `tools` (composition is unexecutable without it). Partial: `audit-adr` already reads the canonical ADR template for section structure (shipped in PR 1, commit on this branch); the invoke-the-language-skill step + the tool-allowlist update remain for PR 2.
+- [ ] C3. `audit-{lang}*` skills: drop "dispatch the {lang}-auditor agent" dispatch_gate prose; `audit-{lang}-architecture` drops duplicated structure/voice/tag checks (defer to the composing `adr-auditor`).
 - [ ] C4. `architect-python` Phase 0: point at canonical template (understand skill), not `/author`.
 - [ ] D. Fold in 16-verification conformance for surviving generic auditors: `tools: Bash, Read, Skill`, model field, `scripts/` arbiter, thread-store persistence, eval suites; build unbuilt `test_pdr_auditing` suites; update `spx/EXCLUDE`.
 - [ ] E. `just build-skills`; marketplace catalogs; `just bump`; `develop:skill-auditor` on changed skills; `subagent-auditor` on changed agents; `just check`; `/merge`.
