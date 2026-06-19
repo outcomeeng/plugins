@@ -1,7 +1,9 @@
 """Mapping tests for 21-identity.enabler (identity.md mapping).
 
-L1: the real `session-start.py` hook is run as a subprocess against real
-filesystem I/O in pytest tmp_path directories, with no test doubles.
+L1: the shipped `SessionStart` hook command — which delegates to `spx hook run
+session-start` — is run as a subprocess against real filesystem I/O in pytest
+tmp_path directories, with no test doubles. The invocation comes from
+`outcomeeng_testing.harnesses.hooks`.
 
 Assertion covered:
   - A SessionStart payload maps to the identity write: distinct session UUIDs map

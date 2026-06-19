@@ -4,18 +4,20 @@ PROVIDES a stable per-agent session identity and a per-runtime session directory
 SO THAT session management nodes (sessions, pickup, handoff)
 CAN scope work to the current agent without file-system heuristics or race conditions
 
-The spec-tree plugin's only runtime hook is a `SessionStart` hook whose only positive effect is writing the agent session identity into the harness-provided `$CLAUDE_ENV_FILE`; on the disabled-or-failed path it exits with a valid empty result and writes nothing. It holds no `.spx/` state, inspects no git state, and spawns no subprocess of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`. This node holds the hook-wide constraint that spans its children.
+The spec-tree plugin's only runtime hook is a `SessionStart` hook that delegates to the `spx` CLI hook runner — `spx hook run <hook-name-kebab-case>`, here `spx hook run session-start` — through a hook-safety-compliant inline guard. On the normal path the `spx` hook runner delivers the session environment: it writes the agent session identity and project directories into the harness-provided `$CLAUDE_ENV_FILE` and records the worktree-occupancy claim. On the disabled-or-absent path the guard exits with a valid empty result and writes nothing. The plugin owns only the hook's wiring and its fail-open guard; it embeds no `.spx/`, git, transcript, or session logic of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` and `spx/15-hook-safety.pdr.md`. The identity's distinctness and the per-session directory the `spx` CLI realizes are its own contract, verified by its suite; this node verifies the plugin's integration with it. This node holds the hook-wide constraint that spans its children.
 
 ## Assertions
 
 ### Scenarios
 
-- Given a `SessionStart` payload, when the `session-start.py` script runs on the normal path, then its only effect is writing `CLAUDE_SESSION_ID` to `$CLAUDE_ENV_FILE` — it emits no stdout directive and creates no `.spx/` state (no worktree claim, no session directory) ([test](tests/test_agent_environment.scenario.l1.py))
+- Given a `SessionStart` payload and `spx` resolvable on `PATH`, when the shipped hook command runs, then the `spx` hook runner delivers the session environment — `CLAUDE_SESSION_ID` and `CLAUDE_WORKTREE_CLAIMED=1` reach `$CLAUDE_ENV_FILE` and a worktree-occupancy claim is recorded under the project's `.spx/worktrees/` ([test](tests/test_agent_environment.scenario.l1.py))
+- Given the kill switch `SPECTREE_SESSION_HOOK_DISABLED=1`, when the shipped hook command runs, then it exits with a valid empty result and writes nothing — no identity, no claim, no `.spx/` state ([test](tests/test_agent_environment.scenario.l1.py))
+- Given `spx` is unresolvable on `PATH`, when the shipped hook command runs, then it exits with a valid empty result and writes nothing — the fail-open safety net for a consumer without `spx` installed ([test](tests/test_agent_environment.scenario.l1.py))
 
 ### Conformance
 
-- The spec-tree plugin's `hooks.json` declares exactly one hook event — `SessionStart`, wired to `scripts/session-start.py` — and no other hook event ([test](tests/test_agent_environment.conformance.l1.py))
+- The spec-tree plugin's `hooks.json` declares exactly one hook event — `SessionStart` — whose command delegates to `spx hook run session-start` and names no plugin-shipped script path ([test](tests/test_agent_environment.conformance.l1.py))
 
-### Compliance
+### Audit
 
-- ALWAYS: on the normal path the `SessionStart` hook's only effect is writing the agent session identity to `$CLAUDE_ENV_FILE`, and on the disabled-or-failed path it exits with a valid empty result and writes nothing; the `session-start.py` script reads or writes no `.spx/` state, inspects no git state, parses no transcript, and spawns no subprocess of its own, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([review])
+- ALWAYS: the `SessionStart` hook delegates session-identity, project-dir, and worktree-occupancy work to the `spx` CLI hook runner and embeds no `.spx/`, git, transcript, or session logic of its own; on the disabled-or-absent path it exits with a valid empty result, per `spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md` ([audit])

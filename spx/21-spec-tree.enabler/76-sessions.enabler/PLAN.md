@@ -4,7 +4,7 @@
 
 The spec-tree plugin now specifies `.spx/sessions/$CLAUDE_SESSION_ID/` (or `$CODEX_THREAD_ID/` under Codex) as the authoritative accumulator for every session an agent has claimed during a runtime. The marketplace side is in place after commit `ad7d696`:
 
-- `src/plugins/spec-tree/scripts/session-start.py` no longer mkdirs the per-runtime directory. It is created lazily on first claim.
+- The spec-tree `SessionStart` hook (`src/plugins/spec-tree/hooks/hooks.json`) delegates to `spx hook run session-start` and never mkdirs the per-runtime directory; it is created lazily on first claim by `spx session pickup`.
 - `src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md` reads the filesystem as primary source of truth and cross-checks against `<CLAIMED_SESSIONS>` / `<PICKUP_CHECKPOINT>` / `<PICKUP_CLAIM>` markers.
 - `src/plugins/spec-tree/skills/pickup/SKILL.md` documents the dual accumulator (filesystem symlink + marker).
 
@@ -93,7 +93,7 @@ Nothing else to change here. The plugin-side contract is already merged. If the 
 
 - Marketplace commit implementing the plugin-side contract: `ad7d696`
 - Authoritative algorithm: [`src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md`](../../../src/plugins/spec-tree/skills/handoff/references/claimed-session-resolution.md)
-- SessionStart hook (lazy-create expectation): [`src/plugins/spec-tree/scripts/session-start.py`](../../../src/plugins/spec-tree/scripts/session-start.py)
+- SessionStart hook (delegates to `spx hook run session-start`; the per-session directory is created lazily by `spx session pickup`, not the hook): [`src/plugins/spec-tree/hooks/hooks.json`](../../../src/plugins/spec-tree/hooks/hooks.json)
 - Current spx session command handlers (paths observed during plan drafting; confirm on entry): `src/commands/session/pickup.ts`, `src/commands/session/archive.ts`, `src/domains/session/index.ts`
 
 ---

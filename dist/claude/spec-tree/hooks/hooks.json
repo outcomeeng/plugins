@@ -6,8 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"${SPECTREE_SESSION_HOOK_DISABLED:-}\" = \"1\" ]; then echo '{}'; else python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py\" 2>/dev/null || echo '{}'; fi",
-            "timeout": 5
+            "command": "if [ \"${SPECTREE_SESSION_HOOK_DISABLED:-}\" = \"1\" ]; then echo '{}'; else SPX_BIN=\"${SPX_BIN:-spx}\"; command -v \"$SPX_BIN\" >/dev/null 2>&1 && \"$SPX_BIN\" hook run session-start || echo '{}'; fi",
+            "timeout": 10
           }
         ]
       }

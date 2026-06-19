@@ -1,8 +1,11 @@
 """Scenario tests for 21-identity.enabler (identity.md scenario).
 
-L1: the real `session-start.py` hook is run as a subprocess against real
-filesystem I/O in pytest tmp_path directories, with no test doubles. The hook
-invocation comes from `outcomeeng_testing.harnesses.hooks`.
+L1: the shipped `SessionStart` hook command — which delegates to `spx hook run
+session-start` — is run as a subprocess against real filesystem I/O in pytest
+tmp_path directories, with no test doubles. The invocation comes from
+`outcomeeng_testing.harnesses.hooks`, which runs the command from `hooks.json`
+with the temp directory as the project dir so spx's session storage stays
+hermetic.
 
 Assertion covered:
   - SessionStart writes $CLAUDE_SESSION_ID to the harness env file.

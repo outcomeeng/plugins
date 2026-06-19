@@ -14,11 +14,6 @@ CAN scope work to the current agent without file-system heuristics or race condi
 
 - A `SessionStart` payload maps to the identity write: distinct session UUIDs map to distinct `$CLAUDE_SESSION_ID` writes, and a missing or empty `session_id` maps to no export ([test](tests/test_identity.mapping.l1.py))
 
-### Properties
-
-- For any session UUID, the env file receives that identity as `$CLAUDE_SESSION_ID` with surrounding whitespace trimmed — the value round-trips through the hook's shell-quoting otherwise unchanged ([test](tests/test_identity.property.l1.py))
-- The hook writes the session identity deterministically: repeated `SessionStart` events with the same payload produce the same `$CLAUDE_SESSION_ID` export line, so every Bash tool call in the session reads one stable value ([test](tests/test_identity.property.l1.py))
-
 ### Compliance
 
 - ALWAYS: resolve session identity from `$CLAUDE_SESSION_ID` (Claude Code) or `$CODEX_THREAD_ID` (Codex) — never infer identity from file modification timestamps, directory enumeration, or index files ([review])
