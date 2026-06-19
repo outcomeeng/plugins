@@ -41,7 +41,7 @@ Visit each item before composing findings. A pass that samples one obvious defec
 
 When a finding is valid, state the defect class in `message`: the violated rule, the pattern that makes the cited site representative, and any parallel in-scope sites visible in the diff. If the cited site is isolated, say why the same-class sweep found no visible parallel instance.
 
-A finding that only names one line while the same rule, source contract, evidence pattern, lifecycle step, or generated-source relationship appears elsewhere in the touched subsystem is incomplete. Surface the class so the author can fix the class before the next review round.
+A finding that only names one line while the same rule, source contract, evidence pattern, lifecycle step, or generated-source relationship appears elsewhere in the diff is incomplete. Surface the class — the author resolves it across the touched node(s) — before the next review round.
 
 ## Category (6, grouped by three axes)
 
