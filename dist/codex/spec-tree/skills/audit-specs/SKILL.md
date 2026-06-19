@@ -37,7 +37,7 @@ A node states product truth. "The status rollup reports failing when any child f
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECT`. No middle ground.
+`APPROVED` or `REJECTED`. No middle ground.
 
 </essential_principles>
 
@@ -95,7 +95,7 @@ Check EVERY section for temporal language:
 
 For each assertion under `## Assertions`:
 
-1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design. A missing tag, a tag carried more than once, or a `[test]`/`[review]` mechanism tag with no path is invalid; a bare `[audit]` is not.
+1. The assertion carries exactly one verification-type tag — `([test](path))` and `([eval](path))` carry a path; `([audit])` is bare by design, and `([review])` is its legacy spelling, also bare. A missing tag, a tag carried more than once, or a `[test]` or `[eval]` mechanism tag with no path is invalid; a bare `([audit])` or `([review])` is valid.
 2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<essential_principles>` (a universal is never `scenario`). Reject a type the `/test` router would not produce; do not relitigate a choice the router leaves open between equally valid types.
 3. The tag is reachable for the claim's subject. When the claim's subject is the content of an authored prose or documentation artifact rather than executable behavior, `[test]` is unreachable — its only evidence reads the authored text and asserts on it (directly or through a fixture or harness that exposes or reads the artifact), proving the prose was authored rather than that code behaves. The tag belongs in `[eval]` (a graded judgment over the producer's structured verdict) or `[audit]` (a semantic constraint).
 
@@ -107,7 +107,7 @@ For each assertion under `## Assertions`:
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
+Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 </step>
 
@@ -115,7 +115,7 @@ Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `${SKILL_DIR}/../audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 
