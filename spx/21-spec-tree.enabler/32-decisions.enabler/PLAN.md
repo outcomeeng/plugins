@@ -35,8 +35,12 @@ The committed spec foundation declares the PR-2 end state (no language auditor a
 Phase A committed as the spec layer (specs lead; agent removal + skill composition are downstream, tracked below).
 
 - [ ] B1. Update shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` Quick Reference tables: generic auditors only; bump template_version.
-- [ ] B2. Re-render product `spx/CLAUDE.md`/`AGENTS.md` via `/update-spx`.
-- [ ] C1. Remove language auditor agents: python/typescript/rust × {architecture,code,test} (+ resolve `rust-unsafe-auditor`).
+- [ ] B2. Reconcile the doc surfaces that still reference the language auditor agents the committed spec now forbids (each contradicts `17-auditing.adr` until PR 2 lands — spec leads, tracked here):
+  - Re-render product `spx/CLAUDE.md` (spx guide) via `/update-spx`.
+  - Hand-update the **root `AGENTS.md`** "When to Dispatch Agents vs Invoke Skills" dispatch table (the per-language `audit-{lang}*` → `{lang}-*-auditor` rows) — `/update-spx` does NOT touch the root `AGENTS.md`.
+  - Regenerate the README plugin catalog (`just docs`) after the agents are removed.
+  - Update `develop/skills/create-subagents/references/subagents.md` examples that use `typescript-code-auditor` (a removed agent) as a sample.
+- [ ] C1. Remove language auditor agents: python/typescript/rust × {architecture,code,test} (+ resolve `rust-unsafe-auditor`). Salvage the `rust-unsafe-auditor` unsafe/FFI soundness methodology (rule IDs `ptr-*`, `ffi-*`, SAFETY-comment enforcement, UB categories — aliasing, lifetimes, validity invariants, panic safety) into `audit-rust`. The committed `spx/43-rust.enabler/rust.md` line-19 assertion is the present-tense contract this salvage implements; it is intentionally spec-leading (atemporal voice, no "will pass" hedge) and currently unmet until C1 lands.
 - [~] C2. Generic audit skills compose `audit-{lang}*` by partition, AND add `Skill` to `audit-adr`/`audit-tests`/`audit` `allowed-tools` and to `adr-auditor`/`test-evidence-auditor` `tools` (composition is unexecutable without it). Partial: `audit-adr` already reads the canonical ADR template for section structure (shipped in PR 1, commit on this branch); the invoke-the-language-skill step + the tool-allowlist update remain for PR 2.
 - [ ] C3. `audit-{lang}*` skills: drop "dispatch the {lang}-auditor agent" dispatch_gate prose; `audit-{lang}-architecture` drops duplicated structure/voice/tag checks (defer to the composing `adr-auditor`).
 - [ ] C4. `architect-python` Phase 0: point at canonical template (understand skill), not `/author`.
