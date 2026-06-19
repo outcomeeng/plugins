@@ -1,0 +1,19 @@
+title = "transport-selection"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/15-merging.pdr.md",
+  "spx/AGENTS.md",
+  "spx/local/merging.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/merging.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/**",
+  "spx/21-spec-tree.enabler/76-merging.enabler/evals/transport-selection/**",
+  "src/plugins/spec-tree/skills/merge/**",
+  "src/plugins/spec-tree/skills/merging-standards/**",
+  "dist/claude/spec-tree/skills/merge/**",
+  "dist/claude/spec-tree/skills/merging-standards/**",
+]
+smoke_cases = ["notes-only-routes-direct-push", "mixed-note-plus-spec-routes-github"]
+threshold = 0.85
+trials = 1
