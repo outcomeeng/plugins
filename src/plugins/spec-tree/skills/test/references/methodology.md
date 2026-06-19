@@ -2,6 +2,24 @@
 
 This file is the local methodology payload for the `test` skill. Keep it self-contained inside the plugin.
 
+## Table of contents
+
+- [Non-negotiable rules](#non-negotiable-rules)
+- [Why tests exist](#why-tests-exist)
+- [Before writing any test](#before-writing-any-test)
+- [Source-contract-first gate](#source-contract-first-gate)
+- [The evidence trap](#the-evidence-trap)
+- [Separate the axes](#separate-the-axes)
+- [Assertion types](#assertion-types)
+- [Execution levels](#execution-levels)
+- [Five-stage router](#five-stage-router)
+- [Test double taxonomy](#test-double-taxonomy)
+- [Trust the library when it already owns the problem](#trust-the-library-when-it-already-owns-the-problem)
+- [Four-part progression](#four-part-progression)
+- [Debuggability rules](#debuggability-rules)
+- [Anti-patterns](#anti-patterns)
+- [Naming and co-location](#naming-and-co-location)
+
 ## Non-negotiable rules
 
 - No mocking. Ever.

@@ -17,6 +17,15 @@ Exit codes:
   malformed, no ``base_ref`` could be resolved from any source, or git
   itself fails.
 
+Tested with:
+
+- ``SPX_VERIFY_BASE_REF`` without ``changes.json`` -> emits the committed diff.
+- Staged, unstaged, and untracked worktree changes -> emits all four sections.
+- ``origin/HEAD`` derivation without env or ``changes.json`` -> emits the diff.
+- Env overrides for ``base_ref`` and ``head_ref`` -> take precedence over file state.
+- Missing base-ref sources -> exits non-zero and names env, file, and git sources.
+- Temp repositories and thread-store roots -> cleaned by the pytest tmp-path harness.
+
 Stdlib-only.
 """
 

@@ -16,6 +16,15 @@ review-changes skill produces. Declares:
 
 Stdlib-only. Mirrors the verdict-toolchain precedent in
 ``plugins/spec-tree/skills/audit/scripts/verdict.py``.
+
+Tested with:
+
+- Conforming review-result JSON with findings -> returns ``ReviewResult``.
+- Conforming review-result JSON with empty findings -> returns an empty tuple.
+- Missing required keys -> raises ``ReviewResultValidationError`` naming the key.
+- Unknown severity and concern values -> names the value and allowed set.
+- Malformed JSON -> raises ``ReviewResultValidationError``.
+- Round trips through ``to_json_dict`` and ``from_json_dict`` -> preserve equality.
 """
 
 from __future__ import annotations
