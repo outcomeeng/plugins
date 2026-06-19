@@ -26,6 +26,18 @@ The closing protocol decides whether to fix now, record the issue in the right a
 
 </no_origin_distinction>
 
+<touched_file_debt>
+
+Debt the current change causes, surfaces, or invalidates is fix-now and in-scope — wherever it lives in the repository, not only in the files the change edits. "Invalidates" reaches every file the change makes wrong without opening: when an edit deletes a symbol another file references, enforces a rule another file now violates, falsifies a doc or example another file teaches, or a gate, audit, or review surfaces a defect in the context of the current change, that defect belongs to the current change. Fix it and re-establish green in the same change.
+
+Handling 2 (record and proceed) is reserved for work that exists independently of the current change and lives where the change has no effect — a defect the change neither introduced, nor surfaced, nor rendered incorrect, in a file or node the change does not touch and does not invalidate. The "genuinely separate, larger concern" exception is real only there. When the only thing making a fix feel separate is that doing it reopens the current loop — a second plugin, a regenerated artifact, a downstream doc the change just falsified — the fix is in-scope, not separate.
+
+Deferring debt the change caused or surfaced is the accumulation anti-pattern: every deferred fix becomes a future session's backlog, and that backlog is exactly what postponement manufactures. Location never licenses deferral any more than origin does. The phrases that signal the rationalization — "out of scope", "separate plugin", "separate concern", "doesn't block this change", alongside the `<no_origin_distinction>` phrases — are banned as deferral justifications for debt the change causes, surfaces, or invalidates; a location label is the origin distinction wearing different clothes.
+
+NEVER ask the operator "defer or fix?" for debt the change caused, surfaced, or invalidated. There is no defer; the question is the smell.
+
+</touched_file_debt>
+
 <closing_protocol>
 
 At the end of a turn, apply one test: can the user reasonably ask "What now?" If the work continues on its own — a scheduled wake-up will resume it, a workflow gate authorizes the next step autonomously, or the goal is unfinished with the next action Claude's — then "What now?" has no open answer: report status and continue the work (per "Handoff is not a voluntary close" below), with no question and no trailing "let me know", offer, or prose close. When the user faces a genuine fork, decision, or set of next directions that are theirs to choose, close with `AskUserQuestion` — never a plain-text closing, a trailing "let me know", or an offer in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
@@ -38,7 +50,7 @@ The user's stated goal governs what "task complete" means. When the user says "f
 
 **Handling 1 — Address discovered imperfections first.** Use when one or more imperfections were observed and not yet fixed.
 
-**Handling 2 — Record unresolved imperfections and proceed.** Use when the user may rationally prefer to postpone the fix. The destination must match the artifact taxonomy: specs/ADRs/PDRs for truth changes, methodology for workflow rules, PLAN.md for pending node work, and ISSUES.md for known node issues. Recording the imperfection is not stopping — continue the goal after recording.
+**Handling 2 — Record unresolved imperfections and proceed.** Use only for debt outside the current change's reach per `<touched_file_debt>` — never for debt the change caused, surfaced, or touched, which is fix-now (Handling 1) regardless of which file or plugin it lives in. When recording is warranted, the destination must match the artifact taxonomy: specs/ADRs/PDRs for truth changes, methodology for workflow rules, PLAN.md for pending node work, and ISSUES.md for known node issues. Recording the imperfection is not stopping — continue the goal after recording.
 
 **Handling 3 — Proceed to the next governed workflow step.** Use when the user's stated goal is not yet met: continue the work (the next implementation slice, the next goal-part, the next changeset) directly. This is the default while do-able in-scope work remains. Invoke `/handoff` from this handling only when continuation by Claude now is impossible per "Handoff is not a voluntary close" above — never as a voluntary close while work Claude could do remains.
 

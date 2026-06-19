@@ -39,10 +39,11 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.5.4 introduced the explicit work-branch git_ref the /handoff
-# and /pickup skills depend on (verified-on-origin branch ref recorded as
-# git_ref).
-REQUIRED_SPX_VERSION: Final = "0.5.4"
+# above it. spx 0.5.6 introduced `spx hook run session-start`, the host-lifecycle
+# hook runner the spec-tree plugin's SessionStart hook delegates to for session
+# identity, project-dir exports, and worktree occupancy (0.5.4 introduced the
+# explicit work-branch git_ref the /handoff and /pickup skills depend on).
+REQUIRED_SPX_VERSION: Final = "0.5.6"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"

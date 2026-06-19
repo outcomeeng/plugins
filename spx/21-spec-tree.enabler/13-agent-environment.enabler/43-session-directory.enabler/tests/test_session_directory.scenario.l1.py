@@ -1,7 +1,9 @@
 """Scenario tests for 43-session-directory.enabler (session-directory.md scenario).
 
-L1: the real `session-start.py` hook is run as a subprocess against real
-filesystem I/O in pytest tmp_path directories, with no test doubles.
+L1: the shipped `SessionStart` hook command — which delegates to `spx hook run
+session-start` — is run as a subprocess against real filesystem I/O in pytest
+tmp_path directories, with no test doubles. The spx hook runner claims the
+worktree under `.spx/worktrees/`, but creates no per-runtime session directory.
 
 Assertion covered:
   - SessionStart in a directory containing .spx/ creates no per-runtime session
