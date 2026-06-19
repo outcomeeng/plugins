@@ -10,6 +10,15 @@ The verification isolation separates the **author context** (the context that pr
 - Language-specific concerns are composed by the generic auditor **invoking the language audit SKILL** (`audit-{lang}`, `audit-{lang}-architecture`, `audit-{lang}-tests`) by language partition, as `17-auditing.adr` already does for `/audit`.
 - Section/voice/tag authority for ADRs/PDRs lives once, read from the canonical template (`21-templates.enabler` already forbids copying template content into skills); the language architecture audit drops its duplicated structure/voice/tag checks and carries language-only concerns (DI, no-mocking, level accuracy).
 
+## Staging (decided)
+
+Two PRs, each internally coherent with no behavioral regression:
+
+- **PR 1 (this branch `feat/adr-audit-verifier-composition`)** — the spec foundation (committed `293687e6`) **plus** the composition mechanism: the generic `audit-adr` / `audit-tests` / `audit` skills compose the matching `audit-{lang}*` skill by language partition, and the generic auditor agents (`adr-auditor`, `test-evidence-auditor`, the `/audit` family) gain the `Skill` tool to do so. The per-language auditor agents still exist in PR 1 (redundant, harmless) so nothing regresses. The `audit-{lang}*` dispatch-gates are updated transitionally to permit either entry point (the per-language agent OR a composing generic auditor).
+- **PR 2** — remove the now-redundant language auditor agents (10 files), render the `spx-claude.md` template to generic-only (template_version 0.19.0), salvage the `rust-unsafe-auditor` unsafe-checker methodology into `audit-rust`, simplify the dispatch-gates to generic-only, and complete the 16-verification conformance (`tools: Bash, Read, Skill`, `scripts/` arbiters, thread-store persistence, eval suites). The PR-2 WIP (agent removals + template render) is saved in git stash `wip-agent-removal-and-template (for PR2)`.
+
+The committed spec foundation declares the PR-2 end state (no language auditor agents); that is future product truth leading implementation, with this PLAN recording the downstream PR-2 work.
+
 ## Sequence (audit gate after each spec/structural step)
 
 - [x] A1. Amend `spx/14-verification.pdr.md`: author≠verifier; verifier may compose (principle only — topology pushed to A2 per pdr-auditor). GATE: pdr-auditor APPROVED.
