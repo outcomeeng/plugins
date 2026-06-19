@@ -64,6 +64,8 @@ Read the ADR under audit. Identify its sections: the opening decision statement,
 
 **Step 3: Section structure**
 
+Read the canonical ADR template at `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` and derive the valid section set from it in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template cannot be read, report the section-structure property as UNKNOWN — "template-missing" — and issue no structural finding.
+
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
 **No decision statement, or no Verification section → REJECT — "missing-section."**
