@@ -12,6 +12,7 @@ The spec-tree plugin's only runtime hook is a `SessionStart` hook that delegates
 
 - Given a `SessionStart` payload and `spx` resolvable on `PATH`, when the shipped hook command runs, then the `spx` hook runner delivers the session environment — `CLAUDE_SESSION_ID` and `CLAUDE_WORKTREE_CLAIMED=1` reach `$CLAUDE_ENV_FILE` and a worktree-occupancy claim is recorded under the project's `.spx/worktrees/` ([test](tests/test_agent_environment.scenario.l1.py))
 - Given the kill switch `SPECTREE_SESSION_HOOK_DISABLED=1`, when the shipped hook command runs, then it exits with a valid empty result and writes nothing — no identity, no claim, no `.spx/` state ([test](tests/test_agent_environment.scenario.l1.py))
+- Given `spx` is unresolvable on `PATH`, when the shipped hook command runs, then it exits with a valid empty result and writes nothing — the fail-open safety net for a consumer without `spx` installed ([test](tests/test_agent_environment.scenario.l1.py))
 
 ### Conformance
 

@@ -57,3 +57,20 @@ def test_kill_switch_short_circuits_to_a_clean_no_op(tmp_path: Path) -> None:
     # Disabled: no identity, no claim, no .spx state.
     assert env_file.read_text(encoding="utf-8") == ""
     assert not (tmp_path / ".spx").exists()
+
+
+def test_absent_spx_degrades_to_a_clean_no_op(tmp_path: Path) -> None:
+    # An empty PATH leaves spx unresolvable, so the command's `command -v` probe
+    # fails and the guard floors to a valid empty result — the safety net for a
+    # consumer who installs the plugin without spx on PATH.
+    env_file = tmp_path / "claude.env"
+    env_file.write_text("", encoding="utf-8")
+    result = run_session_start(
+        {"session_id": SESSION_ID, "cwd": str(tmp_path)},
+        env_file=env_file,
+        project_dir=tmp_path,
+        path="",
+    )
+    assert result.returncode == 0
+    assert env_file.read_text(encoding="utf-8") == ""
+    assert not (tmp_path / ".spx").exists()
