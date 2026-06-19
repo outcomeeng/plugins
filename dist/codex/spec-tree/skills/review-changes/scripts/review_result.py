@@ -16,14 +16,24 @@ review-changes skill produces. Declares:
 
 Stdlib-only. Mirrors the verdict-toolchain precedent in
 ``plugins/spec-tree/skills/audit/scripts/verdict.py``.
+
+Tested with:
+
+- Conforming review-result JSON with findings -> returns ``ReviewResult``.
+- Conforming review-result JSON with empty findings -> returns an empty tuple.
+- Missing required keys -> raises ``ReviewResultValidationError`` naming the key.
+- Unknown severity and concern values -> names the value and allowed set.
+- Malformed JSON -> raises ``ReviewResultValidationError``.
+- Round trips through ``to_json_dict`` and ``from_json_dict`` -> preserve equality.
 """
 
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 SCHEMA_VERSION = 3
 
@@ -130,18 +140,23 @@ _REQUIRED_FINDING_KEYS = (
     "action",
 )
 
-# Accepted path-prefixes for ``Finding.rule`` citations. A rule must cite an
-# existing rule in the spec-tree or skill ecosystem; the parser enforces the
-# structural form here (a path beginning with one of these prefixes). The
-# semantic check — that the cited rule actually exists at the referenced
+# Accepted ``Finding.rule`` citation forms. A rule must cite an existing rule in
+# the spec-tree or skill ecosystem; the parser enforces the structural form here.
+# The semantic check — that the cited rule actually exists at the referenced
 # location — is the review prompt's concern and the future deterministic
 # diff-reference check's concern; it is not enforced at parse time.
-_RULE_CITATION_PREFIXES = (
-    "spx/",
-    "plugins/",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "SKILL.md",
+_RULE_CITATION_PATTERNS = (
+    re.compile(
+        r"spx/[^\s:]+\.md:"
+        r"(?:ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE):"
+        r"[1-9][0-9]*"
+    ),
+    re.compile(r"spx/(?:[^\s:]+/)*[1-9][0-9]*-[A-Za-z0-9-]+\.(?:adr|pdr)\.md"),
+    re.compile(
+        r"plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_-]+/"
+        r"SKILL\.md:[A-Za-z0-9][A-Za-z0-9_-]*"
+    ),
+    re.compile(r"(?:AGENTS|CLAUDE|SKILL)\.md:[A-Za-z0-9][A-Za-z0-9_-]*"),
 )
 
 
@@ -261,17 +276,20 @@ def _parse_finding(data: Any) -> Finding:
 def _validate_rule_citation(rule: str) -> None:
     """Reject ``rule`` values that are not path-style citations.
 
-    Accepts a string starting with one of ``_RULE_CITATION_PREFIXES``.
-    Rejects empty strings, free-form prose, action text, and tracking
-    locations. The semantic check (that the cited rule exists at the
-    location) is not enforced here.
+    Accepts the structural citation forms in ``_RULE_CITATION_PATTERNS``.
+    Rejects empty strings, bare path prefixes, free-form prose, action text,
+    and tracking locations. The semantic check (that the cited rule exists at
+    the location) is not enforced here.
     """
     if not rule:
         raise ReviewResultValidationError("finding 'rule' must be a non-empty string")
-    if not rule.startswith(_RULE_CITATION_PREFIXES):
+    if not any(pattern.fullmatch(rule) for pattern in _RULE_CITATION_PATTERNS):
         raise ReviewResultValidationError(
-            f"finding 'rule' must be a path-style citation starting with one of "
-            f"{list(_RULE_CITATION_PREFIXES)}; got {rule!r}"
+            "finding 'rule' must be a full path-style citation such as "
+            "'spx/<path>.md:ALWAYS:1', "
+            "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
+            "'AGENTS.md:<rule-slug>', 'CLAUDE.md:<rule-slug>', or "
+            f"'SKILL.md:<rule-slug>'; got {rule!r}"
         )
 
 
@@ -308,7 +326,7 @@ def _require_int(data: dict[str, Any], key: str) -> int:
         raise ReviewResultValidationError(
             f"{key!r} must be an integer, got {type(value).__name__}"
         )
-    return value
+    return cast(int, value)
 
 
 def _require_str_in_list(items: list[Any], field: str) -> list[str]:

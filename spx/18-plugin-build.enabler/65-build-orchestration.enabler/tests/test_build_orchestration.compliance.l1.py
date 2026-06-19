@@ -4,19 +4,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng.distribution.orchestration import (
+from outcomeeng.distribution.contracts import (
     BUILD_COMMAND_ARGV,
+    DIST_DIFF_ARGV,
+    DIST_DIFF_MODULE_NAME,
+    ORCHESTRATION_VALIDATION_ARGV,
+)
+from outcomeeng.distribution.orchestration import (
     BUILD_RECIPE_NAME,
     CLAUDE_MARKETPLACE_PATH,
     CLAUDE_RUNTIME_ROOT,
     CODEX_MARKETPLACE_PATH,
     CODEX_RUNTIME_ROOT,
-    DIST_DIFF_ARGV,
-    DIST_DIFF_MODULE_NAME,
     JUSTFILE_PATH,
     LEFTHOOK_BUILD_COMMAND,
     LEFTHOOK_PATH,
-    ORCHESTRATION_VALIDATION_ARGV,
     claude_marketplace_plugin_root,
     claude_marketplace_plugin_sources,
     check_build_orchestration,
@@ -28,7 +30,7 @@ from outcomeeng.distribution.orchestration import (
     load_lefthook_config,
     path_is_under_runtime_root,
 )
-from outcomeeng.validation._steps import STEPS
+from outcomeeng.validation._steps import VALIDATION_STEPS
 from outcomeeng.validation.build_orchestration import (
     main as validate_build_orchestration,
 )
@@ -39,12 +41,14 @@ def test_repository_passes_the_build_orchestration_contract() -> None:
 
 
 def test_quality_gate_runs_the_build_orchestration_contract() -> None:
-    assert ORCHESTRATION_VALIDATION_ARGV in {step.argv for step in STEPS}
+    assert ORCHESTRATION_VALIDATION_ARGV in {step.argv for step in VALIDATION_STEPS}
     assert validate_build_orchestration(["."]) == 0
 
 
 def test_dist_diff_surfaces_invoke_the_actionable_reporter() -> None:
-    dist_diff_argvs = {step.argv for step in STEPS if step.label == "dist-diff"}
+    dist_diff_argvs = {
+        step.argv for step in VALIDATION_STEPS if step.label == "dist-diff"
+    }
     assert dist_diff_argvs == {DIST_DIFF_ARGV}
     assert DIST_DIFF_MODULE_NAME in DIST_DIFF_ARGV
     assert "diff" not in DIST_DIFF_ARGV

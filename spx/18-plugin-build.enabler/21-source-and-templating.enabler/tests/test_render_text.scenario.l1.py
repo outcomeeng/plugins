@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.build import (
     IMPLEMENTED,
     SHARED_FRAGMENT_FILENAME,
@@ -31,7 +32,6 @@ from outcomeeng.distribution.build import (
     CyclicIncludeError,
     IncludeDirective,
     RequireSkillDirective,
-    Target,
     expand_require_skill,
     format_directive,
     render_text,

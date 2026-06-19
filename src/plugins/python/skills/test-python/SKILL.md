@@ -35,7 +35,7 @@ Run this workflow for new Python tests:
 
 1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
 2. For each assertion, use `/test` to select the assertion type, execution level, and any Stage 5 exception.
-3. Inspect the code under test and identify the production contract the test will exercise.
+3. Apply the source-contract-first gate in `<source_contract_gate>`: inspect the code under test and identify the production contract the test will exercise.
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.
 5. Choose the canonical test filename: `test_<subject>.<evidence>.<level>[.<runner>].py`.
 6. Put only typed assertion code in the spec node's `tests/` directory.
@@ -52,7 +52,7 @@ Run this workflow for rejected Python tests:
 
 1. Read the rejection and locate every cited test, harness, generator, fixture path provider, and `conftest.py` shim.
 2. Classify each finding by evidence property: coupling, falsifiability, alignment, coverage, source ownership, domain variation, oracle independence, cleanup safety, or pytest discovery safety.
-3. Fix source architecture before fixing test syntax when the finding exposes missing source contracts.
+3. Apply the source-contract-first gate in `<source_contract_gate>` and fix source architecture before fixing test syntax when the finding exposes missing source contracts.
 4. Replace test-owned constants with source-owned exports or variable generators.
 5. Replace constant-only generators with direct source imports or meaningful variable domains.
 6. Move resource setup, teardown, cleanup, and pytest fixture bodies into `product_testing.harnesses.*`.

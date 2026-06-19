@@ -11,11 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME, Target
 from outcomeeng.distribution.build import (
-    DIST_DIR_NAME,
     SKILLS_SUBDIR_NAME,
     SKILL_FILENAME,
-    Target,
 )
 
 

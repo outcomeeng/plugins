@@ -93,13 +93,13 @@ Use `/decompose` to create or restructure child nodes. It owns concern boundarie
 
 ## When to Invoke Skills
 
-### Before ANY spec-tree work → `/understand`
+### Before ANY spec-tree work -> `/understand`
 
 **BLOCKING REQUIREMENT**
 
 Loads the Spec Tree methodology. Required once per session and again after every individual compaction event.
 
-### Before working on a specific node → `/contextualize`
+### Before working on a specific node -> `/contextualize`
 
 **BLOCKING REQUIREMENT**
 
@@ -109,23 +109,23 @@ Loads the Spec Tree methodology. Required once per session and again after every
 
 **NEVER** resume work on a node without having invoked `/contextualize` since the last compaction.
 
-### When creating specs or nodes → `/author`
+### When creating specs or nodes -> `/author`
 
 Create product specs, ADRs/PDRs, enabler nodes, outcome nodes.
 
-### When composing or breaking down nodes → `/decompose`
+### When composing or breaking down nodes -> `/decompose`
 
 Compose top-level children with `/decompose spx/`. Decompose an existing node when it has too many assertions (>7), contains independent concerns, or has `PLAN.md`/`ISSUES.md` structure intent.
 
-### When restructuring the tree → `/refactor`
+### When restructuring the tree -> `/refactor`
 
 Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates.
 
-### When checking consistency → `/align`
+### When checking consistency -> `/align`
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### When shipping work to the default branch → `/merge` (transport dispatcher)
+### When shipping work to the default branch -> `/merge` (transport dispatcher)
 
 **BLOCKING REQUIREMENT**
 
@@ -133,7 +133,7 @@ Every change destined for the default branch routes through `/merge`, the transp
 
 Delivered value exists only when the changeset reaches the default branch on origin through `/merge`. A branch with committed changes ahead of its resolved base is unfinished even when the working tree is clean and deterministic verification, tests, local review, or audits have passed. A status assessment may report local evidence, then carry the changeset into the selected merge lifecycle; local readiness is not a reason to ask what to do next. Do not ask for confirmation before entering `/merge` unless `spx/local/merging.md` explicitly opts into pre-mutation confirmation or an explicit lifecycle gate requires operator input.
 
-The selected transport binds publication mechanics and gate predicates without changing the gate set. `REVIEW_READINESS` holds when deterministic verification passes (the project's full validation-and-testing command) **and** the local review has converged. The local review invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when `changes-reviewer` is unavailable; both run the same `review-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main Claude context has been doing. Claude acts on each finding by **validity and phase, never severity**: validate each finding against its cited rule and drop any the citation does not support, apply every valid finding that belongs, and split out of the changeset only a fix too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/merging-standards` `<authority_gates>` for the three-gate vocabulary.
+The selected transport binds publication mechanics and gate predicates without changing the gate set. `REVIEW_READINESS` holds when local deterministic verification passes (validation and testing for the touched scope, widened only by the project overlay or risk evidence) **and** the local review has converged. The local review invokes the `changes-reviewer` agent on the working diff — falling back to the `/review-changes` slash command when `changes-reviewer` is unavailable; both run the same `review-changes` skill chain in an isolated context, so the verdict is not biased by what the operator's main Claude context has been doing. Claude acts on each finding by **validity and phase, never severity**: validate each finding against its cited rule and drop any the citation does not support, apply every valid finding that belongs, sweep the touched subsystem for same-class instances, and split out of the changeset only a fix too large to belong (recording it in the relevant node's `ISSUES.md` or `PLAN.md`). `MERGE_READINESS` and `PRODUCTION_READINESS` then govern the merge. See `/merging-standards` `<authority_gates>` for the three-gate vocabulary.
 
 ## Stop Triggers
 

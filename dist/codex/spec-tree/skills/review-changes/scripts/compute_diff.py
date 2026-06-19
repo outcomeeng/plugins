@@ -6,9 +6,9 @@ reads the optional ``changes.json`` override from the thread, resolves
 ``base_ref`` from the precedence chain (env → file → git symbolic-ref),
 resolves ``head_ref`` from a parallel precedence chain
 (``SPX_VERIFY_HEAD_REF`` env → ``changes.json`` ``head_ref`` field →
-literal ``HEAD``), runs ``git diff <base_ref>...<head_ref>`` (three-dot,
-merge-base) via ``subprocess``, and emits the diff to stdout. Every filesystem effect against the thread-store backend
-routes through the ``thread_store`` facade.
+literal ``HEAD``), emits the committed merge-base diff, then appends
+staged, unstaged, and untracked worktree diffs. Every filesystem effect
+against the thread-store backend routes through the ``thread_store`` facade.
 
 Exit codes:
 
@@ -16,6 +16,15 @@ Exit codes:
 - non-zero — slug derivation failed, the optional ``changes.json`` is
   malformed, no ``base_ref`` could be resolved from any source, or git
   itself fails.
+
+Tested with:
+
+- ``SPX_VERIFY_BASE_REF`` without ``changes.json`` -> emits the committed diff.
+- Staged, unstaged, and untracked worktree changes -> emits all four sections.
+- ``origin/HEAD`` derivation without env or ``changes.json`` -> emits the diff.
+- Env overrides for ``base_ref`` and ``head_ref`` -> take precedence over file state.
+- Missing base-ref sources -> exits non-zero and names env, file, and git sources.
+- Temp repositories and thread-store roots -> cleaned by the pytest tmp-path harness.
 
 Stdlib-only.
 """
@@ -35,6 +44,10 @@ CHANGES_RECORD_NAME = "changes.json"
 ENV_BASE_REF = "SPX_VERIFY_BASE_REF"
 ENV_HEAD_REF = "SPX_VERIFY_HEAD_REF"
 DEFAULT_HEAD_REF = "HEAD"
+DIFF_SECTION_COMMITTED = "Committed diff"
+DIFF_SECTION_STAGED = "Staged diff"
+DIFF_SECTION_UNSTAGED = "Unstaged diff"
+DIFF_SECTION_UNTRACKED = "Untracked files"
 
 
 def _load_thread_store() -> ModuleType:
@@ -165,6 +178,72 @@ def _resolve_base_ref(changes: dict[str, object] | None) -> str:
     return str(changeset_scope.remote_tracking_ref(bare_base))
 
 
+def _git_diff(args: list[str]) -> str:
+    completed = subprocess.run(  # noqa: S603 — refs derived from validated sources
+        ["git", "diff", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr)
+    return completed.stdout
+
+
+def _git_stdout(args: list[str]) -> str:
+    completed = subprocess.run(  # noqa: S603 — fixed git subcommands
+        ["git", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr)
+    return completed.stdout
+
+
+def _diff_section(title: str, diff: str) -> str:
+    if not diff:
+        return ""
+    return f"### {title}\n\n{diff}"
+
+
+def _untracked_diff() -> str:
+    paths = [
+        line
+        for line in _git_stdout(
+            ["ls-files", "--others", "--exclude-standard", "-z"]
+        ).split("\0")
+        if line
+    ]
+    sections: list[str] = []
+    for path in paths:
+        completed = subprocess.run(  # noqa: S603 — paths come from git ls-files
+            ["git", "diff", "--no-index", "--", os.devnull, path],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode not in (0, 1):
+            raise RuntimeError(completed.stderr)
+        sections.append(completed.stdout)
+    return "\n".join(sections)
+
+
+def combined_diff(base_ref: str, head_ref: str) -> str:
+    """Return committed, staged, unstaged, and untracked diffs as one review input."""
+    sections = (
+        _diff_section(
+            DIFF_SECTION_COMMITTED,
+            _git_diff([f"{base_ref}...{head_ref}"]),
+        ),
+        _diff_section(DIFF_SECTION_STAGED, _git_diff(["--cached"])),
+        _diff_section(DIFF_SECTION_UNSTAGED, _git_diff([])),
+        _diff_section(DIFF_SECTION_UNTRACKED, _untracked_diff()),
+    )
+    return "\n".join(section for section in sections if section)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Compute git diff against the resolved base ref."
@@ -202,17 +281,12 @@ def main(argv: list[str] | None = None) -> int:
 
     head_ref = _resolve_head_ref(changes)
 
-    completed = subprocess.run(  # noqa: S603 — refs derived from validated sources
-        # Three-dot (merge-base) diff: what head_ref added since branching from base_ref.
-        ["git", "diff", f"{base_ref}...{head_ref}"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        sys.stderr.write(completed.stderr)
-        return completed.returncode
-    sys.stdout.write(completed.stdout)
+    try:
+        diff = combined_diff(base_ref, head_ref)
+    except RuntimeError as exc:
+        sys.stderr.write(str(exc))
+        return 1
+    sys.stdout.write(diff)
     return 0
 
 

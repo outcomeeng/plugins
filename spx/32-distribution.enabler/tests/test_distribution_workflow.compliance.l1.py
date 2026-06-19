@@ -6,9 +6,11 @@ import tomllib
 from pathlib import Path
 from typing import Any, Final, cast
 
-import yaml
+# PyYAML ships without inline types; this test casts parsed workflow structure below.
+import yaml  # type: ignore[import-untyped]
 
-from outcomeeng.distribution.build import DIST_DIR_NAME, PLUGINS_DIR_NAME
+from outcomeeng.distribution.contracts import DIST_DIR_NAME
+from outcomeeng.distribution.build import PLUGINS_DIR_NAME
 from outcomeeng.distribution.distribute import CLAUDE_DIST_RELATIVE
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[3]

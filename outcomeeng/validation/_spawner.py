@@ -12,9 +12,18 @@ descendant tree from the orchestrator's signal handler.
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Final
+
+_CHILD_UNBLOCK_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+
+
+def _restore_child_signal_mask() -> None:
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, _CHILD_UNBLOCK_SIGNALS)
 
 
 @dataclass
@@ -47,9 +56,15 @@ class _PopenHandle:
 class ProductionSpawner:
     """Spawns real subprocesses for the orchestrator's quality-gate steps."""
 
-    def spawn(self, argv: Sequence[str]) -> _PopenHandle:
-        proc = subprocess.Popen(
-            list(argv),
-            start_new_session=True,
-        )
+    def spawn(self, argv: Sequence[str], output_path: Path) -> _PopenHandle:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("wb") as output:
+            proc = subprocess.Popen(
+                list(argv),
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                preexec_fn=_restore_child_signal_mask,
+            )
         return _PopenHandle(_proc=proc)

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.build import (
     BLOCK_DELIMITER_END,
     BLOCK_DELIMITER_START,
@@ -24,7 +25,6 @@ from outcomeeng.distribution.build import (
     IncludeDirective,
     RequireSkillDirective,
     SourceFormatError,
-    Target,
     build,
     emit_skill,
     expand_require_skill,

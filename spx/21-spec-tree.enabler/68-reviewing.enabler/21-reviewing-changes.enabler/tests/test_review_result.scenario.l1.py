@@ -27,10 +27,14 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import Any
 
 import pytest
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_ADR_RULE_CITATION,
+    FIXTURE_AGENTS_RULE_CITATION,
+    FIXTURE_MALFORMED_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     load_render_review_module,
     load_review_result_module,
@@ -169,6 +173,60 @@ class TestParseJsonRejection:
             review_result.parse_json("{not valid json")
 
 
+class TestRuleCitationValidation:
+    """``Finding.rule`` accepts declared citation families and rejects prose."""
+
+    @pytest.mark.parametrize(
+        "rule_citation",
+        (
+            FIXTURE_RULE_CITATION,
+            FIXTURE_ADR_RULE_CITATION,
+            FIXTURE_AGENTS_RULE_CITATION,
+        ),
+    )
+    def test_parse_json_accepts_declared_rule_citation_forms(
+        self,
+        rule_citation: str,
+    ) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": rule_citation,
+            "message": "m",
+            "action": "a",
+        }
+        payload = json.dumps(make_review_result_dict(findings=[finding]))
+
+        result = review_result.parse_json(payload)
+
+        assert result.findings[0].rule == rule_citation
+
+    def test_parse_json_rejects_free_form_rule_text(self) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_MALFORMED_RULE_CITATION,
+            "message": "m",
+            "action": "a",
+        }
+        payload = json.dumps(make_review_result_dict(findings=[finding]))
+
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(payload)
+
+        message = str(excinfo.value)
+        assert "rule" in message
+        assert FIXTURE_MALFORMED_RULE_CITATION in message
+
+
 class TestRoundTrip:
     """``to_json_dict`` and ``from_json_dict`` round-trip a
     ``ReviewResult`` without loss."""
@@ -237,7 +295,7 @@ class TestSeverityToRenderClassMapping:
     rule.
     """
 
-    def _make_finding(self, severity: str, finding_id: str):
+    def _make_finding(self, severity: str, finding_id: str) -> Any:
         review_result = load_review_result_module()
         return review_result.Finding(
             id=finding_id,
@@ -282,16 +340,30 @@ class TestSeverityToRenderClassMapping:
 class TestRuleCitationForm:
     """``Finding.rule`` must be a path-style citation; the parser rejects others.
 
-    Accepted prefixes: ``spx/``, ``plugins/``, ``AGENTS.md``, ``CLAUDE.md``,
-    ``SKILL.md``. The semantic check (cited rule exists at the location)
-    is the review prompt's concern and is not enforced at parse time.
+    Accepted forms: ``spx/<path>.md:<assertion-kind>:<n>``,
+    ``spx/<path>/<n>-<slug>.adr.md``,
+    ``spx/<path>/<n>-<slug>.pdr.md``,
+    ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
+    ``AGENTS.md:<rule-slug>``, ``CLAUDE.md:<rule-slug>``, and
+    ``SKILL.md:<rule-slug>``. The semantic check (cited rule exists at
+    the location) is the review prompt's concern and is not enforced at
+    parse time.
     """
 
     @pytest.mark.parametrize(
         "rule",
         [
             "spx/21-spec-tree.enabler/spec-tree.md:ALWAYS:1",
-            "plugins/python/skills/python-standards/SKILL.md:atemporal-voice",
+            "spx/21-spec-tree.enabler/spec-tree.md:SCENARIO:1",
+            "spx/21-spec-tree.enabler/spec-tree.md:MAPPING:2",
+            "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:3",
+            "spx/21-spec-tree.enabler/spec-tree.md:PROPERTY:4",
+            "spx/21-spec-tree.enabler/spec-tree.md:COMPLIANCE:5",
+            "spx/1-root.adr.md",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
+            "spx/21-spec-tree.enabler/132-reviewing-changes.pdr.md",
+            "spx/15-merging.pdr.md",
+            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
             "AGENTS.md:critical-rules",
             "CLAUDE.md:imperfection-protocol",
             "SKILL.md:render-templates-as-data",
@@ -323,6 +395,16 @@ class TestRuleCitationForm:
             "Track under: ISSUES.md",
             "r",
             "spec/auth.md:ALWAYS:1",  # wrong prefix (spec/ not spx/)
+            "spx/",
+            "spx/rules.md",
+            "spx/rules.md:ALWAYS",
+            "spx/rules.md:SCENARIO",
+            "plugins/foo",
+            "plugins/foo/skills/bar",
+            "plugins/foo/skills/bar/SKILL.md",
+            "AGENTS.md",
+            "CLAUDE.md",
+            "SKILL.md",
         ],
     )
     def test_parser_rejects_non_citation_rule(self, rule: str) -> None:

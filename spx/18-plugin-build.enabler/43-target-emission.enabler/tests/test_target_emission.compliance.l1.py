@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.build import (
     CLAUDE_ONLY_FRONTMATTER_FIELDS,
     CLAUDE_SKILL_DIR_TOKEN,
@@ -16,7 +17,6 @@ from outcomeeng.distribution.build import (
     SKILL_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     SKILLS_SUBDIR_NAME,
-    Target,
     build,
     rewrite_paths_for_target,
     strip_frontmatter_fields,

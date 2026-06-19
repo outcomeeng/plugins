@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.distribution.build import IMPLEMENTED, PLUGINS_DIR_NAME, Target, build
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.build import IMPLEMENTED, PLUGINS_DIR_NAME, build
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 

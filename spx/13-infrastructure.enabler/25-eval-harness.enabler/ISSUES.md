@@ -54,7 +54,7 @@ The eval CI workflow (`spec-tree-evals.yml`) scopes to trusted triggers: `push` 
 
 The right fix is a repo-wide deterministic CI gate (run `just check`, including `dist-diff`, on `pull_request`), not a `dist`-freshness step bolted onto the eval workflow — the eval's job is to grade the shipped artifact, not to police build freshness. Track here until that gate exists.
 
-Resolved 2026-06-16: `.github/workflows/check.yml` now runs `uv run python -m outcomeeng.validation` on `pull_request` and `push` to `main`; `outcomeeng.validation.STEPS` includes `build-skills` and `dist-diff`, so PR-time deterministic verification enforces `dist == build(src)`.
+Resolved 2026-06-16: `.github/workflows/check.yml` now runs the validation package on `pull_request` and `push` to `main`; the check recipe includes `build-skills` and `dist-diff`, so PR-time deterministic verification enforces `dist == build(src)`.
 
 `.github/workflows/spec-tree-evals.yml` commits the appended `history.jsonl`
 rows back to `main` using the org-level PAT secret `OUTCOMEENG_EVAL_STORE`

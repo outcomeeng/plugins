@@ -2,6 +2,24 @@
 
 This file is the local methodology payload for the `test` skill. Keep it self-contained inside the plugin.
 
+## Table of contents
+
+- [Non-negotiable rules](#non-negotiable-rules)
+- [Why tests exist](#why-tests-exist)
+- [Before writing any test](#before-writing-any-test)
+- [Source-contract-first gate](#source-contract-first-gate)
+- [The evidence trap](#the-evidence-trap)
+- [Separate the axes](#separate-the-axes)
+- [Assertion types](#assertion-types)
+- [Execution levels](#execution-levels)
+- [Five-stage router](#five-stage-router)
+- [Test double taxonomy](#test-double-taxonomy)
+- [Trust the library when it already owns the problem](#trust-the-library-when-it-already-owns-the-problem)
+- [Four-part progression](#four-part-progression)
+- [Debuggability rules](#debuggability-rules)
+- [Anti-patterns](#anti-patterns)
+- [Naming and co-location](#naming-and-co-location)
+
 ## Non-negotiable rules
 
 - No mocking. Ever.
@@ -31,6 +49,16 @@ Every test must answer these questions:
 3. What failure would this catch before users see it?
 
 If all three cannot be answered, stop.
+
+## Source-contract-first gate
+
+Before writing or repairing evidence, read the spec assertion, the existing or planned test, and the code under test. State the production contract the test will exercise:
+
+- source-owned values: protocol tokens, status values, command names, route names, schema fields, rule identifiers, message identifiers, registries, constructors, typed factories, or public vocabulary
+- observable behavior: pure functions, constructors, dataclasses, enums, schemas, protocols, typed collaborators, emitted artifacts, or side-effect boundaries
+- oracle: expected output derived from the input, an independent reference, a source-owned contract, or a real system response
+
+If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or mock away behavior the assertion claims to verify.
 
 ## The evidence trap
 

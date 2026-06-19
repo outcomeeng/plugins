@@ -7,15 +7,15 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /manage-github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → first management pass → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /manage-pr governs the post-creation loop.
+The opening protocol. Loaded by /manage-github-pr for the one-shot path: pre-flight -> topology -> REVIEW_READINESS (deterministic verification + local review) -> push -> open ready -> first management pass -> exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /manage-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
 After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
 
-The overlay MUST NOT: skip or weaken the deterministic-verification or local-review predicates of `REVIEW_READINESS`, open the PR before `REVIEW_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
+The overlay MUST NOT: skip or weaken the local deterministic-verification or local-review predicates of `REVIEW_READINESS`, open the PR before `REVIEW_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition and the merge command live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The deterministic-verification command is the project's own `CLAUDE.md` / `AGENTS.md` convention, which an overlay MAY centralize there too.
+Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `CLAUDE.md` / `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <the_opening_flow>
@@ -30,15 +30,15 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 3 — Evaluate `REVIEW_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `REVIEW_READINESS` holds — both predicates below.
 
-*(a) Deterministic verification.* Run the project's full validation-and-testing command — the command the project documents in its `CLAUDE.md` / `AGENTS.md` (for example `just check` / `pnpm test`; an overlay MAY centralize it in `spx/local/merging.md`). It must report success; fix failures and re-run until green.
+*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a temporary log path and inspect only the exit status, summary, and failing sections. It must report success; fix failures and re-run until green.
 
 *(b) Local review to convergence.* Run the changes-reviewer agent (preferred) on the working diff — it runs in an isolated context, so the verdict is not biased by everything the operator's main context has been doing. Fall back to the `/review-changes` slash command when `changes-reviewer` is not installed; both invoke the same `review-changes` skill chain and produce the same `review-result.json` / `review.md` artifacts under thread-store. Invoke it per /merging-standards `<local_review_invocation>`: let it resolve its own scope — the worktree it runs in and the working diff — with no interpretive scope, no severity pre-filter, and no instruction on what to emphasize; the reviewer reads the repository's own instructions and the shared taxonomy itself. The reviewer emits findings only (no decision/verdict); process them by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
 
 - **Validate each finding** against its cited rule, the product-local / language / spec-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
-- **Apply every valid finding that belongs.** Fix it, commit via /commit-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
+- **Apply every valid finding that belongs.** Treat each valid finding as defect-class evidence: sweep the owning touched subsystem for parallel instances with the same rule, source contract, evidence pattern, lifecycle step, or generated-source relationship. Fix the cited site and every in-scope parallel instance, commit via /commit-changes, re-invoke the reviewer, and repeat. When a valid finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` or `PLAN.md` — instead of applying it here.
 - **Converged** when the working diff carries no unapplied valid finding that belongs. Severity never decides; validity and the before-open phase do.
 
-The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run deterministic verification, and re-run the local review — both `REVIEW_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes both (the joint fixpoint of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, and a review-driven fix is a tree verification has not covered). `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no unresolved valid `BLOCKING` or `DEBT` finding.
+The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run local deterministic verification, and re-run the local review — both `REVIEW_READINESS` predicates must hold together on the exact tree the push publishes, so loop until a single tree passes both (the joint fixpoint of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, and a review-driven fix is a tree verification has not covered). `REVIEW_READINESS` holds only when (a) and (b) both hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid finding that belongs is applied here and only split-out work survives to the CI review, which on the open PR must show no unresolved valid `BLOCKING` or `DEBT` finding.
 
 **Step 4 — Push.** Use the explicit destination ref form from /merging-standards `<push_semantics>`:
 
@@ -108,8 +108,8 @@ gh pr checks <pr-number> --watch --fail-fast --interval 30
 
 The PR title is one commit-subject line under 70 characters per /commit-changes:
 
-- Single commit on the branch → use that commit's subject as-is.
-- Multiple commits → synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /commit-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
+- Single commit on the branch -> use that commit's subject as-is.
+- Multiple commits -> synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /commit-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
 
 Examples:
 
@@ -166,7 +166,7 @@ Body explains WHY for the reviewer; the diff already shows WHAT. Reference spec 
 
 <failure_modes>
 
-**Opened a PR gated on an earlier tree.** Claude established `REVIEW_READINESS`, then committed review-driven fixes during the convergence loop, and opened the PR without re-running deterministic verification and the local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, deterministic verification, AND the local review, treating `REVIEW_READINESS` as holding only when both predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3b).
+**Opened a PR gated on an earlier tree.** Claude established `REVIEW_READINESS`, then committed review-driven fixes during the convergence loop, and opened the PR without re-running local deterministic verification and the local review on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, local deterministic verification, AND the local review, treating `REVIEW_READINESS` as holding only when both predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3b).
 
 </failure_modes>
 
@@ -176,7 +176,7 @@ The opening flow has succeeded when:
 
 - /merging-standards and /commit-changes are loaded before the flow begins.
 - /merging-standards `<branch_hygiene>` and `<branch_topology>` gates pass before push.
-- `REVIEW_READINESS` held before the PR opened: deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
+- `REVIEW_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, and the local review converged — every valid finding that belongs was applied, any valid finding too large to belong was split out (recorded in the relevant node's `ISSUES.md` / `PLAN.md`), and unbacked findings were dropped. Severity did not gate; validity and the before-open phase did.
 - Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
 - Title is one commit-subject line under 70 chars per /commit-changes.
 - Body is delivered to gh via `--body-file -` on stdin (real newlines).

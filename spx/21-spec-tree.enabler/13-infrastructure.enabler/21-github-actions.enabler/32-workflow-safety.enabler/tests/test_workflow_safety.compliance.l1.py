@@ -7,7 +7,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Final, cast
 
-import yaml
+# PyYAML ships without inline types; this test casts parsed workflow structure below.
+import yaml  # type: ignore[import-untyped]
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[6]
 WORKFLOWS_DIR: Final = REPO_ROOT / ".github" / "workflows"

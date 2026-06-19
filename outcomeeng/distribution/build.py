@@ -4,9 +4,9 @@ Transforms src/ plugin source into committed target trees at dist/claude/
 and dist/codex/. The pipeline is decomposed into stages so each stage is
 independently testable.
 
-This module owns every constant, type, and error class the build emits or
-recognizes. Tests import from here directly — there are no test-owned
-duplicates of build contracts.
+This module owns build behavior and consumes distribution contracts from
+``outcomeeng.distribution.contracts``. Tests import source-owned contracts
+directly instead of keeping test-owned duplicates.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
@@ -29,6 +28,11 @@ from jinja2 import (
     pass_context,
 )
 from jinja2.runtime import Context
+
+from outcomeeng.distribution.contracts import (
+    TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
+    Target as _Target,
+)
 
 # Implementation status flag. Tests gate on this via:
 #
@@ -75,16 +79,6 @@ PLUGIN_SUBDIRS: Final = frozenset(
 SKILL_FILENAME: Final = "SKILL.md"
 COMMAND_FILE_SUFFIX: Final = ".md"
 AGENT_FILE_SUFFIX: Final = ".md"
-TEXT_FILE_SUFFIXES: Final = frozenset(
-    {".md", ".py", ".sh", ".json", ".toml", ".yml", ".yaml"}
-)
-
-
-# ---------------------------------------------------------------------------
-# Output tree layout
-# ---------------------------------------------------------------------------
-
-DIST_DIR_NAME: Final = "dist"
 
 
 # ---------------------------------------------------------------------------
@@ -162,18 +156,6 @@ _JINJA_CONTROL_KEYWORDS: Final = frozenset(
 
 def _is_jinja_control_block(body: str) -> bool:
     return bool(body) and body.split()[0] in _JINJA_CONTROL_KEYWORDS
-
-
-# ---------------------------------------------------------------------------
-# Types
-# ---------------------------------------------------------------------------
-
-
-class Target(StrEnum):
-    """Generated output target."""
-
-    CLAUDE = "claude"
-    CODEX = "codex"
 
 
 @dataclass(frozen=True)
@@ -386,7 +368,7 @@ def render_text(
 # ---------------------------------------------------------------------------
 
 
-def rewrite_paths_for_target(text: str, *, target: Target) -> str:
+def rewrite_paths_for_target(text: str, *, target: _Target) -> str:
     """Apply target-specific path rewriting.
 
     For Target.CLAUDE: identity (CLAUDE_SKILL_DIR_TOKEN preserved verbatim).
@@ -403,7 +385,7 @@ def rewrite_paths_for_target(text: str, *, target: Target) -> str:
     exclusively and never re-processes dist/ output.
     """
     protected = _protect_skill_dir_rewrite_escapes(text)
-    if target is Target.CLAUDE:
+    if target is _Target.CLAUDE:
         return protected.replace(SKILL_DIR_REWRITE_PLACEHOLDER, CLAUDE_SKILL_DIR_TOKEN)
 
     translated = protected.replace(CLAUDE_SKILL_DIR_TOKEN, CODEX_SKILL_DIR_TOKEN)
@@ -483,7 +465,7 @@ def strip_frontmatter_fields(
 def emit_skill(
     src_path: Path,
     *,
-    target: Target,
+    target: _Target,
     dist_root: Path,
     shared_root: Path,
 ) -> None:
@@ -502,7 +484,7 @@ def emit_skill(
         variables={"target": target.value},
     )
     translated = rewrite_paths_for_target(rendered, target=target)
-    if target is Target.CODEX:
+    if target is _Target.CODEX:
         translated = strip_frontmatter_fields(
             translated,
             fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
@@ -532,14 +514,14 @@ def build(src_root: Path, dist_root: Path) -> None:
     shared_root = src_root / SHARED_DIR_NAME
     plugins_root = src_root / PLUGINS_DIR_NAME
 
-    for target in Target:
+    for target in _Target:
         target_root = dist_root / target.value
         if target_root.exists():
             shutil.rmtree(target_root)
         target_root.mkdir(parents=True, exist_ok=True)
 
     for source_file in _iter_plugin_files(plugins_root):
-        for target in Target:
+        for target in _Target:
             if _is_rendered_text(source_file):
                 if (
                     SKILLS_SUBDIR_NAME in source_file.parts
@@ -704,13 +686,13 @@ def _relative_plugin_path(path: Path) -> Path:
 
 
 def _is_rendered_text(path: Path) -> bool:
-    return path.suffix in TEXT_FILE_SUFFIXES
+    return path.suffix in _TEXT_FILE_SUFFIXES
 
 
 def _emit_rendered_file(
     source_file: Path,
     *,
-    target: Target,
+    target: _Target,
     dist_root: Path,
     shared_root: Path,
 ) -> None:
@@ -722,7 +704,7 @@ def _emit_rendered_file(
         variables={"target": target.value},
     )
     translated = rewrite_paths_for_target(rendered, target=target)
-    if target is Target.CODEX:
+    if target is _Target.CODEX:
         translated = strip_frontmatter_fields(
             translated,
             fields=CLAUDE_ONLY_FRONTMATTER_FIELDS,
@@ -738,7 +720,7 @@ def _emit_rendered_file(
 
 
 def _copy_unrendered_file(
-    source_file: Path, *, target: Target, dist_root: Path
+    source_file: Path, *, target: _Target, dist_root: Path
 ) -> None:
     destination = dist_root / target.value / _relative_plugin_path(source_file)
     destination.parent.mkdir(parents=True, exist_ok=True)

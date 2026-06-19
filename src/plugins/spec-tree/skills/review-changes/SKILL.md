@@ -1,7 +1,9 @@
 ---
 name: review-changes
 description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading thread-store records directly.
-allowed-tools: Bash, Read
+allowed-tools:
+  - Bash
+  - Read
 ---
 
 <objective>
@@ -10,17 +12,18 @@ Compute the diff against the resolved base ref, apply the judgment-style review 
 
 <api_surface>
 
-Four entry points under `${CLAUDE_SKILL_DIR}/scripts/` and one swappable prompt under `${CLAUDE_SKILL_DIR}/references/`:
+Four entry points under `${CLAUDE_SKILL_DIR}/scripts/` plus prompt and render-template references:
 
 | Entry point                                       | Effect                                                                                                                                                                                                                               |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scripts/compute_diff.py`                         | Resolve current thread, `base_ref` (env → optional `changes.json` → git origin/HEAD) and `head_ref` (env → `changes.json` → default `HEAD`), run `git diff <base_ref>...<head_ref>` (three-dot merge-base), write the diff to stdout |
+| `scripts/compute_diff.py`                         | Resolve current thread, `base_ref` (env -> optional `changes.json` -> git origin/HEAD) and `head_ref` (env -> `changes.json` -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout |
 | `scripts/validate_review_result.py [--file PATH]` | Pipe a review-result JSON document through `review_result.parse_json`; exit 0 on conformance                                                                                                                                         |
 | `scripts/render_review.py`                        | Read `review-result.json` from the current thread, parse through the arbiter, write `review.md` content to stdout                                                                                                                    |
 | `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                                                                                                        |
 | `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into context                                                                                                                                                                |
+| `references/render/*.md`                          | Render templates loaded by `render_review.py` for the document, findings, acknowledgements, and empty severity buckets                                                                                                               |
 
-This skill uses the thread-store CLIs at `${CLAUDE_SKILL_DIR}/../manage-thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; Claude omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` → git current branch).
+This skill uses the thread-store CLIs at `${CLAUDE_SKILL_DIR}/../manage-thread-store/scripts/` for every persistence call. Every thread-store CLI accepts an optional `--slug`; Claude omits it so the CLI resolves the thread via `thread_store.current_slug()` (env `SPX_VERIFY_BRANCH` -> git current branch).
 
 </api_surface>
 
@@ -84,9 +87,9 @@ Schema validation — required keys, enum membership, the path-style `rule` cita
 <constraints>
 
 - Stdlib-only Python under `${CLAUDE_SKILL_DIR}/scripts/`. No third-party packages, no `outcomeeng_*` imports, no dependency on `uv` at runtime.
-- Every filesystem effect routes through the `thread_store` facade — no direct `open()`, `pathlib.Path.write_*`, or `os.remove` against the thread-store backend's storage paths. `compute_diff.py` shells out to `git diff` via `subprocess.run`; that is the only `subprocess` call permitted in the script set.
+- Every filesystem effect routes through the `thread_store` facade — no direct `open()`, `pathlib.Path.write_*`, or `os.remove` against the thread-store backend's storage paths. Only `compute_diff.py` shells out, and only to run `git diff` / `git ls-files` for the committed, staged, unstaged, and untracked review input sections.
 - The judgment-style review prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`. It is never embedded inside this SKILL.md or any `.py` file under `scripts/`.
-- Frozen dataclasses (`Finding`, `ReviewResult`) cross the parse → validate → render boundary. Any attempt to mutate one between steps raises `FrozenInstanceError`.
+- Frozen dataclasses (`Finding`, `ReviewResult`) cross the parse -> validate -> render boundary. Any attempt to mutate one between steps raises `FrozenInstanceError`.
 
 </constraints>
 

@@ -34,11 +34,15 @@ production code with its home outside ``tests/`` and outside ``spx/``.
 from __future__ import annotations
 
 import importlib.util
+import io
+import os
 import pathlib
 import subprocess
 import sys
+from contextlib import redirect_stderr, redirect_stdout
 from types import ModuleType
-from typing import Any
+from typing import Any, Callable, cast
+from unittest.mock import patch
 
 # Two ``parents`` hops land at the repository root: this file lives at
 # ``outcomeeng_testing/harnesses/reviewing_changes.py``.
@@ -67,6 +71,12 @@ FIXTURE_RULE_CITATION = (
     "spx/21-spec-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
 )
+FIXTURE_ADR_RULE_CITATION = (
+    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
+)
+FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:never-maintain-backward-compatibility"
+FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 
 
 def load_review_result_module() -> ModuleType:
@@ -117,6 +127,131 @@ def load_render_review_module() -> ModuleType:
     sys.modules["render_review"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def load_compute_diff_module() -> ModuleType:
+    """Load the ``compute_diff`` script as a module via importlib."""
+
+    cached = sys.modules.get("compute_diff")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location("compute_diff", COMPUTE_DIFF_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load compute_diff from {COMPUTE_DIFF_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["compute_diff"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_validate_review_result_module() -> ModuleType:
+    """Load the ``validate_review_result`` script as a module via importlib."""
+
+    cached = sys.modules.get("validate_review_result")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "validate_review_result", VALIDATE_REVIEW_RESULT_SCRIPT
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"Cannot load validate_review_result from {VALIDATE_REVIEW_RESULT_SCRIPT}"
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["validate_review_result"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
+    return cast("Callable[[list[str] | None], int]", module.main)
+
+
+def run_compute_diff_in_process(
+    *,
+    repo: pathlib.Path,
+    env: dict[str, str],
+    slug: str,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``compute_diff.main`` in-process with CLI-shaped outputs.
+
+    The script path is still loaded from authored plugin source and the same
+    ``main(["--slug", slug])`` entry point runs. Running in-process lets coverage
+    observe the script's lines while preserving a ``CompletedProcess`` result
+    shape for scenario tests.
+    """
+
+    module = load_compute_diff_module()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    old_cwd = pathlib.Path.cwd()
+    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug]
+    try:
+        os.chdir(repo)
+        with (
+            patch.dict(os.environ, env, clear=True),
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
+            returncode = _module_main(module)(["--slug", slug])
+    finally:
+        os.chdir(old_cwd)
+    return subprocess.CompletedProcess(
+        argv,
+        returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
+def run_validate_review_result_in_process(
+    *args: str,
+    stdin: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``validate_review_result.main`` in-process with CLI-shaped outputs."""
+
+    module = load_validate_review_result_module()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    input_stream = io.StringIO(stdin or "")
+    argv = [sys.executable, str(VALIDATE_REVIEW_RESULT_SCRIPT), *args]
+    with (
+        patch.object(sys, "stdin", input_stream),
+        redirect_stdout(stdout),
+        redirect_stderr(stderr),
+    ):
+        returncode = _module_main(module)(list(args))
+    return subprocess.CompletedProcess(
+        argv,
+        returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
+def run_render_review_in_process(
+    *,
+    slug: str,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess[str]:
+    """Run ``render_review.main`` in-process with CLI-shaped outputs."""
+
+    module = load_render_review_module()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    argv = [sys.executable, str(RENDER_REVIEW_SCRIPT), "--slug", slug]
+    with (
+        patch.dict(os.environ, env, clear=True),
+        redirect_stdout(stdout),
+        redirect_stderr(stderr),
+    ):
+        returncode = _module_main(module)(["--slug", slug])
+    return subprocess.CompletedProcess(
+        argv,
+        returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
 
 
 def run_script(

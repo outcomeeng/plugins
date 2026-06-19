@@ -90,7 +90,13 @@ For each assertion, apply the `/test` methodology:
 | Database, Docker                | `l2`          |
 | Real credentials, external APIs | `l3`          |
 
-**Step 3: Write Test Files**
+**Step 3: Apply the source-contract-first gate**
+
+Read the assertion, the existing or planned test, and the TypeScript code under test. State the production contract the evidence exercises. If the source does not expose the needed type, enum, constructor, schema, parser entry point, registry, route, command, dependency boundary, or observable behavior, fix the source contract before writing test predicates.
+
+Do not patch a predicate around a reviewer example, copy source literals into tests, hide values in fixtures or generators, or replace the behavior under test with a mock.
+
+**Step 4: Write Test Files**
 
 Create test files following `/typescript-test-standards`:
 
@@ -103,7 +109,7 @@ Create test files following `/typescript-test-standards`:
 - No `vi.mock()` or `vi.fn()` replacing the dependency under test -- use typed DI interfaces
 - Vitest as default runner; `playwright` runner token when needed
 
-**Step 4: Verify Tests Fail (RED)**
+**Step 5: Verify Tests Fail (RED)**
 
 ```bash
 # Resolve from repo docs or scripts; fallback: npx vitest run
@@ -114,7 +120,7 @@ If the canonical wrapper rejects a path suffix, run the closest supported focuse
 
 Tests should FAIL with import errors or assertion errors (implementation does not exist yet).
 
-**Step 5: Handle Specified Nodes**
+**Step 6: Handle Specified Nodes**
 
 If the implementation module does not exist yet, tests fail on import -- breaking the quality gate. Add the node to `spx/EXCLUDE`:
 

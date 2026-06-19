@@ -100,6 +100,7 @@ Report the evidence gap summary before proceeding.
 
 For each assertion that needs a test, apply the 5-stage router from `${CLAUDE_SKILL_DIR}/references/methodology.md`:
 
+0. **Source-contract-first gate** — read the assertion, the existing or planned test, and the code under test; state the production contract the evidence exercises; fix missing source-owned contracts before writing test predicates.
 1. **Stage 1** — What evidence does this assertion demand?
 2. **Stage 2** — At what execution level does that evidence live? Respect ADRs/PDRs loaded from tree context.
 3. **Stages 3–5** — If `L1` is viable, classify the code, check real system viability, and match an exception if needed.

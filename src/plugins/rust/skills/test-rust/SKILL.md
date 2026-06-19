@@ -27,9 +27,11 @@ Before writing or revising tests, also check:
 <workflow>
 1. Load the governing spec context before editing any co-located `spx/.../tests/` file.
 2. Map each assertion to the assertion type and level chosen by `/test`.
-3. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
-4. Keep test helpers, fixtures, and harnesses in the location prescribed by `/rust-test-standards` and repo-local overlays.
-5. Run the repository's Rust validation commands before reporting the tests complete.
+3. Apply the `/test` source-contract-first gate: read the assertion, the existing or planned test, and the Rust code under test; state the production contract the evidence exercises.
+4. If the source does not expose the enum, constructor, trait boundary, parser entry point, registry, schema, or observable behavior the assertion needs, fix the source contract before writing test predicates.
+5. Use the `<router_mapping>` and examples in `/rust-test-standards` to choose the Rust implementation shape.
+6. Keep test helpers, fixtures, and harnesses in the location prescribed by `/rust-test-standards` and repo-local overlays.
+7. Run the repository's Rust validation commands before reporting the tests complete.
 
 </workflow>
 
@@ -66,6 +68,7 @@ All Rust test examples are owned by `/rust-test-standards`:
 Rust test work is complete when:
 
 - `/test` chose the assertion type and target level first
+- the source-contract-first gate was applied before test predicates were written or repaired
 - `/rust-standards` and `/rust-test-standards` were loaded before test code was written
 - the test shape follows the canonical Rust test standard and repo-local overlays
 - controlled implementations preserve coupling to the real seam

@@ -1,24 +1,36 @@
-"""Domain model for the check-pipeline orchestrator.
+"""Domain model for verification recipe orchestration.
 
-Defines the Step record, the ProcessHandle Protocol, and the ProcessSpawner
-Protocol. These are the only types the orchestrator's main loop depends on;
-the production adapter that binds them to subprocess.Popen lives in
-_spawner.py, the sole module in this package that imports subprocess.
+Defines the Step and Recipe records plus the process Protocols. These are the
+only types the orchestrator's main loop depends on; the production adapter that
+binds them to subprocess.Popen lives in _spawner.py, the sole module in this
+package that imports subprocess.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 
 @dataclass(frozen=True)
 class Step:
-    """A single quality-gate step: a human label and the argv to execute."""
+    """A single recipe step: a human label and the argv to execute."""
 
     label: str
     argv: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Recipe:
+    """A deterministic verification recipe and its step lists."""
+
+    name: str
+    verification_type: str | None
+    purpose: str | None
+    preflight_steps: tuple[Step, ...]
+    steps: tuple[Step, ...]
 
 
 class ProcessHandle(Protocol):
@@ -37,4 +49,4 @@ class ProcessHandle(Protocol):
 class ProcessSpawner(Protocol):
     """Spawns a child process and returns a ProcessHandle for it."""
 
-    def spawn(self, argv: Sequence[str]) -> ProcessHandle: ...
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle: ...
