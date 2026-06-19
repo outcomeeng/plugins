@@ -28,9 +28,9 @@ Report structured verdict:
 ```text
 ## Spec Audit: {node spec path}
 
-Section structure: {PASS|FAIL} — {rationale}
-Atemporal voice: {PASS|FAIL} — {rationale}
-Per-assertion tag fitness: {PASS|FAIL} — {rationale}
+Section structure: {PASS|REJECT} — {rationale}
+Atemporal voice: {PASS|REJECT} — {rationale}
+Per-assertion tag fitness: {PASS|REJECT} — {rationale}
 
 ---
 
