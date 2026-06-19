@@ -89,14 +89,15 @@ Read the test file's import statements. Classify each import:
 
 If codebase imports exist, classify using the coupling taxonomy in `${SKILL_DIR}/references/evidence-model.md`:
 
-| Category       | Definition                                                  | Verdict                                         |
-| -------------- | ----------------------------------------------------------- | ----------------------------------------------- |
-| Direct         | Test imports the module under test                          | Proceed                                         |
-| Indirect       | Test imports a harness wrapping the module                  | Proceed — verify harness has real coupling      |
-| Transitive     | Test imports a consumer of the module                       | Proceed — verify test level matches             |
-| False          | Imports module but never calls assertion-relevant functions | REJECT                                          |
-| Partial        | Calls functions but on wrong inputs or wrong code paths     | REJECT                                          |
-| Prose-coupling | Reads an authored prose/doc body and asserts its content    | REJECT — couples to authored text, not behavior |
+| Category           | Definition                                                                                 | Verdict                                         |
+| ------------------ | ------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| Direct             | Test imports the module under test                                                         | Proceed                                         |
+| Indirect           | Test imports a harness wrapping the module                                                 | Proceed — verify harness has real coupling      |
+| Transitive         | Test imports a consumer of the module                                                      | Proceed — verify test level matches             |
+| Laundered indirect | Imports a test-support module that exists only to expose hardcoded values back to the test | REJECT — laundering                             |
+| False              | Imports module but never calls assertion-relevant functions                                | REJECT                                          |
+| Partial            | Calls functions but on wrong inputs or wrong code paths                                    | REJECT                                          |
+| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                   | REJECT — couples to authored text, not behavior |
 
 Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader helper that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
 
