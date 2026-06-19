@@ -27,15 +27,16 @@ A test missing any property has zero evidentiary value regardless of code qualit
 
 The `/audit-tests` skill in the spec-tree plugin classifies test coupling into distinct categories, each with a different audit response:
 
-| Category           | Definition                                                                                      | Verdict                                                |
-| ------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Direct             | Test imports the module under test                                                              | Proceed to falsifiability                              |
-| Indirect           | Test imports a harness that wraps the module                                                    | Proceed — verify harness coupling                      |
-| Transitive         | Test imports something that depends on the module                                               | Review — may be legitimate cross-module evidence at L2 |
-| Laundered indirect | Test imports a test-support module that exists only to expose hardcoded values back to the test | REJECT — laundering                                    |
-| False              | Test imports the module but never exercises the assertion-relevant path                         | REJECT                                                 |
-| Partial            | Test exercises some paths but not the ones the assertion claims                                 | REJECT                                                 |
-| None               | Test imports only its test framework                                                            | REJECT — tautology                                     |
+| Category           | Definition                                                                                                                                              | Verdict                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Direct             | Test imports the module under test                                                                                                                      | Proceed to falsifiability                                                               |
+| Indirect           | Test imports a harness that wraps the module                                                                                                            | Proceed — verify harness coupling                                                       |
+| Transitive         | Test imports something that depends on the module                                                                                                       | Review — may be legitimate cross-module evidence at L2                                  |
+| Laundered indirect | Test imports a test-support module that exists only to expose hardcoded values back to the test                                                         | REJECT — laundering                                                                     |
+| False              | Test imports the module but never exercises the assertion-relevant path                                                                                 | REJECT                                                                                  |
+| Partial            | Test exercises some paths but not the ones the assertion claims                                                                                         | REJECT                                                                                  |
+| None               | Test imports only its test framework                                                                                                                    | REJECT — tautology                                                                      |
+| Prose-coupling     | Test reads an authored prose or documentation body (skill, spec, prompt) and asserts on its content — directly or laundered through test infrastructure | REJECT — couples to authored text, not behavior; retag the assertion `[eval]`/`[audit]` |
 
 ## Falsifiability Model
 
