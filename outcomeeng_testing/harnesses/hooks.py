@@ -19,13 +19,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shlex
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
+
+# A shell variable name the harness may safely interpolate into a sourced script.
+_ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 _HOOKS_JSON = ("src", "plugins", "spec-tree", "hooks", "hooks.json")
 SESSION_START_EVENT = "SessionStart"
@@ -34,6 +40,11 @@ SESSION_START_EVENT = "SessionStart"
 # hook to a valid empty result before it probes for or invokes spx.
 KILL_SWITCH_ENV = "SPECTREE_SESSION_HOOK_DISABLED"
 KILL_SWITCH_DISABLED = "1"
+
+# The spx hook runner records this PID as the worktree claim's controlling
+# process; spx worktree status reads it back and checks liveness, so a claim is
+# `occupied` only while this process is alive. A test sets it to its own PID.
+WORKTREE_CONTROLLING_PID_ENV = "SPX_WORKTREE_CONTROLLING_PID"
 
 # Env vars dropped from the child so the hook command sees only what the call
 # provides — its own session identity, project dir, and env file, not the runner's.
@@ -124,11 +135,79 @@ def run_session_start(
     )
 
 
+def init_session_worktree(path: Path) -> None:
+    """Initialize a real git worktree at ``path`` the hook can claim (L3 setup)."""
+    subprocess.run(  # noqa: S603, S607 — git is a standard dev tool on PATH.
+        ["git", "-C", str(path), "init", "-q"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROCESS_TIMEOUT_S,
+    )
+
+
+def read_env_exports(env_file: Path, names: Sequence[str]) -> dict[str, str]:
+    """Source the hook's env file in ``/bin/sh`` and return each name's value.
+
+    Sourcing through the shell applies the file's own ``export`` quoting, so the
+    test reads the value a later Bash tool call in the session would see — not a
+    hand-parsed line. An unset variable resolves to ``"<unset>"`` so a missing
+    write is a loud assertion failure rather than an empty string. Each name is
+    interpolated into the sourced script as a parameter expansion, so a name that
+    is not a bare shell identifier could inject shell — every name is validated
+    against ``_ENV_NAME`` first and a non-conforming name is a ``ValueError``.
+    """
+    for name in names:
+        if not _ENV_NAME.fullmatch(name):
+            msg = f"env var name must be a shell identifier, got {name!r}"
+            raise ValueError(msg)
+    script = (
+        ". "
+        + shlex.quote(str(env_file))
+        + "\n"
+        + "\n".join(f'printf "%s\\n" "${{{name}-<unset>}}"' for name in names)
+    )
+    result = subprocess.run(  # noqa: S603 — fixed /bin/sh argv; names validated as shell identifiers above.
+        ["/bin/sh", "-c", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROCESS_TIMEOUT_S,
+    )
+    return dict(zip(names, result.stdout.splitlines(), strict=True))
+
+
+def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
+    """Return spx's own occupancy verdict for the project's worktree claims.
+
+    Runs the real ``spx worktree status`` from inside ``project_dir``, so the
+    test asserts the spx CLI recognizes the claim the hook recorded — the
+    round-trip, not a claim file's presence on disk. ``status`` resolves both the
+    worktree under inspection and its ``.spx/worktrees`` from the working
+    directory, so no explicit ``--worktrees-dir`` (and thus no dependency on that
+    flag's availability at the pinned floor) is needed.
+    """
+    result = subprocess.run(  # noqa: S603, S607 — spx is the methodology CLI on PATH.
+        ["spx", "worktree", "status", "--format", "json"],
+        check=True,
+        capture_output=True,
+        text=True,
+        cwd=str(project_dir),
+        timeout=_SUBPROCESS_TIMEOUT_S,
+    )
+    parsed: Any = json.loads(result.stdout)
+    return parsed if isinstance(parsed, list) else [parsed]
+
+
 __all__ = [
     "KILL_SWITCH_DISABLED",
     "KILL_SWITCH_ENV",
     "SESSION_START_EVENT",
+    "WORKTREE_CONTROLLING_PID_ENV",
+    "init_session_worktree",
+    "read_env_exports",
     "run_session_start",
     "session_start_command",
     "session_start_events",
+    "worktree_occupancy",
 ]
