@@ -218,7 +218,6 @@ TEST_RECIPE: Final = Recipe(
 )
 
 CHECK_RECIPES: Final = (VALIDATION_RECIPE, TEST_RECIPE)
-STEPS: Final = (*VALIDATION_STEPS, *TEST_STEPS)
 
 
 def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:

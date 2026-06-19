@@ -34,7 +34,6 @@ from outcomeeng.validation import (
     RUN_FAIL_STATUS,
     RUN_PASS_STATUS,
     SPAWN_FAILURE_EXIT_CODE,
-    STEPS,
     SUMMARY_KEY_EXIT_CODE,
     SUMMARY_KEY_EXCERPT,
     SUMMARY_KEY_LOG_PATH,
@@ -49,7 +48,9 @@ from outcomeeng.validation import (
     STEP_FAIL_STATUS,
     STEP_PASS_STATUS,
     TEST_RECIPE,
+    TEST_STEPS,
     VALIDATION_RECIPE,
+    VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
     Recipe,
@@ -505,18 +506,19 @@ class TestCheckWrapper:
         assert summary[SUMMARY_KEY_STEPS] == []
 
 
-class TestProductionStepListSmoke:
-    """The production STEPS constant runs through the orchestrator end-to-end.
+class TestProductionRecipeStepListsSmoke:
+    """The production primitive step lists run through the orchestrator.
 
-    Uses the same recording spawner — proves STEPS is shape-compatible with
-    `run(...)` without launching real validators.
+    Uses the same recording spawner — proves the primitive step-list constants
+    are shape-compatible with `run(...)` without launching real validators.
     """
 
     def test_run_with_production_steps_succeeds_when_all_pass(self) -> None:
-        spawner = RecordingSpawner(exit_codes=[PASS] * len(STEPS))
+        steps = (*VALIDATION_STEPS, *TEST_STEPS)
+        spawner = RecordingSpawner(exit_codes=[PASS] * len(steps))
         sink = io.StringIO()
 
-        exit_code = run(spawner=spawner, sink=sink, steps=STEPS)
+        exit_code = run(spawner=spawner, sink=sink, steps=steps)
 
         assert exit_code == PASS
-        assert len(spawner.spawn_calls) == len(STEPS)
+        assert len(spawner.spawn_calls) == len(steps)

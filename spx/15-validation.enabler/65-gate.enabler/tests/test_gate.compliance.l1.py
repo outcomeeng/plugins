@@ -45,7 +45,6 @@ from outcomeeng.validation import (
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
     SPX_MARKDOWN_ARGV,
-    STEPS,
     SUMMARY_KEY_PURPOSE,
     SUMMARY_KEY_RECIPE,
     SUMMARY_KEY_VERIFICATION_TYPE,
@@ -74,9 +73,11 @@ class TestDeclaredSteps:
     """Validation recipe includes validators; test recipe owns pytest."""
 
     def test_steps_is_non_empty_tuple_of_step(self) -> None:
-        assert isinstance(STEPS, tuple)
-        assert len(STEPS) >= 1
-        for step in STEPS:
+        assert isinstance(VALIDATION_STEPS, tuple)
+        assert isinstance(TEST_STEPS, tuple)
+        assert len(VALIDATION_STEPS) >= 1
+        assert len(TEST_STEPS) >= 1
+        for step in (*VALIDATION_STEPS, *TEST_STEPS):
             assert isinstance(step, Step)
 
     def test_validation_recipe_reports_validation_conformance(self) -> None:
@@ -182,7 +183,7 @@ class TestBoundedLiveOutput:
         assert len(output.splitlines()) < len(HIGH_VOLUME_CHILD_OUTPUT.splitlines())
 
     def test_steps_includes_hook_safety(self) -> None:
-        assert any(step.argv == HOOK_SAFETY_ARGV for step in STEPS)
+        assert any(step.argv == HOOK_SAFETY_ARGV for step in VALIDATION_STEPS)
 
 
 def _package_modules() -> list[Path]:

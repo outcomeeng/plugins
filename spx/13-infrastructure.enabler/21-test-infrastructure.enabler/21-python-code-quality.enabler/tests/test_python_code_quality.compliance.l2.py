@@ -7,12 +7,12 @@ from outcomeeng.validation import (
     PYRIGHT_ARGV,
     PYTHON_SOURCE_PATHS,
     RUFF_CHECK_ARGV,
-    STEPS,
+    VALIDATION_STEPS,
 )
 
 
 def test_static_analysis_steps_are_declared_in_gate() -> None:
-    step_argvs = {step.argv for step in STEPS}
+    step_argvs = {step.argv for step in VALIDATION_STEPS}
 
     assert RUFF_CHECK_ARGV in step_argvs
     assert MYPY_ARGV in step_argvs
