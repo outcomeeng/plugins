@@ -4,7 +4,7 @@ This product adopts the verification taxonomy declared in the `/understand` foun
 
 ## Rationale
 
-This product adopts the marketplace verification taxonomy rather than defining its own, so every node's evidence reads the same way across the spec tree and the two agentic types — auditing and reviewing — are themselves verified by graded eval cases. An audit verdict is produced in an isolated agent context, reached only by dispatching the corresponding auditor agent, so the judgment stays free of the bias the main conversation accumulates while doing the work under audit. The rule binds the main conversation's entry point; a dispatched agent's own calls while it runs the audit are a separate concern.
+This product adopts the marketplace verification taxonomy rather than defining its own, so every node's evidence reads the same way across the spec tree and the two agentic types — auditing and reviewing — are themselves verified by graded eval cases. An audit verdict is produced in a verifier context isolated from the author context — the context that produced the work under audit — so the judgment stays free of the bias a context accumulates while producing the work it would otherwise grade. The isolation separates author from verifier, never one verifier from another: the author context dispatches the audit to a separate verifier context rather than grading its own work in place, and a verifier already free of author bias may compose further verification without reintroducing it.
 
 Verification ownership spans all five types, not only the deterministic ones a CI gate re-runs. Passing tests and validation shows the changed code meets the checks that already exist; it does not show the design is coherent, the evidence sufficient, or a finding's defect class swept — the judgment only reviewing and auditing supply. An agent that defers those to an external reviewer lets the reviewer drive the design one finding per round; running them locally first forecloses that. Reading the changeset is the cheapest verification the agent has and the one that converges the design, so an agentic gate confirms an artifact already stabilized rather than discovering it. The scope split keeps per-iteration deterministic runs cheap while CI stays the full-repository regression net.
 
@@ -25,7 +25,7 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 
 1. Verification is the five marketplace types — validation, testing, reviewing, auditing, evaluating — across two axes, verdict mode and purpose. Three back the tag an assertion carries: `[test]` by testing, `[eval]` by evaluating, `[audit]` by auditing.
 2. Each path-bearing evidence link resolves to its target — a `[test]` link to an executable test, an `[eval]` link to an eval definition — and the `[audit]` tag is pathless.
-3. An audit verdict is produced in an isolated agent context, reached only by dispatching the corresponding auditor agent. The main conversation never invokes an audit skill in place to produce a verdict.
+3. An audit verdict is produced in a verifier context isolated from the author context — the context that produced the work under audit. The author context never grades its own work in place; it dispatches the audit to a separate verifier context. The isolation separates author from verifier, never one verifier from another, so a verifier already free of author bias may compose further verification.
 4. The agent owns all five verification types and runs each applicable one locally, over the changeset, before any external or CI review.
 5. Deterministic verification (validation, testing, evaluating) runs over the changeset locally and over the whole repository in CI; agentic verification (reviewing, auditing) runs over the changeset both locally and in CI, per the Scope table.
 6. Passing deterministic verification is the floor: it shows the changed code meets the deterministic checks that exist, establishes nothing about reviewing or auditing, and never on its own authorizes publishing.
@@ -39,8 +39,10 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 - ALWAYS: an activity declares its type and purpose ([audit])
 - NEVER: a type's verdict mode differs from the one its definition binds — the binding is fixed, not chosen per run ([audit])
 - NEVER: a model judges the verdict of a deterministic type — it may run inside the process, but the verdict is the deterministic score ([audit])
-- ALWAYS: the main conversation produces an audit verdict only by dispatching the corresponding auditor agent — the auditor agent's isolated context is the surface that emits the verdict ([audit])
-- NEVER: the main conversation invokes an audit skill in place to produce a verdict — direct in-context invocation reintroduces the bias the dispatched agent's isolated context removes ([audit])
+- ALWAYS: an audit verdict is produced in a verifier context isolated from the author context that produced the work under audit — the isolation separates author from verifier, never one verifier from another ([audit])
+- ALWAYS: the author context produces an audit verdict only by dispatching the audit to a separate verifier context — never by grading its own work in place ([audit])
+- NEVER: the author context invokes an audit skill in place to produce a verdict — in-context invocation reintroduces the bias the dispatched verifier's isolated context removes ([audit])
+- ALWAYS: a verifier already isolated from author bias may compose further verification — composition within a verifier context reintroduces no author bias ([audit])
 - NEVER: the type set or the two verdict modes are extended — a new type amends the `/understand` foundation's verification-kinds reference and this decision ([audit])
 - ALWAYS: the agent runs each applicable verification type locally over the changeset before any external or CI review — reviewing and auditing as well as validation, testing, and evaluating ([audit])
 - ALWAYS: deterministic verification runs over the changeset locally and over the whole repository in CI; agentic verification runs over the changeset both locally and in CI ([audit])

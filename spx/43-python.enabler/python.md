@@ -4,13 +4,13 @@ PROVIDES the complete Python development workflow — architecture, testing, imp
 SO THAT Python projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The python plugin contains 9 skills following the foundational + language-specific pattern: `/python-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/test-python`, `/code-python`, `/audit-python`, `/audit-python-tests`, `/architect-python`, `/audit-python-architecture`. Three auditor agents (`python-code-auditor`, `python-architecture-auditor`, `python-test-auditor`) preload the corresponding skills.
+The python plugin contains 9 skills following the foundational + language-specific pattern: `/python-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/test-python`, `/code-python`, `/audit-python`, `/audit-python-tests`, `/architect-python`, `/audit-python-architecture`. The `audit-python*` skills carry no Python-specific auditor agent; the generic artifact-type auditors (`adr-auditor`, `test-evidence-auditor`, and the `/audit` family) compose them for the Python concerns in scope, per `spx/21-spec-tree.enabler/17-auditing.adr.md`.
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: the `audit-python*` skills are reached only by dispatching their auditor agent (`python-code-auditor`, `python-test-auditor`, `python-architecture-auditor`); the main conversation does not invoke them in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
+- ALWAYS: the `audit-python*` skills carry no Python-specific auditor agent and are composed by the generic artifact-type auditor for the Python concerns in scope; the main conversation does not invoke them in place — the dispatched verifier's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: follow the foundational + language-specific pattern — core principles in `/test`, Python-specific patterns in `/test-python` ([review])
 - ALWAYS: use dependency injection instead of mocking — reality is the oracle ([review])
 - ALWAYS: the Python plugin's standards are grouped under `spx/43-python.enabler/25-python-standards.enabler/`, with architecture standards, test standards, and implementation workflows separated by dependency order ([review])
