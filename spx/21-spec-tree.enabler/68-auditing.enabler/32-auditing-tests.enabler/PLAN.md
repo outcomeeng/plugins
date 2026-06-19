@@ -56,7 +56,7 @@ See `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the full cros
 ## Done when
 
 - [x] `auditing-tests.md` declares assertions for the literal rule, the positive pattern, the testability gate, and the extended coupling taxonomy.
-- [ ] `tests/test_test_auditing.scenario.l1.py`, `tests/test_test_auditing.property.l1.py`, and `tests/test_test_auditing.conformance.l1.py` exercise at least one scenario per new assertion (laundered-indirect rejection, testability failure against source, library-origin positive case).
+- [ ] `tests/test_test_auditing.scenario.l1.py`, `tests/test_test_auditing.property.l1.py`, and `tests/test_test_auditing.conformance.l1.py` exercise at least one scenario per new assertion (laundered-indirect rejection, prose-coupling rejection, testability failure against source, library-origin positive case), and the property asserts at least the eight coupling categories.
 - [ ] `/audit-tests/SKILL.md` workflow restates the literal rule at each of: quick_start, coupling step, falsifiability step, rejection criteria.
 - [ ] Audit dry-run against a handful of existing test files in this repo produces the expected verdicts.
 
