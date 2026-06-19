@@ -32,6 +32,9 @@ from typing import Any
 import pytest
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_ADR_RULE_CITATION,
+    FIXTURE_AGENTS_RULE_CITATION,
+    FIXTURE_MALFORMED_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     load_render_review_module,
     load_review_result_module,
@@ -168,6 +171,60 @@ class TestParseJsonRejection:
         review_result = load_review_result_module()
         with pytest.raises(review_result.ReviewResultValidationError):
             review_result.parse_json("{not valid json")
+
+
+class TestRuleCitationValidation:
+    """``Finding.rule`` accepts declared citation families and rejects prose."""
+
+    @pytest.mark.parametrize(
+        "rule_citation",
+        (
+            FIXTURE_RULE_CITATION,
+            FIXTURE_ADR_RULE_CITATION,
+            FIXTURE_AGENTS_RULE_CITATION,
+        ),
+    )
+    def test_parse_json_accepts_declared_rule_citation_forms(
+        self,
+        rule_citation: str,
+    ) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": rule_citation,
+            "message": "m",
+            "action": "a",
+        }
+        payload = json.dumps(make_review_result_dict(findings=[finding]))
+
+        result = review_result.parse_json(payload)
+
+        assert result.findings[0].rule == rule_citation
+
+    def test_parse_json_rejects_free_form_rule_text(self) -> None:
+        review_result = load_review_result_module()
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_MALFORMED_RULE_CITATION,
+            "message": "m",
+            "action": "a",
+        }
+        payload = json.dumps(make_review_result_dict(findings=[finding]))
+
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(payload)
+
+        message = str(excinfo.value)
+        assert "rule" in message
+        assert FIXTURE_MALFORMED_RULE_CITATION in message
 
 
 class TestRoundTrip:

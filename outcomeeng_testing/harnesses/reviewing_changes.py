@@ -71,6 +71,12 @@ FIXTURE_RULE_CITATION = (
     "spx/21-spec-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
 )
+FIXTURE_ADR_RULE_CITATION = (
+    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
+)
+FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:never-maintain-backward-compatibility"
+FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 
 
 def load_review_result_module() -> ModuleType:
