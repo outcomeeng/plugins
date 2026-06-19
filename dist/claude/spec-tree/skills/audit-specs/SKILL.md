@@ -164,7 +164,7 @@ Audit is complete when:
 - [ ] Section structure: kind statement well-formed, `## Assertions` present, and each assertion-type heading non-empty and matched to its type
 - [ ] Atemporal voice: every section checked for temporal language
 - [ ] Per-assertion tag fitness: each assertion carries one valid tag; each `[test]` assertion type fits the claim's quantifier; no `[test]` tag on an authored-prose-content claim
-- [ ] Verdict issued: APPROVED or REJECT
+- [ ] Verdict issued: APPROVED or REJECTED
 - [ ] For REJECT: each finding has property, category, and detail
 
 </success_criteria>
