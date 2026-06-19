@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
 <objective>
-The managing protocol. Loaded by /manage-github-pr for the open-PR management pass: inspect → classify → sync to base → drive queue → re-review and push follow-ups → wait on PR checks when needed → evaluate the merge gates → act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /merging-standards `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
+The managing protocol. Loaded by /manage-github-pr for the open-PR management pass: inspect -> classify -> sync to base -> drive queue -> re-review and push follow-ups -> wait on PR checks when needed -> evaluate the merge gates -> act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /merging-standards `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
 </objective>
 
 <the_managing_flow>
@@ -67,7 +67,7 @@ For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phr
 
 When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRODUCTION_READINESS` also holds, run the mutation-point guard from /merging-standards `<authority_gates>` immediately before the merge command. The guard re-reads live PR state and returns either `MERGE_READY:<head-sha>` or one existing action token. Do not run `gh pr merge` unless the guard returns `MERGE_READY:<head-sha>` for the head SHA just inspected.
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** → merge using the project's merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /merging-standards `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** -> merge using the project's merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /merging-standards `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
 
   Overlay-silent default (per /merging-standards `<merge_cleanup>`):
 
@@ -92,7 +92,7 @@ When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRO
   ```
 
   Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
-- **Production-relevant and not yet approved** → emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
+- **Production-relevant and not yet approved** -> emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
 
 If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standards `<action_tokens>`. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `AWAIT_APPROVAL`, `SYNC_BASE`, or `MERGE_BLOCKED:<reason>`, stop at the operator boundary or concrete blocker the token names.
 

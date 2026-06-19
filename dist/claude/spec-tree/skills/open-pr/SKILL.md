@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /manage-github-pr for the one-shot path: pre-flight → topology → REVIEW_READINESS (deterministic verification + local review) → push → open ready → first management pass → exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /manage-pr governs the post-creation loop.
+The opening protocol. Loaded by /manage-github-pr for the one-shot path: pre-flight -> topology -> REVIEW_READINESS (deterministic verification + local review) -> push -> open ready -> first management pass -> exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /manage-pr governs the post-creation loop.
 </objective>
 
 <project_specialization>
@@ -108,8 +108,8 @@ gh pr checks <pr-number> --watch --fail-fast --interval 30
 
 The PR title is one commit-subject line under 70 characters per /commit-changes:
 
-- Single commit on the branch → use that commit's subject as-is.
-- Multiple commits → synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /commit-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
+- Single commit on the branch -> use that commit's subject as-is.
+- Multiple commits -> synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /commit-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
 
 Examples:
 

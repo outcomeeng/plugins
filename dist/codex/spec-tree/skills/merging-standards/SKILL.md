@@ -321,7 +321,7 @@ Severity is the validity judgment the reviewer makes. **Disposition** — whethe
 
 *What the code does vs. what it is supposed to do*
 
-- `consistency` — disagreement across layers (decisions / PDR / ADR ↔ spec ↔ tests ↔ implementation). Surface the disagreement; do not judge which side is right.
+- `consistency` — disagreement across layers (decisions / PDR / ADR <-> spec <-> tests <-> implementation). Surface the disagreement; do not judge which side is right.
 - `security` — confidentiality, integrity, availability.
 - `performance` — unbounded loops, hot-path allocations, O(n²) traversals where O(n) suffices, synchronous I/O on async paths, and similar pessimisations that change the changeset's runtime characteristics under realistic load.
 

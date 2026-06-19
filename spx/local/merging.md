@@ -18,7 +18,7 @@ Merge the moment `MERGE_READINESS` holds and **NEVER ask the operator whether to
 
 ## Pre-mutation confirmation
 
-This repository declares **no** pre-mutation confirmation: drive a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow → Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
+This repository declares **no** pre-mutation confirmation: drive a determined changeset from intent to merge autonomously, stating the plan in prose with no up-front structured-question pause before branching, committing, pushing, opening a PR, or direct-pushing. This matches the standing autonomy in [`AGENTS.md`](../../AGENTS.md) Git workflow -> Autonomy — the operator has pre-authorized the whole lifecycle, so an up-front proposal-and-confirm pause would re-ask a decision the operator has already made.
 
 Establishing *what* to ship when nothing is determined (the `/manage-github-pr` Empty-mode `/interview` pass) is requirements work, not a pre-mutation confirmation, and proceeds regardless. The only operator-facing pauses in the whole flow are the explicit `<action_tokens>` an unresolved condition emits — an unresolvable rebase conflict (`SYNC_BASE`) or a mention-review edge case (`MENTION_REVIEW_NEEDED`) — never a discretionary "should I proceed?".
 
@@ -50,9 +50,9 @@ After a clean rebase, `/sync-base` returns a readiness-preservation proof (`pres
 
 **Validation lane.** Choose the narrowest lane that covers every `base_delta_paths` entry:
 
-- All entries under `spx/` or matching `*.md` (specs, decisions, coordination notes, docs), and `path_overlap` empty → the spec/markdown lane: `spx validation markdown` and `spx spec status --format json`.
-- Any entry under `src/plugins/` or `dist/` that is only skill Markdown/reference content, and `path_overlap` empty → the skill/doc lane: `just check-skills` and `just docs-check`.
-- Any entry under `src/`, `outcomeeng*/`, `.github/`, a package or lockfile, `justfile`/`Justfile`, or validation config; any entry this overlay does not classify; `path_overlap` non-empty; or `branch_patch_changed` true → widen to the focused node/package/module test lane plus the narrow validation lane that covers the changed files, reserving full `just check` for the escalation cases above.
+- All entries under `spx/` or matching `*.md` (specs, decisions, coordination notes, docs), and `path_overlap` empty -> the spec/markdown lane: `spx validation markdown` and `spx spec status --format json`.
+- Any entry under `src/plugins/` or `dist/` that is only skill Markdown/reference content, and `path_overlap` empty -> the skill/doc lane: `just check-skills` and `just docs-check`.
+- Any entry under `src/`, `outcomeeng*/`, `.github/`, a package or lockfile, `justfile`/`Justfile`, or validation config; any entry this overlay does not classify; `path_overlap` non-empty; or `branch_patch_changed` true -> widen to the focused node/package/module test lane plus the narrow validation lane that covers the changed files, reserving full `just check` for the escalation cases above.
 
 When in doubt, widen the local lane only as far as the changed contract requires — the narrower lane is an optimization, never a relaxation of `REVIEW_READINESS`.
 

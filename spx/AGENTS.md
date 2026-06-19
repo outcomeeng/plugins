@@ -94,13 +94,13 @@ Use `/decompose` to create or restructure child nodes. It owns concern boundarie
 
 ## When to Invoke Skills
 
-### Before ANY spec-tree work → `/understand`
+### Before ANY spec-tree work -> `/understand`
 
 **BLOCKING REQUIREMENT**
 
 Loads the Spec Tree methodology. Required once per session and again after every individual compaction event.
 
-### Before working on a specific node → `/contextualize`
+### Before working on a specific node -> `/contextualize`
 
 **BLOCKING REQUIREMENT**
 
@@ -110,23 +110,23 @@ Loads the Spec Tree methodology. Required once per session and again after every
 
 **NEVER** resume work on a node without having invoked `/contextualize` since the last compaction.
 
-### When creating specs or nodes → `/author`
+### When creating specs or nodes -> `/author`
 
 Create product specs, ADRs/PDRs, enabler nodes, outcome nodes.
 
-### When composing or breaking down nodes → `/decompose`
+### When composing or breaking down nodes -> `/decompose`
 
 Compose top-level children with `/decompose spx/`. Decompose an existing node when it has too many assertions (>7), contains independent concerns, or has `PLAN.md`/`ISSUES.md` structure intent.
 
-### When restructuring the tree → `/refactor`
+### When restructuring the tree -> `/refactor`
 
 Move nodes, re-scope assertions, extract shared enablers, consolidate duplicates.
 
-### When checking consistency → `/align`
+### When checking consistency -> `/align`
 
 Review, audit, or quality check specs. Find contradictions or gaps.
 
-### When shipping work to the default branch → `/merge` (transport dispatcher)
+### When shipping work to the default branch -> `/merge` (transport dispatcher)
 
 **BLOCKING REQUIREMENT**
 

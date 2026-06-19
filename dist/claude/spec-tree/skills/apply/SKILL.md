@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node, plus a terminal tenth that carries default-branch work through `/merge`. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare → spec → apply) because without guardrails Claude skips declaring prerequisites.
+Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node, plus a terminal tenth that carries default-branch work through `/merge`. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare -> spec -> apply) because without guardrails Claude skips declaring prerequisites.
 
 For work destined for the default branch, the flow is complete only when the change reaches the default branch on origin through `/merge` (Step 10). An APPROVED Step 8 audit, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are local readiness, not delivered value. Step 10 governs when that continuation is scoped out.
 
@@ -16,9 +16,9 @@ For work destined for the default branch, the flow is complete only when the cha
 
 1. Load methodology (Step 1 — once per session)
 2. Load work item context (Step 2 — every node)
-3. Architect → audit until APPROVED (Steps 3–4)
-4. Test → audit until APPROVED (Steps 5–6)
-5. Implement → audit until APPROVED (Steps 7–8)
+3. Architect -> audit until APPROVED (Steps 3–4)
+4. Test -> audit until APPROVED (Steps 5–6)
+5. Implement -> audit until APPROVED (Steps 7–8)
 6. Whole-changeset review when the change reaches beyond the target node (Step 9)
 7. Merge — carry default-branch work through `/merge` until it reaches the default branch on origin (Step 10)
 
@@ -28,9 +28,9 @@ For work destined for the default branch, the flow is complete only when the cha
 
 Before starting Step 3, determine the product language:
 
-- `tsconfig.json` exists → **TypeScript**
-- `pyproject.toml` or `setup.py` exists → **Python**
-- Both exist → check the spec node for language indicators, or ask the user
+- `tsconfig.json` exists -> **TypeScript**
+- `pyproject.toml` or `setup.py` exists -> **Python**
+- Both exist -> check the spec node for language indicators, or ask the user
 
 Use the detected language for ALL Steps 3–8. Do not switch mid-flow.
 
@@ -121,7 +121,7 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT → fix the defect class → re-invoke this step.** Loop until APPROVED.
+**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
 
 </step>
 
@@ -141,7 +141,7 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT → fix the defect class → re-invoke this step.** Loop until APPROVED.
+**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
 
 </step>
 
@@ -161,7 +161,7 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>`.
 
-**REJECT → fix the defect class → re-invoke this step.** Loop until APPROVED.
+**REJECT -> fix the defect class -> re-invoke this step.** Loop until APPROVED.
 
 </step>
 
@@ -171,7 +171,7 @@ Skip this step only when the entire diff is confined to the target node's own di
 
 Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent, or `/review-changes` when `changes-reviewer` is not installed. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
 
-Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding it surfaces, including every in-scope same-class instance found by the subsystem sweep, then re-run. **Unaddressed valid finding → fix the defect class → re-run this step.** Loop until the review converges.
+Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding it surfaces, including every in-scope same-class instance found by the subsystem sweep, then re-run. **Unaddressed valid finding -> fix the defect class -> re-run this step.** Loop until the review converges.
 
 </step>
 
@@ -203,7 +203,7 @@ Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or
 
 On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the defect class, re-invoke the same skill, and scan again.
 
-**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings → STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the model is unstable; refactor the model before asking the same gate again.
+**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the model is unstable; refactor the model before asking the same gate again.
 
 </review_gates>
 
