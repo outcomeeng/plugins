@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.15"
+template_version: "0.19.0"
 template_source: spec-tree
 ---
 
@@ -153,7 +153,7 @@ Default-branch work is complete only when it reaches the default branch on origi
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context, returning structured APPROVED/REJECTED verdicts. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
+Skills run in the main conversation. An auditor agent runs an audit in a verifier context isolated from the author context, returning a structured APPROVED/REJECTED verdict. **ALWAYS run an audit through its auditor agent** — the separate context keeps the verdict free of the author context's bias — and dispatch agents in parallel when auditing multiple targets. The auditor agents are generic and artifact-type-scoped (ADR, PDR, code, test); a generic auditor composes a language's `audit-{lang}*` skill for the language detected in scope. There is no language-specific auditor agent.
 
 | User Says...                               | Skill            | Agent                   |
 | ------------------------------------------ | ---------------- | ----------------------- |
@@ -168,35 +168,35 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit this PDR"                           | `/audit-pdr`     | `pdr-auditor`           |
 | "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
+| "Audit this code" or "Audit this scope"    | `/audit`         | `auditor`               |
 
-Per-language code, architecture, and test audits render for the product's enabled languages:
+A generic auditor composes these language `audit-{lang}*` skills for the language detected in scope — no language-specific auditor agent exists:
 
 <!-- lang:python -->
 
-| User Says...            | Skill                        | Agent                         |
-| ----------------------- | ---------------------------- | ----------------------------- |
-| "Audit this code"       | `/audit-python`              | `python-code-auditor`         |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `python-architecture-auditor` |
-| "Audit these tests"     | `/audit-python-tests`        | `python-test-auditor`         |
+| Concern          | Composed skill               | Composing agent                 |
+| ---------------- | ---------------------------- | ------------------------------- |
+| Code             | `/audit-python`              | `auditor` (the `/audit` family) |
+| ADR architecture | `/audit-python-architecture` | `adr-auditor`                   |
+| Test evidence    | `/audit-python-tests`        | `test-evidence-auditor`         |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill                            | Agent                             |
-| --------------------------- | -------------------------------- | --------------------------------- |
-| "Audit this code"           | `/audit-typescript`              | `typescript-code-auditor`         |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `typescript-architecture-auditor` |
-| "Audit these tests"         | `/audit-typescript-tests`        | `typescript-test-auditor`         |
+| Concern          | Composed skill                   | Composing agent                 |
+| ---------------- | -------------------------------- | ------------------------------- |
+| Code             | `/audit-typescript`              | `auditor` (the `/audit` family) |
+| ADR architecture | `/audit-typescript-architecture` | `adr-auditor`                   |
+| Test evidence    | `/audit-typescript-tests`        | `test-evidence-auditor`         |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill                      | Agent                       |
-| --------------------- | -------------------------- | --------------------------- |
-| "Audit this code"     | `/audit-rust`              | `rust-code-auditor`         |
-| "Audit unsafe Rust"   | `/audit-rust`              | `rust-unsafe-auditor`       |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `rust-architecture-auditor` |
-| "Audit these tests"   | `/audit-rust-tests`        | `rust-test-auditor`         |
+| Concern                   | Composed skill             | Composing agent                 |
+| ------------------------- | -------------------------- | ------------------------------- |
+| Code (incl. `unsafe`/FFI) | `/audit-rust`              | `auditor` (the `/audit` family) |
+| ADR architecture          | `/audit-rust-architecture` | `adr-auditor`                   |
+| Test evidence             | `/audit-rust-tests`        | `test-evidence-auditor`         |
 
 <!-- /lang:rust -->
 
