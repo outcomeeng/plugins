@@ -3,7 +3,7 @@ name: audit-adr
 description: >-
   ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
   to audit an ADR; the main conversation reaches this audit only through that agent.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
@@ -16,7 +16,7 @@ This audit runs in the adr-auditor agent's isolated context. When this skill loa
 
 Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — stay in `/audit-{lang}-architecture`, not here.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` (Step 5b), which judges only those concerns. This skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
 </objective>
 
@@ -64,6 +64,8 @@ Read the ADR under audit. Identify its sections: the opening decision statement,
 
 **Step 3: Section structure**
 
+Read the canonical ADR template at `${CLAUDE_SKILL_DIR}/../understand/templates/decisions/decision-name.adr.md` and derive the valid section set from it in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR.
+
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
 **No decision statement, or no Verification section → REJECT — "missing-section."**
@@ -104,11 +106,21 @@ A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subse
 
 </step>
 
+<step name="compose_language">
+
+**Step 5b: Compose language-specific architecture concerns**
+
+This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
+
+Detect the implementation language from the node's scope. When a language is in scope and an `audit-{lang}-architecture` skill exists for it, invoke that skill via the Skill tool and fold its findings into the verdict. The language skill judges only language-specific concerns; it never re-judges section structure, voice, or tags. When no language is in scope (a language-neutral ADR) or no matching skill exists, skip composition.
+
+</step>
+
 <step name="verdict">
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
+Scan all findings, including any folded in from the composed language audit. If any property fails: REJECT. Otherwise: APPROVED.
 
 </step>
 

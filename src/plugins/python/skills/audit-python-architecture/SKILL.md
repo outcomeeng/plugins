@@ -1,9 +1,8 @@
 ---
 name: audit-python-architecture
 description: >-
-  Python ADR audit methodology preloaded by the python-architecture-auditor agent.
-  Dispatch python-architecture-auditor to audit ADRs for Python;
-  the main conversation reaches this audit only through that agent.
+  Python-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Python concerns in scope.
+  Reached only through a dispatched auditor agent, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -11,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Bash
 
 <dispatch_gate>
 
-This audit runs in the python-architecture-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the python-architecture-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — the generic adr-auditor composing this skill for the Python concerns in scope, or (transitionally) the python-architecture-auditor agent — isolated from the author context that produced the work under audit. This skill judges only Python-specific concerns: dependency injection, no-mocking, and execution-level accuracy. Section structure, atemporal voice, and tag validity are owned by the composing adr-auditor reading the canonical template and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
 
 </dispatch_gate>
 

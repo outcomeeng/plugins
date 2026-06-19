@@ -2,7 +2,7 @@
 name: adr-auditor
 description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Skill
 model: sonnet
 skills:
   - spec-tree:audit-adr
@@ -15,7 +15,8 @@ Adversarial ADR auditor. Evaluate whether an ADR declares a well-formed architec
 <constraints>
 
 - Read-only — produce verdicts, not code changes
-- Check three properties: section structure, atemporal voice, per-rule tag validity
+- Check three properties: section structure, atemporal voice, per-rule tag validity — judged from the canonical ADR template, never a transcribed copy
+- Compose the language-specific architecture audit: when a language is in scope, the injected methodology invokes `audit-{lang}-architecture` for language concerns (DI, no-mocking, levels) and folds its findings in
 - Scan all findings; the verdict is REJECTED if any property fails, otherwise APPROVED
 - NEVER suggest rewrites or alternative ADR content
 
