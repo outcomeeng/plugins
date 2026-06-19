@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import subprocess
 from collections.abc import Sequence
@@ -28,6 +29,9 @@ from typing import Any
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
+
+# A shell variable name the harness may safely interpolate into a sourced script.
+_ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 _HOOKS_JSON = ("src", "plugins", "spec-tree", "hooks", "hooks.json")
 SESSION_START_EVENT = "SessionStart"
@@ -148,15 +152,22 @@ def read_env_exports(env_file: Path, names: Sequence[str]) -> dict[str, str]:
     Sourcing through the shell applies the file's own ``export`` quoting, so the
     test reads the value a later Bash tool call in the session would see — not a
     hand-parsed line. An unset variable resolves to ``"<unset>"`` so a missing
-    write is a loud assertion failure rather than an empty string.
+    write is a loud assertion failure rather than an empty string. Each name is
+    interpolated into the sourced script as a parameter expansion, so a name that
+    is not a bare shell identifier could inject shell — every name is validated
+    against ``_ENV_NAME`` first and a non-conforming name is a ``ValueError``.
     """
+    for name in names:
+        if not _ENV_NAME.fullmatch(name):
+            msg = f"env var name must be a shell identifier, got {name!r}"
+            raise ValueError(msg)
     script = (
         ". "
         + shlex.quote(str(env_file))
         + "\n"
         + "\n".join(f'printf "%s\\n" "${{{name}-<unset>}}"' for name in names)
     )
-    result = subprocess.run(  # noqa: S603 — fixed /bin/sh, names are test-owned.
+    result = subprocess.run(  # noqa: S603 — fixed /bin/sh argv; names validated as shell identifiers above.
         ["/bin/sh", "-c", script],
         check=True,
         capture_output=True,
@@ -169,25 +180,18 @@ def read_env_exports(env_file: Path, names: Sequence[str]) -> dict[str, str]:
 def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
     """Return spx's own occupancy verdict for the project's worktree claims.
 
-    Runs the real ``spx worktree status`` against the project's
-    ``.spx/worktrees``, so the test asserts the spx CLI recognizes the claim the
-    hook recorded — the round-trip, not a claim file's presence on disk.
+    Runs the real ``spx worktree status`` from inside ``project_dir``, so the
+    test asserts the spx CLI recognizes the claim the hook recorded — the
+    round-trip, not a claim file's presence on disk. ``status`` resolves both the
+    worktree under inspection and its ``.spx/worktrees`` from the working
+    directory, so no explicit ``--worktrees-dir`` (and thus no dependency on that
+    flag's availability at the pinned floor) is needed.
     """
     result = subprocess.run(  # noqa: S603, S607 — spx is the methodology CLI on PATH.
-        [
-            "spx",
-            "worktree",
-            "status",
-            "--format",
-            "json",
-            "--worktrees-dir",
-            str(project_dir / ".spx" / "worktrees"),
-        ],
+        ["spx", "worktree", "status", "--format", "json"],
         check=True,
         capture_output=True,
         text=True,
-        # status resolves the worktree under inspection from the working
-        # directory, so it must run inside the claimed worktree.
         cwd=str(project_dir),
         timeout=_SUBPROCESS_TIMEOUT_S,
     )
