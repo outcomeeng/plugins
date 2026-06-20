@@ -52,7 +52,7 @@ spx worktree status --format json
 
 The strongest single signal is worktree status `occupied` together with `claimed=1`: that pair is reachable only when the hook reached `spx`, `spx` claimed the worktree, and the claim's controlling process — the live session — is alive.
 
-This check calls `spx` before the spx-reachability check runs; that ordering is intentional. The checks are independent — an absent `spx` surfaces here as `silent no-op` and in spx-reachability as `unreachable` — so neither depends on the other and the report's line order is stable.
+This check calls `spx` before the spx-reachability check runs; that ordering is intentional and the two checks classify different conditions. When `spx` is missing from the hook's PATH but installed where the skill runs, this check reads `silent no-op` while spx-reachability reads `reachable`. When `spx` is absent from the system entirely, `spx worktree status` errors and this check falls to `unknown` per step 4 while spx-reachability reads `unreachable`. Neither check depends on the other, so the report's line order is stable.
 
 </check>
 
