@@ -5,14 +5,14 @@ This node governs the `diagnose` skill — a portable environment doctor for any
 ## Resolved decisions
 
 - **Architecture — thin skill over existing `spx`/harness surfaces.** The skill orchestrates existing commands (`spx worktree status`, harness env vars, and later `spx session list` / marketplace listing) and classifies their output in its body. It ships in this repository now. Per `spx/12-shipped-scripting.adr.md`, a check that outgrows light orchestration extracts into the `spx` CLI then — not preemptively. No new `spx doctor` CLI subcommand in this slice.
-- **First slice — seed + `spx` reachability/version.** The `SessionStart`-hook session-environment check (working / identity-only / silent no-op) plus the `spx`-on-PATH-and-version-floor check. Heavier checks are deferred (below).
+- **First slice — seed + `spx` reachability/version.** The `SessionStart`-hook session-environment check (working / identity-only / silent no-op) plus the `spx`-on-PATH check that reports the installed version verbatim. Heavier checks, including version-floor compliance, are deferred (below).
 
 ## First-slice authoring steps
 
 1. `/contextualize spx/43-develop.enabler` (the skill-authoring node) before touching skill mechanics.
 2. Author the skill with `develop:create-skills`. Keep the shipped body portable — no product-internal node paths inside it; the node references in this note are coordination only.
    - Session-environment check: read `CLAUDE_SESSION_ID`, `CLAUDE_WORKTREE_CLAIMED`, `CLAUDE_PROJECT_DIR`, and `spx worktree status --format json`; classify per the table below. The contract is the same env-var + `spx worktree status` round-trip already proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler/tests/test_agent_environment.scenario.l3.py` — reuse it, do not re-derive.
-   - spx-reachability check: probe `spx` on PATH and compare its reported version to the consumer's declared minimum; classify reachable-and-current / reachable-below-floor / unreachable.
+   - spx-reachability check: probe `spx` on PATH and report its resolved path and version verbatim; classify reachable / unreachable (and unknown when the probe errors). The version-floor comparison is deferred (below) because no minimum-version declaration ships in the plugin tree yet.
    - Aggregate into one report: a named verdict per check plus an overall verdict, each verdict carrying a remediation hint.
 3. Write the `[eval]` evidence with `/test` for the three behavior assertions (`evals/session-environment-check/`, `evals/spx-reachability-check/`, `evals/diagnostic-report/`), and confirm the `[audit]` assertions. Remove the node from `spx/EXCLUDE` once evidence exists.
 4. Gate every changed skill with `develop:skill-auditor` (`/audit-skills`) and the node with `spec-auditor` / `test-evidence-auditor`.
@@ -35,3 +35,4 @@ Each grows the report by extension; the heavier ones are the candidates `spx/12-
 - **Marketplace install state** — are the expected plugins installed at the expected versions on both the Claude and Codex surfaces.
 - **Worktree-pool health** — is the checkout a compliant single working tree or bare-repository pool, and are any worktree claims stale.
 - **Session-store sanity** — `.spx/sessions/` `todo`/`doing`/`archive` consistency, and orphaned `doing` claims whose holding process is dead.
+- **spx version-floor compliance** — judge the reported `spx` version against a required minimum. Needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today); the first-slice spx-reachability check reports the version verbatim rather than judging it against a floor. Deciding the declaration mechanism (e.g. a `minimumSpxVersion` manifest field and how the floor value is sourced) is a prerequisite and may warrant its own decision record.
