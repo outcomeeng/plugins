@@ -30,13 +30,3 @@ Append to the default template from `/open-pr`:
 ```
 
 Drop the **Versioning** section only when no `plugin.json` files changed.
-
-## Push command
-
-Feature-branch PRs push with `git push -u origin HEAD:refs/heads/<branch>` (explicit destination ref). The bare `git push -u origin <branch>` form is forbidden because `push.default=tracking` would publish feature-branch commits to whatever upstream is configured locally — including `main` when the branch was created from `main` without an upstream reset. The marketplace-specific recipes are not for opening a PR:
-
-- `just sync-marketplace` — run after the PR merges to refresh the local Claude and Codex marketplace installs.
-
-## Self-reference
-
-The marketplace bans agent identity strings from branch names, commit messages, PR titles, and PR bodies (see the product-scope `self_reference_policy`). The base `/open-pr` skill already enforces this — no further additions here.
