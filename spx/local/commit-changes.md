@@ -161,34 +161,3 @@ printf '%s\n' 'docs({plugin-name}): address review feedback' | git commit -F -
 | Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface         |
 | Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin    |
 | Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin       |
-
-## After Adding/Modifying Commands or Skills
-
-1. **Make your changes** to skills, commands, templates, etc.
-2. **Determine whether a plugin distribution surface changed.** If the change is
-   confined to `spx/`, `AGENTS.md`, `spx/local/`, tests, validation config, or
-   generated repository docs, do not bump a plugin version.
-3. **When a plugin distribution surface changed, determine the branch-level
-   version bump against the target base branch**: MINOR for new items or major
-   functional changes; PATCH for everything else.
-4. **Update plugin.json once, in the first plugin-distribution commit on the branch**:
-   - `src/plugins/{plugin-name}/.claude-plugin/plugin.json`
-   - `src/plugins/{plugin-name}/.codex-plugin/plugin.json` (when it exists)
-5. **Update marketplace catalogs**:
-   - When **adding a new plugin**: add an entry to **both** `.claude-plugin/marketplace.json` (Claude Code) and `.agents/plugins/marketplace.json` (Codex). `just check` fails if either catalog is missing the plugin.
-   - When **changing a description**: update `.claude-plugin/marketplace.json` only (Codex catalog has no description field).
-6. **Regenerate derived files**: Run `just build-skills` so `dist/claude/` and `dist/codex/` match the authored source.
-7. **Document changes**: Update `AGENTS.md` and generated docs when adding new commands/skills to the catalog-facing surfaces.
-8. **Update the spx/CLAUDE.md template**: If the change affects skill structure, commands, or conventions that new projects inherit, update `src/plugins/spec-tree/skills/understand/templates/spx-claude.md`
-9. **Stage and commit the plugin distribution change and manifest bump together** in ONE commit:
-
-   ```bash
-   git add src/plugins/{plugin-name}/ dist/claude/{plugin-name}/ dist/codex/{plugin-name}/ src/plugins/{plugin-name}/.claude-plugin/plugin.json
-   printf '%s\n' 'type(scope): changes including version bump' | git commit -F -
-   ```
-
-   If `.codex-plugin/plugin.json` exists for that plugin, include it in the same
-   commit. For later review commits on the same PR, do not change the manifest
-   version again.
-
-Run `just check` before committing. The pre-commit hook also validates, but catching errors earlier is faster.
