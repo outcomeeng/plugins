@@ -48,25 +48,26 @@ Classify:
 
 The strongest single signal is worktree status `occupied` together with `claimed=1`: that pair is reachable only when the hook reached `spx`, `spx` claimed the worktree, and the claim's controlling process — the live session — is alive.
 
+This check calls `spx` before the spx-reachability check runs; that ordering is intentional. The checks are independent — an absent `spx` surfaces here as `silent no-op` and in spx-reachability as `unreachable` — so neither depends on the other and the report's line order is stable.
+
 </check>
 
 <check name="spx-reachability">
 
-Verifies that the `spx` CLI is installed, on PATH, and new enough for the installed plugins.
+Verifies that the `spx` CLI is installed and on PATH, and reports its version.
 
 ```bash
 command -v spx && spx --version
 ```
 
-Classify the resolution and the reported version against the minimum version the installed plugins declare:
+Classify the resolution, reporting the resolved path and version verbatim:
 
-| Reading                                                                    | Verdict                   | Remediation                                                                                                    |
-| -------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `spx` resolves on PATH and its version is at or above the declared minimum | **reachable-and-current** | None.                                                                                                          |
-| `spx` resolves on PATH but its version is below the declared minimum       | **reachable-below-floor** | Upgrade `spx` to at least the declared minimum; the installed plugins assume capabilities the older CLI lacks. |
-| `command -v spx` finds nothing                                             | **unreachable**           | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it.               |
+| Reading                                      | Verdict         | Remediation                                                                                      |
+| -------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `spx` resolves on PATH and reports a version | **reachable**   | None — report the resolved path and version verbatim.                                            |
+| `command -v spx` finds nothing               | **unreachable** | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it. |
 
-When the declared minimum cannot be determined in the current environment, report the resolved path and version verbatim and note the floor as undetermined rather than asserting a below-floor verdict.
+Comparing the reported version against a required floor is a future extension: it needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today), so this check reports the version rather than judging it against a floor.
 
 </check>
 
@@ -80,7 +81,7 @@ Emit one report. Each check is one line: its name, its verdict, and a trailing d
 diagnose — environment report
 
   session-environment   unknown — id set, claimed=1, but spx worktree status reports unclaimed
-  spx-reachability      reachable-below-floor — upgrade spx to at least the declared minimum
+  spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
 
 overall: unknown
 ```
