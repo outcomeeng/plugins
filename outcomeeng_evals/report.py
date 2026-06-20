@@ -92,6 +92,8 @@ def _cost_summary(result: SuiteResult) -> dict[str, Any]:
     total_duration_ms: float | None = None
     total_input_tokens: int | None = None
     total_output_tokens: int | None = None
+    total_cache_read_input_tokens: int | None = None
+    total_cache_creation_input_tokens: int | None = None
     for outcome in result.outcomes:
         for trial in outcome.trials:
             trials_total += 1
@@ -101,6 +103,8 @@ def _cost_summary(result: SuiteResult) -> dict[str, Any]:
                 and md.duration_ms is None
                 and md.input_tokens is None
                 and md.output_tokens is None
+                and md.cache_read_input_tokens is None
+                and md.cache_creation_input_tokens is None
             ):
                 continue
             trials_with_metadata += 1
@@ -108,6 +112,12 @@ def _cost_summary(result: SuiteResult) -> dict[str, Any]:
             total_duration_ms = _add(total_duration_ms, md.duration_ms)
             total_input_tokens = _add_int(total_input_tokens, md.input_tokens)
             total_output_tokens = _add_int(total_output_tokens, md.output_tokens)
+            total_cache_read_input_tokens = _add_int(
+                total_cache_read_input_tokens, md.cache_read_input_tokens
+            )
+            total_cache_creation_input_tokens = _add_int(
+                total_cache_creation_input_tokens, md.cache_creation_input_tokens
+            )
     return {
         "trials_total": trials_total,
         "trials_with_metadata": trials_with_metadata,
@@ -115,6 +125,8 @@ def _cost_summary(result: SuiteResult) -> dict[str, Any]:
         "total_duration_ms": total_duration_ms,
         "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
+        "total_cache_read_input_tokens": total_cache_read_input_tokens,
+        "total_cache_creation_input_tokens": total_cache_creation_input_tokens,
     }
 
 
@@ -340,6 +352,8 @@ _VIEWER_JS = r"""
     if (summary.total_duration_ms != null) stats.appendChild(renderStat("Duration", fmtDuration(summary.total_duration_ms)));
     if (summary.total_input_tokens != null) stats.appendChild(renderStat("Input tokens", summary.total_input_tokens));
     if (summary.total_output_tokens != null) stats.appendChild(renderStat("Output tokens", summary.total_output_tokens));
+    if (summary.total_cache_read_input_tokens != null) stats.appendChild(renderStat("Cache-read tokens", summary.total_cache_read_input_tokens));
+    if (summary.total_cache_creation_input_tokens != null) stats.appendChild(renderStat("Cache-write tokens", summary.total_cache_creation_input_tokens));
     if (summary.trials_with_metadata !== summary.trials_total) {
       stats.appendChild(renderStat("With metadata", summary.trials_with_metadata + " / " + summary.trials_total));
     }

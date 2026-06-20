@@ -23,6 +23,7 @@ from outcomeeng_evals.report import (
 )
 from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
+from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
 
 
 _RULE = "r-1"
@@ -113,6 +114,20 @@ def test_serialize_result_aggregates_cost_summary_across_trials() -> None:
     assert summary["total_duration_ms"] == pytest.approx(2608.0)
     assert summary["total_input_tokens"] == 5
     assert summary["total_output_tokens"] == 6
+    assert summary["total_cache_read_input_tokens"] == 18240
+    assert summary["total_cache_creation_input_tokens"] == 33830
+
+
+def test_cost_summary_aggregates_cache_tokens_across_trials() -> None:
+    summary = serialize_result(make_bimodal_cache_suite_result(), title="t")[
+        "cost_summary"
+    ]
+    assert summary["trials_total"] == 2
+    assert summary["trials_with_metadata"] == 2
+    assert summary["total_input_tokens"] == 22
+    assert summary["total_output_tokens"] == 12
+    assert summary["total_cache_read_input_tokens"] == 49600
+    assert summary["total_cache_creation_input_tokens"] == 34000
 
 
 def test_serialize_result_carries_per_trial_metadata() -> None:
@@ -150,6 +165,41 @@ def test_cost_summary_skips_trials_without_metadata() -> None:
     assert summary["trials_with_metadata"] == 0
     assert summary["total_cost_usd"] is None
     assert summary["total_duration_ms"] is None
+    assert summary["total_input_tokens"] is None
+    assert summary["total_output_tokens"] is None
+    assert summary["total_cache_read_input_tokens"] is None
+    assert summary["total_cache_creation_input_tokens"] is None
+
+
+def test_cost_summary_counts_cache_only_metadata_trial() -> None:
+    # A trial carrying only cache tokens — every other metadata field None —
+    # must count as having metadata: the skip-guard includes the cache
+    # fields, so dropping them from the guard (the boundary this test pins)
+    # would wrongly skip a cache-only trial.
+    case = Case(
+        id="c",
+        input={},
+        must_contain=({"status": "rejected"},),
+        must_not_contain=(),
+    )
+    cache_only_trial = TrialResult(
+        case_id="c",
+        trial_index=0,
+        prompt="p",
+        response="r",
+        verdict=None,
+        grade=GradeResult(passed=True, reasons=()),
+        metadata=RunMetadata(cache_read_input_tokens=49600),
+    )
+    outcome = CaseOutcome(case=case, trials=(cache_only_trial,), passed=True)
+    result = SuiteResult(
+        outcomes=(outcome,), pass_rate=1.0, threshold=0.85, passed=True
+    )
+
+    summary = serialize_result(result, title="t")["cost_summary"]
+    assert summary["trials_with_metadata"] == 1
+    assert summary["total_cache_read_input_tokens"] == 49600
+    assert summary["total_cost_usd"] is None
     assert summary["total_input_tokens"] is None
 
 
