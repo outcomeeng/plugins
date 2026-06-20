@@ -3,7 +3,7 @@ name: audit-rust-tests
 description: >-
   Rust test-evidence audit methodology composed by a dispatched auditor agent for the Rust tests in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

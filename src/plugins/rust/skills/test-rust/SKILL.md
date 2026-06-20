@@ -1,7 +1,7 @@
 ---
 name: test-rust
 description: ALWAYS invoke this skill when writing or fixing tests for Rust. NEVER write or repair Rust tests without this skill.
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit
+allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

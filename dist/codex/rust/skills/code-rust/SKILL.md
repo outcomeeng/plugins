@@ -96,7 +96,7 @@ Before implementation, confirm:
 Invoke `/test-rust` before adding or revising tests. If the change alters behavior and no test already proves that behavior, write or extend tests first.
 
 Use `/rust-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, compile-fail evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
-</test_methodology>
+</testing_methodology>
 
 <context_loading>
 If this work belongs to a spec-tree node:

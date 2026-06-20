@@ -3,7 +3,7 @@ name: audit-rust-architecture
 description: >-
   Rust-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Rust concerns in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 {!% require_skill 'rust:rust-standards' %!}

@@ -3,7 +3,7 @@ name: audit-rust
 description: >-
   Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by a generic auditor agent for the Rust files in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 {!% require_skill 'rust:rust-standards' %!}
