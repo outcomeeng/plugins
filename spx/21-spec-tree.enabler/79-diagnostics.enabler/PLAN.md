@@ -1,6 +1,6 @@
-# PLAN: Build the `spx-doctor` diagnostic skill
+# PLAN: Build the `diagnose` environment-doctor skill
 
-This node governs the `spx-doctor` skill — a portable environment doctor for any spec-tree / spx environment. The spec declares the first slice; this note tracks the remaining authoring work and the deferred checks. Coordination only; the spec and its `[eval]`/`[audit]` evidence are the truth.
+This node governs the `diagnose` skill — a portable environment doctor for any spec-tree / spx environment. The spec declares the first slice; this note tracks the remaining authoring work and the deferred checks. Coordination only; the spec and its `[eval]`/`[audit]` evidence are the truth.
 
 ## Resolved decisions
 

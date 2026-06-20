@@ -1,6 +1,6 @@
 # Diagnostics
 
-PROVIDES a portable environment-diagnostics capability — the `spx-doctor` skill — that runs a sequence of named health checks over a spec-tree / spx environment and reports a per-check verdict with a remediation hint
+PROVIDES a portable environment-diagnostics capability — the `diagnose` skill — that runs a sequence of named health checks over a spec-tree / spx environment and reports a per-check verdict with a remediation hint
 SO THAT a user or agent working any spec-tree product
 CAN self-diagnose a misconfigured environment without recalling and typing the underlying interrogation by hand
 
@@ -10,8 +10,8 @@ The capability orchestrates surfaces every consumer already has — the `spx` CL
 
 ### Compliance
 
-- ALWAYS: the session-environment check classifies the session as working, identity-only, or silent no-op from the agent session identity, the worktree-claim flag, and the `spx worktree status` round-trip, pairing each verdict with a remediation hint ([eval](evals/session-environment-check/eval.toml))
-- ALWAYS: the spx-reachability check classifies `spx` as reachable-and-current, reachable-below-floor, or unreachable from its PATH resolution and reported version against the consumer's declared minimum, pairing each verdict with a remediation hint ([eval](evals/spx-reachability-check/eval.toml))
+- ALWAYS: the session-environment check classifies the session as working, identity-only, silent no-op, or — when the readings are inconsistent or a command errors — unknown, from the agent session identity, the worktree-claim flag, and the `spx worktree status` round-trip, pairing each verdict with a remediation hint ([eval](evals/session-environment-check/eval.toml))
+- ALWAYS: the spx-reachability check classifies `spx` as reachable-and-current, reachable-below-floor, unreachable, or — when the version or declared minimum cannot be determined — unknown, from its PATH resolution and reported version against the consumer's declared minimum, pairing each verdict with a remediation hint ([eval](evals/spx-reachability-check/eval.toml))
 - ALWAYS: the skill aggregates its checks into one report carrying a named verdict per check and an overall verdict ([eval](evals/diagnostic-report/eval.toml))
 - ALWAYS: the shipped skill reasons only about surfaces every consumer has — the `spx` CLI, harness environment variables, and install state — and names no product-internal spec-tree node address ([audit])
 - ALWAYS: each check is an independent named diagnostic carrying its own verdict and remediation, so a check is added by extension without restructuring existing checks ([audit])
