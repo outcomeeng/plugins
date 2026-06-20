@@ -4,7 +4,7 @@ description: >-
   Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
   Dispatch test-evidence-auditor to audit test evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
@@ -187,11 +187,21 @@ If the product has no coverage tooling configured: note as a finding but do not 
 
 </step>
 
+<step name="compose_language">
+
+**Step 3e: Compose language-specific test-evidence concerns**
+
+The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
+
+Detect the test language from the node's scope — infer it from the file extension of the test files linked from the assertions (`.py` → python, `.ts`/`.tsx` → typescript, `.rs` → rust); on mixed extensions, prefer the one with the most linked files. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-0-deterministic`, `gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When no language is in scope or no matching skill exists, skip composition.
+
+</step>
+
 <step name="verdict">
 
 **Step 4: Issue verdict**
 
-Scan all findings across all assertions. If any assertion has a property failure: **REJECT.**
+Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECT.**
 
 </step>
 

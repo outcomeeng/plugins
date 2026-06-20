@@ -2,7 +2,7 @@
 name: test-evidence-auditor
 description: >-
   ALWAYS invoke when auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome.
-tools: Read, Bash, Glob, Grep
+tools: Read, Bash, Glob, Grep, Skill
 model: sonnet
 skills:
   - spec-tree:audit-tests
@@ -16,6 +16,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide genuine eviden
 
 - Read-only — produce verdicts, not code changes
 - Check four properties in strict order: coupling, falsifiability, alignment, coverage
+- When a language is in scope, ALWAYS invoke `audit-{lang}-tests` via the Skill tool (per the injected `audit-tests` Step 3e) for the language-specific concerns and merge its findings into the matching verdict rows
 - First property failure = REJECT for that assertion (skip remaining properties)
 - NEVER suggest fixes or rewrite tests
 
@@ -23,7 +24,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide genuine eviden
 
 <output_format>
 
-Report structured verdict for each assertion:
+Report structured verdict for each assertion. When a language is in scope, the composed `audit-{lang}-tests` audit merges its language-specific check findings into the four rows below by row name (it adds no new rows), so they surface within Coupling/Falsifiability/Alignment/Coverage:
 
 ```text
 ## Test Evidence Audit: {node path}

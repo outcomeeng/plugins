@@ -268,15 +268,15 @@ Auditor must be dispatched as subagents. Each auditor agent preloads the corresp
 - **Run multiple audits in parallel** → dispatch subagents, collect verdicts
 - **Autonomous flow (e.g., `/apply --agent`)** → the `applier` agent handles audit dispatch internally
 
-| Skill                            | Agent                             |
-| -------------------------------- | --------------------------------- |
-| `/audit-adr`                     | `adr-auditor`                     |
-| `/audit-pdr`                     | `pdr-auditor`                     |
-| `/audit-tests`                   | `test-evidence-auditor`           |
-| `/audit-specs`                   | `spec-auditor`                    |
-| `/audit-{language}`              | `{language}-code-auditor`         |
-| `/audit-{language}-architecture` | `{language}-architecture-auditor` |
-| `/audit-{language}-tests`        | `{language}-test-auditor`         |
+| Skill              | Agent                           |
+| ------------------ | ------------------------------- |
+| `/audit-adr`       | `adr-auditor`                   |
+| `/audit-pdr`       | `pdr-auditor`                   |
+| `/audit-tests`     | `test-evidence-auditor`         |
+| `/audit-specs`     | `spec-auditor`                  |
+| code / scope audit | `auditor` (the `/audit` family) |
+
+The marketplace's auditor agents are generic and artifact-type-scoped — there is **no** per-language auditor agent. The `/audit-{language}*` skills (`audit-{language}`, `audit-{language}-architecture`, `audit-{language}-tests`) carry only language-specific concerns and are **composed** by the generic auditors for the language in scope: `adr-auditor` composes `audit-{language}-architecture`, `test-evidence-auditor` composes `audit-{language}-tests`, and the `/audit` family (`auditor`, `audit-orchestrator`, `pr-reviewer`, `pr-review-orchestrator`) composes `audit-{language}` and the others by language partition. Dispatch the generic auditor; it invokes the matching language skill automatically (`spx/21-spec-tree.enabler/17-auditing.adr.md`).
 
 ## Before Making Changes
 

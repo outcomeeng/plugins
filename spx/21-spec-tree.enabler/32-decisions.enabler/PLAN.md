@@ -1,6 +1,6 @@
 # Plan: collapse to generic artifact-type auditors composing language skills
 
-Branch `feat/adr-audit-verifier-composition`. Governing decisions: `spx/14-verification.pdr.md` (root principle) and `spx/21-spec-tree.enabler/17-auditing.adr.md` (auditing architecture).
+PR-1 branch `feat/adr-audit-verifier-composition` (merged as #272). PR-2 branch `feat/auditor-collapse` (redo from this PLAN; the `wip/composition-partial` and `wip/pr2-agent-removal-template` refs were confirmed stale — they branch before #272/#273 and reusing them reverts the SessionStart-hook work and newer `14-verification.pdr` content; only their three small skill/agent edits were used as reference). Governing decisions: `spx/14-verification.pdr.md` (root principle) and `spx/21-spec-tree.enabler/17-auditing.adr.md` (auditing architecture).
 
 ## Design (decided)
 
@@ -34,20 +34,22 @@ The committed spec foundation declares the PR-2 end state (no language auditor a
 
 Phase A committed as the spec layer (specs lead; agent removal + skill composition are downstream, tracked below).
 
-- [ ] B1. Update shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` Quick Reference tables: generic auditors only; bump template_version.
-- [ ] B2. Reconcile the doc surfaces that still reference the language auditor agents the committed spec now forbids (each contradicts `17-auditing.adr` until PR 2 lands — spec leads, tracked here):
-  - Re-render product `spx/CLAUDE.md` (spx guide) via `/update-spx`.
-  - Hand-update the **root `AGENTS.md`** "When to Dispatch Agents vs Invoke Skills" dispatch table (the per-language `audit-{lang}*` → `{lang}-*-auditor` rows) — `/update-spx` does NOT touch the root `AGENTS.md`.
-  - Regenerate the README plugin catalog (`just docs`) after the agents are removed.
-  - Update `develop/skills/create-subagents/references/subagents.md` examples that use `typescript-code-auditor` (a removed agent) as a sample.
-- [ ] C1. Remove language auditor agents: python/typescript/rust × {architecture,code,test} (+ resolve `rust-unsafe-auditor`). Salvage the `rust-unsafe-auditor` unsafe/FFI soundness methodology (rule IDs `ptr-*`, `ffi-*`, SAFETY-comment enforcement, UB categories — aliasing, lifetimes, validity invariants, panic safety) into `audit-rust`. The committed `spx/43-rust.enabler/rust.md` line-19 assertion is the present-tense contract this salvage implements; it is intentionally spec-leading (atemporal voice, no "will pass" hedge) and currently unmet until C1 lands.
-- [~] C2. Generic audit skills compose `audit-{lang}*` by partition, AND add `Skill` to `audit-adr`/`audit-tests`/`audit` `allowed-tools` and to `adr-auditor`/`test-evidence-auditor` `tools` (composition is unexecutable without it). Partial: `audit-adr` already reads the canonical ADR template for section structure (shipped in PR 1, commit on this branch); the invoke-the-language-skill step + the tool-allowlist update remain for PR 2.
-- [ ] C3. `audit-{lang}*` skills: drop "dispatch the {lang}-auditor agent" dispatch_gate prose; `audit-{lang}-architecture` drops duplicated structure/voice/tag checks (defer to the composing `adr-auditor`).
-- [ ] C4. `architect-python` Phase 0: point at canonical template (understand skill), not `/author`.
-- [ ] D. Fold in 16-verification conformance for surviving generic auditors: `tools: Bash, Read, Skill`, model field, `scripts/` arbiter, thread-store persistence, eval suites; build unbuilt `test_pdr_auditing` suites; update `spx/EXCLUDE`.
-- [ ] E. `just build-skills`; marketplace catalogs; `just bump`; `develop:skill-auditor` on changed skills; `subagent-auditor` on changed agents; `just check`; `/merge`.
+- [x] B1. Updated shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md`: per-language audit tables now show the composing generic auditor (no per-language agent); `rust-unsafe-auditor` row dropped; `template_version` bumped 0.18.16 → 0.19.0.
+- [x] B2. Reconciled the doc surfaces that referenced the removed language auditor agents:
+  - [x] Root `AGENTS.md` "When to Dispatch Agents vs Invoke Skills" dispatch table — per-language rows replaced with the composed-by-generic-auditor note.
+  - [x] README plugin catalog regenerated (`just docs`); rust plugin description in `.claude-plugin/marketplace.json` de-referenced `rust-unsafe-auditor`.
+  - [x] `develop/skills/create-subagents/references/subagents.md` example switched from `typescript-code-auditor` to the surviving `adr-auditor`.
+  - [x] `architect-python` Phase 5 reviewer reference re-pointed from `python-architecture-auditor` to the generic `adr-auditor`.
+  - [x] Re-rendered product `spx/CLAUDE.md` (→ `spx/AGENTS.md`) via `/update-spx` to `template_version 0.19.0`, integrating the merged `audit-specs`/`spec-auditor` row.
+  - Sweep confirms NO removed-agent reference remains anywhere in `src/`, `AGENTS.md`, `README.md`, or the marketplace catalogs.
+- [x] C1. Removed language auditor agents: python/typescript/rust × {architecture,code,test} + `rust-unsafe-auditor` (10 total; `*-simplifier` agents kept). Salvaged the `rust-unsafe-auditor` unsafe/FFI soundness methodology into `audit-rust` as `references/unsafe-soundness.md` + a process subsection 3.4 + an `unsafe-soundness` verdict row (the `unsafe-checker` skill the agent referenced never existed; the baseline lives in `rust-standards`, the audit *workflow* is what was salvaged). Satisfies the `spx/43-rust.enabler/rust.md` line-19 contract.
+- [x] C2. Generic audit skills compose `audit-{lang}*` by partition + `Skill` added to `audit-adr`/`audit-tests`/`audit` `allowed-tools` and to `adr-auditor`/`test-evidence-auditor` `tools` (the `/audit`-family agents already carried `Skill`). `audit-adr` gained a compose Step 5b; `audit-tests` gained a compose Step 3e; the generic `audit` skill already dispatched by partition. The PR-1 "template-missing → UNKNOWN" handling in `audit-adr` Step 3 was preserved (the WIP had dropped it).
+- [x] C3. All 9 `audit-{lang}*` dispatch_gates + descriptions reconciled to the composed-by-generic-auditor model (no dangling `{lang}-*-auditor` agent references). The 3 `audit-{lang}-architecture` skills simplified to language-only concerns (DI, no-mocking, level accuracy, anti-patterns, ancestor-consistency); section-structure / atemporal-voice / tag-validity rows, steps, principles, failure-modes, and success-criteria removed (deferred to the composing `adr-auditor`).
+- [x] C4. `architect-python` Phase 0 now sources ADR section structure from `/python-architecture-standards` (`<adr_sections>`) and the `adr-auditor` (Phase 5), not `/author` and not a non-portable cross-plugin template path.
+- [→] D. **Split out of this PR** into its own change (per the `ISSUES.md` "16-verification.enabler conformance" entry, which scopes it as an independent audit-skill-family migration). Remaining: fold in 16-verification conformance for surviving generic auditors — `tools: Bash, Read, Skill`, model field, `scripts/` arbiter, thread-store persistence, eval suites; build unbuilt `test_pdr_auditing` suites; update `spx/EXCLUDE`. This gap exists on `main` today (the auditors run in their established pre-conformance read-only-verdict pattern) and is unchanged by the collapse, so the split introduces no regression.
+- [~] E (this PR). `just build-skills` ✓; marketplace catalogs ✓; `just bump` ✓ (spec-tree 0.60.1, python 0.20.0, rust 0.4.0, typescript 0.21.0, develop 0.10.3); `develop:skill-auditor` on the changed skills ✓ (representatives of every distinct edit shape; valid findings fixed, family-wide pre-existing patterns tracked in `ISSUES.md`); `subagent-auditor` on `adr-auditor`/`test-evidence-auditor` ✓; rebased onto `origin/main` (#274 audit-specs integrated) ✓; `just check` ✓ + local `changes-reviewer` converged ✓; `/merge` remaining.
 
 ## Notes
 
 - Removing shipped language auditor agents is a breaking change for consumers dispatching them by name — intended; the generic auditors + composed skills replace them.
-- This folds the deferred "16-verification.enabler conformance for adr-auditor / pdr-auditor / test-evidence-auditor" item from `ISSUES.md` into the same change.
+- PR 2 (`feat/auditor-collapse`) ships the composition mechanism + agent collapse + doc reconciliation (C1–C4, B1, B2): a regression-free unit that satisfies `17-auditing.adr`'s spec-leading composition assertions. The 16-verification conformance (step D) is split out as its own change per the decisions `ISSUES.md` entry, which already scopes it as independent of the per-rule-evidence-type feature.

@@ -5,7 +5,7 @@ description: >-
   audit-orchestrator, pr-reviewer, and pr-review-orchestrator agents. Dispatch the
   audit agent that fits the scope; the main conversation reaches a generic audit
   only through one of those agents.
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 <dispatch_gate>

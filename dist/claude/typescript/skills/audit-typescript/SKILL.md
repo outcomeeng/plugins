@@ -1,9 +1,8 @@
 ---
 name: audit-typescript
 description: >-
-  TypeScript implementation-code audit methodology preloaded by the typescript-code-auditor agent.
-  Dispatch typescript-code-auditor to audit TypeScript code for design flaws and ADR compliance;
-  the main conversation reaches this audit only through that agent.
+  TypeScript implementation-code audit methodology — design flaws and ADR compliance — composed by a generic auditor agent for the TypeScript files in scope.
+  Reached only through a dispatched auditor agent, never the main conversation.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -11,7 +10,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 <dispatch_gate>
 
-This audit runs in the typescript-code-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the typescript-code-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor`, `audit-orchestrator`, `pr-reviewer`, or `pr-review-orchestrator`) composing this skill for the TypeScript files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 

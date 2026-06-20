@@ -3,7 +3,7 @@ name: audit-adr
 description: >-
   ADR audit methodology preloaded by the adr-auditor agent. Dispatch adr-auditor
   to audit an ADR; the main conversation reaches this audit only through that agent.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
@@ -16,7 +16,7 @@ This audit runs in the adr-auditor agent's isolated context. When this skill loa
 
 Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — stay in `/audit-{lang}-architecture`, not here.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` (Step 5b), which judges only those concerns. This skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
 </objective>
 
@@ -106,11 +106,21 @@ A bare mechanism tag (`([review])`/`([test])`), a tag disagreeing with its subse
 
 </step>
 
+<step name="compose_language">
+
+**Step 5b: Compose language-specific architecture concerns**
+
+This skill owns section structure, atemporal voice, and tag validity from the canonical template. Language-specific architecture concerns — dependency injection, no-mocking, execution-level accuracy — are owned by the language audit skill, not by this one.
+
+Detect the implementation language from the node's scope — infer it from the file extension of the implementation files the ADR governs (`.py` → python, `.ts`/`.tsx` → typescript, `.rs` → rust). When a language is in scope and an `audit-{lang}-architecture` skill exists for it, invoke that skill via the Skill tool. The language skill returns its own verdict whose rows (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, …) are distinct from this skill's. **Append those rows to this verdict's `rows` array**, producing one merged verdict; the language skill judges only language-specific concerns and never re-judges section structure, voice, or tags. When no language is in scope (a language-neutral ADR) or no matching skill exists, skip composition.
+
+</step>
+
 <step name="verdict">
 
 **Step 6: Issue verdict**
 
-Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
+Scan all findings, including any folded in from the composed language audit. If any property fails: REJECT. Otherwise: APPROVED.
 
 </step>
 
@@ -120,7 +130,7 @@ Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
 
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
-The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
+The `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any row is `FAIL`; `UNKNOWN` if a property cannot be evaluated. When Step 5b composed a language audit, its rows are appended to the `rows` array below and count toward `overall` exactly like the native rows. Findings carry severity `REJECT` for blocking violations and `WARNING`/`INFO` otherwise.
 
 ```json
 {

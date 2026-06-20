@@ -1,9 +1,8 @@
 ---
 name: audit-rust
 description: >-
-  Rust implementation-code audit methodology preloaded by the rust-code-auditor agent.
-  Dispatch rust-code-auditor to audit Rust code for design flaws and ADR compliance;
-  the main conversation reaches this audit only through that agent.
+  Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by a generic auditor agent for the Rust files in scope.
+  Reached only through a dispatched auditor agent, never the main conversation.
 allowed-tools: Read, Bash, Glob, Grep
 ---
 
@@ -13,7 +12,7 @@ Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is 
 
 <dispatch_gate>
 
-This audit runs in the rust-code-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the rust-code-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor`, `audit-orchestrator`, `pr-reviewer`, or `pr-review-orchestrator`) composing this skill for the Rust files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 
@@ -126,6 +125,10 @@ Import rules:
 
 Use `references/false-positive-handling.md` when a suspicious pattern might still be correct in context.
 
+**3.4 Unsafe and FFI soundness**
+
+When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `extern "C"` / `#[no_mangle]` boundary, run the soundness pass in `references/unsafe-soundness.md`: enumerate every unsafe site, check each block for a `SAFETY:` comment tied to the real invariant and against the pointer, aliasing, lifetime, validity, FFI, and `Send`/`Sync` hazard categories, and check each FFI boundary for ABI-stable types, panic containment, and documented pointer contracts. A single soundness violation is REJECT. A scope with no unsafe sites skips this subsection.
+
 **Phase 4: ADR and PDR compliance**
 
 Verify each relevant architectural or product constraint is reflected in the code shape. Undocumented deviations are REJECTED.
@@ -135,6 +138,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 <reference_guides>
 
 - `references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
+- `references/unsafe-soundness.md` -- soundness pass for `unsafe` blocks and FFI boundaries
 - `references/example-audit.md` -- complete APPROVED and REJECTED examples
 - `rules/validation-sequence.json` -- fallback validation sequence metadata
 - `rules/review-prompts.js` -- fallback manual review prompts
@@ -160,6 +164,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
     { "name": "function-comprehension", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "design-coherence", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "import-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "unsafe-soundness", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "adr-pdr-compliance", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
   "metadata": { "branch": "<branch>" }
@@ -177,6 +182,7 @@ Each finding carries `file`, `line`, `rule` (the concern name or specific violat
 - full tests passed before manual review started
 - every production function in scope was read with the predict and verify protocol
 - design review covered seams, ownership flow, error quality, and module cohesion
+- unsafe and FFI soundness was audited when the scope contained unsafe or FFI sites
 - ADR and PDR constraints were checked when applicable
 - verdict is structured and binary
 

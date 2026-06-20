@@ -105,7 +105,7 @@ ADR numbering uses the sparse integer index [10, 99]; a lower index is a depende
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Read context.** Read the node spec completely; read `spx/CLAUDE.md`; read `/python-architecture-standards` for canonical ADR conventions; consult `/test` for level definitions and principles; read existing ADRs for consistency; read `/author` for the ADR template.
+**Phase 0 — Read context.** Read the node spec completely; read `spx/CLAUDE.md`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); consult `/test` for level definitions and principles; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
 
 **Phase 1 — Identify decisions needed.** For each requirement, ask what architectural choices it implies, what patterns to mandate, what constraints to impose, and what trade-offs are made. List the decisions before writing any ADR.
 
@@ -120,7 +120,7 @@ Execute these phases in order.
 
 **Phase 4 — Verify consistency.** No ADR contradicts another; node ADRs align with ancestor ADRs; nested ADRs do not contradict parent-level ADRs.
 
-**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, invoke `/audit-python-architecture` (or the `python-architecture-auditor` agent) to validate against `/test` principles. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
+**Phase 5 — Submit to the architecture reviewer (MANDATORY).** Before outputting ADRs, dispatch the generic `adr-auditor` agent — it judges section structure, atemporal voice, and tag validity from the canonical template and composes `audit-python-architecture` for the Python-specific concerns (DI, no-mocking, level accuracy) against `/test` principles. On REJECT, read the violations, fix every issue, and resubmit until APPROVED. Do not output ADRs until the reviewer APPROVES.
 
 Common violations to avoid: a phantom Testing Strategy section, `l2` assigned to SaaS services, "mock at boundary" language for external services, missing DI Protocol interfaces in `## Verification` (`### Audit`), and any mocking language in the ADR.
 </adr_creation_protocol>
@@ -240,7 +240,7 @@ See `${CLAUDE_SKILL_DIR}/references/test-infrastructure-patterns.md` for the ful
 - Every ADR follows the authoritative template (decision-first; Rationale; optional Invariants; Verification with `### Testing` / `### Eval` / `### Audit`).
 - Testability constraints appear as ALWAYS/NEVER `([audit])` rules under `## Verification`'s `### Audit` subsection, never in a separate Testing Strategy section.
 - No mocking language anywhere; external SaaS services are never assigned `l2`.
-- Every ADR is submitted to `/audit-python-architecture` and returns APPROVED before output.
+- Every ADR is submitted to the `adr-auditor` agent (which composes `audit-python-architecture`) and returns APPROVED before output.
 - ADRs are placed and numbered per `<outputs>`, consistent with ancestor and sibling decisions.
 
 </success_criteria>

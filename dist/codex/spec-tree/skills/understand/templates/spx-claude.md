@@ -1,5 +1,5 @@
 ---
-template_version: "0.18.17"
+template_version: "0.19.0"
 template_source: spec-tree
 ---
 
@@ -170,34 +170,34 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
 | "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
 
-Per-language code, architecture, and test audits render for the product's enabled languages:
+Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 
 <!-- lang:python -->
 
-| User Says...            | Skill                        | Agent                         |
-| ----------------------- | ---------------------------- | ----------------------------- |
-| "Audit this code"       | `/audit-python`              | `python-code-auditor`         |
-| "Audit ADRs for Python" | `/audit-python-architecture` | `python-architecture-auditor` |
-| "Audit these tests"     | `/audit-python-tests`        | `python-test-auditor`         |
+| User Says...            | Skill (composed)             | Composing agent             |
+| ----------------------- | ---------------------------- | --------------------------- |
+| "Audit this code"       | `/audit-python`              | `auditor` (`/audit` family) |
+| "Audit ADRs for Python" | `/audit-python-architecture` | `adr-auditor`               |
+| "Audit these tests"     | `/audit-python-tests`        | `test-evidence-auditor`     |
 
 <!-- /lang:python -->
 <!-- lang:typescript -->
 
-| User Says...                | Skill                            | Agent                             |
-| --------------------------- | -------------------------------- | --------------------------------- |
-| "Audit this code"           | `/audit-typescript`              | `typescript-code-auditor`         |
-| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `typescript-architecture-auditor` |
-| "Audit these tests"         | `/audit-typescript-tests`        | `typescript-test-auditor`         |
+| User Says...                | Skill (composed)                 | Composing agent             |
+| --------------------------- | -------------------------------- | --------------------------- |
+| "Audit this code"           | `/audit-typescript`              | `auditor` (`/audit` family) |
+| "Audit ADRs for TypeScript" | `/audit-typescript-architecture` | `adr-auditor`               |
+| "Audit these tests"         | `/audit-typescript-tests`        | `test-evidence-auditor`     |
 
 <!-- /lang:typescript -->
 <!-- lang:rust -->
 
-| User Says...          | Skill                      | Agent                       |
+| User Says...          | Skill (composed)           | Composing agent             |
 | --------------------- | -------------------------- | --------------------------- |
-| "Audit this code"     | `/audit-rust`              | `rust-code-auditor`         |
-| "Audit unsafe Rust"   | `/audit-rust`              | `rust-unsafe-auditor`       |
-| "Audit ADRs for Rust" | `/audit-rust-architecture` | `rust-architecture-auditor` |
-| "Audit these tests"   | `/audit-rust-tests`        | `rust-test-auditor`         |
+| "Audit this code"     | `/audit-rust`              | `auditor` (`/audit` family) |
+| "Audit unsafe Rust"   | `/audit-rust`              | `auditor` (`/audit` family) |
+| "Audit ADRs for Rust" | `/audit-rust-architecture` | `adr-auditor`               |
+| "Audit these tests"   | `/audit-rust-tests`        | `test-evidence-auditor`     |
 
 <!-- /lang:rust -->
 

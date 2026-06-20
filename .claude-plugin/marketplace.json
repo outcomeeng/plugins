@@ -51,7 +51,7 @@
     {
       "name": "rust",
       "source": "./dist/claude/rust",
-      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust, /architect-rust, /audit-rust-architecture, rust-unsafe-auditor agent"
+      "description": "Rust engineering: /test-rust, /code-rust, /audit-rust, /architect-rust, /audit-rust-architecture"
     }
   ]
 }
