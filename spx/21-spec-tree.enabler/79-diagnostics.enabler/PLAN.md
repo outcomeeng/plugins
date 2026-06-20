@@ -9,7 +9,7 @@ This node governs the `diagnose` skill — a portable environment doctor for any
 
 ## Status
 
-- **Shipped:** the `diagnose` skill with four checks — session-environment and spx-reachability (spec-tree 0.61.0), worktree-pool (0.61.2), and session-store (this slice) — the spec node, README/template/catalog registration, and the version bumps. Each check carries a `[eval]` suite under `evals/` (test-evidence-auditor APPROVED); the node is out of `spx/EXCLUDE`. spec-auditor and skill-auditor pass on every slice.
+- **Shipped:** the `diagnose` skill with five checks — session-environment and spx-reachability (spec-tree 0.61.0), worktree-pool (0.61.2), session-store (0.61.3), and marketplace-install (this slice) — the spec node, README/template/catalog registration, and the version bumps. Each check carries a `[eval]` suite under `evals/` (test-evidence-auditor APPROVED); the node is out of `spx/EXCLUDE`. spec-auditor and skill-auditor pass on every slice.
 - **Remaining:** the graded eval run (see `ISSUES.md` — needs CI auth or local `ANTHROPIC_API_KEY`; not gated by `just check`); the `[audit]` assertions are agentic and verified at audit time; the deferred checks below.
 
 The session-environment check reuses the env-var + `spx worktree status` round-trip proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler`.
@@ -18,5 +18,4 @@ The session-environment check reuses the env-var + `spx worktree status` round-t
 
 Each grows the report by extension; the heavier ones are candidates `spx/12-shipped-scripting.adr.md` would push into the `spx` CLI once they prove themselves.
 
-- **Marketplace install state** — are the expected plugins installed at the expected versions on both the Claude and Codex surfaces.
 - **spx version-floor compliance** — judge the reported `spx` version against a required minimum. Needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today); the spx-reachability check reports the version verbatim rather than judging it against a floor. Deciding the declaration mechanism (e.g. a `minimumSpxVersion` manifest field and how the floor value is sourced) is a prerequisite and may warrant its own decision record.
