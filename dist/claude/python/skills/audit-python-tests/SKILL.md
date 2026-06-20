@@ -3,7 +3,7 @@ name: audit-python-tests
 description: >-
   Python test-evidence audit methodology composed by a dispatched auditor agent for the Python tests in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -272,3 +272,9 @@ A Python test audit succeeds when:
 - The verdict lists exact evidence-property findings or emits `APPROVED`
 
 </success_criteria>
+
+<reference_guides>
+
+- `references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
+
+</reference_guides>

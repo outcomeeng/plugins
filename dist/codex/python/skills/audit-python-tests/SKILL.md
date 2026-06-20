@@ -271,3 +271,9 @@ A Python test audit succeeds when:
 - The verdict lists exact evidence-property findings or emits `APPROVED`
 
 </success_criteria>
+
+<reference_guides>
+
+- `references/python-test-audit-examples.md` — worked Python test-audit cases (an approved audit, a rejection for `@patch` severing runtime coupling, and a rejection for a `TYPE_CHECKING` import disguised as coupling). Read alongside the coupling and source-ownership checks for concrete verdict shapes.
+
+</reference_guides>
