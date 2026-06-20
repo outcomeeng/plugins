@@ -2,7 +2,7 @@
 name: write-internal-docs
 description: >-
   ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content. Use this skill whenever the user is creating a doc intended for colleagues who already have context, not for strangers reading it for the first time. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use write-prose for those instead. NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions like SKILL.md and AGENTS.md.
-allowed-tools: Read, Edit, Write, Glob, Grep
+allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 
 Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -14,7 +14,7 @@ Write internal team documents that are scannable, decisive, and durable. Apply t
 <why_internal_docs_are_different>
 External prose optimizes for first-read comprehension by a stranger. Internal docs optimize for repeated retrieval by colleagues who already have context. That changes what's helpful.
 
-A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references earn their keep in internal docs because they accelerate retrieval. The same patterns can read as AI noise in external prose where the reader is meeting the content for the first time.
+A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references are worth the visual weight in internal docs because they accelerate retrieval. The same patterns can read as AI noise in external prose where the reader is meeting the content for the first time.
 
 The `/internal-doc-standards` catalog encodes this calibration. The inherited prose rules still apply for things that are unambiguously bad writing (em-dash overuse, significance adverbs, false suspense). The overrides apply for things prose-skills forbid that internal docs need.
 </why_internal_docs_are_different>

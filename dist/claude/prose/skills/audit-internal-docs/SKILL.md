@@ -2,7 +2,7 @@
 name: audit-internal-docs
 description: >-
   ALWAYS invoke this skill when auditing or reviewing internal team documents for cleanup. Use this whenever the user asks to review, audit, clean up, or check the writing of a Notion page, runbook, hiring rubric, scorecard, internal policy, decision record, design spec, competency model, onboarding guide, or any other doc that lives in a workspace and is read by colleagues. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use audit-prose for those instead. NEVER invoke for responses to the user, including long research summaries delivered in chat, or for agent-facing instructions like SKILL.md and AGENTS.md.
-allowed-tools: Read, Glob, Grep, Bash
+allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
