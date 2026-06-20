@@ -1,7 +1,7 @@
 ---
 name: test
 description: ALWAYS invoke this skill before writing tests or when learning the testing approach.
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
