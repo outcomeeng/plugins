@@ -8,6 +8,12 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
+<objective>
+Write or fix implementation code that makes tests pass. Two modes:
+1. **Writing new implementation** - Given failing tests, produce code that passes them
+2. **Fixing rejected implementation** - Given reviewer feedback, fix existing code
+</objective>
+
 <accessing_skill_files>
 When this skill is invoked, Claude Code provides the base directory in the loading message:
 

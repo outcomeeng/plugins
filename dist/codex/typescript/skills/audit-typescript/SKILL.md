@@ -22,13 +22,11 @@ This skill is read-only. It produces verdicts, not commits or fixes.
 **Test evidence quality is audited by skill `/audit-typescript-tests`.** This skill audits implementation code, not test code.
 Almost every TypeScript file must be covered by tests. Invoke `/audit-typescript-tests` separately as part of the overall auditing workflow.
 
-**Standards are pre-loaded above.** Check for `spx/local/typescript.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-
 </objective>
 
 <quick_start>
 
-1. Check for `spx/local/typescript.md` if present, then invoke `/test` for methodology + `/test-typescript` for TypeScript patterns
+1. Read `/test` for methodology + `/test-typescript` for TypeScript patterns
 2. Load product config: `CLAUDE.md`, `tsconfig.json`, `package.json` (Phase 0)
 3. Run automated gates -- product validation command (Phase 1, blocking)
 4. Run tests -- verify all pass (Phase 2, blocking)
@@ -37,6 +35,10 @@ Almost every TypeScript file must be covered by tests. Invoke `/audit-typescript
 7. Produce structured verdict: APPROVED or REJECTED
 
 </quick_start>
+
+<repo_local_overlay>
+Standards are pre-loaded above. Check for `spx/local/typescript.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+</repo_local_overlay>
 
 <essential_principles>
 
@@ -71,14 +73,6 @@ Execute phases IN ORDER. Do not skip.
 **Phase 1: Automated Gates** (blocking)
 
 Run the product's validation command. Catches everything linters handle: type safety, naming, magic numbers, unused imports, security rules.
-
-If the product lacks its own linter configs, use the reference configs in `${SKILL_DIR}/rules/`:
-
-| File                   | Purpose                                      |
-| ---------------------- | -------------------------------------------- |
-| `tsconfig.strict.json` | Strict TypeScript compiler options           |
-| `eslint.config.js`     | ESLint strict + security rules               |
-| `semgrep_sec.yaml`     | Semgrep security patterns (CWE-78/89/94/798) |
 
 Non-zero exit = REJECTED. Do not proceed.
 
@@ -206,7 +200,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 }
 ```
 
-Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "REJECT"`, and `message` (the one-line "why this fails"). For correct-approach code samples and required changes, include them in the finding's `message` field or put them in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "REJECT"`, and `message` (the one-line "why this fails"). Include correct-approach code samples and required changes directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
 </output_format>
 

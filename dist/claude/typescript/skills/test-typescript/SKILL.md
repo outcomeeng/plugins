@@ -2,7 +2,7 @@
 name: test-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing tests for TypeScript.
-allowed-tools: Read, Bash, Glob, Grep, Write, Edit
+allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
