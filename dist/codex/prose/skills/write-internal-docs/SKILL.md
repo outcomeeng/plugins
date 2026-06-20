@@ -13,7 +13,7 @@ Write internal team documents that are scannable, decisive, and durable. Apply t
 <why_internal_docs_are_different>
 External prose optimizes for first-read comprehension by a stranger. Internal docs optimize for repeated retrieval by colleagues who already have context. That changes what's helpful.
 
-A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references earn their keep in internal docs because they accelerate retrieval. The same patterns can read as AI noise in external prose where the reader is meeting the content for the first time.
+A colleague returning to a hiring scorecard for the third time doesn't want to re-read the introduction. They want to find their section in five seconds. Bold key terms, tables, definition lists, and inline cross-references are worth the visual weight in internal docs because they accelerate retrieval. The same patterns can read as AI noise in external prose where the reader is meeting the content for the first time.
 
 The `/internal-doc-standards` catalog encodes this calibration. The inherited prose rules still apply for things that are unambiguously bad writing (em-dash overuse, significance adverbs, false suspense). The overrides apply for things prose-skills forbid that internal docs need.
 </why_internal_docs_are_different>

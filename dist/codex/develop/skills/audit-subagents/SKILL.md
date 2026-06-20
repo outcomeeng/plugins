@@ -281,7 +281,7 @@ Before completing the audit, verify:
 <final_step>
 After presenting findings, offer:
 
-1. Implement all fixes automatically
+1. Return the prioritized findings to the caller for implementation
 2. Show detailed examples for specific issues
 3. Focus on critical issues only
 4. Other
