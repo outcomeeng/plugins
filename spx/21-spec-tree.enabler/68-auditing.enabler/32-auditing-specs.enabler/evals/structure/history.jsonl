@@ -1,0 +1,2 @@
+{"timestamp":"2026-06-20T06-21-58Z","schema_version":"1","git_sha":"de86e554","passed":false,"pass_rate":0.5,"cases_total":2,"cases_passed":1,"total_cost_usd":0.41185299999999997,"total_duration_ms":7538.0,"transcript":"runs/2026-06-20T06-21-58Z.json"}
+{"timestamp":"2026-06-20T06-24-37Z","schema_version":"1","git_sha":"de86e554","passed":true,"pass_rate":1.0,"cases_total":1,"cases_passed":1,"total_cost_usd":0.27251800000000004,"total_duration_ms":19717.0,"transcript":"runs/2026-06-20T06-24-37Z.json"}

@@ -1,0 +1,13 @@
+title = "auditing-specs-prose-coupling"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-specs.enabler/auditing-specs.md",
+  "spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-specs.enabler/evals/prose-coupling/**",
+  "src/plugins/spec-tree/skills/audit-specs/**",
+  "dist/claude/spec-tree/skills/audit-specs/**",
+]
+smoke_cases = ["test-tag-on-skill-body-claim-rejected", "prose-claim-tagged-audit-passes"]
+threshold = 0.85
+trials = 1
