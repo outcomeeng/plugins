@@ -20,8 +20,6 @@ This audit runs in the subagent-auditor agent's isolated context. When this skil
 
 <objective>
 Evaluate subagent configuration files against best practices for role definition, prompt quality, tool selection, model appropriateness, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
-
-This ensures subagents follow proper structure, configuration, pure XML formatting, and implementation patterns.
 </objective>
 
 <quick_start>
@@ -39,7 +37,7 @@ This ensures subagents follow proper structure, configuration, pure XML formatti
 - MUST distinguish between functional deficiencies and style preferences
 - NEVER flag missing tag names if the content/function is present under a different name (e.g., `<critical_workflow>` vs `<workflow>`)
 - ALWAYS verify information isn't present under a different tag name or format before flagging
-- DO NOT flag formatting preferences that don't impact effectiveness
+- NEVER flag formatting preferences that don't impact effectiveness
 - MUST flag missing functionality, not missing exact tag names
 - ONLY flag issues that reduce actual effectiveness
 - ALWAYS apply contextual judgment based on subagent purpose and complexity
