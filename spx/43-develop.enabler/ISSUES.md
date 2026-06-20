@@ -139,6 +139,20 @@ subjects verbatim.
     (touched and untouched), so the coherent fix is one marketplace-wide pass, not a per-touched-file
     edit. Out of scope for the agent-only-audit-dispatch change; tracked here for that pass.
 
+  - **Verdict-schema row-taxonomy divergence — marketplace-wide.** The `audit-*` skills do not agree
+    on `<output_format>` verdict row names: `audit-skills` emits the three-row
+    `keep-these-aspects` / `worth-improving` / `must-fix` shape, while `audit-commands` and
+    `audit-subagents` emit a four-row `critical-issues` / `recommendations` / `strengths` /
+    `quick-fixes` shape, and the `overall` rule differs with it (`PASS` iff `must-fix` empty vs `PASS`
+    iff `critical-issues` carries no `REJECT`). All claim conformance to the canonical schema in
+    `audit/scripts/verdict.py`. Reconciling requires deciding whether `verdict.py` mandates a uniform
+    row taxonomy or treats row names as free-form labels over a fixed envelope — a verification-contract
+    question governed by `spx/15-audit-result-delivery.pdr.md` and the auditing nodes, affecting
+    `emit_verdict.py` rendering and any auditor agent that indexes on row names. The class spans the
+    14 verdict-emitting skills (touched and untouched), so the coherent fix is one marketplace-wide
+    pass, not a per-touched-file edit. Surfaced by the `develop:skill-auditor` gate during the PR3
+    `Skill`-append; out of scope for that frontmatter change.
+
 **Verification gate:** `develop:skill-auditor` (`/audit-skills`) loads `agent-prompt-standards`;
 `develop:subagent-auditor` (`/audit-subagents`) governs the agent-definition files. Run both on
 changed targets; the deterministic PCRE `git grep` confirms the named-subject axis specifically.
@@ -165,20 +179,23 @@ touched plugins — spec-tree (`decompose`, `refactor`, `test`, `audit-pdr`, `au
 **Remaining (untouched plugins — follow-up PRs, each its own version bump). Per-plugin playbooks live
 in each plugin's owning node; this section holds the develop half and the shared heuristic.**
 
-- **develop — PR3 (develop half), clean `Skill`-append.** Three skills carry the
-  `{!% require_skill … %!}` macro while omitting `Skill` from `allowed-tools`: `audit-commands`,
-  `audit-skills`, `audit-subagents` (current `allowed-tools: Read, Grep, Glob, Bash` — append `Skill`
-  only; they are read-only audit skills, never add `Write`/`Edit`). `agent-prompt-standards` is a
-  reference skill ("invoke X **instead of me**") and is NOT a gap. Ships in ONE PR with the prose half
-  (`spx/43-prose.enabler/ISSUES.md`); each plugin gets its own patch bump. Gate every changed SKILL.md
-  with `develop:skill-auditor` before shipping (the changes-reviewer and CI `spec-tree-review` do not
-  load skill standards), `just build-skills`, `just bump`, then `/merge`.
+- **develop — PR3 (develop half) — CLOSED (this PR, branch `fix/skill-delegation-allowed-tools-develop-prose`).**
+  `Skill` appended to `allowed-tools` on the three read-only audit skills carrying the
+  `{!% require_skill … %!}` macro: `audit-commands`, `audit-skills`, `audit-subagents` (now
+  `Read, Grep, Glob, Bash, Skill`; no `Write`/`Edit`). `agent-prompt-standards` is a reference skill
+  ("invoke X **instead of me**") and was correctly NOT a gap. The `develop:skill-auditor` gate ran on
+  every changed SKILL.md and additionally surfaced a touched-file must-fix fixed in this PR — the
+  `<final_step>` "Implement all fixes automatically" option contradicted the read-only audit contract
+  in `audit-commands` and `audit-subagents` (both reworded to "Return the prioritized findings to the
+  caller for implementation"). The marketplace-wide classes the gate re-flagged (`<quick_start>` on
+  validators, bare verdict-path citation, verdict-schema row-taxonomy) stay tracked in §1.
 - **typescript — PR2, entangled.** Full playbook in `spx/43-typescript.enabler/ISSUES.md`: 6 skills
   need `Skill`, and `architect-typescript` + `audit-typescript` carry pre-existing skill-auditor
   REJECTs to remediate in the same change; `audit-typescript`'s quick_start `/test` invocation is a
   defect to **remove**, not enable with `Skill`.
-- **prose — PR3 (prose half).** Playbook in `spx/43-prose.enabler/ISSUES.md`: `audit-prose`,
-  `audit-internal-docs`, `write-internal-docs` need `Skill`; clean append.
+- **prose — PR3 (prose half) — CLOSED (this PR, same branch).** `Skill` appended to `audit-prose`,
+  `audit-internal-docs` (both now `Read, Glob, Grep, Bash, Skill`, read-only), and `write-internal-docs`
+  (now `Read, Edit, Write, Glob, Grep, Skill`). See `spx/43-prose.enabler/ISSUES.md`.
 
 **Detection heuristic (the lesson — for any future allowed-tools sweep).** A skill needs `Skill` in
 `allowed-tools` iff its body operationally invokes another skill. The two signals are the

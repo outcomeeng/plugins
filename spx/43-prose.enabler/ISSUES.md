@@ -1,6 +1,15 @@
 # Issues: Prose Plugin
 
-## Skill-delegation `Skill` allowed-tools gap — PR3 (prose half) (OPEN)
+## Skill-delegation `Skill` allowed-tools gap — PR3 (prose half) (CLOSED)
+
+**Closed (branch `fix/skill-delegation-allowed-tools-develop-prose`, shipped with the develop half).**
+`Skill` appended to `allowed-tools` on all three delegating skills: `audit-prose` and
+`audit-internal-docs` (now `Read, Glob, Grep, Bash, Skill`, read-only — no `Write`/`Edit`) and
+`write-internal-docs` (now `Read, Edit, Write, Glob, Grep, Skill`). The `develop:skill-auditor` gate
+ran on every changed SKILL.md and confirmed the appends clean; it also surfaced one touched-file
+worth-fixing item resolved in this PR — `write-internal-docs` used the forbidden corporate-metaphor
+phrase "earn their keep" (reworded to "are worth the visual weight"). `prose-standards` (reference)
+and `write-prose` (empty `allowed-tools`, unrestricted) were correctly NOT gaps.
 
 A skill whose body invokes another skill needs `Skill` in `allowed-tools`, or the delegation requires
 per-call approval. The marketplace-wide `require_skill` → `Skill` sweep closed spec-tree/python/rust in
