@@ -38,10 +38,10 @@ Every MUST/NEVER bullet in the ADR and PDR decision templates carries a single e
 ## Audit gates
 
 - PDR/ADR-template structural check via `spx validation markdown`
-- The decision-record audits (`pdr-auditor` / `adr-auditor`, see `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md`) read this tag — keep the two changes consistent.
+- The decision-record audits (`pdr-auditor` / `adr-auditor`, see `spx/21-spec-tree.enabler/32-decisions.enabler/`) read this tag — keep the two changes consistent.
 - `just check` — the template and example edits regenerate `dist/`, so the `dist-diff` gate must run.
 
 ## Related plans
 
-- `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the audits that enforce the evidence-type floor
-- `spx/21-spec-tree.enabler/35-evidence.enabler/PLAN.md` — the `/test` router that picks the evidence type
+- `spx/21-spec-tree.enabler/32-decisions.enabler/` — the audits that enforce the evidence-type floor
+- `spx/21-spec-tree.enabler/35-evidence.enabler/` — the `/test` router that picks the evidence type
