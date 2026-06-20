@@ -20,6 +20,15 @@ Exposes:
   one file in distinct regions, so the rebase auto-merges and the base delta
   overlaps the branch's changed paths.
 - ``detach_head``. Detaches HEAD so the branch cannot be resolved.
+- ``build_detached_behind_base_repo``. A worktree parked detached at a commit
+  that is an ancestor of the advanced base — the stale-but-clean pool-worktree
+  case — so synchronization advances it to the base tip.
+- ``build_detached_current_repo``. A worktree parked detached at the base tip
+  with no base advance, so synchronization reports it already current.
+- ``build_detached_dirty_behind_base_repo``. A behind-base detached worktree
+  with an uncommitted tracked edit, so synchronization reports ``dirty_tree``.
+- ``build_detached_no_remote_repo``. A detached worktree with no ``origin``
+  remote, so the base cannot be fetched and synchronization fails.
 
 The harness owns the git lifecycle and the invented payload (file names and
 commit messages); tests assert behavior against the returned handle.
@@ -361,6 +370,16 @@ def fetch_base(repo: pathlib.Path, base_ref: str = BASE_BRANCH) -> None:
     _git(repo, "fetch", "origin", base_ref)
 
 
+def head_oid(repo: pathlib.Path) -> str:
+    """Return the full OID ``HEAD`` resolves to in ``repo``."""
+    return _git(repo, "rev-parse", "HEAD")
+
+
+def resolve_ref(repo: pathlib.Path, ref: str) -> str:
+    """Return the full OID ``ref`` resolves to in ``repo``."""
+    return _git(repo, "rev-parse", ref)
+
+
 def working_tree_has_tracked_changes(repo: pathlib.Path) -> bool:
     """Report whether the working tree has uncommitted changes to tracked files.
 
@@ -452,3 +471,128 @@ def detach_head(repo: pathlib.Path) -> None:
     """Detach HEAD so the branch cannot be resolved for a rebase."""
     sha = _git(repo, "rev-parse", "HEAD")
     _git(repo, "checkout", "-q", "--detach", sha)
+
+
+def _working_clone_detached_on_base(
+    root: pathlib.Path, origin: pathlib.Path
+) -> pathlib.Path:
+    """Clone ``origin`` into ``repo`` and park HEAD detached at the base tip.
+
+    No feature branch is cut: HEAD is detached at the cloned base commit, the
+    normal parked state of a free bare-repository pool worktree. The clone has
+    not fetched any later base advance, so the detached commit is an ancestor of
+    ``origin/<base>`` once the base moves on.
+    """
+    repo = root / "repo"
+    _git(root, "clone", "-q", str(origin), str(repo), cwd=root)
+    _configure(repo)
+    _git(repo, "remote", "set-head", "origin", BASE_BRANCH)
+    sha = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "--detach", sha)
+    return repo
+
+
+@dataclass(frozen=True)
+class DetachedRepo:
+    """A worktree with HEAD detached, used for the detached-base-sync cases.
+
+    ``detached_oid`` is the commit HEAD is parked at. ``base_file`` is the base
+    advance the worktree is behind by — present only when a base advance was
+    pushed (``None`` for the already-current case). ``dirty_file`` and
+    ``dirty_marker`` are populated only for the dirty case.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    remote_ref: str
+    detached_oid: str
+    base_file: str | None = None
+    dirty_file: str | None = None
+    dirty_marker: str | None = None
+
+
+def build_detached_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a clean detached worktree parked behind the advanced base.
+
+    HEAD is detached at the cloned base commit; the base then advances out of
+    band and the clone has not fetched it, so the detached commit is a strict
+    ancestor of ``origin/<base>``. Synchronization must advance the worktree to
+    the base tip and bring the base advance into the working tree.
+    """
+    origin = _init_origin_with_base(root)
+    repo = _working_clone_detached_on_base(root, origin)
+    detached_oid = _git(repo, "rev-parse", "HEAD")
+
+    pusher = root / "pusher"
+    _commit_file(pusher, BASE_FILE, "base advance\n", "advance base")
+    _git(pusher, "push", "-q", "origin", BASE_BRANCH)
+
+    return DetachedRepo(
+        repo=repo,
+        base_ref=BASE_BRANCH,
+        remote_ref=f"origin/{BASE_BRANCH}",
+        detached_oid=detached_oid,
+        base_file=BASE_FILE,
+    )
+
+
+def build_detached_current_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a clean detached worktree parked at the base tip (no base advance).
+
+    HEAD is detached at the base tip and no base advance follows, so after the
+    fetch the detached commit equals ``origin/<base>`` and synchronization
+    reports it already current without advancing.
+    """
+    origin = _init_origin_with_base(root)
+    repo = _working_clone_detached_on_base(root, origin)
+    return DetachedRepo(
+        repo=repo,
+        base_ref=BASE_BRANCH,
+        remote_ref=f"origin/{BASE_BRANCH}",
+        detached_oid=_git(repo, "rev-parse", "HEAD"),
+    )
+
+
+def build_detached_dirty_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a behind-base detached worktree with an uncommitted tracked edit.
+
+    Same parked-behind state as ``build_detached_behind_base_repo``, plus an
+    uncommitted modification to the tracked initial file, so the advance
+    precondition fails and synchronization reports ``dirty_tree`` without moving
+    the worktree.
+    """
+    behind = build_detached_behind_base_repo(root)
+    dirty_path = behind.repo / INITIAL_FILE
+    dirty_path.write_text(
+        dirty_path.read_text(encoding="utf-8") + DIRTY_MARKER, encoding="utf-8"
+    )
+    return DetachedRepo(
+        repo=behind.repo,
+        base_ref=behind.base_ref,
+        remote_ref=behind.remote_ref,
+        detached_oid=behind.detached_oid,
+        base_file=behind.base_file,
+        dirty_file=INITIAL_FILE,
+        dirty_marker=DIRTY_MARKER,
+    )
+
+
+def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:
+    """Build a detached worktree with no ``origin`` remote to fetch the base from.
+
+    A standalone repository (no clone, no remote) with HEAD detached: the base
+    cannot be fetched and no remote base resolves, so synchronization reports a
+    hard git failure rather than advancing.
+    """
+    repo = root / "repo"
+    _git(root, "init", "-q", "-b", BASE_BRANCH, str(repo), cwd=root)
+    _configure(repo)
+    _commit_file(repo, INITIAL_FILE, "hello\n", "initial")
+    sha = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "--detach", sha)
+    return DetachedRepo(
+        repo=repo,
+        base_ref=BASE_BRANCH,
+        remote_ref=f"origin/{BASE_BRANCH}",
+        detached_oid=sha,
+    )

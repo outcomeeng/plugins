@@ -20,6 +20,20 @@ through the commit workflow, not a rebase conflict, and synchronization never
 commits or stashes on the caller's behalf. Untracked files do not block a
 rebase and are not a dirty tree.
 
+A detached HEAD — a worktree with no branch checked out, the normal parked state
+of a bare-repository worktree pool — is brought current by fetch-and-compare
+rather than waved through. When the detached commit is an ancestor of the
+fetched ``origin/<base>`` (behind it or equal to it) and the working tree is
+clean, the worktree is advanced to the base tip and reported ``rebased`` (it
+moved) or ``already_current`` (it was already there); a behind detached commit
+with uncommitted tracked changes reports ``dirty_tree``. When the detached
+commit has diverged — it carries commits the base lacks — advancing it would
+orphan those commits, so the outcome is ``git_failure``; a detached HEAD has no
+branch to rebase its own commits onto. A detached HEAD with no resolvable remote
+base also reports ``git_failure``. Advancing a clean, strictly-behind detached
+worktree is a fast-forward to commits it does not yet have, never the reset the
+mechanism rejects.
+
 On a clean outcome (``rebased`` or ``already_current``) the result carries a
 readiness-preservation proof: full before/after base and branch OIDs, the base
 delta, the branch's changed paths against the old and new base, their overlap,
@@ -333,6 +347,129 @@ def _build_preservation(
     )
 
 
+def _sync_detached(
+    repo: pathlib.Path,
+    base_ref: str,
+    remote_ref: str,
+    *,
+    fetch: bool,
+) -> SyncBaseResult:
+    """Bring a detached-HEAD worktree current with its fetched base.
+
+    A detached HEAD has no branch, so it is brought current by advancing the
+    worktree to ``origin/<base>`` rather than by rebasing branch commits. The
+    detached commit is compared to the fetched base: an ancestor (behind or
+    equal) and clean is advanced and reported ``rebased``/``already_current``; an
+    ancestor that is behind but dirty is ``dirty_tree``; a commit that has
+    diverged from the base, or a base that does not resolve, is ``git_failure``,
+    because advancing a diverged worktree would orphan its commits. The branch
+    field is ``None`` for every detached outcome.
+    """
+    old_head_oid = _rev(repo, "HEAD")
+
+    if fetch:
+        fetched = _git(repo, "fetch", "origin", base_ref)
+        if fetched.returncode != 0:
+            return SyncBaseResult(
+                SyncStatus.GIT_FAILURE,
+                base_ref,
+                remote_ref,
+                None,
+                f"detached HEAD: git fetch origin {base_ref} failed: "
+                f"{fetched.stderr.strip()}",
+            )
+
+    new_base_oid = _rev(repo, remote_ref)
+    if old_head_oid is None or new_base_oid is None:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            remote_ref,
+            None,
+            f"detached HEAD: base ref {remote_ref} does not resolve to a commit",
+        )
+
+    # An ancestor detached commit (behind or equal) carries nothing the base
+    # lacks, so advancing it to the base tip loses no commits. A commit that is
+    # not an ancestor has diverged — it carries its own commits — and advancing
+    # would orphan them, so it stays a git failure: a detached HEAD has no branch
+    # to rebase those commits onto.
+    is_ancestor = _git(repo, "merge-base", "--is-ancestor", old_head_oid, new_base_oid)
+    if is_ancestor.returncode != 0:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            remote_ref,
+            None,
+            f"detached HEAD {old_head_oid} has diverged from {remote_ref}: it "
+            f"carries commits the base lacks and has no branch to rebase them onto",
+        )
+
+    # The fork point of an ancestor detached commit is the commit itself.
+    old_base_oid = _merge_base(repo, old_head_oid, new_base_oid)
+
+    if old_head_oid == new_base_oid:
+        return SyncBaseResult(
+            SyncStatus.ALREADY_CURRENT,
+            base_ref,
+            remote_ref,
+            None,
+            f"detached HEAD is already current with {remote_ref}",
+            preservation=_build_preservation(
+                repo,
+                old_base_oid=old_base_oid,
+                new_base_oid=new_base_oid,
+                old_head_oid=old_head_oid,
+                new_head_oid=old_head_oid,
+            ),
+        )
+
+    # precondition: advancing a worktree over uncommitted tracked changes would
+    # clobber them, so a dirty tree blocks the advance just as it blocks a rebase
+    dirty = _git(repo, "status", "--porcelain", "--untracked-files=no")
+    if dirty.returncode != 0:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            remote_ref,
+            None,
+            f"cannot inspect working tree state: {dirty.stderr.strip()}",
+        )
+    if dirty.stdout.strip():
+        return SyncBaseResult(
+            SyncStatus.DIRTY_TREE,
+            base_ref,
+            remote_ref,
+            None,
+            f"detached HEAD behind {remote_ref} has uncommitted changes to "
+            f"tracked files; commit them before advancing to {remote_ref}",
+        )
+
+    advanced = _git(repo, "switch", "--detach", remote_ref)
+    if advanced.returncode != 0:
+        return SyncBaseResult(
+            SyncStatus.GIT_FAILURE,
+            base_ref,
+            remote_ref,
+            None,
+            f"detached HEAD: cannot advance to {remote_ref}: {advanced.stderr.strip()}",
+        )
+    return SyncBaseResult(
+        SyncStatus.REBASED,
+        base_ref,
+        remote_ref,
+        None,
+        f"advanced detached HEAD to {remote_ref}",
+        preservation=_build_preservation(
+            repo,
+            old_base_oid=old_base_oid,
+            new_base_oid=new_base_oid,
+            old_head_oid=old_head_oid,
+            new_head_oid=_rev(repo, "HEAD"),
+        ),
+    )
+
+
 def sync_base(
     repo: pathlib.Path, *, base_ref: str | None = None, fetch: bool = True
 ) -> SyncBaseResult:
@@ -353,13 +490,7 @@ def sync_base(
     try:
         branch = detect_current_branch(repo)
     except DetachedHeadError:
-        return SyncBaseResult(
-            SyncStatus.GIT_FAILURE,
-            base_ref,
-            remote_ref,
-            None,
-            "detached HEAD: no branch to rebase",
-        )
+        return _sync_detached(repo, base_ref, remote_ref, fetch=fetch)
 
     # Capture the pre-rebase HEAD for the preservation proof; the base fork point
     # is derived after the fetch (below) so the base delta stays accurate even

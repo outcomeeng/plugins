@@ -11,7 +11,15 @@ Covers the Scenario assertions in ``../sync-base.md``:
   outcome without rebasing, leaving the uncommitted edit untouched.
 - A behind-base tree carrying only an untracked file rebases normally — an
   untracked file does not block a rebase and is not a dirty tree.
-- A detached HEAD with no branch to rebase reports a hard git failure.
+- A base ref that does not resolve reports a hard git failure.
+- A clean detached HEAD that is an ancestor of the fetched base and behind it is
+  advanced to the base tip and reported ``rebased``.
+- A clean detached HEAD already at the base tip is reported ``already_current``.
+- A detached HEAD behind the base with an uncommitted tracked edit reports
+  ``dirty_tree`` without advancing.
+- A diverged detached HEAD — carrying commits the base lacks — reports a hard git
+  failure rather than advancing and orphaning those commits.
+- A detached HEAD with no resolvable remote base reports a hard git failure.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories (a bare origin and working clones) seeded under ``tmp_path``; git
@@ -29,10 +37,16 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_conflicting_repo,
     build_current_repo,
+    build_detached_behind_base_repo,
+    build_detached_current_repo,
+    build_detached_dirty_behind_base_repo,
+    build_detached_no_remote_repo,
     build_dirty_behind_base_repo,
     build_untracked_only_behind_base_repo,
     detach_head,
+    head_oid,
     load_sync_base_module,
+    resolve_ref,
 )
 
 
@@ -133,12 +147,99 @@ def test_untracked_only_behind_base_rebases_not_dirty_tree(
     assert (handle.repo / handle.feature_file).exists()
 
 
-def test_detached_head_reports_hard_git_failure(
+def test_diverged_detached_head_reports_hard_git_failure(
     tmp_path: pathlib.Path,
 ) -> None:
+    # The detached commit carries the feature commit, which the base lacks, so
+    # HEAD has diverged from origin/<base>. Advancing would orphan that commit,
+    # and a detached HEAD has no branch to rebase it onto, so the outcome is a
+    # hard git failure — the feature commit is preserved, not discarded.
     module = load_sync_base_module()
     handle = build_behind_base_repo(_root(tmp_path))
+    feature_oid_before = head_oid(handle.repo)
     detach_head(handle.repo)
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.GIT_FAILURE
+    assert result.branch is None
+    assert result.action_token is None
+    # The detached commit is untouched: its feature commit was not discarded.
+    assert head_oid(handle.repo) == feature_oid_before
+    assert (handle.repo / handle.feature_file).exists()
+
+
+def test_clean_behind_detached_head_is_advanced_to_base_tip(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A pool worktree parked detached at a commit that is an ancestor of the
+    # advanced base, with a clean tree, is brought current rather than waved
+    # through: synchronization advances the worktree to origin/<base> and reports
+    # rebased, with the base advance now present.
+    module = load_sync_base_module()
+    handle = build_detached_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.branch is None
+    assert result.action_token is None
+    # The worktree advanced to the fetched base tip...
+    assert head_oid(handle.repo) == resolve_ref(handle.repo, handle.remote_ref)
+    # ...so the base advance the worktree was behind is now present.
+    assert handle.base_file is not None
+    assert (handle.repo / handle.base_file).exists()
+
+
+def test_clean_detached_head_at_base_tip_is_already_current(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A detached worktree already at the base tip (no base advance) performs no
+    # advance and reports already_current.
+    module = load_sync_base_module()
+    handle = build_detached_current_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert result.branch is None
+    assert result.action_token is None
+    assert head_oid(handle.repo) == handle.detached_oid
+
+
+def test_dirty_behind_detached_head_reports_dirty_tree_without_advancing(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A behind-base detached worktree carrying an uncommitted tracked edit reports
+    # the distinct dirty_tree outcome: no advance, no SYNC_BASE token, and the
+    # edit and the parked commit left untouched for the caller to commit.
+    module = load_sync_base_module()
+    handle = build_detached_dirty_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.DIRTY_TREE
+    assert result.action_token is None
+    # The worktree did not advance: HEAD is still the parked commit...
+    assert head_oid(handle.repo) == handle.detached_oid
+    # ...the base advance never entered the tree...
+    assert handle.base_file is not None
+    assert not (handle.repo / handle.base_file).exists()
+    # ...and the uncommitted edit is left untouched, not committed or stashed.
+    assert handle.dirty_file is not None and handle.dirty_marker is not None
+    assert handle.dirty_marker in (handle.repo / handle.dirty_file).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_detached_head_with_no_remote_reports_hard_git_failure(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A detached worktree with no origin remote cannot fetch or resolve a base, so
+    # the detached case stays a hard git failure — the only genuinely
+    # non-advanceable detached outcome alongside divergence.
+    module = load_sync_base_module()
+    handle = build_detached_no_remote_repo(_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
