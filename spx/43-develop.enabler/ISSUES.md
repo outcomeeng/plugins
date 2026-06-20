@@ -93,7 +93,22 @@ subjects verbatim.
 
   - **Audit-skill structural conformance — marketplace-wide.** `skill-standards` mandates
     `allowed-tools: Read, Grep, Glob, Bash` for every `audit-*` skill and (per `<xml_structure>`)
-    omitting `<quick_start>` on validator/gate skills. The touched-file portion is **fixed in this
+    omitting `<quick_start>` on validator/gate skills.
+
+    **⚠️ Post-collapse exception (PR #275, the auditor collapse — do NOT strip `Skill`).** The
+    generic composing auditors `audit-adr`, `audit-tests`, and `audit` now carry
+    `allowed-tools: Read, Grep, Glob, Bash, Skill` — the `Skill` tool is REQUIRED so they compose
+    `audit-{lang}*` by language partition per `spx/21-spec-tree.enabler/17-auditing.adr.md`.
+    Treating the blanket four-tool rule as absolute would revert the merged composition mechanism
+    (composition is unexecutable without `Skill`). Any marketplace-wide allowed-tools sweep must
+    keep `Skill` on those three skills. The 10 per-language auditor agents
+    (`{python,typescript,rust}-{architecture,code,test}-auditor`, `rust-unsafe-auditor`) were
+    removed in the same collapse, so the audit-skill set this sweep ranges over is the post-collapse
+    set, and the `<quick_start>`-on-validator question below is the same family-wide deviation now
+    tracked in `spx/21-spec-tree.enabler/32-decisions.enabler/ISSUES.md` — reconcile the two rather
+    than running parallel passes.
+
+    The touched-file portion is **fixed in this
     PR** (the local `changes-reviewer` gate raised it as in-scope touched-file debt): `audit-tests`
     gained `allowed-tools` and dropped its `<quick_start>` (its `/contextualize` prerequisite and
     coupling-gate already live in `<essential_principles>`/`<audit_workflow>`/`<success_criteria>`),
