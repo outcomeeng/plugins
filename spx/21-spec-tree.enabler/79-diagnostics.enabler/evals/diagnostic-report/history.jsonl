@@ -1,0 +1,1 @@
+{"timestamp":"2026-06-20T23-47-26Z","schema_version":"1","git_sha":"aea776d8","passed":true,"pass_rate":1.0,"cases_total":5,"cases_passed":5,"total_cost_usd":0.392625,"total_duration_ms":21566.0,"total_input_tokens":15,"total_output_tokens":321,"total_cache_read_input_tokens":97350,"total_cache_creation_input_tokens":95616,"transcript":"runs/2026-06-20T23-47-26Z.json"}
