@@ -20,8 +20,6 @@ This audit runs in the subagent-auditor agent's isolated context. When this skil
 
 <objective>
 Evaluate subagent configuration files against best practices for role definition, prompt quality, tool selection, model appropriateness, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
-
-This ensures subagents follow proper structure, configuration, pure XML formatting, and implementation patterns.
 </objective>
 
 <quick_start>

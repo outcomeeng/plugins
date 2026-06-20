@@ -20,8 +20,6 @@ This audit runs in the command-auditor agent's isolated context. When this skill
 
 <objective>
 Evaluate slash command .md files against best practices for structure, YAML configuration, argument usage, dynamic context, tool restrictions, and effectiveness. Then provide actionable findings with contextual judgment, not arbitrary scores.
-
-This ensures commands follow security, clarity, and effectiveness standards.
 </objective>
 
 <quick_start>
@@ -37,7 +35,7 @@ This ensures commands follow security, clarity, and effectiveness standards.
 - NEVER modify files during audit - ONLY analyze and report findings
 - MUST read all reference documentation before evaluating
 - ALWAYS provide file:line locations for every finding
-- DO NOT generate fixes unless explicitly requested by the user
+- NEVER generate fixes unless explicitly requested by the user
 - NEVER make assumptions about command intent - flag ambiguities as findings
 - MUST complete all evaluation areas (YAML, Arguments, Dynamic Context, Tool Restrictions, Content)
 - ALWAYS apply contextual judgment based on command purpose and complexity
