@@ -10,7 +10,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from outcomeeng_evals.case import Case
+from outcomeeng_evals.cli.commands.run import _history_row
+from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HISTORY_ROW_FIELDS, HistoryRow, append_history_row
+from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.suite import CaseOutcome, SuiteResult, TrialResult
+from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
 
 
 SCHEMA_VERSION = "1"
@@ -32,6 +38,10 @@ def _passing_row() -> HistoryRow:
         "cases_passed": 4,
         "total_cost_usd": 1.04,
         "total_duration_ms": 18960.0,
+        "total_input_tokens": 40,
+        "total_output_tokens": 24,
+        "total_cache_read_input_tokens": 198560,
+        "total_cache_creation_input_tokens": 0,
         "transcript": TRANSCRIPT_REL,
     }
 
@@ -49,6 +59,10 @@ def _failing_row() -> HistoryRow:
         "cases_passed": 3,
         "total_cost_usd": 1.04,
         "total_duration_ms": 18960.0,
+        "total_input_tokens": 39,
+        "total_output_tokens": 31,
+        "total_cache_read_input_tokens": 52160,
+        "total_cache_creation_input_tokens": 33830,
         "transcript": FAILING_TRANSCRIPT_REL,
     }
 
@@ -98,6 +112,68 @@ def test_row_carries_required_schema_fields(tmp_path: Path) -> None:
 
     row = _read_history(history_path)[0]
     assert set(HISTORY_ROW_FIELDS).issubset(row.keys())
+
+
+def test_row_carries_token_aggregates_for_cache_hit_rate(tmp_path: Path) -> None:
+    # The durable row carries the input/output/cache token totals so a
+    # reader can derive the prompt-cache hit rate over time without the
+    # gitignored transcript.
+    history_path = tmp_path / "history.jsonl"
+    append_history_row(history_path, _passing_row())
+
+    row = _read_history(history_path)[0]
+    for field in (
+        "total_input_tokens",
+        "total_output_tokens",
+        "total_cache_read_input_tokens",
+        "total_cache_creation_input_tokens",
+    ):
+        assert field in HISTORY_ROW_FIELDS
+        assert field in row
+    assert row["total_cache_read_input_tokens"] == 198560
+
+
+def test_history_row_aggregates_token_counts_across_trials() -> None:
+    # Exercises the run-command aggregation (_history_row -> _sum_int), not
+    # just persistence: the row's token totals must be the per-trial sums.
+    # Deleting the _sum_int cache-token calls in run.py fails this.
+    row = _history_row(
+        timestamp=TIMESTAMP,
+        result=make_bimodal_cache_suite_result(),
+        transcript_relative=TRANSCRIPT_REL,
+    )
+    assert row["total_input_tokens"] == 22
+    assert row["total_output_tokens"] == 12
+    assert row["total_cache_read_input_tokens"] == 49600
+    assert row["total_cache_creation_input_tokens"] == 34000
+
+
+def test_history_row_token_aggregates_are_none_without_metadata() -> None:
+    # A run whose trials carry no metadata reports null aggregates, never a
+    # fabricated zero — so "no data" stays distinguishable from "billed zero".
+    case = Case(id="c-1", input={}, must_contain=(), must_not_contain=())
+    bare = TrialResult(
+        case_id="c-1",
+        trial_index=0,
+        prompt="p",
+        response="r",
+        verdict=None,
+        grade=GradeResult(passed=True, reasons=()),
+        metadata=RunMetadata(),
+    )
+    result = SuiteResult(
+        outcomes=(CaseOutcome(case=case, trials=(bare,), passed=True),),
+        pass_rate=1.0,
+        threshold=0.85,
+        passed=True,
+    )
+    row = _history_row(
+        timestamp=TIMESTAMP, result=result, transcript_relative=TRANSCRIPT_REL
+    )
+    assert row["total_input_tokens"] is None
+    assert row["total_output_tokens"] is None
+    assert row["total_cache_read_input_tokens"] is None
+    assert row["total_cache_creation_input_tokens"] is None
 
 
 def test_row_is_valid_json_per_line(tmp_path: Path) -> None:

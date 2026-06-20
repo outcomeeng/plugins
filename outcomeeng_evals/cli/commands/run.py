@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
+from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
@@ -196,8 +198,16 @@ def _history_row(
         "pass_rate": result.pass_rate,
         "cases_total": len(result.outcomes),
         "cases_passed": sum(1 for o in result.outcomes if o.passed),
-        "total_cost_usd": _sum_cost(result),
-        "total_duration_ms": _sum_duration(result),
+        "total_cost_usd": _sum_float(result, lambda m: m.total_cost_usd),
+        "total_duration_ms": _sum_float(result, lambda m: m.duration_ms),
+        "total_input_tokens": _sum_int(result, lambda m: m.input_tokens),
+        "total_output_tokens": _sum_int(result, lambda m: m.output_tokens),
+        "total_cache_read_input_tokens": _sum_int(
+            result, lambda m: m.cache_read_input_tokens
+        ),
+        "total_cache_creation_input_tokens": _sum_int(
+            result, lambda m: m.cache_creation_input_tokens
+        ),
         "transcript": transcript_relative,
     }
 
@@ -218,22 +228,42 @@ def _git_sha() -> str:
     return completed.stdout.strip() or "unknown"
 
 
-def _sum_cost(result: SuiteResult) -> float | None:
+def _sum_float(
+    result: SuiteResult, value_of: Callable[[RunMetadata], float | None]
+) -> float | None:
+    """Sum a float ``RunMetadata`` field across every trial.
+
+    The accumulator stays ``None`` until a trial supplies a value, so a
+    field absent from every trial surfaces as ``null`` rather than a
+    fabricated ``0`` — "no run carried this metric" stays distinct from "a
+    run genuinely measured zero". A real ``0.0`` from any trial initialises
+    the accumulator, so a measured zero is reported as ``0``, not dropped.
+    The typed ``value_of`` accessor keeps static type coverage that an
+    attribute-name string would erase.
+    """
     accum: float | None = None
     for outcome in result.outcomes:
         for trial in outcome.trials:
-            value = trial.metadata.total_cost_usd
+            value = value_of(trial.metadata)
             if value is None:
                 continue
             accum = value if accum is None else accum + value
     return accum
 
 
-def _sum_duration(result: SuiteResult) -> float | None:
-    accum: float | None = None
+def _sum_int(
+    result: SuiteResult, value_of: Callable[[RunMetadata], int | None]
+) -> int | None:
+    """Sum an integer ``RunMetadata`` field across every trial.
+
+    The integer analogue of ``_sum_float`` — same null-vs-zero contract
+    (``None`` only when every trial omitted the field; a genuine ``0``
+    initialises the accumulator) and the same typed ``value_of`` accessor.
+    """
+    accum: int | None = None
     for outcome in result.outcomes:
         for trial in outcome.trials:
-            value = trial.metadata.duration_ms
+            value = value_of(trial.metadata)
             if value is None:
                 continue
             accum = value if accum is None else accum + value

@@ -99,6 +99,42 @@ def make_suite_result(
     )
 
 
+def make_bimodal_cache_suite_result() -> SuiteResult:
+    """A two-trial suite: one cold-write trial, then one warm-read trial.
+
+    The bimodal prompt-cache shape — the first trial paying a cache-creation
+    write, the second served from a warm cache read — exercises token
+    aggregation across more than one trial, which a single-trial fixture
+    cannot. Aggregate sums across the two trials: input 22, output 12,
+    cache-read 49600, cache-creation 34000.
+    """
+    trials = (
+        make_trial_result(
+            trial_index=0,
+            metadata=RunMetadata(
+                duration_ms=2000.0,
+                total_cost_usd=0.42,
+                input_tokens=10,
+                output_tokens=5,
+                cache_read_input_tokens=0,
+                cache_creation_input_tokens=34000,
+            ),
+        ),
+        make_trial_result(
+            trial_index=1,
+            metadata=RunMetadata(
+                duration_ms=1000.0,
+                total_cost_usd=0.09,
+                input_tokens=12,
+                output_tokens=7,
+                cache_read_input_tokens=49600,
+                cache_creation_input_tokens=0,
+            ),
+        ),
+    )
+    return make_suite_result(outcomes=(make_case_outcome(trials=trials),))
+
+
 def make_eval_dir(
     directory: Path,
     *,
