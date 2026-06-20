@@ -27,4 +27,4 @@ The skill subsumes the command: slash invocation, argument passing, and a curate
 - NEVER: spawn daemons, background keep-alives, streaming-log commands, open-ended watchers, or any watcher other than the exact PR-check wait command in helpers or skill instructions ([audit])
 - ALWAYS: author user-facing functionality as a skill — the marketplace's single user-facing invocation artifact, invocable as `/<skill-name>` ([audit])
 - ALWAYS: an agent that fronts a skill is a thin wrapper holding no logic — its behavior lives entirely in the skill it invokes ([audit])
-- NEVER: author a command (`commands/*.md`) for new functionality — the skill is the user-facing authoring target and carries every command capability; command wrappers predating this decision are migration backlog, not an authoring target ([audit])
+- NEVER: author a command (`commands/*.md`) — the skill is the marketplace's sole user-facing invocation artifact and carries every command capability ([audit])
