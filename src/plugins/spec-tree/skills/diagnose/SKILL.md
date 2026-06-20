@@ -11,7 +11,7 @@ allowed-tools: Bash, Read
 
 <objective>
 
-Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI and the harness session environment, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
+Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, and the git worktree layout, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
 
 Every check is read-only. It inspects environment variables and queries `spx` with non-mutating status commands; it never changes credentials, runs workflows, writes session state, or edits files.
 
@@ -41,7 +41,7 @@ echo "id=${CLAUDE_SESSION_ID:-UNSET} claimed=${CLAUDE_WORKTREE_CLAIMED:-UNSET} p
 spx worktree status --format json
 ```
 
-`spx worktree status --format json` reports the worktree state in its `.status` field (`occupied` or `unclaimed`). Classify:
+`spx worktree status --format json` reports the worktree state in its `.status` field (`occupied`, `unclaimed`, or `stale`). A `stale` reading for the current worktree — a lingering claim from a dead session — matches no row below and falls to `unknown` per step 4. Classify:
 
 | Reading                                                                                                    | Verdict            | Bucket         | Remediation                                                                                                                                                                                                                   |
 | ---------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -75,6 +75,31 @@ Comparing the reported version against a required floor is a future extension: i
 
 </check>
 
+<check name="worktree-pool">
+
+Verifies the repository's git worktree layout and flags stale occupancy claims. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as `occupied`, `unclaimed`, or `stale` — a claim whose holding session is dead.
+
+Read the worktree set, then query each non-bare worktree's occupancy:
+
+```bash
+git worktree list
+git worktree list --porcelain |
+  awk '/^worktree /{p=substr($0,10);b=0} /^bare$/{b=1} /^$/{if(p&&!b)print p;p=""} END{if(p&&!b)print p}' |
+  while IFS= read -r wt; do spx worktree status --format json "$wt"; done
+```
+
+`git worktree list --porcelain` puts each worktree on its own `worktree <path>` line and marks the bare entry with a `bare` line; the `awk` extracts the non-bare paths verbatim (spaces preserved) and the loop queries each with single-path `spx worktree status --format json "$wt"` — the path is quoted, so a path containing spaces stays one argument, and the single-path form is the one existing skills already rely on. Each call returns a `{worktree, status}` object whose `status` is `occupied`, `unclaimed`, or `stale`; a bare path is excluded because `spx worktree status` resolves occupancy only for real worktrees. Classify:
+
+| Reading                                                                                               | Verdict           | Bucket   | Remediation                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------- | ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| A lone working tree, or a bare-repository pool with linked worktrees, and no worktree reports `stale` | **compliant**     | healthy  | None — report the layout shape and worktree count.                                                                                 |
+| A recognized layout (lone tree or bare pool), but one or more worktrees report `stale`                | **stale-claims**  | degraded | Release each stale claim — run `spx worktree release` from that worktree, or let a live session reclaim it.                        |
+| Linked worktrees attached to a non-bare repository                                                    | **non-compliant** | broken   | The layout is neither a lone working tree nor a bare-repository pool. Provision the pool so worktrees attach to a bare repository. |
+
+`spx worktree status` exposes occupancy and staleness; this check reports the worktree set, the layout shape, and any stale claim, but does not re-derive the full repository-layout compliance rules — the repository-name main checkout, the `.spx/` placement beside the git-common-dir. Auditing those is test-bearing classification that belongs in the `spx` CLI; surface it here once `spx` exposes it.
+
+</check>
+
 </checks>
 
 <report_format>
@@ -86,6 +111,7 @@ diagnose — environment report
 
   session-environment   unknown — id set, claimed=1, but spx worktree status reports unclaimed
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
+  worktree-pool         stale-claims — plugins-c holds a stale claim
 
 overall: unknown
 ```
@@ -97,6 +123,7 @@ diagnose — environment report
 
   session-environment   not-applicable — runtime has no spec-tree SessionStart hook
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
+  worktree-pool         compliant — bare-repository pool, 7 worktrees, no stale claims
 
 overall: healthy
 ```
@@ -109,7 +136,7 @@ Report every reading verbatim. Never collapse a session identifier or version st
 
 Each check is an independent named diagnostic: a reading step, a verdict table that maps each reading to a named verdict and its aggregation bucket — healthy, degraded, broken, or not-applicable, with `unknown` for readings that match no row or a command that errors — and a remediation hint per non-healthy state. A check that inspects a runtime-specific surface reports `not-applicable` where that surface is absent rather than misclassifying. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
 
-Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces, worktree-pool layout and stale-claim health, and session-store consistency across the `todo` / `doing` / `archive` queues.
+Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces, and session-store consistency across the `todo` / `doing` / `archive` queues.
 
 </extending>
 
