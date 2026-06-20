@@ -11,7 +11,7 @@ allowed-tools: Bash, Read
 
 <objective>
 
-Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, and the git worktree layout, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
+Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, the git worktree layout, and the `.spx/` session store, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
 
 Every check is read-only. It inspects environment variables and queries `spx` with non-mutating status commands; it never changes credentials, runs workflows, writes session state, or edits files.
 
@@ -100,6 +100,33 @@ git worktree list --porcelain |
 
 </check>
 
+<check name="session-store">
+
+Verifies the `.spx/` session store reads consistently and flags orphaned `doing` claims. `spx session list --json` returns `{"doing": [...], "todo": [...]}`, each session carrying its `git_ref` and `agent_session_id`; `spx session list --status archive --json` reports the archive. A `doing` session is orphaned when the agent that claimed it is gone — observable through the worktree that backs the claim: the worktree on the session's `git_ref` reporting `stale` occupancy, or no worktree existing on that branch.
+
+Read the store and the worktree occupancy backing each doing claim:
+
+```bash
+spx session list --json
+spx session list --status archive --json
+# for each doing session, substitute <git_ref> with that session's git_ref and resolve its worktree:
+git worktree list --porcelain |
+  awk -v ref="<git_ref>" '/^worktree /{p=substr($0,10)} /^branch /{if($2=="refs/heads/" ref) print p}'
+# pass the resolved path (if any) to spx — substitute it for <resolved worktree path>; no match means the branch has no worktree (absent):
+spx worktree status --format json "<resolved worktree path>"
+```
+
+The `awk` matches the doing session's `git_ref` to a worktree's branch and prints that worktree's path (spaces preserved); if it prints nothing, the branch has no worktree and the claim is `absent`. Join each `doing` session to that occupancy and classify:
+
+| Reading                                                                                                                                                  | Verdict             | Bucket   | Remediation                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The store reads and every `doing` session's backing worktree is `occupied` (holder live)                                                                 | **consistent**      | healthy  | None — report the doing / todo / archive counts.                                                                                                       |
+| The store reads but one or more `doing` sessions are orphaned — the worktree on the session's `git_ref` is `stale`, or no worktree exists on that branch | **orphaned-claims** | degraded | Release or archive each orphaned session — `spx session release <id>` returns it to the queue, or `spx session archive <id>` once its work has landed. |
+
+`spx session` exposes the store but reports no holder-liveness signal of its own, so this check infers it from the worktree-claim occupancy that backs each doing session; a reading that cannot be joined falls to `unknown` per step 4. When `.spx/` does not exist or `spx session list` errors, the check falls to `unknown` per step 4 — there is no not-applicable case for this surface, since any spec-tree environment has a session store. A future `spx session` orphan signal would replace the join.
+
+</check>
+
 </checks>
 
 <report_format>
@@ -112,6 +139,7 @@ diagnose — environment report
   session-environment   unknown — id set, claimed=1, but spx worktree status reports unclaimed
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
   worktree-pool         stale-claims — plugins-c holds a stale claim
+  session-store         consistent — 1 doing, 4 todo, 22 archived
 
 overall: unknown
 ```
@@ -124,6 +152,7 @@ diagnose — environment report
   session-environment   not-applicable — runtime has no spec-tree SessionStart hook
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
   worktree-pool         compliant — bare-repository pool, 7 worktrees, no stale claims
+  session-store         consistent — 2 doing, 3 todo, 22 archived
 
 overall: healthy
 ```
@@ -136,7 +165,7 @@ Report every reading verbatim. Never collapse a session identifier or version st
 
 Each check is an independent named diagnostic: a reading step, a verdict table that maps each reading to a named verdict and its aggregation bucket — healthy, degraded, broken, or not-applicable, with `unknown` for readings that match no row or a command that errors — and a remediation hint per non-healthy state. A check that inspects a runtime-specific surface reports `not-applicable` where that surface is absent rather than misclassifying. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
 
-Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces, and session-store consistency across the `todo` / `doing` / `archive` queues.
+Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces.
 
 </extending>
 
