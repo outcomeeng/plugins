@@ -1,9 +1,8 @@
 ---
 name: audit-rust-architecture
 description: >-
-  Rust ADR audit methodology preloaded by the rust-architecture-auditor agent.
-  Dispatch rust-architecture-auditor to audit ADRs for Rust;
-  the main conversation reaches this audit only through that agent.
+  Rust-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Rust concerns in scope.
+  Reached only through a dispatched auditor agent, never the main conversation.
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -13,18 +12,18 @@ allowed-tools: Read, Grep, Glob, Bash
 
 <dispatch_gate>
 
-This audit runs in the rust-architecture-auditor agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the rust-architecture-auditor agent instead of running this audit here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — the generic `adr-auditor` composing this skill for the Rust concerns in scope, or a generic `/audit`-family agent — isolated from the author context that produced the work under audit. This skill judges only Rust-specific concerns: dependency injection, no-mocking, and execution-level accuracy. Section structure, atemporal voice, and tag validity are owned by the composing `adr-auditor` reading the canonical template and are never judged here; a structural, voice, or tag finding from this skill is out of scope. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context.
 
 </dispatch_gate>
 
 <objective>
-Review ADRs against `/rust-standards`, `/rust-architecture-standards`, `/test` principles, atemporal voice rules, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
+Review the Rust-specific architecture concerns of an ADR — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and Rust anti-patterns — against `/rust-standards`, `/rust-architecture-standards`, `/test` principles, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
 
-**Standards are pre-loaded above.**
+**Standards are pre-loaded above.** Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` judges them from the canonical decision template.
 </objective>
 
 <context_loading>
-For spec-tree work items, load full ADR/PDR hierarchy first with `spec-tree:contextualize`, then review the target ADR against that hierarchy.
+When this skill is composed for a spec-tree work item, the dispatching `adr-auditor` has already invoked `spec-tree:contextualize` and loaded the full ADR/PDR hierarchy; review the target ADR's Rust concerns against that hierarchy.
 
 After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </context_loading>
@@ -32,36 +31,39 @@ After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/loc
 <process>
 
 1. Read repo-local Rust overlays when present (`spx/local/rust.md`, `spx/local/rust-architecture.md`, `spx/local/rust-tests.md`)
-2. Verify an ADR exists for any real architectural choice
-3. Read the ADR completely
-4. Check section structure against the authoritative ADR template
-5. Check every section for temporal language
-6. Check `## Verification` (`### Audit`) for real testability constraints and absence of level tables
-7. Check for mocking language or invalid DI claims
-8. Check consistency with ancestor ADRs/PDRs when applicable
-9. Output APPROVED or REJECTED with a concern table
+2. Read the ADR completely, focusing on the Rust-specific concerns below
+3. Check `## Verification` (`### Audit`) for real testability constraints and absence of level tables
+4. Check for mocking language or invalid DI claims
+5. Verify level accuracy when testing levels are mentioned
+6. Check Rust anti-patterns
+7. Check consistency with ancestor ADRs/PDRs when applicable
+8. Output APPROVED or REJECTED with a concern table
 
 </process>
 
 <principles_to_enforce>
 
-1. Section structure
-2. Testability in Verification
-3. Atemporal voice
-4. Mocking prohibition
-5. Level accuracy when testing levels are mentioned
-6. Anti-patterns
-7. Ancestor consistency for spec-tree work
+This skill checks only the Rust-specific concerns:
+
+1. Testability in Verification (DI seams)
+2. Mocking prohibition
+3. Level accuracy when testing levels are mentioned
+4. Rust anti-patterns
+5. Ancestor consistency for spec-tree work
+
+Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` owns them from the canonical template.
 
 </principles_to_enforce>
 
 <failure_modes>
 
-- Vague Compliance rules that cannot falsify non-conforming code
-- False positives on DI parameters that belong to a real seam
-- "Dependency injection" paired with generated mocks
-- Temporal rationale that narrates decision history
-- Phantom sections removed without moving testability constraints into `## Verification`
+**Claude approved a Compliance rule that named no falsifiable condition.** The rule used adjectives ("clean", "well-structured") with no concrete code pattern. Why it failed: an adjective-only rule passes a surface reading but cannot reject non-conforming code. How to avoid: require each Compliance rule to name a concrete code pattern, API call, or seam that triggers rejection.
+
+**Claude flagged a DI parameter as dead code.** The parameter was unused in the example but required by a trait the seam exposes. Why it failed: Claude judged the parameter from the example alone, not the seam contract. How to avoid: before flagging an unused DI parameter, check whether a trait or downstream implementation requires it.
+
+**Claude accepted "dependency injection" paired with a generated mock.** The ADR injected a `mockall` double as the controlled implementation. Why it failed: DI is the delivery mechanism, but a generated mock is still a mock. How to avoid: require DI to inject a controlled real implementation (a simple struct or function), not a mock framework double.
+
+**Claude re-judged section structure and atemporal voice.** Claude flagged a phantom section and a temporal sentence. Why it failed: those concerns belong to the composing `adr-auditor` reading the canonical template, not this skill. How to avoid: drop any structural, voice, or tag finding — this skill judges only Rust-specific concerns.
 
 </failure_modes>
 
@@ -78,9 +80,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
   "target": "<adr-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
-    { "name": "section-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "testability-in-verification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "mocking-prohibition", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "level-accuracy", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "anti-patterns", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
@@ -90,7 +90,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 }
 ```
 
-Each finding's `rule` carries the violation pattern (e.g., `phantom-section`, `temporal-voice`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach Rust sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
+Each finding's `rule` carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach Rust sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
 </output_format>
 
@@ -104,9 +104,10 @@ Read `references/example-audit.md` for a complete rejected architecture review i
 
 - `/rust-standards` was read before `/rust-architecture-standards`
 - repo-local Rust test overlays were applied to level accuracy checks
-- every ADR section was checked for temporal language
 - `## Verification` (`### Audit`) contains real DI and no-mocking constraints
-- phantom sections were rejected
+- mocking language and invalid DI claims were rejected
+- Rust anti-patterns were checked
+- section structure, atemporal voice, and tag validity were NOT judged — those are the composing adr-auditor's concern
 - the verdict is structured and binary
 
 </success_criteria>

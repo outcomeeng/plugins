@@ -417,15 +417,15 @@ Subagents can preload skills via the `skills:` frontmatter field. The full SKILL
 
 ```yaml
 ---
-name: typescript-code-auditor
-description: Audit TypeScript code for design flaws and ADR compliance
-tools: Read, Bash, Glob, Grep
+name: adr-auditor
+description: Audit an ADR for structure, atemporal voice, and tag validity
+tools: Read, Glob, Grep, Skill
 skills:
-  - audit-typescript
+  - spec-tree:audit-adr
 ---
 
 <role>
-Adversarial code auditor. Follow the injected audit methodology exactly.
+Adversarial ADR auditor. Follow the injected audit methodology exactly.
 </role>
 
 <constraints>
@@ -434,7 +434,7 @@ Adversarial code auditor. Follow the injected audit methodology exactly.
 </constraints>
 ```
 
-The `audit-typescript` skill content (phases, evidence model, verdict format) is available in the subagent's context from the start.
+The `audit-adr` skill content (audit workflow, evidence model, verdict format) is available in the subagent's context from the start.
 
 </example>
 

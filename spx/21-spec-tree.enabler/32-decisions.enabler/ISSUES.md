@@ -1,8 +1,8 @@
 # Issues: Decisions Enabler
 
-## 16-verification.enabler conformance for adr-auditor / pdr-auditor / test-evidence-auditor (deferred)
+## 16-verification.enabler conformance for adr-auditor / pdr-auditor / test-evidence-auditor (deferred — NEXT change after the collapse)
 
-`adr-auditor`, `pdr-auditor`, and `test-evidence-auditor` (agents) landed at SCOPE-MIN per `spx/21-spec-tree.enabler/32-decisions.enabler/PLAN.md` — the established read-only verdict-producer shape shared by the other spec-tree audit agents. They do NOT yet conform to `spx/21-spec-tree.enabler/16-verification.enabler`:
+The auditor collapse (PR `feat/auditor-collapse`: composition mechanism + removal of the 10 language auditor agents + doc reconciliation) shipped without this conformance, exactly as scoped here: it is an audit-skill-family migration independent of the collapse. `adr-auditor` and `test-evidence-auditor` gained `Skill` (for composition) but otherwise remain at the established read-only verdict-producer shape; `pdr-auditor` is unchanged. They do NOT yet conform to `spx/21-spec-tree.enabler/16-verification.enabler`:
 
 - The wrapper agents now declare `model: sonnet` but still use `tools: Read, Glob, Grep` (`adr-auditor`, `pdr-auditor`) or `tools: Read, Bash, Glob, Grep` (`test-evidence-auditor`); `16-verification.enabler` requires `tools: Bash, Read, Skill`.
 - No `scripts/` CLI arbiter module encodes the verification policy (schema conformance) for the wrapper agent to invoke; the verdict schema is described in skill prose.
@@ -10,6 +10,13 @@
 - The audit skills' LLM-judgment scenarios carry forward-referenced `[test]` in `pdr-auditing.md`; per `16-verification.enabler` those should be `[eval]`, and the PDR-auditing suites remain unbuilt (`32-pdr-auditing.enabler` remains in `spx/EXCLUDE`). The specific unbuilt fixture still referenced is `tests/test_pdr_auditing.scenario.l1.py` under `32-pdr-auditing.enabler`; build it as part of this migration. ADR-auditing now declares eval suites under `evals/structure/`, `evals/voice/`, and `evals/tag-validity/`, with `invalid-tag` as the bare-mechanism finding category; external execution for the new tag-validity suite is separate validation evidence, not a remaining missing-link issue.
 
 This conformance is an architecture migration that applies to the whole audit-skill family, not just these three, and is independent of the per-rule-evidence-type feature. Address it as its own change: build the `scripts/` arbiter, give the audit agents `tools: Bash, Read, Skill`, wire thread-store persistence, and build the eval suites. Until then, adr-auditor/pdr-auditor/test-evidence-auditor run as read-only verdict producers in the established pre-conformance pattern.
+
+## Audit-skill family carries two codebase-wide standards deviations (FOLLOW-UP, surfaced by skill-auditor during the collapse)
+
+The `develop:skill-auditor` pass over the collapse changeset surfaced two pre-existing patterns that span the **entire** audit-skill family — every `audit-*` SKILL.md plus the `develop` audit skills (`audit-skills`, `audit-commands`, `audit-subagents`) — and the shared `verdict.py` schema. Both predate the collapse and are out of scope for it; fixing either in one skill would diverge it from its siblings, so they are tracked as their own family-wide change:
+
+- **`<quick_start>` on validator skills.** `skill-standards` says omit `<quick_start>` for validator/gate/reference skills, yet every language code-audit skill (`audit-python`, `audit-typescript`, `audit-rust`) and the `develop` audit skills carry one — including `audit-skills` itself. Either the convention is an accepted exception for these skills or the family needs a sweep; decide once and apply uniformly.
+- **Audit verdict vocabulary.** Every audit skill states a human conclusion as `APPROVED`/`REJECT` in prose while the JSON schema (canonical `verdict.py`) uses `PASS`/`FAIL`/`UNKNOWN` for `overall` and rows, and `REJECT` doubles as a finding severity. The dual vocabulary is consistent across the family; if it is to be reconciled, it is a `verdict.py`-plus-every-audit-skill change, not a per-skill edit.
 
 ## ADR `### Audit` rules mirror implementing-spec `[test]`/`[eval]` lanes (deferred)
 
