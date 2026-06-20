@@ -7,16 +7,13 @@ This node governs the `diagnose` skill — a portable environment doctor for any
 - **Architecture — thin skill over existing `spx`/harness surfaces.** The skill orchestrates existing commands (`spx worktree status`, harness env vars, and later `spx session list` / marketplace listing) and classifies their output in its body. It ships in this repository now. Per `spx/12-shipped-scripting.adr.md`, a check that outgrows light orchestration extracts into the `spx` CLI then — not preemptively. No new `spx doctor` CLI subcommand in this slice.
 - **First slice — seed + `spx` reachability/version.** The `SessionStart`-hook session-environment check (working / identity-only / silent no-op) plus the `spx`-on-PATH check that reports the installed version verbatim. Heavier checks, including version-floor compliance, are deferred (below).
 
-## First-slice authoring steps
+## Status
 
-1. `/contextualize spx/43-develop.enabler` (the skill-authoring node) before touching skill mechanics.
-2. Author the skill with `develop:create-skills`. Keep the shipped body portable — no product-internal node paths inside it; the node references in this note are coordination only.
-   - Session-environment check: read `CLAUDE_SESSION_ID`, `CLAUDE_WORKTREE_CLAIMED`, `CLAUDE_PROJECT_DIR`, and `spx worktree status --format json`; classify per the table below. The contract is the same env-var + `spx worktree status` round-trip already proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler/tests/test_agent_environment.scenario.l3.py` — reuse it, do not re-derive.
-   - spx-reachability check: probe `spx` on PATH and report its resolved path and version verbatim; classify reachable / unreachable (and unknown when the probe errors). The version-floor comparison is deferred (below) because no minimum-version declaration ships in the plugin tree yet.
-   - Aggregate into one report: a named verdict per check plus an overall verdict, each verdict carrying a remediation hint.
-3. Write the `[eval]` evidence with `/test` for the three behavior assertions (`evals/session-environment-check/`, `evals/spx-reachability-check/`, `evals/diagnostic-report/`), and confirm the `[audit]` assertions. Remove the node from `spx/EXCLUDE` once evidence exists.
-4. Gate every changed skill with `develop:skill-auditor` (`/audit-skills`) and the node with `spec-auditor` / `test-evidence-auditor`.
-5. `just build-skills`, run the narrow validation lane, then `/merge`.
+- **Shipped (spec-tree 0.61.0):** the `diagnose` skill with its two first-slice checks (session-environment, spx-reachability), the spec node, README/template/catalog registration, and the version bump. spec-auditor APPROVED, skill-auditor PASS.
+- **Authored (this slice):** the three `[eval]` evidence suites (`evals/session-environment-check/`, `evals/spx-reachability-check/`, `evals/diagnostic-report/`), each loading cleanly through the eval harness. The node is out of `spx/EXCLUDE` and link-integrity resolves the `[eval]` links.
+- **Remaining:** the graded eval run (see `ISSUES.md` — needs CI auth or local `ANTHROPIC_API_KEY`); the `[audit]` assertions are agentic and verified at audit time; the deferred checks below.
+
+The session-environment check reuses the env-var + `spx worktree status` round-trip already proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler/tests/test_agent_environment.scenario.l3.py`.
 
 ### Session-environment classification table
 
