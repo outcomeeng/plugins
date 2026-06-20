@@ -32,3 +32,49 @@ Three small fixes against `plugins/typescript/skills/audit-typescript/SKILL.md`,
 
 - Line 77: broken reference `${CLAUDE_SKILL_DIR}/rules/` — the directory does not exist; the skill ships `references/` only. Either correct the path to `references/` or create `rules/` if a separate location is intended.
 - Line 33: `quick_start` invokes `/test` and `/test-typescript`; these are test-evidence skills, but `audit-typescript` explicitly delegates test concerns to `audit-typescript-tests` elsewhere. Remove the test-skill invocations from `quick_start`.
+
+## Skill-delegation `Skill` allowed-tools gap — PR2 (OPEN)
+
+The marketplace-wide `require_skill` → `Skill` sweep closed spec-tree/python/rust in PR #279; typescript
+is held for its own PR because two of its skills also carry pre-existing skill-auditor REJECTs that must
+be remediated in the same change (touched-file debt — once a SKILL.md is edited, its auditor must-fixes
+are in scope). A skill whose body invokes another skill needs `Skill` in `allowed-tools`, or the
+delegation requires per-call approval; the cross-plugin context and detection heuristic are in
+`spx/43-develop.enabler/ISSUES.md` §2.
+
+**The 6 skills needing `Skill` appended to `allowed-tools`** (each carries `{!% require_skill … %!}`
+and/or an `Invoke /<skill>` prerequisite):
+
+- **Clean, frontmatter-only** (`audit-*` stay read-only — append `Skill`, never `Write`/`Edit`):
+  `code-typescript`, `test-typescript`, `audit-typescript-architecture`, `audit-typescript-tests`.
+- **`architect-typescript` — append `Skill` AND remediate its pre-existing REJECTs:**
+  1. Product-path portability: the body cites `spx/CLAUDE.md` and `spx/{NN}-{slug}.adr.md` directly,
+     which do not exist in a consumer that installs the typescript plugin without spec-tree. Reword to a
+     conditional ("If this repository uses the spec-tree methodology, read its spec-tree root guide and
+     the relevant ancestor ADRs/PDRs …"). NOTE `architect-python`/`architect-rust` carry the same
+     `spx/CLAUDE.md` references but their PR #279 audits did not flag them — if the auditor flags those
+     too, that is a separate cross-language portability pass, not this PR.
+  2. Missing `<objective>` tag: `architect-python` and `architect-rust` have one; `architect-typescript`
+     does not (skill-auditor REJECT). Add a TypeScript-accurate `<objective>` after the `require_skill`
+     directive (no reviewer-gate claim unless the body actually dispatches one). An earlier session
+     drafted this objective in a now-stale git stash — re-author from scratch.
+- **`audit-typescript` — do NOT add `Skill` to enable its quick_start `/test` invocation; that
+  invocation is the defect** (see the `audit-typescript` Spot Defects entry above). Fixes:
+  1. Change quick_start step 1 "invoke `/test` … `/test-typescript`" to "Read `/test` … `/test-typescript`"
+     to match the read-only sibling pattern — `audit-python`/`audit-rust` carry NO `Skill` and say "Read".
+  2. Move the `spx/local/typescript.md` overlay check out of `<objective>` into a dedicated
+     `<repo_local_overlay>` tag (siblings use that tag), removing the quick_start duplication.
+  3. Fix the broken `${CLAUDE_SKILL_DIR}/rules/` reference (Spot Defects line 77) — the skill ships
+     `references/` only.
+  4. Verify whether `audit-typescript`'s body carries a `{!% require_skill … %!}` macro: if YES it needs
+     `Skill` regardless (append it); if its only delegation was the quick_start `/test`, the Read-rewrite
+     resolves it and NO `Skill` is added — matching audit-python/audit-rust.
+
+**Procedure:** edit src → `just build-skills` → gate EVERY changed SKILL.md with `develop:skill-auditor`
+(CI/changes-reviewer do not load skill standards; only the auditor catches voice/structure/portability)
+→ fix every must-fix on touched files → `just bump` (typescript patch) → `/merge`. Marketplace-wide
+classes the auditor will also flag are out of scope and tracked in `spx/43-develop.enabler/ISSUES.md` §2
+(the bare `…/audit/scripts/verdict.py` verdict-path citation; `<quick_start>` on validators; reference
+markdown-heading style — see also "Legacy XML Structure Cleanup" above).
+
+Surfaced by PR #279 (the spec-tree/python/rust Skill-gap sweep).

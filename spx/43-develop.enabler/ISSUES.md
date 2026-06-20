@@ -162,25 +162,33 @@ touched plugins — spec-tree (`decompose`, `refactor`, `test`, `audit-pdr`, `au
 `audit-rust-tests`, `audit-rust-architecture`). The `audit-*` skills keep their read-only tool set
 (`Skill` added, no `Write`/`Edit`).
 
-**Remaining (untouched plugins — follow-up PRs, each needs its own version bump):**
+**Remaining (untouched plugins — follow-up PRs, each its own version bump). Per-plugin playbooks live
+in each plugin's owning node; this section holds the develop half and the shared heuristic.**
 
-- **typescript** (6: `architect-typescript`, `code-typescript`, `test-typescript`,
-  `audit-typescript`, `audit-typescript-architecture`, `audit-typescript-tests`). Held for the
-  typescript skill-quality PR because `architect-typescript` and `audit-typescript` also carry
-  pre-existing skill-auditor REJECTs (a product-path portability break and a `<repo_local_overlay>`
-  placement defect) that must be remediated in the same change. NOTE: `audit-typescript`'s
-  quick_start `/test` invocation is a defect to **remove** (see the `audit-typescript` Spot Defects
-  entry in `spx/43-typescript.enabler/ISSUES.md`), not a delegation to enable with `Skill`.
-- **develop** (3: `audit-commands`, `audit-skills`, `audit-subagents`) and **prose** (3:
-  `audit-prose`, `audit-internal-docs`, `write-internal-docs`). Clean `Skill`-append; a dedicated
-  develop+prose PR.
+- **develop — PR3 (develop half), clean `Skill`-append.** Three skills carry the
+  `{!% require_skill … %!}` macro while omitting `Skill` from `allowed-tools`: `audit-commands`,
+  `audit-skills`, `audit-subagents` (current `allowed-tools: Read, Grep, Glob, Bash` — append `Skill`
+  only; they are read-only audit skills, never add `Write`/`Edit`). `agent-prompt-standards` is a
+  reference skill ("invoke X **instead of me**") and is NOT a gap. Ships in ONE PR with the prose half
+  (`spx/43-prose.enabler/ISSUES.md`); each plugin gets its own patch bump. Gate every changed SKILL.md
+  with `develop:skill-auditor` before shipping (the changes-reviewer and CI `spec-tree-review` do not
+  load skill standards), `just build-skills`, `just bump`, then `/merge`.
+- **typescript — PR2, entangled.** Full playbook in `spx/43-typescript.enabler/ISSUES.md`: 6 skills
+  need `Skill`, and `architect-typescript` + `audit-typescript` carry pre-existing skill-auditor
+  REJECTs to remediate in the same change; `audit-typescript`'s quick_start `/test` invocation is a
+  defect to **remove**, not enable with `Skill`.
+- **prose — PR3 (prose half).** Playbook in `spx/43-prose.enabler/ISSUES.md`: `audit-prose`,
+  `audit-internal-docs`, `write-internal-docs` need `Skill`; clean append.
 
-**Reason for the out-of-scope split:** each remaining plugin is an independent distribution artifact
-requiring its own version bump, and the typescript subset is entangled with pre-existing body-level
-REJECTs that a frontmatter `allowed-tools` sweep should not carry. The require_skill axis was
-surfaced by the PR #279 CI and local `changes-reviewer` gates; the original sweep missed it because
-the discovery heuristic matched only lowercase `invoke /` prose, not the `require_skill` macro or
-capitalized `Invoke /`.
+**Detection heuristic (the lesson — for any future allowed-tools sweep).** A skill needs `Skill` in
+`allowed-tools` iff its body operationally invokes another skill. The two signals are the
+`{!% require_skill … %!}` macro (renders at build to "Invoke the `<skill>` skill before proceeding")
+and a `Invoke /<skill>` / `invoke /<skill>` prerequisite in **either** case. The PR #279 sweep
+initially missed ~14 skills because the discovery grep matched only lowercase `invoke /`. Enumerate a
+plugin's gaps with `grep -liE 'require_skill|invoke`?/[a-z]' src/plugins/<plugin>/skills/*/SKILL.md`,
+then DROP reference/standards skills (`*-standards`,`agent-prompt-standards`,`prose-standards`):
+they tell the reader to "invoke X **instead of** me" and do not themselves delegate, and skills with
+an **empty**`allowed-tools`are unrestricted (no gap). The`audit-*`read-only constraint permits`Skill`(it loads context, it is not`Write`/`Edit`).
 
 **Pre-existing skill-body quality debt surfaced by the `develop:skill-auditor` gate during the PR #279
 sweep (separate skill-quality pass — the `allowed-tools` change itself is auditor-confirmed clean on
