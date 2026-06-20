@@ -9,27 +9,14 @@ This node governs the `diagnose` skill — a portable environment doctor for any
 
 ## Status
 
-- **Shipped (spec-tree 0.61.0):** the `diagnose` skill with its two first-slice checks (session-environment, spx-reachability), the spec node, README/template/catalog registration, and the version bump. spec-auditor APPROVED, skill-auditor PASS.
-- **Authored (this slice):** the three `[eval]` evidence suites (`evals/session-environment-check/`, `evals/spx-reachability-check/`, `evals/diagnostic-report/`), each loading cleanly through the eval harness. The node is out of `spx/EXCLUDE` and link-integrity resolves the `[eval]` links.
-- **Remaining:** the graded eval run (see `ISSUES.md` — needs CI auth or local `ANTHROPIC_API_KEY`); the `[audit]` assertions are agentic and verified at audit time; the deferred checks below.
+- **Shipped:** the `diagnose` skill with four checks — session-environment and spx-reachability (spec-tree 0.61.0), worktree-pool (0.61.2), and session-store (this slice) — the spec node, README/template/catalog registration, and the version bumps. Each check carries a `[eval]` suite under `evals/` (test-evidence-auditor APPROVED); the node is out of `spx/EXCLUDE`. spec-auditor and skill-auditor pass on every slice.
+- **Remaining:** the graded eval run (see `ISSUES.md` — needs CI auth or local `ANTHROPIC_API_KEY`; not gated by `just check`); the `[audit]` assertions are agentic and verified at audit time; the deferred checks below.
 
-The session-environment check reuses the env-var + `spx worktree status` round-trip already proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler/tests/test_agent_environment.scenario.l3.py`.
-
-### Session-environment classification table
-
-| Reading                                               | Verdict                                                                                                                                  |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`=UUID, `claimed=1`, `proj` set, status `occupied` | **working** — the hook reached spx, which wrote identity + project dirs and claimed the worktree; spx recognizes the claim               |
-| `id`=UUID, `claimed=UNSET`, status `unclaimed`        | **identity-only** — an older, pre-delegation hook is active for this session, not the spx-delegating hook                                |
-| `id=UNSET`, status `unclaimed`                        | **silent no-op** — `spx` not on the hook's PATH, or `SPECTREE_SESSION_HOOK_DISABLED=1` is set; fail-open, but session identity is absent |
-
-The strongest single signal is `spx worktree status` = `occupied` together with `CLAUDE_WORKTREE_CLAIMED=1`: that pair is reachable only if the hook reached spx, spx claimed the worktree, and the claim's controlling process (the live session) is alive.
+The session-environment check reuses the env-var + `spx worktree status` round-trip proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler`.
 
 ## Deferred checks (follow-up slices)
 
-Each grows the report by extension; the heavier ones are the candidates `spx/12-shipped-scripting.adr.md` would push into the `spx` CLI once they prove themselves.
+Each grows the report by extension; the heavier ones are candidates `spx/12-shipped-scripting.adr.md` would push into the `spx` CLI once they prove themselves.
 
 - **Marketplace install state** — are the expected plugins installed at the expected versions on both the Claude and Codex surfaces.
-- **Worktree-pool health** — is the checkout a compliant single working tree or bare-repository pool, and are any worktree claims stale.
-- **Session-store sanity** — `.spx/sessions/` `todo`/`doing`/`archive` consistency, and orphaned `doing` claims whose holding process is dead.
-- **spx version-floor compliance** — judge the reported `spx` version against a required minimum. Needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today); the first-slice spx-reachability check reports the version verbatim rather than judging it against a floor. Deciding the declaration mechanism (e.g. a `minimumSpxVersion` manifest field and how the floor value is sourced) is a prerequisite and may warrant its own decision record.
+- **spx version-floor compliance** — judge the reported `spx` version against a required minimum. Needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today); the spx-reachability check reports the version verbatim rather than judging it against a floor. Deciding the declaration mechanism (e.g. a `minimumSpxVersion` manifest field and how the floor value is sourced) is a prerequisite and may warrant its own decision record.
