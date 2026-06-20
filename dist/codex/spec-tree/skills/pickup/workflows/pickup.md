@@ -44,7 +44,7 @@ Then check it out per the checkout kind:
 
 **Foreign-pool guardrail.** Operate only inside a pool Claude participates in. A worktree in a `.spx/` pool Claude does not participate in — another product's checkout — is off-limits regardless of how free its git state looks; treat it as occupied. The claim protocol coordinates only Claude sessions that share one pool.
 
-When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this step and read the spec tree from there.
+When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this checkout step. Do not treat the current checkout as authoritative product truth yet: a detached worktree parked at a bare SHA, or a stale default-branch checkout, can sit behind `origin/<default>`. The `/contextualize` Step SYNC that runs before any spec is read advances a clean behind-base detached checkout to the base tip, so read the spec tree only from that advanced state, never from a possibly-stale parked commit.
 
 **Step 5: Inspect anchored nodes**
 

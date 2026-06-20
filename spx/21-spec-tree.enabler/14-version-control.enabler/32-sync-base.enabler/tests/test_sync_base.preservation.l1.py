@@ -9,6 +9,10 @@ Covers the readiness-preservation Scenario and Compliance assertions in
   overlap, so a caller does not reuse a prior local review.
 - An already-current branch reports an empty base delta and an unchanged branch
   patch identity.
+- A clean detached HEAD advanced to the base tip emits a proof reporting the base
+  advance and an unchanged branch patch identity.
+- A clean detached HEAD already at the base tip emits a proof reporting an empty
+  base delta and an unchanged branch patch identity.
 - The proof carries a schema version, full unabbreviated OIDs, and no
   project-specific validation-lane name.
 
@@ -23,6 +27,8 @@ import pathlib
 from outcomeeng_testing.harnesses.sync_base import (
     build_behind_base_repo,
     build_current_repo,
+    build_detached_behind_base_repo,
+    build_detached_current_repo,
     build_overlapping_base_repo,
     build_rename_base_repo,
     fetch_base,
@@ -114,6 +120,48 @@ def test_base_delta_accurate_when_caller_prefetched(
     assert handle.base_file in proof.base_delta_paths
     assert proof.path_overlap == []
     assert proof.branch_diff_unchanged is True
+
+
+def test_advanced_detached_head_emits_preservation_proof(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A clean detached worktree advanced to the base tip emits the same proof a
+    # branch rebase does: the base advance is reported, and the parked worktree
+    # carries no branch work of its own, so the patch identity is unchanged and
+    # all prior readiness is preserved.
+    module = load_sync_base_module()
+    handle = build_detached_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.REBASED
+    assert proof is not None
+    assert handle.base_file is not None
+    assert handle.base_file in proof.base_delta_paths
+    assert proof.path_overlap == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+
+
+def test_already_current_detached_head_emits_preservation_proof(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A detached worktree already at the base tip emits a proof with an empty
+    # base delta and an unchanged branch patch identity — no advance happened and
+    # nothing the caller's readiness depends on moved.
+    module = load_sync_base_module()
+    handle = build_detached_current_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+    proof = result.preservation
+
+    assert result.status is module.SyncStatus.ALREADY_CURRENT
+    assert proof is not None
+    assert proof.base_delta_paths == []
+    assert proof.branch_patch_changed is False
+    assert proof.branch_diff_unchanged is True
+    assert proof.old_head_oid == proof.new_head_oid
 
 
 def test_base_rename_surfaces_both_paths_in_base_delta(
