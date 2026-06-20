@@ -1,5 +1,5 @@
 ---
-template_version: "0.19.0"
+template_version: "0.19.1"
 template_source: spec-tree
 ---
 
@@ -169,6 +169,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
 | "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
+| "Diagnose the spx environment"             | `/diagnose`      | —                       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 

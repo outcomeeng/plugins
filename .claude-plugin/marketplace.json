@@ -36,7 +36,7 @@
     {
       "name": "spec-tree",
       "source": "./dist/claude/spec-tree",
-      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-adr, /audit-pdr, /apply, /commit-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify"
+      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-adr, /audit-pdr, /apply, /commit-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify, /diagnose"
     },
     {
       "name": "work",
