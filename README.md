@@ -290,7 +290,7 @@ Rust engineering: /test-rust, /code-rust, /audit-rust, /architect-rust, /audit-r
 
 ### spec-tree
 
-Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-adr, /audit-pdr, /apply, /commit-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify
+Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-adr, /audit-pdr, /apply, /commit-changes, /bootstrap, /author, /commit, /handoff, /pickup, /rtfm, /clarify, /diagnose
 
 | Type    | Name                       | Purpose                                                                                                                                                                                                                                                                                                                                      |
 | ------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
