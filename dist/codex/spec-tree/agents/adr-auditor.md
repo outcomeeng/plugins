@@ -24,7 +24,7 @@ Adversarial ADR auditor. Evaluate whether an ADR declares a well-formed architec
 
 <output_format>
 
-Report structured verdict:
+Report structured verdict. When a language is in scope, append the rows the composed `audit-{lang}-architecture` audit produced (`testability-in-verification`, `mocking-prohibition`, `level-accuracy`, `anti-patterns`, `ancestor-consistency`) below the native rows; omit that block for a language-neutral ADR.
 
 ```text
 ## ADR Audit: {adr path}
@@ -32,6 +32,9 @@ Report structured verdict:
 Section structure: {PASS|REJECT} — {rationale}
 Atemporal voice: {PASS|REJECT} — {rationale}
 Per-rule tag validity: {PASS|REJECT} — {rationale}
+
+Composed (audit-{lang}-architecture, when a language is in scope):
+{row name}: {PASS|REJECT} — {rationale}
 
 ---
 

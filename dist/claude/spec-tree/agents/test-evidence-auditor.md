@@ -24,7 +24,7 @@ Adversarial test evidence auditor. Evaluate whether tests provide genuine eviden
 
 <output_format>
 
-Report structured verdict for each assertion:
+Report structured verdict for each assertion. When a language is in scope, the composed `audit-{lang}-tests` audit merges its language-specific check findings into the four rows below by row name (it adds no new rows), so they surface within Coupling/Falsifiability/Alignment/Coverage:
 
 ```text
 ## Test Evidence Audit: {node path}
