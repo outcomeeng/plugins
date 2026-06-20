@@ -78,14 +78,16 @@ Comparing the reported version against a required floor is a future extension: i
 
 Verifies the repository's git worktree layout and flags stale occupancy claims. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as `occupied`, `unclaimed`, or `stale` — a claim whose holding session is dead.
 
-Read the worktree set and each worktree's occupancy:
+Read the worktree set, then query each non-bare worktree's occupancy:
 
 ```bash
-git worktree list --porcelain
-spx worktree status $(git worktree list --porcelain | sed -n 's/^worktree //p')
+git worktree list
+git worktree list --porcelain |
+  awk '/^worktree /{p=substr($0,10);b=0} /^bare$/{b=1} /^$/{if(p&&!b)print p;p=""} END{if(p&&!b)print p}' |
+  while IFS= read -r wt; do spx worktree status --format json "$wt"; done
 ```
 
-`git worktree list --porcelain` emits a `bare` line when the common dir is bare and a `worktree <path>` line per worktree; `spx worktree status` with those paths reports one occupancy line per worktree (`occupied`, `unclaimed`, or `stale`). Classify:
+`git worktree list --porcelain` puts each worktree on its own `worktree <path>` line and marks the bare entry with a `bare` line; the `awk` extracts the non-bare paths verbatim (spaces preserved) and the loop queries each with single-path `spx worktree status --format json "$wt"` — the path is quoted, so a path containing spaces stays one argument, and the single-path form is the one existing skills already rely on. Each call returns a `{worktree, status}` object whose `status` is `occupied`, `unclaimed`, or `stale`; a bare path is excluded because `spx worktree status` resolves occupancy only for real worktrees. Classify:
 
 | Reading                                                                                               | Verdict           | Bucket   | Remediation                                                                                                                        |
 | ----------------------------------------------------------------------------------------------------- | ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
