@@ -5,7 +5,7 @@ description: >-
   skill-auditor to audit SKILL.md files; the main conversation reaches this audit
   only through that agent.
 argument-hint: <skill-path>
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 {!% require_skill 'develop:skill-standards' %!}

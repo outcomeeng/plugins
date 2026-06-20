@@ -5,7 +5,7 @@ description: >-
   Dispatch subagent-auditor to audit subagent configuration files; the main
   conversation reaches this audit only through that agent.
 argument-hint: <subagent-path>
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -283,7 +283,7 @@ Before completing the audit, verify:
 <final_step>
 After presenting findings, offer:
 
-1. Implement all fixes automatically
+1. Return the prioritized findings to the caller for implementation
 2. Show detailed examples for specific issues
 3. Focus on critical issues only
 4. Other
