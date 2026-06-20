@@ -3,7 +3,7 @@ name: audit-python
 description: >-
   Python implementation-code audit methodology — design flaws and ADR compliance — composed by a generic auditor agent for the Python files in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
-allowed-tools: Read, Bash, Glob, Grep
+allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 {!% require_skill 'python:python-standards' %!}

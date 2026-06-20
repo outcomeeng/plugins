@@ -145,3 +145,54 @@ changed targets; the deterministic PCRE `git grep` confirms the named-subject ax
 
 Surfaced 2026-06-12 while correcting a named-subject regression introduced in PR #169 and fixed in
 PR #171 (`understand` skill).
+
+## 2. Skill-delegation `Skill` allowed-tools gap — language + develop + prose plugins (OPEN)
+
+A skill whose body invokes another skill needs `Skill` in `allowed-tools`, or the delegation
+requires per-call approval. Two body patterns delegate: the `{!% require_skill … %!}` macro (which
+renders to "Invoke the `<skill>` skill before proceeding") and an explicit `Invoke /<skill>`
+prerequisite (for example `/understand`, `/contextualize`, the `/test` family). This is the same
+requirement the PR #275 composing auditors already satisfy (entry 1 above) — generalized to every
+delegating skill, not only `audit-adr` / `audit-tests` / `audit`.
+
+**Closed (PR #279, branch `fix/skill-delegation-allowed-tools`):** every affected skill in the three
+touched plugins — spec-tree (`decompose`, `refactor`, `test`, `audit-pdr`, `audit-specs`), python
+(`architect-python`, `code-python`, `test-python`, `audit-python`, `audit-python-tests`,
+`audit-python-architecture`), and rust (`architect-rust`, `code-rust`, `test-rust`, `audit-rust`,
+`audit-rust-tests`, `audit-rust-architecture`). The `audit-*` skills keep their read-only tool set
+(`Skill` added, no `Write`/`Edit`).
+
+**Remaining (untouched plugins — follow-up PRs, each needs its own version bump):**
+
+- **typescript** (6: `architect-typescript`, `code-typescript`, `test-typescript`,
+  `audit-typescript`, `audit-typescript-architecture`, `audit-typescript-tests`). Held for the
+  typescript skill-quality PR because `architect-typescript` and `audit-typescript` also carry
+  pre-existing skill-auditor REJECTs (a product-path portability break and a `<repo_local_overlay>`
+  placement defect) that must be remediated in the same change. NOTE: `audit-typescript`'s
+  quick_start `/test` invocation is a defect to **remove** (see the `audit-typescript` Spot Defects
+  entry in `spx/43-typescript.enabler/ISSUES.md`), not a delegation to enable with `Skill`.
+- **develop** (3: `audit-commands`, `audit-skills`, `audit-subagents`) and **prose** (3:
+  `audit-prose`, `audit-internal-docs`, `write-internal-docs`). Clean `Skill`-append; a dedicated
+  develop+prose PR.
+
+**Reason for the out-of-scope split:** each remaining plugin is an independent distribution artifact
+requiring its own version bump, and the typescript subset is entangled with pre-existing body-level
+REJECTs that a frontmatter `allowed-tools` sweep should not carry. The require_skill axis was
+surfaced by the PR #279 CI and local `changes-reviewer` gates; the original sweep missed it because
+the discovery heuristic matched only lowercase `invoke /` prose, not the `require_skill` macro or
+capitalized `Invoke /`.
+
+**Pre-existing skill-body quality debt surfaced by the `develop:skill-auditor` gate during the PR #279
+sweep (separate skill-quality pass — the `allowed-tools` change itself is auditor-confirmed clean on
+all 17 touched skills):** the gate, run per the AGENTS.md skill-auditor requirement on every edited
+SKILL.md, flagged pre-existing body defects unrelated to the one-line `allowed-tools` change. The two
+unambiguous structural bugs were fixed in PR #279 as touched-file debt — `rust/code-rust`'s
+`<testing_methodology>` / `</test_methodology>` tag mismatch, and the orphaned (uncited)
+`python/audit-python-tests/references/python-test-audit-examples.md` (now cited via `<reference_guides>`).
+The remaining items are the same already-tracked marketplace classes (entry 1 above) and belong to
+their dedicated passes, not this frontmatter sweep: the bare `plugins/spec-tree/skills/audit/scripts/verdict.py`
+path citation across the audit skills (verdict-toolchain portability); `<quick_start>` carried by the
+complex code/audit validators; and now also `rust/code-rust`'s duplicate `<reference_loading>` +
+`<repo_local_overlay>` blocks (one is redundant — the two auditor runs disagreed on which to keep, so
+it is a content judgment for the skill-quality pass) and `python/audit-python-tests`'s reference file
+using markdown headings rather than pure-XML structure.

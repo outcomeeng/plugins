@@ -2,7 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>

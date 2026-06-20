@@ -3,7 +3,7 @@ name: code-python
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for Python.
   NEVER write or fix Python implementation without this skill.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

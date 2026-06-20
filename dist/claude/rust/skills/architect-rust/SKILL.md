@@ -1,7 +1,7 @@
 ---
 name: architect-rust
 description: ALWAYS invoke this skill when writing ADRs for Rust.
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

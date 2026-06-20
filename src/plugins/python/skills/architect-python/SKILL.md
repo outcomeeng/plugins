@@ -3,7 +3,7 @@ name: architect-python
 description: >-
   ALWAYS invoke this skill when writing ADRs for Python.
   NEVER author a Python ADR without this skill.
-allowed-tools: Read, Write, Glob, Grep
+allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
 {!% require_skill 'python:python-architecture-standards' %!}

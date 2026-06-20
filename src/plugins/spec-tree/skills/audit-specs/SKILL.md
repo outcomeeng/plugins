@@ -4,7 +4,7 @@ description: >-
   Spec-node audit methodology preloaded by the spec-auditor agent. Dispatch
   spec-auditor to audit a spec node; the main conversation reaches this audit
   only through that agent.
-allowed-tools: Read, Grep, Glob, Bash
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
