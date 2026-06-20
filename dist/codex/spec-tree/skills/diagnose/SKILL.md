@@ -10,7 +10,7 @@ description: >-
 
 <objective>
 
-Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. This is the self-serve form of an interrogation a user would otherwise recall and type by hand: it runs a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, and the install state — classifies each, and aggregates one report.
+Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI and the harness session environment, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
 
 Every check is read-only. It inspects environment variables and queries `spx` with non-mutating status commands; it never changes credentials, runs workflows, writes session state, or edits files.
 
@@ -21,7 +21,7 @@ Every check is read-only. It inspects environment variables and queries `spx` wi
 1. Run each check in `<checks>`. Capture each reading verbatim — session identifiers, version strings, and `spx` status fields are reported exactly as their source emits them, NEVER paraphrased or rounded.
 2. Classify each check's readings against its verdict table. A check yields exactly one verdict: a healthy state, a degraded state, or a broken state, each paired with the matching remediation hint.
 3. Aggregate into one report per `<report_format>`: one line per check plus an overall verdict.
-4. When a reading is ambiguous or a command errors, report the check as `unknown` with the captured error rather than forcing a verdict — a misread check is worse than an honest gap.
+4. When a reading is ambiguous, matches no verdict row (an inconsistent partial state), or a command errors, report the check as `unknown` with the captured readings rather than forcing a verdict — a misread check is worse than an honest gap.
 
 </workflow>
 
@@ -74,15 +74,15 @@ When the declared minimum cannot be determined in the current environment, repor
 
 <report_format>
 
-Emit one report. Each check is one line: its name, its verdict, and — when not healthy — the remediation hint. Close with an overall verdict: **healthy** when every check is in its healthy state, **degraded** when at least one check is in a degraded-but-non-fatal state and none is broken, **broken** when any check is in a broken state.
+Emit one report. Each check is one line: its name, its verdict, and a trailing detail — the remediation hint when the verdict is not healthy, or the captured readings or error when the verdict is `unknown`. Close with an overall verdict, in precedence order: **broken** when any check is broken, else **unknown** when any check is `unknown`, else **degraded** when any check is in a degraded-but-non-fatal state, else **healthy** when every check is healthy.
 
 ```text
 diagnose — environment report
 
-  session-environment   working
+  session-environment   unknown — id set, claimed=1, but spx worktree status reports unclaimed
   spx-reachability      reachable-below-floor — upgrade spx to at least the declared minimum
 
-overall: degraded
+overall: unknown
 ```
 
 Report every reading verbatim. Never collapse a session identifier or version string to a summary; downstream comparison against the source depends on the literal value.
@@ -91,7 +91,7 @@ Report every reading verbatim. Never collapse a session identifier or version st
 
 <extending>
 
-Each check is an independent named diagnostic: a reading step, a verdict table mapping readings to a healthy / degraded / broken state, and a remediation hint per non-healthy state. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
+Each check is an independent named diagnostic: a reading step, a verdict table mapping readings to a healthy / degraded / broken state (with `unknown` for readings that match no row or a command that errors), and a remediation hint per non-healthy state. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
 
 Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces, worktree-pool layout and stale-claim health, and session-store consistency across the `todo` / `doing` / `archive` queues.
 
@@ -101,7 +101,7 @@ Candidate checks to add by extension: marketplace install state across the Claud
 
 - Every check in `<checks>` ran and reported a single verdict or an honest `unknown` with the captured error.
 - Each reading appears verbatim in the report.
-- Each non-healthy verdict carries its remediation hint.
-- The report closes with an overall verdict derived from the per-check verdicts.
+- Each non-healthy verdict carries its remediation hint, and each `unknown` verdict carries the captured readings or error.
+- The report closes with an overall verdict derived from the per-check verdicts in precedence order — broken, else unknown, else degraded, else healthy.
 
 </success_criteria>
