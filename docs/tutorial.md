@@ -177,10 +177,10 @@ Without arguments, `/apply` determines work from conversation context or falls b
 
 ## 7. Commit changes
 
-Use `/commit` for Conventional Commits with selective staging:
+Use `/commit-changes` for Conventional Commits with selective staging:
 
 ```text
-> /commit
+> /commit-changes
 ```
 
 The skill:
@@ -193,7 +193,7 @@ The skill:
 
 Multiple concerns = multiple commits. The skill never uses `git add .`.
 
-<!-- TODO: Add screenshot of /commit in action -->
+<!-- TODO: Add screenshot of /commit-changes in action -->
 
 ## 8. Hand off and pick up
 
@@ -237,7 +237,7 @@ The skill analyzes impact (broken links, ADR/PDR scope changes), applies changes
 If you catch yourself writing code without specs, debugging without tests, or skipping the methodology:
 
 ```text
-> /rtfm
+> /refocus
 ```
 
 This stops the current ad hoc work and restarts the proper TDD flow from Step 1. It's a corrective command — use it when you realize you're off track.
@@ -253,7 +253,7 @@ This stops the current ad hoc work and restarts the proper TDD flow from Step 1.
 | **Align**     | Check consistency and quality                     | `/align`                         |
 | **Test**      | Write tests from spec assertions                  | `/test`                          |
 | **Implement** | TDD flow: architect → test → code                 | `/apply`                         |
-| **Commit**    | Selective staging, Conventional Commits           | `/commit`                        |
+| **Commit**    | Selective staging, Conventional Commits           | `/commit-changes`                |
 | **Hand off**  | Save context for next session                     | `/handoff` → `/pickup`           |
 | **Refactor**  | Restructure the tree                              | `/refactor`                      |
-| **Correct**   | Stop ad hoc work, restart methodology             | `/rtfm`                          |
+| **Correct**   | Stop ad hoc work, restart methodology             | `/refocus`                       |

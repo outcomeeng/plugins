@@ -63,7 +63,7 @@ For each node in the `<nodes>` section:
 Show the `<persisted>` section:
 
 - What was committed (trust these are in place)
-- What is uncommitted (may need `/commit` before continuing)
+- What is uncommitted (may need `/commit-changes` before continuing)
 - What insights were written to CLAUDE.md/memory/skills
 - What coordination notes were written and where
 
