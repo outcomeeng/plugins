@@ -27,6 +27,9 @@ Exposes:
   with no base advance, so synchronization reports it already current.
 - ``build_detached_dirty_behind_base_repo``. A behind-base detached worktree
   with an uncommitted tracked edit, so synchronization reports ``dirty_tree``.
+- ``build_detached_untracked_only_behind_base_repo``. A behind-base detached
+  worktree whose only change is a non-colliding untracked file, so
+  synchronization advances it rather than reporting ``dirty_tree``.
 - ``build_detached_no_remote_repo``. A detached worktree with no ``origin``
   remote, so the base cannot be fetched and synchronization fails.
 
@@ -575,6 +578,22 @@ def build_detached_dirty_behind_base_repo(root: pathlib.Path) -> DetachedRepo:
         dirty_file=INITIAL_FILE,
         dirty_marker=DIRTY_MARKER,
     )
+
+
+def build_detached_untracked_only_behind_base_repo(
+    root: pathlib.Path,
+) -> DetachedRepo:
+    """Build a behind-base detached worktree whose only change is an untracked file.
+
+    Same parked-behind state as ``build_detached_behind_base_repo``, plus an
+    untracked file that does not collide with the base advance. An untracked file
+    does not block the advance, so sync-base advances the worktree rather than
+    reporting ``dirty_tree`` — the detached analogue of the branch untracked-only
+    case, proving the advance's ``--untracked-files=no`` scope is necessary.
+    """
+    behind = build_detached_behind_base_repo(root)
+    (behind.repo / UNTRACKED_FILE).write_text("scratch\n", encoding="utf-8")
+    return behind
 
 
 def build_detached_no_remote_repo(root: pathlib.Path) -> DetachedRepo:

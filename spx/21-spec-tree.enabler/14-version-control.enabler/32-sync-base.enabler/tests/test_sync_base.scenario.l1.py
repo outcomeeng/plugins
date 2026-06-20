@@ -20,6 +20,8 @@ Covers the Scenario assertions in ``../sync-base.md``:
 - A diverged detached HEAD — carrying commits the base lacks — reports a hard git
   failure rather than advancing and orphaning those commits.
 - A detached HEAD with no resolvable remote base reports a hard git failure.
+- A clean detached HEAD behind the base whose only change is an untracked file is
+  advanced rather than reported ``dirty_tree``.
 
 These are ``l1`` — direct in-process calls into ``sync_base`` against real git
 repositories (a bare origin and working clones) seeded under ``tmp_path``; git
@@ -41,6 +43,7 @@ from outcomeeng_testing.harnesses.sync_base import (
     build_detached_current_repo,
     build_detached_dirty_behind_base_repo,
     build_detached_no_remote_repo,
+    build_detached_untracked_only_behind_base_repo,
     build_dirty_behind_base_repo,
     build_untracked_only_behind_base_repo,
     detach_head,
@@ -230,6 +233,27 @@ def test_dirty_behind_detached_head_reports_dirty_tree_without_advancing(
     assert handle.dirty_marker in (handle.repo / handle.dirty_file).read_text(
         encoding="utf-8"
     )
+
+
+def test_detached_untracked_only_behind_base_is_advanced(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A clean detached worktree behind the base carrying only an untracked file is
+    # advanced, not reported dirty_tree: an untracked file does not block the
+    # advance, the detached analogue of the branch untracked-only case. Proves the
+    # advance's --untracked-files=no scope — without it the file would read as
+    # dirty and force dirty_tree.
+    module = load_sync_base_module()
+    handle = build_detached_untracked_only_behind_base_repo(_root(tmp_path))
+
+    result = module.sync_base(handle.repo)
+
+    assert result.status is module.SyncStatus.REBASED
+    assert result.action_token is None
+    # The worktree advanced to the fetched base tip, base advance now present.
+    assert head_oid(handle.repo) == resolve_ref(handle.repo, handle.remote_ref)
+    assert handle.base_file is not None
+    assert (handle.repo / handle.base_file).exists()
 
 
 def test_detached_head_with_no_remote_reports_hard_git_failure(
