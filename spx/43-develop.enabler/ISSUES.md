@@ -1,5 +1,23 @@
 # Issues: Develop Plugin
 
+## 0. Skill `<objective>` is an output statement, not a behavioral claim — marketplace-wide reframe (OPEN; supersedes the §1 "the skill" voice question)
+
+A skill `<objective>` states the observable **output** the skill produces — its shape — not an actor's action ("The skill produces X" / "Claude produces X"), and not a behavioral claim. Because an objective is not a behavioral claim, the `agent-prompt-standards` `<voice>` rule (which governs behavioral claims) never governed it — the "the skill vs Claude" debate at the end of §1 was a category error, not a conflict. The output framing reuses the methodology's existing **output / outcome / impact** vocabulary (`spec-tree/skills/understand/references/node-types.md`: "Assertions specify the output — not the outcome or impact"); it does not coin "program logic model" as a term. `<success_criteria>` proves the output: objective = the output, success_criteria = how it is proven.
+
+**Settled decisions:**
+
+- Language plugins ship only alongside spec-tree — the node specs scope them to "projects using spec-tree" — so the **"architect-\* / code-\* product-path portability" class is CLOSED as mis-framed**: the `spx/` references are correct and there is no standalone-consumer scenario to conditionalize. (Also closed in `spx/43-typescript.enabler/ISSUES.md`.)
+- The reframe is marketplace-wide (every skill `<objective>`), codified in `skill-standards` + `agent-prompt-standards` FIRST, then swept per-plugin.
+- `architect-python`'s in-skill reviewer phase (Phase 5 + `<authority_model>` + the output_format reviewer-status) is dropped to match `architect-typescript`: `/apply` Step 4 (`gate="true"`) owns the architecture audit for every language, so removing it opens no gap. Folded into python's objective sweep.
+
+**Plan of record:**
+
+1. PR A (branch `work/architect-code-path-portability`, repurposed): amend `skill-standards` + `agent-prompt-standards` with the output-objective rule, the objective-is-not-a-behavioral-claim boundary, and the objective↔success_criteria division; make `develop:skill-auditor` enforce it; close the portability class here + in the typescript tracker; gate, build, bump develop, `/merge`.
+2. PRs B+: per-plugin objective sweeps to output shape, one plugin per PR with its own version bump.
+3. Separate session: Class 1 (verdict-path) + Class 4 (quick_start), reconciled with the run-journal migration (session `2026-06-21_10-07-44`) and the live structural-conformance session (`2026-06-16_12-47-44`).
+
+**Active discussion:** the exact formulation of `<objective>`, `<success_criteria>`, and the other standing sections **for the auditor skills specifically** — verdict-output section naming (`output_format` vs `verdict_format`), workflow-section naming (`process` / `audit_workflow` / `critical_workflow` / `workflow`), and `failure_modes` / `quick_start` / `dispatch_gate` consistency across the 18 auditors — is under discussion before authoring.
+
 ## 1. Named-subject convention sweep — prose swept; scoped residuals remain (OPEN)
 
 The `develop` plugin's `agent-prompt-standards` `<voice>` rule requires authored prompt
