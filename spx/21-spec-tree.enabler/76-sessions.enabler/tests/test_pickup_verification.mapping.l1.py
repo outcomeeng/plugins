@@ -229,10 +229,14 @@ def test_spec_entry_emits_both_path_and_node_status(tmp_path: pathlib.Path) -> N
 
         verdicts = module.verify(session, repo, runner)
 
-        path_verdict = _only(verdicts, ClaimKind.INJECTED_PATH)
-        node_verdict = _only(verdicts, ClaimKind.NODE_STATUS)
-        assert path_verdict.subject == "spx/21-x.enabler/x.md"
-        assert node_verdict.subject == "spx/21-x.enabler"
+        path_verdicts = [v for v in verdicts if v.kind == ClaimKind.INJECTED_PATH]
+        node_verdicts = [v for v in verdicts if v.kind == ClaimKind.NODE_STATUS]
+        # Exactly one verdict per recorded spec entry — no spurious entry from a
+        # YAML delimiter absorbed by the list parser.
+        assert len(path_verdicts) == 1
+        assert len(node_verdicts) == 1
+        assert path_verdicts[0].subject == "spx/21-x.enabler/x.md"
+        assert node_verdicts[0].subject == "spx/21-x.enabler"
 
 
 def test_git_ref_branch_on_origin_confirms(tmp_path: pathlib.Path) -> None:
