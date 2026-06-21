@@ -2,7 +2,7 @@
 
 ## Why this product exists
 
-The Outcome Engineering Plugin Marketplace provides Spec Tree methodology for Codex and Claude Code, establishing human-written specifications as the authoritative source of truth for product development.
+This product is a Claude Code and Codex plugin marketplace delivering the Spec Tree methodology — human-written specifications as the authoritative source of truth — together with the affordances that facilitate agent–user interaction while authoring, refactoring, and maintaining a product's spec tree: the SPX CLI and a local browser surface. It ships into every consumer team's own repository, in languages and domains unknown at design time; this repository is only the dogfood instance, the least important of those consumers.
 
 ## Product hypothesis
 
