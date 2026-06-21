@@ -113,7 +113,8 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 
    A bare mechanism tag (`([review])`/`([test])`), a tag that disagrees with its subsection, a missing tag, or more than one tag is invalid.
 2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
-3. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
+
+A rule earns a sound tag only when it is verifiable (a test, eval, or auditing skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
 
 **A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
 
@@ -201,6 +202,12 @@ How to avoid: Step 3 classifies every statement. "Would a user be able to determ
 Claude saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
 
 How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
+
+**Failure 3: Approved a universal claim tagged as a scenario**
+
+Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([scenario])" and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the tag should be `mapping`, `conformance`, `property`, or `compliance`. The mismatch is `evidence-type-mismatch`, not `invalid-tag`.
+
+How to avoid: Step 5 reads the quantifier first. A universal (ALWAYS / NEVER / "for all" / "no input") tagged `scenario` is `evidence-type-mismatch`; a structural tag problem — bare mechanism tag, wrong subsection, missing tag, more than one tag — is `invalid-tag`.
 
 </failure_modes>
 

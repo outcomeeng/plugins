@@ -2,7 +2,7 @@
 
 Detailed evidence model for PDR auditing. Read this before auditing any PDR.
 
-Five properties define PDR evidence: content classification, property quality, compliance quality, atemporal voice, consistency. This reference provides detailed definitions, boundary cases, and concrete examples for each.
+Five properties define PDR evidence: content classification, property quality, tag validity, atemporal voice, consistency. This reference provides detailed definitions, boundary cases, and concrete examples for each.
 
 </overview>
 
@@ -76,15 +76,16 @@ Product properties are guarantees users can rely on. They must be:
 
 </property_quality>
 
-<compliance_quality>
+<tag_validity>
 
-Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule needs:
+Verification rules are the enforceable part of a PDR, grouped under `## Verification` into `### Testing`, `### Eval`, and `### Audit` by verification type. Each rule carries a tag valid for its subsection, and a `### Testing` rule's evidence type fits the claim:
 
-1. **Verifiability** — can a test, an eval, or an auditing skill determine pass/fail?
-2. **Tag matching its subsection** — under `### Testing`, a `/test`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. Never a bare mechanism (`([review])`/`([test])`) and never a tag that disagrees with its subsection.
-3. **Specificity** — two independent reviewers would agree on the verdict
+1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed evidence type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit])`. A bare mechanism (`([review])`/`([test])`), a missing tag, more than one tag, or a tag that disagrees with its subsection is `invalid-tag`.
+2. **Evidence-type fit** — a `### Testing` rule's evidence type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `evidence-type-mismatch`, since a single case cannot establish a universal.
 
-**Good compliance rules:**
+A rule earns a sound tag only when it is verifiable (a test, eval, or auditing skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
+
+**Well-formed verification rules:**
 
 ```markdown
 ## Verification
@@ -101,7 +102,7 @@ Verification rules are the enforceable part of a PDR, grouped under `## Verifica
 - ALWAYS: every theme variant is selectable from the settings surface ([audit])
 ```
 
-**Bad compliance rules:**
+**Ill-formed verification rules:**
 
 ```markdown
 ### MUST
@@ -121,4 +122,4 @@ Verification rules are the enforceable part of a PDR, grouped under `## Verifica
 - "Follow accessibility best practices" → "Meet WCAG 2.1 Level AA for all interactive components ([compliance])"
 - "Be fast" → "API responses return within 200ms at p95 under normal load ([property])"
 
-</compliance_quality>
+</tag_validity>

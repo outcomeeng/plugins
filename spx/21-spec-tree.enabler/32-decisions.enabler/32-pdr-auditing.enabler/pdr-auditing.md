@@ -12,7 +12,7 @@ Evidence requires five properties checked in order:
 
 1. **Content classification** — every statement is about observable product behavior, not architecture or implementation
 2. **Property quality** — product properties are user-observable and falsifiable
-3. **Compliance quality** — MUST/NEVER rules are verifiable by product review or automated test
+3. **Tag validity** — each verification rule carries a tag valid for its subsection, and a `### Testing` rule's evidence type fits the claim's quantifier
 4. **Atemporal voice** — the PDR states product truth, not history
 5. **Consistency** — the PDR does not contradict the product spec or ancestor PDRs
 
