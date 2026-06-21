@@ -49,7 +49,7 @@ Two-tier hierarchy:
 
 **An objective is not a behavioral claim.** `<voice>` governs behavioral claims — what Claude does, tends to do, or fails to do. An objective is an output statement, a different category, so the imperative-vs-"Claude" subject choice never applies to it. Naming an actor as the subject of an objective is the error the output framing removes.
 
-This mirrors the methodology's output / outcome / impact distinction (`spec-tree/skills/understand/references/node-types.md`: assertions specify the **output**). The objective is the skill's output; `<success_criteria>` proves it: the objective names the output and its shape, `<success_criteria>` states the properties that make it sound, and the two never duplicate.
+This mirrors the methodology's output / outcome / impact distinction — assertions specify the **output**, and an objective names the skill's output the same way. `<success_criteria>` proves it: the objective names the output and its shape, `<success_criteria>` states the properties that make it sound, and the two never duplicate.
 
 </objective_shape>
 
