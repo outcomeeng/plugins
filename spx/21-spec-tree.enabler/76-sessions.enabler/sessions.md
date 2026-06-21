@@ -23,7 +23,7 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 
 ### Mappings
 
-- A claim the script compares against current state — `git_ref` reachability, an injected `specs`/`files` path, or the working-tree state — maps to `Confirmed` when current state matches the recorded claim, `Discrepancy` when it differs, and `Unverifiable` when the check cannot run ([test](tests/test_pickup_verification.mapping.l1.py))
+- A claim the script compares against current state maps to `Confirmed` when current state matches the recorded claim and `Discrepancy` when it differs: an injected `specs`/`files` path resolves to one of those two by its existence at current HEAD, while `git_ref` reachability and the working-tree state additionally map to `Unverifiable` when the underlying `git` command cannot run ([test](tests/test_pickup_verification.mapping.l1.py))
 - A claim the script can only observe current state for — a node's `spx spec status` and an external PR id, whose recorded baseline lives in session prose the script does not parse — maps to `Confirmed` with the current value surfaced for reconciliation against that prose, and `Unverifiable` when the observing command cannot run ([test](tests/test_pickup_verification.mapping.l1.py))
 
 ### Conformance
