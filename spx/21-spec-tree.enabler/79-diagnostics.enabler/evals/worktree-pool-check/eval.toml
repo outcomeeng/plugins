@@ -7,6 +7,6 @@ owned_paths = [
   "src/plugins/spec-tree/skills/diagnose/**",
   "dist/claude/spec-tree/skills/diagnose/**",
 ]
-smoke_cases = ["compliant-bare-pool", "stale-claims-in-pool"]
+smoke_cases = ["compliant-bare-pool", "stale-claims-in-pool", "non-compliant-linked-on-non-bare"]
 threshold = 0.8
 trials = 1

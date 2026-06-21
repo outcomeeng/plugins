@@ -2,9 +2,9 @@
 
 The diagnostics node's conformance test reads the shipped ``diagnose`` skill
 from the committed ``dist/`` tree to verify the build rendered the spx version
-floor into it. The repository-root constant and the dist reader live here per
-``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is production
-code outside ``tests/`` and outside ``spx/``.
+floor into it. The repository-root constant and the dist reader live here
+because shared test scaffolding is production code outside ``tests/`` and
+outside ``spx/``.
 """
 
 from __future__ import annotations

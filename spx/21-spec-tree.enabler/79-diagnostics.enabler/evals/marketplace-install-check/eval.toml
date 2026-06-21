@@ -7,6 +7,6 @@ owned_paths = [
   "src/plugins/spec-tree/skills/diagnose/**",
   "dist/claude/spec-tree/skills/diagnose/**",
 ]
-smoke_cases = ["installed-both-surfaces-current", "drifted-codex-surface-stale"]
+smoke_cases = ["installed-both-surfaces-current", "drifted-codex-surface-stale", "unregistered-claude-surface"]
 threshold = 0.8
 trials = 1
