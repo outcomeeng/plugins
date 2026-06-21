@@ -65,7 +65,6 @@ _RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = re.compile(
 # as each plugin converts; a converted plugin's entries are removed here.
 RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
     {
-        "src/plugins/spec-tree/commands/clarify.md",
         "src/plugins/spec-tree/skills/apply/SKILL.md",
         "src/plugins/spec-tree/skills/author/SKILL.md",
         "src/plugins/spec-tree/skills/bootstrap/SKILL.md",
