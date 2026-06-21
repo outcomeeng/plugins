@@ -26,14 +26,24 @@ The TypeScript specs under `spx/43-typescript.enabler/25-typescript-standards.en
 
 Resolution path: factor the Spec Tree fundamentals into a marketplace-wide PDR (or extend an existing one) so the language-standards skills can reference it instead of restating it. Until then, evaluations of these skills must check both layers.
 
-## `audit-typescript` Spot Defects
+## `audit-typescript` Spot Defects — RESOLVED (PR2, branch `fix/typescript-skill-delegation-allowed-tools`)
 
-Three small fixes against `plugins/typescript/skills/audit-typescript/SKILL.md`, to land with the audit-skill alignment work rather than with the eval-harness slice.
+Both defects fixed alongside the Skill-gap remediation:
 
-- Line 77: broken reference `${CLAUDE_SKILL_DIR}/rules/` — the directory does not exist; the skill ships `references/` only. Either correct the path to `references/` or create `rules/` if a separate location is intended.
-- Line 33: `quick_start` invokes `/test` and `/test-typescript`; these are test-evidence skills, but `audit-typescript` explicitly delegates test concerns to `audit-typescript-tests` elsewhere. Remove the test-skill invocations from `quick_start`.
+- The dangling `${CLAUDE_SKILL_DIR}/rules/` fallback block (referencing `tsconfig.strict.json`, `eslint.config.js`, `semgrep_sec.yaml` — none of which ship in the typescript skill; it carries `references/` only) was removed. (Creating actual TypeScript reference configs for parity with `audit-python`/`audit-rust`, which ship a partial `rules/` dir, is a separate cross-language concern below.)
+- The `quick_start` step-1 `/test` + `/test-typescript` invocations were rewritten to "Read" — matching the read-only `audit-python`/`audit-rust` siblings — so the step no longer delegates test execution from a read-only audit skill.
 
-## Skill-delegation `Skill` allowed-tools gap — PR2 (OPEN)
+## Skill-delegation `Skill` allowed-tools gap — PR2 (CLOSED, branch `fix/typescript-skill-delegation-allowed-tools`)
+
+**Shipped:** `Skill` appended to `allowed-tools` on all 6 delegating skills (`code-typescript`, `test-typescript`, `audit-typescript-architecture`, `audit-typescript-tests`, `architect-typescript`, `audit-typescript`); `audit-*` kept read-only (no `Write`/`Edit`). Entangled remediation: `architect-typescript` gained a TypeScript-accurate `<objective>` (no reviewer-gate claim — its Phase 4 is "Verify Consistency", not a reviewer dispatch); `audit-typescript` gained a dedicated `<repo_local_overlay>` tag, the `quick_start` Read-rewrite, and removal of the dangling `rules/` block. Two typescript-unique defects the `develop:skill-auditor` gate surfaced were fixed as touched-file debt: `code-typescript` was missing the required `<objective>` tag (every sibling `code-python`/`code-rust` has it) and `audit-typescript`'s `<output_format>` carried a garbled duplicate sentence (the `audit-python` sibling has the clean form). Every changed `SKILL.md` was gated with `develop:skill-auditor`.
+
+**Deferred — marketplace-wide / cross-language defect classes the skill-auditor gate also surfaced (parallel instances in already-shipped python/rust siblings; a typescript-only fix would diverge from untouched nodes per `spx/14-verification.pdr.md`'s defect-class-sweep rule, so each is its own cross-plugin pass):**
+
+- **Decision-toolchain path portability** — `audit-typescript`/`audit-typescript-architecture` `<output_format>` cite the bare `plugins/spec-tree/skills/audit/scripts/verdict.py` path; present across 11 audit skills marketplace-wide. Already tracked in `spx/43-develop.enabler/ISSUES.md` §1.
+- **`architect-*` / `code-*` product-path portability** — `spx/CLAUDE.md`, `spx/{NN}-{slug}.adr.md`, `spec-tree:contextualize` invocations, and `spx/`-rooted example paths in shipped skill bodies. `architect-python`/`architect-rust`/`code-*` carry identical references (`architect-rust` has the same `spec-tree:contextualize` calls); a cross-language portability pass, not this PR.
+- **Operational-effectiveness gaps** — `code-typescript`/`test-typescript` (and every `code-*`/`test-*` sibling, all `failure_modes=0`) lack a `<failure_modes>` section and carry qualitative, non-command-verifiable `<success_criteria>`; `test-typescript` flagged for procedural/operational imbalance. Marketplace-wide builder-skill operational pass.
+- **`<quick_start>` on validator/audit skills** — carried by `audit-typescript` and its `audit-python`/`audit-rust` siblings; tracked in `spx/43-develop.enabler/ISSUES.md` §1 as the family-wide `<quick_start>`-on-validator question.
+- **Worth-improving WARNINGs** — reference files using markdown headings rather than pure XML; `<what_to_avoid>` vs canonical `<anti_patterns>` tag name; `<example_review>` vs `<reference_guides>` consolidation. Style-level, marketplace-wide.
 
 The marketplace-wide `require_skill` → `Skill` sweep closed spec-tree/python/rust in PR #279; typescript
 is held for its own PR because two of its skills also carry pre-existing skill-auditor REJECTs that must

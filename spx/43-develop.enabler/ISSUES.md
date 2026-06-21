@@ -189,10 +189,12 @@ in each plugin's owning node; this section holds the develop half and the shared
   in `audit-commands` and `audit-subagents` (both reworded to "Return the prioritized findings to the
   caller for implementation"). The marketplace-wide classes the gate re-flagged (`<quick_start>` on
   validators, bare verdict-path citation, verdict-schema row-taxonomy) stay tracked in §1.
-- **typescript — PR2, entangled.** Full playbook in `spx/43-typescript.enabler/ISSUES.md`: 6 skills
-  need `Skill`, and `architect-typescript` + `audit-typescript` carry pre-existing skill-auditor
-  REJECTs to remediate in the same change; `audit-typescript`'s quick_start `/test` invocation is a
-  defect to **remove**, not enable with `Skill`.
+- **typescript — PR2, entangled. CLOSED** (branch `fix/typescript-skill-delegation-allowed-tools`).
+  All 6 skills gained `Skill`; `architect-typescript` (`<objective>`) and `audit-typescript`
+  (`<repo_local_overlay>`, quick_start Read-rewrite, dangling `rules/` removal) remediated; the
+  typescript-unique `code-typescript` missing-`<objective>` and `audit-typescript` duplicate-prose
+  defects fixed as touched-file debt. Marketplace-wide classes the gate also surfaced are deferred and
+  recorded in `spx/43-typescript.enabler/ISSUES.md`.
 - **prose — PR3 (prose half) — CLOSED (this PR, same branch).** `Skill` appended to `audit-prose`,
   `audit-internal-docs` (both now `Read, Glob, Grep, Bash, Skill`, read-only), and `write-internal-docs`
   (now `Read, Edit, Write, Glob, Grep, Skill`). See `spx/43-prose.enabler/ISSUES.md`.
