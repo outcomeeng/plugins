@@ -242,19 +242,6 @@ Skills for writing implementation code and committing results. `apply` is an orc
 | `open-pr`          | 10       | Internal PR-opening protocol loaded by `manage-github-pr`                   | Implemented |
 | `manage-pr`        | 10       | Internal open-PR management and merge protocol loaded by `manage-github-pr` | Implemented |
 
-### Commands
-
-Commands provide dynamic context injection and invoke the corresponding skill.
-
-| Command    | Step    | Invokes          | Purpose                                                       |
-| ---------- | ------- | ---------------- | ------------------------------------------------------------- |
-| `/clarify` | declare | —                | Gather requirements through questioning before acting         |
-| `/handoff` | —       | —                | Create timestamped handoff for session continuity             |
-| `/pickup`  | —       | —                | Load handoff document to continue previous work               |
-| `/apply`   | *all*   | `apply`          | Run TDD flow on a subtree or discover work from `spx/EXCLUDE` |
-| `/rtfm`    | *all*   | `apply`          | Stop ad hoc work, restart proper TDD flow                     |
-| `/commit`  | apply   | `commit-changes` | Git commit with auto-injected branch/status/diff              |
-
 ## Ownership model
 
 ### Declare
