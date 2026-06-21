@@ -223,7 +223,6 @@ A successful pickup:
 - [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
-- [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
