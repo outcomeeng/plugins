@@ -1,0 +1,15 @@
+# Apply
+
+PROVIDES the apply lifecycle — selecting the next executable observable slice, then driving each node in that slice through the per-node TDD flow — bounded by a whole-changeset review and a terminal merge-lifecycle gate
+SO THAT all implementation agents
+CAN turn an implementation plan into demonstrable value merged to the default branch, with each node conforming to its governing spec on the first pass
+
+The assertions below are the cross-cutting properties of the lifecycle as a whole: the whole-changeset review that gates flow completion, the delivered-value boundary that holds until the change reaches the default branch, and the gate-enforcement model.
+
+## Assertions
+
+### Compliance
+
+- ALWAYS: when the change touches files or specs beyond the target node, run a whole-changeset review (the `changes-reviewer` agent or `/review-changes`) over the full diff and point the language audit gates at the whole changeset before declaring the flow complete — per-node gates miss cross-node effects ([audit])
+- ALWAYS: for default-branch work, the flow is incomplete until the change reaches the default branch on origin through `/merge`; an approved code audit, a converged whole-changeset review, passing tests, and a clean committed branch are local readiness, not completion — the flow continues into `/merge` unless the user explicitly scoped the work to a proposal, analysis, review, or local-only change, or an explicit lifecycle gate blocks with no independent local action remaining, per `spx/15-merging.pdr.md` and the `/understand` default-branch completion boundary ([audit])
+- NEVER: a runtime hook enforces the audit gates — the gate reminders are skill prose, and the spec-tree plugin ships no `PostToolUse` hook (`spx/21-spec-tree.enabler/13-agent-environment.enabler/`); enforcement is the flow's own discipline, not a hook ([review])
