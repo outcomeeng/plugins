@@ -25,10 +25,46 @@ Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin, the CLI
 `--bare` / `--no-bare` overrides, cross-suite parallelism, and the
 `just eval-run` recipe naming.
 
+## Execution-cost implementation (pending — governed by `15-execution-cost.adr.md`)
+
+`spx/13-infrastructure.enabler/25-eval-harness.enabler/15-execution-cost.adr.md`
+declares prefix-cache amortization as the eval cost lever: one shared cached
+prefix and time-to-live-packed invocations, written once and read warm. The
+telemetry that makes this observable already ships (the per-run cache read and
+creation token aggregates in `cost_summary` and `history.jsonl`). The execution
+side that captures the saving is not yet built:
+
+1. **Converge on one shared prefix.** Today suites point `plugin_dir` at
+   different runtimes (and a minimal-`plugin_dir` budget workaround diverges
+   them further); each distinct prefix is one avoidable cold write. Decide and
+   implement a single shared context for a run rather than a per-suite prefix.
+2. **Pack invocations within the time-to-live.** The CI workflow runs suites in
+   sequence per `outcomeeng-evals run` invocations; ensure a run's invocations
+   stay inside one warm window so the shared prefix is not re-written on
+   time-to-live expiry.
+3. **Resolve the simulation-vs-in-situ fork.** Some suites simulate the skill in
+   a self-contained `prompt.md` (no real plugin load needed); others load the
+   shipped plugin. The shared-context decision differs for each — record which
+   suites need the real plugin prefix and which can run against a minimal stub.
+4. **Retire the prototype once the measurement migrates.** When the harness (or
+   the SPX CLI) gains a cache-aggregate reporting path that reproduces the
+   amortization measurement, remove `prototypes/eval-cache-amortization/` — its
+   `FINDINGS.md` result is the durable record; `measure.py` is the throwaway
+   measurement tool, kept only until the harness absorbs it, per the
+   prove-then-migrate-or-remove lifecycle in `spx/12-shipped-scripting.adr.md`.
+
+Empirical grounding for the lever lives in the exploratory prototype
+`prototypes/eval-cache-amortization/` (`FINDINGS.md`): a warm prefix reads at a
+fraction of a cold write over the same prefix, and the server cache holds
+several prefixes at once within the time-to-live, so the cost driver is the
+count of distinct prefixes plus time-to-live expiry, not which suite runs when.
+Per `spx/12-shipped-scripting.adr.md` the prototype proves the lever; proven
+logic moves into the harness or the SPX CLI, not the script (step 4 above).
+
 ## References
 
 - **Workflow**: `.github/workflows/spec-tree-evals.yml`
-- **Runner contract**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md:16`
+- **Runner contract**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md:18`
 - **Gate-policy tests**: `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`
 - **PR-authority PDR**: `spx/15-merging.pdr.md`
 - **Launch-in-CI + configurable-surface reference**: `outcomeeng/gh-actions` `spec-tree-review.yml`
