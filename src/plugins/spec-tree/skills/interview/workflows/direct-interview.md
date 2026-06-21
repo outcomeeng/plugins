@@ -20,7 +20,7 @@ Before classifying input, check whether the interview is resuming a prior sessio
    - Have product docs (README, CLAUDE.md) changed?
 3. Flag any stale answers: "This answer may no longer apply because [reason]. Re-ask?"
 4. Display the current coverage map with `[done]` / `[current]` / `[pending]` markers
-5. Use AskUserQuestion to confirm: "Resume from [area X], or start over?"
+5. Use {{! tool('ask_user') !}} to confirm: "Resume from [area X], or start over?"
 6. If resume → jump to **Step 4: Conduct Interview** with the loaded state
 7. If start over → proceed to Step 1, delete the state file after the new interview completes
 
@@ -32,7 +32,7 @@ Determine what the user provided in response to the intake question:
 
 1. **File path** (contains `/`, `.md`, `.txt`, etc.) — read the file
 2. **Free text** — treat as a verbal requirement
-3. **Non-spec file** (source code, config, data) — confirm intent via AskUserQuestion: "This looks like [type]. Want me to interview you about [inferred intent]?"
+3. **Non-spec file** (source code, config, data) — confirm intent via {{! tool('ask_user') !}}: "This looks like [type]. Want me to interview you about [inferred intent]?"
 
 ## Step 2: Pre-Analysis
 
@@ -61,7 +61,7 @@ Display the initial coverage map to the user.
 Follow the essential principles strictly:
 
 1. Display coverage map before each question
-2. Ask one question at a time via AskUserQuestion (2-4 options, no obvious choices)
+2. Ask one question at a time via {{! tool('ask_user') !}} (2-4 options, no obvious choices)
 3. Push back on contradictions, over-engineering, missing edge cases
 4. Refine coverage map as new areas emerge — split, add, mark [done]
 5. Record every pushback and resolution in a running decisions log
@@ -71,13 +71,13 @@ Follow the essential principles strictly:
 When all discovered areas are [done]:
 
 1. Summarize what was covered and key decisions made
-2. Ask via AskUserQuestion: "Ready to write, or explore further?"
+2. Ask via {{! tool('ask_user') !}}: "Ready to write, or explore further?"
 3. If further — identify what areas to add or deepen
 4. If ready — proceed to output
 
 ## Step 6: Determine Output
 
-Ask the user via AskUserQuestion:
+Ask the user via {{! tool('ask_user') !}}:
 
 1. **Output format** — markdown spec, structured notes, or other
 2. **Output location** — where to save the file
@@ -96,7 +96,7 @@ Generate dynamic sections based on what the interview revealed:
 
 ## Step 8: Post-Output
 
-Ask via AskUserQuestion what task format the user wants:
+Ask via {{! tool('ask_user') !}} what task format the user wants:
 
 - Claude Code tasks (trackable in current session)
 - GitHub Issues via `gh` CLI

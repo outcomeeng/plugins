@@ -88,7 +88,7 @@ For each assertion:
 
 evidence ∈ {scenario, mapping, conformance, property, compliance} — level ∈ {l1, l2, l3}
 
-If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via AskUserQuestion before proceeding.
+If any covered link uses a legacy name: flag as imperfection per the global imperfection protocol and surface via {{! tool('ask_user') !}} before proceeding.
 
 Report the evidence gap summary before proceeding.
 

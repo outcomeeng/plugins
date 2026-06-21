@@ -20,7 +20,7 @@ The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `s
 
 1. **Resolve the paths.** Template: `${SKILL_DIR}/../understand/templates/spx-claude.md`. Guide: the product's spx-level guide (`spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file), referred to below as `<guide>`.
 
-2. **Determine the enabled languages.** Identify the languages the project uses — from `/understand`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
+2. **Determine the enabled languages.** Identify the languages the project uses — from `/understand`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `request_user_input`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
 
 3. **Detect status.** Run, passing the determined languages so the check catches a language drift as well as a version gap:
 

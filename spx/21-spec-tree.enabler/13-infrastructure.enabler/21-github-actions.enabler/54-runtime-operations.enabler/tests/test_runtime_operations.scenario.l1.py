@@ -86,7 +86,7 @@ def test_failure_triage_runs_log_failed_first(skill_md_text: str) -> None:
 
 
 def test_tty_branch_lists_accounts_and_prompts(skill_md_text: str) -> None:
-    """SKILL.md's orient step handles both is_tty=true (AskUserQuestion + `gh auth switch -u <account>`) and is_tty=false (manual remediation, no prompt) branches."""
+    """SKILL.md's orient step handles both is_tty=true (ask_user runtime token + `gh auth switch -u <account>`) and is_tty=false (manual remediation, no prompt) branches."""
     block = _step_block(skill_md_text, "orient")
     block_lower = block.lower()
 
@@ -96,8 +96,8 @@ def test_tty_branch_lists_accounts_and_prompts(skill_md_text: str) -> None:
     assert re.search(r"is_tty[^\n]+false", block), (
         "orient block must explicitly handle the is_tty=false branch"
     )
-    assert "askuserquestion" in block_lower, (
-        "orient block's TTY branch must use AskUserQuestion to prompt the user"
+    assert "tool('ask_user')" in block, (
+        "orient block's TTY branch must prompt the user via the ask_user runtime token"
     )
     assert "gh auth switch -u" in block, (
         "orient block must mention `gh auth switch -u <account>` for the TTY branch"

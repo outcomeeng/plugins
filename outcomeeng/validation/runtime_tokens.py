@@ -65,16 +65,6 @@ _RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = re.compile(
 # as each plugin converts; a converted plugin's entries are removed here.
 RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
     {
-        "src/plugins/spec-tree/skills/author/SKILL.md",
-        "src/plugins/spec-tree/skills/bootstrap/SKILL.md",
-        "src/plugins/spec-tree/skills/inspect-github-actions/SKILL.md",
-        "src/plugins/spec-tree/skills/init-worktrees/SKILL.md",
-        "src/plugins/spec-tree/skills/interview/SKILL.md",
-        "src/plugins/spec-tree/skills/interview/workflows/direct-interview.md",
-        "src/plugins/spec-tree/skills/test/SKILL.md",
-        "src/plugins/spec-tree/skills/task-tracking-standards/SKILL.md",
-        "src/plugins/spec-tree/skills/understand/references/imperfection-protocol.md",
-        "src/plugins/spec-tree/skills/update-spx/SKILL.md",
         "src/plugins/work/skills/sanitize-powerpoint/SKILL.md",
     }
 )

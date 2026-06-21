@@ -36,7 +36,7 @@ The output is a JSON object with these fields:
 
 If `error` is non-null or `host` is not `github.com`, stop and report — this skill handles `github.com` only.
 
-If `has_access` is `false` and `is_tty` is `true`, ask the user via `AskUserQuestion` which of `available_accounts` to switch to. Calling `gh auth switch -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
+If `has_access` is `false` and `is_tty` is `true`, ask the user via `request_user_input` which of `available_accounts` to switch to. Calling `gh auth switch -u <account>` is permitted only after the user has answered — that answer is the explicit instruction the safety rule requires.
 
 If `has_access` is `false` and `is_tty` is `false` (CI, scripts, batch), report the active account, the access failure, and the manual remediation commands. Do not attempt a switch.
 
@@ -131,7 +131,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 
 - NEVER invoke `gh run watch`. Unreaped subprocess trees from `gh run watch` exhaust the workstation when the harness fails to reap them across turns.
 - NEVER write `until <check>; do sleep N; done` or `while ! <check>; do sleep N; done`. Per-iteration process trees from these constructs accumulate until the host is exhausted.
-- NEVER call any state-changing `gh` subcommand without an explicit user instruction in the same turn. The user answering an `AskUserQuestion` is explicit instruction. The full list — also enforced programmatically by `${SKILL_DIR}/scripts/mutation_gate.py` — is `gh auth login`, `gh auth switch`, `gh auth refresh`, `gh auth logout`, `gh run rerun`, `gh run cancel`, `gh run delete`, `gh workflow run`, `gh workflow enable`, and `gh workflow disable`.
+- NEVER call any state-changing `gh` subcommand without an explicit user instruction in the same turn. The user's answer to `request_user_input` is explicit instruction. The full list — also enforced programmatically by `${SKILL_DIR}/scripts/mutation_gate.py` — is `gh auth login`, `gh auth switch`, `gh auth refresh`, `gh auth logout`, `gh run rerun`, `gh run cancel`, `gh run delete`, `gh workflow run`, `gh workflow enable`, and `gh workflow disable`.
 - NEVER report a conclusion other than the literal value returned by `gh run view --json conclusion`. Derived states ("looks failed", "probably passing") are prohibited.
 - NEVER ship shell scripts in this skill's `scripts/` directory. Helpers are Python.
 

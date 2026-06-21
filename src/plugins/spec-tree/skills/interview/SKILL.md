@@ -2,7 +2,7 @@
 name: interview
 description: >-
   ALWAYS invoke BEFORE asking the user anything while creating or modifying any
-  artifact (spec, ADR, PDR, test, code, doc). Triggers: AskUserQuestion,
+  artifact (spec, ADR, PDR, test, code, doc). Triggers: {{! tool('ask_user') !}},
   seeking draft approval, stuck on scope or design. NEVER ask without this
   skill.
 argument-hint: <file-path-or-requirement>
@@ -51,7 +51,7 @@ When a question is warranted, its options obey:
 **Questioning Protocol**
 
 - **One question at a time** — never batch. Go deep before moving on.
-- **Always use AskUserQuestion** — structured choices (2-4 options per question), never open-ended
+- **Always use {{! tool('ask_user') !}}** — structured choices (2-4 options per question), never open-ended
 - **No obvious questions** — never ask what can be inferred from input or codebase analysis
 - **Options must require judgment** — no "yes/no", no obviously-correct choices
 - **Describe trade-offs** — each option's description explains consequences, not just what it is
@@ -114,7 +114,7 @@ Tell the user:
 - **Paste feedback** back into Claude Code for revision
 - **Click "Approved"** when satisfied — generates the final document
 
-Revision loop: parse feedback, clarify ambiguous comments with AskUserQuestion, regenerate, repeat until approved.
+Revision loop: parse feedback, clarify ambiguous comments with {{! tool('ask_user') !}}, regenerate, repeat until approved.
 
 **State Persistence Protocol**
 
@@ -229,7 +229,7 @@ A well-conducted interview:
 
 - Pre-analysis completed before first question
 - Each question was reasoned to a recommendation first and asked only because the decision was genuinely the operator's and unsettled by code, specs, decisions, or defaults
-- Every question used AskUserQuestion with 2-4 non-obvious options that are materially distinct end-states — no strawman, no false 50/50 — with the recommended option stated first
+- Every question used {{! tool('ask_user') !}} with 2-4 non-obvious options that are materially distinct end-states — no strawman, no false 50/50 — with the recommended option stated first
 - Coverage map displayed and updated before each question
 - Pushback applied when contradictions or risks detected
 - Decisions log captures every pushback and its resolution
