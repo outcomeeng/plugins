@@ -70,7 +70,7 @@ just bump-check    # exit non-zero if any changed plugin still needs a bump (loc
 
 The `bump*` recipes take `base_ref="origin/main"` by default; pass a different base for a stacked branch (e.g. `just bump origin/<base>`). Run `just bump` BEFORE `just build-skills` so the regenerated `dist/` manifests carry the bumped version.
 
-**Segment auto-detection.** A plugin that gains, loses, or renames a skill, command, agent, or manifest detects `minor`; every other plugin-distribution change detects `patch`. One `just bump` run can write `minor` for one changed plugin and `patch` for another. Auto-detection NEVER selects `major` — pass `--segment major` (or `minor`/`patch`) to force a segment for every changed plugin (`just bump --segment minor`); an explicit override warns on stderr for any plugin whose detected segment differed. The `## Version Bump Examples` below are the patterns this detection follows.
+**Segment auto-detection is structural.** `just bump` keys on structure, not on a change's semantic weight: a plugin that gains, loses, or renames a skill, command, agent, or manifest detects `minor`; every other plugin-distribution change detects `patch`. One run can write `minor` for one changed plugin and `patch` for another. It NEVER selects `major`. It also cannot recognize a non-structural change the policy still treats as `minor` — a **major functional change** or **significant user experience improvement** per `## Version Management` (for example a new claim mechanism inside an existing skill) gains no skill/command/agent/manifest, so `just bump` detects `patch`; pass `just bump --segment minor` for it. An explicit `--segment` (`major`/`minor`/`patch`) forces that segment for every changed plugin and warns on stderr for any plugin whose detected segment differed. In `## Version Bump Examples` below, the structural rows (new command, new skill) are what auto-detection produces; a row marked "not structural" needs the `--segment minor` override.
 
 **`bump-check` is local, not a CI gate.** The quality gate (`just check`) does not run `bump-check`, so a missing or wrong version is NOT caught by CI — run `just bump` (or at least `just bump-check`) yourself before pushing.
 
@@ -88,7 +88,7 @@ The `bump*` recipes take `base_ref="origin/main"` by default; pass a different b
 **Bump once per branch, in the first plugin-distribution commit; do not bump again during PR review.** Only the version that lands on `main` matters.
 
 1. Make the plugin changes.
-2. Run `just bump`, then `just build-skills`. `just bump` bumps every changed-but-unbumped plugin and SKIPS (with a diagnostic) any plugin already bumped on this branch — so re-running it after a later commit bumps a newly-changed plugin without disturbing the ones already set. A branch that changes only `spx/`, coordination notes, repository instructions, tests, validation config, or local overlays bumps nothing.
+2. Run `just bump`, then `just build-skills`. `just bump` bumps every changed-but-unbumped plugin and SKIPS (with a diagnostic) any plugin already bumped on this branch — so re-running it after a later commit bumps a newly-changed plugin without disturbing the ones already set. A branch that changes only `spx/`, coordination notes, repository instructions, tests, validation config, or local overlays bumps nothing. Detection is structural (see **Segment auto-detection is structural** above): if the change is a major functional change or significant UX improvement per `## Version Management` but `just bump-dry` shows `patch`, re-run `just bump --segment minor`.
 3. Stage the plugin source, the regenerated `dist/`, and the manifests `just bump` wrote, then commit them together via `/commit-changes`.
 4. During review, leave the version alone — follow-up commits that fix code, docs, specs, or review feedback do not bump again, and re-running `just bump` is a no-op for an already-bumped plugin.
 5. If review materially expands the PR (for example adds a skill, turning a `patch` into a `minor`), run `just bump --segment minor` once to re-select the segment, then leave it fixed.
@@ -113,16 +113,16 @@ just build-skills  # propagate the bumped version into dist/
 
 ## Version Bump Examples
 
-| Change                                  | Old   | New   | Reason                               |
-| --------------------------------------- | ----- | ----- | ------------------------------------ |
-| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                  |
-| Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR      |
-| Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch   |
-| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                  |
-| Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH            |
-| Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                    |
-| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
-| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface |
-| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface         |
-| Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin    |
-| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin       |
+| Change                                  | Old   | New   | Reason                                                                   |
+| --------------------------------------- | ----- | ----- | ------------------------------------------------------------------------ |
+| Add `/handoff` command                  | 0.2.0 | 0.3.0 | New command = MINOR                                                      |
+| Add self-organizing handoff             | 0.3.0 | 0.4.0 | Major functional change = MINOR — not structural, pass `--segment minor` |
+| Fix typo in an installed skill          | 0.4.0 | 0.4.1 | Plugin-surface documentation patch                                       |
+| Refactor pickup logic                   | 0.4.1 | 0.4.2 | Refactoring = PATCH                                                      |
+| Improve error messages                  | 0.4.2 | 0.4.3 | Small enhancement = PATCH                                                |
+| Add `/design-frontend`                  | 0.4.3 | 0.5.0 | New skill = MINOR                                                        |
+| Add `spx/.../PLAN.md`                   | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                     |
+| Update `spx/.../ISSUES.md`              | 0.4.3 | 0.4.3 | Coordination note, no plugin surface                                     |
+| Edit `spx/43-python.enabler/python.md`  | 0.4.3 | 0.4.3 | Spec-only, no plugin surface                                             |
+| Edit `spx/local/commit-changes.md`      | 0.4.3 | 0.4.3 | Local workflow overlay, no plugin                                        |
+| Edit `AGENTS.md` without plugin changes | 0.4.3 | 0.4.3 | Product instruction, no plugin                                           |
