@@ -2,7 +2,7 @@
 name: apply
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
-  NEVER write code for a spec-tree node without this skill.
+  NEVER write code, tests, or architecture for a spec-tree node without this skill.
 ---
 
 <objective>
@@ -31,6 +31,8 @@ An optional argument controls what runs before the per-node flow below:
 - `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The agent does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
 - `[node-path]` → the work queue is that single node.
 - no argument → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+
+When the work is described as a plan or proposal rather than a specific node or queue, invoke `/plan-slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
