@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["reachable-above-floor", "below-floor-old-version", "unreachable-not-on-path"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading

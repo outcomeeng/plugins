@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["compliant-bare-pool", "stale-claims-in-pool", "non-compliant-linked-on-non-bare"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading

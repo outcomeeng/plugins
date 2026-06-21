@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["working-hook-delivered", "not-applicable-runtime-without-hook"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading

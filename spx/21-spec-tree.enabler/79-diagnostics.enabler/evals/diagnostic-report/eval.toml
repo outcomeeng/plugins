@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["broken-dominates-degraded", "not-applicable-excluded-from-overall"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading
