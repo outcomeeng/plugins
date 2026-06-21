@@ -6,9 +6,9 @@ argument-hint: "[path/to/deck.pptx]"
 ---
 
 <objective>
-Audit and repair the internal structure of a PowerPoint `.pptx` deck by editing its OPC (Open Packaging Conventions) XML directly. A `.pptx` is a ZIP of XML parts; PowerPoint's UI cannot reach most defects this skill targets — orphaned layouts, wrong layout `type` attributes, stray fonts, hardcoded colors, inconsistent layout names, dead masters, leftover add-ins.
+A repaired `.pptx` whose every untouched part is byte-identical to the original — only the parts that resolved an approved finding differ.
 
-The deliverable is a repaired `.pptx` whose every untouched part is identical to the original — only the parts that fixed a finding differ.
+A `.pptx` is a ZIP of XML parts (OPC, Open Packaging Conventions). The defects this skill targets — orphaned layouts, wrong layout `type` attributes, stray fonts, hardcoded colors, inconsistent layout names, dead masters, leftover add-ins — are unreachable through PowerPoint's UI, so the repair audits and edits the OPC XML directly.
 </objective>
 
 <core_rules>
@@ -29,7 +29,7 @@ Run these steps in order. Steps 2 and 6 use the bundled scripts in `<scripts>`.
 
 2. **Audit.** Run `pptx_audit.py` on the deck. It reads the package read-only and reports findings across the six dimensions in `<audit_dimensions>`. Read the full report.
 
-3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `AskUserQuestion` to get per-dimension or per-finding approval. Fix only what the user approves.
+3. **Present and scope.** Show the user the findings grouped by dimension. Mechanical fixes (layout `type`, font redirect) and judgment fixes (color mapping, layout renames) are different — surface the judgment ones explicitly. Use `{{! tool('ask_user') !}}` to get per-dimension or per-finding approval. Fix only what the user approves.
 
 4. **Extract.** Unzip the deck into a temporary working directory **outside any git repository** (e.g. under `/tmp`). Never extract into the deck's own folder.
 
@@ -75,7 +75,7 @@ NEVER repackage by extracting everything and re-zipping with default tooling —
 </repackaging>
 
 <scripts>
-Both scripts are standard-library Python 3.11+ — no third-party dependencies, no install step.
+Both scripts are standard-library Python 3.13+ — no third-party dependencies, no install step.
 
 | Script                   | Purpose                                                                                        | Usage                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
