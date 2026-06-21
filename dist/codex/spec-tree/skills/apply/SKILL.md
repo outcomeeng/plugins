@@ -24,6 +24,25 @@ For work destined for the default branch, the flow is complete only when the cha
 
 </quick_start>
 
+<invocation_modes>
+
+An optional argument controls what runs before the per-node flow below:
+
+- `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The agent does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
+- `[node-path]` → the work queue is that single node.
+- no argument → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+
+When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
+
+1. If it is listed in `spx/EXCLUDE`, remove its line first — the `spx` CLI then includes its tests in `spx test passing`.
+2. Run Steps 1–9 on the node.
+3. Commit via `/commit-changes`.
+4. Proceed to the next node without stopping or asking, subject to the gate-retry limits in `<review_gates>`.
+
+If a node's flow cannot reach an APPROVED/converged state within the gate retry limit, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
+
+</invocation_modes>
+
 <language_detection>
 
 Before starting Step 3, determine the product language:
@@ -217,6 +236,16 @@ When something breaks or behaves unexpectedly, Claude's instinct is to write ad 
 This is not slower. The ad hoc script takes the same effort as a test, but the script gets deleted and the test stays.
 
 </rationale>
+
+<failure_modes>
+
+**Failure 1: Claude closed the flow at Step 9.** Claude reported the flow complete the moment the Step 8 audit passed, tests were green, and the Step 9 review converged — while nothing had been committed, pushed, reviewed at integration time, or merged. Signal: a "done" claim for default-branch work with a clean working tree or a local commit ahead of base and no merged PR. Avoid: for default-branch work the flow is incomplete until Step 10 reaches the default branch on origin; local readiness is progress, never delivered value.
+
+**Failure 2: Claude patched the cited line instead of the defect class.** An audit gate or the Step 9 review cited one instance; Claude fixed that line, re-ran the gate, and the same class reopened on the next iteration elsewhere. Signal: repeated REJECTs reopening the same rule, source contract, or evidence pattern. Avoid: per `<stabilized_diff_rule>`, treat each finding as defect-class evidence — sweep the touched node(s), fix every in-scope instance, then run the gate once on the stabilized tree.
+
+**Failure 3: Claude kept running the flow in the main context after dispatching `--agent`.** Invoked with `--agent`, Claude launched the `applier` agent and then also ran Steps 1–8 in the main context, duplicating the work. Signal: main-context architect/test/code steps after an `applier` dispatch. Avoid: after `--agent` dispatch, stop the per-node steps in the main context; resume only at Step 9 (when cross-node) and Step 10 once the agent returns.
+
+</failure_modes>
 
 <success_criteria>
 
