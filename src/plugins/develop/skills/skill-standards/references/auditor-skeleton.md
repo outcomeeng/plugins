@@ -29,7 +29,8 @@ The objective names the verdict, not the activity:
 - ❌ "Audit an ADR for its structure, atemporal voice, and conformance to the evidence model." (bare activity verb)
 - ❌ "Evaluate SKILL.md files against best practices." (activity verb)
 - ✅ "A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-rule tag validity."
-  </objective_examples>
+
+</objective_examples>
 
 <success_criteria_shape>
 An auditor's `<success_criteria>` states verdict soundness, never a re-list of the workflow steps:
