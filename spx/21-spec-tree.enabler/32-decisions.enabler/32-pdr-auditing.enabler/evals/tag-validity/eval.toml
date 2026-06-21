@@ -15,6 +15,7 @@ smoke_cases = [
   "testing-missing-tag-rejected",
   "testing-multiple-tags-rejected",
   "universal-scenario-tag-rejected",
+  "valid-tags-pass",
 ]
 threshold = 0.85
 trials = 1
