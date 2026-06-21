@@ -19,7 +19,7 @@ Every check is read-only. It inspects environment variables and queries `spx` wi
 
 <workflow>
 
-1. Run each check in `<checks>`. Capture each reading verbatim — session identifiers, version strings, and `spx` status fields are reported exactly as their source emits them, NEVER paraphrased or rounded.
+1. Run each check in `<checks>` in the order they appear — the order is intentional where a check notes a cross-check interaction (the session-environment check calls `spx` before spx-reachability runs). Capture each reading verbatim — session identifiers, version strings, and `spx` status fields are reported exactly as their source emits them, NEVER paraphrased or rounded.
 2. Classify each check's readings against its verdict table. A check yields exactly one verdict, and each verdict maps to one aggregation bucket — healthy, degraded, broken, or not-applicable — named in the check's table; a not-yet-classifiable reading falls to `unknown` per step 4. Pair each verdict with the matching remediation hint.
 3. Aggregate into one report per `<report_format>`: one line per check plus an overall verdict.
 4. When a reading is ambiguous, matches no verdict row (an inconsistent partial state), or a command errors, report the check as `unknown` with the captured readings rather than forcing a verdict — a misread check is worse than an honest gap.
@@ -58,20 +58,21 @@ This check calls `spx` before the spx-reachability check runs; that ordering is 
 
 <check name="spx-reachability">
 
-Verifies that the `spx` CLI is installed and on PATH, and reports its version.
+Verifies that the `spx` CLI is installed and on PATH, reports its version, and judges that version against the floor the spec-tree skills depend on. That floor is `0.5.6` — the lowest `spx` version whose capabilities the shipped skills assume.
 
 ```bash
 command -v spx && spx --version
 ```
 
-Classify the resolution, reporting the resolved path and version verbatim:
+Classify the resolution, reporting the resolved path and version verbatim and comparing the reported version against the floor `0.5.6` by dotted-numeric order:
 
-| Reading                                      | Verdict         | Bucket  | Remediation                                                                                      |
-| -------------------------------------------- | --------------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `spx` resolves on PATH and reports a version | **reachable**   | healthy | None — report the resolved path and version verbatim.                                            |
-| `command -v spx` finds nothing               | **unreachable** | broken  | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it. |
+| Reading                                                               | Verdict         | Bucket   | Remediation                                                                                                                    |
+| --------------------------------------------------------------------- | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `spx` resolves on PATH and its version is at or above `0.5.6`         | **reachable**   | healthy  | None — report the resolved path and version verbatim.                                                                          |
+| `spx` resolves on PATH and reports a version, but it is below `0.5.6` | **below-floor** | degraded | Update `spx` to at least `0.5.6`; the spec-tree skills assume its capabilities. Report the resolved path and version verbatim. |
+| `command -v spx` finds nothing                                        | **unreachable** | broken   | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it.                               |
 
-Comparing the reported version against a required floor is a future extension: it needs a minimum-version declaration the installed plugin tree exposes (no such declaration ships today), so this check reports the version rather than judging it against a floor.
+A reported version that is not dotted-numeric — a prerelease or build-tagged value that cannot be ordered against `0.5.6` — matches no row and falls to `unknown` per step 4, reported with the version verbatim.
 
 </check>
 
@@ -195,9 +196,7 @@ Report every reading verbatim. Never collapse a session identifier or version st
 
 <extending>
 
-Each check is an independent named diagnostic: a reading step, a verdict table that maps each reading to a named verdict and its aggregation bucket — healthy, degraded, broken, or not-applicable, with `unknown` for readings that match no row or a command that errors — and a remediation hint per non-healthy state. A check that inspects a runtime-specific surface reports `not-applicable` where that surface is absent rather than misclassifying. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
-
-Candidate checks to add by extension: spx version-floor compliance — judging the reported `spx` version against a required minimum — once the installed plugin tree exposes a minimum-version declaration to judge against.
+Each check is an independent named diagnostic: a reading step, a verdict table that maps each reading to a named verdict and its aggregation bucket — healthy, degraded, broken, or not-applicable, with `unknown` for readings that match no row or a command that errors — and a remediation hint per non-healthy state. A check that inspects a runtime-specific surface reports `not-applicable` where that surface is absent rather than misclassifying. Add a check for a new surface by appending a new `<check>` block and one line to the report; a new judgment of a surface an existing check already reads — as the below-floor verdict extends `spx-reachability`, both reading `spx --version` — adds a verdict row to that owning check rather than a second check over the same command. Neither extension rewrites the unrelated existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
 
 </extending>
 

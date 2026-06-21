@@ -5,7 +5,7 @@
 The node's six `[eval]` assertions in `diagnostics.md` now carry authored evidence:
 
 - `evals/session-environment-check/` (6 cases)
-- `evals/spx-reachability-check/` (3 cases)
+- `evals/spx-reachability-check/` (6 cases)
 - `evals/worktree-pool-check/` (6 cases)
 - `evals/session-store-check/` (5 cases)
 - `evals/marketplace-install-check/` (8 cases)

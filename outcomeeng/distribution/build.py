@@ -33,6 +33,7 @@ from outcomeeng.distribution.contracts import (
     TEXT_FILE_SUFFIXES as _TEXT_FILE_SUFFIXES,
     Target as _Target,
 )
+from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 
 # Implementation status flag. Tests gate on this via:
 #
@@ -319,6 +320,17 @@ def expand_require_skill(directive: RequireSkillDirective) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _render_variables(target: _Target) -> dict[str, object]:
+    """Return the Jinja render variables for a build target.
+
+    Carries the build target name and the spx version floor. The floor is
+    sourced from the single source of truth in
+    ``outcomeeng.validation.spx_version`` so the value the build renders into
+    shipped content cannot drift from the floor the product enforces.
+    """
+    return {"target": target.value, "spx_floor": REQUIRED_SPX_VERSION}
+
+
 def render_text(
     template: str,
     *,
@@ -481,7 +493,7 @@ def emit_skill(
     rendered = render_text(
         raw_text,
         shared_root=shared_root,
-        variables={"target": target.value},
+        variables=_render_variables(target),
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
@@ -701,7 +713,7 @@ def _emit_rendered_file(
     rendered = render_text(
         raw_text,
         shared_root=shared_root,
-        variables={"target": target.value},
+        variables=_render_variables(target),
     )
     translated = rewrite_paths_for_target(rendered, target=target)
     if target is _Target.CODEX:
