@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash, Read
+allowed-tools: Skill, {{! tool('ask_user') !}}, Bash, Read
 ---
 
 <objective>
@@ -65,7 +65,7 @@ It prints the total and non-coordination-note counts over the full changed-file 
 <direct_push_lifecycle>
 The direct-push transport publishes a verified changeset straight to the default branch on origin with no pull request, under the same three gates as every transport, with the review predicate bound to the local review since no CI review exists, per /merging-standards `<authority_gates>`. The project's `spx/local/merging.md` direct-push block binds the push command and the post-merge step.
 
-**Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose (the changeset, that the transport is direct-push to the default branch on origin with no PR, and that the flow runs through the push and post-merge steps) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
+**Step D1 — State the plan; confirm only if the overlay opts in.** By default — no pre-mutation-confirmation setting in `spx/local/merging.md` — state the plan in prose (the changeset, that the transport is direct-push to the default branch on origin with no PR, and that the flow runs through the push and post-merge steps) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that plan through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` on Claude Code, `{{! tool('ask_user', 'codex') !}}` on Codex) and obtain confirmation before any mutating action — never commit or push before that confirmation.
 
 **Step D2 — Commit.** Invoke `/commit-changes`. Branch hygiene from /merging-standards `<branch_hygiene>` does not apply unchanged here — direct-push publishes to the default branch on origin, so the working changeset is committed on the default-branch-tracking checkout or a short-lived branch per the overlay's direct-push configuration.
 
