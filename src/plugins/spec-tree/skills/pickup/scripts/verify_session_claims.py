@@ -100,7 +100,9 @@ def _scalar(text: str, key: str) -> str | None:
 
 
 def _string_list(text: str, key: str) -> tuple[str, ...]:
-    block = re.search(rf"^{key}:\s*\n((?:\s*-\s*.+\n?)+)", text, re.MULTILINE)
+    # Require indentation before each bullet so the YAML document delimiter
+    # `---` (no leading space) is never absorbed as a trailing list item.
+    block = re.search(rf"^{key}:\s*\n((?:[ \t]+-\s*.+\n?)+)", text, re.MULTILINE)
     if not block:
         return ()
     items = re.findall(r"-\s*\"?([^\"\n]+?)\"?\s*$", block.group(1), re.MULTILINE)
