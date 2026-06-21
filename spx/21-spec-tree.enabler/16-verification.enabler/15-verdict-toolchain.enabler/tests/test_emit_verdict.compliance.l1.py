@@ -1,4 +1,4 @@
-"""Scenario tests for the ``emit_verdict.py`` CLI.
+"""Compliance tests for the ``emit_verdict.py`` CLI.
 
 Covers the Compliance MUST clauses on ``emit_verdict.py`` in
 ``../verdict-toolchain.md``:
