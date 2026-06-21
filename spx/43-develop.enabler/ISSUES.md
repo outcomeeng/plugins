@@ -1,5 +1,25 @@
 # Issues: Develop Plugin
 
+## 0. Skill `<objective>` is an output statement, not a behavioral claim — marketplace-wide reframe (OPEN; supersedes the §1 "the skill" voice question)
+
+A skill `<objective>` states the observable **output** the skill produces — its shape — not an actor's action ("The skill produces X" / "Claude produces X"), and not a behavioral claim. Because an objective is not a behavioral claim, the `agent-prompt-standards` `<voice>` rule (which governs behavioral claims) never governed it — the "the skill vs Claude" debate at the end of §1 was a category error, not a conflict. The output framing reuses the methodology's existing **output / outcome / impact** vocabulary (`spec-tree/skills/understand/references/node-types.md`: "Assertions specify the output — not the outcome or impact"); it does not coin "program logic model" as a term. `<success_criteria>` proves the output: objective = the output, success_criteria = how it is proven.
+
+**Settled decisions:**
+
+- Language plugins ship only alongside spec-tree — the node specs scope them to "projects using spec-tree" — so the **"architect-\* / code-\* product-path portability" class is CLOSED as mis-framed**: the `spx/` references are correct and there is no standalone-consumer scenario to conditionalize. (Also closed in `spx/43-typescript.enabler/ISSUES.md`.)
+- The reframe is marketplace-wide (every skill `<objective>`), codified in `skill-standards` + `agent-prompt-standards` FIRST, then swept per-plugin.
+- `architect-python`'s in-skill reviewer phase (Phase 5 + `<authority_model>` + the output_format reviewer-status) is dropped to match `architect-typescript`: `/apply` Step 4 (`gate="true"`) owns the architecture audit for every language, so removing it opens no gap. Folded into python's objective sweep.
+
+**Plan of record:**
+
+1. PR A (branch `work/architect-code-path-portability`, repurposed): amend `skill-standards` + `agent-prompt-standards` with the output-objective rule, the objective-is-not-a-behavioral-claim boundary, and the objective↔success_criteria division; make `develop:skill-auditor` enforce it; close the portability class here + in the typescript tracker; gate, build, bump develop, `/merge`.
+2. PRs B+: per-plugin objective sweeps to output shape, one plugin per PR with its own version bump.
+3. Separate session: Class 1 (verdict-path) + Class 4 (quick_start), reconciled with the run-journal migration (session `2026-06-21_10-07-44`) and the live structural-conformance session (`2026-06-16_12-47-44`).
+
+**Settled and codified (this PR):** the canonical auditor formulation — a verdict-shaped `<objective>`, `<audit_workflow>` (not `process`/`critical_workflow`), `<verdict_format>` (not `output_format`), `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>` — lives in `skill-standards`'s `references/auditor-skeleton.md`, and `audit-skills` is brought to it as the reference-conformant auditor. **Open:** sweeping the other 17 `audit-*` skills onto the skeleton (section renames + missing `<failure_modes>`) — structural-conformance work that overlaps the Class-4 / `2026-06-16_12-47-44` structural-conformance session; reconcile with it before starting.
+
+**Tracked (separate effort) — audit-skills eval coverage.** The objective-output enforcement added three observable `audit-skills` flags (`actor_or_activity_objective`, `objective_criteria_duplication`, `auditor_skeleton_violation`) with no `[eval]` case verifying detection. `develop` carries no skill eval suite today (its skills are `[review]`-only per `develop.md`), so covering these flags means establishing the first audit-skills eval suite and the `[eval]` assertions to govern it — a separate eval-authoring effort larger than this PR's diff, not a bounded fix to it. **Author it before the per-plugin objective sweeps (PRs B+) begin** — those sweeps depend on the auditor correctly flagging violations, so an unverified detector makes them unreliable. Gate with the eval harness.
+
 ## 1. Named-subject convention sweep — prose swept; scoped residuals remain (OPEN)
 
 The `develop` plugin's `agent-prompt-standards` `<voice>` rule requires authored prompt

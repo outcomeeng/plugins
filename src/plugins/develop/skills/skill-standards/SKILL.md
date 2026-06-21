@@ -222,10 +222,10 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Required tags (every skill):**
 
-| Tag                  | Content                                           |
-| -------------------- | ------------------------------------------------- |
-| `<objective>`        | What the skill does and why it matters.           |
-| `<success_criteria>` | How to know the task worked; completion criteria. |
+| Tag                  | Content                                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<objective>`        | The observable **output** the skill produces, in a definite shape — not an actor or an activity. See `/agent-prompt-standards` `<objective_shape>`. |
+| `<success_criteria>` | The properties that prove the output is sound — not a re-list of the workflow steps.                                                                |
 
 **Router-pattern tags** (skills that route to multiple workflows):
 
@@ -292,12 +292,13 @@ Constraints:
 
 **Intelligence rules** — match structure to complexity:
 
-| Skill class                               | Expected tags                                                                   |
-| ----------------------------------------- | ------------------------------------------------------------------------------- |
-| Simple (single domain)                    | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                 |
-| Medium (multiple patterns)                | Required + `<workflow>` and/or `<examples>`                                     |
-| Complex (multi-domain, API, sec)          | Required + router pattern + appropriate conditional tags                        |
-| Foundation / gate / validator / reference | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists. |
+| Skill class                               | Expected tags                                                                                                                                       |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Simple (single domain)                    | `<objective>`, `<success_criteria>`, optionally `<quick_start>`                                                                                     |
+| Medium (multiple patterns)                | Required + `<workflow>` and/or `<examples>`                                                                                                         |
+| Complex (multi-domain, API, sec)          | Required + router pattern + appropriate conditional tags                                                                                            |
+| Foundation / gate / validator / reference | Required + `<workflow>`. **Omit** `<quick_start>` — no abbreviated path exists.                                                                     |
+| Auditor (agent-preloaded)                 | The canonical auditor skeleton — **read** `references/auditor-skeleton.md` when authoring or auditing an `audit-*` skill. **Omit** `<quick_start>`. |
 
 Don't over-engineer simple skills. Don't under-specify complex ones.
 

@@ -44,6 +44,16 @@ Two-tier hierarchy:
 
 </voice>
 
+<objective_shape>
+
+**An `<objective>` states the skill's output, not an activity or an actor.** It describes the observable artifact or state the skill produces, in a definite shape — what is true when the skill has been applied correctly, such that "every rule followed exactly" is the visible proof. It never opens with an actor ("The skill produces…", "Claude produces…") or a bare activity verb ("Audit…", "Generate…", "Evaluate…"). It names the output and its required shape.
+
+**An objective is not a behavioral claim.** `<voice>` governs behavioral claims — what Claude does, tends to do, or fails to do. An objective is an output statement, a different category, so the imperative-vs-"Claude" subject choice never applies to it. Naming an actor as the subject of an objective is the error the output framing removes.
+
+This mirrors the methodology's output / outcome / impact distinction — assertions specify the **output**, and an objective names the skill's output the same way. `<success_criteria>` proves it: the objective names the output and its shape, `<success_criteria>` states the properties that make it sound, and the two never duplicate.
+
+</objective_shape>
+
 <description_style>
 
 **Directive descriptions for reliable activation.**
