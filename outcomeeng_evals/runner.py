@@ -154,14 +154,15 @@ def _subprocess_env() -> dict[str, str]:
     path instead of the print-mode subprocess contract. Do not narrow
     this in a future refactor.
 
-    In CI, the job currently supplies ``CLAUDE_CODE_OAUTH_TOKEN`` through
-    the environment and it reaches the subprocess by this same
-    pass-through; ``ANTHROPIC_API_KEY`` is not forwarded yet, so
-    ``ClaudeCliRunner._effective_bare`` omits ``--bare`` (correct under
-    the OAuth auth source). Forwarding ``ANTHROPIC_API_KEY`` from a job
-    secret (tracked under the eval-harness node's ``ISSUES.md``
-    workflow-env TODO) would flip the CI invocation onto the isolated
-    path. Other job-level secrets (deployment tokens, cloud credentials)
+    In CI, the job supplies both ``CLAUDE_CODE_OAUTH_TOKEN`` and
+    ``ANTHROPIC_API_KEY`` through the environment, and they reach the
+    subprocess by this same pass-through. When the repo/org provides
+    ``ANTHROPIC_API_KEY`` the derive rule flips the invocation onto the
+    isolated ``--bare`` path; when it is absent GitHub forwards an empty
+    string that ``ClaudeCliRunner._effective_bare`` treats as unset, so
+    the call omits ``--bare`` and resolves auth from
+    ``CLAUDE_CODE_OAUTH_TOKEN`` instead. Other job-level secrets
+    (deployment tokens, cloud credentials)
     are forwarded too; that is acceptable — ``claude`` consumes only
     what it needs. The env is not narrowed to an allow-list because an
     ``apiKeyHelper`` is an arbitrary command that may read arbitrary
