@@ -44,7 +44,7 @@ Also detect **brownfield**: a product already implemented in code while `spx/` i
 
 **Step 2: Interview the user**
 
-Invoke `/interview` and apply its methodology (one question at a time, `AskUserQuestion`, coverage display before each question, pushback) with the product-bootstrap coverage areas below as the interview plan. `/interview` supplies the technique; bootstrapping supplies the coverage areas — do not fork the interview. Take the areas in order, each constraining the next:
+Invoke `/interview` and apply its methodology (one question at a time, `request_user_input`, coverage display before each question, pushback) with the product-bootstrap coverage areas below as the interview plan. `/interview` supplies the technique; bootstrapping supplies the coverage areas — do not fork the interview. Take the areas in order, each constraining the next:
 
 1. **Consumers** — who consumes this product? Name distinct personas, not a single "user".
 2. **Job-to-be-done** — what job does each consumer hire the product for?

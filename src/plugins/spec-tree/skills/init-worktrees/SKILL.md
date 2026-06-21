@@ -2,7 +2,7 @@
 name: init-worktrees
 description: >-
   ALWAYS invoke this skill when setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while pushing every local ref to the remote and carrying a prior checkout's gitignored state across. NEVER run git clone --bare plus git worktree add to build the pool outside this skill.
-allowed-tools: Read, Bash(git:*), Bash(python3:*), Bash(just:*), Bash(pnpm:*), AskUserQuestion
+allowed-tools: Read, Bash(git:*), Bash(python3:*), Bash(just:*), Bash(pnpm:*), {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -83,7 +83,7 @@ Provisioning never deletes the prior checkout — it renamed it aside. Emit the 
 rm -rf <prior_husk>
 ```
 
-Then block on the runtime's structured-question tool (`AskUserQuestion` on Claude Code, `request_user_input` on Codex) asking the operator to confirm the removal ran. Do not run the removal — the operator runs it. The husk is fully redundant by this point: its branches and tags are on the remote and its gitignored state is in the new pool, so removing it loses nothing. Once the operator confirms the husk is removed, the provisioning flow is complete.
+Then block on the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` on Claude Code, `{{! tool('ask_user', 'codex') !}}` on Codex) asking the operator to confirm the removal ran. Do not run the removal — the operator runs it. The husk is fully redundant by this point: its branches and tags are on the remote and its gitignored state is in the new pool, so removing it loses nothing. Once the operator confirms the husk is removed, the provisioning flow is complete.
 
 </step>
 

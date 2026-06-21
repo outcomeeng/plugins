@@ -14,7 +14,7 @@ When Claude observes an imperfection — failing validation, broken link, outdat
 - The skill or workflow that governs the fix
 - The proposed handling (fix now, ask for operator judgment, or write to the correct coordination artifact)
 
-A safe local fix is applied immediately without asking. A blocking decision is surfaced via `AskUserQuestion` immediately. A non-blocking decision is held until the next natural checkpoint.
+A safe local fix is applied immediately without asking. A blocking decision is surfaced via `{{! tool('ask_user') !}}` immediately. A non-blocking decision is held until the next natural checkpoint.
 
 </recording>
 
@@ -40,9 +40,9 @@ NEVER ask the operator "defer or fix?" for debt the change caused, surfaced, or 
 
 <closing_protocol>
 
-At the end of a turn, apply one test: can the user reasonably ask "What now?" If the work continues on its own — a scheduled wake-up will resume it, a workflow gate authorizes the next step autonomously, or the goal is unfinished with the next action Claude's — then "What now?" has no open answer: report status and continue the work (per "Handoff is not a voluntary close" below), with no question and no trailing "let me know", offer, or prose close. When the user faces a genuine fork, decision, or set of next directions that are theirs to choose, close with `AskUserQuestion` — never a plain-text closing, a trailing "let me know", or an offer in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
+At the end of a turn, apply one test: can the user reasonably ask "What now?" If the work continues on its own — a scheduled wake-up will resume it, a workflow gate authorizes the next step autonomously, or the goal is unfinished with the next action Claude's — then "What now?" has no open answer: report status and continue the work (per "Handoff is not a voluntary close" below), with no question and no trailing "let me know", offer, or prose close. When the user faces a genuine fork, decision, or set of next directions that are theirs to choose, close with `{{! tool('ask_user') !}}` — never a plain-text closing, a trailing "let me know", or an offer in prose. The question presents the concrete next handling and lets the user choose when operator judgment is needed.
 
-**The closing protocol applies at task completion, not at every milestone.** A turn is a checkpoint when the user's stated goal is still unfulfilled. While the goal is unfulfilled, Claude continues working — reports brief status updates, surfaces blockers via `AskUserQuestion` only when input is genuinely required, and never proposes "separate session", "future session", or "next session" as an out. Recording future-session coordination is appropriate only when the user accepts that destination or runtime constraints require persistence.
+**The closing protocol applies at task completion, not at every milestone.** A turn is a checkpoint when the user's stated goal is still unfulfilled. While the goal is unfulfilled, Claude continues working — reports brief status updates, surfaces blockers via `{{! tool('ask_user') !}}` only when input is genuinely required, and never proposes "separate session", "future session", or "next session" as an out. Recording future-session coordination is appropriate only when the user accepts that destination or runtime constraints require persistence.
 
 The user's stated goal governs what "task complete" means. When the user says "fix CI", the task is unfinished while CI is red. Component milestones (a single test passes, a single migration commits, a single changeset reaches the default branch) are progress, not completion. Closing the session before the goal is achieved is a violation of the user's instruction.
 
