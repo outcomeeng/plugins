@@ -70,6 +70,14 @@ Claude drives the chain top-to-bottom. Every filesystem effect routes through `t
 
 `render_review.py` re-parses `review-result.json` through `review_result.parse_json` before emitting; an invalid result fails the render with a non-zero exit before any markdown is produced.
 
+7. **Surface the result to the caller.** Read `review.md` back from the thread and print it to the conversation so a direct skill invocation gives the caller the findings to act on, not only persisted artifacts:
+
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/../manage-thread-store/scripts/read_record.py" --name review.md
+   ```
+
+   Print, in order: the record names persisted to the current thread (`review-result.json` and `review.md`); a one-line count by render class (`BLOCKING: <n>, DEBT: <n>` — render class is identity-mapped from severity); and, when any finding is present, the full `review.md` content. When the review carries no finding, the count line and the persisted records suffice. The caller then handles every finding by validity and phase, never by severity.
+
 </chain>
 
 <validate_as_arbiter>
@@ -99,5 +107,6 @@ Schema validation — required keys, enum membership, the path-style `rule` cita
 - [ ] `review-result.json` and `review.md` both exist under the current branch's slug in the thread store after the chain completes.
 - [ ] No script under `scripts/` imports a third-party package or calls a direct filesystem primitive against the backend's storage paths.
 - [ ] The swappable review prompt remains a standalone file at `references/review-prompt.md`; rotating the prompt does not require touching code.
+- [ ] After persistence, the chain reads `review.md` back and surfaces the record names, the `BLOCKING`/`DEBT` count line, and (when any finding is present) the full `review.md` to the caller.
 
 </success_criteria>

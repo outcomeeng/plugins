@@ -18,13 +18,10 @@ The methodology documents Go's test-infrastructure home (`internal/testinfra/`) 
 
 Identified during the lean-template migration of the product-level decision records.
 
-## Migrate command wrappers to skills
+## Conformance test reinforcing the no-command authoring stance
 
-`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill as the marketplace's sole user-facing invocation artifact; the command artifact type is not authored. Seven command wrappers predate this convention, each a thin `/<name>` that fronts a skill, all in the spec-tree plugin:
+`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill the marketplace's sole user-facing invocation artifact and forbids authoring a command (`commands/*.md`); the rule carries `[audit]` evidence. No `src/plugins/*/commands/` directory ships. A deterministic conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory exists would reinforce that `[audit]` stance with executable evidence.
 
-- `src/plugins/spec-tree/commands/` — `apply`, `author`, `bootstrap`, `clarify`, `commit`, `review-changes`, `rtfm`.
-- No other plugin ships a `commands/` directory (verified by `ls src/plugins/*/commands/*.md`). Re-enumerate before migrating in case new commands have landed.
+The `develop` plugin retains its `create-commands` and `audit-commands` skills and `command-auditor` agent: those serve the consumer audience (authoring commands in other repositories), which the product-internal ADR does not govern.
 
-Each command already maps to a governing skill (e.g. `/commit` → `commit-changes`, `/apply` → `apply`, `/author` → `author`, `/bootstrap` → `bootstrap`, `/clarify` → `clarify`/`interview`, `/review-changes` → `review-changes`, `/rtfm` → `refocus`). The `develop` plugin also ships `create-commands` and `audit-commands` skills whose status this convention affects — fold their disposition into the migration. `/open-pr` is removed by `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/`, which makes `/pr` the shipping route and treats opening/management as internal protocols.
-
-**Resolution shape**: per-command (or per-batch) PRs that drop each `commands/*.md`, name the skill like the former command where a rename is wanted, update both marketplace catalogs (`.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`) and the README plugin catalog, and rebuild `dist/`. Once no `commands/` directories remain, the ADR's `[audit]` authoring-stance rules can be reinforced by a conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory ships. Audit gate: `/align` against `spx/13-plugin-and-runtime-conventions.adr.md` + `just check`.
+**Resolution shape**: the ADR is a product-root decision file with no co-located `tests/` directory, so the conformance assertion needs a naturally-placed home — the distribution enabler (`spx/32-distribution.enabler/`) or another node governing the shipped plugin layout. Decide placement, then add the `[test]` assertion plus its Python test per `spx/15-test-language.adr.md`.
