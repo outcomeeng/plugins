@@ -48,6 +48,9 @@ on:
     # so do not mark it a required status check without a separate always-runs
     # gate job.
     paths:
+      - "spx/21-spec-tree.enabler/79-diagnostics.enabler/**"
+      - "src/plugins/spec-tree/skills/diagnose/**"
+      - "dist/claude/spec-tree/skills/diagnose/**"
       - "spx/15-merging.pdr.md"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
@@ -75,6 +78,9 @@ on:
     # Same scope as the PR filter — a change to this workflow file itself does
     # not refresh the baseline; dispatch it when a workflow edit needs a run.
     paths:
+      - "spx/21-spec-tree.enabler/79-diagnostics.enabler/**"
+      - "src/plugins/spec-tree/skills/diagnose/**"
+      - "dist/claude/spec-tree/skills/diagnose/**"
       - "spx/15-merging.pdr.md"
       - "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/**"
       - "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/**"
@@ -199,6 +205,13 @@ jobs:
       # (never interpolated into a run: body). The harness reads it via the
       # inherited environment per eval-harness.md:16.
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      # Optional `--bare` isolation auth. When the repo/org provides
+      # ANTHROPIC_API_KEY, the runner derives `--bare` and the eval claude
+      # subprocess takes no ambient ~/.claude or cwd AGENTS.md discovery. When
+      # the secret is absent GitHub forwards an empty string, and the runner's
+      # non-empty derivation falls back to the OAuth path above, so absence
+      # never forces an empty-key `--bare` failure.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       EVALS_ROOT: ${{ github.event.inputs.evals_root || 'spx' }}
       PLUGIN_DIR: ${{ github.event.inputs.plugin_dir || 'dist/claude/spec-tree' }}
       WORKERS: ${{ github.event.inputs.workers || '1' }}
