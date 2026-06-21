@@ -153,6 +153,8 @@ subjects verbatim.
     pass, not a per-touched-file edit. Surfaced by the `develop:skill-auditor` gate during the PR3
     `Skill`-append; out of scope for that frontmatter change.
 
+**`"The skill"` as named subject in `architect-*` objectives — cross-language candidate (surfaced by the CI `spec-tree-review` on PR #286, NOT the skill-auditor).** The CI reviewer flagged `architect-typescript`'s `<objective>` sentence "The skill produces ADRs, never implementation code." as a `<voice>` named-subject violation (a behavioral/output claim should name **"Claude"**), and PR #286 changed it to "Claude produces ADRs, never implementation code." `architect-python` and `architect-rust` carry the identical "The skill produces ADRs, never implementation code…" phrasing in their objectives and now diverge from the typescript form. The nuance: the **authoritative** `develop:skill-auditor` gate did NOT flag this phrasing on `architect-typescript` (only the CI `spec-tree-review`, which does not load `agent-prompt-standards`, did) — so "the skill" as a subject is a borderline call, not a confirmed banned subject like "the agent"/"you"/"the model". Resolve as a deliberate decision in a marketplace-wide named-subject voice pass: either rule "the skill" an acceptable artifact-subject (and revert typescript for consistency) or a violation (and sweep `architect-python`/`architect-rust` to "Claude"). Each plugin touched gets its own patch bump; gate with `develop:skill-auditor`.
+
 **Verification gate:** `develop:skill-auditor` (`/audit-skills`) loads `agent-prompt-standards`;
 `develop:subagent-auditor` (`/audit-subagents`) governs the agent-definition files. Run both on
 changed targets; the deterministic PCRE `git grep` confirms the named-subject axis specifically.
