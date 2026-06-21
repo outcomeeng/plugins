@@ -2,7 +2,7 @@
 name: apply
 description: >-
   ALWAYS invoke this skill before implementing any spec-tree work item.
-  NEVER write code for a spec-tree node without this skill.
+  NEVER write code, tests, or architecture for a spec-tree node without this skill.
 ---
 
 <objective>
@@ -14,6 +14,7 @@ For work destined for the default branch, the flow is complete only when the cha
 
 <quick_start>
 
+0. Plan the slice when the work is a plan or proposal, not a specific node or queue — invoke `/plan-slice` to select the observable slice whose node set becomes the work queue (see `<invocation_modes>`)
 1. Load methodology (Step 1 — once per session)
 2. Load work item context (Step 2 — every node)
 3. Architect -> audit until APPROVED (Steps 3–4)
@@ -31,6 +32,8 @@ An optional argument controls what runs before the per-node flow below:
 - `--agent [node-path]` → launch the `applier` agent (`Agent` tool, `subagent_type: spec-tree:applier`) on the node; it runs the per-node TDD flow (Steps 1–8, audit gates included) autonomously and returns a status report. Do not run those steps in the main context. The agent does not review the whole changeset or merge — on its return, continue with Step 9 (when the change is cross-node) and Step 10 over the resulting changeset.
 - `[node-path]` → the work queue is that single node.
 - no argument → determine the work from the conversation; if nothing is clear, read `spx/EXCLUDE` and queue every node path it lists (one per non-comment, non-blank line). If no work is found, report "Nothing to apply" and stop.
+
+When the work is described as a plan or proposal rather than a specific node or queue, invoke `/plan-slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
 
 When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
@@ -78,10 +81,11 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 <skill_map>
 
-Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
+Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
 | Step | Purpose                  | TypeScript                                                      | Python                               |
 | ---- | ------------------------ | --------------------------------------------------------------- | ------------------------------------ |
+| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                                 | same                                 |
 | 1    | Load methodology         | `Skill("spec-tree:understand")`                                 | same                                 |
 | 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")`         | same                                 |
 | 3    | Architect                | `Skill("architect-typescript")`                                 | `Skill("architect-python")`          |
@@ -93,6 +97,7 @@ Steps 1–2 are language-independent. Steps 3–8 use the detected language. Ste
 | 9    | Whole-changeset review † | `changes-reviewer` agent or `Skill("spec-tree:review-changes")` | same                                 |
 | 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                      | same                                 |
 
+§ Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
 ‡ Step 10 runs for any change destined for the default branch — skip only when the user explicitly scoped the work to a proposal, analysis, review, or local-only change (see the step).
 
