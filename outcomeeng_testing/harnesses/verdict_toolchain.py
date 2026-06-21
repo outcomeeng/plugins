@@ -1,4 +1,4 @@
-"""Harness for verdict-toolchain scenario tests.
+"""Harness for verdict-toolchain compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
 ``spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler/tests/``:

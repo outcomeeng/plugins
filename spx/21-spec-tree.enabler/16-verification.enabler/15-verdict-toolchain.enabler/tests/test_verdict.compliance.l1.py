@@ -1,4 +1,4 @@
-"""Scenario tests for the canonical verdict module.
+"""Compliance tests for the canonical verdict module.
 
 Covers the Compliance MUST clauses on ``verdict.py`` in
 ``../verdict-toolchain.md``:

@@ -1,4 +1,4 @@
-"""Scenario tests for the ``aggregate_verdicts.py`` CLI.
+"""Compliance tests for the ``aggregate_verdicts.py`` CLI.
 
 Covers the Compliance MUST clauses on ``aggregate_verdicts.py`` in
 ``../verdict-toolchain.md``:
