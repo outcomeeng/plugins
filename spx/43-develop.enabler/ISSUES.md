@@ -16,7 +16,7 @@ A skill `<objective>` states the observable **output** the skill produces — it
 2. PRs B+: per-plugin objective sweeps to output shape, one plugin per PR with its own version bump.
 3. Separate session: Class 1 (verdict-path) + Class 4 (quick_start), reconciled with the run-journal migration (session `2026-06-21_10-07-44`) and the live structural-conformance session (`2026-06-16_12-47-44`).
 
-**Active discussion:** the exact formulation of `<objective>`, `<success_criteria>`, and the other standing sections **for the auditor skills specifically** — verdict-output section naming (`output_format` vs `verdict_format`), workflow-section naming (`process` / `audit_workflow` / `critical_workflow` / `workflow`), and `failure_modes` / `quick_start` / `dispatch_gate` consistency across the 18 auditors — is under discussion before authoring.
+**Settled and codified (this PR):** the canonical auditor formulation — a verdict-shaped `<objective>`, `<audit_workflow>` (not `process`/`critical_workflow`), `<verdict_format>` (not `output_format`), `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>` — lives in `skill-standards`'s `references/auditor-skeleton.md`, and `audit-skills` is brought to it as the reference-conformant auditor. **Open:** sweeping the other 17 `audit-*` skills onto the skeleton (section renames + missing `<failure_modes>`) — structural-conformance work that overlaps the Class-4 / `2026-06-16_12-47-44` structural-conformance session; reconcile with it before starting.
 
 ## 1. Named-subject convention sweep — prose swept; scoped residuals remain (OPEN)
 
