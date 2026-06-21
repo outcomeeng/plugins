@@ -77,7 +77,7 @@ Read every statement in the PDR. Classify each:
 | Data structure or schema           | ADR            | REJECT — architecture                |
 | Performance implementation         | ADR            | REJECT (performance guarantee = PDR) |
 
-**Any architecture or implementation content → REJECT — "architecture content in PDR."**
+**Any architecture or implementation content → REJECT — finding rule "architecture-content."**
 
 The test: "Would a user care about this statement?" If the answer is no, it probably belongs in an ADR.
 
@@ -96,7 +96,7 @@ For each product property:
    - "Good user experience" → unfalsifiable ✗
    - "Search returns results in under 500ms" → falsifiable ✓
 
-**Non-observable or unfalsifiable property → REJECT — "non-observable property."**
+**Non-observable or unfalsifiable property → REJECT — finding rule "non-observable-property."**
 
 </step>
 
@@ -115,7 +115,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 3. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
 
 </step>
 
@@ -132,7 +132,7 @@ Check EVERY section for temporal language:
 | "After customer feedback, we decided" | "The product does X to meet customer expectations" |
 | "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
-**Any temporal language in any section → REJECT — "temporal voice."**
+**Any temporal language in any section → REJECT — finding rule "temporal-language."**
 
 </step>
 
@@ -146,7 +146,7 @@ Compare the PDR against:
 2. **Ancestor PDRs** — Does the PDR contradict constraints from PDRs higher in the tree?
 3. **Sibling ADRs** — Does the PDR overlap with architecture concerns?
 
-**Contradiction with product spec or ancestor PDR → REJECT — "consistency violation."**
+**Contradiction with product spec or ancestor PDR → REJECT — finding rule "consistency-violation."**
 **Overlap with ADR → finding (content misplacement) but not automatic REJECT.**
 
 </step>
@@ -176,7 +176,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
   "rows": [
     { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "property-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "tag-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
@@ -184,7 +184,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
 
 </verdict_format>
 

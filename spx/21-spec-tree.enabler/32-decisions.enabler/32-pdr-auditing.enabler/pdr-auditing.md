@@ -37,23 +37,18 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 ### Scenarios
 
-- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture content" ([test](tests/test_pdr_auditing.scenario.l1.py))
-- Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable property" ([test](tests/test_pdr_auditing.scenario.l1.py))
-- Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal voice" ([test](tests/test_pdr_auditing.scenario.l1.py))
-- Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the verdict is REJECT with finding category "evidence-type-mismatch" ([test](tests/test_pdr_auditing.scenario.l1.py))
-- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency violation" ([test](tests/test_pdr_auditing.scenario.l1.py))
-- Given a PDR where all five properties hold, when audited, then the verdict is APPROVED ([test](tests/test_pdr_auditing.scenario.l1.py))
-
-### Properties
-
-- The audit methodology classifies PDR content into at least the six content types defined in the Content Classification Model — product behavior, observable non-functional property, technology choice, implementation approach, data structure, performance implementation ([test](tests/test_pdr_auditing.property.l1.py))
-
-### Conformance
-
-- The `/audit-pdr` skill invokes `/contextualize` on the PDR's location before any audit phase ([test](tests/test_pdr_auditing.conformance.l1.py))
+- Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture-content" ([eval](evals/structure/eval.toml))
+- Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable-property" ([eval](evals/structure/eval.toml))
+- Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal-language" ([eval](evals/voice/eval.toml))
+- Given a PDR whose `### Testing` rule carries a bare mechanism tag, a tag disagreeing with its subsection, no tag, or more than one tag, when audited, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
+- Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the verdict is REJECT with finding category "evidence-type-mismatch" ([eval](evals/tag-validity/eval.toml))
+- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the verdict is REJECT with finding category "consistency-violation" ([eval](evals/structure/eval.toml))
+- Given a PDR where all five properties hold, when audited, then the verdict is APPROVED ([eval](evals/structure/eval.toml))
 
 ### Compliance
 
+- ALWAYS: classify every PDR statement into at least the six content types defined in the Content Classification Model — product behavior, observable non-functional property, technology choice, implementation approach, data structure, performance implementation ([audit])
+- ALWAYS: invoke `/contextualize` on the PDR's location before any audit phase ([audit])
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([review])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([review])
 - ALWAYS: verify each `### Testing` rule's evidence type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([review])
