@@ -143,9 +143,9 @@ def check_paths(session: Session, repo: Path) -> list[ClaimVerdict]:
                 ClaimKind.INJECTED_PATH,
                 path,
                 Verdict.CONFIRMED if exists else Verdict.DISCREPANCY,
-                "path present at current HEAD"
+                "path present in the current checkout"
                 if exists
-                else "path missing at current HEAD",
+                else "path missing in the current checkout",
             )
         )
     return verdicts

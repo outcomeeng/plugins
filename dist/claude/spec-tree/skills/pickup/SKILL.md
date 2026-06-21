@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[--list] [--auto-continue]"
-allowed-tools: Read, Bash(spx:*), Bash(git:*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx:*), Bash(git:*), Bash(python3:*), AskUserQuestion, Glob, Skill
 ---
 
 <context>
