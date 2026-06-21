@@ -182,6 +182,25 @@ def test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set(
     )
 
 
+def test_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # A workflow that forwards ANTHROPIC_API_KEY from an absent secret sets the
+    # variable to an empty string. An empty value is not usable --bare auth, so
+    # the derive rule treats it as unset and omits --bare, falling back to the
+    # OAuth token rather than failing the run with an empty-key --bare call.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-oauth-test")
+    runner = ClaudeCliRunner(plugin_dir=tmp_path)
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    assert "--bare" not in argv, (
+        "an empty ANTHROPIC_API_KEY must derive no --bare so the OAuth auth"
+        " source is accepted"
+    )
+
+
 def test_claude_cli_runner_forces_bare_when_override_is_true(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
