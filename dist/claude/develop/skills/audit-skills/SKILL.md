@@ -312,6 +312,16 @@ The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` i
 Note: While this skill uses pure XML structure, it produces JSON output that the verdict toolchain renders as markdown for human readability.
 </verdict_format>
 
+<failure_modes>
+
+**Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a must-fix the `actor_or_activity_objective` flag exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
+
+**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover all six areas before issuing the verdict.
+
+**Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of grouping findings as keep / worth-improving / must-fix, turning a verdict into a rating the author cannot act on. Each finding names a location, a standard, and a consequence; a score names none of them. Emit findings, never scores.
+
+</failure_modes>
+
 <success_criteria>
 The verdict is sound when:
 
