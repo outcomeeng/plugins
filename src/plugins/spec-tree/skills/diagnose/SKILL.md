@@ -11,7 +11,7 @@ allowed-tools: Bash, Read
 
 <objective>
 
-Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, the git worktree layout, and the `.spx/` session store, with further surfaces listed under `<extending>` — classify each, and aggregate one report.
+Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, the git worktree layout, the `.spx/` session store, and the plugin install surfaces across the Claude and Codex plugin CLIs — classify each, and aggregate one report. `<extending>` lists the candidate checks a future slice adds.
 
 Every check is read-only. It inspects environment variables and queries `spx` with non-mutating status commands; it never changes credentials, runs workflows, writes session state, or edits files.
 
@@ -127,6 +127,36 @@ The `awk` matches the doing session's `git_ref` to a worktree's branch and print
 
 </check>
 
+<check name="marketplace-install">
+
+Verifies that the methodology marketplace — the marketplace that provides the spec-tree plugins this project depends on — is registered and its offered plugins are installed, enabled, and current, across the two plugin surfaces a consumer may run: Claude Code (`claude plugin`) and Codex (`codex plugin`).
+
+The check applies only where a plugin CLI is present. On a runtime that exposes neither `claude plugin` nor `codex plugin`, report `not-applicable` rather than classifying — there is no install surface to inspect, not a failed install.
+
+Read each present surface's registration and the offered-against-installed plugin state, skipping a surface whose CLI is absent:
+
+```bash
+# Claude surface (skip when `claude` is absent):
+command -v claude && claude plugin marketplace list --json
+command -v claude && claude plugin list --available --json
+# Codex surface (skip when `codex` is absent):
+command -v codex && codex plugin marketplace list
+command -v codex && codex plugin list
+```
+
+`claude plugin marketplace list --json` reports whether the methodology marketplace is registered (a `name`/`source` entry). `claude plugin list --available --json` lists every plugin the registered marketplaces offer — the `--available` flag adds the offered-but-not-installed plugins to the installed set, so the listing is the union of offered and installed; an installed entry carries `id` (of the form `<plugin>@<marketplace>`), `version`, and `enabled`. Join the two by plugin name to read, per offered plugin: whether it is installed, whether it is enabled, its installed version, and the offered version. The Codex surface mirrors this — `codex plugin marketplace list` reports registration and `codex plugin list` reports each plugin available from the configured marketplace snapshots and its installed state. Classify across the present surfaces, taking the worst verdict over them (unregistered worse than drifted worse than installed):
+
+| Reading                                                                                                                          | Verdict            | Bucket         | Remediation                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Every present surface has the marketplace registered and every offered plugin installed, enabled, and at the offered version     | **installed**      | healthy        | None — report the present surfaces, the marketplace, and the plugin count.                                                                                                                                                  |
+| The marketplace is registered on the present surfaces, but a plugin is missing, disabled, or installed below the offered version | **drifted**        | degraded       | Install, enable, or update each diverging plugin to the offered set — `claude plugin install\|enable\|update <plugin>@<marketplace>` on the Claude surface, `codex plugin add <plugin>@<marketplace>` on the Codex surface. |
+| A present plugin surface does not have the marketplace registered, so its offered plugins cannot resolve                         | **unregistered**   | broken         | Register the marketplace on that surface — `claude plugin marketplace add <source>` or `codex plugin marketplace add <source>` — then install its plugins.                                                                  |
+| Neither the Claude nor the Codex plugin CLI is present                                                                           | **not-applicable** | not-applicable | None — this runtime exposes no plugin install surface, so install state does not apply.                                                                                                                                     |
+
+A reading that matches no row — an inconsistent registration-versus-install state — or a surface whose command errors falls to `unknown` per step 4. The plugin CLIs expose registration, the offered set, and the installed-and-enabled state directly; this check joins and compares them but does not re-derive version-floor compliance — judging the installed version against a required minimum needs a minimum-version declaration the installed plugin tree exposes, which extracts into the `spx` CLI once it ships.
+
+</check>
+
 </checks>
 
 <report_format>
@@ -140,6 +170,7 @@ diagnose — environment report
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
   worktree-pool         stale-claims — plugins-c holds a stale claim
   session-store         consistent — 1 doing, 4 todo, 22 archived
+  marketplace-install   drifted — develop installed below offered version on the claude surface
 
 overall: unknown
 ```
@@ -153,6 +184,7 @@ diagnose — environment report
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
   worktree-pool         compliant — bare-repository pool, 7 worktrees, no stale claims
   session-store         consistent — 2 doing, 3 todo, 22 archived
+  marketplace-install   installed — outcomeeng registered, 4 plugins current on codex
 
 overall: healthy
 ```
@@ -165,7 +197,7 @@ Report every reading verbatim. Never collapse a session identifier or version st
 
 Each check is an independent named diagnostic: a reading step, a verdict table that maps each reading to a named verdict and its aggregation bucket — healthy, degraded, broken, or not-applicable, with `unknown` for readings that match no row or a command that errors — and a remediation hint per non-healthy state. A check that inspects a runtime-specific surface reports `not-applicable` where that surface is absent rather than misclassifying. Add a check by appending a new `<check>` block and one line to the report — NEVER by restructuring the existing checks. A check MUST remain a light orchestration of surfaces the environment already exposes. Heavy, test-bearing classification logic MUST live in the `spx` CLI — invoked here as one more non-mutating command — never embedded in this skill.
 
-Candidate checks to add by extension: marketplace install state across the Claude and Codex surfaces.
+Candidate checks to add by extension: spx version-floor compliance — judging the reported `spx` version against a required minimum — once the installed plugin tree exposes a minimum-version declaration to judge against.
 
 </extending>
 
