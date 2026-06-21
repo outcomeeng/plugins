@@ -36,8 +36,8 @@ The objective names the verdict, not the activity:
 An auditor's `<success_criteria>` states verdict soundness, never a re-list of the workflow steps:
 
 - Every applicable rule was judged — none skipped (coverage-complete).
-- The verdict is APPROVED or REJECTED with no rule left unevaluated.
-- Each REJECT finding is falsifiable: it names the artifact, the violated rule, and the evidence.
+- The verdict states its overall determination — APPROVED/REJECTED, PASS/FAIL, or the auditor's keep/worth-improving/must-fix grouping — with no rule left unevaluated.
+- Each finding that flags a problem is falsifiable: it names the artifact, the violated rule, and the evidence.
 - The same input yields the same verdict (reproducible).
 
 The ordered steps ("`/contextualize` invoked", "artifact read", "tests run") belong in `<audit_workflow>`, not here — listing them as success criteria is the activity/output confusion the output framing removes.
