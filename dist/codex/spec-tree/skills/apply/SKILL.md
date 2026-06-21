@@ -227,7 +227,7 @@ Steps 4, 6, and 8 are blocking audit gates. Each audit skill emits `APPROVED` or
 
 On `REJECT` (Steps 4, 6, 8) or an unaddressed valid finding (Step 9): fix the defect class, re-invoke the same skill, and scan again.
 
-**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `AskUserQuestion`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the model is unstable; refactor the model before asking the same gate again.
+**3 consecutive REJECTs on the same gate (Steps 4, 6, 8), or 3 consecutive Step 9 runs that still surface unresolved valid findings -> STOP.** Surface the stuck gate to the user via `request_user_input`: report the gate, its most recent verdict (for Step 9, the outstanding findings), the same-class sweep already performed, and what did not resolve. A convergence loop that keeps reopening valid findings is a signal the model is unstable; refactor the model before asking the same gate again.
 
 </review_gates>
 
