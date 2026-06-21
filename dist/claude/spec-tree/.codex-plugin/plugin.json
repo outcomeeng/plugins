@@ -27,7 +27,10 @@
     "longDescription": "Spec Tree methodology skills for context loading, authoring, decomposition, implementation, and auditing durable specs.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://outcome.engineering"
   }
 }

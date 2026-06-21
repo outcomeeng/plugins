@@ -115,7 +115,7 @@ Rules live under `## Verification`, grouped into `### Testing`, `### Eval`, and 
 2. Under `### Testing`, the evidence type fits the claim's shape per the `/test` router. A universal claim (ALWAYS / NEVER / "for all" / "for every" / "no input") takes `mapping`, `conformance`, `compliance`, or `property` — never `scenario`, which fits only a single existential interaction. Reject a type the router would not produce for the claim; do not relitigate a choice the router leaves open between equally-valid types.
 3. Is the rule specific enough that two reviewers invariably would agree on pass/fail?
 
-**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-mode-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
+**A rule with no subsection tag, a tag disagreeing with its subsection, a bare mechanism tag in place of an evidence type, or more than one tag → REJECT — "invalid-tag." An evidence type that contradicts the claim's shape (a universal tagged `scenario` is the clearest case) → REJECT — "evidence-type-mismatch."**
 
 </step>
 
@@ -176,7 +176,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
   "rows": [
     { "name": "content-classification", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "property-quality", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "mode-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
+    { "name": "tag-validity", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "atemporal-voice", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "consistency", "status": "PASS | FAIL | UNKNOWN", "findings": [] }
   ],
@@ -184,7 +184,7 @@ The skill's `overall` is `PASS` iff every property row is `PASS`; `FAIL` if any 
 }
 ```
 
-Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-mode-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
+Each finding's `rule` field carries the violation pattern (e.g., `architecture-content`, `invalid-tag`, `evidence-type-mismatch`, `temporal-language`); the `message` field carries the one-line detail.
 
 </verdict_format>
 
