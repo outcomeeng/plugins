@@ -2,7 +2,7 @@
 name: handoff
 description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining or continuation by Claude is impossible (context exhausted, user halted, external blocker). NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
-allowed-tools: Read, Edit, Write, Bash(spx:*), Bash(git:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(spx:*), Bash(git:*), Bash(pwd), Bash(ls:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
 ---
 
 <context>

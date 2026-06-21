@@ -98,14 +98,14 @@ After context is loaded, STOP and present a post-context checkpoint:
 
 If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume with the recommended next action.
 
-Otherwise, use `AskUserQuestion` with exactly one question and 2-4 options. The options must come from the loaded context:
+Otherwise, use `request_user_input` with exactly one question and 2-4 options. The options must come from the loaded context:
 
 - Include the recommended next action as the first option
 - Include "Review persisted artifacts first" only when persisted artifacts or coordination notes exist
 - Include "Re-check coordination claims first" only when coordination reports failing tests, bugs, or errors
 - Include "Take a different approach" only when the loaded context reveals a real alternative
 
-Wait for the user's selection before continuing. The checkpoint completes only after the `AskUserQuestion` response is received.
+Wait for the user's selection before continuing. The checkpoint completes only after the `request_user_input` response is received.
 
 After the checkpoint completes, emit a canonical post-context marker using the claimed session id from `<PICKUP_CLAIM>` and carry the full claimed-session set from the most recent `<CLAIMED_SESSIONS ids="...">`:
 
@@ -115,7 +115,7 @@ After the checkpoint completes, emit a canonical post-context marker using the c
 </PICKUP_CHECKPOINT>
 ```
 
-If the checkpoint used `AskUserQuestion`, record the selected option in `next_action`. If `--auto-continue` was used, record the resumed next action and `mode="auto-continue"`. The `claimed` attribute mirrors the latest `<CLAIMED_SESSIONS>` so handoff workflows can read a single marker.
+If the checkpoint used `request_user_input`, record the selected option in `next_action`. If `--auto-continue` was used, record the resumed next action and `mode="auto-continue"`. The `claimed` attribute mirrors the latest `<CLAIMED_SESSIONS>` so handoff workflows can read a single marker.
 
 After emitting the checkpoint marker, report the result and the current session state. Do not infer that successful verification means closure. State which sessions remain claimed in `doing`.
 
@@ -152,7 +152,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
-- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
+- [ ] Post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Claude knows which skills to invoke and which to avoid

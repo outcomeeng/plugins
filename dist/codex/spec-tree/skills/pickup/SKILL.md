@@ -98,7 +98,7 @@ Session IDs use format `YYYY-MM-DD_HH-MM-SS`. If the user message or `$ARGUMENTS
    spx session todo --json
    ```
 2. Parse each session to extract session ID, `priority`, `goal`, `next_step`, and `git_ref` from frontmatter, plus nodes from the `<nodes>` section. Limit to most recent 10.
-3. Present options with `AskUserQuestion`:
+3. Present options with `request_user_input`:
    ```json
    {
      "questions": [
@@ -170,7 +170,7 @@ Use `/handoff` to create a handoff document.
 Found only doing sessions — these are claimed by active Claude sessions.
 ```
 
-Present options via `AskUserQuestion`:
+Present options via `request_user_input`:
 
 - Wait for other sessions to complete
 - Check if doing sessions are orphaned (from abandoned sessions)
@@ -191,7 +191,7 @@ Showing raw content:
 
 Claude loaded `/contextualize`, then invoked `/apply` or started writing ADRs, tests, or code without a user checkpoint. The pre-context gate passed, but the workflow left the post-context transition as a suggestion instead of a requirement.
 
-How to avoid: After `/contextualize`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/apply` or edit files before that checkpoint completes.
+How to avoid: After `/contextualize`, present the loaded state and stop. Use `request_user_input` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/apply` or edit files before that checkpoint completes.
 
 **Failure 2: Later handoff archived only the most recent doing session, orphaning earlier pickups**
 
@@ -222,7 +222,7 @@ A successful pickup:
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
-- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
+- [ ] Post-context decision captured via `request_user_input` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
 - [ ] Claude knows which skills to invoke and which to avoid
