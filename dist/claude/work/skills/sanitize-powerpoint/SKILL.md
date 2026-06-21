@@ -6,9 +6,9 @@ argument-hint: "[path/to/deck.pptx]"
 ---
 
 <objective>
-Audit and repair the internal structure of a PowerPoint `.pptx` deck by editing its OPC (Open Packaging Conventions) XML directly. A `.pptx` is a ZIP of XML parts; PowerPoint's UI cannot reach most defects this skill targets — orphaned layouts, wrong layout `type` attributes, stray fonts, hardcoded colors, inconsistent layout names, dead masters, leftover add-ins.
+A repaired `.pptx` whose every untouched part is byte-identical to the original — only the parts that resolved an approved finding differ.
 
-The deliverable is a repaired `.pptx` whose every untouched part is identical to the original — only the parts that fixed a finding differ.
+A `.pptx` is a ZIP of XML parts (OPC, Open Packaging Conventions). The defects this skill targets — orphaned layouts, wrong layout `type` attributes, stray fonts, hardcoded colors, inconsistent layout names, dead masters, leftover add-ins — are unreachable through PowerPoint's UI, so the repair audits and edits the OPC XML directly.
 </objective>
 
 <core_rules>
@@ -75,7 +75,7 @@ NEVER repackage by extracting everything and re-zipping with default tooling —
 </repackaging>
 
 <scripts>
-Both scripts are standard-library Python 3.11+ — no third-party dependencies, no install step.
+Both scripts are standard-library Python 3.13+ — no third-party dependencies, no install step.
 
 | Script                   | Purpose                                                                                        | Usage                                                                                       |
 | ------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |

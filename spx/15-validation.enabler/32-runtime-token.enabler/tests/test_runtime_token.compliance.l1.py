@@ -44,11 +44,22 @@ def test_forbidden_set_derives_from_the_registry() -> None:
     assert find_raw_tokens("text NotARegisteredTool text") == []
 
 
-def test_enforced_by_default_only_ignored_files_exempt() -> None:
-    # A file under src/plugins/ not named on the ignore-list is enforced; the
-    # ignore-list is the only exemption.
-    ignored_relative = next(iter(RUNTIME_TOKEN_IGNORE))
-    assert is_ignored(_REPO_ROOT / ignored_relative)
+def test_enforced_by_default_only_ignored_files_exempt(tmp_path: Path) -> None:
+    # The ignore-list is the only exemption: an entry on it is exempt, every other
+    # file under the root is enforced. Inject a controlled ignore-list and root so
+    # the discrimination is exercised independently of the live (empty) set.
+    relative = "plugins/wip/SKILL.md"
+    ignore = frozenset({relative})
+    assert is_ignored(
+        tmp_path / "plugins" / "wip" / "SKILL.md", ignore=ignore, repo_root=tmp_path
+    )
+    assert not is_ignored(
+        tmp_path / "plugins" / "live" / "SKILL.md", ignore=ignore, repo_root=tmp_path
+    )
+
+    # The live exemption set is empty — the whole marketplace is enforced with no
+    # opt-outs, so a real authored plugin file is never exempt.
+    assert RUNTIME_TOKEN_IGNORE == frozenset()
     assert not is_ignored(
         _REPO_ROOT
         / "src"
@@ -60,17 +71,15 @@ def test_enforced_by_default_only_ignored_files_exempt() -> None:
     )
 
 
-def test_real_tree_scan_passes_only_because_raw_tokens_are_ignore_listed() -> None:
+def test_real_tree_scan_passes_with_no_exemptions() -> None:
     # End-to-end delegation over the real authored tree: scan_paths exercises
     # scan_file -> is_ignored across exactly the files the gate step feeds the
-    # validator. It returns empty only because every file carrying a raw token
-    # is on the ignore-list and every non-ignored file is clean — the live
-    # invariant the gate enforces.
+    # validator. It returns empty because every authored file is converted to
+    # tokens — the marketplace is fully enforced, not passing on an exemption.
     gate_files = runtime_token_files()
     assert gate_files  # the gate scans a non-empty authored set
     assert scan_paths(gate_files) == []
 
-    # The exemption is load-bearing, not vacuous: dropping the ignore-list
-    # surfaces real violations in the ignore-listed files.
-    ignored_paths = [_REPO_ROOT / rel for rel in RUNTIME_TOKEN_IGNORE]
-    assert any(find_raw_tokens(p.read_text(encoding="utf-8")) for p in ignored_paths)
+    # Full enforcement: the exemption set is empty, so the clean scan masks no raw
+    # token behind an opt-out. Every file the gate scans was checked, none exempted.
+    assert RUNTIME_TOKEN_IGNORE == frozenset()

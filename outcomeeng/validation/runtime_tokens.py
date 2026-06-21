@@ -17,10 +17,10 @@ which also renders rather than embeds the literal.
 
 Every authored-source file the build renders or inlines — plugin content under
 ``src/plugins/`` and the shared fragments under ``src/_shared/`` that plugin files
-include — is enforced by default.  ``RUNTIME_TOKEN_IGNORE`` names the not-yet-converted
-files exempt from enforcement; the set shrinks to empty as each plugin's content is
-converted to tokens.  A newly added plugin or shared fragment is enforced without
-being opted in.
+include — is enforced by default.  ``RUNTIME_TOKEN_IGNORE`` is the exemption surface:
+it is empty (every authored file is converted, so the marketplace is fully enforced),
+and remains the explicit, tracked hatch for any future not-yet-converted file.  A newly
+added plugin or shared fragment is enforced without being opted in.
 
 Usage::
 
@@ -61,13 +61,12 @@ _RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = re.compile(
 )
 
 # Files under src/plugins/ exempt from enforcement until their content is
-# converted to runtime-token tokens. Repo-relative POSIX paths. Shrinks to empty
-# as each plugin converts; a converted plugin's entries are removed here.
-RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
-    {
-        "src/plugins/work/skills/sanitize-powerpoint/SKILL.md",
-    }
-)
+# converted to runtime-token tokens. Repo-relative POSIX paths. Empty: every
+# authored file is converted, so the marketplace is fully enforced with no
+# exemptions. The mechanism remains as the explicit, tracked exemption surface
+# for any future not-yet-converted plugin or shared fragment — an entry added
+# here exempts that one file without opting the rest of the tree out.
+RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -88,18 +87,33 @@ def find_raw_tokens(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def is_ignored(path: Path) -> bool:
-    """Return whether ``path`` is on the not-yet-converted ignore-list."""
+def is_ignored(
+    path: Path,
+    *,
+    ignore: frozenset[str] = RUNTIME_TOKEN_IGNORE,
+    repo_root: Path = _REPO_ROOT,
+) -> bool:
+    """Return whether ``path`` is on the exemption ignore-list.
+
+    ``ignore`` and ``repo_root`` default to the module-level exemption set and
+    repository root; both are injectable so the exemption mechanism is testable
+    with a controlled ignore-list and root independent of the live (empty) set.
+    """
     try:
-        relative = path.resolve().relative_to(_REPO_ROOT).as_posix()
+        relative = path.resolve().relative_to(repo_root).as_posix()
     except ValueError:
         return False
-    return relative in RUNTIME_TOKEN_IGNORE
+    return relative in ignore
 
 
-def scan_file(path: Path) -> list[Violation]:
+def scan_file(
+    path: Path,
+    *,
+    ignore: frozenset[str] = RUNTIME_TOKEN_IGNORE,
+    repo_root: Path = _REPO_ROOT,
+) -> list[Violation]:
     """Return one violation per raw runtime token in ``path``, unless ignored."""
-    if is_ignored(path):
+    if is_ignored(path, ignore=ignore, repo_root=repo_root):
         return []
     text = path.read_text(encoding="utf-8")
     return [
@@ -108,20 +122,35 @@ def scan_file(path: Path) -> list[Violation]:
     ]
 
 
-def scan_paths(paths: Iterable[str | Path]) -> list[Violation]:
-    """Scan each existing file in ``paths`` for raw runtime tokens."""
+def scan_paths(
+    paths: Iterable[str | Path],
+    *,
+    ignore: frozenset[str] = RUNTIME_TOKEN_IGNORE,
+    repo_root: Path = _REPO_ROOT,
+) -> list[Violation]:
+    """Scan each existing file in ``paths`` for raw runtime tokens.
+
+    ``ignore`` and ``repo_root`` forward to ``scan_file`` so the exemption the
+    gate's ``main`` -> ``scan_paths`` -> ``scan_file`` path applies is testable
+    with a controlled ignore-list and root, defaulting to the module globals.
+    """
     violations: list[Violation] = []
     for raw in paths:
         path = Path(raw)
         if not path.is_file():
             continue
-        violations.extend(scan_file(path))
+        violations.extend(scan_file(path, ignore=ignore, repo_root=repo_root))
     return violations
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    ignore: frozenset[str] = RUNTIME_TOKEN_IGNORE,
+    repo_root: Path = _REPO_ROOT,
+) -> int:
     args = argv if argv is not None else sys.argv[1:]
-    violations = scan_paths(args)
+    violations = scan_paths(args, ignore=ignore, repo_root=repo_root)
     for violation in violations:
         print(
             f"{violation.path}:{violation.line}: "
