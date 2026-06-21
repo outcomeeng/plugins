@@ -6,20 +6,21 @@ and derives ``--bare`` from the inherited environment by default.
 ``apiKeyHelper`` (configured via ``--settings``); under ``--bare``,
 ``claude`` never reads ``CLAUDE_CODE_OAUTH_TOKEN`` or an OAuth login
 session, and ambient ``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md``
-are not auto-discovered. When ``ANTHROPIC_API_KEY`` is set the runner
-passes ``--bare``; otherwise the runner omits ``--bare`` so OAuth or the
-user's existing auth path continues to work. The derivation only checks
-the env-var form, so a developer using ``apiKeyHelper`` must opt into
-isolation explicitly with ``bare=True``. Callers may force the flag on
+are not auto-discovered. When ``ANTHROPIC_API_KEY`` is set to a non-empty
+value the runner passes ``--bare``; otherwise — unset, or an empty value a
+workflow forwards from an absent secret — the runner omits ``--bare`` so
+OAuth or the user's existing auth path continues to work. The derivation
+only checks the env-var form, so a developer using ``apiKeyHelper`` must opt
+into isolation explicitly with ``bare=True``. Callers may force the flag on
 or off by passing ``bare=True`` or ``bare=False`` to the constructor;
 the default ``bare=None`` is derivation.
 
 A developer with ``ANTHROPIC_API_KEY`` exported gets isolation locally
-without further setup. CI currently forwards only
-``CLAUDE_CODE_OAUTH_TOKEN``, so the derive rule omits ``--bare`` there
-(correct for that auth source); the CI invocation becomes isolated once
-the workflow forwards ``ANTHROPIC_API_KEY`` from a job secret (tracked
-in this node's ``ISSUES.md`` under the workflow-env TODO).
+without further setup. The CI eval workflow forwards both
+``CLAUDE_CODE_OAUTH_TOKEN`` and ``ANTHROPIC_API_KEY``: when the repo/org
+provides the latter the derive rule passes ``--bare`` for an isolated run,
+and when it is absent GitHub forwards an empty string that the non-empty
+derivation treats as unset, falling back to the OAuth path.
 
 Each call is a single bounded subprocess invocation; no polling, no
 streaming watchers. The runner strips ``CLAUDECODE`` from the inherited
@@ -127,15 +128,17 @@ class ClaudeCliRunner:
 
         ``bare=True`` or ``bare=False`` is an explicit caller override.
         ``bare=None`` (the default) derives from the inherited environment:
-        ``--bare`` only when ``ANTHROPIC_API_KEY`` is set, because that is
-        the only ``--bare``-compatible auth source ``claude`` accepts
-        without ambient discovery. Under OAuth (``CLAUDE_CODE_OAUTH_TOKEN``
-        or an OAuth login session), ``--bare`` would reject the auth and
-        the call would fail before grading.
+        ``--bare`` only when ``ANTHROPIC_API_KEY`` is set to a non-empty
+        value, because that is the only ``--bare``-compatible auth source
+        ``claude`` accepts without ambient discovery. An empty value — what a
+        workflow forwards from an absent secret — is not usable auth, so it
+        derives no ``--bare`` and the call falls back to OAuth
+        (``CLAUDE_CODE_OAUTH_TOKEN`` or an OAuth login session) rather than
+        failing before grading on an empty-key ``--bare`` call.
         """
         if self.bare is not None:
             return self.bare
-        return "ANTHROPIC_API_KEY" in os.environ
+        return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def _subprocess_env() -> dict[str, str]:
