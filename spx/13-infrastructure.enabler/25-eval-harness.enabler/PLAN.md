@@ -25,14 +25,18 @@ Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin, the CLI
 `--bare` / `--no-bare` overrides, cross-suite parallelism, and the
 `just eval-run` recipe naming.
 
-## Execution-cost implementation (pending — governed by `15-execution-cost.adr.md`)
+## Prompt-caching implementation (pending — governed by `15-prompt-caching.adr.md`)
 
-`spx/13-infrastructure.enabler/25-eval-harness.enabler/15-execution-cost.adr.md`
-declares prefix-cache amortization as the eval cost lever: one shared cached
-prefix and time-to-live-packed invocations, written once and read warm. The
-telemetry that makes this observable already ships (the per-run cache read and
-creation token aggregates in `cost_summary` and `history.jsonl`). The execution
-side that captures the saving is not yet built:
+`spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`
+declares that eval execution holds one prompt prefix per run so the cache serves
+it warm. Its `### Testing` rules (one shared prefix per run; warmth from the
+server cache, not a resident process) are testable with a recording runner but
+carry no path yet — the path-bearing `[test]` assertions and their tests land in
+`eval-harness.md` (likely a co-located child node, EXCLUDE'd until green) when
+`/apply` builds the execution below. The telemetry that makes a run's caching
+observable already ships (the per-run cache read and creation token aggregates
+in `cost_summary` and `history.jsonl`). The execution side that captures the
+saving is not yet built:
 
 1. **Converge on one shared prefix.** Today suites point `plugin_dir` at
    different runtimes (and a minimal-`plugin_dir` budget workaround diverges
