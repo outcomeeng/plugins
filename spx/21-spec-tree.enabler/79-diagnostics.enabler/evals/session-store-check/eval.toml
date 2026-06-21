@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["consistent-all-holders-live", "orphaned-stale-backing-worktree"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading

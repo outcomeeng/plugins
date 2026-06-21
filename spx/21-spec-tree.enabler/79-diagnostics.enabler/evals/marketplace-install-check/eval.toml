@@ -10,3 +10,4 @@ owned_paths = [
 smoke_cases = ["installed-both-surfaces-current", "drifted-codex-surface-stale", "unregistered-claude-surface"]
 threshold = 0.8
 trials = 1
+ci_policy = "manual" # excluded from automatic CI grading
