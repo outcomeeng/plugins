@@ -15,11 +15,14 @@ from __future__ import annotations
 import pathlib
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TypedDict
+from typing import Any, TypedDict
 
 import pytest
 
-from outcomeeng_testing.harnesses.git_context import accepted_git_context
+from outcomeeng_testing.harnesses.git_context import (
+    accepted_git_context,
+    handoff_git_env,
+)
 from outcomeeng_testing.harnesses.verify_session_claims import (
     RecordingRunner,
     dirty_tree,
@@ -175,3 +178,84 @@ def test_claim_maps_to_verdict(case: Case, tmp_path: pathlib.Path) -> None:
         matching = [v for v in verdicts if v.kind == case.kind]
         assert matching, f"no {case.kind} verdict emitted"
         assert matching[0].verdict == case.verdict
+
+
+def _only(verdicts: list[Any], kind: object) -> Any:
+    matching = [v for v in verdicts if v.kind == kind]
+    assert matching, f"no {kind} verdict emitted"
+    return matching[0]
+
+
+def test_node_status_surfaces_changed_value(tmp_path: pathlib.Path) -> None:
+    # An observed status that differs from a 'passing' handoff stays Confirmed —
+    # the script has no parsed baseline to diff — but the live value reaches the
+    # evidence field so the agent can reconcile it against the session prose.
+    with accepted_git_context() as repo:
+        session = write_session_file(tmp_path, specs=("spx/21-x.enabler/x.md",))
+        runner = RecordingRunner(
+            repo=repo, scripted={SPX_STATUS: (0, '{"status": "failing"}', "")}
+        )
+
+        verdict = _only(module.verify(session, repo, runner), ClaimKind.NODE_STATUS)
+
+        assert verdict.verdict == Verdict.CONFIRMED
+        assert "failing" in verdict.evidence
+
+
+def test_external_id_surfaces_changed_state(tmp_path: pathlib.Path) -> None:
+    # A PR that is no longer MERGED stays Confirmed for the same reason; the live
+    # state is surfaced in evidence rather than silently dropped.
+    with accepted_git_context() as repo:
+        session = write_session_file(tmp_path, pr_numbers=("256",))
+        runner = RecordingRunner(
+            repo=repo, scripted={GH_VIEW: (0, '{"state": "CLOSED"}', "")}
+        )
+
+        verdict = _only(module.verify(session, repo, runner), ClaimKind.EXTERNAL_ID)
+
+        assert verdict.verdict == Verdict.CONFIRMED
+        assert "CLOSED" in verdict.evidence
+
+
+def test_spec_entry_emits_both_path_and_node_status(tmp_path: pathlib.Path) -> None:
+    # A specs entry is checked twice: as an injected path (filesystem existence)
+    # and as a node (spx spec status). Both verdicts are emitted, the path verdict
+    # keyed on the file and the node verdict on its parent directory.
+    with accepted_git_context() as repo:
+        session = write_session_file(tmp_path, specs=("spx/21-x.enabler/x.md",))
+        runner = RecordingRunner(
+            repo=repo, scripted={SPX_STATUS: (0, '{"status": "passing"}', "")}
+        )
+
+        verdicts = module.verify(session, repo, runner)
+
+        path_verdict = _only(verdicts, ClaimKind.INJECTED_PATH)
+        node_verdict = _only(verdicts, ClaimKind.NODE_STATUS)
+        assert path_verdict.subject == "spx/21-x.enabler/x.md"
+        assert node_verdict.subject == "spx/21-x.enabler"
+
+
+def test_git_ref_branch_on_origin_confirms(tmp_path: pathlib.Path) -> None:
+    # A git_ref naming a branch present on origin takes check_git_ref's branch
+    # path (not the SHA path) and confirms via refs/remotes/origin/<name>.
+    with handoff_git_env() as env:
+        branch = env.push_work_branch("work/pickup-claim")
+        session = write_session_file(tmp_path, git_ref=branch)
+        runner = RecordingRunner(repo=env.root)
+
+        verdict = _only(module.verify(session, env.root, runner), ClaimKind.GIT_REF)
+
+        assert verdict.verdict == Verdict.CONFIRMED
+
+
+def test_git_ref_branch_absent_from_origin_is_discrepancy(
+    tmp_path: pathlib.Path,
+) -> None:
+    # A branch-name git_ref with no remote-tracking ref resolves to Discrepancy.
+    with handoff_git_env() as env:
+        session = write_session_file(tmp_path, git_ref="work/never-pushed")
+        runner = RecordingRunner(repo=env.root)
+
+        verdict = _only(module.verify(session, env.root, runner), ClaimKind.GIT_REF)
+
+        assert verdict.verdict == Verdict.DISCREPANCY
