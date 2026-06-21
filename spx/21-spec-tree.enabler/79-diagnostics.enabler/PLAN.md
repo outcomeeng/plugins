@@ -13,6 +13,13 @@ This node governs the `diagnose` skill — a portable environment doctor for any
 - **Shipped (pre-extraction state):** the `diagnose` skill with five checks — session-environment, spx-reachability (judging the installed `spx` version against the build-rendered floor per `15-version-floor.adr.md`), worktree-pool, session-store, and marketplace-install — the spec node, the `15-version-floor.adr.md` decision, the build-render of `REQUIRED_SPX_VERSION`, README/template/catalog registration, and the version bumps. Each behavior check carries an `[eval]` suite under `evals/`, and the floor render carries a `[test]` conformance suite (`tests/test_version_floor.conformance.l1.py`); the node is out of `spx/EXCLUDE`. The five per-check `[eval]` suites describe the skill's current classification behavior — they remain accurate until the rewire below migrates them.
 - **Recorded:** `13-diagnose-engine.adr.md` declares the target architecture (engine in `spx diagnose`, thin skill, manifest contract). The shipped skill stays the pre-extraction state until the gated build lands.
 
+### In-transit contradictions (intended; resolved at the rewire)
+
+`13-diagnose-engine.adr.md` declares target product truth while the shipped skill is still the pre-extraction implementation, so two sets of assertions in this node conflict by design until step 3 of the rewire migrates them. This is tracked, not silent — the publish-before-depend gate forbids resolving them now (flipping the spec asserts an unpublished `spx diagnose` and orphans the graded-green eval suites):
+
+- `diagnostics.md` lines 17–22 (five per-check `[eval]` classification assertions and the aggregate) and the line-13 conformance assertion ("the version floor the shipped diagnose skill carries") attribute classification and floor-carrying to the shipped skill. `13-diagnose-engine.adr.md` declares NEVER the skill re-derives classification, and the floor's carrier becomes the diagnose manifest. The spec assertions accurately describe the current shipped skill (their eval suites grade green); the rewire replaces them — the five `[eval]` classification suites retire, one `[eval]` covers relay + remediation, and the manifest gets a `[test]`.
+- `15-version-floor.adr.md` carries a supersession note pointing at `13-diagnose-engine.adr.md` and disambiguates "runtime plugin manifest" from the diagnose manifest, so its floor assertions read as the pre-extraction state with the successor named. The rewire updates its render target to the manifest.
+
 The session-environment check reuses the env-var + `spx worktree status` round-trip proven by `spx/21-spec-tree.enabler/13-agent-environment.enabler`.
 
 ## Deferred build (gated on publish-before-depend)
