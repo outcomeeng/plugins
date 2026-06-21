@@ -44,19 +44,34 @@ Then check it out per the checkout kind:
 
 **Foreign-pool guardrail.** Operate only inside a pool Claude participates in. A worktree in a `.spx/` pool Claude does not participate in — another product's checkout — is off-limits regardless of how free its git state looks; treat it as occupied. The claim protocol coordinates only Claude sessions that share one pool.
 
-When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this checkout step. Do not treat the current checkout as authoritative product truth yet: a detached worktree parked at a bare SHA, or a stale default-branch checkout, can sit behind `origin/<default>`. The `/contextualize` Step SYNC that runs before any spec is read advances a clean behind-base detached checkout to the base tip, so read the spec tree only from that advanced state, never from a possibly-stale parked commit.
+When `git_ref` names the default branch or is a bare commit SHA, the work landed on the default branch with no feature branch — skip this checkout step. Do not treat the current checkout as authoritative product truth yet: a detached worktree parked at a bare SHA, or a stale default-branch checkout, can sit behind `origin/<default>`.
 
-**Step 5: Inspect anchored nodes**
+**Step 4b: Bring the checkout current — sync before presenting**
 
-For each node in the `<nodes>` section:
+Before inspecting anchored nodes, presenting any session detail, or touching coordination notes, bring the checkout current for **every** `git_ref` kind — feature branch, default branch, or commit SHA — by invoking `/sync-base`. A session file records claims that were true at handoff time; reading or presenting them against a stale checkout is the exact failure this step prevents (a base that advanced over an anchored node makes the recorded snapshot silently wrong). Do not defer the sync to `/contextualize` (Step 8) — the reconciliation and presentation below must read current product truth, never the parked commit. `/sync-base` advances a clean behind-base detached checkout to the base tip and rebases a behind-base branch; act on its result as `/sync-base` documents.
 
-1. **Present status from the session file**: Show what the handoff recorded as done and remaining.
-2. **Check for coordination note paths only**:
-   ```bash
-   Glob: "spx/{node-path}/PLAN.md"
-   Glob: "spx/{node-path}/ISSUES.md"
-   ```
-   If found, list their paths. Do not read `PLAN.md` or `ISSUES.md` content in this step. `/contextualize` reads node-local coordination notes after product context and ancestry are loaded; acting on note content before then violates the spec-tree context guarantee.
+**Step 5: Reconcile recorded claims against current state**
+
+Do not present the session file's recorded claims as if they were current — the session document is a pointer whose detail is re-derived from the repository, not a source of truth. Reconcile every recorded claim against the now-current checkout by running the verification script, then present its result in place of the recorded snapshot:
+
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py" <session-file> --repo <repo-root>
+```
+
+The script reads only — it reaches `spx spec status`, `gh`, and `git` to observe, never to mutate — and emits one verdict per recorded claim:
+
+- `Confirmed` — current state matches the recorded claim.
+- `Discrepancy` — current state differs (a base that advanced over the node, a commit absent from history, a tree now dirty, a renamed path). Surface these prominently before any work proceeds.
+- `Unverifiable` — the check could not run (a tool absent, a claim the script cannot parse). Present it as such; never treat it as `Confirmed`.
+
+Present the per-claim verdict report. Then, for each node in the `<nodes>` section, check for coordination-note paths only:
+
+```bash
+Glob: "spx/{node-path}/PLAN.md"
+Glob: "spx/{node-path}/ISSUES.md"
+```
+
+If found, list their paths. Do not read `PLAN.md` or `ISSUES.md` content in this step. `/contextualize` reads node-local coordination notes after product context and ancestry are loaded; acting on note content before then violates the spec-tree context guarantee.
 
 **Step 6: Present persisted artifacts**
 
@@ -133,9 +148,9 @@ After emitting the checkpoint marker, report the result and the current session 
 
 NEVER invoke `/apply`, author ADRs/tests/code, or edit files before this checkpoint completes.
 
-**Step 9: Verify coordination claims before triaging**
+**Step 9: Act on the Step 5 verdicts before triaging**
 
-When the coordination section reports failing tests, known bugs, or specific errors, run them first before proposing fixes. The coordination section is a point-in-time snapshot; commits may have landed between handoff-write and pickup-claim that resolved listed failures. Running the tests is cheap (one command); triaging a non-existent failure wastes time and risks mis-diagnosis.
+The Step 5 verification pass already reconciled every recorded claim against current state, so do not re-run a narrow per-failure check it already covered. Act on its verdict report instead: a `Discrepancy` on an injected path or the working tree means the recorded picture no longer holds — investigate it before trusting any dependent claim or proposing a fix. Node status and external ids never emit `Discrepancy`; instead, a `Confirmed` node-status or external-id verdict whose surfaced value differs from what the session prose recorded means that state changed since handoff — compare the value against the prose and act on the difference. An `Unverifiable` verdict is an unconfirmed claim, not a passing one — treat it as needing confirmation, never as `Confirmed`. The coordination section remains a point-in-time snapshot; where it names a failure the verdicts do not cover, confirm it against current state before triaging.
 
 This applies after the post-context checkpoint in Step 8 completes, or after the explicit `--auto-continue` override is acknowledged.
 
@@ -146,7 +161,8 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
 - [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
 - [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 4)
-- [ ] Each anchored node's status presented
+- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind (Step 4b)
+- [ ] Recorded claims reconciled by running `verify_session_claims.py`, and per-claim verdicts (`Confirmed` / `Discrepancy` / `Unverifiable`) presented in place of the recorded snapshot, before the checkpoint (Step 5)
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
