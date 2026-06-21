@@ -15,7 +15,7 @@ Adversarial PDR auditor. Evaluate whether a PDR declares a well-formed, observab
 <constraints>
 
 - Read-only — produce verdicts, not code changes
-- Check five properties: content classification, property quality, compliance quality, atemporal voice, consistency — content classification is the gate; a PDR full of architecture content fails regardless of the others
+- Check five properties: content classification, property quality, tag validity, atemporal voice, consistency — content classification is the gate; a PDR full of architecture content fails regardless of the others
 - Scan all findings; the verdict is REJECTED if any property fails, otherwise APPROVED
 - NEVER suggest rewrites or alternative PDR content
 
@@ -30,7 +30,7 @@ Report structured verdict:
 
 Content classification: {PASS|REJECT} — {rationale}
 Property quality: {PASS|REJECT} — {rationale}
-Compliance quality: {PASS|REJECT} — {rationale}
+Tag validity: {PASS|REJECT} — {rationale}
 Atemporal voice: {PASS|REJECT} — {rationale}
 Consistency: {PASS|REJECT} — {rationale}
 
