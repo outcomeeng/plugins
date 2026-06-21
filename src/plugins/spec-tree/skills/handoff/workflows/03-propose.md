@@ -4,7 +4,7 @@ Present the combined output of the four reflection perspectives as a persistence
 </objective>
 
 <session_disposition_header>
-Before the `AskUserQuestion` block, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
+Before the `{{! tool('ask_user') !}}` block, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
 
 ```text
 Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none (--no-session)>
@@ -31,7 +31,7 @@ Include this item even when no other imperfection surfaced — template drift is
 </spx_claude_staleness>
 
 <process>
-Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
+Present a single `{{! tool('ask_user') !}}` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
 
 ```json
 {
@@ -60,7 +60,7 @@ Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type
 
 This lets the user verify at a glance that each item is going to the right place.
 
-**`AskUserQuestion` has two hard limits: 4 options per question, 4 questions per call.** Batch actionable items so no single question exceeds 4 options, and no call exceeds 4 questions.
+**`{{! tool('ask_user') !}}` has two hard limits: 4 options per question, 4 questions per call.** Batch actionable items so no single question exceeds 4 options, and no call exceeds 4 questions.
 
 **Chunking rules:**
 
@@ -70,7 +70,7 @@ This lets the user verify at a glance that each item is going to the right place
    - Question N: first 3 items + `[See more from this perspective]` as 4th option.
    - Question N+1: next 3 items + same continuation, repeat.
    - Final question for the perspective: remaining items + `[Skip remaining]` as the final option.
-4. **Total questions across all perspectives >4** → split into multiple `AskUserQuestion` calls. Wait for the user's answers to each call before presenting the next batch — the user may revise their approach based on what they approved, and late items may become redundant.
+4. **Total questions across all perspectives >4** → split into multiple `{{! tool('ask_user') !}}` calls. Wait for the user's answers to each call before presenting the next batch — the user may revise their approach based on what they approved, and late items may become redundant.
 5. **Global skip**: the overall `[Skip] N items → session file only` option appears as the last option in the last question of the last call — never mixed with per-perspective skip options.
 
 Don't collapse a long list into a terse summary option to fit the limit. Each actionable item must be visible and separately approvable.

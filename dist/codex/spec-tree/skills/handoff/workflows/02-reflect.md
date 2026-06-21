@@ -40,7 +40,7 @@ Identify what is now understood about how the remaining work should proceed:
 For each insight, propose the persistence target (workflow 03 confirms; workflow 04 writes):
 
 - Amend a spec (Tier 2, durable) — when the insight changes what the spec says
-- Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `AskUserQuestion` approval
+- Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `request_user_input` approval
 - Remove PLAN.md (a done plan is a stale plan) — also requires approval
 - Session file only — coordination context
 

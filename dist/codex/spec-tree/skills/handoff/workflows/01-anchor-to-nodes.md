@@ -14,7 +14,7 @@ List every spec-tree node touched in this session (any path matching `spx/**/*.e
 </process>
 
 <no_nodes_case>
-If NO spec-tree nodes were involved in this session, use `AskUserQuestion`:
+If NO spec-tree nodes were involved in this session, use `request_user_input`:
 
 ```json
 {
