@@ -1,6 +1,6 @@
 # Issues: Diagnostics Enabler
 
-## Eval evidence authored; graded run pending CI
+## Eval evidence authored; graded green in CI
 
 The node's six `[eval]` assertions in `diagnostics.md` now carry authored evidence:
 
@@ -20,4 +20,4 @@ What remains is the **graded run** — replaying the cases through `claude --pri
 - `--bare` isolation arrives once the operator provisions `secrets.ANTHROPIC_API_KEY` per `spx/13-infrastructure.enabler/25-eval-harness.enabler/ISSUES.md`; the workflow already forwards it and degrades to OAuth while it is absent.
 - No local run on this developer environment: it has no `ANTHROPIC_API_KEY` / OAuth token, so the runner cannot invoke `claude` here.
 
-Required to move the assertions from declared-and-evidenced to graded-green: confirm the first PR-time or scheduled `spec-tree-evals` run grades these six suites at or above their `threshold` (0.8). Adjust cases/prompts if the graded pass rate falls short.
+Confirmed graded-green: CI eval run `27902017867` (2026-06-21, on PR #294) graded all six diagnostics suites at or above their `0.8` threshold — session-environment, spx-reachability, worktree-pool, session-store, marketplace-install, and diagnostic-report (100% / 87.5% / 83.3% / 100% / 100% / 100%, with the sub-threshold misses being single-case LLM variance well above the floor). The weekly schedule and future diagnose PRs re-grade them; revisit cases/prompts only if a later run dips below `0.8`.
