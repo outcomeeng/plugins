@@ -21,6 +21,11 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - Given a linked worktree at the `origin/<default-branch>` tip and an explicit work-branch ref naming a branch on `origin` in the JSON header, when `spx session handoff` runs, then it records `git_ref` as that branch name rather than the tip SHA ([test](tests/test_sessions.scenario.l1.py))
 - Given an explicit work-branch ref naming a branch absent from `origin`, when `spx session handoff` runs, then it is refused with `SessionWorkBranchNotOnOriginError` and no session file is written ([test](tests/test_sessions.scenario.l1.py))
 
+### Mappings
+
+- A claim the script compares against current state — `git_ref` reachability, an injected `specs`/`files` path, or the working-tree state — maps to `Confirmed` when current state matches the recorded claim, `Discrepancy` when it differs, and `Unverifiable` when the check cannot run ([test](tests/test_pickup_verification.mapping.l1.py))
+- A claim the script can only observe current state for — a node's `spx spec status` and an external PR id, whose recorded baseline lives in session prose the script does not parse — maps to `Confirmed` with the current value surfaced for reconciliation against that prose, and `Unverifiable` when the observing command cannot run ([test](tests/test_pickup_verification.mapping.l1.py))
+
 ### Conformance
 
 - The `compactPrompt` in `.claude/settings.json` contains all six state-schema section headers (active node, pre-compact markers, modified files, open questions, last user request, in-flight observations) ([test](tests/test_sessions.conformance.l1.py))
@@ -51,3 +56,8 @@ CAN maintain work continuity without context loss across explicit handoffs and c
 - ALWAYS: a `/handoff` session document initializes the next agent through repository-derived pointers — the anchored node paths and the skills to invoke — so the next agent re-derives detail from the spec tree rather than from the session file ([review])
 - ALWAYS: when external infrastructure holds state the next agent cannot re-derive from the spec tree, PLAN.md/ISSUES.md, or git history — live PR, run, image, or job identifiers and their status, deployed inventories, in-flight workflows — the `/handoff` session document records that observable state and guides the next pickup from it in prose ([review])
 - NEVER: structure a `/handoff` session document as a retrospective, changelog, activity log, or duplicate of PLAN.md/ISSUES.md, or encode the next pickup's decision as fixed if-then branches — the document points at durable truth and records only the external state the next agent cannot re-derive ([review])
+- ALWAYS: `/pickup` brings the checkout current before presenting any session detail or coordination note, for every `git_ref` kind (feature branch, default branch, or commit SHA) and not only inside `/contextualize`, so no recorded claim is read against a stale checkout, per `spx/21-spec-tree.enabler/76-sessions.enabler/65-pickup-claim-verification.adr.md` ([audit])
+- ALWAYS: `/pickup` reconciles every recorded session-file claim against current repository and external state before the post-context checkpoint by running `python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py"`, and presents one verdict per claim — `Confirmed`, `Discrepancy`, or `Unverifiable` — in place of the recorded snapshot ([audit])
+- ALWAYS: the verification script resolves node status from `spx spec status`, reaches `spx`, `gh`, and `git` only through a dependency-injected runner, and emits `Unverifiable` for any check it cannot run ([test](tests/test_pickup_verification.compliance.l1.py))
+- NEVER: `/pickup` presents a recorded session-file claim as current state without a verdict from the verification pass ([audit])
+- NEVER: the verification pass executes a node's test suite or mutates the working tree, the index, or any session file — reconciliation observes, it does not change state ([test](tests/test_pickup_verification.compliance.l1.py))
