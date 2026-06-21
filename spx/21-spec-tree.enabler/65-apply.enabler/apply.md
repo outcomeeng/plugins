@@ -4,12 +4,15 @@ PROVIDES the apply lifecycle — selecting the next executable observable slice,
 SO THAT all implementation agents
 CAN turn an implementation plan into demonstrable value merged to the default branch, with each node conforming to its governing spec on the first pass
 
-The assertions below are the cross-cutting properties of the lifecycle as a whole: the whole-changeset review that gates flow completion, the delivered-value boundary that holds until the change reaches the default branch, and the gate-enforcement model.
+The assertions below govern the lifecycle as a whole — how the work queue is formed and dispatched, and the cross-cutting properties that hold across the slice: the whole-changeset review that gates flow completion, the delivered-value boundary that holds until the change reaches the default branch, and the gate-enforcement model.
 
 ## Assertions
 
 ### Compliance
 
+- ALWAYS: `--agent [node-path]` dispatches the full flow to the `applier` agent and runs nothing else in the main context — the autonomous runner owns the per-node flow ([audit])
+- ALWAYS: with a node-path argument the work queue is that single node, and with no argument it is derived from the conversation, falling back to the node paths listed in `spx/EXCLUDE` ([audit])
+- ALWAYS: a multi-node work queue runs in ascending numeric-index order, removing each node from `spx/EXCLUDE` before its flow and committing per node, and a node whose flow cannot converge stops the queue with the remaining nodes left in `spx/EXCLUDE` ([audit])
 - ALWAYS: when the change touches files or specs beyond the target node, run a whole-changeset review (the `changes-reviewer` agent or `/review-changes`) over the full diff and point the language audit gates at the whole changeset before declaring the flow complete — per-node gates miss cross-node effects ([audit])
 - ALWAYS: for default-branch work, the flow is incomplete until the change reaches the default branch on origin through `/merge`; an approved code audit, a converged whole-changeset review, passing tests, and a clean committed branch are local readiness, not completion — the flow continues into `/merge` unless the user explicitly scoped the work to a proposal, analysis, review, or local-only change, or an explicit lifecycle gate blocks with no independent local action remaining, per `spx/15-merging.pdr.md` and the `/understand` default-branch completion boundary ([audit])
 - NEVER: a runtime hook enforces the audit gates — the gate reminders are skill prose, and the spec-tree plugin ships no `PostToolUse` hook (`spx/21-spec-tree.enabler/13-agent-environment.enabler/`); enforcement is the flow's own discipline, not a hook ([review])
