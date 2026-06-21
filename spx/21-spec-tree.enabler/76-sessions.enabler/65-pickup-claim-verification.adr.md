@@ -1,6 +1,6 @@
 # Pickup Claim Verification
 
-`/pickup` reconciles every recorded session-file claim against current repository and external state before it presents the session and before the post-context checkpoint, and presents one verdict per claim — `Confirmed`, `Discrepancy`, or `Unverifiable` — in place of the recorded snapshot. The reconciliation is performed by a single plugin-shipped, stdlib-only `python3` script under the pickup skill, invoked as `python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py"`, which reads the session file and the current checkout and emits the verdicts as structured output. The script reaches `spx spec status`, `gh`, and `git` only through a dependency-injected command runner, performs no working-tree mutation, and runs no node test suite.
+`/pickup` reconciles every recorded session-file claim against current repository and external state before it presents the session and before the post-context checkpoint, and presents one verdict per claim — `Confirmed`, `Discrepancy`, or `Unverifiable` — in place of the recorded snapshot. The reconciliation is performed by a single plugin-shipped, stdlib-only `python3` script — `scripts/verify_session_claims.py` under the pickup skill, invoked through each runtime's skill-directory variable — which reads the session file and the current checkout and emits the verdicts as structured output. The script reaches `spx spec status`, `gh`, and `git` only through a dependency-injected command runner, performs no working-tree mutation, and runs no node test suite.
 
 ## Rationale
 
@@ -20,7 +20,7 @@ A plugin-shipped stdlib script is chosen over an `spx` CLI subcommand: a CLI sub
 
 - ALWAYS: every `spx`, `gh`, and `git` invocation in the verification script is issued through a dependency-injected runner parameter typed as a Protocol -- enables `l1` verification of claim-checking logic without mocking ([audit])
 - ALWAYS: the default runner implementation uses `subprocess` with array arguments, and tests inject a controlled runner -- no mocking ([audit])
-- ALWAYS: the verification script is stdlib-only `python3` shipped under the pickup skill and invoked via `python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py"` -- portable to consumer repositories, no third-party packages, no `uv` ([audit])
+- ALWAYS: the verification script is stdlib-only `python3` shipped under the pickup skill as `scripts/verify_session_claims.py`, invoked through the runtime's skill-directory variable -- portable to consumer repositories, no third-party packages, no `uv` ([audit])
 - ALWAYS: each claim resolves to exactly one of `Confirmed`, `Discrepancy`, or `Unverifiable`, and a check that cannot run resolves to `Unverifiable` -- an unrun check is a visible verdict, never a silent omission ([audit])
 - NEVER: the verification reads node status by executing a node's test suite -- node status comes from the `spx spec status` contract, keeping the pass read-only ([audit])
 - NEVER: the verification mutates the working tree, the index, or any session file -- reconciliation observes, it does not change state ([audit])
