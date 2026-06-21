@@ -18,6 +18,8 @@ Load and claim a handoff session to continue work from a previous context withou
 
 After `/contextualize`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
 
+Bring the checkout current before presenting anything, then reconcile every recorded session-file claim against current state — emitting a `Confirmed`, `Discrepancy`, or `Unverifiable` verdict per claim — before that checkpoint. The session file is a pointer whose detail is re-derived from the repository, not a snapshot to replay; presenting its recorded claims as current truth is the failure this verification prevents.
+
 Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
 
 **Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handoff` workflow accounts for it explicitly.
@@ -219,6 +221,8 @@ A successful pickup:
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
 - [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
+- [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
+- [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
 - [ ] Each anchored node's status presented
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
