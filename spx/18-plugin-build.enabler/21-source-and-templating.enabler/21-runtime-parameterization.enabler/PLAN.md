@@ -2,17 +2,17 @@
 
 Coordination note; not spec truth. Reconcile before use.
 
-## Phase 1 (current)
+## Phase 1 (complete)
 
 Registry-backed `tool(...)` token + runtime-explicit form, implemented in
 `outcomeeng/distribution/build.py` with the registry populated from the `AGENTS.md` Agent
-Runtime Guidance table. The `develop` plugin's content is converted to tokens. Enforcement
-that no raw runtime-divergent name appears in authored source is the runtime-token validation
-lint (`outcomeeng/validation/runtime_tokens.py`, governed by
-`spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) — default-on across
-`src/plugins/` with a shrinking `RUNTIME_TOKEN_IGNORE` set of not-yet-converted files. Registry
-seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the no-Codex-equivalent
-`ScheduleWakeup`.
+Runtime Guidance table. Every plugin's content is converted to tokens, and the runtime-token
+validation lint (`outcomeeng/validation/runtime_tokens.py`, governed by
+`spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) enforces every authored
+file under `src/plugins/` and `src/_shared/` with `RUNTIME_TOKEN_IGNORE` empty — no exemptions.
+The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the
+no-Codex-equivalent `ScheduleWakeup`; the ignore-list mechanism remains as the tracked exemption
+surface for any future not-yet-converted plugin.
 
 ## Phase 2 (declared in the ADR, not yet implemented)
 
@@ -30,7 +30,3 @@ declares the full symmetric model. These parts are declared ahead of implementat
 - **Concept-term conversion in `develop`.** The subagent model (~224 mentions) and
   fact-level claims need term tokens and per-runtime conditional blocks; needs consolidated
   Codex agent-model facts.
-- **Marketplace-wide rollout.** Convert the other plugins whose `dist/codex/` output still
-  carries raw Claude tool names (spec-tree and `work`, the current `RUNTIME_TOKEN_IGNORE`
-  entries) to `tool(...)` tokens, dropping each from the ignore-list as it converts until the
-  set reaches empty and the marketplace is fully enforced.
