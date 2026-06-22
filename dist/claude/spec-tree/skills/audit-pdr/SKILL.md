@@ -30,6 +30,8 @@ Read the PDR evidence model completely before auditing: `${CLAUDE_SKILL_DIR}/ref
 
 PDRs govern what the product does, behavior that its users experience. "Sessions expire after 1 hour" is product behavior. "Sessions use JWT with 1-hour TTL" is architecture. If the content describes HOW something is built rather than WHAT users observe, it belongs in an ADR.
 
+"Users" means the audience the product document declares, and "observe" means observe through the interaction surfaces that document names — not a fixed end-user-application assumption. When the product document declares an audience that operates the product through a command-line, filesystem, version-control, or other infrastructure surface, the CLI, filesystem, and version-control state that audience operates is product behavior; the internal algorithm, in-memory data structure, persisted schema, and library choices that audience never touches stay architecture.
+
 **ATEMPORAL VOICE.**
 
 PDRs state atemporal product truth without historical context. No references to past behavior or events.
@@ -66,7 +68,9 @@ Note any missing sections — a PDR without a Verification section is unenforcea
 
 **Step 3: Content classification**
 
-Read every statement in the PDR. Classify each:
+First, read the product document loaded in Step 1 and name its declared audience and the interaction surfaces through which that audience operates the product. "Observable" is judged against that audience: a statement is product behavior when the declared audience observes or operates it. For a product whose audience operates a command-line, filesystem, version-control, or other infrastructure surface, the CLI commands, on-disk layout, and version-control state that audience runs and inspects are observable product behavior — not architecture. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the in-memory data structures it holds, the schema it persists, and the libraries it depends on.
+
+Then read every statement in the PDR. Classify each:
 
 | Content type                       | Belongs in     | Finding if in PDR                    |
 | ---------------------------------- | -------------- | ------------------------------------ |
@@ -79,7 +83,7 @@ Read every statement in the PDR. Classify each:
 
 **Any architecture or implementation content → REJECT — finding rule "architecture-content."**
 
-The test: "Would a user care about this statement?" If the answer is no, it probably belongs in an ADR.
+The test: "Would the product document's declared audience observe or operate this?" If yes, it is product behavior. If only an implementer of the tool — never the audience — would know it, it belongs in an ADR. Do not flag a tooling product's CLI, filesystem, or version-control state as architecture merely because it names git, a path, or a command; that state is what its audience operates. Reserve the architecture finding for the tool's internal algorithm, data structures, schema, and library choices.
 
 </step>
 
@@ -209,6 +213,12 @@ Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([sce
 
 How to avoid: Step 5 reads the quantifier first. A universal (ALWAYS / NEVER / "for all" / "no input") tagged `scenario` is `evidence-type-mismatch`; a structural tag problem — bare mechanism tag, wrong subsection, missing tag, more than one tag — is `invalid-tag`.
 
+**Failure 4: Flagged a tooling product's observable state as architecture**
+
+Claude audited a PDR for a command-line tool whose product document declares its audience operates the product through a CLI and an on-disk layout. The PDR described the repository layout the audience inspects on disk and the version-control state it observes. Claude saw git commands and filesystem paths, applied the end-user-application reflex ("a user does not see git"), and rejected the statements as `architecture-content`. That is a false positive: the declared audience operates exactly that surface, so the layout is observable product behavior.
+
+How to avoid: Step 3 reads the product document's declared audience first and judges "observable" against it. A git topology, a path layout, or a CLI behavior the audience operates is product behavior. Reserve `architecture-content` for what the audience never operates — the tool's internal algorithm, in-memory data structures, persisted schema, and library choices — which stays an ADR concern even for a tooling product.
+
 </failure_modes>
 
 <success_criteria>
@@ -217,7 +227,7 @@ Audit is complete when:
 
 - [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
 - [ ] PDR read — all sections identified
-- [ ] Content classification: every statement classified as product behavior or flagged
+- [ ] Content classification: product document's declared audience and interaction surfaces named, and every statement classified as product behavior or flagged against that audience
 - [ ] Property quality: each property checked for observability and falsifiability
 - [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/test` (a universal is never `scenario`)
 - [ ] Atemporal voice: every section checked for temporal language
