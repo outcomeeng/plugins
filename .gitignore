@@ -50,6 +50,7 @@ out/
 *.bak
 *.orig
 /.coverage
+/coverage.json
 
 # Worktrees
 .work/*
