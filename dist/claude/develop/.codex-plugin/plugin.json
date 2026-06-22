@@ -1,7 +1,7 @@
 {
   "name": "develop",
-  "version": "0.10.6",
-  "description": "Create and audit plugin assets: skills, commands, subagents, and agent prompt standards",
+  "version": "0.11.0",
+  "description": "Create and audit plugin assets: skills, subagents, and agent prompt standards",
   "author": {
     "name": "Simon Heimlicher",
     "url": "https://github.com/outcomeeng"
@@ -14,7 +14,6 @@
     "plugin",
     "marketplace",
     "skill",
-    "command",
     "agent",
     "subagent",
     "prompt",
@@ -25,7 +24,7 @@
   "interface": {
     "displayName": "Plugin Development",
     "shortDescription": "Create and audit plugin assets",
-    "longDescription": "Create and audit skills, commands, subagents, and agent prompt standards for Codex and Claude Code plugin workflows.",
+    "longDescription": "Create and audit skills, subagents, and agent prompt standards for Codex and Claude Code plugin workflows.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": [

@@ -19,7 +19,7 @@ This audit runs in the skill-auditor agent's isolated context. When this skill l
 </dispatch_gate>
 
 <objective>
-A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence — contextual judgment, never a score. The verdict spans YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, prompt craft, and anti-patterns.
+A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`: findings grouped as keep-these-aspects / worth-improving / must-fix, each naming the location, the standard at issue, and the consequence — contextual judgment, never a score. The verdict spans YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, command capabilities, prompt craft, and anti-patterns.
 </objective>
 
 <constraints>
@@ -36,7 +36,8 @@ A verdict on a SKILL.md against `/skill-standards` and `/agent-prompt-standards`
 <focus_areas>
 During audits, prioritize evaluation of:
 
-- YAML compliance (name length, description quality, directive style with negative constraint)
+- YAML compliance (name length, description quality, directive style with negative constraint, `argument-hint` when arguments are used)
+- Command capabilities (argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `@` file references)
 - Pure XML structure (required tags, no markdown headings in body, proper nesting)
 - Progressive disclosure structure (SKILL.md < 500 lines, references one level deep)
 - Conciseness and signal-to-noise ratio (every word earns its place)
@@ -57,7 +58,7 @@ During audits, prioritize evaluation of:
 1. Read `/skill-standards` — the canonical standards for skill structure, frontmatter, XML tags, progressive disclosure, skill types, reference patterns, code-fence rules, bash restrictions, validation, and script testing. Then check for `spx/local/skills.md` at the repository root and read it if it exists.
 2. Read `/agent-prompt-standards` — voice, description style, constraint language, and prose anti-patterns. Already injected above.
 3. Read the target skill files (SKILL.md and any `references/`, `workflows/`, `templates/`, `scripts/` subdirectories).
-4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
+4. Read `${CLAUDE_SKILL_DIR}/references/xml-structure-examples.md` and `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for annotated violation examples. When the target carries command-capability fields — `argument-hint`/`arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — also read `/skill-standards`'s `references/command-capabilities.md` for the rules that govern that surface. When the target is an `audit-*` skill, also read `/skill-standards`'s `references/auditor-skeleton.md` — the `/skill-standards` table loaded in step 1 directs you to it; read the file itself explicitly — the canonical auditor structure the `auditor_skeleton_violation` check verifies against.
 5. Handle edge cases:
    - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
    - If YAML frontmatter is malformed, flag as critical issue.
@@ -74,6 +75,7 @@ Check for:
 
 - **name**: Lowercase-with-hyphens, max 64 chars, matches directory name, follows verb-noun convention (create-*, manage-*, setup-*, generate-*)
 - **description**: Max 1024 chars, directive style (ALWAYS invoke + NEVER without), no XML tags
+- **argument-hint**: Present when the skill takes arguments (the body substitutes a declared `$name`); omit for self-contained skills
 
 </area>
 
@@ -139,6 +141,29 @@ Check whether the skill provides operational wisdom, not just procedural steps:
 
 </area>
 
+<area name="command_capabilities">
+Check the capability surface a SKILL.md carries that a slash command also had, against `/skill-standards` `references/command-capabilities.md` (read it when any of these apply):
+
+**Argument usage**:
+
+- Every argument declared in `arguments` is substituted as `$name` in the body, and every `$name` the body substitutes is declared — neither orphaned
+- `argument-hint` is present when the skill takes arguments
+- A bare command-style `$ARGUMENTS` / `$1` copied into a skill body is a defect — skills name arguments through the `arguments` field
+- Empty-argument handling is stated when the skill requires an argument or defines a no-argument fallback
+
+**Dynamic-context safety** (`!`-backtick blocks inside `<context>`):
+
+- Loaded state is directly relevant to the skill's task — not injected context the skill never reads
+- Each command is filtered to bounded output and never grows monotonically (the block fires on every skill load)
+
+**Tool-restriction security** (`allowed-tools`):
+
+- Bash is restricted to the narrowest verb pattern that works (`Bash(git add:*)`, not bare `Bash` or `Bash(git *)`) when specific verbs suffice
+- Destructive and network tools (`Write`, `Bash`, `WebFetch`) are absent unless the task genuinely needs them — a read-only or analysis skill cannot delete, force-push, deploy, or exfiltrate
+- An `audit-*` skill carries `Read, Grep, Glob, Bash` (plus `Skill` when composing) and never `Write`/`Edit`
+
+</area>
+
 <area name="prompt_craft">
 Check against `/agent-prompt-standards` conventions:
 
@@ -173,6 +198,11 @@ Flag these issues:
 - **abstract_examples**: Examples that show patterns but not concrete values/outputs
 - **orphaned_references**: Files in `references/` not cited from SKILL.md or any workflow file. Verify with `grep -rn "<filename>" <skill-dir>/`. Orphans inflate token cost via speculative reads (Claude tends to open siblings of cited references) and indicate either dead content or a missing cross-reference. Flag as critical: either delete the file or add an explicit `<required_reading>` reference from the workflow that needs it.
 - **heavy_context_block**: `<context>` bash commands that produce verbose or growing output (session lists, full file contents, cache enumerations) without filtering. The `<context>` block fires on every skill load — including false-positive activations from directive descriptions — so heavy commands compound. Flag as recommendation: filter the command (e.g., `--status doing,todo`, `head -N`) or move it to the workflow file that consumes the data.
+- **orphaned_argument**: an argument declared in `arguments` that the body never substitutes, or a `$name` substituted in the body that `arguments` never declares. Flag as critical — the skill takes input it ignores, or substitutes an undefined name.
+- **missing_argument_hint**: the skill takes arguments but omits `argument-hint`, so `/` autocomplete gives the user no signal about expected input. Flag as recommendation.
+- **command_style_arguments**: a bare `$ARGUMENTS` or `$1`/`$2` copied from a slash command into a skill body instead of a named `$name` declared in `arguments`. Flag as critical.
+- **overbroad_allowed_tools**: `allowed-tools` grants bare `Bash`, `Bash(git *)`, or a destructive/network tool the skill's task does not need, re-admitting the destructive or exfiltrating commands a narrower grant would bar. Flag as critical for security-sensitive skills.
+- **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Flag as recommendation — it taxes every load without payoff.
 
 </area>
 </evaluation_areas>
@@ -316,7 +346,7 @@ Note: While this skill uses pure XML structure, it produces JSON output that the
 
 **Failure 1: Approved a skill whose objective was still activity-shaped.** Claude read an `<objective>` that opened with a verb ("Audit…", "Generate…") or an actor ("The skill…") and passed it, because the activity reading felt natural. The objective states an output; an activity- or actor-shaped one is a must-fix the `actor_or_activity_objective` flag exists to catch. Read every objective against `/agent-prompt-standards` `<objective_shape>`, not by feel.
 
-**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover all six areas before issuing the verdict.
+**Failure 2: Skipped an evaluation area and missed a whole class.** Claude judged YAML and structure, formed a verdict, and stopped — leaving prompt craft or anti-patterns unexamined, so a class of violations passed unseen. The verdict is sound only when every evaluation area was judged; a skipped area yields an unsound verdict, not a shorter one. Cover all seven areas before issuing the verdict.
 
 **Failure 3: Scored the skill instead of judging it.** Claude assigned a number ("8/10 structure") instead of grouping findings as keep / worth-improving / must-fix, turning a verdict into a rating the author cannot act on. Each finding names a location, a standard, and a consequence; a score names none of them. Emit findings, never scores.
 
@@ -325,7 +355,7 @@ Note: While this skill uses pure XML structure, it produces JSON output that the
 <success_criteria>
 The verdict is sound when:
 
-- Every evaluation area was judged with none skipped — YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, prompt craft, and anti-patterns (coverage-complete).
+- Every evaluation area was judged with none skipped — YAML frontmatter, structure and progressive disclosure, content quality, operational effectiveness, command capabilities, prompt craft, and anti-patterns (coverage-complete).
 - The verdict states an overall PASS/FAIL with findings grouped keep-these-aspects / worth-improving / must-fix.
 - Each finding is falsifiable: it names the location (file:line), the standard at issue, and the consequence — every keep names what degrades if removed, every must-fix names the failure it prevents.
 - The same SKILL.md yields the same verdict.

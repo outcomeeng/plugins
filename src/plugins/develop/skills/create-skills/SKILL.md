@@ -17,6 +17,8 @@ Before creating, editing, or auditing any skill, read `/skill-standards` — the
 
 Also read `/agent-prompt-standards` for voice, description style, constraint language, and anti-pattern conventions before writing prompt text.
 
+When the skill takes arguments, injects state-dependent context, restricts tools, or references files — the capabilities a slash command also carried — follow the command-capability rules `/skill-standards` carries (its `<frontmatter>` points to the `command-capabilities` reference) for `argument-hint`/`arguments`, `!`-dynamic-context, `allowed-tools`-security, and `@`-file references before authoring that surface.
+
 This skill provides routing, workflows, templates, and domain-workflow references for creating skills. It does not restate standards.
 </reference_loading>
 

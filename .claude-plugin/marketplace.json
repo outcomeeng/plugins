@@ -11,7 +11,7 @@
     {
       "name": "develop",
       "source": "./dist/claude/develop",
-      "description": "Plugin development: /create-skills, /create-commands, /create-subagents"
+      "description": "Plugin development: /create-skills, /create-subagents"
     },
     {
       "name": "frontend",

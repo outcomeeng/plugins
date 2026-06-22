@@ -7,13 +7,13 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical reference for writing agent prompts — the text content within SKILL.md files, slash command bodies, and subagent system prompts. Covers voice, description style, constraint language, and anti-patterns. Creator skills reference these conventions when authoring; auditor skills check compliance against them.
+Canonical reference for writing agent prompts — the text content within SKILL.md files and subagent system prompts. Covers voice, description style, constraint language, and anti-patterns. Creator skills reference these conventions when authoring; auditor skills check compliance against them.
 
 This skill governs prompt *craft* (how to write text). Prompt *structure* (which XML tags to use, file organization) is governed by the creator skills themselves.
 </objective>
 
 <reference_note>
-This is a reference skill. Creator and auditor skills load these conventions automatically. Invoke `/create-skills`, `/create-commands`, or `/create-subagents` to author; invoke `/audit-skills`, `/audit-commands`, or `/audit-subagents` to review.
+This is a reference skill. Creator and auditor skills load these conventions automatically. Invoke `/create-skills` or `/create-subagents` to author; invoke `/audit-skills` or `/audit-subagents` to review.
 </reference_note>
 
 <voice>

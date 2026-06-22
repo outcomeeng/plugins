@@ -20,8 +20,6 @@ Identified during the lean-template migration of the product-level decision reco
 
 ## Conformance test reinforcing the no-command authoring stance
 
-`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill the marketplace's sole user-facing invocation artifact and forbids authoring a command (`commands/*.md`); the rule carries `[audit]` evidence. No `src/plugins/*/commands/` directory ships. A deterministic conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory exists would reinforce that `[audit]` stance with executable evidence.
-
-The `develop` plugin retains its `create-commands` and `audit-commands` skills and `command-auditor` agent: those serve the consumer audience (authoring commands in other repositories), which the product-internal ADR does not govern.
+`spx/13-plugin-and-runtime-conventions.adr.md` declares the skill the marketplace's sole user-facing invocation artifact and forbids authoring a command (`commands/*.md`); the rule carries `[audit]` evidence. No `src/plugins/*/commands/` directory ships, and the `develop` plugin authors skills and subagents only — its former `create-commands` / `audit-commands` skills and `command-auditor` agent are removed, their still-live capability checks folded into the skills cluster (`spx/43-develop.enabler/21-skills.enabler/`). A deterministic conformance `[test]` that walks `src/plugins/**` and asserts no `commands/` directory exists would reinforce that `[audit]` stance with executable evidence.
 
 **Resolution shape**: the ADR is a product-root decision file with no co-located `tests/` directory, so the conformance assertion needs a naturally-placed home — the distribution enabler (`spx/32-distribution.enabler/`) or another node governing the shipped plugin layout. Decide placement, then add the `[test]` assertion plus its Python test per `spx/15-test-language.adr.md`.
