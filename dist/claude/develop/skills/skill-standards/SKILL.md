@@ -117,6 +117,8 @@ Audit skills (`audit-*`) must add `allowed-tools: Read, Grep, Glob, Bash` per th
 
 **Field `skills:` is NOT supported on SKILL.md.** It exists only on subagent definitions (`agents/*.md`), where it preloads skill content as reference material into the subagent's startup context. The official docs page above lists every field a SKILL.md actually accepts; `skills:` is not among them. To make a reference skill available to another skill, set `user-invocable: false` on the reference and have the parent skill invoke it via the Skill tool — there is no preload field on the consumer side.
 
+**Command-capability fields.** A SKILL.md carries every capability a slash command had — `argument-hint`/`arguments`, `allowed-tools` restriction, plus `!`-dynamic context and `@` file references in the body. The authoring and audit rules for that surface live in `${CLAUDE_SKILL_DIR}/references/command-capabilities.md`; read it before authoring a skill that takes arguments, injects state, or restricts tools.
+
 </frontmatter>
 
 ---

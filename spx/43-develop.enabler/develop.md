@@ -1,6 +1,6 @@
 # Develop
 
-PROVIDES meta-skills for Codex and Claude Code plugin development — creating and auditing skills, commands, subagents, and the agent-prompt conventions they share
+PROVIDES meta-skills for Codex and Claude Code plugin development — creating and auditing skills and subagents, and the agent-prompt conventions they share
 SO THAT plugin authors
 CAN build high-quality plugins that follow established patterns and best practices
 

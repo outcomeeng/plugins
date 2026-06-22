@@ -18,7 +18,7 @@ A skill `<objective>` states the observable **output** the skill produces — it
 
 **Settled and codified (this PR):** the canonical auditor formulation — a verdict-shaped `<objective>`, `<audit_workflow>` (not `process`/`critical_workflow`), `<verdict_format>` (not `output_format`), `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>` — lives in `skill-standards`'s `references/auditor-skeleton.md`, and `audit-skills` is brought to it as the reference-conformant auditor. **Open:** sweeping the other 17 `audit-*` skills onto the skeleton (section renames + missing `<failure_modes>`) — structural-conformance work that overlaps the Class-4 / `2026-06-16_12-47-44` structural-conformance session; reconcile with it before starting.
 
-**Tracked (separate effort) — audit-skills eval coverage.** The objective-output enforcement added three observable `audit-skills` flags (`actor_or_activity_objective`, `objective_criteria_duplication`, `auditor_skeleton_violation`) with no `[eval]` case verifying detection. `develop` carries no skill eval suite today (its skills are `[review]`-only per `develop.md`), so covering these flags means establishing the first audit-skills eval suite and the `[eval]` assertions to govern it — a separate eval-authoring effort larger than this PR's diff, not a bounded fix to it. **Author it before the per-plugin objective sweeps (PRs B+) begin** — those sweeps depend on the auditor correctly flagging violations, so an unverified detector makes them unreliable. Gate with the eval harness.
+**Tracked (separate effort) — audit-skills eval coverage.** The objective-output enforcement added three observable `audit-skills` flags (`actor_or_activity_objective`, `objective_criteria_duplication`, `auditor_skeleton_violation`) with no `[eval]` case verifying detection. `develop` carries no skill eval suite today (its skills are `[review]`-only per `develop.md`), so covering these flags means establishing the first audit-skills eval suite and the `[eval]` assertions to govern it — a separate eval-authoring effort larger than this PR's diff, not a bounded fix to it. **Author it before the per-plugin objective sweeps (PRs B+) begin** — those sweeps depend on the auditor correctly flagging violations, so an unverified detector makes them unreliable. Gate with the eval harness. The command-tooling retirement (folding the command-capability checks into `audit-skills`) added five more observable flags to the same uncovered set — `orphaned_argument`, `missing_argument_hint`, `command_style_arguments`, `overbroad_allowed_tools`, `irrelevant_dynamic_context` — whose `[eval]` cases belong in this suite.
 
 ## 1. Named-subject convention sweep — prose swept; scoped residuals remain (OPEN)
 
@@ -134,8 +134,8 @@ subjects verbatim.
     coupling-gate already live in `<essential_principles>`/`<audit_workflow>`/`<success_criteria>`),
     and `audit-python-architecture` + `audit-typescript-architecture` completed their
     `allowed-tools` (`Read, Grep` → `Read, Grep, Glob, Bash`). **Remaining (untouched files, dedicated
-    pass):** `allowed-tools` absent in `develop/audit-commands`, `develop/audit-skills`,
-    `develop/audit-subagents`; `<quick_start>` carried by those 3 `develop` auditors plus the
+    pass):** `allowed-tools` absent in `develop/audit-skills` and
+    `develop/audit-subagents`; `<quick_start>` carried by those 2 `develop` auditors plus the
     complex code auditors `audit-python`, `audit-rust`, `audit-typescript` (whether a
     multi-phase code auditor is a "validator" that must omit `<quick_start>` is the unsettled design
     call for that pass — the skill-auditor split on it). Also:
@@ -144,10 +144,13 @@ subjects verbatim.
     or this structural pass.
 
     **Update (agent-only-audit-dispatch change):** the missing `allowed-tools` on
-    `develop/audit-skills`, `develop/audit-commands`, and `develop/audit-subagents` is now **fixed**
-    — all three gained `allowed-tools: Read, Grep, Glob, Bash` as touched-file debt while their
+    `develop/audit-skills` and `develop/audit-subagents` is now **fixed**
+    — both gained `allowed-tools: Read, Grep, Glob, Bash` as touched-file debt while their
     descriptions were converted to the agent-preloaded dispatch-steering form. The `<quick_start>`
-    question for the 3 develop auditors plus the complex code auditors remains for the dedicated pass.
+    question for the 2 develop auditors plus the complex code auditors remains for the dedicated pass.
+    (`develop/audit-commands` and its `command-auditor` agent were removed — commands are not a
+    supported artifact per `spx/13-plugin-and-runtime-conventions.adr.md` — so they drop out of this
+    sweep's scope.)
 
   - **Verdict-toolchain path portability — marketplace-wide.** Every `audit-*` skill's
     `<output_format>` / `<verdict_format>` cites the JSON schema as the bare path
@@ -161,15 +164,15 @@ subjects verbatim.
 
   - **Verdict-schema row-taxonomy divergence — marketplace-wide.** The `audit-*` skills do not agree
     on `<output_format>` verdict row names: `audit-skills` emits the three-row
-    `keep-these-aspects` / `worth-improving` / `must-fix` shape, while `audit-commands` and
-    `audit-subagents` emit a four-row `critical-issues` / `recommendations` / `strengths` /
-    `quick-fixes` shape, and the `overall` rule differs with it (`PASS` iff `must-fix` empty vs `PASS`
+    `keep-these-aspects` / `worth-improving` / `must-fix` shape, while `audit-subagents` emits a
+    four-row `critical-issues` / `recommendations` / `strengths` / `quick-fixes` shape, and the
+    `overall` rule differs with it (`PASS` iff `must-fix` empty vs `PASS`
     iff `critical-issues` carries no `REJECT`). All claim conformance to the canonical schema in
     `audit/scripts/verdict.py`. Reconciling requires deciding whether `verdict.py` mandates a uniform
     row taxonomy or treats row names as free-form labels over a fixed envelope — a verification-contract
     question governed by `spx/15-audit-result-delivery.pdr.md` and the auditing nodes, affecting
     `emit_verdict.py` rendering and any auditor agent that indexes on row names. The class spans the
-    14 verdict-emitting skills (touched and untouched), so the coherent fix is one marketplace-wide
+    13 verdict-emitting skills (touched and untouched), so the coherent fix is one marketplace-wide
     pass, not a per-touched-file edit. Surfaced by the `develop:skill-auditor` gate during the PR3
     `Skill`-append; out of scope for that frontmatter change.
 

@@ -209,19 +209,16 @@ Skills are available in both Claude Code and Codex. Commands and agents are Clau
 
 ### develop
 
-Plugin development: /create-skills, /create-commands, /create-subagents
+Plugin development: /create-skills, /create-subagents
 
 | Type  | Name                      | Purpose                                                                                                                                  |
 | ----- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Skill | `/agent-prompt-standards` | Agent prompt writing conventions enforced across all creator and auditor skills                                                          |
-| Skill | `/audit-commands`         | Slash-command audit methodology preloaded by the command-auditor agent                                                                   |
 | Skill | `/audit-skills`           | SKILL.md audit methodology preloaded by the skill-auditor agent                                                                          |
 | Skill | `/audit-subagents`        | Subagent-configuration audit methodology preloaded by the subagent-auditor agent                                                         |
-| Skill | `/create-commands`        | Creating or editing slash commands                                                                                                       |
 | Skill | `/create-skills`          | Creating, editing, or improving SKILL.md files                                                                                           |
 | Skill | `/create-subagents`       | Creating, editing, or configuring subagents                                                                                              |
 | Skill | `/skill-standards`        | Skill authoring standards enforced across all creating and auditing skills                                                               |
-| Agent | `command-auditor`         | Auditing, reviewing, or evaluating slash command .md files for best practices compliance, or when the user asks to audit a command       |
 | Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                  |
 | Agent | `subagent-auditor`        | Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent |
 
