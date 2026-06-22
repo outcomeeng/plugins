@@ -6,9 +6,17 @@ Five properties define PDR evidence: content classification, property quality, t
 
 </overview>
 
+<contents>
+
+- `<content_classification>` — observable product behavior versus architecture, grounded in the product document's declared audience and interaction surfaces, with tooling-product examples
+- `<property_quality>` — observable, falsifiable, stable product properties
+- `<tag_validity>` — per-rule verification tag and evidence-type fit
+
+</contents>
+
 <content_classification>
 
-PDRs govern observable product behavior. Every statement must pass the user test: "Would a user care about this?"
+PDRs govern observable product behavior. Every statement must pass the user test: "Would the product document's declared audience observe or operate this?" The product document the audit loads names the audience and the interaction surfaces through which it operates the product; "observable" is judged against that declaration, never a fixed end-user-application assumption.
 
 **Product behavior (belongs in PDR):**
 
@@ -38,7 +46,30 @@ PDRs govern observable product behavior. Every statement must pass the user test
 | "Dark mode is the default theme"                  | PDR                                     | User sees the default               |
 | "Dark mode uses L=0.03 OKLCH background"          | ADR                                     | User sees dark, not the color math  |
 
-**The escalation test:** When a statement is ambiguous, ask: "If this changed, would a user file a bug report or a feature request?" If yes → PDR. If only engineers would notice → ADR.
+**Tooling and infrastructure products.** When the product document declares an audience that operates the product through a command-line, filesystem, version-control, or other infrastructure surface — engineers, agents, operators — the surface that audience runs and inspects is the product's observable behavior. Naming a command, a path, or a version-control concept is not by itself architecture; the audience operates exactly those things.
+
+**Tooling product behavior (belongs in PDR):**
+
+- "The tool recognizes two on-disk layouts: a single working tree and a worktree pool" — the audience inspects the layout on disk
+- "Running the build command in a clean checkout produces a `dist/` directory" — the audience runs the command and sees the output
+- "A shared state directory resolves to the same path from every worktree in a pool" — the audience relies on the resolved path
+- "An unknown subcommand exits non-zero with a usage message" — the audience observes the exit code and message
+
+**Tooling architecture (belongs in ADR), even though the product is tooling:**
+
+- "The layout detector caches results in an in-memory map keyed by path" — the audience never sees the cache
+- "The classifier reads metadata in a single pass and skips re-validating unchanged entries" — internal algorithm of the tool
+- "State is persisted as newline-delimited JSON records" — a serialization schema the audience does not operate
+- "The CLI is built on the Cobra command framework" — a library choice invisible to the audience
+
+| Statement                                            | Verdict | Reasoning                                       |
+| ---------------------------------------------------- | ------- | ----------------------------------------------- |
+| "The repository uses a bare-repo worktree pool"      | PDR     | The audience inspects the layout on disk        |
+| "Layout detection queries a version-control config"  | ADR     | The detection mechanism is internal to the tool |
+| "A new worktree is created detached at the base tip" | PDR     | The audience observes the worktree state        |
+| "Worktree records are held in a linked list"         | ADR     | The data structure is invisible to the audience |
+
+**The escalation test:** When a statement is ambiguous, ask: "If this changed, would the declared audience file a bug report or a feature request?" If yes → PDR. If only an implementer of the tool — never the audience — would notice → ADR.
 
 </content_classification>
 
