@@ -58,21 +58,21 @@ This check calls `spx` before the spx-reachability check runs; that ordering is 
 
 <check name="spx-reachability">
 
-Verifies that the `spx` CLI is installed and on PATH, reports its version, and judges that version against the floor the spec-tree skills depend on. That floor is `0.5.6` — the lowest `spx` version whose capabilities the shipped skills assume.
+Verifies that the `spx` CLI is installed and on PATH, reports its version, and judges that version against the floor the spec-tree skills depend on. That floor is `0.6.0` — the lowest `spx` version whose capabilities the shipped skills assume.
 
 ```bash
 command -v spx && spx --version
 ```
 
-Classify the resolution, reporting the resolved path and version verbatim and comparing the reported version against the floor `0.5.6` by dotted-numeric order:
+Classify the resolution, reporting the resolved path and version verbatim and comparing the reported version against the floor `0.6.0` by dotted-numeric order:
 
 | Reading                                                               | Verdict         | Bucket   | Remediation                                                                                                                    |
 | --------------------------------------------------------------------- | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `spx` resolves on PATH and its version is at or above `0.5.6`         | **reachable**   | healthy  | None — report the resolved path and version verbatim.                                                                          |
-| `spx` resolves on PATH and reports a version, but it is below `0.5.6` | **below-floor** | degraded | Update `spx` to at least `0.5.6`; the spec-tree skills assume its capabilities. Report the resolved path and version verbatim. |
+| `spx` resolves on PATH and its version is at or above `0.6.0`         | **reachable**   | healthy  | None — report the resolved path and version verbatim.                                                                          |
+| `spx` resolves on PATH and reports a version, but it is below `0.6.0` | **below-floor** | degraded | Update `spx` to at least `0.6.0`; the spec-tree skills assume its capabilities. Report the resolved path and version verbatim. |
 | `command -v spx` finds nothing                                        | **unreachable** | broken   | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it.                               |
 
-A reported version that is not dotted-numeric — a prerelease or build-tagged value that cannot be ordered against `0.5.6` — matches no row and falls to `unknown` per step 4, reported with the version verbatim.
+A reported version that is not dotted-numeric — a prerelease or build-tagged value that cannot be ordered against `0.6.0` — matches no row and falls to `unknown` per step 4, reported with the version verbatim.
 
 </check>
 
