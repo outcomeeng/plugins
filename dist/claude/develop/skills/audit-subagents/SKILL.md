@@ -5,6 +5,7 @@ description: >-
   Dispatch subagent-auditor to audit subagent configuration files; the main
   conversation reaches this audit only through that agent.
 argument-hint: <subagent-path>
+arguments: subagent_path
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -19,19 +20,11 @@ This audit runs in the subagent-auditor agent's isolated context. When this skil
 </dispatch_gate>
 
 <objective>
-Evaluate subagent configuration files against best practices for role definition, prompt quality, tool selection, model appropriateness, and effectiveness. Provide actionable findings with contextual judgment, not arbitrary scores.
+A verdict on one subagent configuration file (`agents/*.md`) against the create-subagents and `/agent-prompt-standards` conventions — PASS when no critical issue rejects it, FAIL when one does. Findings group as critical issues (role definition, workflow specification, constraints, tool access, XML structure, and prompt craft), recommendations, strengths, and quick fixes, each naming the location, the convention at issue, and the consequence — contextual judgment, never a score.
 </objective>
 
-<quick_start>
-
-1. Read best practices from the create-subagents skill and its reference files
-2. Read the subagent configuration file at `$ARGUMENTS`
-3. Evaluate against all areas: YAML, role, workflow, constraints, tools, XML structure
-4. Report findings using the severity-based output format
-
-</quick_start>
-
 <constraints>
+- NEVER modify the subagent file under audit or any other file — this audit produces a verdict, never a fix or a commit
 - MUST check for markdown headings (##, ###) in subagent body and flag as critical
 - MUST verify all XML tags are properly closed
 - MUST distinguish between functional deficiencies and style preferences
@@ -44,7 +37,7 @@ Evaluate subagent configuration files against best practices for role definition
 
 </constraints>
 
-<critical_workflow>
+<audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
 1. Both skills are already injected above. Read the create-subagents reference files:
@@ -52,11 +45,11 @@ Evaluate subagent configuration files against best practices for role definition
    - `${CLAUDE_SKILL_DIR}/../create-subagents/references/write-subagent-prompts.md`
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Before penalizing any missing section, search entire file for equivalent content under different tag names
-4. Read the subagent configuration file at `$ARGUMENTS`
+4. Read the subagent configuration file at `$subagent_path`
 5. Evaluate against best practices from steps 1-3, focusing on functionality over formatting
 
 **Use ACTUAL patterns from references, not memory.**
-</critical_workflow>
+</audit_workflow>
 
 <evaluation_areas>
 <area name="critical" priority="must-fix">
@@ -225,7 +218,7 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 </pattern>
 </anti_patterns>
 
-<output_format>
+<verdict_format>
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
 The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `REJECT`; `FAIL` if any critical finding is `REJECT`; `UNKNOWN` if the subagent file cannot be read or the audit cannot complete. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
@@ -263,7 +256,27 @@ The skill's `overall` is `PASS` iff the `critical-issues` row has no findings wi
 }
 ```
 
-</output_format>
+</verdict_format>
+
+<failure_modes>
+
+**Failure 1: Flagged a missing tag name when the content was present under a different name.** Claude penalized a subagent for lacking `<workflow>` when its procedure lived under `<approach>`. The audit checks for functionality, not exact tag spelling; a missing function is a finding, a renamed-but-present section is not. Search the whole file for equivalent content before flagging.
+
+**Failure 2: Scored the subagent instead of judging it.** Claude assigned "role clarity 7/10" instead of naming the specific deficiency and its consequence. A score names no location, convention, or fix and the author cannot act on it. Emit findings, never scores.
+
+**Failure 3: Skipped an evaluation area and missed a whole class.** Claude judged YAML and role, formed a verdict, and stopped — leaving tool-access over-permissioning unexamined, so a class of issues passed unseen. The verdict is sound only when every evaluation area was judged; cover them all before issuing the verdict.
+
+</failure_modes>
+
+<success_criteria>
+The verdict is sound when:
+
+- Every evaluation area was judged with none skipped — YAML frontmatter, role definition, workflow specification, constraints, tool access, XML structure, prompt craft, and the recommended areas (coverage-complete).
+- The verdict states an overall PASS/FAIL with findings grouped critical-issues / recommendations / strengths / quick-fixes.
+- Each finding is falsifiable: it names the location, the convention at issue, and the consequence — every critical issue names what breaks if unfixed, judged on functionality rather than exact tag spelling.
+- The same subagent file yields the same verdict.
+
+</success_criteria>
 
 <validation>
 Before completing the audit, verify:
@@ -287,18 +300,3 @@ After presenting findings, offer:
 4. Other
 
 </final_step>
-
-<success_criteria>
-A complete subagent audit includes:
-
-- Assessment summary (1-2 sentences on fitness for purpose)
-- Critical issues identified with file:line references
-- Recommendations listed with specific benefits
-- Strengths documented (what's working well)
-- Quick fixes enumerated
-- Context assessment (subagent type, tool access, model selection)
-- Estimated effort to fix
-- Post-audit options offered to user
-- Fair evaluation that distinguishes functional deficiencies from style preferences
-
-</success_criteria>
