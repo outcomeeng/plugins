@@ -151,7 +151,14 @@
     .layout {
       display: grid;
       grid-template-columns: minmax(320px, 420px) 1fr;
+      grid-template-rows: minmax(0, 1fr);
       height: calc(100% - 57px);
+    }
+    .tpane {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
     }
     .qpane {
       display: flex;
@@ -162,6 +169,7 @@
     }
     .qscroll {
       flex: 1;
+      min-height: 0;
       overflow: auto;
       padding: 1.1rem 1.2rem;
     }
@@ -222,6 +230,7 @@
       margin-bottom: 0.15rem;
     }
     .tree {
+      flex: 1;
       overflow: auto;
       background: var(--canvas);
       padding: 0.7rem 0;
@@ -413,7 +422,7 @@
           <button id="chat-send">Send</button>
         </div>
       </div>
-      <div>
+      <div class="tpane">
         <ul class="tree tree-list" id="tree"></ul>
         <div class="toolbar">
           <button onclick="addNode(null, 'enabler')">+ root enabler</button>
