@@ -1,214 +1,356 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Interview — Prototype</title>
+    <title>Spec Tree — live</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
+    /* Vendored from the product design system (levenate-tree.html). Spike: inlined;
+       ships as static assets in the interfaces plugin per 13-rendering.adr.md. */
     :root {
-      --bg: #0a0f1c;
-      --panel: #111827;
-      --card: #1a2236;
-      --line: #243049;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #00d4aa;
-      --accent-bg: rgba(0, 212, 170, 0.12);
-      --enabler: #60a5fa;
-      --outcome: #f59e0b;
+      --canvas: oklch(0.966 0.004 255);
+      --paper: oklch(0.976 0.003 255);
+      --surface: oklch(0.995 0.001 255);
+      --sunken: oklch(0.945 0.005 255);
+      --ink: oklch(0.215 0.011 255);
+      --ink-2: oklch(0.420 0.012 255);
+      --ink-3: oklch(0.505 0.013 255);
+      --line: oklch(0.895 0.006 255);
+      --accent: oklch(0.550 0.130 250);
+      --accent-deep: oklch(0.450 0.130 250);
+      --accent-wash: oklch(0.955 0.025 250);
+      --on-accent: oklch(0.995 0.001 255);
+      --st-passing: oklch(0.600 0.120 155);
+      --st-passing-ink: oklch(0.470 0.130 152);
+      --st-failing: oklch(0.585 0.165 30);
+      --st-failing-ink: oklch(0.510 0.180 28);
+      --st-specified: oklch(0.580 0.100 245);
+      --st-specified-ink: oklch(0.490 0.110 248);
+      --st-declared: oklch(0.655 0.020 255);
+      --st-declared-ink: oklch(0.500 0.018 258);
+      --cat-outcome: oklch(0.560 0.110 80);
+      --cat-outcome-w: oklch(0.950 0.045 85);
+      --shadow-sm: 0 1px 2px oklch(0.5 0.02 255/0.08);
+      --font-sans: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
+      --font-display: "Newsreader", Georgia, serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+      --text-xs: 0.8125rem;
+      --text-sm: 0.875rem;
+      --text-2xl: 1.5rem;
+      --radius-sm: 8px;
+      --radius: 12px;
+    }
+    [data-theme="dark"] {
+      --canvas: oklch(0.150 0.009 255);
+      --paper: oklch(0.175 0.010 255);
+      --surface: oklch(0.215 0.011 255);
+      --sunken: oklch(0.115 0.008 255);
+      --ink: oklch(0.976 0.003 255);
+      --ink-2: oklch(0.895 0.006 255);
+      --ink-3: oklch(0.840 0.007 255);
+      --line: oklch(0.300 0.012 255);
+      --accent: oklch(0.680 0.150 250);
+      --accent-deep: oklch(0.700 0.100 250);
+      --accent-wash: oklch(0.300 0.060 250);
+      --on-accent: oklch(0.115 0.008 255);
+      --st-passing: oklch(0.720 0.150 155);
+      --st-passing-ink: oklch(0.720 0.150 155);
+      --st-failing: oklch(0.700 0.180 30);
+      --st-failing-ink: oklch(0.700 0.180 30);
+      --st-specified: oklch(0.700 0.130 245);
+      --st-specified-ink: oklch(0.700 0.130 245);
+      --st-declared: oklch(0.640 0.020 255);
+      --st-declared-ink: oklch(0.640 0.020 255);
+      --cat-outcome: oklch(0.560 0.110 80);
+      --cat-outcome-w: oklch(0.300 0.055 80);
+      --shadow-sm: 0 1px 2px oklch(0 0 0/0.4);
     }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+    html, body {
+      height: 100%;
+    }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font: 15px/1.5 system-ui, sans-serif;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
-    header {
-      padding: 12px 20px;
-      border-bottom: 1px solid var(--line);
+    .topbar {
       display: flex;
-      gap: 12px;
-      align-items: center;
+      align-items: baseline;
+      gap: 1.1rem;
+      padding: 0.85rem 1.4rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 5;
     }
-    header h1 {
-      font-size: 15px;
+    .brand {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
       font-weight: 600;
     }
-    #status {
+    .brand-sub {
+      color: var(--ink-3);
+      font-size: var(--text-sm);
+    }
+    .legend {
       margin-left: auto;
-      font-size: 12px;
-      color: var(--muted);
+      display: flex;
+      gap: 0.85rem;
+      align-items: center;
+    }
+    .lg {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: var(--text-sm);
+      color: var(--ink-2);
+    }
+    .lg .dot {
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 999px;
+    }
+    .lg b {
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+    }
+    #status {
+      font-size: var(--text-xs);
+      color: var(--ink-3);
     }
     #status.live::before {
       content: "● ";
-      color: var(--accent);
+      color: var(--st-passing);
     }
     #status.off::before {
       content: "● ";
-      color: #ef4444;
+      color: var(--st-failing);
     }
-    main {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      padding: 20px;
-      align-items: start;
-    }
-    section {
-      background: var(--panel);
+    .theme-btn {
+      font: inherit;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      color: var(--ink-2);
+      background: var(--paper);
       border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 16px;
+      border-radius: var(--radius-sm);
+      padding: 0.25rem 0.7rem;
     }
-    section h2 {
-      font-size: 12px;
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) 1fr;
+      height: calc(100% - 57px);
+    }
+    .qpane {
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: var(--paper);
+      padding: 1.1rem 1.2rem;
+    }
+    .tree {
+      overflow: auto;
+      background: var(--canvas);
+      padding: 0.7rem 0;
+    }
+    .sec-h {
+      font-size: var(--text-xs);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 12px;
+      letter-spacing: 0.06em;
+      color: var(--ink-3);
+      margin: 1.1rem 0 0.55rem;
+    }
+    .sec-h:first-child {
+      margin-top: 0;
     }
     .q {
-      background: var(--card);
+      background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
+      border-radius: var(--radius);
+      padding: 0.8rem 0.9rem;
+      margin-bottom: 0.6rem;
+      box-shadow: var(--shadow-sm);
     }
     .q.current {
       border-color: var(--accent);
     }
+    .q.settled {
+      opacity: 0.65;
+    }
     .q .text {
-      font-weight: 500;
-      margin-bottom: 8px;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      margin-bottom: 0.5rem;
     }
     .q .opt {
       display: inline-block;
-      margin: 3px 6px 3px 0;
-      padding: 5px 10px;
+      margin: 0.2rem 0.35rem 0.2rem 0;
+      padding: 0.3rem 0.65rem;
       border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--bg);
-      color: var(--text);
+      border-radius: 999px;
+      background: var(--paper);
+      color: var(--ink);
       cursor: pointer;
-      font-size: 13px;
+      font: inherit;
+      font-size: var(--text-xs);
     }
     .q .opt:hover {
       border-color: var(--accent);
+      color: var(--accent-deep);
     }
     .q .choice {
-      color: var(--accent);
-      font-size: 13px;
+      color: var(--accent-deep);
+      font-size: var(--text-sm);
+      font-weight: 600;
     }
-    .q.settled {
-      opacity: 0.7;
-    }
-    ul.tree, ul.tree ul {
-      list-style: none;
-      margin: 0;
-      padding-left: 18px;
-    }
-    ul.tree {
-      padding-left: 0;
-    }
-    li.node > .row {
+    .row {
       display: flex;
-      gap: 8px;
       align-items: center;
-      padding: 4px 6px;
-      border-radius: 6px;
+      gap: 0.5rem;
+      padding: 0.3rem 1rem 0.3rem 0;
+      border-left: 3px solid transparent;
     }
-    li.node > .row:hover {
-      background: var(--card);
+    .row:hover {
+      background: var(--sunken);
+    }
+    .node.sel > .row {
+      background: var(--accent-wash);
+      border-left-color: var(--accent);
+    }
+    .dot {
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 999px;
+      flex: none;
+    }
+    .idx {
+      color: var(--ink-3);
+      font-size: var(--text-sm);
+      font-variant-numeric: tabular-nums;
+      flex: none;
+      min-width: 1.4rem;
+      text-align: right;
+    }
+    .nm {
+      color: var(--ink);
+      flex: 1;
+      padding: 0.1rem 0.25rem;
+      border-radius: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .nm:focus {
+      outline: 1px solid var(--accent);
+      background: var(--surface);
+      white-space: normal;
+    }
+    .chip {
+      font-size: var(--text-xs);
+      padding: 0.05rem 0.45rem;
+      border-radius: 999px;
+      flex: none;
+      border: 1px solid transparent;
+    }
+    .chip.enabler {
+      background: var(--sunken);
+      color: var(--ink-2);
+      border-color: var(--line);
+    }
+    .chip.outcome {
+      background: var(--cat-outcome-w);
+      color: var(--cat-outcome);
+    }
+    .row .act {
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      cursor: pointer;
+      font: inherit;
+      font-size: var(--text-sm);
+      padding: 0 0.25rem;
+      opacity: 0;
+      flex: none;
+    }
+    .row:hover .act {
+      opacity: 1;
+    }
+    .row .act:hover {
+      color: var(--accent-deep);
+    }
+    ul.tree-list, ul.tree-list ul {
+      list-style: none;
+    }
+    li.node > ul {
+      margin: 0;
     }
     li.node.drop-into > .row {
       outline: 1px dashed var(--accent);
+      outline-offset: -1px;
     }
     li.node.drop-before > .row {
-      box-shadow: 0 -2px 0 0 var(--accent);
+      box-shadow: inset 0 2px 0 0 var(--accent);
     }
     li.node.drop-after > .row {
-      box-shadow: 0 2px 0 0 var(--accent);
+      box-shadow: inset 0 -2px 0 0 var(--accent);
     }
-    ul.tree.root-drop {
+    ul.tree-list.root-drop {
       outline: 1px dashed var(--accent);
-      outline-offset: 4px;
-    }
-    .kind {
-      font-size: 10px;
-      text-transform: uppercase;
-      padding: 1px 6px;
-      border-radius: 4px;
-    }
-    .kind.enabler {
-      color: var(--enabler);
-      background: rgba(96, 165, 250, 0.12);
-    }
-    .kind.outcome {
-      color: var(--outcome);
-      background: rgba(245, 158, 11, 0.12);
-    }
-    .title {
-      flex: 1;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    .title:focus {
-      outline: 1px solid var(--accent);
-      background: var(--bg);
-    }
-    .row button {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 13px;
-      padding: 2px 5px;
-    }
-    .row button:hover {
-      color: var(--accent);
+      outline-offset: -4px;
     }
     .toolbar {
-      margin-top: 12px;
+      padding: 0.7rem 1rem;
     }
     .toolbar button {
-      background: var(--accent-bg);
+      background: var(--accent-wash);
       border: 1px solid var(--accent);
-      color: var(--accent);
-      border-radius: 6px;
-      padding: 6px 12px;
+      color: var(--accent-deep);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.8rem;
       cursor: pointer;
-      font-size: 13px;
+      font: inherit;
+      font-size: var(--text-xs);
+      margin-right: 0.4rem;
     }
     </style>
   </head>
   <body>
-    <header>
-      <h1>Live Interview</h1>
-      <span id="rev"></span>
+    <div class="topbar">
+      <span class="brand">Spec Tree</span>
+      <span class="brand-sub" id="sub">live</span>
+      <div class="legend" id="legend"></div>
+      <span id="rev" class="brand-sub"></span>
       <span id="status" class="off">connecting…</span>
-    </header>
-    <main>
-      <section id="questions-panel">
-        <h2>Questions</h2>
+      <button class="theme-btn" id="theme">dark</button>
+    </div>
+    <div class="layout">
+      <div class="qpane">
+        <div class="sec-h">Current</div>
         <div id="current"></div>
-        <h2 style="margin-top: 18px">Planned</h2>
+        <div class="sec-h">Planned</div>
         <div id="planned"></div>
-        <h2 style="margin-top: 18px">Settled</h2>
+        <div class="sec-h">Settled</div>
         <div id="settled"></div>
-      </section>
-      <section id="tree-panel">
-        <h2>Spec Tree</h2>
-        <ul class="tree" id="tree"></ul>
+      </div>
+      <div>
+        <ul class="tree tree-list" id="tree"></ul>
         <div class="toolbar">
-          <button onclick="addNode(null, 'enabler')">+ Root enabler</button>
-          <button onclick="addNode(null, 'outcome')">+ Root outcome</button>
+          <button onclick="addNode(null, 'enabler')">+ root enabler</button>
+          <button onclick="addNode(null, 'outcome')">+ root outcome</button>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
 
     <script>
     const TOKEN = new URLSearchParams(location.search).get("token") || "";
@@ -329,7 +471,9 @@
       moveNode(dragId, t.parentId, idx);
     }
 
-    function nodeLi(node) {
+    const STATES = ["declared", "specified", "failing", "passing"];
+
+    function nodeLi(node, depth) {
       const li = document.createElement("li");
       li.className = "node";
       li.draggable = true;
@@ -337,34 +481,49 @@
 
       const row = document.createElement("div");
       row.className = "row";
+      row.style.paddingLeft = (1 + depth * 1.15) + "rem";
 
-      const kind = document.createElement("span");
-      kind.className = "kind " + node.kind;
-      kind.textContent = node.kind[0];
-      row.appendChild(kind);
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      const st = STATES.includes(node.state) ? node.state : "declared";
+      dot.style.background = "var(--st-" + st + ")";
+      dot.title = st;
+      row.appendChild(dot);
 
-      const title = document.createElement("span");
-      title.className = "title";
-      title.contentEditable = "true";
-      title.textContent = node.title;
-      title.onblur = () => {
-        if (title.textContent !== node.title) renameNode(node.id, title.textContent);
+      const idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = node.order != null ? node.order : "";
+      row.appendChild(idx);
+
+      const nm = document.createElement("span");
+      nm.className = "nm";
+      nm.contentEditable = "true";
+      nm.textContent = node.title;
+      nm.onblur = () => {
+        if (nm.textContent !== node.title) renameNode(node.id, nm.textContent);
       };
-      title.onkeydown = (e) => {
+      nm.onkeydown = (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          title.blur();
+          nm.blur();
         }
       };
-      row.appendChild(title);
+      row.appendChild(nm);
+
+      const chip = document.createElement("span");
+      chip.className = "chip " + node.kind;
+      chip.textContent = node.kind;
+      row.appendChild(chip);
 
       const addBtn = document.createElement("button");
+      addBtn.className = "act";
       addBtn.textContent = "+";
       addBtn.title = "add child enabler";
       addBtn.onclick = () => addNode(node.id, "enabler");
       row.appendChild(addBtn);
 
       const del = document.createElement("button");
+      del.className = "act";
       del.textContent = "✕";
       del.title = "remove";
       del.onclick = () => removeNode(node.id);
@@ -405,10 +564,32 @@
 
       if (node.children && node.children.length) {
         const ul = document.createElement("ul");
-        node.children.forEach((c) => ul.appendChild(nodeLi(c)));
+        node.children.forEach((c) => ul.appendChild(nodeLi(c, depth + 1)));
         li.appendChild(ul);
       }
       return li;
+    }
+
+    function countStates(nodes, acc) {
+      (nodes || []).forEach((n) => {
+        const st = STATES.includes(n.state) ? n.state : "declared";
+        acc[st] = (acc[st] || 0) + 1;
+        countStates(n.children, acc);
+      });
+      return acc;
+    }
+
+    function renderLegend() {
+      const counts = countStates(state.tree, {});
+      const legend = document.getElementById("legend");
+      legend.innerHTML = "";
+      STATES.forEach((st) => {
+        const span = document.createElement("span");
+        span.className = "lg";
+        span.innerHTML = `<span class="dot" style="background:var(--st-${st})"></span>${st} <b>${counts[st] || 0}</b>`;
+        legend.appendChild(span);
+      });
+      document.getElementById("sub").textContent = (state.tree || []).length + " top-level nodes · state derived from tests";
     }
 
     function render() {
@@ -426,7 +607,8 @@
 
       const tree = document.getElementById("tree");
       tree.innerHTML = "";
-      (state.tree || []).forEach((n) => tree.appendChild(nodeLi(n)));
+      (state.tree || []).forEach((n) => tree.appendChild(nodeLi(n, 0)));
+      renderLegend();
     }
 
     // --- SSE: agent-side updates push here ------------------------------------
@@ -476,11 +658,22 @@
       });
     }
 
+    function setupTheme() {
+      const btn = document.getElementById("theme");
+      const root = document.documentElement;
+      btn.onclick = () => {
+        const dark = root.getAttribute("data-theme") === "dark";
+        root.setAttribute("data-theme", dark ? "light" : "dark");
+        btn.textContent = dark ? "dark" : "light";
+      };
+    }
+
     async function boot() {
       loadCache(); // optimistic paint from last session
       render();
       await refetch(); // authoritative state from the server
       setupRootDrop();
+      setupTheme();
       connect(); // then stream agent-side updates
     }
 
