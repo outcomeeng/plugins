@@ -5,6 +5,15 @@ Measured 2026-06-21 against the OAuth `claude` CLI (v2.1.185), `claude --print
 invocation `outcomeeng_evals/runner.py` uses. Output token count held at 9 per
 call, so per-call cost is prefix-cache-dominated by construction.
 
+> **Read with `investigation.md` and the ADR.** Result 1 below holds the *whole
+> prompt* identical, so it measures the payoff of a fixed warm prefix — the
+> ceiling. Real eval cases vary the question, so the harness's current single-turn
+> shape does **not** hold the prefix fixed and cold-writes the plugin every case
+> (`investigation.md`, Measurement 2). The mechanism that realizes this ceiling for
+> differing cases is a base session loaded once and forked per case
+> (`spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`),
+> currently gated on regression `anthropics/claude-code#34629`.
+
 ## Result 1 — sequential same-prefix run is the headline
 
 `spec-tree` plugin, 5 reps, back-to-back:
