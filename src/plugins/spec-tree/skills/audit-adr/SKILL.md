@@ -14,7 +14,7 @@ This audit runs in the adr-auditor agent's isolated context. When this skill loa
 
 <objective>
 
-Audit an ADR for its structure, atemporal voice, and strict conformance to the ADR evidence model.
+A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three native categories: section structure, atemporal voice, and per-rule tag validity and evidence-type fit.
 
 Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-{lang}-architecture` (Step 5b), which judges only those concerns. This skill owns section structure, atemporal voice, and tag validity from the canonical template.
 
@@ -36,9 +36,18 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECT`. No middle ground.
+`APPROVED` or `REJECTED`. No middle ground.
 
 </essential_principles>
+
+<constraints>
+
+- NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
+- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
+- NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
+
+</constraints>
 
 <audit_workflow>
 
@@ -120,7 +129,7 @@ Detect the implementation language from the node's scope — infer it from the f
 
 **Step 6: Issue verdict**
 
-Scan all findings, including any folded in from the composed language audit. If any property fails: REJECT. Otherwise: APPROVED.
+Scan all findings, including any folded in from the composed language audit. If any property fails: REJECTED. Otherwise: APPROVED.
 
 </step>
 
@@ -169,14 +178,11 @@ How to avoid: Step 5 verifies the evidence type fits the claim's shape per the `
 
 <success_criteria>
 
-Audit is complete when:
+The verdict is sound when:
 
-- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
-- [ ] ADR read — all sections identified
-- [ ] Section structure: decision stated in the opening and `## Verification` present
-- [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/test` (a universal is never `scenario`)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has property, category, and detail
+- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and evidence-type fit; when a language is in scope, the composed `/audit-{lang}-architecture` rows are judged too (coverage-complete).
+- The verdict states an overall APPROVED/REJECTED, every native and composed row carrying its determination, with no rule left unevaluated.
+- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
+- The same ADR yields the same verdict.
 
 </success_criteria>

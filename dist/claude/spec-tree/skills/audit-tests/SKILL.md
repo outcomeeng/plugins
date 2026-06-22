@@ -15,7 +15,7 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-Audit whether tests provide genuine evidence that spec assertions are fulfilled. Four properties must hold — coupling, falsifiability, alignment, coverage — checked in strict order. A test missing any property has zero evidentiary value regardless of code quality.
+A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap. Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (measured deltas). A test missing any property has zero evidentiary value regardless of code quality.
 
 Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
@@ -39,9 +39,18 @@ Cross-file literal validation is TypeScript-only. The base audit and non-TypeScr
 
 **BINARY VERDICT.**
 
-APPROVED or REJECT. No middle ground. If any property is missing for any assertion, REJECT.
+APPROVED or REJECTED. No middle ground. If any property is missing for any assertion, REJECTED.
 
 </essential_principles>
+
+<constraints>
+
+- NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- ALWAYS measure coverage by running the project's coverage command (baseline, then with the test) — never estimate which paths a test covers.
+- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
+- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
+
+</constraints>
 
 <audit_workflow>
 
@@ -201,7 +210,7 @@ Detect the test language from the node's scope — infer it from the file extens
 
 **Step 4: Issue verdict**
 
-Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECT.**
+Scan all findings across all assertions, including any folded in from the composed language audit. If any assertion has a property failure: **REJECTED.**
 
 </step>
 
@@ -307,16 +316,11 @@ How to avoid: Step 3a — after identifying what a test reads, classify by wheth
 
 <success_criteria>
 
-Audit is complete when:
+The verdict is sound when:
 
-- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
-- [ ] All assertions extracted from spec with types and test links
-- [ ] Each test file: coupling checked (imports classified)
-- [ ] Each test file: falsifiability checked (mutations named)
-- [ ] Each test file: alignment checked (assertion-to-test match verified)
-- [ ] Each test file: coverage checked (actual deltas from coverage command)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has assertion reference, failed property, finding category, detail
-- [ ] For REJECT: "how tests could pass while assertions fail" explained
+- Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
+- The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
+- Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
+- Coverage deltas are measured from the coverage command, never estimated; the same node yields the same verdict.
 
 </success_criteria>
