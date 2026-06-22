@@ -10,7 +10,7 @@ The audit answers one question: **is this a well-formed, observable product deci
 
 Evidence requires five properties checked in order:
 
-1. **Content classification** — every statement is about observable product behavior, not architecture or implementation
+1. **Content classification** — every statement is about observable product behavior for the product's declared audience, not architecture or implementation
 2. **Property quality** — product properties are user-observable and falsifiable
 3. **Tag validity** — each verification rule carries a tag valid for its subsection, and a `### Testing` rule's evidence type fits the claim's quantifier
 4. **Atemporal voice** — the PDR states product truth, not history
@@ -33,11 +33,15 @@ The `/audit-pdr` skill in the spec-tree plugin classifies every statement in the
 
 The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sessions use JWT with 1-hour TTL" is architecture (ADR). "The session table has a TTL column" is implementation (code).
 
+"Observable" is grounded in the product document the audit loads, not a fixed end-user-application assumption. The product document declares the product's audience and the interaction surfaces through which that audience operates the product; content classification reads that declaration and judges each statement against it. When the audience operates the product through a command-line interface, a filesystem layout, a version-control topology, or another infrastructure surface, the CLI, filesystem, and version-control state that audience directly observes or operates is observable product behavior and belongs in the PDR. The architecture line falls at what the audience never operates: the internal algorithm by which a tool reaches an observable result, the data structures it holds in memory, the schema it persists, and the libraries or frameworks it depends on. A repository-layout decision a developer inspects on disk is product behavior; the in-memory cache the layout detector keys by path is architecture — even though both belong to the same tooling product.
+
 ## Assertions
 
 ### Scenarios
 
 - Given a PDR containing architecture content ("use JWT tokens", "store in PostgreSQL"), when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture-content" ([eval](evals/structure/eval.toml))
+- Given a PDR for a product whose product document declares its audience operates the product through a command-line, filesystem, or version-control surface, and whose statements describe the CLI, filesystem, or version-control state that audience observes, when audited by `/audit-pdr`, then content classification passes and the statements are not rejected as architecture ([eval](evals/structure/eval.toml))
+- Given a PDR whose statements describe a tool's internal algorithm, in-memory data structure, persisted schema, or library choice that the declared audience never operates, when audited by `/audit-pdr`, then the verdict is REJECT with finding category "architecture-content" even for a tooling product ([eval](evals/structure/eval.toml))
 - Given a PDR with product properties that are not user-observable ("database uses row-level locking"), when audited, then the verdict is REJECT with finding category "non-observable-property" ([eval](evals/structure/eval.toml))
 - Given a PDR with temporal language in any section, when audited, then the verdict is REJECT with finding category "temporal-language" ([eval](evals/voice/eval.toml))
 - Given a PDR whose `### Testing` rule carries a bare mechanism tag, a tag disagreeing with its subsection, no tag, or more than one tag, when audited, then the verdict is REJECT with finding category "invalid-tag" ([eval](evals/tag-validity/eval.toml))
@@ -48,6 +52,7 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 ### Compliance
 
 - ALWAYS: classify every PDR statement into at least the six content types defined in the Content Classification Model — product behavior, observable non-functional property, technology choice, implementation approach, data structure, performance implementation ([audit])
+- ALWAYS: ground "observable" in the product document's declared audience and interaction surfaces rather than a fixed end-user-application assumption — a statement is product behavior when that audience observes or operates it, so an audience that operates the product through a command-line, filesystem, or version-control surface makes those mechanics product behavior, while the internal algorithm, in-memory data structure, persisted schema, and library choices that audience never operates remain architecture ([audit])
 - ALWAYS: invoke `/contextualize` on the PDR's location before any audit phase ([audit])
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([review])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([review])
