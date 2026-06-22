@@ -40,25 +40,59 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY
+from outcomeeng.distribution.build import RUNTIME_TOKEN_REGISTRY, RuntimeTokenKind
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 
-# Every runtime-divergent name the build's registry owns, longest first so the
-# alternation prefers the most specific match. Word boundaries keep a name from
-# matching inside a longer identifier.
-_FORBIDDEN_NAMES: Final = tuple(
-    sorted(
-        {name for entry in RUNTIME_TOKEN_REGISTRY.values() for name in entry.values()},
-        key=len,
-        reverse=True,
+
+def forbidden_names(
+    *,
+    registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> tuple[str, ...]:
+    """Return the guard-enforced runtime-divergent names, longest first.
+
+    Derived only from the registry's lint-enforced kinds (``tool``, ``field``); the
+    review-only ``term`` kind is excluded because its common-word concept terms
+    would match throughout prose. Longest-first ordering lets the scanner's
+    alternation prefer the most specific match. The keyword-only ``registry`` seam
+    defaults to the build registry and is injectable so the kind-aware derivation
+    is exercised with a controlled registry independent of the live (tool-only)
+    names — the same seam shape ``is_ignored``/``scan_file`` use.
+    """
+    return tuple(
+        sorted(
+            {
+                name
+                for kind in registry.values()
+                if kind.lint_enforced
+                for entry in kind.names.values()
+                for name in entry.values()
+            },
+            key=len,
+            reverse=True,
+        )
     )
-)
-_RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = re.compile(
-    r"(?<![\w-])(?:"
-    + "|".join(re.escape(name) for name in _FORBIDDEN_NAMES)
-    + r")(?![\w-])"
-)
+
+
+def compile_forbidden_pattern(names: tuple[str, ...]) -> re.Pattern[str]:
+    """Compile the scanner pattern matching any guard-enforced ``names`` as a token.
+
+    The ``(?<![\\w-]) … (?![\\w-])`` boundaries keep a name from matching inside a
+    longer identifier. With no enforced names — possible now that a kind can be
+    enforced yet carry no entries — the pattern matches nothing rather than the
+    empty string, which an empty alternation would otherwise match at every
+    position.
+    """
+    if not names:
+        return re.compile(r"(?!)")  # never matches
+    return re.compile(
+        r"(?<![\w-])(?:" + "|".join(re.escape(name) for name in names) + r")(?![\w-])"
+    )
+
+
+# Every guard-enforced runtime-divergent name the build's registry owns.
+_FORBIDDEN_NAMES: Final = forbidden_names()
+_RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = compile_forbidden_pattern(_FORBIDDEN_NAMES)
 
 # Files under src/plugins/ exempt from enforcement until their content is
 # converted to runtime-token tokens. Repo-relative POSIX paths. Empty: every

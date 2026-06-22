@@ -14,6 +14,7 @@ CAN keep each generated target's output naming only its own runtime's tools, wit
 
 ### Compliance
 
-- NEVER: the validator passes a raw runtime-divergent token — a name registered in the build's runtime-token registry — in a non-ignored file under `src/plugins/` — because that literal ships into a target whose runtime does not provide it ([test](tests/test_runtime_token.compliance.l1.py))
-- ALWAYS: the validator derives its forbidden-name set from the build's runtime-token registry rather than a copied literal list — the registry is the single source of truth for which names diverge per runtime ([test](tests/test_runtime_token.compliance.l1.py))
+- NEVER: the validator passes a raw runtime-divergent token — a name registered in a guard-enforced kind (`tool`, `field`) of the build's runtime-token registry — in a non-ignored file under `src/plugins/` — because that literal ships into a target whose runtime does not provide it ([test](tests/test_runtime_token.compliance.l1.py))
+- ALWAYS: the validator derives its forbidden-name set from the guard-enforced kinds (`tool`, `field`) of the build's runtime-token registry rather than a copied literal list — the registry is the single source of truth for which names diverge per runtime ([test](tests/test_runtime_token.compliance.l1.py))
+- NEVER: the validator's forbidden-name set includes a name registered only in the review-only `term` kind — concept terms are common words a whole-token match would flag throughout prose, so the guard excludes them and review covers them instead ([test](tests/test_runtime_token.compliance.l1.py))
 - ALWAYS: the validator enforces every authored-source file the build renders or inlines — plugin content under `src/plugins/` and shared fragments under `src/_shared/` — by default, exempting only the files named on the ignore-list, so a newly added plugin or shared fragment is enforced without being opted in ([test](tests/test_runtime_token.compliance.l1.py))
