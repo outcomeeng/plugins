@@ -9,10 +9,11 @@ CAN record runs and produce surfaces through one shared, type-agnostic projectio
 ### Scenarios
 
 - Given a verification run's results, when the projection builds the channel event-input sequence, then it yields a scope-entered event, one finding-reported event per finding, and a terminal run-completed event, each a valid channel event input with non-empty `id`, `source`, `type`, and `time` strings and an integer `attempt` ([test](tests/test_journal_projection.scenario.l1.py))
+- Given a sealed event prefix, when the projection renders the human-readable surface, then it produces a heading line from the scope-entered event, one severity-prefixed location line per finding-reported event, and an overall footer from the run-completed event ([test](tests/test_journal_projection.scenario.l1.py))
 
 ### Mappings
 
-- The rollup projection maps an event prefix's outcomes to the run's overall: any rejecting or failing outcome maps to a rejected overall; otherwise any unknown maps to an unknown overall; otherwise the overall is approved ([test](tests/test_journal_projection.mapping.l1.py))
+- The rollup projection maps an event prefix's finding severities to the run's overall: any `REJECT` finding maps to a rejected overall; otherwise any `UNKNOWN` finding maps to an unknown overall; otherwise the overall is approved ([test](tests/test_journal_projection.mapping.l1.py))
 
 ### Compliance
 

@@ -30,7 +30,7 @@ The projection lives in `${SKILL_DIR}/scripts/journal_projection.py`, imported b
 | Symbol                                      | Purpose                                                                                                                                          |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `build_events(run_result, *, now, attempt)` | Ordered channel event inputs from a run's results: a scope-entered event, one finding-reported event per finding, a terminal run-completed event |
-| `compute_overall(events)`                   | The rollup over an event prefix: any rejecting or failing outcome maps to a rejected overall, else any unknown to unknown, else approved         |
+| `compute_overall(events)`                   | The rollup over an event prefix: any `REJECT` finding maps to a rejected overall, else any `UNKNOWN` finding to unknown, else approved           |
 | `render_surface(events)`                    | The human-readable verdict surface rendered from an event prefix                                                                                 |
 
 </api_surface>
