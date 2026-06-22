@@ -105,6 +105,9 @@ class Surface:
             results["tree"] = self._post("/reply", {"type": "set_tree", "tree": tree})
         return results or {"ok": True, "note": "nothing to present"}
 
+    def say(self, text: str) -> dict:
+        return self._post("/reply", {"type": "chat", "role": "assistant", "text": text})
+
     def shutdown(self) -> dict:
         return self._post("/shutdown", {})
 
@@ -129,6 +132,17 @@ TOOLS = [
                     "description": "Last revision seen (0 to start).",
                 }
             },
+        },
+    },
+    {
+        "name": "say",
+        "description": "Send a chat message from the agent to the user's browser; it appears in the surface's chat log live over SSE. Use this to reply to what the user typed or did.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Message to show the user."}
+            },
+            "required": ["text"],
         },
     },
     {
@@ -158,6 +172,8 @@ def dispatch_tool(surface: Surface, name: str, args: dict) -> dict:
         return {"url": surface.open_url}
     if name == "wait_for_interaction":
         return surface.wait_for_interaction(int(args.get("since", 0)))
+    if name == "say":
+        return surface.say(str(args.get("text", "")))
     if name == "present":
         return surface.present(args.get("questions"), args.get("tree"))
     if name == "shutdown_surface":

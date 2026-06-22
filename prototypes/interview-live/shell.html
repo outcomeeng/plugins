@@ -154,10 +154,72 @@
       height: calc(100% - 57px);
     }
     .qpane {
-      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       border-right: 1px solid var(--line);
       background: var(--paper);
+    }
+    .qscroll {
+      flex: 1;
+      overflow: auto;
       padding: 1.1rem 1.2rem;
+    }
+    .chat-input {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.7rem 1rem;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+    }
+    .chat-input textarea {
+      flex: 1;
+      resize: none;
+      font: inherit;
+      font-size: var(--text-sm);
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .chat-input textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .chat-input button {
+      background: var(--accent);
+      border: none;
+      color: var(--on-accent);
+      border-radius: var(--radius-sm);
+      padding: 0 0.9rem;
+      cursor: pointer;
+      font: inherit;
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .msg {
+      margin: 0.4rem 0;
+      padding: 0.5rem 0.7rem;
+      border-radius: var(--radius-sm);
+      max-width: 90%;
+      font-size: var(--text-sm);
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+    .msg.user {
+      background: var(--accent-wash);
+      border: 1px solid var(--accent-line);
+      margin-left: auto;
+    }
+    .msg.assistant {
+      background: var(--sunken);
+      border: 1px solid var(--line);
+    }
+    .msg .who {
+      font-size: var(--text-xs);
+      color: var(--ink-3);
+      margin-bottom: 0.15rem;
     }
     .tree {
       overflow: auto;
@@ -336,12 +398,20 @@
     </div>
     <div class="layout">
       <div class="qpane">
-        <div class="sec-h">Current</div>
-        <div id="current"></div>
-        <div class="sec-h">Planned</div>
-        <div id="planned"></div>
-        <div class="sec-h">Settled</div>
-        <div id="settled"></div>
+        <div class="qscroll">
+          <div class="sec-h">Chat</div>
+          <div id="chat"></div>
+          <div class="sec-h">Current</div>
+          <div id="current"></div>
+          <div class="sec-h">Planned</div>
+          <div id="planned"></div>
+          <div class="sec-h">Settled</div>
+          <div id="settled"></div>
+        </div>
+        <div class="chat-input">
+          <textarea id="chat-text" placeholder="Message the agent…  (Enter to send · Shift+Enter for newline)" rows="2"></textarea>
+          <button id="chat-send">Send</button>
+        </div>
       </div>
       <div>
         <ul class="tree tree-list" id="tree"></ul>
@@ -358,6 +428,7 @@
     let state = {
       questions: { planned: [], current: null, settled: [] },
       tree: [],
+      chat: [],
     };
     let dragId = null;
 
@@ -609,6 +680,33 @@
       tree.innerHTML = "";
       (state.tree || []).forEach((n) => tree.appendChild(nodeLi(n, 0)));
       renderLegend();
+      renderChat();
+    }
+
+    function renderChat() {
+      const box = document.getElementById("chat");
+      if (!box) return;
+      box.innerHTML = "";
+      (state.chat || []).forEach((m) => {
+        const div = document.createElement("div");
+        div.className = "msg " + (m.role === "assistant" ? "assistant" : "user");
+        const who = document.createElement("div");
+        who.className = "who";
+        who.textContent = m.role === "assistant" ? "agent" : "you";
+        const txt = document.createElement("div");
+        txt.textContent = m.text;
+        div.appendChild(who);
+        div.appendChild(txt);
+        box.appendChild(div);
+      });
+    }
+
+    function sendChat() {
+      const ta = document.getElementById("chat-text");
+      const text = ta.value.trim();
+      if (!text) return;
+      send({ type: "chat", role: "user", text });
+      ta.value = "";
     }
 
     // --- SSE: agent-side updates push here ------------------------------------
@@ -668,12 +766,23 @@
       };
     }
 
+    function setupChat() {
+      document.getElementById("chat-send").onclick = sendChat;
+      document.getElementById("chat-text").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendChat();
+        }
+      });
+    }
+
     async function boot() {
       loadCache(); // optimistic paint from last session
       render();
       await refetch(); // authoritative state from the server
       setupRootDrop();
       setupTheme();
+      setupChat();
       connect(); // then stream agent-side updates
     }
 
