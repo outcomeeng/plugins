@@ -25,45 +25,52 @@ Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin, the CLI
 `--bare` / `--no-bare` overrides, cross-suite parallelism, and the
 `just eval-run` recipe naming.
 
-## Prompt-caching implementation (pending — governed by `15-prompt-caching.adr.md`)
+## Prompt-caching implementation (decided; gated on CLI regression #34629)
 
+The prompt-caching decision is reconciled.
 `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`
-declares that eval execution holds one prompt prefix per run so the cache serves
-it warm. Its `### Testing` rules (one shared prefix per run; warmth from the
-server cache, not a resident process) are testable with a recording runner but
-carry no path yet — the path-bearing `[test]` assertions and their tests land in
-`eval-harness.md` (likely a co-located child node, EXCLUDE'd until green) when
-`/apply` builds the execution below. The telemetry that makes a run's caching
-observable already ships (the per-run cache read and creation token aggregates
-in `cost_summary` and `history.jsonl`). The execution side that captures the
-saving is not yet built:
+keeps prefix reuse as the cost lever and records the corrected mechanism:
+**capture the amortization on the subscription `claude --print` path via a base
+session loaded with every plugin once and forked per case**, so each case reads
+the shared prefix warm and writes only its case-specific suffix, keeping the
+`NEVER`-route-to-a-metered-API stance. The supporting investigation is recorded
+in `prototypes/eval-cache-amortization/investigation.md` (outside `spx/`;
+conclusion corrected from the earlier single-turn-only reading); the empirical
+fixed-prefix payoff is `prototypes/eval-cache-amortization/FINDINGS.md` (5.45× per
+call, ~73–80% per suite).
 
-1. **Converge on one shared prefix.** Today suites point `plugin_dir` at
-   different runtimes (and a minimal-`plugin_dir` budget workaround diverges
-   them further); each distinct prefix is one avoidable cold write. Decide and
-   implement a single shared context for a run rather than a per-suite prefix.
-2. **Pack invocations within the time-to-live.** The CI workflow runs suites in
-   sequence per `outcomeeng-evals run` invocations; ensure a run's invocations
-   stay inside one warm window so the shared prefix is not re-written on
-   time-to-live expiry.
-3. **Resolve the simulation-vs-in-situ fork.** Some suites simulate the skill in
-   a self-contained `prompt.md` (no real plugin load needed); others load the
-   shipped plugin. The shared-context decision differs for each — record which
-   suites need the real plugin prefix and which can run against a minimal stub.
-4. **Retire the prototype once the measurement migrates.** When the harness (or
-   the SPX CLI) gains a cache-aggregate reporting path that reproduces the
-   amortization measurement, remove `prototypes/eval-cache-amortization/` — its
-   `FINDINGS.md` result is the durable record; `measure.py` is the throwaway
-   measurement tool, kept only until the harness absorbs it, per the
-   prove-then-migrate-or-remove lifecycle in `spx/12-shipped-scripting.adr.md`.
+Realization is gated on an upstream CLI regression: since v2.1.69
+(`anthropics/claude-code#34629`; installed CLI 2.1.185 is affected),
+`claude --print --resume`/`--fork-session` stops reusing the cached conversation
+history, so a forked case cold-writes the prefix exactly as the current
+single-turn shape does. The harness keeps its current single-turn invocation
+until the regression clears. The telemetry that makes a run's caching observable
+already ships (the per-run cache read and creation token aggregates in
+`cost_summary` and `history.jsonl`).
 
-Empirical grounding for the lever lives in the exploratory prototype
-`prototypes/eval-cache-amortization/` (`FINDINGS.md`): a warm prefix reads at a
-fraction of a cold write over the same prefix, and the server cache holds
-several prefixes at once within the time-to-live, so the cost driver is the
-count of distinct prefixes plus time-to-live expiry, not which suite runs when.
-Per `spx/12-shipped-scripting.adr.md` the prototype proves the lever; proven
-logic moves into the harness or the SPX CLI, not the script (step 4 above).
+When the regression clears — upstream fix, a pinned pre-regression CLI (v2.1.68),
+or the published community cache fix — implement and validate:
+
+1. **Validate fork-per-case empirically.** Extend
+   `prototypes/eval-cache-amortization/measure.py` to load a base session with the
+   plugin, fork it per case with *differing* questions, and confirm each fork reads
+   the plugin prefix warm (read ≈ full prefix, write ≈ question only). This is the
+   one claim the existing measurements do not yet cover directly — Result 1 used an
+   identical prompt; real cases vary the question.
+2. **Build the base-session-fork-per-case runner.** Load every plugin once into a
+   base session, then fork it per case so each case reads the shared prefix warm
+   and writes only its suffix; keep cases independent (fork the same clean base,
+   never accumulate). The path-bearing `[test]` assertions (one shared warm prefix;
+   warmth from the server cache, not a resident process) land in `eval-harness.md`
+   (likely a co-located child node, EXCLUDE'd until green) when `/apply` builds it.
+3. **Pack invocations within the time-to-live** so the shared prefix is not evicted
+   and re-written mid-run.
+4. **Retire the prototype once the measurement migrates.** When the harness (or the
+   SPX CLI) reproduces the amortization measurement, remove
+   `prototypes/eval-cache-amortization/` — its `FINDINGS.md`/`investigation.md` are
+   the durable record; `measure.py` is the throwaway measurement tool, kept only
+   until the harness absorbs it, per the prove-then-migrate-or-remove lifecycle in
+   `spx/12-shipped-scripting.adr.md`.
 
 ## References
 
@@ -72,3 +79,6 @@ logic moves into the harness or the SPX CLI, not the script (step 4 above).
 - **Gate-policy tests**: `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`
 - **PR-authority PDR**: `spx/15-merging.pdr.md`
 - **Launch-in-CI + configurable-surface reference**: `outcomeeng/gh-actions` `spec-tree-review.yml`
+- **Prompt-caching decision**: `spx/13-infrastructure.enabler/25-eval-harness.enabler/15-prompt-caching.adr.md`
+- **Cache investigation + measurement**: `prototypes/eval-cache-amortization/investigation.md`, `prototypes/eval-cache-amortization/FINDINGS.md`
+- **CLI cache regression**: `anthropics/claude-code#34629`
