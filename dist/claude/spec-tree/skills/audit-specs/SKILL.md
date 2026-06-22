@@ -15,7 +15,7 @@ This audit runs in the spec-auditor agent's isolated context. When this skill lo
 
 <objective>
 
-Audit a spec node — an enabler or outcome `{slug}.md` — for its section structure, atemporal voice, and per-assertion tag fitness: every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`.
+A verdict on one spec node — an enabler or outcome `{slug}.md` — against the node-spec form: APPROVED, or REJECTED with each finding naming the section or assertion, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-assertion tag fitness (every assertion carries a valid verification-type tag that fits its claim, and no claim about authored prose carries `[test]`).
 
 Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test-evidence quality by `/audit-tests`. This audit checks the node spec's own form, not its tests or its decisions.
 
@@ -41,6 +41,15 @@ A node states product truth. "The status rollup reports failing when any child f
 `APPROVED` or `REJECTED`. No middle ground.
 
 </essential_principles>
+
+<constraints>
+
+- NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- ALWAYS judge each assertion's tag against the `/test` router and the verification-type model — never accept a present tag as valid by its mere presence.
+- ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
+- NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
+
+</constraints>
 
 <audit_workflow>
 
@@ -157,14 +166,11 @@ How to avoid: Step 5 check 2 verifies the assertion type fits the quantifier. Re
 
 <success_criteria>
 
-Audit is complete when:
+The verdict is sound when:
 
-- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
-- [ ] Node read — kind statement and `## Assertions` identified
-- [ ] Section structure: kind statement well-formed, `## Assertions` present, and each assertion-type heading non-empty and matched to its type
-- [ ] Atemporal voice: every section checked for temporal language
-- [ ] Per-assertion tag fitness: each assertion carries one valid tag; each `[test]` assertion type fits the claim's quantifier; no `[test]` tag on an authored-prose-content claim
-- [ ] Verdict issued: APPROVED or REJECTED
-- [ ] For REJECT: each finding has property, category, and detail
+- Every spec-node rule was judged with none skipped — section structure, atemporal voice, and per-assertion tag fitness (coverage-complete).
+- The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no assertion left unevaluated.
+- Each REJECT finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
+- The same node spec yields the same verdict.
 
 </success_criteria>

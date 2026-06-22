@@ -14,7 +14,7 @@ This audit runs in the pdr-auditor agent's isolated context. When this skill loa
 
 <objective>
 
-Audit a PDR for its consistency, clarity, and strict conformance to the PDR evidence model.
+A verdict on one PDR against the PDR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in five categories: content classification (observable product behavior, never architecture), property quality (observable and falsifiable), per-rule tag validity and evidence-type fit, atemporal voice, and consistency with the product spec and ancestor PDRs.
 
 </objective>
 
@@ -38,9 +38,18 @@ PDRs state atemporal product truth without historical context. No references to 
 
 **BINARY VERDICT.**
 
-`APPROVED` or `REJECT`. No middle ground.
+`APPROVED` or `REJECTED`. No middle ground.
 
 </essential_principles>
+
+<constraints>
+
+- NEVER modify the PDR under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- ALWAYS read the PDR evidence model before judging — derive the rule set from it, never from memory.
+- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding.
+- NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
+
+</constraints>
 
 <audit_workflow>
 
@@ -160,7 +169,7 @@ Compare the PDR against:
 
 **Step 8: Issue verdict**
 
-Scan all findings. If any property fails: REJECT. Otherwise: APPROVED.
+Scan all findings. If any property fails: REJECTED. Otherwise: APPROVED.
 
 </step>
 
@@ -223,16 +232,11 @@ How to avoid: Step 3 reads the product document's declared audience first and ju
 
 <success_criteria>
 
-Audit is complete when:
+The verdict is sound when:
 
-- [ ] `/contextualize` invoked — `<SPEC_TREE_CONTEXT>` marker present
-- [ ] PDR read — all sections identified
-- [ ] Content classification: product document's declared audience and interaction surfaces named, and every statement classified as product behavior or flagged against that audience
-- [ ] Property quality: each property checked for observability and falsifiability
-- [ ] Per-rule tag validity and evidence-type fit: each rule's tag validated against its Verification subsection (Testing → one of the five evidence types, Eval → `[eval]`, Audit → `[audit]`), and each `### Testing` rule's evidence type verified against the claim's shape per `/test` (a universal is never `scenario`)
-- [ ] Atemporal voice: every section checked for temporal language
-- [ ] Consistency: compared against product spec and ancestor PDRs
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has property, category, and detail
+- Every PDR rule was judged with none skipped — content classification, property quality, per-rule tag validity and evidence-type fit, atemporal voice, and consistency (coverage-complete).
+- The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
+- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable or unfalsifiable property, the mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
+- The same PDR yields the same verdict.
 
 </success_criteria>
