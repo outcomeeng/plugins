@@ -11,7 +11,9 @@ from outcomeeng.distribution.build import (
     RUNTIME_TOKEN_REGISTRY,
     IMPLEMENTED,
     RuntimeTokenError,
+    RuntimeTokenKind,
     build,
+    resolve_runtime_token,
 )
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
@@ -29,6 +31,9 @@ def _require_module_implemented() -> None:
 
 PLUGIN_NAME = "develop"
 SKILL_NAME = "example-skill"
+
+# The unique-token kind that carries the seeded tool capabilities.
+TOOL_KIND = "tool"
 
 # A capability that diverges across both runtimes, and one that exists for Claude
 # with no Codex equivalent — both drawn from the source-owned registry so the test
@@ -49,8 +54,9 @@ def _build_one_skill(tmp_path: Path, body: str) -> DistTreeReader:
 
 
 def test_registry_token_renders_each_target_name(tmp_path: Path) -> None:
-    claude_name = RUNTIME_TOKEN_REGISTRY[BOTH_RUNTIME_CAPABILITY]["claude"]
-    codex_name = RUNTIME_TOKEN_REGISTRY[BOTH_RUNTIME_CAPABILITY]["codex"]
+    tool_names = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[BOTH_RUNTIME_CAPABILITY]
+    claude_name = tool_names["claude"]
+    codex_name = tool_names["codex"]
 
     reader = _build_one_skill(
         tmp_path,
@@ -68,7 +74,9 @@ def test_registry_token_renders_each_target_name(tmp_path: Path) -> None:
 def test_runtime_explicit_token_renders_named_runtime_on_every_target(
     tmp_path: Path,
 ) -> None:
-    claude_name = RUNTIME_TOKEN_REGISTRY[BOTH_RUNTIME_CAPABILITY]["claude"]
+    claude_name = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[BOTH_RUNTIME_CAPABILITY][
+        "claude"
+    ]
 
     reader = _build_one_skill(
         tmp_path,
@@ -81,7 +89,9 @@ def test_runtime_explicit_token_renders_named_runtime_on_every_target(
 
 
 def test_token_for_capability_absent_on_target_fails(tmp_path: Path) -> None:
-    assert "codex" not in RUNTIME_TOKEN_REGISTRY[CLAUDE_ONLY_CAPABILITY]
+    assert (
+        "codex" not in RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[CLAUDE_ONLY_CAPABILITY]
+    )
 
     with pytest.raises(RuntimeTokenError):
         _build_one_skill(
@@ -93,7 +103,9 @@ def test_token_for_capability_absent_on_target_fails(tmp_path: Path) -> None:
 def test_conditional_renders_absent_capability_only_where_present(
     tmp_path: Path,
 ) -> None:
-    claude_name = RUNTIME_TOKEN_REGISTRY[CLAUDE_ONLY_CAPABILITY]["claude"]
+    claude_name = RUNTIME_TOKEN_REGISTRY[TOOL_KIND].names[CLAUDE_ONLY_CAPABILITY][
+        "claude"
+    ]
 
     reader = _build_one_skill(
         tmp_path,
@@ -106,3 +118,75 @@ def test_conditional_renders_absent_capability_only_where_present(
     codex_body = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=Target.CODEX)
     assert claude_name in claude_body
     assert claude_name not in codex_body
+
+
+def test_registry_keyed_by_kind_with_explicit_guard_enforcement() -> None:
+    # The registry is keyed by token kind; each kind is a RuntimeTokenKind that
+    # declares whether the source-layer guard enforces its names. tool and field
+    # are unique-token kinds the guard enforces; term concept terms are common
+    # words it excludes (review covers them).
+    assert set(RUNTIME_TOKEN_REGISTRY) == {"tool", "field", "term"}
+    assert all(
+        isinstance(kind, RuntimeTokenKind) for kind in RUNTIME_TOKEN_REGISTRY.values()
+    )
+    assert RUNTIME_TOKEN_REGISTRY["tool"].lint_enforced is True
+    assert RUNTIME_TOKEN_REGISTRY["field"].lint_enforced is True
+    assert RUNTIME_TOKEN_REGISTRY["term"].lint_enforced is False
+
+
+def test_resolve_renders_each_kind_from_its_own_sub_registry() -> None:
+    # One resolution path serves every kind: the kind selects the sub-registry,
+    # then capability and runtime select the name. Built from the source-owned
+    # RuntimeTokenKind so field() and term() render exactly as tool() does. The
+    # expected name is read back from the same controlled registry (input-derived
+    # oracle), not asserted against the live (empty) field/term kinds.
+    registry = {
+        "tool": RuntimeTokenKind(
+            lint_enforced=True,
+            names={
+                "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"}
+            },
+        ),
+        "field": RuntimeTokenKind(
+            lint_enforced=True,
+            names={"tools_list": {"claude": "allowed-tools", "codex": "tools"}},
+        ),
+        "term": RuntimeTokenKind(
+            lint_enforced=False,
+            names={"research_agent": {"claude": "subagent", "codex": "agent"}},
+        ),
+    }
+    for kind, capability, runtime in (
+        ("tool", "ask_user", "codex"),
+        ("field", "tools_list", "claude"),
+        ("term", "research_agent", "codex"),
+    ):
+        expected = registry[kind].names[capability][runtime]
+        assert (
+            resolve_runtime_token(kind, capability, runtime, registry=registry)
+            == expected
+        )
+
+
+def test_resolve_fails_on_unknown_kind_capability_or_runtime() -> None:
+    registry = {
+        "tool": RuntimeTokenKind(
+            lint_enforced=True, names={"ask_user": {"claude": "AskUserQuestion"}}
+        ),
+    }
+    with pytest.raises(RuntimeTokenError):
+        resolve_runtime_token("field", "ask_user", "claude", registry=registry)
+    with pytest.raises(RuntimeTokenError):
+        resolve_runtime_token("tool", "unknown_capability", "claude", registry=registry)
+    with pytest.raises(RuntimeTokenError):
+        resolve_runtime_token("tool", "ask_user", "codex", registry=registry)
+
+
+@pytest.mark.parametrize("kind", ["field", "term"])
+def test_kind_global_is_wired_to_the_resolver(tmp_path: Path, kind: str) -> None:
+    # Every registry kind is exposed as a build template global. A field()/term()
+    # token for a capability the kind has no name for fails through the resolver
+    # (RuntimeTokenError) — an unregistered global would instead raise Jinja's
+    # UndefinedError, so this proves the global exists and reaches resolution.
+    with pytest.raises(RuntimeTokenError):
+        _build_one_skill(tmp_path, f"{{{{! {kind}('nonexistent') !}}}}")

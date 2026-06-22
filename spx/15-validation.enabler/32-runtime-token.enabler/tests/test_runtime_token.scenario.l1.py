@@ -25,8 +25,8 @@ from outcomeeng.validation.runtime_tokens import (
 )
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
 
-_RAW_NAME = RUNTIME_TOKEN_REGISTRY["ask_user"]["claude"]
 _CAPABILITY = "ask_user"
+_RAW_NAME = RUNTIME_TOKEN_REGISTRY["tool"].names[_CAPABILITY]["claude"]
 
 
 def test_raw_token_is_reported_with_file_line_and_token_and_exits_nonzero(

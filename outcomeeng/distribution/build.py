@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -117,18 +118,78 @@ SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
 SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
 
-# Source-owned registry of runtime-divergent names, keyed by capability then by
-# runtime. Authored source names a capability via the `tool('<capability>')`
-# template token; the build renders the current target's name. A capability with
-# no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
+
+@dataclass(frozen=True)
+class RuntimeTokenKind:
+    """One category of runtime-divergent name the build renders via a template global.
+
+    ``names`` maps a capability to its per-runtime names (capability -> runtime ->
+    name). ``lint_enforced`` marks whether the runtime-token validation gate forbids
+    a raw appearance of these names in authored source: the unique-token kinds
+    (``tool``, ``field``) are enforced, while the common-word concept-term kind
+    (``term``) is not — a whole-token match on a word like "agent" would flag every
+    prose mention, so terms are covered by review instead. A new kind opts into or
+    out of guard enforcement explicitly through this flag.
+    """
+
+    lint_enforced: bool
+    names: dict[str, dict[str, str]]
+
+
+# Source-owned registry of runtime-divergent names, keyed by token kind, then by
+# capability, then by runtime. Authored source names a capability via a per-kind
+# template token (`tool('<capability>')`, `field(...)`, `term(...)`); the build
+# renders the current target's name from that kind's sub-registry. A capability
+# with no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
 # per-runtime conditional so the token is never evaluated for the missing runtime.
-# Seeded from the Agent Runtime Guidance table in AGENTS.md. Enforcement that a
-# raw name never appears in authored source is the runtime-token validation lint
-# (outcomeeng.validation.runtime_tokens), not this module.
-RUNTIME_TOKEN_REGISTRY: Final[dict[str, dict[str, str]]] = {
-    "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
-    "schedule_wakeup": {"claude": "ScheduleWakeup"},
+# The `tool` kind is seeded from the Agent Runtime Guidance table in AGENTS.md;
+# `field` and `term` carry the rendering mechanism ahead of their first authored
+# consumers. Enforcement that a raw name never appears in authored source is the
+# runtime-token validation lint (outcomeeng.validation.runtime_tokens), which
+# derives its forbidden set from the lint-enforced kinds only — not this module.
+RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
+    "tool": RuntimeTokenKind(
+        lint_enforced=True,
+        names={
+            "ask_user": {"claude": "AskUserQuestion", "codex": "request_user_input"},
+            "schedule_wakeup": {"claude": "ScheduleWakeup"},
+        },
+    ),
+    "field": RuntimeTokenKind(lint_enforced=True, names={}),
+    "term": RuntimeTokenKind(lint_enforced=False, names={}),
 }
+
+
+def resolve_runtime_token(
+    kind: str,
+    capability: str,
+    runtime: str,
+    *,
+    registry: dict[str, RuntimeTokenKind] = RUNTIME_TOKEN_REGISTRY,
+) -> str:
+    """Return the runtime-divergent name for ``(kind, capability, runtime)``.
+
+    The kind selects the sub-registry; capability and runtime select the name. The
+    ``registry`` seam defaults to the module registry and is injectable so the
+    kind-generic resolution is exercised with a controlled registry. Raises
+    ``RuntimeTokenError`` when the kind is absent, the capability has no entry in
+    that kind, or the kind has no name for the runtime — the caller wraps the
+    absent-runtime case in a per-runtime conditional.
+    """
+    kind_entry = registry.get(kind)
+    if kind_entry is None:
+        raise RuntimeTokenError(f"unknown runtime-token kind {kind!r}")
+    entry = kind_entry.names.get(capability)
+    if entry is None:
+        raise RuntimeTokenError(f"unknown {kind} capability {capability!r}")
+    name = entry.get(runtime)
+    if name is None:
+        raise RuntimeTokenError(
+            f"{kind} capability {capability!r} has no name for runtime {runtime!r}; "
+            "wrap the token in a per-runtime conditional"
+        )
+    return name
+
 
 REQUIRE_SKILL_TEXT_TEMPLATE: Final = (
     "Invoke the `{skill_ref}` skill before proceeding. If that skill is "
@@ -575,34 +636,27 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-@pass_context
-def render_runtime_token(
-    context: Context,
-    capability: str,
-    runtime: str | None = None,
-) -> str:
-    """Render a runtime-divergent name for the build target (the `tool` global).
+def _make_kind_global(kind: str) -> Callable[..., str]:
+    """Build the template global that renders the named registry ``kind``.
 
-    `tool('ask_user')` renders the current target's name; `tool('ask_user',
-    'claude')` renders the named runtime's name regardless of target. Raises
-    RuntimeTokenError when the capability is unknown or has no name for the
-    resolved runtime — the caller wraps the absent case in a per-runtime conditional.
+    Each kind (`tool`, `field`, `term`) is exposed under its own name. The global
+    renders the build target's name by default; a runtime-explicit second argument
+    (`tool('ask_user', 'claude')`) renders the named runtime's name regardless of
+    target. Resolution is delegated to ``resolve_runtime_token`` so every kind
+    shares one path. Raises RuntimeTokenError when no target is in context for the
+    default form, or when the capability has no name for the resolved runtime.
     """
-    resolved = runtime if runtime is not None else context.get("target")
-    entry = RUNTIME_TOKEN_REGISTRY.get(capability)
-    if entry is None:
-        raise RuntimeTokenError(f"unknown runtime-token capability {capability!r}")
-    if resolved is None:
-        raise RuntimeTokenError(
-            f"runtime-token {capability!r} rendered with no target in context"
-        )
-    name = entry.get(resolved)
-    if name is None:
-        raise RuntimeTokenError(
-            f"capability {capability!r} has no name for runtime {resolved!r}; "
-            "wrap the token in a per-runtime conditional"
-        )
-    return name
+
+    @pass_context
+    def render(context: Context, capability: str, runtime: str | None = None) -> str:
+        resolved = runtime if runtime is not None else context.get("target")
+        if resolved is None:
+            raise RuntimeTokenError(
+                f"{kind} token {capability!r} rendered with no target in context"
+            )
+        return resolve_runtime_token(kind, capability, resolved)
+
+    return render
 
 
 def make_jinja_environment(shared_root: Path | None = None) -> Environment:
@@ -620,7 +674,10 @@ def make_jinja_environment(shared_root: Path | None = None) -> Environment:
         autoescape=False,
         keep_trailing_newline=True,
     )
-    environment.globals["tool"] = render_runtime_token
+    # One template global per registry kind, named after the kind: tool(), field(),
+    # term(). A new kind in the registry is exposed automatically.
+    for kind in RUNTIME_TOKEN_REGISTRY:
+        environment.globals[kind] = _make_kind_global(kind)
     return environment
 
 
