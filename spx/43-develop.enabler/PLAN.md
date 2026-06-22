@@ -1,145 +1,33 @@
-# PLAN — Commands cluster + shared mechanics refactor
+# PLAN — Retire command tooling; fold command capabilities into the skills cluster
 
-**Status:** deferred. This plan is a coordination note to be executed in a fresh session. Delete this file when the work lands.
+**Status:** ready for a fresh session. Delete this file when the work lands.
 
-## Context
+## Why
 
-After the `skill-standards` refactor (commit 73b60cb + follow-up), the develop plugin has a clean skills cluster (`21-skills.enabler/`) but no parallel cluster for commands or subagents. Investigation showed:
+`spx/13-plugin-and-runtime-conventions.adr.md` decides the skill is the marketplace's sole user-facing invocation artifact and "carries every command capability"; authoring a `commands/*.md` is forbidden, and no plugin ships one. So the develop plugin's command tooling — `create-commands`, `audit-commands`, and the `command-auditor` agent — authors and audits a forbidden artifact: a lower layer contradicting the ADR.
 
-- **Subagents cluster depends on skills** — `/create-subagents` already loads `/skill-standards` for XML structure principles. This is documented by the node-ordering: skills at 21, subagents higher.
-- **Commands cluster is independent** — `/create-commands` and `/audit-commands` share no standards with skills.
-
-But the "independent" framing hides a problem: commands and skills share ~30% of their underlying rules — `!` bash safety, Claude Code variable scopes (`${CLAUDE_PLUGIN_ROOT}` etc.), and `allowed-tools` semantics. Those rules currently live only in `/skill-standards`. Any future `/command-standards` would either duplicate them (drift risk) or cross-reference `/skill-standards` (commands reading skill-structural standards is conceptually wrong).
-
-The right home is `/agent-prompt-standards`. It already covers cross-artifact prose conventions (voice, descriptions, constraint language, anti-patterns). Extending it to own the shared *mechanical* rules gives all three clusters — skills, commands, subagents — one source of truth for platform-level plumbing.
+Skills already carry the command capabilities — `skill-standards` documents `argument-hint`, `allowed-tools`, `disable-model-invocation` (the user-only-command case), `!`-backtick dynamic context, and arguments — but `audit-skills` does not audit that surface: its `yaml_frontmatter` area checks only `name` and `description`. So a skill can wield command-power that nothing audits.
 
 ## Outcome
 
-- `/agent-prompt-standards` owns every rule that applies to prompt artifacts regardless of type (skills, commands, subagents).
-- `/skill-standards` sheds its cross-artifact content and keeps only skill-specific standards.
-- A new `/command-standards` is created covering command-specific standards.
-- Skills, commands, and subagents clusters all load `/agent-prompt-standards` first, then their type-specific reference.
+- `create-commands`, `audit-commands`, and the `command-auditor` agent are removed from the develop plugin, from `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, and the README catalog.
+- The still-live command-capability checks fold into the skills cluster: `audit-skills` gains evaluation areas for argument usage (`$ARGUMENTS`/positional and integration), `!`-dynamic-context safety, `allowed-tools`/tool-restriction security, and `argument-hint`; `create-skills` teaches authoring those capabilities. `skill-standards` stays the single source of the rules.
+- No `/command-standards` is created — commands are not a supported artifact.
 
-## What moves where
+## Steps
 
-### Out of `/skill-standards` → into `/agent-prompt-standards`
+1. `/understand`, then `/contextualize spx/43-develop.enabler/21-skills.enabler`.
+2. Read `audit-commands` and `create-commands` to enumerate the capability checks and authoring guidance worth preserving: argument usage and integration, `!`-dynamic-context safety, `allowed-tools` tool-restriction security, `argument-hint`, `@` file references. Read `skill-standards/references/runtime-variables.md` for the exact skill-side variable / `$ARGUMENTS` mapping.
+3. Fold those into `audit-skills` (new evaluation areas + anti-patterns) and `create-skills` (authoring guidance). Do not restate rules already in `skill-standards`; add any genuinely new shared rule there.
+4. Remove `create-commands`, `audit-commands`, and the `command-auditor` agent. Drop them from both marketplace catalogs and the README catalog. Sweep references: `audit-commands`'s `require_skill 'create-commands'`, develop `develop.md` / `21-skills.enabler/skills.md` enumerations, and any cross-reference elsewhere (`grep -rn 'create-commands\|audit-commands\|command-auditor'`).
+5. `just build-skills`, bump develop, gate `audit-skills` and `create-skills` with `develop:skill-auditor`, `just check`, `/merge`.
 
-| Section                                                                                                                               | Reason                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `<bash_expansion_restrictions>` (via `references/platform-constraints.md`)                                                            | Claude Code `!` safety checker applies to skills, commands, subagent tool calls |
-| Variable scopes table (in `<templates_and_variables>`) — `${CLAUDE_PLUGIN_ROOT}`, `${CLAUDE_PLUGIN_DATA}`, `$CLAUDE_PROJECT_DIR` rows | Runtime variables are cross-artifact                                            |
-| `allowed-tools` field semantics (the prose explaining the field, not per-type examples)                                               | Same field, same semantics, across all three artifact types                     |
+## Sequencing — THIS lands BEFORE the auditor-skeleton sweep
 
-### Stays in `/skill-standards`
-
-| Section                                                           | Reason                                                                                                                                                               |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<frontmatter>`                                                   | Skill-specific field set (`disable-model-invocation`)                                                                                                                |
-| `<naming_conventions>`                                            | Gerund convention, directory-match rule                                                                                                                              |
-| `<descriptions>`                                                  | Activation-rate research is skill-specific (auto-activation doesn't apply to commands)                                                                               |
-| `<xml_structure>`                                                 | Required tags + conditional tags are skill-specific (commands have different required tags)                                                                          |
-| `<progressive_disclosure>`                                        | SKILL.md < 500 lines, references/ pattern                                                                                                                            |
-| `<conciseness>`                                                   | Carries over to commands but reads well as a skill principle; OK to duplicate the test sentence in commands if needed                                                |
-| `<skill_types>` (6-type taxonomy)                                 | Pure skill concept                                                                                                                                                   |
-| `<reference_skills>`                                              | Pure skill concept                                                                                                                                                   |
-| `${CLAUDE_SKILL_DIR}` row (of variables)                          | Skill-specific variable                                                                                                                                              |
-| `<nested_code_fences>` (via `references/platform-constraints.md`) | dprint/`markup_fmt` rule — applies to markdown body in any artifact, but the current content lives alongside bash restrictions. Move both to agent-prompts or split. |
-| `<xml_tag_formatting>` (blank-line rule)                          | Markdown-parser rule applies to any pseudo-XML in prompts; decide whether to promote                                                                                 |
-| `<validation_rule>`                                               | Applies to scripts authored alongside skills; could move if commands also ship scripts                                                                               |
-| `<script_testing_rule>`                                           | Applies to `scripts/` inside skills; commands rarely ship scripts — probably stays skill-specific                                                                    |
-
-**Open question 1:** `<nested_code_fences>` and `<xml_tag_formatting>` are about markdown authoring for prompt bodies. They apply to skills, command bodies, subagent bodies alike. Promote to `/agent-prompt-standards` or leave in `/skill-standards` with cross-reference from commands/subagents?
-
-### Into new `/command-standards`
-
-| Section                                                                                                                         | Source                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Command frontmatter spec (`description`, `argument-hint`, `model`, `allowed-tools`)                                             | Extract from `create-commands/SKILL.md` + references           |
-| Command XML body tags (required: `<objective>`, `<process>`, `<success_criteria>`; conditional: `<context>`, `<examples>`, ...) | Extract from `create-commands/SKILL.md`                        |
-| Argument handling (`$ARGUMENTS`, `argument-hint` semantics)                                                                     | Extract from `create-commands/references/arguments.md`         |
-| `!` expansion *usage patterns* for dynamic context                                                                              | Extract from `create-commands/references/patterns.md`          |
-| `allowed-tools` patterns specific to commands                                                                                   | Extract from `create-commands/references/tool-restrictions.md` |
-| Command file placement (`.claude/commands/` vs `~/.claude/commands/`)                                                           | Extract from `create-commands/SKILL.md`                        |
-
-Safety restrictions for `!` expansion are inherited from `/agent-prompt-standards`, not repeated.
-
-### `/create-commands` and `/audit-commands` shrink
-
-After the extraction:
-
-- `/create-commands/SKILL.md` becomes a router + workflows, parallel to the post-refactor `/create-skills` (~100 lines).
-- `/create-commands/references/` keeps only workflow content (patterns for intent-based commands, pattern examples for dynamic context *usage*); deletes standards duplicates.
-- `/audit-commands/SKILL.md` `<critical_workflow>` reads `/agent-prompt-standards` + `/command-standards` only. Drops any create-commands/references reads (if any exist — audit current state).
-
-## Scope tension — flag before executing
-
-`/agent-prompt-standards` currently declares in its own `<objective>`:
-
-> "This skill governs prompt *craft* (how to write text). Prompt *structure* (which XML tags to use, file organization) is governed by the creator skills themselves."
-
-Option 2 expands that scope to include *platform-level runtime plumbing* (bash safety, variable scopes). Two ways to handle:
-
-- **(a) Rename and broaden.** Rename to `/prompt-artifact-standards` or similar. Update the objective to cover prose craft + runtime plumbing. Cleanest semantics; touches every consumer that references the old name.
-- **(b) Keep the name, broaden the scope silently.** Update the objective to include runtime plumbing but keep the name. Less churn; the name becomes slightly less accurate.
-
-**Recommendation:** (b) for the follow-up session. The skill name is already loaded by three clusters and referenced in audit workflows; renaming multiplies the scope. A crisp scope-expansion note in the objective (`"covers shared prose conventions AND runtime plumbing that apply across skills, commands, and subagents"`) is enough.
-
-**Open question 2:** Confirm which option before starting the file moves.
-
-## Execution sequence
-
-1. **Expand `/agent-prompt-standards`** — add `<bash_safety>`, `<runtime_variables>`, `<allowed_tools>` sections. Update the objective. If promoting `<nested_code_fences>` and `<xml_tag_formatting>`, add those too.
-2. **Trim `/skill-standards`** — remove the promoted sections; replace with a single cross-reference at the top: "Read `/agent-prompt-standards` for runtime plumbing (bash, variables, allowed-tools) that applies to every prompt artifact."
-3. **Update the `/skill-standards` reference file `platform-constraints.md`** — either delete (if fully absorbed into agent-prompts) or retain only skill-specific content.
-4. **Create `/command-standards`** — new reference skill with `user-invocable: false`, passive description, and the command-specific standards listed above. (Use `user-invocable: false`, not `disable-model-invocation: true`: the latter blocks Skill-tool loading by other skills and subagent preloading — see the invocability matrix in `/skill-standards`.)
-5. **Rewrite `/create-commands/SKILL.md`** as a router — same shape as the post-refactor `/create-skills/SKILL.md`. Preserve the workflows and references that are genuinely command-authoring workflow (not standards).
-6. **Delete obsolete `/create-commands/references/` content** — the standards sections that moved out.
-7. **Rewrite `/audit-commands/SKILL.md` `<critical_workflow>`** — reads `/agent-prompt-standards` and `/command-standards` only.
-8. **Update subagents** — `/create-subagents/SKILL.md:250` and `/create-subagents/references/write-subagent-prompts.md:12` currently cross-reference `/skill-standards` for XML structure. After the refactor, the XML structure rules they need (nested code fences, XML tag formatting) may live in `/agent-prompt-standards`. Update the cross-references accordingly.
-9. **Update spec tree** — this enabler (`43-develop.enabler/`) gains a sibling pair alongside `21-skills.enabler/`:
-   - `21-commands.enabler/commands.md` (independent of skills)
-   - `32-subagents.enabler/subagents.md` (depends on skills via XML rules; and depends on commands? probably not — confirm)
-10. **Run verifications** — self-audit each refactored skill; grep for dangling references to `/skill-standards` that should now point to `/agent-prompt-standards`.
+This work and the marketplace-wide auditor-skeleton structural sweep (its own session) both edit the `audit-skills` / `create-skills` surface. **Command removal + capability fold merges first.** Running the skeleton sweep's develop portion first forces a second edit of `audit-skills` / `create-skills` when this lands — touching the same files twice and rebasing one effort over the other. The skeleton session's develop portion waits on this; its spec-tree and language portions (which do not touch `audit-skills` / `create-skills`) are independent.
 
 ## Verification
 
-- Every artifact type's auditor (`/audit-skills`, `/audit-commands`, `/audit-subagents`) reads exactly two references: `/agent-prompt-standards` and the type-specific standards reference.
-- No rule appears in more than one standards skill — grep for bash-safety keywords, variable-scope table entries, `allowed-tools` prose should each return one home.
-- `/audit-skills` passes against every refactored skill.
-- The `43-develop.enabler/` sibling tree has three child enablers with correct dependency indices.
-
-## Open questions to resolve at session start
-
-1. **Nested code fences + XML tag formatting**: promote to `/agent-prompt-standards` or keep in `/skill-standards` with cross-reference?
-2. **Rename `/agent-prompt-standards`?** Recommendation says no; confirm.
-3. **Does `/subagent-standards` need to exist?** Current state: `/create-subagents` has its own in-line standards. If the refactor also creates `/subagent-standards`, the develop plugin ends up with three parallel reference skills (skills, commands, subagents) + `/agent-prompt-standards`. That's four. Decide whether subagents gets its own standards reference or continues referencing `/skill-standards` (which becomes conceptually odd after the refactor).
-4. **Audit of `/create-commands/references/patterns.md` (828 lines)** — almost certainly mixes standards and workflow. Classify before splitting.
-
-## What this session produced
-
-- `spx/43-develop.enabler/develop.md` — removed the skill-enumeration paragraph, kept aggregate compliance rules
-- `spx/43-develop.enabler/21-skills.enabler/skills.md` — new child enabler for the skills-about-skills cluster with 5 compliance assertions
-
----
-
-## Runtime-neutral authoring pilot (separate effort)
-
-`develop` is the pilot for runtime-neutral authoring
-(`spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`).
-It is the densest concentration of runtime-divergent content in the marketplace, so it
-proves the model before a marketplace-wide rollout.
-
-**Phase 1 (current):** convert the name-level cases whose Codex mapping is known — the
-instruction-role `AskUserQuestion` uses in `skills/create-skills/workflows/*.md` become
-`tool('ask_user')` registry tokens; the `ScheduleWakeup` mention in the tracking-tasks
-documentation (Claude-only, no Codex equivalent) becomes a per-runtime conditional. The
-runtime-token validation lint (`spx/15-validation.enabler/32-runtime-token.enabler`) then
-passes over `src/plugins/develop/` — develop is not on the lint's ignore-list.
-
-**Phase 2 (declared in the build-architecture ADR, not yet done):** the subject-matter
-teaching that names Claude's authoring surface — `allowed-tools`/`disable-model-invocation`/
-`argument-hint` (×90+), the subagent model (~224 mentions), and fact-level claims
-("subagents cannot use AskUserQuestion") — needs `field(...)`/`term(...)` registry tokens and
-per-runtime conditional blocks, plus consolidated Codex agent-model facts to write the Codex
-branches. Largest, most judgment-heavy slice; do it once Phase 1 is proven. Until then
-`develop`'s Codex output still teaches Claude's authoring surface in those sections.
+- No `commands/` artifact and no `create-commands` / `audit-commands` / `command-auditor` remain anywhere; `just check` (`validate_plugins`) passes with both catalogs consistent and the README catalog regenerated (`just docs`).
+- `audit-skills` audits the command-capability surface (argument usage, `!`-dynamic-context, tool-restriction security, `argument-hint`); `skill-standards` remains the sole rule source (no rule duplicated).
+- `develop:skill-auditor` passes on `audit-skills` and `create-skills`.
