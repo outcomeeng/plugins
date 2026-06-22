@@ -8,6 +8,6 @@ owned_paths = [
   "src/plugins/spec-tree/skills/audit-pdr/**",
   "dist/claude/spec-tree/skills/audit-pdr/**",
 ]
-smoke_cases = ["architecture-content-rejected", "well-formed-pdr-passes"]
+smoke_cases = ["architecture-content-rejected", "well-formed-pdr-passes", "tooling-observable-passes"]
 threshold = 0.85
 trials = 1
