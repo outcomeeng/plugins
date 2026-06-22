@@ -16,13 +16,17 @@ This orchestration runs in an audit agent's isolated context. When this skill lo
 
 <objective>
 
-Run a deterministic audit over a code scope: prepare (Phase 0), automated gates (Phase 1), tests (Phase 2), implementation review (Phase 3), test evidence (Phase 4), ADR/PDR compliance (Phase 5), and emit (Phase 6). Partition the scope by language, dispatch to the corresponding `audit-{lang}*` skills, aggregate each partition's verdict via `aggregate_verdicts.py`, and emit one wrapper verdict whose `children` array carries the per-language dispatched verdicts. The orchestrator itself embeds zero language-specific knowledge beyond the dispatch template — language audits live in their own skills, this one composes them.
+One wrapper verdict over a code scope: three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one dispatched child verdict per language partition in its `children` array, assembled via `aggregate_verdicts.py`, recorded on the `spx journal` as the run's source of truth, and rendered from the sealed event prefix through `journal_emit.py`. The run advances deterministically through prepare (Phase 0), automated gates (Phase 1), tests (Phase 2), implementation review (Phase 3), test evidence (Phase 4), ADR/PDR compliance (Phase 5), and emit (Phase 6); the scope is partitioned by language and each partition dispatched to the corresponding `audit-{lang}*` skills. The orchestrator itself embeds zero language-specific knowledge beyond the dispatch template — language audits live in their own skills, this one composes them.
 
-This skill runs a single audit pass per invocation. By default it is stateless: it reads no prior verdict and persists nothing — the caller renders and delivers the emitted verdict (a CI workflow posts the `markdown+json` carrier to the PR comment thread; a local caller relays the rendered output). When a caller (e.g., the `audit-orchestrator` agent) needs cross-commit continuity, the skill exposes a stateful orchestration mode that drives the `audit_orchestrator.py` CLI to maintain `.spx/audits/<lang>/<branch-slug>.md` and a TTL-bounded lock at `<state-file>.lock`. See `<stateful_orchestration>` below.
-
-Read-only over the audited code. The stateful mode writes only under the gitignored `.spx/audits/` partition; the audited project tree is never modified.
+This skill runs a single audit pass per invocation. By default it is stateless: it reads no prior verdict and records the single run on the `spx journal` channel as the run's source of truth, reading the verdict back from the sealed event prefix (Phase 6). When a caller (e.g., the `audit-orchestrator` agent) needs cross-commit continuity, the skill exposes a stateful orchestration mode that drives the `audit_orchestrator.py` CLI to maintain `.spx/audits/<lang>/<branch-slug>.md` and a TTL-bounded lock at `<state-file>.lock`. See `<stateful_orchestration>` below.
 
 </objective>
+
+<constraints>
+
+Read-only over the audited code: this skill produces a wrapper verdict and records it on the `spx journal`; it never edits, fixes, or commits, and never modifies the audited project tree. The only writes it performs are the journal append/seal the channel owns and — in the stateful mode — the gitignored `.spx/audits/` partition. Subagents it dispatches are read-only too.
+
+</constraints>
 
 <determinism_contract>
 
@@ -62,7 +66,7 @@ If any of the three dispatched skills is missing for the target language, halt b
 
 </skill_map>
 
-<process>
+<audit_workflow>
 
 <phase number="0" name="prepare">
 
@@ -117,18 +121,20 @@ Dispatch to `audit-{lang}-architecture`. Findings populate row 5. If no ADRs or 
 
 <phase number="6" name="emit">
 
-For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator's stdout pipes directly into `emit_verdict.py`, which renders the wrapper to the requested surface form (`markdown`, `markdown+json`, or `json-only`; default `markdown+json` for PR-comment delivery). The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
+For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator assembles one wrapper verdict whose `children` array carries the per-language verdicts. The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
+
+The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type auditing` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
-# Caller owns cleanup unconditionally: the trap fires whether the
-# aggregator pipeline succeeds, an earlier dispatched skill halted, or
-# the shell is interrupted. A plain `rm -rf` at the end of the block
-# would leak $CHILDREN_DIR on every non-happy exit path — exactly the
-# scenario the marketplace's persistent-/tmp environments (CI runners
-# reused across jobs, developer workstations) are vulnerable to. Caller-owned
-# cleanup of a unique-per-invocation scratch dir is the portable
-# scratch-storage rule every plugin follows.
+# Caller owns cleanup unconditionally: the trap fires whether the run
+# succeeds, an earlier dispatched skill halted, or the shell is
+# interrupted. A plain `rm -rf` at the end of the block would leak
+# $CHILDREN_DIR on every non-happy exit path — exactly the scenario the
+# marketplace's persistent-/tmp environments (CI runners reused across
+# jobs, developer workstations) are vulnerable to. Caller-owned cleanup
+# of a unique-per-invocation scratch dir is the portable scratch-storage
+# rule every plugin follows.
 trap 'rm -rf "$CHILDREN_DIR"' EXIT
 
 # Dispatched skills emit their per-partition verdict JSON to
@@ -137,7 +143,10 @@ trap 'rm -rf "$CHILDREN_DIR"' EXIT
 # exited non-zero (Phase 1 → automated-gates, Phase 2 → test-execution)
 # or UNKNOWN when Phase 0 halted before producing a frozen scope
 # (determinism-contract).
-python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
+#
+# Assemble the wrapper verdict. This is the run's verdict artifact; the
+# stateful and PR-thread modes below consume $WRAPPER_JSON unchanged.
+WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --directory "$CHILDREN_DIR" \
   --row automated-gates=PASS \
   --row test-execution=PASS \
@@ -145,16 +154,30 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --skill auditing \
   --target <scope-target> \
   --metadata branch=<branch-name> \
-  --metadata scope_hash=<scope-hash> \
-| python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
-  --format "${AUDIT_FORMAT:-markdown+json}"
+  --metadata scope_hash=<scope-hash>)
+
+# Default stateless local emit: record the run on the spx journal and read
+# its verdict back from the sealed event prefix. journal_emit maps the
+# wrapper onto channel events (one per line) and renders the verdict —
+# overall plus human-readable surface — from the prefix.
+RUN_TOKEN=$(spx journal open --type auditing \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["runToken"])')
+printf '%s' "$WRAPPER_JSON" \
+  | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" build-events \
+    --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  | while IFS= read -r EVENT; do
+      printf '%s' "$EVENT" | spx journal append --type auditing --run "$RUN_TOKEN" >/dev/null
+    done
+spx journal seal --type auditing --run "$RUN_TOKEN" >/dev/null
+spx journal read --type auditing --run "$RUN_TOKEN" --from 0 \
+  | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render
 ```
 
-The orchestrator does not write the verdict to disk — the caller delivers it. The orchestrator never hand-formats markdown; deterministic rendering lives in `emit_verdict.py`.
+The append loop iterates a finite event list (it is not a polling wait — no `sleep`, no condition retry). The journal is the run's source of truth; the rendered `{overall, surface}` is a projection of the sealed prefix, never authoritative state.
 
 </phase>
 
-</process>
+</audit_workflow>
 
 <verdict_format>
 
@@ -196,7 +219,7 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 
 **Dropped partition in mixed-language scope.** Claude treats a mixed-language scope as one audit, dispatches to whichever language has a plurality of files, and silently skips the others. The contract is one dispatched verdict per partition aggregated into one wrapper; never drop a partition. If a partition's `audit-{lang}*` skills do not exist, halt with the missing-skill error before any phase runs.
 
-**Hand-formatted verdict.** Claude emits a markdown verdict directly into the conversation instead of producing JSON and piping through `emit_verdict.py`. The toolchain owns rendering; the orchestrator owns the JSON shape. Re-read `<verdict_format>` and the Phase 6 emit instructions if uncertain.
+**Hand-formatted verdict.** Claude emits a markdown verdict directly into the conversation instead of recording the run on the `spx journal` and reading the verdict back through `journal_emit.py render`. The shared projection owns the rollup and the render; the orchestrator owns only the wrapper JSON shape. Re-read `<verdict_format>` and the Phase 6 emit instructions if uncertain.
 
 **Re-implemented rollup.** Claude computes the wrapper's overall by reading the children's rows and deciding APPROVED/REJECTED in-prose. The rollup lives in `verdict.roll_up`; `aggregate_verdicts.py` invokes it. Never re-implement the rollup logic inline.
 
@@ -205,6 +228,8 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 <stateful_orchestration>
 
 Callers that need cross-run continuity — carrying open finding IDs forward, resolving findings that have been fixed, reopening regressions under their original IDs — invoke this skill with the stateful-orchestration mode enabled. The mode is opt-in: a caller activates it by requesting state persistence (e.g., the `audit-orchestrator` agent in its prompt). When inactive, the skill runs the stateless protocol above unchanged.
+
+The stateful mode routes through the verdict toolchain, not the journal: Phase 6 assembles `$CHILDREN_DIR` and `$WRAPPER_JSON`, and the state-transition flow below replaces the default `spx journal` emit. The default journal emit and the stateful mode are mutually exclusive — an active stateful run drives the state-transition flow rather than the journal channel.
 
 State partitioning and naming are deterministic. State files live at `.spx/audits/<lang>/<branch-slug>.md` rooted in the repo working tree, with the run lock at `<state-file>.lock`. The `.spx/` root is gitignored — state is local development scratch, not product truth. Language partition is the same `<lang>` the orchestrator dispatches against in Phase 3–5; branch slug is derived from the current branch via the CLI.
 
@@ -275,6 +300,8 @@ The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, disp
 
 CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself — the durable cross-CI-run surface for an audit verdict — the skill writes nothing to `.spx/` in either mode.
 
+The PR-thread modes route through the verdict toolchain, not the journal: Phase 6 assembles `$WRAPPER_JSON`, and the verdict-diff and `emit_verdict.py` flow below replaces the default `spx journal` emit. The default journal emit and the PR-thread modes are mutually exclusive — an active PR-thread run drives that flow rather than the journal channel.
+
 The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a caller's wording drifts; loud failure surfaces the drift on the next CI run.
 
 **MODE: prior-verdict-read.** Pull the prior audit verdict, if any, from the target PR's comment thread. The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The skill drives the pipeline below from inside its own prose so Claude never constructs a path into `scripts/`.
@@ -317,9 +344,9 @@ When the caller composes a single combined PR comment from the rendered enriched
 - One wrapper verdict emitted, with one child verdict per language partition in the frozen scope.
 - The wrapper has three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one child per partition.
 - The wrapper's `overall` is APPROVED, REJECTED, or UNKNOWN per `verdict.roll_up` applied to wrapper rows plus children overalls.
-- The verdict is emitted via `emit_verdict.py` with the format axis forwarded from the caller.
+- The wrapper verdict is assembled via `aggregate_verdicts.py`; the default stateless local run is recorded on the `spx journal` and its verdict read back through `journal_emit.py render`, the overall preserved across the journal.
 - The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `audit-{lang}*` and the language placeholder `<lang>`.
 - The scope hash is reproducible: re-running the skill on the same frozen scope produces the same hash.
-- If the run halts (missing `audit-{lang}*` trio, empty scope, or a non-zero exit from the canonical validation or test command), the halt reason is reported on the relevant row and no subsequent phase runs.
+- If the run halts, the halt reason is reported on the row the halt condition owns and no subsequent phase runs: a Phase 1 non-zero validation exit on `automated-gates` (FAIL), a Phase 2 non-zero test exit on `test-execution` (FAIL), and an empty scope or a missing `audit-{lang}*` trio (a Phase 0 halt before a frozen scope exists) on `determinism-contract` (UNKNOWN).
 
 </success_criteria>
