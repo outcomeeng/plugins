@@ -1,12 +1,12 @@
 ---
 name: understand
 description: ALWAYS invoke this skill before any spec-tree work to load methodology. NEVER create, read, or modify spec tree files without loading this foundation first.
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
 <objective>
 
-The Spec Tree methodology — truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds — loaded into the conversation as a shared foundation.
+The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds, so every subsequent spec-tree skill operates from a shared methodology foundation.
 
 </objective>
 
@@ -90,7 +90,7 @@ Examples available in: examples/
 8. Check the product's spx-level guides for template drift (once per session — the step 1 foundation-marker guard makes this run on first load only). The guide is two generated files, `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex, rendered from the canonical template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Do NOT judge staleness or detect languages in this conversation — run the deterministic checker, which reads the enabled languages from the project's `spx/**/tests/` extensions and compares both guide files against the installed template:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/templates/spx-claude.md" --spx-dir spx --check
+   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/templates/spx-claude.md" --spx-dir "$(git rev-parse --show-toplevel)/spx" --check
    ```
 
    It prints one of `current`, `stale`, or `absent` — the worst status across the two guide files. Emit the staleness marker when the output is `stale` or `absent`, and nothing when it is `current`. The marker lets `/handoff` carry the staleness into the persistence proposal so the operator can run `/update-spx`, which regenerates both guides from the installed template:

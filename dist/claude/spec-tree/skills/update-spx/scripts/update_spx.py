@@ -192,7 +192,10 @@ def render(
 
 
 def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
-    """Glob the product's ``spx/**/tests/`` test-file extensions and map them to languages."""
+    """CLI-edge helper: glob ``spx/**/tests/`` extensions and map them to languages.
+
+    The filesystem read lives here at the edge, not in the pure render functions.
+    """
     extensions = {
         path.suffix.lstrip(".") for path in spx_dir.glob("**/tests/*") if path.is_file()
     }
@@ -202,7 +205,10 @@ def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
 def guide_status(
     guide_path: pathlib.Path, installed_version: str, languages: tuple[str, ...]
 ) -> str:
-    """Return ``absent``, ``stale``, or ``current`` for one guide file."""
+    """CLI-edge helper: return ``absent``, ``stale``, or ``current`` for one guide file.
+
+    The filesystem read lives here at the edge, not in the pure render functions.
+    """
     if not guide_path.is_file():
         return "absent"
     text = guide_path.read_text(encoding="utf-8")

@@ -129,6 +129,32 @@ def test_cli_check_reports_language_drift(
     assert capsys.readouterr().out.strip() == "stale"
 
 
+def test_cli_check_reports_absent_when_one_guide_is_missing(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    # Only CLAUDE.md exists and is current; AGENTS.md is absent — the worst status wins.
+    claude_name = module.RUNTIME_GUIDE_FILENAMES[RUNTIME_CLAUDE]
+    (tmp_path / claude_name).write_text(
+        module.render(
+            build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CLAUDE
+        ),
+        encoding="utf-8",
+    )
+    check = [
+        "--template",
+        str(template),
+        "--spx-dir",
+        str(tmp_path),
+        "--check",
+        "--languages",
+        LANG_PRIMARY,
+    ]
+    assert module.main(check) == 0
+    assert capsys.readouterr().out.strip() == "absent"
+
+
 def test_cli_write_without_spx_dir_exits_2(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, NEW_VERSION)
