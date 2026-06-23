@@ -20,6 +20,7 @@ real against a temp repository built by ``git_context``.
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 import subprocess
 import sys
@@ -67,7 +68,9 @@ class RecordingRunner:
 
     def run(self, cmd: list[str]) -> tuple[int, str, str]:
         self.calls.append(list(cmd))
-        for prefix, response in self.scripted.items():
+        for prefix, response in sorted(
+            self.scripted.items(), key=lambda item: len(item[0]), reverse=True
+        ):
             if tuple(cmd[: len(prefix)]) == prefix:
                 return response
         if cmd and cmd[0] == "git":
@@ -104,13 +107,13 @@ def write_session_file(
     """Write a minimal stored-format session file carrying structured claims."""
     front = ["---"]
     if git_ref is not None:
-        front.append(f'git_ref: "{git_ref}"')
+        front.append(f'"git_ref": "{git_ref}"')
     if specs:
-        front.append("specs:")
-        front.extend(f"  - {path}" for path in specs)
+        front.append('"specs":')
+        front.extend(f'  - "{path}"' for path in specs)
     if files:
-        front.append("files:")
-        front.extend(f"  - {path}" for path in files)
+        front.append('"files":')
+        front.extend(f'  - "{path}"' for path in files)
     front.append("---")
     body = ["<metadata>"]
     if git_status is not None:
@@ -123,3 +126,28 @@ def write_session_file(
     path = directory / "session.md"
     path.write_text("\n".join(front + body) + "\n")
     return path
+
+
+def session_show_response(
+    *,
+    git_ref: str | None = None,
+    git_status: str | None = None,
+    specs: tuple[str, ...] = (),
+    files: tuple[str, ...] = (),
+    pr_numbers: tuple[str, ...] = (),
+) -> tuple[int, str, str]:
+    """Return the ``spx session show --json`` response for structured fields."""
+    _ = git_status, pr_numbers
+    payload: dict[str, object] = {
+        "id": "session",
+        "status": "doing",
+        "priority": "medium",
+        "git_ref": git_ref,
+        "goal": "Reconcile pickup claims.",
+        "next_step": "Continue.",
+        "specs": list(specs),
+        "files": list(files),
+        "created_at": "2026-06-23T00:00:00.000Z",
+        "agent_session_id": "00000000-0000-0000-0000-000000000000",
+    }
+    return (0, json.dumps(payload), "")

@@ -24,8 +24,8 @@ import subprocess
 import sys
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from pathlib import Path
-from typing import Protocol
+from pathlib import Path, PurePosixPath
+from typing import Protocol, cast
 
 
 class Verdict(StrEnum):
@@ -35,6 +35,7 @@ class Verdict(StrEnum):
 
 
 class ClaimKind(StrEnum):
+    SESSION_METADATA = "session_metadata"
     GIT_REF = "git_ref"
     INJECTED_PATH = "injected_path"
     NODE_STATUS = "node_status"
@@ -78,51 +79,138 @@ class Session:
     pr_numbers: tuple[str, ...]
 
 
-def parse_session(text: str) -> Session:
-    """Extract the structured, reliably-parseable claims from a session file."""
-    git_ref = _scalar(text, "git_ref")
-    git_status = None
-    meta = re.search(r"git_status:\s*(clean|dirty)", text)
-    if meta:
-        git_status = meta.group(1)
-    return Session(
-        git_ref=git_ref,
-        git_status=git_status,
-        specs=_string_list(text, "specs"),
-        files=_string_list(text, "files"),
-        pr_numbers=tuple(re.findall(r"(?:PR|pull request)\s*#(\d+)", text)),
+def load_session(
+    session_path: Path, runner: CommandRunner
+) -> tuple[Session | None, ClaimVerdict | None]:
+    """Load producer-parsed session metadata through ``spx session show --json``."""
+    session_id = (
+        session_path.stem if session_path.suffix == ".md" else session_path.name
     )
+    sessions_dir = _sessions_dir(session_path)
+    code, out, err = runner.run(
+        [
+            "spx",
+            "session",
+            "show",
+            "--json",
+            "--sessions-dir",
+            str(sessions_dir),
+            session_id,
+        ]
+    )
+    if code != 0:
+        return None, ClaimVerdict(
+            ClaimKind.SESSION_METADATA,
+            session_id,
+            Verdict.UNVERIFIABLE,
+            f"spx session show unavailable: {err.strip() or 'non-zero exit'}",
+        )
+    try:
+        payload_obj = json.loads(out)
+    except json.JSONDecodeError as exc:
+        return None, ClaimVerdict(
+            ClaimKind.SESSION_METADATA,
+            session_id,
+            Verdict.UNVERIFIABLE,
+            f"spx session show returned invalid JSON: {exc.msg}",
+        )
+    if not isinstance(payload_obj, dict):
+        return None, ClaimVerdict(
+            ClaimKind.SESSION_METADATA,
+            session_id,
+            Verdict.UNVERIFIABLE,
+            "spx session show returned JSON that was not an object",
+        )
+    payload = cast("dict[str, object]", payload_obj)
+    shape_error = _metadata_shape_error(payload)
+    if shape_error is not None:
+        return None, ClaimVerdict(
+            ClaimKind.SESSION_METADATA,
+            session_id,
+            Verdict.UNVERIFIABLE,
+            f"spx session show returned malformed metadata: {shape_error}",
+        )
+    text = _read_optional_text(session_path)
+    git_ref = payload["git_ref"]
+    return Session(
+        git_ref=git_ref if isinstance(git_ref, str) else None,
+        git_status=_body_git_status(text),
+        specs=tuple(cast("list[str]", payload["specs"])),
+        files=tuple(cast("list[str]", payload["files"])),
+        pr_numbers=_pr_numbers(text),
+    ), None
 
 
-def _scalar(text: str, key: str) -> str | None:
-    match = re.search(rf"^{key}:\s*\"?([^\"\n]+?)\"?\s*$", text, re.MULTILINE)
-    return match.group(1) if match else None
+def _sessions_dir(session_path: Path) -> Path:
+    if session_path.parent.name in {"todo", "doing", "archive"}:
+        return session_path.parent.parent
+    return session_path.parent
 
 
-def _string_list(text: str, key: str) -> tuple[str, ...]:
-    # Require indentation before each bullet so the YAML document delimiter
-    # `---` (no leading space) is never absorbed as a trailing list item.
-    block = re.search(rf"^{key}:\s*\n((?:[ \t]+-\s*.+\n?)+)", text, re.MULTILINE)
-    if not block:
-        return ()
-    items = re.findall(r"-\s*\"?([^\"\n]+?)\"?\s*$", block.group(1), re.MULTILINE)
-    return tuple(items)
+def _read_optional_text(path: Path) -> str:
+    try:
+        return path.read_text()
+    except OSError:
+        return ""
+
+
+def _metadata_shape_error(payload: dict[str, object]) -> str | None:
+    for key in ("git_ref", "specs", "files"):
+        if key not in payload:
+            return f"{key} is absent"
+    git_ref = payload["git_ref"]
+    if git_ref is not None and not isinstance(git_ref, str):
+        return "git_ref is not a string or null"
+    for key in ("specs", "files"):
+        value = payload[key]
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) for item in value
+        ):
+            return f"{key} is not a list of strings"
+        for item in value:
+            path = PurePosixPath(item)
+            if item == "" or path.is_absolute() or ".." in path.parts:
+                return f"{key} contains a path outside the checkout"
+    return None
+
+
+def _body_git_status(text: str) -> str | None:
+    meta = re.search(r"^\s*git_status:\s*(clean|dirty)\s*$", text, re.MULTILINE)
+    return meta.group(1) if meta else None
+
+
+def _pr_numbers(text: str) -> tuple[str, ...]:
+    return tuple(re.findall(r"(?:PR|pull request)\s*#(\d+)", text))
 
 
 def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | None:
     if session.git_ref is None:
         return None
     ref = session.git_ref
-    if re.fullmatch(r"[0-9a-f]{7,40}", ref):
-        expr = f"{ref}^{{commit}}"
-        present, absent = "commit reachable", "commit not in repository"
-    else:
-        expr = f"refs/remotes/origin/{ref}"
-        present, absent = "branch present on origin", "branch absent from origin"
-    # rev-parse --verify --quiet exits 0 (resolves), 1 (clean miss), >=128 (git
-    # could not run). The exit code, not the stderr text, distinguishes a missing
-    # object — which also prints "fatal:" — from git being unavailable.
-    code, _, _ = runner.run(["git", "rev-parse", "--verify", "--quiet", expr])
+    branch_code, _, _ = runner.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{ref}"]
+    )
+    if branch_code >= 128:
+        return ClaimVerdict(
+            ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
+        )
+    if branch_code == 0:
+        return ClaimVerdict(
+            ClaimKind.GIT_REF,
+            ref,
+            Verdict.CONFIRMED,
+            "branch present on origin",
+        )
+    if not re.fullmatch(r"[0-9a-f]{40}", ref):
+        return ClaimVerdict(
+            ClaimKind.GIT_REF,
+            ref,
+            Verdict.DISCREPANCY,
+            "branch absent from origin",
+        )
+    code, _, _ = runner.run(
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"]
+    )
     if code >= 128:
         return ClaimVerdict(
             ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
@@ -132,7 +220,7 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
         ClaimKind.GIT_REF,
         ref,
         Verdict.CONFIRMED if ok else Verdict.DISCREPANCY,
-        present if ok else absent,
+        "commit reachable" if ok else "commit not in repository",
     )
 
 
@@ -219,7 +307,18 @@ def check_external_ids(session: Session, runner: CommandRunner) -> list[ClaimVer
 
 def verify(session_path: Path, repo: Path, runner: CommandRunner) -> list[ClaimVerdict]:
     """Reconcile every parseable recorded claim against current state."""
-    session = parse_session(session_path.read_text())
+    session, load_error = load_session(session_path, runner)
+    if load_error is not None:
+        return [load_error]
+    if session is None:
+        return [
+            ClaimVerdict(
+                ClaimKind.SESSION_METADATA,
+                session_path.stem,
+                Verdict.UNVERIFIABLE,
+                "spx session show returned no session metadata",
+            )
+        ]
     verdicts: list[ClaimVerdict] = []
     git_ref = check_git_ref(session, runner)
     if git_ref is not None:

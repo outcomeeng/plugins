@@ -157,6 +157,19 @@ class TestHandoffCreatesTodoSession:
             assert todo_files
             assert active_node in todo_files[0].read_text()
 
+    def test_session_file_records_current_git_ref(self, tmp_path):
+        with accepted_git_context() as repo:
+            result = _handoff(
+                tmp_path / "sessions",
+                "Active node: spx/21-spec-tree.enabler/76-sessions.enabler/\n",
+                cwd=repo,
+                goal="Verify handoff records the current git ref",
+                next_step="Read the todo session file and assert git_ref",
+            )
+            assert result.returncode == 0, result.stderr
+            session_file = _parse_session_file(result.stdout)
+            assert _read_git_ref(session_file) == "main"
+
 
 # ---------------------------------------------------------------------------
 # Assertion 2 — pickup moves session from todo/ to doing/
