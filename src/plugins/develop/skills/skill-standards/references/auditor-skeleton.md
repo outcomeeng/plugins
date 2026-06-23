@@ -1,5 +1,5 @@
 <objective>
-The canonical structure for an auditor skill — the family whose output is a structured verdict. Loaded by `/skill-standards` and the skill-auditor when authoring or checking an `audit-*` skill.
+The canonical structure for an auditor skill — the family whose output is a structured verdict.
 </objective>
 
 <output_is_a_verdict>

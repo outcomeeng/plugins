@@ -11,9 +11,7 @@ allowed-tools: Bash, Read
 
 <objective>
 
-Diagnose the health of a spec-tree / spx environment and report a named verdict per check with a remediation hint. Run a sequence of independent read-only checks over surfaces every environment has — the `spx` CLI, the harness session environment, the git worktree layout, the `.spx/` session store, and the plugin install surfaces across the Claude and Codex plugin CLIs — classify each, and aggregate one report. `<extending>` lists the candidate checks a future slice adds.
-
-Every check is read-only. It inspects environment variables and queries `spx` with non-mutating status commands; it never changes credentials, runs workflows, writes session state, or edits files.
+A health report on a spec-tree / spx environment — a named, remediation-hinted verdict per read-only check across the `spx` CLI, the harness session environment, the git worktree layout, the `.spx/` session store, and the Claude and Codex plugin installs.
 
 </objective>
 

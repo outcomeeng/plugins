@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Create distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Provides expert design thinking and implementation guidance for building memorable web UI with bold aesthetic directions, exceptional typography, cohesive color palettes, thoughtful motion, and surprising spatial composition.
+A distinctive, production-grade frontend interface that avoids generic "AI slop" — bold aesthetic direction, exceptional typography, a cohesive color palette, thoughtful motion, and surprising spatial composition.
 </objective>
 
 <quick_start>

@@ -5,9 +5,7 @@ description: >-
 ---
 
 <objective>
-Select the next executable observable slice from an implementation plan, before the per-node TDD flow runs. An observable slice is a coherent set of changesets — across one or more `/merge` cycles — whose merged result demonstrates business and user value the operator can be shown. The slice is expressed as a path through existing spec-tree nodes and handed to `/apply` as its work queue.
-
-This is an applying preflight: the operator and session decide the slice together before any node is implemented, and the selected node set feeds `/apply`'s per-node TDD flow.
+The next executable observable slice — a path through existing spec-tree nodes whose merged result demonstrates business and user value — selected from an implementation plan and handed to `/apply` as its work queue.
 </objective>
 
 <observable_slice>

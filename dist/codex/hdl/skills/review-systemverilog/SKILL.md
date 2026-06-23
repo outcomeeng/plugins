@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Review hand-written SystemVerilog (IEEE 1800-2017) through the lens of an experienced FPGA engineer targeting AMD Vivado and Altera Quartus Prime. Produce prioritized findings covering type discipline, always-block usage, naming conventions, and synthesizability. Flag legacy Verilog-2001 patterns as style findings.
+Prioritized SystemVerilog (IEEE 1800-2017) review findings covering type discipline, always-block usage, naming conventions, and synthesizability, with legacy Verilog-2001 patterns flagged as style.
 
 </objective>
 

@@ -27,9 +27,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 
 <objective>
-Audit Python test evidence against the spec-tree test-audit properties plus Python-specific source ownership, testability, harness, generator, inert-fixture, and pytest discovery rules.
-
-This skill audits tests and test infrastructure. It does not audit production implementation style except where source architecture affects test evidence quality.
+A verdict on Python test evidence against the spec-tree test-audit properties plus the Python-specific source-ownership, testability, harness, generator, inert-fixture, and pytest-discovery rules.
 </objective>
 
 <audit_scope>

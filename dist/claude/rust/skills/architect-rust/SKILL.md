@@ -9,7 +9,7 @@ Invoke the `rust:rust-standards` skill before proceeding. If that skill is unava
 Invoke the `rust:rust-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as `## Verification` `### Audit` rules.
+A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>

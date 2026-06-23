@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Write effective git commit messages following Conventional Commits standard with selective staging, atomic commits, and domain-specific type conventions.
+Effective git commit messages following the Conventional Commits standard, with selective staging, atomic commits, and domain-specific type conventions.
 </objective>
 
 <success_criteria>

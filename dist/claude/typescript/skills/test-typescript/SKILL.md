@@ -12,11 +12,7 @@ Invoke the `typescript:typescript-test-standards` skill before proceeding. If th
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Write or fix test files for a node specification. This skill handles both:
-1. **Writing new tests** - Given a node spec, produce test files
-2. **Fixing rejected tests** - Given reviewer feedback, fix existing tests
-
-**This skill WRITES tests. It does not just design or plan.**
+TypeScript test files that supply evidence for a node specification's assertions — written fresh from the spec, or repaired against reviewer feedback.
 </objective>
 
 <mode_detection>

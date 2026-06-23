@@ -14,18 +14,15 @@ allowed-tools: Read, Bash(spx:*), Bash(git:*), Bash(python3:*), AskUserQuestion,
 </context>
 
 <objective>
-Load and claim a handoff session to continue work from a previous context without repeating earlier mistakes.
-
-After `/contextualize`, stop at a post-context checkpoint before any new work starts unless `$ARGUMENTS` explicitly includes `--auto-continue`.
-
-Bring the checkout current before presenting anything, then reconcile every recorded session-file claim against current state — emitting a `Confirmed`, `Discrepancy`, or `Unverifiable` verdict per claim — before that checkpoint. The session file is a pointer whose detail is re-derived from the repository, not a snapshot to replay; presenting its recorded claims as current truth is the failure this verification prevents.
-
-Emit canonical pickup markers keyed by the claimed session id so later workflows can distinguish repeated pickups in the same conversation.
-
-**Pickup opens session responsibility. It never releases, archives, deletes, or closes a session.** A claimed session remains Claude's responsibility until a later `/handoff` workflow accounts for it explicitly.
-
-**⚠️ NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.**
+A claimed handoff session — loaded, reconciled against current repository state, and marked with canonical pickup markers — ready to continue prior work without repeating earlier mistakes.
 </objective>
+
+<constraints>
+
+- Pickup opens session responsibility and never releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
+- NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
+
+</constraints>
 
 <claimed_sessions>
 Three rules govern a conversation's claimed-session set:

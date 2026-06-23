@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-Execute {{process}} reliably and repeatably.
+A completed run of {{process}}, reproducible across invocations.
 </objective>
 
 <quick_start>

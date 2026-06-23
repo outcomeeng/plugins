@@ -6,7 +6,7 @@ allowed-tools: Bash, Read, AskUserQuestion
 ---
 
 <objective>
-Keep a product's spx-level directory guide current with the installed spec-tree template by rendering it from the template and the project's enabled-language list. The guide carries no substituted strings; its only per-product variation is the `languages` frontmatter list, which scopes the rendered guide to the project's languages. An update re-renders the new template with that list, so new template content arrives automatically and disabled-language blocks stay out. The deterministic parse, compare, and render logic lives in `scripts/update_spx.py`; this skill orchestrates file access, the language list, and the report.
+A product's spx-level directory guide rendered current from the installed spec-tree template, scoped to the project's enabled-language list.
 </objective>
 
 <context>

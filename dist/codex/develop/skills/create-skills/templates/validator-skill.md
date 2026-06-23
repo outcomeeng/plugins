@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-Enforce quality standards by systematically validating {{subject}} against defined criteria.
+A verdict on whether {{subject}} meets the defined quality criteria.
 </objective>
 
 <quick_start>

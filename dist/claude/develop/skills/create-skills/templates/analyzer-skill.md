@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-Extract actionable insights from {{subject}} by applying systematic analysis.
+A {{subject}} analysis report with prioritized findings and actionable recommendations.
 </objective>
 
 <quick_start>

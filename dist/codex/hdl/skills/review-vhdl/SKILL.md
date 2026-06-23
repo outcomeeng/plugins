@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Review hand-written VHDL through the lens of an experienced FPGA/ASIC engineer who writes idiomatic, synthesizable VHDL-2008. Produce prioritized findings covering library usage, type discipline, process patterns, naming conventions, and synthesizability.
+Prioritized VHDL-2008 review findings covering library usage, type discipline, process patterns, naming conventions, and synthesizability.
 
 </objective>
 

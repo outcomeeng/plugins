@@ -8,7 +8,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Defines the concepts, predicates, gates, commands, and tokens shared by the merge lifecycle — /merge as dispatcher, /manage-github-pr as router, /open-pr as the one-shot opening protocol, and /manage-pr as the open-PR managing protocol. Carries no flow itself; ships vocabulary only.
+The shared merge-lifecycle vocabulary — the concepts, predicates, gates, commands, and tokens that `/merge`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` all read.
 </objective>
 
 <reference_note>

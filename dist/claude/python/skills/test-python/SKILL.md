@@ -13,9 +13,7 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Write or fix Python test files for a spec-tree node. The workflow covers new test evidence and repair of rejected test evidence.
-
-This skill writes tests only after the source contract is testable. When the existing code shape blocks maintainable evidence, refactor the code under test first or record the architecture gap in the owning spec-tree node before writing the test.
+Python test files that supply evidence for a spec-tree node's assertions — written fresh, or repaired against rejected evidence.
 </objective>
 
 <mode_detection>

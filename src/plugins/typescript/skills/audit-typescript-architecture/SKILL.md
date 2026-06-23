@@ -15,9 +15,7 @@ This audit runs inside a dispatched auditor's verifier context — the generic `
 </dispatch_gate>
 
 <objective>
-Review the TypeScript-specific architecture concerns of an ADR — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and TypeScript anti-patterns — against `/typescript-architecture-standards`, `/test` principles, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only — it produces verdicts, not code changes.
-
-**Standards are pre-loaded above.** Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` judges them from the canonical decision template. Check for `spx/local/typescript-architecture.md` at the repository root and read it if it exists, applying it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
+A structured verdict on an ADR's TypeScript-specific architecture concerns — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and TypeScript anti-patterns.
 </objective>
 
 <context_loading>

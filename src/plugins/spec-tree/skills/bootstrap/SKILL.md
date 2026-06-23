@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Interview the user to understand the product, then scaffold the initial `spx/` root with a product spec and product guide. Record top-level structure intent for `/decompose spx/`, which owns top-level child composition.
+An initial `spx/` root scaffolded with a product spec and product guide, plus recorded top-level structure intent for `/decompose spx/`.
 
 </objective>
 

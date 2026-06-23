@@ -10,7 +10,7 @@ Invoke the `prose:prose-standards` skill before proceeding. If that skill is una
 
 <objective>
 
-Detect and fix formulaic patterns that signal machine-generated or lazy writing. Flag specific violations and suggest concrete rewrites.
+A list of formulaic, machine-generated, or lazy-writing patterns found in reader-facing prose, each flagged with a concrete rewrite.
 
 </objective>
 

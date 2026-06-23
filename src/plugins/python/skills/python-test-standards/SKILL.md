@@ -7,9 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Define Python-specific test standards loaded by `/test-python`, `/code-python`, `/architect-python`, and `/audit-python-tests`.
-
-Read `/test` first when deciding what evidence to create. Read `/python-standards` before this reference when writing or reviewing Python test code. These standards implement the product's `test-infrastructure` PDR and Python test standards.
+The Python-specific test standards every Python skill enforces.
 </objective>
 
 <repo_local_overlay>

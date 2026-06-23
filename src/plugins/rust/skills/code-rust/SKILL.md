@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 {!% require_skill 'rust:rust-test-standards' %!}
 
 <objective>
-Write or repair Rust implementation code with spec-driven behavior, repository-aware discovery, explicit seams, and full validation before completion.
+Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.
 </objective>
 
 <accessing_skill_files>

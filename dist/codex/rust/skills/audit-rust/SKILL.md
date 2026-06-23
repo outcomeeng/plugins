@@ -16,7 +16,7 @@ This audit runs inside a dispatched auditor's verifier context — a generic aud
 </dispatch_gate>
 
 <objective>
-Review Rust implementation code after the mechanical checks pass. Find design flaws, boundary violations, and ADR or PDR drift that automated gates do not catch. This skill is read-only.
+A verdict on Rust implementation code — the design flaws, boundary violations, and ADR/PDR drift that automated gates do not catch.
 </objective>
 
 <quick_start>

@@ -10,9 +10,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 Invoke the `typescript:typescript-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Write or fix implementation code that makes tests pass. Two modes:
-1. **Writing new implementation** - Given failing tests, produce code that passes them
-2. **Fixing rejected implementation** - Given reviewer feedback, fix existing code
+TypeScript implementation code that makes its node's tests pass — written fresh against failing tests, or repaired against reviewer feedback.
 </objective>
 
 <accessing_skill_files>

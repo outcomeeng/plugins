@@ -7,9 +7,7 @@ allowed-tools: Read, Bash(git:*), Bash(python3:*), Bash(just:*), Bash(pnpm:*), A
 
 <objective>
 
-Bring a repository into one of the two compliant git layouts and keep it there: a single working tree, or a bare-repository worktree pool. The pool nests under one repository-name container directory: a bare `<repo>.git` repository whose git-common-dir has, as siblings, a **main checkout** — the worktree whose directory basename is the repository name, tracking the git-resolved default branch `origin/<default>` — and a shared `.spx/` operational directory, with additional pool worktrees detached at the `origin/<default>` tip. The on-disk shape is `<repo>/{<repo>.git, <repo>, <repo>-a…, .spx}`; the container is the repository-name directory, **never** the multi-repository workspace that holds it. The layout keeps the default branch claimable by no single worktree and lets every worktree resolve one shared `.spx/`, which the session, review, and merge workflows depend on.
-
-The layout is defined by the **target state** derived from the repository name, not by inspecting the prior checkout's shape. Provisioning relies on only two things being recoverable: every commit (pushed to the remote) and the gitignored state (carried across). Deterministic classification and provisioning run in `scripts/init_worktrees.py`; this skill orchestrates that helper, runs the post-carry clean, and guards the one destructive step — removing the renamed-aside prior husk — behind operator confirmation.
+A repository in one of the two compliant git layouts: a single working tree, or a bare-repository worktree pool shaped `<repo>/{<repo>.git, <repo>, <repo>-a…, .spx}` — a bare `<repo>.git`, a main checkout tracking `origin/<default>`, a shared `.spx/`, and detached pool worktrees at the `origin/<default>` tip — so the default branch is claimable by no single worktree and every worktree resolves one shared `.spx/`.
 
 </objective>
 

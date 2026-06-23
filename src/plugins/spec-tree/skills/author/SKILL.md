@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 
 <objective>
 
-Author Spec Tree artifacts — product specs, decision records (ADR/PDR), enabler nodes, and outcome nodes — using templates from the `understand` foundation skill. Guides placement, index assignment, and content quality.
+A Spec Tree artifact — a product spec, decision record (ADR/PDR), enabler, or outcome node — placed, indexed, and authored from the `understand` foundation templates.
 
 </objective>
 

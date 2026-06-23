@@ -15,9 +15,7 @@ This audit runs inside a dispatched auditor's verifier context — the generic `
 </dispatch_gate>
 
 <objective>
-Review the Python-specific architecture concerns of an ADR — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, Python anti-patterns, and test-double exception cases — against `/python-architecture-standards`, `/test` principles, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only — it produces verdicts, not code changes.
-
-**Standards are pre-loaded above.** Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` judges them from the canonical decision template. This skill carries only the Python-specific concerns.
+A structured verdict on an ADR's Python-specific architecture concerns — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, Python anti-patterns, and test-double exception cases.
 </objective>
 
 <context_loading>
