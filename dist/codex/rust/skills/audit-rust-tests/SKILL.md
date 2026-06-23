@@ -20,8 +20,16 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 </dispatch_gate>
 
 <objective>
-A verdict on Rust test evidence, with findings across three categories: deterministic readiness, per-assertion evidence, and architectural DRY.
+A verdict on Rust test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
 </objective>
+
+<constraints>
+
+This audit is read-only. Produce a verdict over test evidence; never edit tests, production code, specs, fixtures, harnesses, generators, or project configuration.
+
+</constraints>
+
+<audit_workflow>
 
 <prerequisites>
 
@@ -315,6 +323,8 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </supplement>
 
 </rust_supplements>
+
+</audit_workflow>
 
 <verdict_format>
 

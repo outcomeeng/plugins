@@ -22,9 +22,17 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 
 <objective>
 
-A verdict on TypeScript test evidence, with findings across two categories: per-assertion evidence and architectural DRY.
+A verdict on TypeScript test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence.
 
 </objective>
+
+<constraints>
+
+This audit is read-only. Produce a verdict over test evidence; never edit tests, production code, specs, fixtures, harnesses, generators, or project configuration.
+
+</constraints>
+
+<audit_workflow>
 
 <prerequisites>
 
@@ -334,6 +342,8 @@ If the product has no coverage tooling: record as a coverage note, do not REJECT
 </supplement>
 
 </typescript_supplements>
+
+</audit_workflow>
 
 <verdict_format>
 

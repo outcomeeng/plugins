@@ -16,25 +16,14 @@ This audit runs inside a dispatched auditor's verifier context — a generic aud
 </dispatch_gate>
 
 <objective>
-A verdict on Rust implementation code — the design flaws, boundary violations, and ADR/PDR drift that automated gates do not catch.
+A verdict on Rust implementation code — APPROVED, or REJECTED with each finding naming the design flaw, boundary violation, ADR/PDR drift, or unsafe/FFI soundness issue; the violated rule; and the evidence.
 </objective>
-
-<quick_start>
-
-1. Standards are pre-loaded above. Also check for `spx/local/rust.md` if it exists.
-2. If test files are part of the review scope, read `/rust-test-standards` and `/test-rust` for test-shape context, then hand off evidence judgments to `/audit-rust-tests`.
-3. Read `CLAUDE.md`, `Cargo.toml`, and `rust-toolchain.toml` when present.
-4. Run the repository's declared validation command. If none is declared, use the fallback full sequence: `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --all-targets`.
-5. Read every production file in scope with the predict and verify protocol.
-6. Check the final code shape against applicable ADR and PDR constraints.
-
-</quick_start>
 
 <repo_local_overlay>
 Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
 
-<essential_principles>
+<constraints>
 
 Automated gates are the entry ticket. If formatting, linting, or tests fail, reject immediately and stop. Manual review starts only after the code passes the mechanical bar.
 
@@ -44,9 +33,9 @@ This skill audits implementation code. Test evidence quality belongs to `/audit-
 
 The verdict is binary. APPROVED means every concern passes. REJECTED means at least one concern fails.
 
-</essential_principles>
+</constraints>
 
-<process>
+<audit_workflow>
 
 Execute the phases in order.
 
@@ -132,7 +121,7 @@ When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `exter
 
 Verify each relevant architectural or product constraint is reflected in the code shape. Undocumented deviations are REJECTED.
 
-</process>
+</audit_workflow>
 
 <reference_guides>
 
@@ -145,7 +134,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 </reference_guides>
 
-<output_format>
+<verdict_format>
 
 Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
 
@@ -172,17 +161,25 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 
 Each finding carries `file`, `line`, `rule` (the concern name or specific violation), `severity: "REJECT"`, and `message` (the one-line "why this fails"). Include correct-approach Rust samples and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
-</output_format>
+</verdict_format>
+
+<failure_modes>
+
+**Failure 1: Approved code after mechanical gates passed.** Claude saw `cargo fmt`, `cargo clippy`, and `cargo test` pass, then treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift. How to avoid: run Phases 1-2 first, then still execute Phase 3's predict-and-verify pass over every production function in scope.
+
+**Failure 2: Missed a boundary dependency hidden behind a coherent module.** Claude approved a module whose imports looked organized, while a concrete external client was still imported directly inside business logic. Why it failed: import coherence is separate from boundary design; `crate::` paths can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and FFI boundary to an injected trait or narrow function seam.
+
+**Failure 3: Skipped unsafe soundness because no tests failed.** Claude treated green tests as evidence that `unsafe` and FFI boundaries were sound. Why it failed: tests rarely cover pointer validity, aliasing, lifetime, unwind, ABI, or `Send`/`Sync` invariants. How to avoid: whenever scope contains `unsafe`, `unsafe fn`, `unsafe impl`, `extern "C"`, or `#[no_mangle]`, run `references/unsafe-soundness.md` and reject any missing or mismatched invariant.
+
+</failure_modes>
 
 <success_criteria>
 
-- repo-local Rust overlays were loaded when present
-- automated gates passed before manual review started
-- full tests passed before manual review started
-- every production function in scope was read with the predict and verify protocol
-- design review covered seams, ownership flow, error quality, and module cohesion
-- unsafe and FFI soundness was audited when the scope contained unsafe or FFI sites
-- ADR and PDR constraints were checked when applicable
-- verdict is structured and binary
+- APPROVED means every applicable concern row is PASS, every non-applicable UNKNOWN row explains why the concern does not apply, and every production function in scope was covered.
+- REJECTED means each finding names the exact code location, violated Rust or repository rule, observable consequence, and required correction.
+- Boundary and design judgments are falsifiable from the cited import path, call path, ownership flow, error path, or module relationship.
+- Unsafe and FFI judgments identify the invariant being preserved or violated, including pointer validity, aliasing, lifetime, ABI, unwind, and thread-safety constraints when applicable.
+- ADR and PDR judgments cite the product constraint being upheld or violated without embedding spec identifiers in code guidance.
+- The verdict can be reproduced by another auditor from the listed commands, files read, concern rows, and finding evidence.
 
 </success_criteria>

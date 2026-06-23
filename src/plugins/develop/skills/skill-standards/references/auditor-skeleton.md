@@ -29,6 +29,10 @@ The objective names the verdict, not the activity:
 - ❌ "Audit an ADR for its structure, atemporal voice, and conformance to the evidence model." (bare activity verb)
 - ❌ "Evaluate SKILL.md files against best practices." (activity verb)
 - ✅ "A verdict on one ADR against the ADR evidence model — APPROVED, or REJECTED with each finding naming the section, the violated rule, and the evidence. Findings fall in three categories: section structure, atemporal voice, and per-rule tag validity."
+- ✅ "A verdict on implementation code — APPROVED, or REJECTED with each finding naming the design flaw, the violated rule, and the evidence."
+- ✅ "A verdict on test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed evidence property, and the evidence."
+
+Code-auditor and test-auditor objectives use the APPROVED/REJECTED field form above. Their `<verdict_format>` owns the detailed row schema and may group findings by concern; the objective stays stable when a language adds or renames a row.
 
 </objective_examples>
 
