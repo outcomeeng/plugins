@@ -29,6 +29,10 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
+# Regenerate spx/CLAUDE.md + spx/AGENTS.md from the template and fail on drift (CI gate)
+guide-check:
+    uv run python -m outcomeeng.distribution.guide_diff
+
 # Regenerate the plugin catalog in README.md from manifests and frontmatter
 docs:
     uv run python -m outcomeeng.catalog.plugin_catalog --write

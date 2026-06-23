@@ -47,6 +47,11 @@ CANONICAL_SPX_TEMPLATE_PATH = (
     / "spx-claude.md"
 )
 
+# Source-template content probes for the rendered-output session-result check.
+SESSION_MANAGEMENT_HEADING = "## Session Management"
+SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
+SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
 LANG_SECONDARY = "typescript"
@@ -56,10 +61,17 @@ NEW_SECTION = "Process Hygiene"
 # A brace-delimited illustration token the render must pass through unchanged.
 ILLUSTRATION_TOKEN = "{product-slug}"
 
-# Source-template compliance probes.
-SESSION_MANAGEMENT_HEADING = "## Session Management"
-SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
-SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
+# Runtime payload: the template carries a per-runtime block for each agent runtime,
+# rendered only into that runtime's guide file. The marker syntax mirrors the module's
+# ``_RUNTIME_BLOCK`` contract; a test that drifts from it fails to render.
+RUNTIME_CLAUDE = "claude"
+RUNTIME_CODEX = "codex"
+TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
+
+
+def runtime_line(runtime: str) -> str:
+    """The body the harness emits inside a runtime block — what render keeps or drops."""
+    return f"{runtime.upper()} runs the audit as a subagent."
 
 
 def load_update_spx_module() -> ModuleType:
@@ -77,26 +89,23 @@ def load_update_spx_module() -> ModuleType:
 
 
 def read_canonical_spx_template() -> str:
-    """Read the source template that product guides render from."""
+    """Read the canonical template both guide files render from."""
     return CANONICAL_SPX_TEMPLATE_PATH.read_text(encoding="utf-8")
 
 
 def extract_markdown_section(document: str, heading: str) -> str:
-    """Return a markdown section by exact heading, including the heading line."""
+    """Return a markdown section by exact heading line, including the heading."""
     lines = document.splitlines()
     try:
         start = lines.index(heading)
     except ValueError as exc:
         raise RuntimeError(f"Heading not found: {heading}") from exc
-
     heading_level = len(heading) - len(heading.lstrip("#"))
     end = len(lines)
     for index, line in enumerate(lines[start + 1 :], start=start + 1):
-        if line.startswith("#"):
-            line_level = len(line) - len(line.lstrip("#"))
-            if line_level <= heading_level:
-                end = index
-                break
+        if line.startswith("#") and len(line) - len(line.lstrip("#")) <= heading_level:
+            end = index
+            break
     return "\n".join(lines[start:end])
 
 
@@ -137,9 +146,34 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
             "",
             f"<!-- /lang:{language} -->",
         ]
+    for runtime in TEMPLATE_RUNTIMES:
+        parts += [
+            f"<!-- runtime:{runtime} -->",
+            "",
+            runtime_line(runtime),
+            "",
+            f"<!-- /runtime:{runtime} -->",
+        ]
     if extra_section:
         parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
     return frontmatter + "\n".join(parts) + "\n"
+
+
+def write_spx_tree_with_tests(
+    spx_dir: pathlib.Path, extensions: tuple[str, ...]
+) -> pathlib.Path:
+    """Create an ``spx/`` tree carrying one node whose ``tests/`` holds the given extensions.
+
+    Lets language-detection tests drive the CLI edge against a real on-disk tree: the
+    detector globs ``spx/**/tests/`` and maps each test-file extension to its language.
+    """
+    tests_dir = spx_dir / "21-node.enabler" / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    for extension in extensions:
+        (tests_dir / f"test_subject.scenario.l1.{extension}").write_text(
+            "", encoding="utf-8"
+        )
+    return spx_dir
 
 
 def write_template(
@@ -153,24 +187,5 @@ def write_template(
     path = directory / "spx-claude.md"
     path.write_text(
         build_template(version, extra_section=extra_section), encoding="utf-8"
-    )
-    return path
-
-
-def write_guide_without_languages(
-    directory: pathlib.Path, version: str
-) -> pathlib.Path:
-    """Write a guide whose frontmatter records a version but no ``languages`` key.
-
-    The pre-render-model / hand-written shape an update must not silently empty.
-    """
-    module = load_update_spx_module()
-    path = directory / "CLAUDE.md"
-    path.write_text(
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{module.FRONTMATTER_DELIMITER}\n\n# spx/ Directory Guide\n",
-        encoding="utf-8",
     )
     return path

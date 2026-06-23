@@ -1,33 +1,36 @@
 # Update spx/
 
-PROVIDES detection and rendering of a product's `spx/CLAUDE.md` from the installed spec-tree template, scoped to the project's enabled languages
-SO THAT all spec-tree projects
-CAN stay current with methodology changes without manual template tracking
+PROVIDES deterministic generation of a product's two spx-level guide files — `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex — from one installed template, scoped to the project's enabled languages and rendered per agent runtime
+SO THAT every agent working a spec-tree project
+CAN read its own runtime's guidance, kept current by a gate without manual template tracking or agent judgment
 
 ## Assertions
 
 ### Scenarios
 
-- Given a template with language-conditional blocks, when the guide is scaffolded with an enabled-language set, then the rendered output contains exactly the enabled languages' blocks ([test](tests/test_update_spx.scenario.l1.py))
-- Given a guide recording an enabled-language set and a newer template that adds a section, when the guide is updated, then the re-rendered guide contains the new section and still carries the recorded enabled languages ([test](tests/test_update_spx.scenario.l1.py))
-- Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide, and reports `stale` when `--languages` is supplied and differs from the guide's recorded set; `--write` without `--product` exits non-zero; and `--write` creates the guide file ([test](tests/test_update_spx.scenario.l1.py))
+- Given a template with language blocks and per-runtime blocks, when the guide is generated for an enabled-language set, then both `spx/CLAUDE.md` and `spx/AGENTS.md` are written, each containing exactly the enabled languages' blocks and only its own runtime's blocks ([test](tests/test_update_spx.scenario.l1.py))
+- Given the `CLAUDE.md` and `AGENTS.md` outputs of one generation, when they are compared, then they share every line except the runtime-divergent spans — the auditor-subagent mandate, the runtime tool names, and the guide's own filename ([test](tests/test_update_spx.scenario.l1.py))
+- Given a newer template that adds a section, when the guide is updated, then both re-rendered files contain the new section and still carry the recorded enabled languages ([test](tests/test_update_spx.scenario.l1.py))
+- Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide, reports `stale` when the detected language set differs from the recorded set, and `--write` creates both guide files ([test](tests/test_update_spx.scenario.l1.py))
 - Given a guide whose `template_version` is not parseable as dotted integers, when staleness is checked, then it is treated as stale rather than raising, so a re-render normalizes it to the installed version ([test](tests/test_update_spx.scenario.l1.py))
-- Given an update of a guide that records no `languages` frontmatter key, the update refuses without a supplied `--languages` rather than silently emptying the guide's language sections, and renders when a language set is supplied ([test](tests/test_update_spx.scenario.l1.py))
 
 ### Mappings
 
-- Over the languages the template defines blocks for, a language's block appears in the rendered guide when the language is in the guide's recorded `languages` and is omitted otherwise ([test](tests/test_update_spx.mapping.l1.py))
+- Over the languages the template defines blocks for, a language's block appears in a rendered guide when the language is in the detected enabled set and is omitted otherwise ([test](tests/test_update_spx.mapping.l1.py))
+- A test-file extension present under `spx/**/tests/` maps to the language it denotes, and the detected enabled-language set is the set of those mappings ([test](tests/test_update_spx.mapping.l1.py))
 
 ### Properties
 
-- After a scaffold or an update, the `template_version` in the output equals the installed template version ([test](tests/test_update_spx.property.l1.py))
-- Every rendered guide ends with exactly one trailing newline ([test](tests/test_update_spx.property.l1.py))
+- After generation, each output file's `template_version` equals the installed template version ([test](tests/test_update_spx.property.l1.py))
+- Every rendered guide file ends with exactly one trailing newline ([test](tests/test_update_spx.property.l1.py))
 - Staleness ordering matches dotted-numeric version order: a product version is stale exactly when it is numerically below the installed template version ([test](tests/test_update_spx.property.l1.py))
 
 ### Compliance
 
-- ALWAYS: `/understand` detects the project's enabled languages and flags the guide stale when its recorded `languages` or `template_version` fall behind the detected languages or the installed template — staleness detection runs once per session ([audit])
-- ALWAYS: `/handoff` checks for the staleness marker emitted by `/understand` and includes it in the persistence proposal ([audit])
-- NEVER: the render substitutes a product-specific string into the guide body — a brace-delimited token in the template passes through unchanged ([test](tests/test_update_spx.compliance.l1.py))
-- NEVER: an update keeps an unmodeled hand-prose edit to the guide body — a re-render reflects only the template and the recorded enabled languages ([test](tests/test_update_spx.compliance.l1.py))
-- NEVER: the canonical spx-level guide template instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: generation writes both `spx/CLAUDE.md` and `spx/AGENTS.md`, never one without the other — each agent reading the same repository gets its own runtime's guide ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: regenerating a drifted guide overwrites the drift — a re-render restores the template's content over any hand-edit, the basis of the regenerate-and-diff gate that keeps both files current without an agent invocation ([test](tests/test_update_spx.compliance.l1.py))
+- NEVER: the render substitutes a product-specific string into a guide body — a brace-delimited token in the template passes through unchanged ([test](tests/test_update_spx.compliance.l1.py))
+- NEVER: an update keeps an unmodeled hand-prose edit to a guide body — a re-render reflects only the template, the recorded enabled languages, and the runtime ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: `/understand` surfaces guide staleness once per session by running the deterministic `update_spx.py --check` over both guide files — languages read from the project's `spx/**/tests/` extensions — and emits `<SPX_CLAUDE_STALE>` from that verdict without in-conversation judgment ([audit])
+- ALWAYS: `/handoff` carries the `<SPX_CLAUDE_STALE>` marker into its persistence proposal so the operator can reconcile a stale or absent guide ([audit])
+- NEVER: any rendered guide file instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([test](tests/test_update_spx.compliance.l1.py))

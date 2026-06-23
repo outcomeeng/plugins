@@ -1,12 +1,12 @@
 ---
 name: understand
 description: ALWAYS invoke this skill before any spec-tree work to load methodology. NEVER create, read, or modify spec tree files without loading this foundation first.
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
 <objective>
 
-The Spec Tree methodology — truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds — loaded into the conversation as a shared foundation.
+The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds, so every subsequent spec-tree skill operates from a shared methodology foundation.
 
 </objective>
 
@@ -87,22 +87,19 @@ Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
 ```
 
-8. Check the product's spx-level guide for template drift (once per session — the step 1 foundation-marker guard makes this run on first load only). The guide is `spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file. The canonical template lives in this skill's own directory at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Read its frontmatter `template_version`, the guide's frontmatter `template_version` and `languages`, and detect the languages the project actually uses (from its spec-tree test files and enabled language plugins). Emit the staleness marker when any of these hold:
+8. Check the product's spx-level guides for template drift (once per session — the step 1 foundation-marker guard makes this run on first load only). The guide is two generated files, `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex, rendered from the canonical template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Do NOT judge staleness or detect languages in this conversation — run the deterministic checker, which reads the enabled languages from the project's `spx/**/tests/` extensions and compares both guide files against the installed template:
 
-   - The guide is absent — emit `status="absent"`.
-   - The guide exists but carries no `template_version` frontmatter key — emit `status="stale"`. A pre-render-model or hand-written guide holds no version to compare; treat it as behind the installed template so `/update-spx` re-renders it onto the render model.
-   - The guide's `template_version` is numerically below the installed template's `template_version` — emit `status="stale"`.
-   - The guide's recorded `languages` differ from the languages the project actually uses — emit `status="stale"`. The render scopes the guide to the project's languages, so a drift (a language added or dropped since the last render) leaves the guide carrying the wrong language sections.
+   ```bash
+   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/templates/spx-claude.md" --spx-dir "$(git rev-parse --show-toplevel)/spx" --check
+   ```
 
-   Compare versions by dotted-numeric order, not string inequality: a guide whose `template_version` equals or exceeds the installed one is not stale (a guide ahead of the install would only be downgraded by a re-render), matching the `update-spx` helper's strictly-below `--check` verdict. The marker lets `/handoff` carry the staleness into the persistence proposal so the operator can run `/update-spx` (which re-renders the guide from the installed template, scoped to the detected languages):
+   It prints one of `current`, `stale`, or `absent` — the worst status across the two guide files. Emit the staleness marker when the output is `stale` or `absent`, and nothing when it is `current`. The marker lets `/handoff` carry the staleness into the persistence proposal so the operator can run `/update-spx`, which regenerates both guides from the installed template:
 
 ```text
 <SPX_CLAUDE_STALE status="[stale|absent]">
-spx/CLAUDE.md [is behind the installed template or scoped to the wrong languages | is not present]; run /update-spx to reconcile.
+spx/CLAUDE.md and spx/AGENTS.md [are behind the installed template or scoped to the wrong languages | are not both present]; run /update-spx to reconcile.
 </SPX_CLAUDE_STALE>
 ```
-
-When the guide carries a `template_version` not below the installed template's and records the languages the project uses, emit nothing.
 
 </workflow>
 
@@ -141,6 +138,6 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 - [ ] Methodology loaded: a clean working tree with committed changes ahead of the resolved base is unfinished, and passing validation, tests, review, or audit gates are progress gates, not a stopping point, for changes destined for the default branch
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
 - [ ] Methodology loaded: five verification types (validation, testing, reviewing, auditing, evaluating) across verdict mode (deterministic/agentic) and purpose (conformance/correctness); three back the assertion tags (`[test]`, `[eval]`, `[audit]`)
-- [ ] `spx/CLAUDE.md` drift check run once per session; `<SPX_CLAUDE_STALE>` marker emitted when the product guide is absent (`status="absent"`), exists but carries no `template_version` key (`status="stale"`), its `template_version` is numerically below the installed template (`status="stale"`), or its recorded `languages` differ from the project's languages in use (`status="stale"`)
+- [ ] Two-file guide drift check run once per session via the deterministic `update_spx.py --check --spx-dir spx` (no in-conversation staleness judgment or language detection); `<SPX_CLAUDE_STALE>` marker emitted when its output is `stale` or `absent`, nothing when `current`
 
 </success_criteria>

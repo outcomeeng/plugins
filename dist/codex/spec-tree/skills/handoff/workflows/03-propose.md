@@ -1,5 +1,5 @@
 <objective>
-Present the combined output of the four reflection perspectives as a persistence proposal. Only items that require user approval appear here. Imperfections fixed inline during workflow 02 are done — report them as completed work, not as proposals.
+A persistence proposal carrying only the items that require user approval, derived from the four reflection perspectives of workflow 02. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
 
 </objective>
 
@@ -20,10 +20,10 @@ This header is declared intent, not a vote. Default path is archive-all-listed. 
 </session_disposition_header>
 
 <spx_claude_staleness>
-When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understand` when the product's `spx/CLAUDE.md` is absent or its `template_version` differs from the installed template — include a proposal item to reconcile it:
+When a `<SPX_CLAUDE_STALE>` marker is present in the conversation — emitted by `/understand` when the product's `spx/CLAUDE.md` and `spx/AGENTS.md` are absent or behind the installed template — include a proposal item to reconcile it:
 
 ```text
-☑ [Imperfection → run /update-spx] spx/CLAUDE.md is [stale|absent] vs the installed template — reconcile via /update-spx
+☑ [Imperfection → run /update-spx] spx/CLAUDE.md and spx/AGENTS.md are [stale|absent] vs the installed template — reconcile via /update-spx
 ```
 
 Include this item even when no other imperfection surfaced — template drift is a real, actionable continuation the operator should see.

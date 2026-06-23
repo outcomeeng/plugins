@@ -18,6 +18,11 @@ pre-commit:
       run: just build-skills && uv run python -m outcomeeng.distribution.dist_diff
       stage_fixed: true
       priority: 20
+    regenerate-spx-guides:
+      glob: "{src/plugins/spec-tree/skills/understand/templates/spx-claude.md,src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py,spx/**/tests/*}"
+      run: python3 src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py --template src/plugins/spec-tree/skills/understand/templates/spx-claude.md --spx-dir spx --write
+      stage_fixed: true
+      priority: 25
     dprint:
       glob: "*.{md,python,ts,js,json,jsonc}"
       run: dprint fmt {staged_files}

@@ -1,14 +1,19 @@
-"""Pure helpers for rendering a product's ``spx/CLAUDE.md`` from the spec-tree template.
+"""Deterministic generator for a product's two spx-level guide files.
 
-The spx-level directory guide is generated, not hand-merged, and carries no substituted
-strings: its only per-product variation is the enabled-language list, so a re-render keeps
-the blocks for those languages and drops the rest (see the node's Guide Render Model ADR).
-An update re-renders the new template with the guide's recorded language list, so new
-template content propagates while the language selection is preserved.
+One repository is worked by both Claude Code and Codex at once, and each reads its own
+filename from the same ``spx/`` directory, so the guide is two generated files —
+``CLAUDE.md`` for Claude Code and ``AGENTS.md`` for Codex. Both render from one canonical
+template: the body is shared, and the spans that differ by agent runtime are authored once
+as ``<!-- runtime:NAME -->`` blocks rendered only into that runtime's file, mirroring the
+``<!-- lang:NAME -->`` language blocks. The only per-product variation is the
+enabled-language list (see the node's Guide Render Model ADR).
 
-Every function here takes document strings and returns document strings — no filesystem,
-environment, or subprocess access. The skill's CLI edge reads the template and guide files,
-resolves the language list, and writes the result; language detection lives in the caller.
+Generation is deterministic and needs no agent judgment: the enabled-language list is read
+from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version and
+language-set comparison, and the render is a pure string transformation. The parse,
+version-compare, language-filter, runtime-filter, and render functions take document strings
+and return document strings — no filesystem, environment, or subprocess access. The CLI edge
+reads the template, globs the test extensions, and writes both files.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ import argparse
 import pathlib
 import re
 import sys
+from collections.abc import Iterable
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
@@ -24,8 +30,19 @@ TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
 
+# Each agent runtime reads its own guide filename from the product's spx/ directory.
+RUNTIME_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+
+# Test-file extension -> the language it denotes. The enabled-language set is read from the
+# product's own test files, the in-use ground truth, rather than from agent judgment.
+LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust"}
+
 _LANG_BLOCK = re.compile(
     r"[ \t]*<!-- lang:(?P<lang>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /lang:(?P=lang) -->\n?",
+    re.DOTALL,
+)
+_RUNTIME_BLOCK = re.compile(
+    r"[ \t]*<!-- runtime:(?P<runtime>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /runtime:(?P=runtime) -->\n?",
     re.DOTALL,
 )
 _BLANK_RUN = re.compile(r"\n{3,}")
@@ -83,17 +100,6 @@ def parse_languages(text: str) -> tuple[str, ...]:
     return _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
 
 
-def has_languages(text: str) -> bool:
-    """Whether a guide records a ``languages`` frontmatter key, even if it is empty.
-
-    A guide predating the render model records no `languages` key; re-rendering it with
-    an empty list would silently drop its language sections, so the caller must supply
-    the list explicitly rather than fall through to an empty render.
-    """
-    frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(frontmatter, LANGUAGES_KEY) is not None
-
-
 def _version_tuple(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
@@ -121,15 +127,48 @@ def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     return _LANG_BLOCK.sub(replace, body)
 
 
-def render(
-    template_text: str, languages: tuple[str, ...], installed_version: str
-) -> str:
-    """Render a guide from the template and the enabled-language list.
+def _filter_runtime(body: str, runtime: str) -> str:
+    """Keep each ``runtime:NAME`` block whose NAME is the target runtime; drop the rest."""
 
-    Language-conditional blocks render only for enabled languages; nothing else is
-    substituted, so brace-delimited illustration tokens pass through unchanged. The output
-    frontmatter records the version, source, and language list so a later update reads the
-    languages back.
+    def replace(match: re.Match[str]) -> str:
+        if match.group("runtime") == runtime:
+            return match.group("body") + "\n"
+        return ""
+
+    return _RUNTIME_BLOCK.sub(replace, body)
+
+
+def language_for_extension(extension: str) -> str | None:
+    """Map a test-file extension (with or without a leading dot) to its language, or None."""
+    return LANGUAGE_BY_EXTENSION.get(extension.lstrip("."))
+
+
+def detect_languages(extensions: Iterable[str]) -> tuple[str, ...]:
+    """Map a set of test-file extensions to the sorted languages they denote.
+
+    Pure: the enabled-language set is the languages the product's own test extensions map
+    to, computed without agent judgment or filesystem access. The caller globs the extensions.
+    """
+    languages = {
+        language
+        for extension in extensions
+        if (language := language_for_extension(extension)) is not None
+    }
+    return tuple(sorted(languages))
+
+
+def render(
+    template_text: str,
+    languages: tuple[str, ...],
+    installed_version: str,
+    runtime: str,
+) -> str:
+    """Render one runtime's guide from the template and the enabled-language list.
+
+    Language-conditional blocks render only for enabled languages and runtime-conditional
+    blocks only for ``runtime``; nothing else is substituted, so brace-delimited illustration
+    tokens pass through unchanged. The output frontmatter records the version, source, and
+    language list so a later update reads the languages back.
     """
     template_frontmatter, template_body = _split_frontmatter(template_text)
     source = (
@@ -138,6 +177,7 @@ def render(
     )
 
     body = _filter_languages(template_body, languages)
+    body = _filter_runtime(body, runtime)
     body = _BLANK_RUN.sub("\n\n", body)
 
     out_frontmatter = [
@@ -151,15 +191,47 @@ def render(
     return rendered.rstrip("\n") + "\n"
 
 
+def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
+    """CLI-edge helper: glob ``spx/**/tests/`` extensions and map them to languages.
+
+    The filesystem read lives here at the edge, not in the pure render functions.
+    """
+    extensions = {
+        path.suffix.lstrip(".") for path in spx_dir.glob("**/tests/*") if path.is_file()
+    }
+    return detect_languages(extensions)
+
+
+def guide_status(
+    guide_path: pathlib.Path, installed_version: str, languages: tuple[str, ...]
+) -> str:
+    """CLI-edge helper: return ``absent``, ``stale``, or ``current`` for one guide file.
+
+    The filesystem read lives here at the edge, not in the pure render functions.
+    """
+    if not guide_path.is_file():
+        return "absent"
+    text = guide_path.read_text(encoding="utf-8")
+    version = parse_template_version(text)
+    if version is None or is_stale(version, installed_version):
+        return "stale"
+    if parse_languages(text) != languages:
+        return "stale"
+    return "current"
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Thin CLI edge: read the template and guide, resolve languages, emit the result."""
+    """Thin CLI edge: read the template, detect languages, render and write both guide files."""
     parser = argparse.ArgumentParser(
-        description="Render a product's spx/CLAUDE.md from the spec-tree template."
+        description="Generate a product's spx/CLAUDE.md and spx/AGENTS.md from the template."
     )
     parser.add_argument(
         "--template", required=True, help="Path to the canonical template."
     )
-    parser.add_argument("--product", help="Path to the product's spx/CLAUDE.md.")
+    parser.add_argument(
+        "--spx-dir",
+        help="Path to the product's spx/ directory holding both guide files.",
+    )
     parser.add_argument(
         "--check",
         action="store_true",
@@ -168,11 +240,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Write the result to --product instead of stdout.",
+        help="Write both guide files under --spx-dir instead of stdout.",
     )
     parser.add_argument(
         "--languages",
-        help="Comma-separated enabled languages; preserves the guide's recorded list when omitted.",
+        help="Comma-separated enabled languages; detected from spx/**/tests/ extensions when omitted.",
     )
     args = parser.parse_args(argv)
 
@@ -182,52 +254,45 @@ def main(argv: list[str] | None = None) -> int:
         print("error: template has no template_version", file=sys.stderr)
         return 2
 
-    product_path = pathlib.Path(args.product) if args.product else None
-    product_text = (
-        product_path.read_text(encoding="utf-8")
-        if product_path is not None and product_path.is_file()
-        else None
-    )
-
-    if args.check:
-        if product_text is None:
-            print("absent")
-            return 0
-        product_version = parse_template_version(product_text)
-        version_stale = product_version is None or is_stale(product_version, installed)
-        languages_drifted = args.languages is not None and parse_languages(
-            product_text
-        ) != _parse_languages(args.languages)
-        print("stale" if version_stale or languages_drifted else "current")
-        return 0
-
-    if args.write and product_path is None:
-        print("error: --write requires --product", file=sys.stderr)
-        return 2
-
-    if (
-        args.languages is None
-        and product_text is not None
-        and not has_languages(product_text)
-    ):
-        print(
-            "error: guide records no languages; rerun with --languages",
-            file=sys.stderr,
-        )
-        return 2
+    spx_dir = pathlib.Path(args.spx_dir) if args.spx_dir else None
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
-    elif product_text is not None:
-        languages = parse_languages(product_text)
+    elif spx_dir is not None:
+        languages = detect_languages_from_tree(spx_dir)
     else:
         languages = ()
-    result = render(template_text, languages, installed)
 
-    if args.write and product_path is not None:
-        product_path.write_text(result, encoding="utf-8")
+    if args.check:
+        if spx_dir is None:
+            print("error: --check requires --spx-dir", file=sys.stderr)
+            return 2
+        statuses = {
+            guide_status(spx_dir / filename, installed, languages)
+            for filename in RUNTIME_GUIDE_FILENAMES.values()
+        }
+        # Absent dominates stale dominates current: report the worst across both files.
+        for verdict in ("absent", "stale", "current"):
+            if verdict in statuses:
+                print(verdict)
+                break
+        return 0
+
+    if args.write and spx_dir is None:
+        print("error: --write requires --spx-dir", file=sys.stderr)
+        return 2
+
+    rendered = {
+        filename: render(template_text, languages, installed, runtime)
+        for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
+    }
+
+    if args.write and spx_dir is not None:
+        for filename, content in rendered.items():
+            (spx_dir / filename).write_text(content, encoding="utf-8")
     else:
-        sys.stdout.write(result)
+        for filename, content in rendered.items():
+            sys.stdout.write(f"=== {filename} ===\n{content}")
     return 0
 
 

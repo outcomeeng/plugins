@@ -1,66 +1,61 @@
 ---
 name: update-spx
 description: >-
-  ALWAYS invoke this skill when updating, refreshing, or scaffolding a product's spx/CLAUDE.md from the installed spec-tree template. NEVER hand-edit spx/CLAUDE.md to a new template version without this skill.
-allowed-tools: Bash, Read, AskUserQuestion
+  ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's two spx-level guide files (spx/CLAUDE.md and spx/AGENTS.md) from the installed spec-tree template. NEVER hand-edit either guide file to a new template version without this skill.
+allowed-tools: Bash(python3:*), Read
 ---
 
 <objective>
-A product's spx-level directory guide rendered current from the installed spec-tree template, scoped to the project's enabled-language list.
+Both spx-level directory guides — `spx/CLAUDE.md` and `spx/AGENTS.md` — regenerated to the installed template version, language-filtered to the extensions the project's tests use and runtime-filtered per file.
 </objective>
 
 <context>
-The canonical template is the single copy in the understanding skill at `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Its frontmatter `template_version` is the installed version; the guide carries its own `template_version` plus the `languages` list. The guide is stale when its version is numerically below the installed one, or when its recorded `languages` no longer match the project's languages in use.
+The guide is two generated files because one repository is worked by both Claude Code and Codex and each reads its own filename. Both render from one template: the body is shared, the spans that differ by agent runtime are authored as per-runtime blocks rendered into each file, and the only per-product variation is the enabled-language list. Generation is deterministic and needs no agent judgment; the regenerate-and-diff gate keeps the guides current on every commit, and this skill is the manual trigger over the same generator. The parse, compare, filter, and render logic lives in `scripts/update_spx.py`, governed by the node's Guide Render Model ADR.
 
-The spx-level guide is `spx/CLAUDE.md`. Where `spx/CLAUDE.md` is a symlink to `spx/AGENTS.md`, reads and writes follow the link; in a repo that ships only `spx/AGENTS.md`, target that file. Resolve the actual guide path before reading or writing.
-
-`/understand` detects the project's languages and reports staleness once per session, and `/handoff` carries that marker into its persistence proposal. This skill applies the update.
+The canonical template is the single copy in the understanding skill at `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Its frontmatter `template_version` is the installed version; each guide carries its own `template_version` plus the `languages` list. A guide is stale when its version is numerically below the installed one, or when its recorded `languages` differ from the languages the project's tests use. The enabled-language set is read deterministically from the test-file extensions under `spx/**/tests/` — no agent decides it.
 </context>
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Guide: the product's spx-level guide (`spx/CLAUDE.md`, or `spx/AGENTS.md` where that is the real file), referred to below as `<guide>`.
+1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Guide directory: the product's `spx/` directory, referred to below as `<spx-dir>`; the generator writes `<spx-dir>/CLAUDE.md` and `<spx-dir>/AGENTS.md`.
 
-2. **Determine the enabled languages.** Identify the languages the project uses — from `/understand`'s detection, or by inspecting the project's spec-tree test files and enabled language plugins. When interactive and the set is unclear, confirm it with `AskUserQuestion`. This is the comma-separated `<languages>` used below. (Running non-interactively without a known set — the background `spx-updater` agent — leaves `<languages>` unavailable; see the `absent` and non-interactive notes below.)
-
-3. **Detect status.** Run, passing the determined languages so the check catches a language drift as well as a version gap:
+2. **Detect status.** Run:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --product <guide> --languages <languages> --check
+   python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --spx-dir <spx-dir> --check
    ```
 
-   The output is one of `current`, `stale`, or `absent`. `stale` covers both a `template_version` behind the installed template and a recorded-language set that differs from `<languages>`.
+   The output is one of `current`, `stale`, or `absent` — the worst status across the two guide files. The enabled-language set is detected from `<spx-dir>/**/tests/` extensions; pass `--languages <csv>` only to override the detection.
 
-4. **Act on the status.**
+3. **Act on the status.**
 
-   - **`current`** — report that the guide is up to date. Stop.
-   - **`stale`** — re-render in place, scoped to the enabled languages:
+   - **`current`** — report that both guides are up to date. Stop.
+   - **`stale` or `absent`** — regenerate both files:
 
      ```bash
-     python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --product <guide> --languages <languages> --write
+     python3 "${CLAUDE_SKILL_DIR}/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --spx-dir <spx-dir> --write
      ```
 
-     New template sections arrive, the guide is scoped to `<languages>`, and `template_version` is set to the installed version.
-   - **`absent`** — scaffold with the same `--write` command. When running non-interactively without a known language set, omit `--languages`; the scaffold renders no language sections, and the report states the language list must be set.
+     New template sections arrive, each file is scoped to the detected languages and its own runtime, and `template_version` is set to the installed version.
 
-5. **Report.** State the version transition and the enabled-language list the guide was scoped to (update or scaffold), or that the language list is pending (non-interactive scaffold).
+4. **Report.** State the version transition and the detected enabled-language list both guides were scoped to.
 
 </workflow>
 
 <constraints>
-- NEVER edit the deterministic parse, compare, or render logic here — it lives in `scripts/update_spx.py`, governed by the node's Guide Render Model ADR.
-- NEVER hand-merge or section-diff the guide against the template — the guide is rendered from the template and the enabled-language list; re-render is the update mechanism.
-- NEVER substitute a product-specific string into the guide — the guide carries only template content and language filtering; the only per-product variation is the `languages` list.
+- NEVER edit the deterministic parse, compare, filter, or render logic here — it lives in `scripts/update_spx.py`, governed by the node's Guide Render Model ADR.
+- NEVER write only one of the two guide files — `spx/CLAUDE.md` and `spx/AGENTS.md` are generated together, and neither is a symlink to the other.
+- NEVER hand-merge or section-diff a guide against the template — re-render is the update mechanism.
+- NEVER substitute a product-specific string into a guide — the guide carries template content, language filtering, and per-runtime blocks only.
 - The template has one home, the understanding skill's `templates/`. Read it through `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`; never copy it into this skill.
-
 </constraints>
 
 <success_criteria>
 
-- The guide's `template_version` matches the installed template after an update.
-- Enabled-language blocks render and disabled-language blocks are omitted, per the guide's `languages`.
-- Sections newly introduced by the template propagate into the guide on update; the language selection is preserved or updated to the project's current languages.
-- A product with no guide gets a scaffold scoped to the supplied languages, or no language sections (with the pending-language report) when run non-interactively.
+- Both `spx/CLAUDE.md` and `spx/AGENTS.md` exist and carry the installed `template_version` after a regenerate.
+- Enabled-language blocks render and disabled-language blocks are omitted, per the languages the project's tests use.
+- Each guide carries only its own runtime's blocks; the other runtime's blocks are dropped.
+- Sections newly introduced by the template propagate into both guides on regenerate.
 - No deterministic logic is duplicated in this skill body.
 
 </success_criteria>
