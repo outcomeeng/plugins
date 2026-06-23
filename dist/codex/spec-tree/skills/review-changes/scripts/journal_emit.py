@@ -26,6 +26,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import subprocess
 import sys
 from dataclasses import dataclass
 from types import ModuleType
@@ -352,6 +353,7 @@ def _emit_metadata(args: argparse.Namespace) -> int:
         changeset_scope.DetachedHeadError,
         OSError,
         RuntimeError,
+        subprocess.CalledProcessError,
         ValueError,
     ) as exc:
         sys.stderr.write(f"{exc}\n")

@@ -8,6 +8,7 @@ and that the terminal event carries the reviewed diff's identity.
 from __future__ import annotations
 
 import pathlib
+import subprocess
 
 from typing import Any
 
@@ -244,3 +245,34 @@ def test_metadata_scope_hash_includes_full_review_input(
         jp.RUN_STATE_SCOPE
     ]["reviewInputSha256"]
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
+
+
+def test_metadata_cli_reports_git_failure_without_traceback(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/nope")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: (_ for _ in ()).throw(
+            subprocess.CalledProcessError(128, ["git", "diff", range_spec])
+        ),
+    )
+
+    exit_code = je.main(
+        [
+            "metadata",
+            "--started-at",
+            "2026-06-23T00:00:00Z",
+            "--completed-at",
+            "2026-06-23T00:00:05Z",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "returned non-zero exit status 128" in captured.err
+    assert "Traceback" not in captured.err
