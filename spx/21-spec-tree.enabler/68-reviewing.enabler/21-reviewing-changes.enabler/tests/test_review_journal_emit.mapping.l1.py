@@ -145,6 +145,8 @@ def test_config_digest_changes_with_render_template(tmp_path: pathlib.Path) -> N
     first = tmp_path / "first"
     second = tmp_path / "second"
     _write_skill_config(first, prompt="review prompt", document_template="document one")
-    _write_skill_config(second, prompt="review prompt", document_template="document two")
+    _write_skill_config(
+        second, prompt="review prompt", document_template="document two"
+    )
 
     assert je.review_config_digest(first) != je.review_config_digest(second)
