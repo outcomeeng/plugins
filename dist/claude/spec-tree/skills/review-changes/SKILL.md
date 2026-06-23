@@ -84,7 +84,7 @@ Claude drives the chain top-to-bottom. Every JSON document Claude emits passes t
    spx journal seal --type review --run "$RUN_TOKEN" >/dev/null
    REVIEW_RENDERED=$(spx journal read --type review --run "$RUN_TOKEN" --from 0 \
      | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render)
-   printf 'runToken: %s\n' "$RUN_TOKEN"
+   printf '%s\n' "$RUN_TOKEN"
    printf '%s\n' "$REVIEW_RENDERED" \
      | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data["countLine"]); print(data["surface"] if int(data["blocking"]) or int(data["debt"]) else "", end="")'
    ```
