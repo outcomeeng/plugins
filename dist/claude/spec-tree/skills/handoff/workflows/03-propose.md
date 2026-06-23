@@ -4,7 +4,7 @@ A persistence proposal carrying only the items that require user approval, deriv
 </objective>
 
 <session_disposition_header>
-Before the `AskUserQuestion` block, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
+Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
 
 ```text
 Canonical continuation: <rewrite-in-place of <artifact-id> | new handoff | none (--no-session)>
@@ -13,7 +13,11 @@ Sessions to archive after closure: <id-1>, <id-2>, ...
 
 The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">` marker emitted by workflow 02 — every session in `ids` (claimed), plus the artifact only if it will be archived rather than rewritten. If `ids=""` (fresh handoff, no prior pickup) and `artifact_id="none"`, write `Sessions to archive after closure: none`.
 
-This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before answering the proposal. Never leave a claimed session beside the new continuation.
+This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
+
+When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is mandatory unless the user disputes the signal. Do not present "omit handoff" as a normal option. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, archive the completed session and carry the remaining node work through the canonical continuation: rewrite the mid-session artifact in place when `artifact_id` is present, otherwise create a new thin handoff. If the user passed `--no-session`, workflow 04 Path A handles that as a contradiction to resolve, not as a normal proposal choice.
+
+When no persistence items require user approval, do not call `AskUserQuestion` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
 
 **STOP if the user disputes the disposition.** If the user objects to the canonical continuation plan, the archive list, or any session id in either, halt the workflow. Do not proceed to workflow 04, do not archive, do not write the canonical continuation. Return to workflow 02 and re-reflect with the user's correction before proposing again.
 
@@ -31,7 +35,7 @@ Include this item even when no other imperfection surfaced — template drift is
 </spx_claude_staleness>
 
 <process>
-Present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
+When one or more persistence items require user approval, present a single `AskUserQuestion` with `multiSelect: true`. Group items by type: imperfections (with their destination), path-forward insights, and a skip option for coordination-only items.
 
 ```json
 {
@@ -80,9 +84,15 @@ Don't collapse a long list into a terse summary option to fit the limit. Each ac
 <success_criteria>
 
 - Session-disposition header printed before the proposal, naming the canonical continuation plan and every session that will be archived.
-- User has reviewed and approved (or rejected) all proposed persistence items.
+- User has reviewed and approved (or rejected) all proposed persistence items, or no approval-required persistence items existed and the workflow proceeded without a structured question.
 - Approved items are recorded for execution in workflow 04.
 - Unapproved items are noted as coordination-only context for the session file.
 - When a `<SPX_CLAUDE_STALE>` marker is present, the proposal includes an `/update-spx` reconciliation item.
 
 </success_criteria>
+
+<failure_modes>
+
+**Asked whether to omit a required continuation.** Claude completed the claimed session's original deliverable, saw that the anchored node still had unrelated `PLAN.md` or `ISSUES.md` continuation, then asked the operator to approve either creating or omitting a handoff. That wasted a turn and implied the continuation signal was optional. When continuation is present, create the canonical continuation by default; ask only if the user explicitly requested `--no-session`, disputes the signal, or a separate persistence edit needs approval.
+
+</failure_modes>
