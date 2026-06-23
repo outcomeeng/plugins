@@ -99,7 +99,16 @@ NEVER offer the user a choice here. NEVER propose fixes, code, or any implementa
 
 The ONLY valid next action after presenting the session is to invoke `/contextualize` on the target node. The spec-tree methodology forbids all work without loaded context.
 
-If the session references multiple nodes, ask which node to start with. Otherwise, invoke immediately:
+If the session references a single node, invoke `/contextualize` on it immediately. If it references multiple nodes, do NOT ask on multiplicity alone — select the contextualization target by trying these rules in priority order and taking the first that resolves exactly one node, falling through to the next rule when a rule matches zero nodes or more than one:
+
+1. The node named in the `next_step` field immediately after a `/contextualize` reference.
+2. The node named on the `<skills>` "## Next action" line — the `spx/{node-path}` in its `/contextualize {node-path}` entry, or in its "TDD flow position: step N … on `spx/{node-path}`" line.
+3. The first `<nodes>` entry whose "Coordination notes" list a `PLAN.md` or `ISSUES.md` path.
+4. The first node listed in `<nodes>`.
+
+Rule 4 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic. Ask the user which node to start with only when `<nodes>` is empty or unreadable. After loading the first target, contextualize additional nodes only when the next action touches them.
+
+Invoke on the selected node:
 
 ```text
 Skill tool → { "skill": "spec-tree:contextualize", "args": "spx/{node-path}" }
@@ -168,6 +177,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
+- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 4 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
