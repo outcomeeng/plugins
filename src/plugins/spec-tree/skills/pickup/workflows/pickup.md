@@ -55,10 +55,12 @@ Before inspecting anchored nodes, presenting any session detail, or touching coo
 Do not present the session file's recorded claims as if they were current — the session document is a pointer whose detail is re-derived from the repository, not a source of truth. Reconcile every recorded claim against the now-current checkout by running the verification script, then present its result in place of the recorded snapshot:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py" <session-file> --repo <repo-root>
+python3 "${CLAUDE_SKILL_DIR}/scripts/verify_session_claims.py" <claimed-session-id> --repo <repo-root>
 ```
 
-The script reads only — it reaches `spx spec status`, `gh`, and `git` to observe, never to mutate — and emits one verdict per recorded claim:
+Pass the session id from `<PICKUP_CLAIM>`, never a `.spx/sessions/...` path. The `spx` CLI owns the shared session store in both single-worktree and bare-pool layouts; the verifier reads it through `spx session show --json` and `spx session show`.
+
+The script reads only — it reaches `spx session show`, `spx spec status`, `gh`, and `git` to observe, never to mutate — and emits one verdict per recorded claim:
 
 - `Confirmed` — current state matches the recorded claim.
 - `Discrepancy` — current state differs (a base that advanced over the node, a commit absent from history, a tree now dirty, a renamed path). Surface these prominently before any work proceeds.
