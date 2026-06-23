@@ -1,10 +1,18 @@
 # Issues: Verification Enabler
 
-## Run-journal contract leads its lower layers (known non-conformance)
+## Run-journal migration is in flight
 
-`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md` and `verification.md` declare the append-only run-journal contract in atemporal voice — present-tense product truth, not a conditional. Truth flows down, so the lower layers that have not yet migrated are non-conformant by design, not defective: the shipped `review-changes` skill still persists through thread-store's CRUD-overwrite facade; the `/audit` skill's stateful (`audit-orchestrator`) and PR-thread (`pr-reviewer`/`pr-review-orchestrator`) modes still write `.spx/audits` and render through `emit_verdict.py`; and `spx/21-spec-tree.enabler/16-verification.enabler/15-verdict-toolchain.enabler` still ships the verdict toolchain. `spx/21-spec-tree.enabler/17-auditing.adr.md` is reworked onto the journal contract, and its `### Audit` section now carries a NEVER rule against an audit writing a `.spx/audits` state file or recovering prior state from a rendered comment — which the still-toolchain stateful and PR-thread modes contradict by design until they migrate (`PLAN.md` PR2..N), so an audit of the `/audit` skill against the ADR reports a NEVER violation on those modes with this entry as its authoritative disposition. An audit of these surfaces against the contract reports the migration in flight — expected per the durable-map future-product-truth rule, not a defect to fix in place. The migration is tracked in this node's `PLAN.md`.
+`13-run-journal.adr.md` and `verification.md` declare present-tense product truth: every agentic verification run uses `spx journal` as its source of truth, and every surface is a projection from the sealed event prefix. Lower layers that still use the verdict toolchain or `thread_store` are therefore known migration debt, not fresh design choices.
 
-`@outcomeeng/spx@0.6.0` ships the `spx journal` channel (`open`/`append`/`read --from <cursor>`/`seal`/`render`, CloudEvents events, the verification kind an opaque `<type>` segment); the repo floor (`REQUIRED_SPX_VERSION`) and CI `SPX_VERSION` pin are at `0.6.0`. `spx journal render` is an **identity** projection over the event prefix — by spx design the type-agnostic channel carries no verification-kind-specific rendered surface — so the verdict rollup and the human-readable surface are consumer-side projections, not `render` output. The Python verdict toolchain (`15-verdict-toolchain.enabler`: `verdict.py` plus `emit_verdict.py`/`read_verdict.py`/`aggregate_verdicts.py`/`pass_results.py`) is removed, not reframed as "the projection"; `spx journal` is the source of truth, and the only surviving Python is the minimal consumer-side projection (event construction, rollup, human-surface render) governed by the auditing architecture. The corrected verb mapping and PR sequence are in `PLAN.md`.
+Current disposition:
+
+- `/audit` default local emit is on `spx journal` and the shared consumer projection; focused tests and live smoke tests passed. It still needs one real `/audit` workflow run before review migration starts.
+- `review-changes` still persists through `thread_store`; migrate it to `spx journal --type reviewing` and require sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
+- Stateful audit-orchestrator cross-run folding is blocked until `@outcomeeng/spx` exposes an ordered read/list of a branch/type scope's sealed runs. Upstream session: `2026-06-23_07-42-10`.
+- `spx journal render` is identity by design. Consumer-owned markdown/findings/check surfaces replace `emit_verdict.py`; they are not channel render output.
+- Keep the verdict toolchain only while child audit skills still emit verdict JSON. Delete it and `thread_store` after their consumers migrate.
+
+Use `PLAN.md` as the authoritative continuation map.
 
 ## Downstream enforcement for `[audit]` decision-rule modes (deferred)
 
