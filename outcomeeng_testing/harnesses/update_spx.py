@@ -56,6 +56,18 @@ NEW_SECTION = "Process Hygiene"
 # A brace-delimited illustration token the render must pass through unchanged.
 ILLUSTRATION_TOKEN = "{product-slug}"
 
+# Runtime payload: the template carries a per-runtime block for each agent runtime,
+# rendered only into that runtime's guide file. The marker syntax mirrors the module's
+# ``_RUNTIME_BLOCK`` contract; a test that drifts from it fails to render.
+RUNTIME_CLAUDE = "claude"
+RUNTIME_CODEX = "codex"
+TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
+
+
+def _runtime_line(runtime: str) -> str:
+    """The body the harness emits inside a runtime block — what render keeps or drops."""
+    return f"{runtime.upper()} runs the audit as a subagent."
+
 # Source-template compliance probes.
 SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
@@ -137,9 +149,34 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
             "",
             f"<!-- /lang:{language} -->",
         ]
+    for runtime in TEMPLATE_RUNTIMES:
+        parts += [
+            f"<!-- runtime:{runtime} -->",
+            "",
+            _runtime_line(runtime),
+            "",
+            f"<!-- /runtime:{runtime} -->",
+        ]
     if extra_section:
         parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]
     return frontmatter + "\n".join(parts) + "\n"
+
+
+def write_spx_tree_with_tests(
+    spx_dir: pathlib.Path, extensions: tuple[str, ...]
+) -> pathlib.Path:
+    """Create an ``spx/`` tree carrying one node whose ``tests/`` holds the given extensions.
+
+    Lets language-detection tests drive the CLI edge against a real on-disk tree: the
+    detector globs ``spx/**/tests/`` and maps each test-file extension to its language.
+    """
+    tests_dir = spx_dir / "21-node.enabler" / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
+    for extension in extensions:
+        (tests_dir / f"test_subject.scenario.l1.{extension}").write_text(
+            "", encoding="utf-8"
+        )
+    return spx_dir
 
 
 def write_template(

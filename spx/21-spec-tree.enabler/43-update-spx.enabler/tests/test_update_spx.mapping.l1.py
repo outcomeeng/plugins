@@ -13,6 +13,7 @@ import itertools
 import pytest
 
 from outcomeeng_testing.harnesses.update_spx import (
+    RUNTIME_CLAUDE,
     TEMPLATE_LANGUAGES,
     build_template,
     load_update_spx_module,
@@ -31,7 +32,24 @@ def _all_language_subsets() -> list[tuple[str, ...]]:
 @pytest.mark.parametrize("enabled", _all_language_subsets())
 def test_language_block_present_iff_enabled(enabled: tuple[str, ...]) -> None:
     module = load_update_spx_module()
-    rendered = module.render(build_template(VERSION), enabled, VERSION)
+    rendered = module.render(build_template(VERSION), enabled, VERSION, RUNTIME_CLAUDE)
     for language in TEMPLATE_LANGUAGES:
         heading = f"### {language.capitalize()}"
         assert (heading in rendered) is (language in enabled)
+
+
+def test_each_test_extension_maps_to_its_language() -> None:
+    module = load_update_spx_module()
+    for extension, language in module.LANGUAGE_BY_EXTENSION.items():
+        assert module.language_for_extension(extension) == language
+        assert module.language_for_extension(f".{extension}") == language
+        assert module.detect_languages((extension,)) == (language,)
+
+
+def test_detected_language_set_is_the_mapped_extensions() -> None:
+    module = load_update_spx_module()
+    all_extensions = tuple(module.LANGUAGE_BY_EXTENSION)
+    expected = tuple(sorted(set(module.LANGUAGE_BY_EXTENSION.values())))
+    assert module.detect_languages(all_extensions) == expected
+    # An extension with no language mapping contributes nothing.
+    assert module.detect_languages(("md", "txt")) == ()

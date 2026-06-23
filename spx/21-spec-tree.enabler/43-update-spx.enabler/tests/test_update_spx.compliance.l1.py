@@ -13,6 +13,7 @@ from __future__ import annotations
 from outcomeeng_testing.harnesses.update_spx import (
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
+    RUNTIME_CLAUDE,
     SESSION_ARCHIVE_RESULT_INSTRUCTION,
     SESSION_MANAGEMENT_HEADING,
     SESSION_RESULT_FRONTMATTER_FIELD,
@@ -28,20 +29,24 @@ JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
 
 def test_render_passes_brace_token_through_unchanged() -> None:
     module = load_update_spx_module()
-    rendered = module.render(build_template(VERSION), (LANG_PRIMARY,), VERSION)
+    rendered = module.render(
+        build_template(VERSION), (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE
+    )
     assert ILLUSTRATION_TOKEN in rendered
 
 
 def test_re_render_ignores_unmodeled_body_edits() -> None:
     module = load_update_spx_module()
     template = build_template(VERSION)
-    guide = module.render(template, (LANG_PRIMARY,), VERSION)
+    guide = module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
 
     tampered = guide + f"\n\n## Hand Section\n\n{JUNK_EDIT}\n"
-    updated = module.render(template, module.parse_languages(tampered), VERSION)
+    updated = module.render(
+        template, module.parse_languages(tampered), VERSION, RUNTIME_CLAUDE
+    )
 
     assert JUNK_EDIT not in updated
-    assert updated == module.render(template, (LANG_PRIMARY,), VERSION)
+    assert updated == module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
 
 
 def test_canonical_template_does_not_require_session_result_frontmatter() -> None:

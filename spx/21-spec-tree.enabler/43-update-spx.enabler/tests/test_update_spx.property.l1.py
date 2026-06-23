@@ -13,6 +13,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.update_spx import (
+    RUNTIME_CLAUDE,
     TEMPLATE_LANGUAGES,
     build_template,
     load_update_spx_module,
@@ -32,7 +33,9 @@ def test_render_output_version_equals_installed(
 ) -> None:
     module = load_update_spx_module()
     installed_str = _to_version(installed)
-    rendered = module.render(build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str)
+    rendered = module.render(
+        build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, RUNTIME_CLAUDE
+    )
     assert module.parse_template_version(rendered) == installed_str
 
 
@@ -42,7 +45,7 @@ def test_render_output_ends_with_single_newline(
 ) -> None:
     module = load_update_spx_module()
     rendered = module.render(
-        build_template("0.0.0"), TEMPLATE_LANGUAGES, _to_version(installed)
+        build_template("0.0.0"), TEMPLATE_LANGUAGES, _to_version(installed), RUNTIME_CLAUDE
     )
     assert rendered.endswith("\n")
     assert not rendered.endswith("\n\n")
