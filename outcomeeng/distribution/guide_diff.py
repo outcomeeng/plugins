@@ -14,6 +14,7 @@ leaving the freshly written guides uncommitted.
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -27,8 +28,6 @@ _GENERATOR: Final = (
 _TEMPLATE: Final = (
     _REPO_ROOT / "src/plugins/spec-tree/skills/understand/templates/spx-claude.md"
 )
-_GUIDE_PATHS: Final = ("spx/CLAUDE.md", "spx/AGENTS.md")
-
 HEADER: Final = "spx/ guide files differ from a fresh render."
 REMEDIATION: Final = (
     "Run `just guide-check` and commit the regenerated spx/CLAUDE.md and spx/AGENTS.md."
@@ -39,6 +38,22 @@ def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(args), cwd=_REPO_ROOT, capture_output=True, text=True, check=True
     )
+
+
+def guide_paths() -> tuple[str, ...]:
+    """Derive the spx-relative guide paths from the generator's own enumeration.
+
+    ``RUNTIME_GUIDE_FILENAMES`` in the shipped generator is the authoritative set of
+    runtime guide filenames; deriving from it rather than a parallel constant means a
+    new runtime's guide is covered by the drift check without editing this module.
+    """
+    spec = importlib.util.spec_from_file_location("update_spx", _GENERATOR)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load update_spx from {_GENERATOR}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    filenames: dict[str, str] = module.RUNTIME_GUIDE_FILENAMES
+    return tuple(f"spx/{name}" for name in filenames.values())
 
 
 def regenerate_guides() -> None:
@@ -62,8 +77,9 @@ def drifting_guides() -> list[str]:
     ``--intent-to-add`` makes an absent-from-index guide register as drift; a plain
     ``git diff`` reports only tracked changes and would pass silently on a first run.
     """
-    _run(["git", "add", "--intent-to-add", *_GUIDE_PATHS])
-    result = _run(["git", "diff", "--name-only", "--", *_GUIDE_PATHS])
+    paths = guide_paths()
+    _run(["git", "add", "--intent-to-add", *paths])
+    result = _run(["git", "diff", "--name-only", "--", *paths])
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
