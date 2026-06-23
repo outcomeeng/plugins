@@ -134,8 +134,22 @@ def events_for_review(
 
 
 def render_events(events: list[dict[str, object]]) -> dict[str, str]:
+    counts = {"blocking": 0, "debt": 0}
+    for event in events:
+        if event.get("type") != jp.FINDING_REPORTED:
+            continue
+        data = event.get("data")
+        if not isinstance(data, dict):
+            continue
+        if data.get("severity") == jp.Severity.REJECT:
+            counts["blocking"] += 1
+        if data.get("severity") == jp.Severity.WARNING:
+            counts["debt"] += 1
     return {
         "overall": str(jp.compute_overall(events)),
+        "blocking": str(counts["blocking"]),
+        "debt": str(counts["debt"]),
+        "countLine": f"BLOCKING: {counts['blocking']}, DEBT: {counts['debt']}",
         "surface": str(jp.render_surface(events)),
     }
 

@@ -100,6 +100,21 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_STATUS] == jp.JournalRunStatus.APPROVED
 
 
+def test_render_events_counts_review_findings_by_render_class() -> None:
+    result = _review_with_findings(
+        [
+            _finding(severity=review_result.Severity.BLOCKING, identifier="F-001"),
+            _finding(severity=review_result.Severity.DEBT, identifier="F-002"),
+        ]
+    )
+    events = je.events_for_review(result, _metadata(), now="2026-06-23T00:00:06Z")
+    rendered = je.render_events(events)
+
+    assert rendered["blocking"] == "1"
+    assert rendered["debt"] == "1"
+    assert rendered["countLine"] == "BLOCKING: 1, DEBT: 1"
+
+
 def test_adapter_rejects_missing_base_identity() -> None:
     result = _review_with_findings([])
     metadata = je.ReviewRunMetadata(

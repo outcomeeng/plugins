@@ -85,7 +85,7 @@ Claude drives the chain top-to-bottom. Every JSON document Claude emits passes t
    REVIEW_RENDERED=$(spx journal read --type review --run "$RUN_TOKEN" --from 0 \
      | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render)
    printf '%s\n' "$REVIEW_RENDERED" \
-     | python3 -c 'import json,sys; print(json.load(sys.stdin)["surface"])'
+     | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data["countLine"]); print(data["surface"] if int(data["blocking"]) or int(data["debt"]) else "", end="")'
    ```
 
 The append loop iterates a finite event list; it is not a polling wait. `render_review.py` and `journal_emit.py build-events` both parse through `review_result.parse_json`; an invalid result fails before any journal append.
