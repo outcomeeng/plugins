@@ -9,12 +9,13 @@ domain; Python tuple ordering is the independent oracle.
 
 from __future__ import annotations
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.update_spx import (
-    RUNTIME_CLAUDE,
     TEMPLATE_LANGUAGES,
+    TEMPLATE_RUNTIMES,
     build_template,
     load_update_spx_module,
 )
@@ -27,20 +28,24 @@ def _to_version(parts: tuple[int, int, int]) -> str:
     return ".".join(str(part) for part in parts)
 
 
+@pytest.mark.parametrize("runtime", TEMPLATE_RUNTIMES)
 @given(installed=_VERSION)
 def test_render_output_version_equals_installed(
+    runtime: str,
     installed: tuple[int, int, int],
 ) -> None:
     module = load_update_spx_module()
     installed_str = _to_version(installed)
     rendered = module.render(
-        build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, RUNTIME_CLAUDE
+        build_template("0.0.0"), TEMPLATE_LANGUAGES, installed_str, runtime
     )
     assert module.parse_template_version(rendered) == installed_str
 
 
+@pytest.mark.parametrize("runtime", TEMPLATE_RUNTIMES)
 @given(installed=_VERSION)
 def test_render_output_ends_with_single_newline(
+    runtime: str,
     installed: tuple[int, int, int],
 ) -> None:
     module = load_update_spx_module()
@@ -48,7 +53,7 @@ def test_render_output_ends_with_single_newline(
         build_template("0.0.0"),
         TEMPLATE_LANGUAGES,
         _to_version(installed),
-        RUNTIME_CLAUDE,
+        runtime,
     )
     assert rendered.endswith("\n")
     assert not rendered.endswith("\n\n")

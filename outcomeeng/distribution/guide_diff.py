@@ -75,13 +75,13 @@ def render_report(drift: Sequence[str]) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     try:
         regenerate_guides()
+        drift = drifting_guides()
     except subprocess.CalledProcessError as exc:
-        # Surface the generator's own diagnostic — captured output is otherwise
+        # Surface the failed command's own diagnostic — captured output is otherwise
         # swallowed by the default traceback, leaving the reporter unactionable.
         sys.stderr.write(exc.stderr or "")
-        print(f"{HEADER}\n  the spx-guide generator failed; see the error above.")
+        print(f"{HEADER}\n  the spx-guide gate failed; see the error above.")
         return 1
-    drift = drifting_guides()
     if not drift:
         return 0
     print(render_report(drift))
