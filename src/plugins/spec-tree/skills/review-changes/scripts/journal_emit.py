@@ -65,6 +65,8 @@ changeset_scope = _load_module(
 ENV_BASE_REF = "SPX_VERIFY_BASE_REF"
 ENV_HEAD_REF = "SPX_VERIFY_HEAD_REF"
 ENV_BRANCH = "SPX_VERIFY_BRANCH"
+ENV_TARGET_KIND = "SPX_VERIFY_TARGET_KIND"
+ENV_PULL_REQUEST_NUMBER = "SPX_VERIFY_PULL_REQUEST_NUMBER"
 DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
@@ -87,6 +89,8 @@ class ReviewRunMetadata:
     started_at: str
     completed_at: str
     output_paths: tuple[str, ...] = ()
+    target_kind: object = None
+    pull_request_number: int | None = None
 
 
 def _project_severity(severity: object) -> object:
@@ -129,6 +133,12 @@ def events_for_review(
         completed_at=metadata.completed_at,
         output_paths=metadata.output_paths,
         findings=tuple(_project_finding(finding) for finding in result.findings),
+        target_kind=(
+            jp.JournalTargetKind.BRANCH
+            if metadata.target_kind is None
+            else jp.JournalTargetKind(metadata.target_kind)
+        ),
+        pull_request_number=metadata.pull_request_number,
     )
     return cast(
         "list[dict[str, object]]", jp.build_events(run, now=now, attempt=attempt)
@@ -192,6 +202,10 @@ def _metadata_from_json(text: str) -> ReviewRunMetadata:
         started_at=_required_string(data, jp.RUN_STATE_STARTED_AT),
         completed_at=_required_string(data, jp.RUN_STATE_COMPLETED_AT),
         output_paths=_optional_string_tuple(data, jp.RUN_STATE_OUTPUT_PATHS),
+        target_kind=_required_string(data, jp.RUN_STATE_TARGET_KIND),
+        pull_request_number=_optional_positive_int(
+            data, jp.RUN_STATE_PULL_REQUEST_NUMBER
+        ),
     )
 
 
@@ -227,6 +241,15 @@ def _optional_string_tuple(data: Mapping[str, Any], key: str) -> tuple[str, ...]
     return tuple(value)
 
 
+def _optional_positive_int(data: Mapping[str, Any], key: str) -> int | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, int) or value <= 0:
+        raise ValueError(f"metadata {key!r} must be a positive integer when present")
+    return value
+
+
 def _resolve_base_ref() -> str:
     env_value = os.environ.get(ENV_BASE_REF, "").strip()
     if env_value:
@@ -243,6 +266,27 @@ def _resolve_branch_name() -> str:
     return os.environ.get(ENV_BRANCH, "").strip() or str(
         changeset_scope.detect_current_branch(pathlib.Path.cwd())
     )
+
+
+def _resolve_target_kind() -> object:
+    value = os.environ.get(ENV_TARGET_KIND, "").strip()
+    if value == "":
+        return jp.JournalTargetKind.BRANCH
+    return jp.JournalTargetKind(value)
+
+
+def _resolve_pull_request_number(target_kind: object) -> int | None:
+    value = os.environ.get(ENV_PULL_REQUEST_NUMBER, "").strip()
+    if target_kind == jp.JournalTargetKind.PULL_REQUEST:
+        if value == "":
+            raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} is required for pull-request target")
+        number = int(value)
+        if number <= 0:
+            raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} must be positive")
+        return number
+    if value:
+        raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} requires pull-request target")
+    return None
 
 
 def _review_scope(*, base_ref: str, head_ref: str, repo: pathlib.Path) -> dict[str, object]:
@@ -301,12 +345,15 @@ def metadata_for_worktree(
     base_ref = _resolve_base_ref()
     head_ref = _resolve_head_ref()
     branch_name = _resolve_branch_name()
+    target_kind = _resolve_target_kind()
+    pull_request_number = _resolve_pull_request_number(target_kind)
     scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
-    return {
+    metadata = {
         "target": target,
         jp.RUN_STATE_SCOPE_HASH: _digest(scope, length=12),
         jp.RUN_STATE_BRANCH_NAME: branch_name,
         jp.RUN_STATE_BRANCH_SLUG: str(changeset_scope.branch_slug(branch_name)),
+        jp.RUN_STATE_TARGET_KIND: str(target_kind),
         jp.RUN_STATE_HEAD_SHA: str(
             changeset_scope.commit_oid(head_ref, repo=repo)
         ),
@@ -321,6 +368,9 @@ def metadata_for_worktree(
         jp.RUN_STATE_COMPLETED_AT: completed_at,
         jp.RUN_STATE_OUTPUT_PATHS: [],
     }
+    if pull_request_number is not None:
+        metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] = pull_request_number
+    return metadata
 
 
 def _build_events(args: argparse.Namespace) -> int:
@@ -354,6 +404,7 @@ def _emit_metadata(args: argparse.Namespace) -> int:
         OSError,
         RuntimeError,
         subprocess.CalledProcessError,
+        TypeError,
         ValueError,
     ) as exc:
         sys.stderr.write(f"{exc}\n")

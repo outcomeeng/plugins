@@ -269,6 +269,40 @@ def run_render_review_in_process(
     )
 
 
+def run_journal_emit_in_process(
+    *args: str,
+    stdin: str | None = None,
+    repo: pathlib.Path | None = None,
+    env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run ``journal_emit.main`` in-process with CLI-shaped outputs."""
+
+    module = load_journal_emit_module()
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    input_stream = io.StringIO(stdin or "")
+    old_cwd = pathlib.Path.cwd()
+    argv = [sys.executable, str(JOURNAL_EMIT_SCRIPT), *args]
+    try:
+        if repo is not None:
+            os.chdir(repo)
+        with (
+            patch.object(sys, "stdin", input_stream),
+            patch.dict(os.environ, env or os.environ.copy(), clear=True),
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
+            returncode = _module_main(module)(list(args))
+    finally:
+        os.chdir(old_cwd)
+    return subprocess.CompletedProcess(
+        argv,
+        returncode,
+        stdout=stdout.getvalue(),
+        stderr=stderr.getvalue(),
+    )
+
+
 def run_script(
     script: pathlib.Path,
     *args: str,

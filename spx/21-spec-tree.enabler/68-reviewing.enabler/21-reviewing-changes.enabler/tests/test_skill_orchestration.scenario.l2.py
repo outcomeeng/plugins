@@ -28,10 +28,12 @@ import pytest
 from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_repo
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
+    JOURNAL_EMIT_SCRIPT,
     RENDER_REVIEW_SCRIPT,
     VALIDATE_REVIEW_RESULT_SCRIPT,
     make_review_result_dict,
     run_compute_diff_in_process,
+    run_journal_emit_in_process,
     run_render_review_in_process,
     run_script,
 )
@@ -97,7 +99,8 @@ def _make_env(cwd: pathlib.Path) -> dict[str, str]:
 @pytest.mark.skipif(
     not COMPUTE_DIFF_SCRIPT.exists()
     or not RENDER_REVIEW_SCRIPT.exists()
-    or not VALIDATE_REVIEW_RESULT_SCRIPT.exists(),
+    or not VALIDATE_REVIEW_RESULT_SCRIPT.exists()
+    or not JOURNAL_EMIT_SCRIPT.exists(),
     reason=(
         "Reviewing-changes scripts are not yet present; the orchestration "
         "test runs once the verification skill scripts are implemented."
@@ -178,6 +181,41 @@ class TestSkillOrchestrationChain:
         assert "| Severity |" not in rendered, (
             "legacy findings table must not appear in the rendered markdown"
         )
+
+        metadata_result = run_journal_emit_in_process(
+            "metadata",
+            "--started-at",
+            "2026-06-23T00:00:00Z",
+            "--completed-at",
+            "2026-06-23T00:00:05Z",
+            repo=repo,
+            env=env,
+        )
+        assert metadata_result.returncode == 0, metadata_result.stderr
+
+        events_result = run_journal_emit_in_process(
+            "build-events",
+            "--now",
+            "2026-06-23T00:00:06Z",
+            "--metadata",
+            metadata_result.stdout,
+            stdin=review_result_payload,
+            env=env,
+        )
+        assert events_result.returncode == 0, events_result.stderr
+        sealed_prefix = [
+            json.loads(line) for line in events_result.stdout.splitlines() if line
+        ]
+
+        prefix_render = run_journal_emit_in_process(
+            "render",
+            stdin=json.dumps(sealed_prefix),
+            env=env,
+        )
+        assert prefix_render.returncode == 0, prefix_render.stderr
+        prefix_surface = json.loads(prefix_render.stdout)
+        assert prefix_surface["countLine"] == "BLOCKING: 0, DEBT: 1"
+        assert "- [warning] example.py:10" in prefix_surface["surface"]
 
     def test_render_emits_census_marker_for_every_empty_severity(
         self, tmp_path: pathlib.Path

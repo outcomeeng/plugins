@@ -92,6 +92,7 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert events[-1]["type"] == jp.RUN_COMPLETED
     assert data[jp.RUN_STATE_BRANCH_NAME] == metadata.branch_name
     assert data[jp.RUN_STATE_BRANCH_SLUG] == metadata.branch_slug
+    assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.BRANCH
     assert data[jp.RUN_STATE_HEAD_SHA] == metadata.head_sha
     assert data[jp.RUN_STATE_BASE_REF] == metadata.base_ref
     assert data[jp.RUN_STATE_BASE_SHA] == metadata.base_sha
@@ -99,6 +100,31 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_PARTICIPANTS] == ["review"]
     assert data[jp.RUN_STATE_SCOPE] == {"include": ["README.md"]}
     assert data[jp.RUN_STATE_STATUS] == jp.JournalRunStatus.APPROVED
+
+
+def test_adapter_terminal_event_carries_pull_request_identity() -> None:
+    result = _review_with_findings([])
+    metadata = je.ReviewRunMetadata(
+        target="working-diff",
+        scope_hash="abc123def456",
+        branch_name="work/example",
+        branch_slug="work__example",
+        head_sha="1" * 40,
+        base_ref="main",
+        base_sha="2" * 40,
+        config_digest="cfg-abc123",
+        participants=("review",),
+        scope={"include": ["README.md"]},
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+        target_kind=jp.JournalTargetKind.PULL_REQUEST,
+        pull_request_number=123,
+    )
+    events = je.events_for_review(result, metadata, now="2026-06-23T00:00:06Z")
+    data = events[-1]["data"]
+
+    assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
+    assert data[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
 
 
 def test_render_events_counts_review_findings_by_render_class() -> None:
@@ -207,6 +233,37 @@ def test_metadata_scope_hash_includes_changed_file_set(
         "src/plugins/spec-tree/skills/review-changes/SKILL.md",
     ]
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
+
+
+def test_metadata_for_worktree_records_pull_request_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
+    monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "origin/work/example")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
+    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert metadata[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
+    assert metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
 
 
 def test_metadata_scope_hash_includes_full_review_input(
