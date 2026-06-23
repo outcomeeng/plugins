@@ -122,7 +122,7 @@ Dispatch to `audit-{lang}-architecture`. Findings populate row 5. If no ADRs or 
 
 For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator assembles one wrapper verdict whose `children` array carries the per-language verdicts. The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
 
-The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type auditing` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
+The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type audit` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
@@ -163,7 +163,7 @@ SCOPE_JSON=$(printf '%s\n' <frozen-scope-paths> \
   | python3 -c 'import json,sys; print(json.dumps({"include":[line for line in sys.stdin.read().splitlines() if line]}))')
 CONFIG_DIGEST=$(printf '%s\n' <audit-config-digest-input-lines> \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" config-digest)
-PARTICIPANTS_JSON='["auditing"]'
+PARTICIPANTS_JSON='["audit"]'
 OUTPUT_PATHS_JSON='[]'
 
 # Assemble the wrapper verdict. This is the run's verdict artifact.
@@ -172,7 +172,7 @@ WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --row automated-gates=PASS \
   --row test-execution=PASS \
   --row determinism-contract=PASS \
-  --skill auditing \
+  --skill audit \
   --target <scope-target> \
   --metadata scopeHash="$SCOPE_HASH" \
   --metadata branchName="$BRANCH_NAME" \
@@ -190,17 +190,17 @@ WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
 # its verdict back from the sealed event prefix. journal_emit maps the
 # wrapper onto channel events (one per line) and renders the verdict —
 # overall plus human-readable surface — from the prefix.
-RUN_TOKEN=$(spx journal open --type auditing \
+RUN_TOKEN=$(spx journal open --type audit \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["runToken"])')
 RUN_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 printf '%s' "$WRAPPER_JSON" \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" build-events \
     --now "$RUN_COMPLETED_AT" \
   | while IFS= read -r EVENT; do
-      printf '%s' "$EVENT" | spx journal append --type auditing --run "$RUN_TOKEN" >/dev/null
+      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
     done
-spx journal seal --type auditing --run "$RUN_TOKEN" >/dev/null
-spx journal read --type auditing --run "$RUN_TOKEN" --from 0 \
+spx journal seal --type audit --run "$RUN_TOKEN" >/dev/null
+spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render
 ```
 
@@ -236,7 +236,7 @@ The canonical schema is declared in `${CLAUDE_SKILL_DIR}/scripts/verdict.py` (`S
     "baseRef": "<base-ref>",
     "baseSha": "<base-oid>",
     "configDigest": "<config-digest>",
-    "participants": "[\"auditing\"]",
+    "participants": "[\"audit\"]",
     "scope": "{\"include\":[\"<path>\"]}",
     "startedAt": "<utc-timestamp>",
     "outputPaths": "[]"

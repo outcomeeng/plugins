@@ -1153,7 +1153,7 @@ def test_state_round_trip_preserves_pipe_character_in_concern_field(
 ) -> None:
     """A finding whose concern contains ``|`` survives save → load.
 
-    An auditing skill can emit a concern label combining multiple
+    An audit skill can emit a concern label combining multiple
     taxonomy tokens (e.g. ``"cohesion | coupling"``). Without
     cell escaping on the concern field the row would split into more
     cells than the schema has columns; load_state would either parse
@@ -1225,7 +1225,7 @@ def test_state_transition_reopen_refreshes_concern_from_incoming_finding(
 
     Symmetric with the carry-forward branch in :func:`state_transition`,
     which refreshes ``concern`` from the incoming finding. The reopen
-    branch must do the same so an auditing skill that evolves its
+    branch must do the same so an audit skill that evolves its
     concern taxonomy between runs sees the new label on the reopened
     row instead of the stale resolved-row label.
     """
@@ -1782,7 +1782,7 @@ def test_cli_state_transition_exits_3_on_missing_finding_keys(
 
     A KeyError traceback would surface as exit 1 conflated with
     lock-held; exit 3 is the agent's signal that the upstream
-    auditing skill produced a malformed payload.
+    audit skill produced a malformed payload.
     """
     state_path = tmp_path / "main.md"
     payload = json.dumps(

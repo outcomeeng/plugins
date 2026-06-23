@@ -1,6 +1,6 @@
 """Consumer-side run-journal projection — stdlib only, pure.
 
-Shared by the agentic verification surfaces (auditing, reviewing) that drive
+Shared by the agentic verification surfaces (audit, review) that drive
 the ``spx journal`` channel. Build channel event inputs from a run's results;
 compute the rollup over an event prefix; render the human-readable surface
 from an event prefix. These functions touch no journal backend, filesystem,
@@ -113,7 +113,7 @@ class Finding:
 class RunResult:
     """The generic, type-agnostic results of one verification run.
 
-    Auditing and reviewing each adapt their own result shape into this; the
+    Audit and review each adapt their own result shape into this; the
     projection knows nothing of either's verdict schema.
     """
 

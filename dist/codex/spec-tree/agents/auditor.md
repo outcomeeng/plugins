@@ -1,7 +1,7 @@
 ---
 name: auditor
 description: >-
-  ALWAYS invoke when running a one-off audit over a code scope — it invokes the auditing skill and renders the structured verdict as JSON, markdown, or both per the requested surface form.
+  ALWAYS invoke when running a one-off audit over a code scope — it invokes the audit skill and renders the structured verdict as JSON, markdown, or both per the requested surface form.
 tools: Read, Bash, Glob, Grep, Skill
 model: sonnet
 skills:

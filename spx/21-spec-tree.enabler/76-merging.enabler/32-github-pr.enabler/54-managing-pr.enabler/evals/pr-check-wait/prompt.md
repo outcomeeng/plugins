@@ -11,7 +11,7 @@ Closed classification task. Do not invoke skills, do not inspect a repository, d
 
 The wait contract:
 
-- If the open PR is blocked by check completion — a non-terminal required check, a non-terminal reviewing-kind check, or absent review output while another current-head check is non-terminal — run exactly one foreground command: `gh pr checks <pr-number> --watch --fail-fast --interval 30`.
+- If the open PR is blocked by check completion — a non-terminal required check, a non-terminal review-kind check, or absent review output while another current-head check is non-terminal — run exactly one foreground command: `gh pr checks <pr-number> --watch --fail-fast --interval 30`.
 - After that foreground wait exits, inspect the full merge gate before choosing the next action: PR state, check rollup, PR-level comments, formal reviews, and review-thread comments.
 - Runtime heartbeats, runtime timers, background waits, shell polling loops, background `sleep`, and `gh run watch` are invalid wait mechanisms for GitHub PR checks.
 

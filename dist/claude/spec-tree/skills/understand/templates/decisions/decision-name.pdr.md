@@ -34,7 +34,7 @@
 
 ### Audit
 
-{Verified by an auditing skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.}
+{Verified by an audit skill's judgment against this decision — the subject (a Spec Tree decision, spec, skill, or agent) admits no deterministic test or graded eval.}
 
 - ALWAYS: {rule} ([audit])
 - NEVER: {prohibition} ([audit])

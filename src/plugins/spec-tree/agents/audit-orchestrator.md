@@ -1,7 +1,7 @@
 ---
 name: audit-orchestrator
 description: >-
-  ALWAYS invoke for a stateful local audit run that carries findings across commits — runs the auditing skill in its stateful-orchestration mode, persisting open and resolved findings under a worktree-local state file partitioned per language and branch.
+  ALWAYS invoke for a stateful local audit run that carries findings across commits — runs the audit skill in its stateful-orchestration mode, persisting open and resolved findings under a worktree-local state file partitioned per language and branch.
 tools: Read, Bash, Glob, Grep, Skill
 model: sonnet
 skills:

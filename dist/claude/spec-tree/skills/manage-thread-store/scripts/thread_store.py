@@ -190,7 +190,7 @@ def current_slug() -> str:
     recover without reading source.
 
     Slug derivation itself is delegated to the canonical
-    ``branch_slug`` re-exported from the auditing skill.
+    ``branch_slug`` re-exported from the audit skill.
     """
     branch_slug_mod = _load_sibling("branch_slug")
     branch = os.environ.get(ENV_BRANCH, "").strip()

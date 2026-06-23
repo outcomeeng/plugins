@@ -103,7 +103,7 @@ def _wrapper(rows: tuple[Any, ...], children: tuple[Any, ...]) -> Any:
             jp.RUN_STATE_BASE_REF: "main",
             jp.RUN_STATE_BASE_SHA: "2" * 40,
             jp.RUN_STATE_CONFIG_DIGEST: "cfg-abc123",
-            jp.RUN_STATE_PARTICIPANTS: json.dumps(["auditing"]),
+            jp.RUN_STATE_PARTICIPANTS: json.dumps(["audit"]),
             jp.RUN_STATE_SCOPE: json.dumps({"include": ["src/example.py"]}),
             jp.RUN_STATE_STARTED_AT: "2026-06-22T00:00:00Z",
             jp.RUN_STATE_COMPLETED_AT: "2026-06-22T00:00:05Z",
@@ -197,7 +197,7 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert (
         data[jp.RUN_STATE_CONFIG_DIGEST] == wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST]
     )
-    assert data[jp.RUN_STATE_PARTICIPANTS] == ["auditing"]
+    assert data[jp.RUN_STATE_PARTICIPANTS] == ["audit"]
     assert data[jp.RUN_STATE_SCOPE] == {"include": ["src/example.py"]}
     assert data[jp.RUN_STATE_STARTED_AT] == "2026-06-22T00:00:00Z"
     assert data[jp.RUN_STATE_COMPLETED_AT] == "2026-06-22T00:00:05Z"

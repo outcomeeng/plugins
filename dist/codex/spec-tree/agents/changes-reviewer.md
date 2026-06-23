@@ -35,7 +35,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 2. **Export the refs for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>` and `SPX_VERIFY_HEAD_REF=<to_ref>`. For empty input, export nothing — the skill auto-resolves both refs.
 
-3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, and persists `review-result.json` and `review.md` to the current thread.
+3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, records the run on `spx journal --type review`, and renders the sealed prefix.
 
 </workflow>
 
@@ -48,12 +48,13 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <output_format>
 
-Two artifacts under the thread-store backend's storage paths (default `.spx/reviews/<branch-slug>/`):
+The skill reports:
 
-- `review-result.json` — structured result (findings, acknowledgements).
-- `review.md` — rendered prose plus findings table.
+- the `spx journal --type review` run token
+- the `BLOCKING: <n>, DEBT: <n>` count line
+- the rendered review surface when findings are present
 
-The skill writes both. The `.spx/` root is gitignored.
+The sealed review journal prefix is the durable run state.
 
 </output_format>
 
@@ -61,6 +62,6 @@ The skill writes both. The `.spx/` root is gitignored.
 
 - The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` were exported; for empty input, neither was set.
 - The skill ran to completion and the arbiter accepted the emitted JSON.
-- `review-result.json` and `review.md` exist in the current thread.
+- The review journal run was sealed and read back before reporting the result.
 
 </success_criteria>

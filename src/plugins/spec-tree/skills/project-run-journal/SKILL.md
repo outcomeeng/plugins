@@ -9,12 +9,12 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-A verification run recorded as an append-only `spx journal` and its verdict derived from the sealed event prefix, produced through one shared projection that every agentic verification surface — auditing and reviewing — drives identically: a run's results in, ordered channel events out; a sealed event prefix in, rollup and human-readable surface out.
+A verification run recorded as an append-only `spx journal` and its verdict derived from the sealed event prefix, produced through one shared projection that every agentic verification surface — audit and review — drives identically: a run's results in, ordered channel events out; a sealed event prefix in, rollup and human-readable surface out.
 </objective>
 
 <channel>
 
-The `spx` CLI owns the run journal. The verification kind is the opaque `--type <type>` segment (`auditing` or `reviewing`); the backend is edge-resolved (`SPX_VERIFY_BACKEND` override, `SPX_VERIFY_BRANCH` scope), so name no backend — a local run-journal file on a developer machine, the GitHub pull-request backend under CI.
+The `spx` CLI owns the run journal. The verification kind is the opaque `--type <type>` segment (`audit` or `review`); the backend is edge-resolved (`SPX_VERIFY_BACKEND` override, `SPX_VERIFY_BRANCH` scope), so name no backend — a local run-journal file on a developer machine, the GitHub pull-request backend under CI.
 
 | Verb                                                      | Role                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------- |
@@ -50,7 +50,7 @@ To record a verification run, the consuming skill drives the channel (Bash) and 
 4. `spx journal seal --type <type> --run <token>` to finalize the sequence.
 5. `spx journal read --type <type> --run <token> --from 0` to read the sealed event prefix, then `compute_overall` for the verdict and `render_surface` for the human-readable surface.
 
-The consuming skill elaborates the generic core (scope-entered, finding-reported, run-completed) with its own event kinds — auditing adds gate and per-partition events; reviewing adds its own — but never re-implements event construction, the rollup, or the render.
+The consuming skill elaborates the generic core (scope-entered, finding-reported, run-completed) with its own event kinds — audit adds gate and per-partition events; review adds its own — but never re-implements event construction, the rollup, or the render.
 
 </workflow>
 

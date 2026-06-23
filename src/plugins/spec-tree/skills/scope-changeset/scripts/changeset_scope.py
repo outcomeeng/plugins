@@ -36,7 +36,7 @@ class BaseRefNotConfiguredError(RuntimeError):
     """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
 
     The default ``detect_base_ref(strict=False)`` falls back to
-    ``DEFAULT_BASE_REF`` because the auditing skill tolerates a missing
+    ``DEFAULT_BASE_REF`` because the audit skill tolerates a missing
     remote (single-developer repos, fresh bootstraps). The strict
     variant exists for the review-changes skill, which refuses to
     pick a fallback because the operator needs a definitive answer
@@ -148,7 +148,7 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
     bootstrap, solo developer repo):
 
     - ``strict=False`` (default): returns ``DEFAULT_BASE_REF`` so callers
-      can still compose diff ranges without halting. The auditing skill
+      can still compose diff ranges without halting. The audit skill
       relies on this fallback.
     - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
       review-changes skill uses this variant so the operator gets a

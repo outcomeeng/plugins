@@ -12,15 +12,14 @@ Provides the shared scaffolding consumed by every test file under
 - ``SKILL_DIR`` and ``SKILL_FILE``. The compliance tests inspect skill
   prose for the absence of an embedded prompt and presence of a
   ``${CLAUDE_SKILL_DIR}/references/review-prompt.md`` load expression.
+- ``JOURNAL_EMIT_SCRIPT`` and ``load_journal_emit_module``. Tests assert the
+  review-result-to-journal adapter consumes the shared projection.
 - ``WRAPPER_AGENT_PATH``. Compliance tests check the wrapper agent's
   frontmatter shape when the agent file exists; missing files are
   tolerated (the agent is authored in a separate step).
 - ``load_review_result_module``. An importlib loader for the
-  ``review_result`` policy module, mirroring the pattern that
-  ``outcomeeng_testing/harnesses/thread_store.py`` uses for the
-  ``thread_store`` facade.
-- ``run_script``. A thin ``subprocess.run`` wrapper that mirrors the
-  thread-store harness contract for CLI invocations.
+  ``review_result`` policy module.
+- ``run_script``. A thin ``subprocess.run`` wrapper for CLI invocations.
 - ``make_review_result_dict``. Factory that returns a synthetic
   ``review-result`` JSON-ready dict with every required field populated,
   ready to be mutated by callers to construct invalid documents for
@@ -58,6 +57,7 @@ REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
 VALIDATE_REVIEW_RESULT_SCRIPT = SCRIPTS_DIR / "validate_review_result.py"
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 RENDER_REVIEW_SCRIPT = SCRIPTS_DIR / "render_review.py"
+JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
@@ -114,8 +114,7 @@ def load_render_review_module() -> ModuleType:
     Mirrors :func:`load_review_result_module`. Tests that introspect the
     severity → render-class partitioning function or the template-loading
     helpers load the module here. ``render_review`` itself imports
-    ``review_result`` and ``thread_store``; both are wired via sibling
-    importlib in the script.
+    ``review_result`` via sibling importlib in the script.
     """
     cached = sys.modules.get("render_review")
     if cached is not None:
@@ -163,6 +162,23 @@ def load_validate_review_result_module() -> ModuleType:
     return module
 
 
+def load_journal_emit_module() -> ModuleType:
+    """Load the review ``journal_emit`` adapter via importlib."""
+
+    cached = sys.modules.get("review_changes_journal_emit")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location(
+        "review_changes_journal_emit", JOURNAL_EMIT_SCRIPT
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load journal_emit from {JOURNAL_EMIT_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["review_changes_journal_emit"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
     return cast("Callable[[list[str] | None], int]", module.main)
 
@@ -171,21 +187,20 @@ def run_compute_diff_in_process(
     *,
     repo: pathlib.Path,
     env: dict[str, str],
-    slug: str,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``compute_diff.main`` in-process with CLI-shaped outputs.
 
     The script path is still loaded from authored plugin source and the same
-    ``main(["--slug", slug])`` entry point runs. Running in-process lets coverage
-    observe the script's lines while preserving a ``CompletedProcess`` result
-    shape for scenario tests.
+    ``main([])`` entry point runs. Running in-process lets coverage observe the
+    script's lines while preserving a ``CompletedProcess`` result shape for
+    scenario tests.
     """
 
     module = load_compute_diff_module()
     stdout = io.StringIO()
     stderr = io.StringIO()
     old_cwd = pathlib.Path.cwd()
-    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT), "--slug", slug]
+    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT)]
     try:
         os.chdir(repo)
         with (
@@ -193,7 +208,7 @@ def run_compute_diff_in_process(
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
-            returncode = _module_main(module)(["--slug", slug])
+            returncode = _module_main(module)([])
     finally:
         os.chdir(old_cwd)
     return subprocess.CompletedProcess(
@@ -231,21 +246,21 @@ def run_validate_review_result_in_process(
 
 def run_render_review_in_process(
     *,
-    slug: str,
-    env: dict[str, str],
+    stdin: str,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``render_review.main`` in-process with CLI-shaped outputs."""
 
     module = load_render_review_module()
     stdout = io.StringIO()
     stderr = io.StringIO()
-    argv = [sys.executable, str(RENDER_REVIEW_SCRIPT), "--slug", slug]
+    input_stream = io.StringIO(stdin)
+    argv = [sys.executable, str(RENDER_REVIEW_SCRIPT)]
     with (
-        patch.dict(os.environ, env, clear=True),
+        patch.object(sys, "stdin", input_stream),
         redirect_stdout(stdout),
         redirect_stderr(stderr),
     ):
-        returncode = _module_main(module)(["--slug", slug])
+        returncode = _module_main(module)([])
     return subprocess.CompletedProcess(
         argv,
         returncode,
@@ -263,10 +278,9 @@ def run_script(
 ) -> subprocess.CompletedProcess[str]:
     """Invoke a script as a subprocess and return the result.
 
-    Mirrors the thread-store harness ``run_script`` contract: capture
-    stdout/stderr, text mode, optional stdin payload, optional explicit
-    environment. ``check=False`` is the default so tests can inspect
-    returncode explicitly; success-path tests pass ``check=True``.
+    Captures stdout/stderr in text mode with optional stdin payload and
+    optional explicit environment. ``check=False`` is the default so tests can
+    inspect returncode explicitly; success-path tests pass ``check=True``.
     """
     return subprocess.run(  # noqa: S603 — script path comes from the harness, not user input
         [sys.executable, str(script), *args],

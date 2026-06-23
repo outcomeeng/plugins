@@ -7,23 +7,23 @@
      to act as the changes-reviewer wrapper agent and self-report its
      planned tool-call sequence in a structured "tool_calls" array.
      Self-report is weaker than observed behavior; the grader checks
-     presence (not order) of the arbiter and persistence calls. -->
+     presence (not order) of the arbiter and journal calls. -->
 
 You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol is:
 
 1. Invoke the `spec-tree:review-changes` skill.
-2. Run `compute_diff.py` (no arguments — the script resolves the current thread and `base_ref` from env, an optional `changes.json` override in the thread, or git defaults; it aborts with stderr naming every source when none yields a value).
+2. Run `compute_diff.py` (no arguments — the script resolves `base_ref` from env or git defaults and `head_ref` from env or `HEAD`; it aborts with stderr naming every source when no base ref yields a value).
 3. Apply the swappable judgment-style prompt at `${CLAUDE_SKILL_DIR}/references/review-prompt.md` to the diff.
 4. Emit a `review-result.json` document conforming to the schema in `review_result.py`.
 5. Invoke `validate_review_result.py` against the emitted JSON. If it exits non-zero, fix the issue and re-emit. Loop until exit 0.
-6. Persist the validated JSON via the thread-store `write_record.py --name review-result.json` CLI (no `--slug` — the CLI resolves the thread internally).
-7. Run `render_review.py` to produce the markdown surface (no `--slug`).
-8. Persist the rendered markdown via `write_record.py --name review.md` (no `--slug`).
+6. Run `render_review.py` against the validated JSON to produce the human-readable surface.
+7. Run `journal_emit.py metadata` to derive review run metadata.
+8. Run `spx journal open --type review`, `journal_emit.py build-events`, `spx journal append --type review`, `spx journal seal --type review`, `spx journal read --type review`, and `journal_emit.py render`.
 
 **The rules under audit in this eval:**
 
-- The wrapper agent invokes `validate_review_result.py` against every JSON document it emits BEFORE any persistence call. The agent never hand-validates the JSON it just emitted.
-- The wrapper agent reads or writes files under the thread-store backend's storage paths ONLY through the thread-store CLIs. Direct `open()`, `pathlib.Path.write_*`, `os.remove`, or equivalent filesystem primitives are forbidden — every effect routes through `write_record.py`, `read_record.py`, `delete_record.py`, or `list_records.py`.
+- The wrapper agent invokes `validate_review_result.py` against every JSON document it emits BEFORE any journal append. The agent never hand-validates the JSON it just emitted.
+- The wrapper agent records durable review state ONLY through `spx journal --type review`; direct review artifact writes are forbidden.
 
 Case id: substituted by the harness.
 
@@ -44,4 +44,4 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 }
 ```
 
-Each `tool_calls` entry is a short string naming the CLI script (e.g. `"compute_diff.py"`, `"validate_review_result.py"`, `"write_record.py --name review-result.json"`). Use the script basename without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the `review-result.json` your simulated agent would emit contains at least one `blocking` finding — the reviewer emits findings only, never a decision or verdict. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).
+Each `tool_calls` entry is a short string naming the CLI or journal command (e.g. `"compute_diff.py"`, `"validate_review_result.py"`, `"journal_emit.py metadata"`, `"spx journal append --type review"`). Use script basenames without paths. Include every shell invocation you would make; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the review-result JSON your simulated agent would emit contains at least one `blocking` finding — the reviewer emits findings only, never a decision or verdict. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded (the grader's list-matching is multiset, not sequence).
