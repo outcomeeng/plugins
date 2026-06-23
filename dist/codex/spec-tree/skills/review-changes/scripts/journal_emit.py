@@ -66,6 +66,8 @@ ENV_BRANCH = "SPX_VERIFY_BRANCH"
 DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
+REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
+RENDER_TEMPLATES = pathlib.Path("references") / "render"
 
 
 @dataclass(frozen=True)
@@ -235,6 +237,35 @@ def _digest(value: object, *, length: int | None = None) -> str:
     return digest[:length]
 
 
+def _file_digest(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
+    root = skill_dir or _HERE.parent
+    prompt_path = root / REVIEW_PROMPT
+    render_dir = root / RENDER_TEMPLATES
+    template_paths = sorted(path for path in render_dir.glob("*.md") if path.is_file())
+    return _digest(
+        {
+            "skill": "review-changes",
+            "schemaVersion": review_result.SCHEMA_VERSION,
+            "projection": "journal_projection",
+            "prompt": {
+                "path": str(REVIEW_PROMPT),
+                "sha256": _file_digest(prompt_path),
+            },
+            "renderTemplates": [
+                {
+                    "path": str(path.relative_to(root)),
+                    "sha256": _file_digest(path),
+                }
+                for path in template_paths
+            ],
+        }
+    )
+
+
 def metadata_for_worktree(
     *, started_at: str, completed_at: str, target: str = DEFAULT_TARGET
 ) -> dict[str, object]:
@@ -254,13 +285,7 @@ def metadata_for_worktree(
         jp.RUN_STATE_BASE_SHA: str(
             changeset_scope.commit_oid(base_ref, repo=pathlib.Path.cwd())
         ),
-        jp.RUN_STATE_CONFIG_DIGEST: _digest(
-            {
-                "skill": "review-changes",
-                "schemaVersion": review_result.SCHEMA_VERSION,
-                "projection": "journal_projection",
-            }
-        ),
+        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
         jp.RUN_STATE_STARTED_AT: started_at,

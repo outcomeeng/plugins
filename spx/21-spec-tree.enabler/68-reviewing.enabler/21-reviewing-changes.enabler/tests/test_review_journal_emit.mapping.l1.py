@@ -7,6 +7,8 @@ and that the terminal event carries the reviewed diff's identity.
 
 from __future__ import annotations
 
+import pathlib
+
 from typing import Any
 
 import pytest
@@ -117,3 +119,32 @@ def test_adapter_rejects_missing_base_identity() -> None:
 
     with pytest.raises(ValueError, match=jp.RUN_STATE_BASE_SHA):
         je.events_for_review(result, metadata, now="2026-06-23T00:00:06Z")
+
+
+def _write_skill_config(
+    root: pathlib.Path, *, prompt: str, document_template: str = "document"
+) -> None:
+    references = root / "references"
+    render = references / "render"
+    render.mkdir(parents=True)
+    (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
+    (render / "document.md").write_text(document_template, encoding="utf-8")
+    (render / "finding.md").write_text("finding", encoding="utf-8")
+
+
+def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    _write_skill_config(first, prompt="review prompt one")
+    _write_skill_config(second, prompt="review prompt two")
+
+    assert je.review_config_digest(first) != je.review_config_digest(second)
+
+
+def test_config_digest_changes_with_render_template(tmp_path: pathlib.Path) -> None:
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    _write_skill_config(first, prompt="review prompt", document_template="document one")
+    _write_skill_config(second, prompt="review prompt", document_template="document two")
+
+    assert je.review_config_digest(first) != je.review_config_digest(second)
