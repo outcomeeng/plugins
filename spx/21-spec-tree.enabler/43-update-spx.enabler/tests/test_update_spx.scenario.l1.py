@@ -130,6 +130,30 @@ def test_cli_check_reports_language_drift(
     assert capsys.readouterr().out.strip() == "stale"
 
 
+def test_cli_check_reports_stale_from_detected_language_drift(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    # Guides recorded for python only; the tree then gains a typescript test file,
+    # so detection (no --languages, the production path) finds a language the guides
+    # do not carry -> stale. Extensions are source-derived from the module's mapping.
+    _write_both_guides(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
+    extensions = tuple(
+        next(ext for ext, lang in module.LANGUAGE_BY_EXTENSION.items() if lang == want)
+        for want in (LANG_PRIMARY, LANG_SECONDARY)
+    )
+    write_spx_tree_with_tests(tmp_path, extensions)
+
+    assert (
+        module.main(
+            ["--template", str(template), "--spx-dir", str(tmp_path), "--check"]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "stale"
+
+
 def test_cli_check_reports_absent_when_one_guide_is_missing(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

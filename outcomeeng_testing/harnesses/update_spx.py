@@ -189,22 +189,3 @@ def write_template(
         build_template(version, extra_section=extra_section), encoding="utf-8"
     )
     return path
-
-
-def write_guide_without_languages(
-    directory: pathlib.Path, version: str
-) -> pathlib.Path:
-    """Write a guide whose frontmatter records a version but no ``languages`` key.
-
-    The pre-render-model / hand-written shape an update must not silently empty.
-    """
-    module = load_update_spx_module()
-    path = directory / "CLAUDE.md"
-    path.write_text(
-        f"{module.FRONTMATTER_DELIMITER}\n"
-        f'{module.TEMPLATE_VERSION_KEY}: "{version}"\n'
-        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
-        f"{module.FRONTMATTER_DELIMITER}\n\n# spx/ Directory Guide\n",
-        encoding="utf-8",
-    )
-    return path
