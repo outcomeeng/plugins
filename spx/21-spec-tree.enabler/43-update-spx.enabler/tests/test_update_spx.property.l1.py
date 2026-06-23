@@ -45,7 +45,10 @@ def test_render_output_ends_with_single_newline(
 ) -> None:
     module = load_update_spx_module()
     rendered = module.render(
-        build_template("0.0.0"), TEMPLATE_LANGUAGES, _to_version(installed), RUNTIME_CLAUDE
+        build_template("0.0.0"),
+        TEMPLATE_LANGUAGES,
+        _to_version(installed),
+        RUNTIME_CLAUDE,
     )
     assert rendered.endswith("\n")
     assert not rendered.endswith("\n\n")

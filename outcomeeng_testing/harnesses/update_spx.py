@@ -68,6 +68,7 @@ def _runtime_line(runtime: str) -> str:
     """The body the harness emits inside a runtime block — what render keeps or drops."""
     return f"{runtime.upper()} runs the audit as a subagent."
 
+
 # Source-template compliance probes.
 SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"

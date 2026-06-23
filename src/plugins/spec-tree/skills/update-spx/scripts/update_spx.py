@@ -223,7 +223,8 @@ def main(argv: list[str] | None = None) -> int:
         "--template", required=True, help="Path to the canonical template."
     )
     parser.add_argument(
-        "--spx-dir", help="Path to the product's spx/ directory holding both guide files."
+        "--spx-dir",
+        help="Path to the product's spx/ directory holding both guide files.",
     )
     parser.add_argument(
         "--check",

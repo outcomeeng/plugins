@@ -163,7 +163,9 @@ def test_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> N
     # The product's only test files are Python, so detection enables python alone.
     # The extension is source-derived from the module's extension->language mapping.
     py_ext = next(
-        ext for ext, lang in module.LANGUAGE_BY_EXTENSION.items() if lang == LANG_PRIMARY
+        ext
+        for ext, lang in module.LANGUAGE_BY_EXTENSION.items()
+        if lang == LANG_PRIMARY
     )
     write_spx_tree_with_tests(tmp_path, (py_ext,))
     exit_code = module.main(
