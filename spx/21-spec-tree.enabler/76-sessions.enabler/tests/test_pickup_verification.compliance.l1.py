@@ -18,12 +18,16 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
+import pathlib
 
 from outcomeeng_testing.harnesses.git_context import accepted_git_context
 from outcomeeng_testing.harnesses.verify_session_claims import (
     VERIFY_MODULE_PATH,
     RecordingRunner,
+    head_sha,
     load_verify_session_claims_module,
+    session_show_response,
     write_session_file,
 )
 
@@ -66,6 +70,18 @@ TEST_INVOCATIONS = (
 )
 
 
+def _session_show_command(session: pathlib.Path) -> tuple[str, ...]:
+    return (
+        "spx",
+        "session",
+        "show",
+        "--json",
+        "--sessions-dir",
+        str(session.parent),
+        session.stem,
+    )
+
+
 def test_verify_accepts_injected_runner() -> None:
     module = load_verify_session_claims_module()
     params = inspect.signature(module.verify).parameters
@@ -84,10 +100,34 @@ def test_script_imports_are_stdlib_only() -> None:
     assert not offenders, f"non-stdlib imports in shipped script: {sorted(offenders)}"
 
 
+def _enclosing_method(tree: ast.AST, target: ast.AST) -> str | None:
+    for class_node in ast.walk(tree):
+        if not isinstance(class_node, ast.ClassDef):
+            continue
+        for node in class_node.body:
+            if isinstance(node, ast.FunctionDef) and any(
+                child is target for child in ast.walk(node)
+            ):
+                return f"{class_node.name}.{node.name}"
+    return None
+
+
 def test_external_calls_go_through_the_runner() -> None:
-    source = VERIFY_MODULE_PATH.read_text()
-    assert source.count("subprocess.run(") == 1, (
-        "subprocess.run must appear only in the default runner"
+    tree = ast.parse(VERIFY_MODULE_PATH.read_text())
+    subprocess_calls: list[tuple[str, str | None]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if (
+            isinstance(func, ast.Attribute)
+            and isinstance(func.value, ast.Name)
+            and func.value.id == "subprocess"
+        ):
+            subprocess_calls.append((func.attr, _enclosing_method(tree, node)))
+
+    assert subprocess_calls == [("run", "SubprocessRunner.run")], (
+        "subprocess calls must appear only in SubprocessRunner.run"
     )
 
 
@@ -105,6 +145,12 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
         runner = RecordingRunner(
             repo=repo,
             scripted={
+                _session_show_command(session): session_show_response(
+                    git_ref="0" * 40,
+                    git_status="clean",
+                    specs=("spx/21-x.enabler/x.md",),
+                    pr_numbers=("256",),
+                ),
                 ("spx", "spec", "status"): (0, '{"status": "passing"}', ""),
                 ("gh", "pr", "view"): (0, '{"state": "MERGED"}', ""),
             },
@@ -112,6 +158,9 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
 
         module.verify(session, repo, runner)
 
+        assert _session_show_command(session) in map(tuple, runner.calls), (
+            "session metadata must come from spx session show"
+        )
         assert any(call[:3] == ["spx", "spec", "status"] for call in runner.calls), (
             "node status must come from spx spec status"
         )
@@ -127,3 +176,84 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
         assert session.read_bytes() == before, "session file must not be mutated"
         dirty = RecordingRunner(repo=repo).run(["git", "status", "--porcelain"])[1]
         assert dirty.strip() == "", "verification must not mutate the working tree"
+
+
+def test_invalid_session_metadata_is_unverifiable() -> None:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session = write_session_file(repo.parent, git_ref="0" * 40)
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={_session_show_command(session): (0, "{", "")},
+        )
+
+        verdicts = module.verify(session, repo, runner)
+
+        assert len(verdicts) == 1
+        assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
+        assert verdicts[0].verdict == module.Verdict.UNVERIFIABLE
+        assert "invalid JSON" in verdicts[0].evidence
+
+
+def test_wrong_shape_session_metadata_is_unverifiable() -> None:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session = write_session_file(repo.parent, git_ref="0" * 40)
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={_session_show_command(session): (0, "[]", "")},
+        )
+
+        verdicts = module.verify(session, repo, runner)
+
+        assert len(verdicts) == 1
+        assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
+        assert verdicts[0].verdict == module.Verdict.UNVERIFIABLE
+        assert "not an object" in verdicts[0].evidence
+
+
+def test_malformed_session_metadata_fields_are_unverifiable() -> None:
+    module = load_verify_session_claims_module()
+    cases: tuple[dict[str, object], ...] = (
+        {"git_ref": 123, "specs": [], "files": []},
+        {"git_ref": None, "specs": "spx/21-x.enabler/x.md", "files": []},
+        {"git_ref": None, "specs": [], "files": [123]},
+        {"git_ref": None, "files": []},
+        {"git_ref": None, "specs": ["/tmp/escape.md"], "files": []},
+        {"git_ref": None, "specs": [], "files": ["../escape.md"]},
+        {"git_ref": None, "specs": [""], "files": []},
+    )
+    for payload in cases:
+        with accepted_git_context() as repo:
+            session = write_session_file(repo.parent, git_ref="0" * 40)
+            runner = RecordingRunner(
+                repo=repo,
+                scripted={_session_show_command(session): (0, json.dumps(payload), "")},
+            )
+
+            verdicts = module.verify(session, repo, runner)
+
+            assert len(verdicts) == 1
+            assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
+            assert verdicts[0].verdict == module.Verdict.UNVERIFIABLE
+            assert "malformed metadata" in verdicts[0].evidence
+
+
+def test_metadata_loading_does_not_require_readable_session_file_body() -> None:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        session = repo.parent / "missing-session.md"
+        runner = RecordingRunner(
+            repo=repo,
+            scripted={
+                _session_show_command(session): session_show_response(
+                    git_ref=head_sha(repo)
+                ),
+            },
+        )
+
+        verdicts = module.verify(session, repo, runner)
+
+        assert len(verdicts) == 1
+        assert verdicts[0].kind == module.ClaimKind.GIT_REF
+        assert verdicts[0].verdict == module.Verdict.CONFIRMED
