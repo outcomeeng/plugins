@@ -9,7 +9,7 @@ CAN verify that spec assertions are fulfilled by genuine test evidence rather th
 Every assertion is classified through three nested levels:
 
 1. **Verdict mode** — how the verdict is produced: deterministic or agentic.
-2. **Verification type** — testing, evaluating, or auditing, named by the tag the assertion carries (`[test]`, `[eval]`, `[audit]`). Selected by fallback: testing when a deterministic test can verify the assertion, else evaluating when the producer emits a parseable structured verdict, else auditing.
+2. **Verification type** — test, evaluate, or audit, named by the tag the assertion carries (`[test]`, `[eval]`, `[audit]`). Selected by fallback: test when a deterministic test can verify the assertion, else evaluate when the producer emits a parseable structured verdict, else audit.
 3. **Assertion type** — under the testing verification type only, one of scenario, mapping, conformance, property, compliance, read from the assertion's quantifier. Evaluating and auditing carry no assertion type.
 
 `/test` (with `/test-{language}` binding the test file) is the single authority that selects the verification type and, under testing, the assertion type. No decision record, template, section heading, or other skill selects either.

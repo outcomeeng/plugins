@@ -7,7 +7,7 @@
 Current disposition:
 
 - `/audit` default local emit is on `spx journal` and the shared consumer projection; focused tests and live smoke tests passed. It still needs one real `/audit` workflow run before review migration starts.
-- `review-changes` still persists through `thread_store`; migrate it to `spx journal --type reviewing` and require sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
+- `review-changes` still persists through `thread_store`; migrate it to `spx journal --type review` and require sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
 - Stateful audit-orchestrator cross-run folding is blocked until `@outcomeeng/spx` exposes an ordered read/list of a branch/type scope's sealed runs. Upstream session: `2026-06-23_07-42-10`.
 - `spx journal render` is identity by design. Consumer-owned markdown/findings/check surfaces replace `emit_verdict.py`; they are not channel render output.
 - Keep the verdict toolchain only while child audit skills still emit verdict JSON. Delete it and `thread_store` after their consumers migrate.
@@ -16,9 +16,9 @@ Use `PLAN.md` as the authoritative continuation map.
 
 ## Downstream enforcement for `[audit]` decision-rule modes (deferred)
 
-`spx/14-verification.pdr.md` carries four `[audit]` rules under `## Verification` / `### Audit` (an activity declares its type and purpose; a type's verdict mode is fixed by definition; a model never judges a deterministic type's verdict; the type set and the two verdict modes are closed). `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` asserts that a decision record's rules flow into spec assertions that enforce them somewhere in the governed subtree — but an `[audit]`-mode rule is enforced by an auditing skill's judgment, not by a `[test]`/`[eval]` spec assertion, and no node spec yet enforces these four rules individually.
+`spx/14-verification.pdr.md` carries four `[audit]` rules under `## Verification` / `### Audit` (an activity declares its type and purpose; a type's verdict mode is fixed by definition; a model never judges a deterministic type's verdict; the type set and the two verdict modes are closed). `spx/21-spec-tree.enabler/32-decisions.enabler/decisions.md` asserts that a decision record's rules flow into spec assertions that enforce them somewhere in the governed subtree — but an `[audit]`-mode rule is enforced by an audit skill's judgment, not by a `[test]`/`[eval]` spec assertion, and no node spec yet enforces these four rules individually.
 
-Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an auditing skill checks against each rule, or refine the `decisions.md` flow rule so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes. This is a methodology question broader than the verification-taxonomy change that introduced the modes.
+Establish how `[audit]` decision-rule modes are enforced downstream: either author node-spec `[audit]` assertions an audit skill checks against each rule, or refine the `decisions.md` flow rule so it recognizes audit/eval enforcement for `[audit]`/`[eval]` modes. This is a methodology question broader than the verification-taxonomy change that introduced the modes.
 
 Surfaced by the local `review-changes` review on PR #103.
 
@@ -54,15 +54,15 @@ Every verification skill conforming to the contract in `verification.md` is an L
 - `32-auditing-nodes.enabler` (candidate future skill) — when authored, must adopt this pattern.
 - `spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler` — when implemented, eval evidence requirements are documented in its own PLAN.
 
-## `reviewing` vs `audit` vocabulary confusion in `verification-kinds.md` and `review-changes` prompt
+## `review` vs `audit` vocabulary confusion in `verification-kinds.md` and `review-changes` prompt
 
-`src/plugins/spec-tree/skills/understand/references/verification-kinds.md` correctly declares five verification types. The confusing boundary: `reviewing` is open-ended changeset judgment, while standards conformance is `audit` and static/tool conformance is `validation`. The active `review-changes` prompt currently implies standards comparisons the skill does not load enough context to perform.
+`src/plugins/spec-tree/skills/understand/references/verification-kinds.md` correctly declares five verification types. The confusing boundary: `review` is open-ended changeset judgment, while standards conformance is `audit` and static/tool conformance is `validate`. The active `review-changes` prompt currently implies standards comparisons the skill does not load enough context to perform.
 
 **Fix:**
 
-1. Reconcile `verification-kinds.md` so the `reviewing` entry emphasizes open-ended changeset review over quality, risk, consistency, evidence, and architecture, without implying standards-conformance audit.
+1. Reconcile `verification-kinds.md` so the `review` entry emphasizes open-ended changeset review over quality, risk, consistency, evidence, and architecture, without implying standards-conformance audit.
 2. Keep `spx/14-verification.pdr.md` on the five-type taxonomy; amend only if the grounding text needs the same boundary clarification.
-3. Reconcile the reviewing node with the active `review-changes` prompt and schema so any remaining review taxonomy buckets match what `review-changes` can actually judge.
+3. Reconcile the review node with the active `review-changes` prompt and schema so any remaining review taxonomy buckets match what `review-changes` can actually judge.
 4. Gate the change with `spx validation markdown`, `spx spec status --format json`, `just check-skills`, and `just docs-check`.
 
 Handle before applying the Python, TypeScript, and Rust test-standard drift fixes recorded in `docs/cross-language-test-standards-drift-audit.md`.

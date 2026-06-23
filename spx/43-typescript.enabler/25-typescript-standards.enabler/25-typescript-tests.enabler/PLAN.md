@@ -14,4 +14,4 @@
 
 ## Revisit condition
 
-Pick this up after the `review-changes` vocabulary boundary is clarified, so TypeScript standards work is reviewed with the corrected distinction between reviewing and auditing.
+Pick this up after the `review-changes` vocabulary boundary is clarified, so TypeScript standards work is reviewed with the corrected distinction between review and audit.

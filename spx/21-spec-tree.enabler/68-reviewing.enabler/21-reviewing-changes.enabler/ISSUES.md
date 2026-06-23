@@ -228,6 +228,12 @@ Surfaced from the operator review of `changes-reviewer` behavior on
 
 ## 7. Thread-store slug resolves a stale branch name in a reused worktree
 
+**Resolved for review persistence by the 2026-06-23 journal migration.** The
+review-changes skill no longer writes `review-result.json` / `review.md` under a
+branch-slugged Thread Store path. Durable review state is now the sealed
+`spx journal --type review` prefix, whose terminal event records `branchSlug`,
+`headSha`, `baseRef`, `baseSha`, `configDigest`, `scope`, and `status`.
+
 `review-changes` persists `review-result.json` / `review.md` under a
 thread-store slug derived from the branch identity by the `scope-changeset` skill
 (`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler`,
@@ -253,7 +259,8 @@ consumer reading the thread store for branch B finds the wrong branch's record (
 none), and any cross-branch artifact lookup by slug is unreliable in the
 multi-worktree layout.
 
-**Required handling (investigate in `scope-changeset`, the governing node):**
+**Residual handling (investigate in `scope-changeset`, the governing node, if
+branch identity is observed stale outside Thread Store):**
 
 - Confirm how the branch slug is derived — current checked-out branch vs a stale or
   cached ref — and key it off `git branch --show-current` (or the
@@ -270,6 +277,12 @@ Surfaced during the PR #149 local review (2026-06-09), branch
 `work__handoff-lint-enforcement`.
 
 ## 8. The persisted review carries no head identity, so a re-review can return a stale verdict
+
+**Resolved by the 2026-06-23 journal migration.** The review-changes skill now
+derives run metadata from the current worktree and env refs before appending
+review journal events. The terminal `com.outcomeeng.spx.journal.run.completed`
+event carries `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`,
+`scope`, and `status`; the skill reads the sealed prefix back before reporting.
 
 `review-result.json` records findings, acknowledgements, and a summary, but no
 identity of the diff it reviewed — no head OID and no base OID. The thread store
@@ -288,15 +301,15 @@ observed on `outcomeeng/plugins` PR #260 (2026-06-18), where the agent re-read t
 pre-fix record and reported the prior diff's findings. Had that stale verdict been
 *clean*, the path would authorize merging a diff no review ever saw.
 
-**Required handling — a safety property the thread-store replacement must keep.**
-The thread-store backend is being replaced; whatever replaces it must:
+**Resolved handling — the journal replacement keeps this safety property:**
 
-- Stamp the resolved head OID (and base OID) into the review record when
-  `compute_diff` runs.
-- Make `changes-reviewer` / `review-changes` always recompute against the current
-  head and refuse to return a record whose stamped head ≠ the current head.
-- Let the `MERGE_READINESS` evaluation read that stamp to confirm the local review
-  is current, at parity with how the CI review's currency is established.
+- Stamp the resolved head OID and base OID into the terminal journal run-state
+  event.
+- Make `changes-reviewer` / `review-changes` recompute against the current refs
+  and record a fresh journal run.
+- Let `MERGE_READINESS` read the sealed prefix's terminal run-state to confirm
+  the local review is current, at parity with how the CI review's currency is
+  established.
 
 Same stale-ref family as items 2 and 7 (base ref, slug); this one is the
 record-identity gap and the only one with a direct merge-safety consequence.

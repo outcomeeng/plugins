@@ -11,13 +11,21 @@ templates, and the label asymmetry are removed; the schema bumped to version 3. 
 historical D-items and eval-translation notes below predate that collapse — read their
 `follow_up` references as removed.
 
+**Update (2026-06-23) — persistence moved to the review journal.** The
+Thread Store persistence notes below are historical. The active chain validates
+review-result JSON through the arbiter, records the run on
+`spx journal --type review`, and reads the sealed event prefix back through
+`journal_emit.py render`. `compute_diff.py` no longer reads `changes.json`, and
+the wrapper exports `SPX_VERIFY_BASE_REF` / `SPX_VERIFY_HEAD_REF` for non-default
+input scopes.
+
 The verification skill was re-aligned with the `REVIEW.template.md` finding taxonomy: six categories grouped by three axes (`consistency`/`security`/`performance` for what the code does, `evidence` for how we know, `standards`/`architecture` for how it does it), three severities (`blocking`, `debt`, `follow_up`), and label asymmetry between BLOCKING/DEBT (Reference/Evidence/Required) and FOLLOW-UP (Reference/Issue/Track-under) carried by the `message` and `action` fields. This PLAN tracks open items deferred from that re-alignment and earlier iterations.
 
 ## Decisions (2026-05-17 interview)
 
 A `/contextualize` walk over `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` surfaced six imperfections; the interview that followed produced these agreed remediations. The next iteration on the verification skill implements them; PR strategy (one bundled PR vs split) is open.
 
-**D1. Input-mode dispatch lives in the existing `changes-reviewer`, extended with input-parsing prose.** No new wrapper. One smart entry point dispatches `changes-reviewer` via the Task tool with the raw input as the prompt; the Task dispatch IS the "separate context window". The agent's prose teaches it to recognize three input forms — (a) a PR reference (`#N`, URL), (b) a local branch reference, (c) a `from...to` git rev range (local or remote) — parse them, resolve to a `(from_ref, to_ref, slug)` triple, set up env (`SPX_VERIFY_BRANCH`, `SPX_VERIFY_BASE_REF`) or write a `changes.json` thread record accordingly, then invoke the skill chain. The current single-wrapper-per-skill shape per `verification.md` is preserved. No dedicated slash command per mode — the agent interprets what was given. Future verification skills (when authored) ship their own thin wrappers per the shared verification contract; that's verification-skill-author scope, not this iteration.
+**D1. Input-mode dispatch lives in the existing `changes-reviewer`, extended with input-parsing prose.** No new wrapper. One smart entry point dispatches `changes-reviewer` via the Task tool with the raw input as the prompt; the Task dispatch IS the "separate context window". The agent's prose teaches it to recognize three input forms — (a) a PR reference (`#N`, URL), (b) a local branch reference, (c) a `from...to` git rev range (local or remote) — parse them, resolve to a `(from_ref, to_ref)` pair, export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` for non-default scopes, then invoke the skill chain. The current single-wrapper-per-skill shape per `verification.md` is preserved. No dedicated slash command per mode — the agent interprets what was given. Future verification skills (when authored) ship their own thin wrappers per the shared verification contract; that's verification-skill-author scope, not this iteration.
 
 **D2. Diff semantics unify on three-dot (merge-base) across all modes.** `compute_diff.py` runs `git diff <from>...<to>` (not `<from>..<to>`). The merge-base diff shows what the head added since branching from the base — the file-level diff a reviewer wants — independent of how far the base has moved. The third input mode `branch...other-branch` becomes a literal pass-through. Spec scenarios at `reviewing-changes.md:11-15` are updated to name `...` explicitly.
 
@@ -77,7 +85,7 @@ Per the cross-skill eval design pattern in `spx/21-spec-tree.enabler/16-verifica
 - `evals/judgment-grounding/` — absence-claim hallucination (4 cases)
 - `evals/severity-classification/` — severity rubric adherence (4 cases)
 - `evals/findings-direction/` — finding direction on clean vs broken diffs: zero `blocking` findings on clean diffs, at least one `blocking` finding on broken diffs (6 cases)
-- `evals/wrapper-protocol/` — wrapper agent's planned tool-call sequence includes the arbiter and uses thread-store CLIs (3 cases)
+- `evals/wrapper-protocol/` — wrapper agent's planned tool-call sequence includes the arbiter and the review journal append/readback sequence (3 cases)
 
 ## Out of scope
 
@@ -88,6 +96,6 @@ Per the cross-skill eval design pattern in `spx/21-spec-tree.enabler/16-verifica
 
 - PR #43 — the four evals and their spec assertions: `evals/judgment-grounding`, `evals/severity-classification`, `evals/findings-direction`, `evals/wrapper-protocol`
 - Shared verification eval pattern: `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md`
-- PR #37 — the verification skill itself, the wrapper agent, the thread-store backend
+- PR #37 — the verification skill itself, the wrapper agent, and the superseded Thread Store backend
 - Spec-coverage ADR: `spx/15-spec-coverage.adr.md`
 - `REVIEW.template.md` (repo root) — the taxonomy this verification skill now aligns with

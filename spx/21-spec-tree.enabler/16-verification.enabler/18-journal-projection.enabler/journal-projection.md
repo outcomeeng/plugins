@@ -1,7 +1,7 @@
 # Journal Projection
 
 PROVIDES the consumer-side run-journal projection — building `spx journal` channel event inputs from a verification run's results, and computing the rollup and rendering the human-readable surface from an event prefix
-SO THAT the agentic verification skills — auditing's `/audit` and reviewing's `/review-changes`
+SO THAT the agentic verification skills — audit and review-changes
 CAN record runs and produce surfaces through one shared, type-agnostic projection rather than each re-implementing event construction, rollup, and rendering
 
 ## Assertions

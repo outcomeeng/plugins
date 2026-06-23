@@ -2,7 +2,7 @@
 
 ## Target
 
-`spx journal` is the source of truth for every agentic verification run. Auditing and reviewing open one run, append CloudEvents, seal it, read the sealed event prefix, and compute all verdict/check/comment surfaces as consumer-side projections. The journal backend is selected at the edge; skills do not name storage paths or parse rendered comments as state.
+`spx journal` is the source of truth for every agentic verification run. Audit and review open one run, append CloudEvents, seal it, read the sealed event prefix, and compute all verdict/check/comment surfaces as consumer-side projections. The journal backend is selected at the edge; skills do not name storage paths or parse rendered comments as state.
 
 `spx journal render` is intentionally identity: it returns the event-prefix JSON array. Kind-specific markdown/findings/check surfaces are rendered by the consumer from the prefix, not by the type-agnostic channel.
 
@@ -24,14 +24,14 @@ Verification already run:
 
 ## Next
 
-1. Run one real `/audit` workflow against a small known scope, then inspect the sealed run with `spx journal read --type auditing --run <token> --from 0`.
+1. Run one real `audit` workflow against a small known scope, then inspect the sealed run with `spx journal read --type audit --run <token> --from 0`.
 2. Confirm the terminal event includes `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`, `scope`, and `status`.
 3. If the real audit works, finish the audit slice: remove remaining stale audit wording only where it is truly off-path, and gate normally.
 4. Migrate review only after audit is proven in the real workflow.
 
 ## Remaining Migration
 
-- `review-changes` still uses `thread_store`. Migrate it to `spx journal --type reviewing`, consuming the shared projection rather than building a parallel model. The replacement must accept only a sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
+- `review-changes` still uses `thread_store`. Migrate it to `spx journal --type review`, consuming the shared projection rather than building a parallel model. The replacement must accept only a sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
 - `thread_store` and `manage-thread-store` are superseded by the journal and should be deleted when no review consumer uses them. Do not reframe them as current architecture.
 - The stateful audit-orchestrator cross-run fold is blocked until `@outcomeeng/spx` exposes a backend-agnostic read/list of a branch/type scope's sealed run set in order. The upstream request is recorded as outcomeeng/spx session `2026-06-23_07-42-10`; the prototype evidence is in `prototypes/audit-orchestrator-spike/`.
 - PR-thread human delivery remains consumer-owned: the journal's GitHub backend stores event-array JSON, not the human verdict comment. The PR consumer must render and deliver its human surface separately.
