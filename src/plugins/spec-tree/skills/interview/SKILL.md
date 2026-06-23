@@ -9,7 +9,7 @@ argument-hint: <file-path-or-requirement>
 ---
 
 <objective>
-A domain-agnostic interview methodology for structured requirements gathering — questioning technique, coverage tracking, pushback protocol, progress display, and preview rendering.
+A decision-ready requirements packet for the calling workflow: resolved choices, remaining open decisions, coverage state, and previewable artifact constraints.
 
 </objective>
 

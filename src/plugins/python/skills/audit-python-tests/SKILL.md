@@ -27,8 +27,16 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 Any overlay loaded above routes skill behavior to the product's governing specs and decisions; a local overlay supplements skill behavior and does not declare product truth.
 
 <objective>
-A verdict on Python test evidence against the spec-tree test-audit properties plus the Python-specific source-ownership, testability, harness, generator, inert-fixture, and pytest-discovery rules.
+A verdict on Python test evidence — APPROVED, or REJECTED with each finding naming the assertion or evidence artifact, the failed spec-tree or Python-specific evidence property, and the evidence.
 </objective>
+
+<constraints>
+
+This audit is read-only. Produce a verdict over test evidence; never edit tests, production code, specs, fixtures, harnesses, generators, or project configuration.
+
+</constraints>
+
+<audit_workflow>
 
 <audit_scope>
 For every in-scope test assertion, inspect the full evidence chain:
@@ -207,6 +215,8 @@ When two or more in-scope tests repeat setup or infrastructure logic, reject the
 
 Do not recommend `tests/helpers`, `tests/support`, node-local helper modules, or fixture body code in `conftest.py`.
 </architectural_dry_audit>
+
+</audit_workflow>
 
 <verdict_format>
 Follow `<verdict_format>` in `/audit-tests`.

@@ -16,9 +16,7 @@ This orchestration runs in an audit agent's isolated context. When this skill lo
 
 <objective>
 
-One wrapper verdict over a code scope: three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one dispatched child verdict per language partition in its `children` array, assembled via `aggregate_verdicts.py`, recorded on the `spx journal` as the run's source of truth, and rendered from the sealed event prefix through `journal_emit.py`. The run advances deterministically through prepare (Phase 0), automated gates (Phase 1), tests (Phase 2), implementation review (Phase 3), test evidence (Phase 4), ADR/PDR compliance (Phase 5), and emit (Phase 6); the scope is partitioned by language and each partition dispatched to the corresponding `audit-{lang}*` skills. The orchestrator itself embeds zero language-specific knowledge beyond the dispatch template — language audits live in their own skills, this one composes them.
-
-This skill runs a single audit pass per invocation. By default it is stateless: it reads no prior verdict and records the single run on the `spx journal` channel as the run's source of truth, reading the verdict back from the sealed event prefix (Phase 6). When a caller (e.g., the `audit-orchestrator` agent) needs cross-commit continuity, the skill exposes a stateful orchestration mode that drives the `audit_orchestrator.py` CLI to maintain `.spx/audits/<lang>/<branch-slug>.md` and a TTL-bounded lock at `<state-file>.lock`. See `<stateful_orchestration>` below.
+One wrapper verdict over a code scope: three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`), one dispatched child verdict per language partition in `children`, a canonical rollup from `aggregate_verdicts.py`, and a rendered surface derived from the sealed `spx journal` event prefix.
 
 </objective>
 
