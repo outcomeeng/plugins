@@ -7,9 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Define TypeScript-specific test standards loaded by `/test-typescript`, `/code-typescript`, `/architect-typescript`, and `/audit-typescript-tests`.
-
-Read `/test` first when deciding what evidence to create. Read `/typescript-standards` before this reference when writing or reviewing TypeScript test code. These standards apply to all TypeScript tests.
+The TypeScript-specific test standards every TypeScript skill enforces.
 </objective>
 
 <repo_local_overlay>

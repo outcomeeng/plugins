@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Keep active repository work alive across external waits by routing heartbeat and timer creation through one shared tracking standard. `<when_to_load>` names the moments to reach for it. GitHub PR check waits are excluded; /merging-standards owns their exact foreground command.
+One shared standard for routing heartbeat and timer creation that keeps active repository work alive across external waits.
 </objective>
 
 <reference_note>

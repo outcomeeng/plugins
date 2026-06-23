@@ -28,9 +28,7 @@ allowed-tools: Read, Edit, Write, Bash(spx:*), Bash(git:*), Bash(pwd), Bash(ls:*
 </precondition>
 
 <objective>
-Close the ongoing spec-tree session: commit session-owned work on its branch, persist issues and plans already made in coordination notes (these live in the affected spec tree nodes), commit them on the session branch or create a pure coordination branch, and push all branches to origin. Unless every node anchored this session carries no unresolved continuation, create a session file as an initialization prompt for the next session of Claude. If created, the session file comprises pointers to the persisted files (via origin branch) and external state such as the state of production infrastructure.
-
-The imperfection ledger started when invoking the `/understand` skill (which loads the imperfection protocol) has captured insights and issues. With this skill, it is drained by triaging and persisting all remaining entries.
+A closed spec-tree session — session-owned work committed and pushed, coordination notes persisted, the imperfection ledger drained, and a continuation session file written unless every node anchored this session carries no unresolved continuation.
 
 </objective>
 

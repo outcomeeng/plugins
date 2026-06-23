@@ -8,7 +8,7 @@ allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
 <objective>
-Orchestrate the GitHub-PR merge transport — the lifecycle that takes a changeset from shipping intent to a merged pull request. /manage-github-pr is the GitHub-PR transport's lifecycle orchestration, invoked by `/merge` when it selects this transport, or directly when a pull request is the chosen way to ship. It detects what is being shipped and invokes the skills that own implementation, committing, PR opening, PR management, merge, and closure — autonomously by default, presenting a pre-mutation confirmation first only when the merge overlay opts into it. Transport selection belongs to `/merge`; /manage-github-pr assumes the GitHub-PR transport and never reimplements the lifecycle skills' protocols, per /merging-standards.
+A changeset merged into the default branch on origin through the GitHub-PR transport.
 </objective>
 
 <context>

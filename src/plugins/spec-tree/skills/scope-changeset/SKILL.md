@@ -5,7 +5,7 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-Provide the single canonical home for the deterministic git-derived changeset primitives shared across the agentic verification surfaces — auditing, review-changes, and thread-store. Branch identity, the on-disk addressing slug, base-ref resolution, the remote-tracking ref form, and merge-base diff scope are derived here once; consumers import them rather than re-deriving or re-exporting them.
+The canonical deterministic git-derived changeset primitives — branch identity, on-disk addressing slug, base-ref resolution, remote-tracking ref form, and merge-base diff scope — derived once for every verification surface to import.
 </objective>
 
 <api_surface>

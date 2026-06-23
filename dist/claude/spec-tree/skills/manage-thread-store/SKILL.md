@@ -5,7 +5,7 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-Mediate persistence of branch-scoped records produced by spec-tree skills (review results, audit verdicts, and similar). Skills and their wrapper agents call this skill's CRUD CLIs; no caller touches the storage surface directly.
+Branch-scoped verification records (review results, audit verdicts, and similar) persisted and retrieved through one CRUD CLI, never the storage surface directly.
 </objective>
 
 <api_surface>

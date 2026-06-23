@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-Create production-quality {{artifacts}} that follow {{domain}} best practices.
+Production-quality {{artifacts}} that follow {{domain}} best practices.
 </objective>
 
 <quick_start>

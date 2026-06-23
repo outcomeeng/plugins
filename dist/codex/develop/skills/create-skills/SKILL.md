@@ -9,7 +9,7 @@ Invoke the `develop:skill-standards` skill before proceeding. If that skill is u
 Invoke the `develop:agent-prompt-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Route skill-creation, editing, and improvement work through typed workflows. Standards and anti-patterns live in `/skill-standards` and `/agent-prompt-standards`; this skill loads them, asks the user which workflow to run, and points at the right scaffold.
+A skill-authoring request (create, edit, or improve) routed to its matching typed workflow with `/skill-standards` and `/agent-prompt-standards` loaded.
 </objective>
 
 <reference_loading>

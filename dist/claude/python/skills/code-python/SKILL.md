@@ -15,11 +15,7 @@ Invoke the `python:python-test-standards` skill before proceeding. If that skill
 </repo_local_overlay>
 
 <objective>
-Write or fix implementation code that makes tests pass. Two modes:
-1. **Writing new implementation** - Given failing tests, produce code that passes them
-2. **Fixing rejected implementation** - Given reviewer feedback, fix existing code
-
-**Write implementation only — tests MUST already exist.**
+Python implementation code that makes its node's existing tests pass — written fresh against failing tests, or repaired against reviewer feedback.
 </objective>
 
 <mode_detection>

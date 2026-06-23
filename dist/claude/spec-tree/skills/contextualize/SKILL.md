@@ -6,9 +6,7 @@ allowed-tools: Read, Glob, Grep, Skill
 
 <objective>
 
-Walk the Spec Tree from product root to a target node, deterministically collecting and reading all context: ancestor specs along the path, lower-index siblings' specs at each directory level, all ADRs/PDRs, and the local lifecycle overlay that determines whether completed local work continues into `/merge`. Emit `<SPEC_TREE_CONTEXT target="...">` marker with a structured context manifest.
-
-This is full injection — every collected document is read into the conversation. No heuristic selection.
+A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, and the local lifecycle overlay read into the conversation, with no heuristic selection.
 
 </objective>
 

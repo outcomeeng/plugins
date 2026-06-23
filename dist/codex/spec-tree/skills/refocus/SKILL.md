@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-Re-focus on pursuing the goal following the strict spec-tree methodology.
+Ad hoc work re-focused onto the strict spec-tree methodology.
 </objective>
 
 <diagnosis>

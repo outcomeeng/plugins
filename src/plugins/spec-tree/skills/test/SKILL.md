@@ -5,7 +5,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>
-Write tests driven by spec-tree assertions. This skill applies the canonical testing methodology plus spec-tree-specific concerns: assertion extraction, evidence gap analysis, test scaffold generation, and deterministic context loading from the tree.
+Tests driven by spec-tree assertions — assertion extraction, evidence-gap analysis, scaffold generation, and deterministic tree context applied through the canonical testing methodology.
 </objective>
 
 <prerequisite>

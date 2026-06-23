@@ -5,7 +5,7 @@ description: ALWAYS invoke this skill when breaking down, splitting, scoping, co
 
 <objective>
 
-Compose Spec Tree structure from a target node address, durable spec content, and node-local coordination notes. Handles top-level product-root composition (`spx/`) and child decomposition for existing nodes. Determines whether source material is complete, identifies concern boundaries, assigns enabler/outcome types, records ordering evidence, assigns sparse indices, redistributes assertions, and validates structural quality.
+Spec Tree structure composed from a target node address, durable spec content, and node-local coordination notes — concern boundaries identified, enabler/outcome types assigned, sparse indices and ordering evidence recorded, assertions redistributed, and structural quality validated.
 
 </objective>
 

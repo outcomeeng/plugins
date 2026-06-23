@@ -10,9 +10,7 @@ allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
 <objective>
-Write or fix implementation code that makes tests pass. Two modes:
-1. **Writing new implementation** - Given failing tests, produce code that passes them
-2. **Fixing rejected implementation** - Given reviewer feedback, fix existing code
+TypeScript implementation code that makes its node's tests pass — written fresh against failing tests, or repaired against reviewer feedback.
 </objective>
 
 <accessing_skill_files>

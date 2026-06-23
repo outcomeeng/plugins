@@ -7,7 +7,7 @@ allowed-tools:
 ---
 
 <objective>
-Compute the diff against the resolved base ref, apply the judgment-style review prompt, validate the emitted JSON through the arbiter CLI, and persist `review-result.json` plus a rendered `review.md` to the current thread. The arbiter is the source of validity; never hand-validate the emitted JSON, and never name the thread address.
+A `review-result.json` and rendered `review.md` for the working diff, validated through the arbiter CLI and persisted to the current thread.
 </objective>
 
 <api_surface>
@@ -98,6 +98,7 @@ Schema validation — required keys, enum membership, the path-style `rule` cita
 - Every filesystem effect routes through the `thread_store` facade — no direct `open()`, `pathlib.Path.write_*`, or `os.remove` against the thread-store backend's storage paths. Only `compute_diff.py` shells out, and only to run `git diff` / `git ls-files` for the committed, staged, unstaged, and untracked review input sections.
 - The judgment-style review prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`. It is never embedded inside this SKILL.md or any `.py` file under `scripts/`.
 - Frozen dataclasses (`Finding`, `ReviewResult`) cross the parse -> validate -> render boundary. Any attempt to mutate one between steps raises `FrozenInstanceError`.
+- Never name the thread address in output — the `thread_store` facade resolves and owns it; the records persist to the current thread without the skill surfacing its storage path.
 
 </constraints>
 

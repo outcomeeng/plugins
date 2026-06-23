@@ -8,7 +8,7 @@ allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
 <objective>
-Dispatch a changeset to its merge transport so it can reach the default branch on origin. /merge reads the project's transport selection from `spx/local/merging.md`, classifies the changeset, selects exactly one transport, and delegates to that transport's skills. The merging policy — the three authority gates, delivered-value boundary, and finding-disposition rule — is transport-neutral and lives in /merging-standards; /merge owns transport selection only, never the gates and never a transport's internal protocol.
+A changeset reaches the default branch on origin through exactly one merge transport, selected from the project's `spx/local/merging.md` and delegated to that transport's skills.
 </objective>
 
 <context>

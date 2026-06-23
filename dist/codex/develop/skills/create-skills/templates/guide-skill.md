@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-Provide step-by-step guidance for {{domain/task}}.
+{{domain/task}} completed under step-by-step guidance.
 </objective>
 
 <quick_start>

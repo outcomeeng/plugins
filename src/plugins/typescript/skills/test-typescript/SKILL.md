@@ -12,11 +12,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-Write or fix test files for a node specification. This skill handles both:
-1. **Writing new tests** - Given a node spec, produce test files
-2. **Fixing rejected tests** - Given reviewer feedback, fix existing tests
-
-**This skill WRITES tests. It does not just design or plan.**
+TypeScript test files that supply evidence for a node specification's assertions — written fresh from the spec, or repaired against reviewer feedback.
 </objective>
 
 <mode_detection>

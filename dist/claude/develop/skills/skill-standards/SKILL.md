@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical standards for skill authoring. Every rule that `/audit-skills` enforces lives here — frontmatter, XML structure, naming, descriptions, progressive disclosure, skill types, reference patterns, code-fence and bash constraints, validation, script testing. `/create-skills` loads this reference before authoring; `/audit-skills` loads it before evaluating. Nothing in this skill is optional for the skills that load it.
+The canonical standards for skill authoring — frontmatter, XML structure, naming, descriptions, progressive disclosure, skill types, reference patterns, code-fence and bash constraints, validation, and script testing.
 </objective>
 
 <success_criteria>
@@ -224,10 +224,10 @@ Skills use **pure XML structure** — no markdown headings (`#`, `##`, `###`) an
 
 **Required tags (every skill):**
 
-| Tag                  | Content                                                                                                                                             |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<objective>`        | The observable **output** the skill produces, in a definite shape — not an actor or an activity. See `/agent-prompt-standards` `<objective_shape>`. |
-| `<success_criteria>` | The properties that prove the output is sound — not a re-list of the workflow steps.                                                                |
+| Tag                  | Content                                                                                                                                                                                       |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<objective>`        | The observable **output** the skill produces, in a definite shape — one sentence, not an actor or an activity, not a summary of the skill. See `/agent-prompt-standards` `<objective_shape>`. |
+| `<success_criteria>` | The properties that prove the output is sound — not a re-list of the workflow steps.                                                                                                          |
 
 **Router-pattern tags** (skills that route to multiple workflows):
 

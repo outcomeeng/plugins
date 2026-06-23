@@ -6,9 +6,7 @@ description: >-
 ---
 
 <objective>
-Generate `.excalidraw` JSON files that **argue visually**, not just display information.
-
-**Setup:** When the user asks for this skill to be set up (renderer, dependencies, etc.), see `README.md` for instructions.
+An `.excalidraw` JSON file that **argues visually**, not just displays information.
 </objective>
 
 <customization>

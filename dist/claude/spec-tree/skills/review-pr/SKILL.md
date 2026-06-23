@@ -7,11 +7,16 @@ allowed-tools: Read, Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr comment:
 
 <objective>
 
-Review a pull request and return constructive, repository-grounded feedback labeled with the two-severity / six-category taxonomy from `/merging-standards` `<review_classification>` (canonical specification: `REVIEW.template.md` at the repository root). This skill produces review *prose* — observations and suggestions a maintainer reads — not a structured audit verdict and not code changes. When a caller needs the deterministic audit verdict alongside the review, it runs the `/audit` skill separately and combines the two; this skill stays focused on the human-facing review.
-
-Repository-read-only — never edits code, tests, or any repository file. `Bash` is used for two purposes: read operations against GitHub (`gh pr diff`, `gh pr view`) and — in standalone mode only — the single mutating call that posts the review (`gh pr comment --body-file -`). The skill never pushes, merges, or runs `gh pr merge` / `gh pr close` / any write-side `gh` subcommand beyond `gh pr comment`.
+Constructive, repository-grounded review prose on a pull request, labeled with the two-severity / six-category taxonomy from `/merging-standards` `<review_classification>`.
 
 </objective>
+
+<constraints>
+
+- Repository-read-only — never edits code, tests, or any repository file.
+- `Bash` serves two purposes only: read operations against GitHub (`gh pr diff`, `gh pr view`) and — in standalone mode only — the single mutating call that posts the review (`gh pr comment --body-file -`). Never push, merge, or run `gh pr merge` / `gh pr close` / any write-side `gh` subcommand beyond `gh pr comment`.
+
+</constraints>
 
 <reference_loading>
 

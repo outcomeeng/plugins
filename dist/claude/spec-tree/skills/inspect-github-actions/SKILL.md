@@ -8,7 +8,7 @@ model: claude-haiku-4-5-20251001
 
 <objective>
 
-Investigate GitHub Actions workflow runs from inside a Claude session — status, run discovery, log triage, authentication-state diagnosis — under the marketplace's safety constraints. Read-only by default. No fork-bombing CLI patterns. No credential or workflow mutation without explicit user instruction.
+A read-only diagnosis of GitHub Actions workflow runs from inside a session — status, run discovery, log triage, and authentication-state.
 
 </objective>
 

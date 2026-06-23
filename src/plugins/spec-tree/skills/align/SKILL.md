@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep
 
 <objective>
 
-Check Spec Tree files for conformance to templates, atemporal voice, and content placement rules. Report non-conformances as facts. Do not suggest fixes, rate severity, or prioritize findings.
+A factual report of Spec Tree files' non-conformances to templates, atemporal voice, and content-placement rules — no fixes, severities, or prioritization.
 
 </objective>
 

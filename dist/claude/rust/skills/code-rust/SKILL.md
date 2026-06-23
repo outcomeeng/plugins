@@ -9,7 +9,7 @@ Invoke the `rust:rust-standards` skill before proceeding. If that skill is unava
 Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Write or repair Rust implementation code with spec-driven behavior, repository-aware discovery, explicit seams, and full validation before completion.
+Rust implementation code with spec-driven behavior, explicit seams, and full validation passing.
 </objective>
 
 <accessing_skill_files>

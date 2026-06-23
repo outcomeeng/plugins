@@ -13,9 +13,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-Write or fix Python test files for a spec-tree node. The workflow covers new test evidence and repair of rejected test evidence.
-
-This skill writes tests only after the source contract is testable. When the existing code shape blocks maintainable evidence, refactor the code under test first or record the architecture gap in the owning spec-tree node before writing the test.
+Python test files that supply evidence for a spec-tree node's assertions — written fresh, or repaired against rejected evidence.
 </objective>
 
 <mode_detection>

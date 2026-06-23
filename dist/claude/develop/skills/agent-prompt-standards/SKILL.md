@@ -7,13 +7,11 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical reference for writing agent prompts — the text content within SKILL.md files and subagent system prompts. Covers voice, description style, constraint language, and anti-patterns. Creator skills reference these conventions when authoring; auditor skills check compliance against them.
-
-This skill governs prompt *craft* (how to write text). Prompt *structure* (which XML tags to use, file organization) is governed by the creator skills themselves.
+The agent-prompt writing conventions — voice, description style, constraint language, objective shape, and anti-patterns — for the text within SKILL.md files and subagent system prompts, enforced across every creator and auditor skill.
 </objective>
 
 <reference_note>
-This is a reference skill. Creator and auditor skills load these conventions automatically. Invoke `/create-skills` or `/create-subagents` to author; invoke `/audit-skills` or `/audit-subagents` to review.
+This is a reference skill governing prompt *craft* (how to write the text); prompt *structure* (which XML tags, file organization) is governed by the creator skills themselves. Creator and auditor skills load these conventions automatically. Invoke `/create-skills` or `/create-subagents` to author; invoke `/audit-skills` or `/audit-subagents` to review.
 </reference_note>
 
 <voice>
@@ -47,6 +45,16 @@ Two-tier hierarchy:
 <objective_shape>
 
 **An `<objective>` states the skill's output, not an activity or an actor.** It describes the observable artifact or state the skill produces, in a definite shape — what is true when the skill has been applied correctly, such that "every rule followed exactly" is the visible proof. It never opens with an actor ("The skill produces…", "Claude produces…") or a bare activity verb ("Audit…", "Generate…", "Evaluate…"). It names the output and its required shape.
+
+**One sentence — it is the output target, not a summary of the skill.** Write one sentence; reach for a second only when the output genuinely has two parts. A paragraph-length objective is the smell that activation, workflow, or constraints have leaked in. The litmus: every clause must name a property of the *output*. A clause that says *when* the skill runs belongs in `description`; *how* it runs (steps, gates, orchestration) belongs in `<workflow>`; *what it must not do* belongs in `<constraints>`. Delete such clauses from the objective — they are not new truth to relocate, they already live in those sections. `/manage-github-pr`'s output is "the changeset merged into the default branch on origin through a pull request," not the paragraph that narrates how it gets there.
+
+**Common shapes by skill family** — name the output, never the activity:
+
+- **Auditor** → "A verdict on X — &lt;the finding categories&gt;" (the canonical auditor shape; see `/skill-standards` `references/auditor-skeleton.md`).
+- **Coder / builder** → "The &lt;artifact&gt; that &lt;holds the property&gt;" — e.g. "Python implementation code that makes its node's tests pass."
+- **Reference / standards** → "The &lt;standards or vocabulary&gt; &lt;scope&gt;" — e.g. "The Python-specific test standards every Python skill enforces."
+- **Router** → "A &lt;request&gt; routed to its matching workflow" — the routing outcome, not the menu.
+- **Orchestrator** → the end-state its lifecycle produces — e.g. "the changeset merged to the default branch on origin," not the step sequence.
 
 **An objective is not a behavioral claim.** `<voice>` governs behavioral claims — what Claude does, tends to do, or fails to do. An objective is an output statement, a different category, so the imperative-vs-"Claude" subject choice never applies to it. Naming an actor as the subject of an objective is the error the output framing removes.
 

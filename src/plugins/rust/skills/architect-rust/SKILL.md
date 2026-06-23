@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Glob, Grep, Skill
 {!% require_skill 'rust:rust-architecture-standards' %!}
 
 <objective>
-Create Rust ADRs that follow the standard Rust architecture template, preserve spec-tree hierarchy constraints, and encode testability as `## Verification` `### Audit` rules.
+A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>

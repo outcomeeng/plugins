@@ -9,7 +9,7 @@ Invoke the `prose:prose-standards` skill before proceeding. If that skill is una
 
 <objective>
 
-Write prose that reads as varied, specific, and human. These are the craft principles to follow -- not a list of things to avoid, but the positive habits that produce good writing.
+Reader-facing prose that reads as varied, specific, and human.
 
 </objective>
 

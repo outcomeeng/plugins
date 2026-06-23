@@ -6,7 +6,7 @@ allowed-tools: Bash, Read
 ---
 
 <objective>
-Bring the current branch current with its fetched base by rebasing, so context loading reads current product truth, verification scopes against a current base, and a merge integrates onto the latest base. The mechanism is rebase, never `git reset`: rebase replays the branch's own commits onto the advanced base; reset repoints the branch while leaving the working tree at the old base, silently reverting merged work. A clean rebase runs with no operator interaction; a conflict that cannot be resolved autonomously surfaces the `SYNC_BASE` token and stops; uncommitted changes to tracked files yield `dirty_tree`, which the caller clears by committing and re-running.
+The current branch brought current with its fetched base by a clean rebase.
 </objective>
 
 <workflow>

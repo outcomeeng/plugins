@@ -8,7 +8,7 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Detect anti-patterns in internal documents and propose concrete rewrites. Flag specific violations with category and pattern name; show the fix.
+A list of internal-doc anti-patterns found, each flagged with its category and pattern name and paired with a concrete rewrite.
 </objective>
 
 <workflow>

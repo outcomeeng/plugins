@@ -6,9 +6,7 @@ description: >-
 ---
 
 <objective>
-Orchestrate the spec-tree TDD flow for a work item. Eight steps, strictly sequential, plus a conditional ninth that reviews the whole changeset when the work reaches beyond the target node, plus a terminal tenth that carries default-branch work through `/merge`. Three unconditional audit gates (Steps 4, 6, 8) loop until APPROVED, and a conditional whole-changeset review gate (Step 9) is required whenever the change is cross-node — no soft passes on any active gate. Spans all three methodology steps (declare -> spec -> apply) because without guardrails Claude skips declaring prerequisites.
-
-For work destined for the default branch, the flow is complete only when the change reaches the default branch on origin through `/merge` (Step 10). An APPROVED Step 8 audit, a converged Step 9 review, passing tests, a clean working tree, and a local commit ahead of base are local readiness, not delivered value. Step 10 governs when that continuation is scoped out.
+A work item implemented through the spec-tree TDD flow — its node declared, specified, and passing its tests with every audit gate APPROVED — and, for default-branch work, the change merged to the default branch on origin.
 
 </objective>
 

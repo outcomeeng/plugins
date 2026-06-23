@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 
 <objective>
 
-Apply structural changes to the Spec Tree: move nodes between parents, re-scope content across nodes, extract shared enablers, and consolidate nodes. Analyzes impact, applies changes, and reports what was modified.
+A restructured Spec Tree — nodes moved between parents, content re-scoped, shared enablers extracted, nodes consolidated — with impact analyzed and modifications reported.
 
 </objective>
 

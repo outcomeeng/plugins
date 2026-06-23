@@ -16,9 +16,7 @@ This audit runs inside a dispatched auditor's verifier context — the generic `
 </dispatch_gate>
 
 <objective>
-Review the Rust-specific architecture concerns of an ADR — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and Rust anti-patterns — against `/rust-standards`, `/rust-architecture-standards`, `/test` principles, and applicable PDR constraints. Produce a structured verdict per concern. This skill is read-only.
-
-**Standards are pre-loaded above.** Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — the composing `adr-auditor` judges them from the canonical decision template.
+A structured verdict on an ADR's Rust-specific architecture concerns — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and Rust anti-patterns.
 </objective>
 
 <context_loading>

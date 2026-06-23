@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 Invoke the `prose:internal-doc-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Write internal team documents that are scannable, decisive, and durable. Apply the catalog from `/internal-doc-standards`, which inherits the prose rules and overrides or extends them where internal-doc conventions differ.
+Internal team documents that are scannable, decisive, and durable.
 </objective>
 
 <why_internal_docs_are_different>

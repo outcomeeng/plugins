@@ -5,7 +5,7 @@ description: >-
 ---
 
 <objective>
-{{What the skill does and why it matters}}
+{{The output this skill produces, in one sentence — a noun phrase or output-state naming the artifact, never an activity verb ("Audit…", "Generate…") or an actor ("The skill…")}}
 </objective>
 
 <quick_start>

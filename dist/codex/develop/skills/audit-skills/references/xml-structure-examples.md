@@ -41,9 +41,9 @@ Missing: `<objective>`, `<success_criteria>`
 ✅ Should have both required tags:
 
 ```xml
-<objective>What the skill does and why it matters</objective>
+<objective>The artifact the skill produces, named as an output</objective>
 
-<success_criteria>How to know it worked</success_criteria>
+<success_criteria>The properties that prove the output is sound</success_criteria>
 ```
 
 **Why**: Required tags are non-negotiable for all skills. `<quick_start>` is conditional — include for on-demand tool skills, omit for foundation/gate/validator/reference skills.
