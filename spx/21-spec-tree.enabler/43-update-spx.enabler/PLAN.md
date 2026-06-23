@@ -72,20 +72,17 @@ Done and committed:
 - ✅ Dogfood migration: `spx/CLAUDE.md` un-symlinked to a real file; both guides regenerated
   (AGENTS.md carries the Codex block, CLAUDE.md drops it); both dprint-clean.
 
-Remaining (in-scope, not yet done):
+Also done:
 
-- ⬜ Retire the `/understand` once-per-session staleness step (`SKILL.md` workflow step 8,
-  the `<SPX_CLAUDE_STALE>` marker, its success-criterion) and the `/handoff` marker handling —
-  the render-model ADR asserts "NEVER: an agent judges whether a guide is stale". The old code
-  still runs (redundant), so this is a spec-consistency gap, tracked here. CAUTION: `/understand`
-  is the foundation skill — edit carefully.
-- ⬜ Wire the regenerate-and-diff gate for both guide files (a `just` recipe regenerating
-  `spx/CLAUDE.md` + `spx/AGENTS.md` and `git diff --exit-code`, plus a lefthook step), mirroring
-  the existing `dist_diff` gate. The render-model ADR + `update-spx.md` assert it.
-- ⬜ Gates before merge: `develop:skill-auditor` (edited `update-spx`/`understand`/`handoff`
-  SKILLs + template), `spec-auditor` (`update-spx.md`), `test-evidence-auditor` (tests),
-  `/apply` Step 6 test-audit + Step 8 code-audit + Step 9 whole-changeset review (cross-node),
-  `just check`, then `/merge`.
+- ✅ `/understand` step 8 and `/handoff` run the **deterministic** `update_spx.py --check`
+  rather than in-conversation judgment. The check is **kept, not retired**: the render-model
+  ADR forbids only in-conversation staleness/language judgment, and a session invoking the
+  read-only deterministic checker (which the gate also runs) is permitted, so gate-less
+  consumers retain a staleness signal.
+- ✅ Regenerate-and-diff gate wired: `just guide-check` + a lefthook `regenerate-spx-guides`
+  step, mirroring `dist_diff`.
+- ✅ Merge gates: `adr-auditor` APPROVED, `skill-auditor` APPROVED, `test-evidence-auditor`
+  APPROVED, `changes-reviewer` converged (0 BLOCKING), `just check` green.
 
 ## Gates
 

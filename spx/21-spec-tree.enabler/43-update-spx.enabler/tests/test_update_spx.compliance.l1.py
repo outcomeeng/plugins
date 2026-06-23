@@ -72,3 +72,24 @@ def test_generation_writes_both_guide_files(tmp_path: pathlib.Path) -> None:
         if (tmp_path / name).is_file()
     }
     assert written == set(module.RUNTIME_GUIDE_FILENAMES.values())
+
+
+def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, VERSION)
+    args = [
+        "--template",
+        str(template),
+        "--spx-dir",
+        str(tmp_path),
+        "--languages",
+        LANG_PRIMARY,
+    ]
+    assert module.main([*args, "--write"]) == 0
+
+    # Drift one guide by hand, then regenerate — the gate's basis is that --write
+    # overwrites the drift, so a regenerate-and-diff catches a tampered guide.
+    claude = tmp_path / module.RUNTIME_GUIDE_FILENAMES[RUNTIME_CLAUDE]
+    claude.write_text(claude.read_text() + "\n\nHAND DRIFT\n", encoding="utf-8")
+    assert module.main([*args, "--write"]) == 0
+    assert "HAND DRIFT" not in claude.read_text(encoding="utf-8")
