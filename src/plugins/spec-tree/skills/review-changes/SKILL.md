@@ -16,15 +16,15 @@ A validated review-result JSON document for the working diff, recorded on `spx j
 
 Five entry points under `${CLAUDE_SKILL_DIR}/scripts/` plus prompt and render-template references:
 
-| Entry point                                       | Effect                                                                                                                                          |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Entry point                                       | Effect                                                                                                                                                                  |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scripts/compute_diff.py`                         | Resolve `base_ref` (env -> git origin/HEAD) and `head_ref` (env -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout |
-| `scripts/validate_review_result.py [--file PATH]` | Pipe a review-result JSON document through `review_result.parse_json`; exit 0 on conformance                                                    |
-| `scripts/render_review.py [--file PATH]`          | Parse validated review-result JSON through `review_result.parse_json`, write human-readable review content to stdout                             |
-| `scripts/journal_emit.py`                         | Derive run metadata, map a review-result JSON document to review journal events, and render a sealed event prefix                                |
-| `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                   |
-| `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into context                                                                           |
-| `references/render/*.md`                          | Render templates loaded by `render_review.py` for the document, findings, acknowledgements, and empty severity buckets                          |
+| `scripts/validate_review_result.py [--file PATH]` | Pipe a review-result JSON document through `review_result.parse_json`; exit 0 on conformance                                                                            |
+| `scripts/render_review.py [--file PATH]`          | Parse validated review-result JSON through `review_result.parse_json`, write human-readable review content to stdout                                                    |
+| `scripts/journal_emit.py`                         | Derive run metadata, map a review-result JSON document to review journal events, and render a sealed event prefix                                                       |
+| `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `to_json_dict` / `from_json_dict`                                                           |
+| `references/review-prompt.md`                     | Swappable judgment-style review prompt — read via `Read` into context                                                                                                   |
+| `references/render/*.md`                          | Render templates loaded by `render_review.py` for the document, findings, acknowledgements, and empty severity buckets                                                  |
 
 Durable review state is the sealed `spx journal --type review` event prefix. The skill never writes review-result or rendered markdown files as authoritative artifacts.
 

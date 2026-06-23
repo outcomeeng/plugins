@@ -139,11 +139,11 @@ Only include headings for assertion types that apply. Each assertion type lives 
 
 Every assertion declares one verification type, named by the tag it carries (`references/verification-kinds.md`):
 
-| Verification type | Tag                      | Verdict mode  | Verified by    | What it proves                                                                                                                        |
-| ----------------- | ------------------------ | ------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **test**          | `([test](path/to/test))` | deterministic | test runner    | "The code does X" — an automated test drives behavior that is a deterministic function of its inputs                                  |
-| **evaluate**      | `([eval](path/to/eval))` | deterministic | eval runner    | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
-| **audit**         | `([audit])`              | agentic       | audit skill    | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
+| Verification type | Tag                      | Verdict mode  | Verified by | What it proves                                                                                                                        |
+| ----------------- | ------------------------ | ------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **test**          | `([test](path/to/test))` | deterministic | test runner | "The code does X" — an automated test drives behavior that is a deterministic function of its inputs                                  |
+| **evaluate**      | `([eval](path/to/eval))` | deterministic | eval runner | "The skill identifies X" — a runner scores the producer's parseable structured verdict against expected fields under a pass threshold |
+| **audit**         | `([audit])`              | agentic       | audit skill | "The design follows principle W" — a semantic constraint a model judges, with no structural verdict to score                          |
 
 Only a `test` assertion carries an assertion type (one of the five); `evaluate` and `audit` carry none.
 
