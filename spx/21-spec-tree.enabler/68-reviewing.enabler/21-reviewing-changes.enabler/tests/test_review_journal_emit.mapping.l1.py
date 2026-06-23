@@ -150,3 +150,38 @@ def test_config_digest_changes_with_render_template(tmp_path: pathlib.Path) -> N
     )
 
     assert je.review_config_digest(first) != je.review_config_digest(second)
+
+
+def test_metadata_scope_hash_includes_changed_file_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    changed_files = ["README.md"]
+
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
+    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: list(changed_files),
+    )
+
+    first = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+    changed_files.append("src/plugins/spec-tree/skills/review-changes/SKILL.md")
+    second = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert second[jp.RUN_STATE_SCOPE]["changedFiles"] == [
+        "README.md",
+        "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+    ]
+    assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]

@@ -229,6 +229,16 @@ def _resolve_branch_name() -> str:
     )
 
 
+def _review_scope(*, base_ref: str, head_ref: str, repo: pathlib.Path) -> dict[str, object]:
+    range_spec = f"{base_ref}...{head_ref}"
+    changed_files = changeset_scope.expand_diff_range(range_spec, repo=repo)
+    return {
+        "baseRef": base_ref,
+        "headRef": head_ref,
+        "changedFiles": changed_files,
+    }
+
+
 def _digest(value: object, *, length: int | None = None) -> str:
     text = json.dumps(value, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -269,21 +279,22 @@ def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
 def metadata_for_worktree(
     *, started_at: str, completed_at: str, target: str = DEFAULT_TARGET
 ) -> dict[str, object]:
+    repo = pathlib.Path.cwd()
     base_ref = _resolve_base_ref()
     head_ref = _resolve_head_ref()
     branch_name = _resolve_branch_name()
-    scope = {"baseRef": base_ref, "headRef": head_ref}
+    scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
     return {
         "target": target,
         jp.RUN_STATE_SCOPE_HASH: _digest(scope, length=12),
         jp.RUN_STATE_BRANCH_NAME: branch_name,
         jp.RUN_STATE_BRANCH_SLUG: str(changeset_scope.branch_slug(branch_name)),
         jp.RUN_STATE_HEAD_SHA: str(
-            changeset_scope.commit_oid(head_ref, repo=pathlib.Path.cwd())
+            changeset_scope.commit_oid(head_ref, repo=repo)
         ),
         jp.RUN_STATE_BASE_REF: base_ref,
         jp.RUN_STATE_BASE_SHA: str(
-            changeset_scope.commit_oid(base_ref, repo=pathlib.Path.cwd())
+            changeset_scope.commit_oid(base_ref, repo=repo)
         ),
         jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
