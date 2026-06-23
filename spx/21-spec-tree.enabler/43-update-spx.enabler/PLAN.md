@@ -59,6 +59,34 @@ auditor agent.
 5. Tests: two-output render, per-runtime divergence, language detection from extensions, gate
    drift behavior.
 
+## Progress (branch `work/spec-tree-guide-two-file`, on `origin/main`)
+
+Done and committed:
+
+- ✅ Declaration: `21-render-model.adr` (architecture audit APPROVED) + `update-spx.md` (markdown-valid).
+- ✅ Generator: two-file render, runtime filter, language detection from `spx/**/tests/`
+  extensions, `guide_status` gate-check helper. Tests green. spec-tree bumped `0.65.2`.
+- ✅ Template: Codex `<!-- runtime:codex -->` auditor-subagent block; `template_version 0.21.0`.
+- ✅ `/update-spx` SKILL rewritten onto the `--spx-dir` two-file CLI (dropped the manual
+  language prompt and the `ask_user` tool).
+- ✅ Dogfood migration: `spx/CLAUDE.md` un-symlinked to a real file; both guides regenerated
+  (AGENTS.md carries the Codex block, CLAUDE.md drops it); both dprint-clean.
+
+Remaining (in-scope, not yet done):
+
+- ⬜ Retire the `/understand` once-per-session staleness step (`SKILL.md` workflow step 8,
+  the `<SPX_CLAUDE_STALE>` marker, its success-criterion) and the `/handoff` marker handling —
+  the render-model ADR asserts "NEVER: an agent judges whether a guide is stale". The old code
+  still runs (redundant), so this is a spec-consistency gap, tracked here. CAUTION: `/understand`
+  is the foundation skill — edit carefully.
+- ⬜ Wire the regenerate-and-diff gate for both guide files (a `just` recipe regenerating
+  `spx/CLAUDE.md` + `spx/AGENTS.md` and `git diff --exit-code`, plus a lefthook step), mirroring
+  the existing `dist_diff` gate. The render-model ADR + `update-spx.md` assert it.
+- ⬜ Gates before merge: `develop:skill-auditor` (edited `update-spx`/`understand`/`handoff`
+  SKILLs + template), `spec-auditor` (`update-spx.md`), `test-evidence-auditor` (tests),
+  `/apply` Step 6 test-audit + Step 8 code-audit + Step 9 whole-changeset review (cross-node),
+  `just check`, then `/merge`.
+
 ## Gates
 
 `adr-auditor` (ADR), `spec-auditor` (`update-spx.md`), `test-evidence-auditor` (tests),
