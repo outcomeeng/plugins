@@ -171,6 +171,7 @@ def test_metadata_scope_hash_includes_changed_file_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     changed_files = ["README.md"]
+    review_input = "### Committed diff\n\nREADME change"
 
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
@@ -182,6 +183,11 @@ def test_metadata_scope_hash_includes_changed_file_set(
         je.changeset_scope,
         "expand_diff_range",
         lambda range_spec, *, repo: list(changed_files),
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: review_input,
     )
 
     first = je.metadata_for_worktree(
@@ -199,4 +205,42 @@ def test_metadata_scope_hash_includes_changed_file_set(
         "README.md",
         "src/plugins/spec-tree/skills/review-changes/SKILL.md",
     ]
+    assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
+
+
+def test_metadata_scope_hash_includes_full_review_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    review_inputs = ["### Staged diff\n\nfirst", "### Staged diff\n\nsecond"]
+
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
+    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: review_inputs.pop(0),
+    )
+
+    first = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+    second = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert first[jp.RUN_STATE_SCOPE]["reviewInputSha256"] != second[
+        jp.RUN_STATE_SCOPE
+    ]["reviewInputSha256"]
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]

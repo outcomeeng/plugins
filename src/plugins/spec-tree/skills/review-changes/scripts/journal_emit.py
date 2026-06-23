@@ -51,6 +51,7 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
 
 
 review_result = _load_module("review_result", _HERE / "review_result.py")
+compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
 jp = _load_module(
     "journal_projection",
     _HERE.parents[1] / "project-run-journal" / "scripts" / "journal_projection.py",
@@ -246,10 +247,12 @@ def _resolve_branch_name() -> str:
 def _review_scope(*, base_ref: str, head_ref: str, repo: pathlib.Path) -> dict[str, object]:
     range_spec = f"{base_ref}...{head_ref}"
     changed_files = changeset_scope.expand_diff_range(range_spec, repo=repo)
+    review_input = compute_diff.combined_diff(base_ref, head_ref)
     return {
         "baseRef": base_ref,
         "headRef": head_ref,
         "changedFiles": changed_files,
+        "reviewInputSha256": hashlib.sha256(review_input.encode("utf-8")).hexdigest(),
     }
 
 
@@ -348,6 +351,7 @@ def _emit_metadata(args: argparse.Namespace) -> int:
         changeset_scope.BaseRefNotConfiguredError,
         changeset_scope.DetachedHeadError,
         OSError,
+        RuntimeError,
         ValueError,
     ) as exc:
         sys.stderr.write(f"{exc}\n")
