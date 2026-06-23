@@ -27,19 +27,19 @@ Verification already run:
 1. Run one real `audit` workflow against a small known scope, then inspect the sealed run with `spx journal read --type audit --run <token> --from 0`.
 2. Confirm the terminal event includes `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`, `scope`, and `status`.
 3. If the real audit works, finish the audit slice: remove remaining stale audit wording only where it is truly off-path, and gate normally.
-4. Migrate review only after audit is proven in the real workflow.
+4. Exercise the journal-backed review path in the same real-workflow pass as audit.
 
 ## Remaining Migration
 
-- `review-changes` still uses `thread_store`. Migrate it to `spx journal --type review`, consuming the shared projection rather than building a parallel model. The replacement must accept only a sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`.
-- `thread_store` and `manage-thread-store` are superseded by the journal and should be deleted when no review consumer uses them. Do not reframe them as current architecture.
+- `review-changes` now records validated review results through `spx journal --type review`, consumes the shared projection, renders counts from the sealed prefix, and stamps terminal state with `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`, `changedFiles`, and `status`.
+- `thread_store` and `manage-thread-store` are superseded by the journal and should be deleted when no remaining consumer uses them. Do not reframe them as current architecture.
 - The stateful audit-orchestrator cross-run fold is blocked until `@outcomeeng/spx` exposes a backend-agnostic read/list of a branch/type scope's sealed run set in order. The upstream request is recorded as outcomeeng/spx session `2026-06-23_07-42-10`; the prototype evidence is in `prototypes/audit-orchestrator-spike/`.
 - PR-thread human delivery remains consumer-owned: the journal's GitHub backend stores event-array JSON, not the human verdict comment. The PR consumer must render and deliver its human surface separately.
 - Keep `verdict.py`, `aggregate_verdicts.py`, and `pass_results.py` only while child audit skills still emit verdict JSON. Delete the verdict-toolchain node and scripts only after every consumer is on journal events.
 
 ## Safety Rules
 
-- Do not replace Thread Store yet; first prove audit, then migrate review.
+- Do not delete Thread Store yet; first prove audit and review journal paths in real workflows.
 - Do not invent a second keying model for review. Use the journal terminal run-state identity.
 - Do not parse rendered comments or markdown as authoritative state.
 - Do not duplicate the projection under audit or review; shared projection remains the single consumer-side primitive.
