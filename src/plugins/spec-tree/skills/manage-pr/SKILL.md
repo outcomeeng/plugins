@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
 <objective>
-The managing protocol. Loaded by /manage-github-pr for the open-PR management pass: inspect -> classify -> sync to base -> drive queue -> re-review and push follow-ups -> wait on PR checks when needed -> evaluate the merge gates -> act. Authority for merge comes from the `MERGE_READINESS` and `PRODUCTION_READINESS` gates in /merging-standards `<authority_gates>`; the PR is already `ready_for_review` (opened ready once `REVIEW_READINESS` held), so there is no draft-to-ready transition in this loop. Every step is a routine workflow operation that runs without operator confirmation; the only authority-gated wait is `AWAIT_APPROVAL`, emitted when `MERGE_READINESS` holds but the change is production-relevant and unapproved.
+The pull request merged into the base branch on origin, or a terminal action token naming the gate condition that withholds the merge.
 </objective>
 
 <the_managing_flow>

@@ -20,13 +20,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 </dispatch_gate>
 
 <objective>
-Rust test audit. Three gates run in strict sequence:
-
-1. Gate 0 deterministic readiness: filename policy, forbidden source-file reads, skipped tests, generated-mock signals, Rust validation, and coverage-tool availability.
-2. Gate 1 assertion audit: per-assertion challenge, scope, evidence method, controlled implementations, oracle independence, harness chain, and four-property evidence check.
-3. Gate 2 architectural DRY: repeated setup patterns that belong in shared test infrastructure.
-
-A gate failure skips every later gate.
+A verdict on Rust test evidence, with findings across three categories: deterministic readiness, per-assertion evidence, and architectural DRY.
 </objective>
 
 <prerequisites>

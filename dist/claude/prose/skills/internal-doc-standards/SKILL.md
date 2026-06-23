@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Catalog of conventions for writing internal team documents, distinct from external-prose conventions. Internal docs are read by colleagues who already have context, are retrieved repeatedly, and live for years. They optimize for scanning and reuse, not for first-read comprehension by a stranger. Many rules inherit from `/prose-standards`; this catalog overrides or adds rules where internal-doc conventions diverge.
+The catalog of conventions for internal team documents, extending `/prose-standards`.
 </objective>
 
 <reference_note>

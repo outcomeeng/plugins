@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Glob, Grep, Skill
 {!% require_skill 'typescript:typescript-architecture-standards' %!}
 
 <objective>
-Translate technical requirements into binding TypeScript ADRs (Architecture Decision Records) whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection. Claude produces ADRs, never implementation code. ADR decisions are binding for downstream skills: when an architectural assumption fails, the downstream skill aborts rather than improvising.
+A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.
 </objective>
 
 <essential_principles>

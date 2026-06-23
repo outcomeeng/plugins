@@ -11,7 +11,7 @@ Invoke the `python:python-architecture-standards` skill before proceeding. If th
 Invoke the `python:python-test-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Translate technical requirements into binding Python ADRs (Architecture Decision Records) whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection. The skill produces ADRs, never implementation code, and submits every ADR to the architecture reviewer before output. ADR decisions are binding for downstream skills: when an architectural assumption fails, the downstream skill aborts rather than improvising.
+A binding Python ADR whose testability constraints live as ALWAYS/NEVER rules under the `## Verification` section's `### Audit` subsection.
 </objective>
 
 <foundational_stance>

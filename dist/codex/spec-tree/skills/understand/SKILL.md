@@ -5,7 +5,7 @@ description: ALWAYS invoke this skill before any spec-tree work to load methodol
 
 <objective>
 
-The Spec Tree methodology is loaded into the conversation as a shared foundation: the six core reference files are read and the `<SPEC_TREE_FOUNDATION>` marker is emitted, so every subsequent skill operates from the same truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds. This is a foundation skill, loaded once before any spec-tree work in the session and again after every compaction; subsequent skills read the emitted marker before starting work.
+The Spec Tree methodology — truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds — loaded into the conversation as a shared foundation.
 
 </objective>
 

@@ -8,7 +8,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical ADR conventions for Python projects. Defines what sections an ADR has, how testability appears in Verification rules, and Python-specific DI patterns using Protocols. Loaded by `/architect-python` (to produce conformant ADRs) and `/audit-python-architecture` (to validate them).
+The canonical Python ADR conventions — sections, how testability appears in Verification rules, and Python-specific DI patterns using Protocols.
 </objective>
 
 <reference_note>

@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-TypeScript code standards enforced by tsc strict mode, eslint, and manual review. Defines what `/code-typescript` must follow and `/audit-typescript` enforces.
+The TypeScript code standards every TypeScript skill enforces.
 </objective>
 
 <quick_start>

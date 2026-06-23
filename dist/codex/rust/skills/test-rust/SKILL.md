@@ -10,7 +10,7 @@ Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is 
 Invoke the `spec-tree:test` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
 
 <objective>
-Implement Rust tests after the `/test` router decides what to verify and at what level. This skill provides the Rust workflow and load order; reusable policy and examples live in `/rust-standards` and `/rust-test-standards`.
+Rust tests for what the `/test` router selected, at the chosen level.
 </objective>
 
 <prerequisites>

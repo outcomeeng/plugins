@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 
 <objective>
-The opening protocol. Loaded by /manage-github-pr for the one-shot path: pre-flight -> topology -> REVIEW_READINESS (deterministic verification + local review) -> push -> open ready -> first management pass -> exit. Every step is a routine workflow operation that runs without operator confirmation. After exit, /manage-pr governs the post-creation loop.
+A pull request opened ready for review.
 </objective>
 
 <project_specialization>

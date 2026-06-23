@@ -11,7 +11,7 @@ allowed-tools: Read, Bash, Glob, Grep, Write, Edit, Skill
 {!% require_skill 'spec-tree:test' %!}
 
 <objective>
-Implement Rust tests after the `/test` router decides what to verify and at what level. This skill provides the Rust workflow and load order; reusable policy and examples live in `/rust-standards` and `/rust-test-standards`.
+Rust tests for what the `/test` router selected, at the chosen level.
 </objective>
 
 <prerequisites>
