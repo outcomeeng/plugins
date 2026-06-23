@@ -15,6 +15,7 @@ leaving the freshly written guides uncommitted.
 from __future__ import annotations
 
 import subprocess
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
@@ -72,7 +73,14 @@ def render_report(drift: Sequence[str]) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    regenerate_guides()
+    try:
+        regenerate_guides()
+    except subprocess.CalledProcessError as exc:
+        # Surface the generator's own diagnostic — captured output is otherwise
+        # swallowed by the default traceback, leaving the reporter unactionable.
+        sys.stderr.write(exc.stderr or "")
+        print(f"{HEADER}\n  the spx-guide generator failed; see the error above.")
+        return 1
     drift = drifting_guides()
     if not drift:
         return 0
