@@ -1,5 +1,5 @@
 <objective>
-Present the combined output of the four reflection perspectives as a persistence proposal. Only items that require user approval appear here. Imperfections fixed inline during workflow 02 are done — report them as completed work, not as proposals.
+A persistence proposal carrying only the items that require user approval, derived from the four reflection perspectives of workflow 02. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
 
 </objective>
 

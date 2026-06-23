@@ -36,17 +36,6 @@ UPDATE_SPX_MODULE_PATH = (
     / "scripts"
     / "update_spx.py"
 )
-CANONICAL_SPX_TEMPLATE_PATH = (
-    REPO_ROOT
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "understand"
-    / "templates"
-    / "spx-claude.md"
-)
-
 # Invented scenario payload owned by the harness.
 LANG_PRIMARY = "python"
 LANG_SECONDARY = "typescript"
@@ -64,15 +53,9 @@ RUNTIME_CODEX = "codex"
 TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
 
 
-def _runtime_line(runtime: str) -> str:
+def runtime_line(runtime: str) -> str:
     """The body the harness emits inside a runtime block — what render keeps or drops."""
     return f"{runtime.upper()} runs the audit as a subagent."
-
-
-# Source-template compliance probes.
-SESSION_MANAGEMENT_HEADING = "## Session Management"
-SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
-SESSION_RESULT_FRONTMATTER_FIELD = "`result`"
 
 
 def load_update_spx_module() -> ModuleType:
@@ -87,30 +70,6 @@ def load_update_spx_module() -> ModuleType:
     sys.modules["update_spx"] = module
     spec.loader.exec_module(module)
     return module
-
-
-def read_canonical_spx_template() -> str:
-    """Read the source template that product guides render from."""
-    return CANONICAL_SPX_TEMPLATE_PATH.read_text(encoding="utf-8")
-
-
-def extract_markdown_section(document: str, heading: str) -> str:
-    """Return a markdown section by exact heading, including the heading line."""
-    lines = document.splitlines()
-    try:
-        start = lines.index(heading)
-    except ValueError as exc:
-        raise RuntimeError(f"Heading not found: {heading}") from exc
-
-    heading_level = len(heading) - len(heading.lstrip("#"))
-    end = len(lines)
-    for index, line in enumerate(lines[start + 1 :], start=start + 1):
-        if line.startswith("#"):
-            line_level = len(line) - len(line.lstrip("#"))
-            if line_level <= heading_level:
-                end = index
-                break
-    return "\n".join(lines[start:end])
 
 
 def _language_heading(language: str) -> str:
@@ -154,7 +113,7 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
         parts += [
             f"<!-- runtime:{runtime} -->",
             "",
-            _runtime_line(runtime),
+            runtime_line(runtime),
             "",
             f"<!-- /runtime:{runtime} -->",
         ]

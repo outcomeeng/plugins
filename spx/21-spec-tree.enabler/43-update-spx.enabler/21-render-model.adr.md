@@ -28,4 +28,4 @@ Detecting that list deterministically from the product's own test-file extension
 - NEVER: the render substitutes a product-specific string into a guide body — the guide carries no per-product tokens, only template content, language filtering, and per-runtime spans ([audit])
 - NEVER: the generator depends on a third-party templating engine — language-conditional and runtime-conditional blocks use stdlib-parseable delimiters ([audit])
 - NEVER: an update hand-merges or section-diffs a product's body against the template — re-render is the update mechanism ([audit])
-- NEVER: an agent judges which languages a product uses or whether a guide is stale — both are computed deterministically by the generator and the gate ([audit])
+- NEVER: an agent judges which languages a product uses or whether a guide is stale by reading and comparing versions in the conversation — both are computed by the deterministic checker (the generator's `--check`), which the gate runs and a session may invoke read-only to surface drift ([audit])

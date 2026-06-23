@@ -28,8 +28,7 @@ CAN read its own runtime's guidance, kept current by a gate without manual templ
 ### Compliance
 
 - ALWAYS: generation writes both `spx/CLAUDE.md` and `spx/AGENTS.md`, never one without the other — each agent reading the same repository gets its own runtime's guide ([test](tests/test_update_spx.compliance.l1.py))
-- ALWAYS: a gate regenerates both guide files and fails on drift, keeping them current without an agent invocation ([test](tests/test_update_spx.compliance.l1.py))
-- ALWAYS: the enabled-language list is detected from the product's `spx/**/tests/` test-file extensions, with no agent input ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: a gate regenerates both guide files and fails on drift, keeping them current without an agent invocation ([audit])
 - NEVER: the render substitutes a product-specific string into a guide body — a brace-delimited token in the template passes through unchanged ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: an update keeps an unmodeled hand-prose edit to a guide body — a re-render reflects only the template, the recorded enabled languages, and the runtime ([test](tests/test_update_spx.compliance.l1.py))
-- NEVER: the canonical spx-level guide template instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([test](tests/test_update_spx.compliance.l1.py))
+- NEVER: the canonical spx-level guide template instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([audit])

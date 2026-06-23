@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.update_spx import (
     RUNTIME_CODEX,
     build_template,
     load_update_spx_module,
+    runtime_line,
     write_spx_tree_with_tests,
     write_template,
 )
@@ -58,8 +59,8 @@ def test_both_files_share_body_and_differ_only_in_runtime_spans() -> None:
     codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CODEX)
 
     # The shared body — every line that is not a runtime-only span — is identical.
-    runtime_lines = {f"{RUNTIME_CLAUDE.upper()} runs the audit as a subagent."}
-    runtime_lines.add(f"{RUNTIME_CODEX.upper()} runs the audit as a subagent.")
+    # The runtime-only lines come from the harness, which owns their text.
+    runtime_lines = {runtime_line(RUNTIME_CLAUDE), runtime_line(RUNTIME_CODEX)}
     claude_shared = [line for line in claude.splitlines() if line not in runtime_lines]
     codex_shared = [line for line in codex.splitlines() if line not in runtime_lines]
     assert claude_shared == codex_shared
