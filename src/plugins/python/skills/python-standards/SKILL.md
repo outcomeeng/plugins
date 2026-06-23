@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Python code standards enforced by linters (ruff, mypy) and manual review. Defines what `/code-python` must follow and `/audit-python` enforces.
+The Python code standards every Python skill enforces.
 </objective>
 
 <success_criteria>

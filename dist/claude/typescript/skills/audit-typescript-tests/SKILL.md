@@ -22,12 +22,7 @@ This audit runs inside a dispatched auditor's verifier context — `test-evidenc
 
 <objective>
 
-TypeScript test audit. Two gates in strict sequence, fail-closed:
-
-1. **Gate 1 — Assertion audit**: per-assertion LLM audit starting from the spec — challenge, scope, evidence, mocks, oracle, harness chain, 4-property evidence check. A `spx validation literal` cross-file check runs before Gate 1 as a non-blocking preliminary; findings feed into step `mocks` and step `four_properties`.
-2. **Gate 2 — Architectural DRY**: LLM scan for repeated cross-file setup patterns.
-
-A gate failure skips the next gate.
+A verdict on TypeScript test evidence, with findings across two categories: per-assertion evidence and architectural DRY.
 
 </objective>
 

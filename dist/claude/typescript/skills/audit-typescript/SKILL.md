@@ -16,12 +16,7 @@ This audit runs inside a dispatched auditor's verifier context — a generic aud
 
 <objective>
 
-Adversarial code review through comprehension. Find design flaws that automated tools cannot catch. Produce a structured verdict -- not code changes.
-
-This skill is read-only. It produces verdicts, not commits or fixes.
-
-**Test evidence quality is audited by skill `/audit-typescript-tests`.** This skill audits implementation code, not test code.
-Almost every TypeScript file must be covered by tests. Invoke `/audit-typescript-tests` separately as part of the overall auditing workflow.
+A verdict on TypeScript implementation code — APPROVED, or REJECTED with each finding naming the design flaw, the violated rule, and the evidence.
 
 </objective>
 

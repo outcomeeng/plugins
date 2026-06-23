@@ -5,7 +5,7 @@ description: Rust code standards enforced across all skills. Loaded by other ski
 ---
 
 <objective>
-Canonical Rust standards for implementation, testing, architecture, and review. Defines the baseline expectations for type usage, ownership, error handling, module boundaries, async design, testing seams, and unsafe code, and routes specialized Rust standards to the reference skills that contain their examples.
+The canonical Rust standards for type usage, ownership, error handling, module boundaries, async design, testing seams, and unsafe code, enforced across implementation, testing, architecture, and review.
 </objective>
 
 <success_criteria>

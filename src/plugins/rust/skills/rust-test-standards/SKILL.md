@@ -6,7 +6,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical Rust test standards loaded after `/rust-standards`. Defines filename conventions, level mapping, acceptable test doubles, Rust-native testing tools, property-testing requirements, compile-fail testing, snapshot boundaries, shared fixture policy, script testing, and coverage expectations for Rust projects.
+The canonical Rust test standards — filename conventions, level mapping, acceptable test doubles, native tooling, property testing, compile-fail testing, snapshot boundaries, shared fixtures, script testing, and coverage.
 </objective>
 
 <success_criteria>

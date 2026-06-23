@@ -9,12 +9,7 @@ argument-hint: <file-path-or-requirement>
 ---
 
 <objective>
-Domain-agnostic interview methodology for structured requirements gathering. Provides the HOW of interviewing — questioning technique, coverage tracking, pushback protocol, progress display, and preview rendering. Domain knowledge (WHAT to ask about) comes from the calling skill or the user.
-
-Works two ways without duplication:
-
-- **Direct invocation** (`/interview`): Asks what to interview about, then conducts a methodology-driven interview
-- **Referenced by other skills**: Calling skill reads `/interview` for the methodology, then applies it with its own domain-specific coverage areas and templates
+A domain-agnostic interview methodology for structured requirements gathering — questioning technique, coverage tracking, pushback protocol, progress display, and preview rendering.
 
 </objective>
 

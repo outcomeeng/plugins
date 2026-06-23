@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Catalog of 30+ prose anti-patterns across 6 categories. Defines what `/write-prose` must avoid and `/audit-prose` flags as violations. Any pattern used once might be fine. The problem is when multiple appear together or when a single one repeats.
+The catalog of 30+ prose anti-patterns across 6 categories.
 </objective>
 
 <reference_note>

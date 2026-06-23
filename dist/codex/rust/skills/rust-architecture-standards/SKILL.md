@@ -5,7 +5,7 @@ description: Rust ADR conventions enforced across architect and auditor skills. 
 ---
 
 <objective>
-Canonical ADR conventions for Rust projects, loaded after `/rust-standards`. Defines the allowed ADR sections, how Rust testability appears in Verification rules, which dependency-injection patterns are acceptable, and which architectural claims belong in ADRs versus downstream testing work.
+The canonical Rust ADR conventions — allowed sections, how Rust testability appears in Verification rules, acceptable dependency-injection patterns, and which architectural claims belong in ADRs versus downstream testing.
 </objective>
 
 <success_criteria>

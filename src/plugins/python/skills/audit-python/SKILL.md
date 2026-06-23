@@ -16,11 +16,7 @@ This audit runs inside a dispatched auditor's verifier context — a generic aud
 
 <objective>
 
-Adversarial code review through comprehension. Find design flaws that automated tools cannot catch. Produce a structured verdict -- not code changes.
-
-This skill is read-only. It produces verdicts, not commits or fixes.
-
-**Test evidence quality is audited by `/audit-python-tests`.** This skill audits implementation code, not test code. If test files are in scope, delegate to `/audit-python-tests`.
+A verdict on Python implementation code — APPROVED, or REJECTED with each finding naming the design flaw, the violated rule, and the evidence.
 
 </objective>
 

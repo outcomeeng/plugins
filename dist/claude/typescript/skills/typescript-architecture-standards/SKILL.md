@@ -8,7 +8,7 @@ allowed-tools: Read
 ---
 
 <objective>
-Canonical ADR conventions for TypeScript projects. Defines what sections an ADR has, how testability appears in Verification rules, and TypeScript-specific DI patterns. Loaded by `/architect-typescript` (to produce conformant ADRs) and `/audit-typescript-architecture` (to validate them).
+The canonical TypeScript ADR conventions — sections, how testability appears in Verification rules, and TypeScript-specific DI patterns.
 </objective>
 
 <reference_note>
