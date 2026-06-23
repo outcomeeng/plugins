@@ -1,6 +1,6 @@
 # Issues: Reviewing Changes Enabler
 
-## 1. Caller-narrowing prompt-content assertion is `[review]`, could be `[test]` (FOLLOW-UP)
+## 1. Caller-narrowing prompt-content assertion is `[review]`, could be `[test]` (DEBT)
 
 The assertion added to `reviewing-changes.md` —
 
@@ -34,7 +34,7 @@ Until then, agents running the local review in this multi-worktree repo keep `ma
 
 Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
 
-## 3. Local census markers diverge from the GH CI clean-review message (FOLLOW-UP)
+## 3. Local census markers diverge from the GH CI clean-review message (DEBT)
 
 The local `review-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
 
@@ -150,71 +150,56 @@ Required handling:
 
 Surfaced by the `changes-reviewer` runs on `outcomeeng/plugins` PR #148.
 
-## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED — cascade pending)
+## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED)
 
 **Decided (2026-06-10).** Governing decision recorded at
-`spx/15-merging.pdr.md`:
-two severities `blocking`/`debt`; the reviewer judges finding validity and
-severity, the author judges disposition (fix-in-PR or track-out-of-scope in the
-owning node's `ISSUES.md`/`PLAN.md` with a recorded reason); the reviewer's
-render carries the two severity buckets and no disposition axis. The root
-`spx/15-merging.pdr.md` gate clauses were amended in-place to read "a
-`DEBT` finding the author tracks out of scope with a recorded reason is
-non-blocking" in place of the `FOLLOW-UP` severity. The specs, implementation,
-evals, and template below still declare the three-severity taxonomy and are in
-violation of the new decision until the cascade lands.
+`spx/15-merging.pdr.md`: two severities `blocking`/`debt`; the reviewer judges
+finding validity and severity, the author judges disposition (fix-in-PR or
+track-out-of-scope in the owning node's `ISSUES.md`/`PLAN.md` with a recorded
+reason); the reviewer's render carries the two severity buckets and no
+disposition axis. The root `spx/15-merging.pdr.md` gate clauses read "a `DEBT`
+finding the author tracks out of scope with a recorded reason is non-blocking."
 
-The shared taxonomy declares three severities — `blocking`, `debt`, `follow_up`
-(`reviewing.md`, `reviewing-changes.md`'s severity rubric `[eval]`,
-`REVIEW.template.md`, the `Severity` enum and render templates). `follow_up` is
-defined as *"out-of-scope items that would extend the blast-radius of the PR"* — a
-**scope** judgment, not a severity one.
-
-**Proposal.** The reviewer emits only `blocking` (merge-safety defect) and `debt`
+**Decision.** The reviewer emits only `blocking` (merge-safety defect) and `debt`
 (real defect) — the **validity/severity** axis it judges from the code and the
 rules — and the **author** maps each `debt` to `{fix-in-PR |
-track-out-of-scope-in-ISSUES/PLAN-with-justification}` along the **disposition**
-axis, which only the author — holding the changeset's intended scope and its
-`PLAN.md` — is positioned to judge.
+track-out-of-scope-in-ISSUES/PLAN-with-justification}` along the
+**disposition** axis, which only the author — holding the changeset's intended
+scope and its `PLAN.md` — is positioned to judge.
 
 **Rationale (this session).** On PR #148 the reviewer labeled a CLI-scenario
-assertion gap `follow_up`; the author tracked it in `ISSUES.md` rather than fixing
-it, deferring to the reviewer's scope call — and the operator then asked why a
-small, in-scope fix had been merely tracked. The `follow_up` label outsourced a
-scope decision the reviewer is not positioned to make. The skill already declares
-the reviewer "carries findings only … never decides" (`reviewing.md`) and that the
-consumer "acts by validity and phase, never by severity"
-(`spx/15-merging.pdr.md`); `follow_up` is the one place the reviewer
-still makes a disposition call, in tension with that stance.
+assertion gap as a separate scope-disposition class; the author tracked it in
+`ISSUES.md` rather than fixing it, deferring to the reviewer's scope call — and
+the operator then asked why a small, in-scope fix had been merely tracked. That
+outsourced a scope decision the reviewer is not positioned to make. The skill
+already declares the reviewer "carries findings only … never decides"
+(`reviewing.md`) and that the consumer "acts by validity and phase, never by
+severity" (`spx/15-merging.pdr.md`).
 
 **Cascade landed (2026-06-10).** The decision records, the specs (`reviewing.md`,
 `reviewing-changes.md`), `REVIEW.template.md`, the implementation (the `Severity`
-enum at schema v3, `render_review.py`, `review-prompt.md`, and the deleted
-`finding-followup.md`/`none-followup.md` render templates), the four test files,
-and the eval files (`severity-classification` cases plus the three prompt schema
-blocks) all moved to the two-severity model; `dist/` was rebuilt. **Residual:** the
-live eval suite (`severity-classification`, `judgment-grounding`, `findings-direction`)
-needs a re-run to confirm calibration under two severities — that runs out-of-band
-(API cost) per the repo's eval process, and the `severity-classification` case-diff
+enum at schema v3, `render_review.py`, `review-prompt.md`, and the two removed
+scope-disposition render templates), the four test files, and the eval files
+(`severity-classification` cases plus the three prompt schema blocks) all moved to
+the two-severity model; `dist/` was rebuilt. **Residual:** the live eval suite
+(`severity-classification`, `judgment-grounding`, `findings-direction`) needs a
+re-run to confirm calibration under two severities — that runs out-of-band (API
+cost) per the repo's eval process, and the `severity-classification` case-diff
 recalibration the prior `PLAN.md` flagged still applies. The blast-radius surfaces
 this change touched:
 
-- `reviewing.md` three-severity Compliance assertions (the
-  `blocking`/`debt`/`follow_up` set and the severity-rank NEVER).
+- `reviewing.md` severity Compliance assertions.
 - `reviewing-changes.md`: the `Severity` enum wire-value Mapping, the
   `Severity → render-class` Mapping, the render census/label-asymmetry Compliance,
   and the severity-rubric `[eval]` (`evals/severity-classification/`).
 - `Severity` enum and `from_json_dict` in the `review_result.py` policy module;
-  render templates `references/render/finding-followup.md` and `none-followup.md`.
+  render templates for the removed scope-disposition bucket.
 - `evals/severity-classification/` cases — this node's `PLAN.md` already records
-  them as calibration-fragile at the `follow_up` boundary (cases 3–4 flip
-  `debt`/`follow_up` across trials); a two-severity rubric would likely *improve*
-  eval stability.
+  them as calibration-fragile; a two-severity rubric reduces that ambiguity.
 - `REVIEW.template.md` (the consumer-override taxonomy surface at repo root).
-- `spx/15-merging.pdr.md` — `MERGE_READINESS` reads the taxonomy; its
-  "`FOLLOW-UP` tracked, not blocking" clause becomes "a `debt` the author tracked
-  out-of-scope, with a recorded reason, is not blocking." Same gate strength,
-  ownership corrected.
+- `spx/15-merging.pdr.md` — `MERGE_READINESS` reads the taxonomy; a `debt` the
+  author tracks out-of-scope, with a recorded reason, is not blocking. Same gate
+  strength, ownership corrected.
 
 **Decided (render shape).** The reviewer's render carries exactly two buckets,
 `BLOCKING` and `DEBT`, each reporting its census in the empty state. The
