@@ -17,8 +17,14 @@ from outcomeeng_testing.harnesses.update_spx import (
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
     RUNTIME_CLAUDE,
+    RUNTIME_CODEX,
+    SESSION_ARCHIVE_RESULT_INSTRUCTION,
+    SESSION_MANAGEMENT_HEADING,
+    SESSION_RESULT_FRONTMATTER_FIELD,
     build_template,
+    extract_markdown_section,
     load_update_spx_module,
+    read_canonical_spx_template,
     write_template,
 )
 
@@ -95,3 +101,16 @@ def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
     assert module.main([*args, "--write"]) == 0
     for guide in guides:
         assert "HAND DRIFT" not in guide.read_text(encoding="utf-8")
+
+
+def test_no_rendered_guide_teaches_result_session_frontmatter() -> None:
+    module = load_update_spx_module()
+    template = read_canonical_spx_template()
+    # Render the canonical template for each runtime and assert the rendered
+    # Session Management section carries no result-frontmatter instruction —
+    # exercising the generator's output, not just the authored template text.
+    for runtime in (RUNTIME_CLAUDE, RUNTIME_CODEX):
+        rendered = module.render(template, (LANG_PRIMARY,), VERSION, runtime)
+        section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
+        assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
+        assert SESSION_RESULT_FRONTMATTER_FIELD not in section
