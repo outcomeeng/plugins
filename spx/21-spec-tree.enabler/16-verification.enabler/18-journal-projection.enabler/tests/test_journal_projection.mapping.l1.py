@@ -21,7 +21,21 @@ def _events_with(severities: tuple) -> list:
         jp.Finding(file="f.py", line=None, rule="r", severity=severity, message="m")
         for severity in severities
     )
-    run = jp.RunResult(target="t", scope_hash="h", branch="b", findings=findings)
+    run = jp.RunResult(
+        target="t",
+        scope_hash="h",
+        branch_name="b",
+        branch_slug="b",
+        head_sha="1" * 40,
+        base_ref="main",
+        config_digest="cfg",
+        participants=("audit",),
+        scope={"include": ["f.py"]},
+        started_at="2026-06-22T00:00:00Z",
+        completed_at="2026-06-22T00:00:01Z",
+        output_paths=(),
+        findings=findings,
+    )
     return jp.build_events(run, now="2026-06-22T00:00:00Z")
 
 

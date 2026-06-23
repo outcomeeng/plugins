@@ -8,8 +8,9 @@ detection across audit runs.
 
 Exposes a stdlib ``argparse`` CLI so the ``/audit`` skill can drive
 each helper from shell. Subcommands: ``base-ref``, ``current-branch``,
-``branch-slug``, ``scope-hash``, ``branch-scope``, ``modified-since``,
-``sha-reachable``, ``acquire-lock``, ``release-lock``,
+``branch-slug``, ``remote-tracking-ref``, ``commit-oid``, ``scope-hash``,
+``config-digest``, ``branch-scope``, ``modified-since``, ``sha-reachable``,
+``acquire-lock``, ``release-lock``,
 ``state-transition``. Library callers continue to import the functions
 directly via ``importlib.util`` (per the marketplace skill-co-located
 Python convention); the CLI is a thin wrapper around the same surface.
@@ -34,6 +35,7 @@ from typing import Any
 
 NULL_BYTE = b"\x00"
 SCOPE_HASH_LENGTH = 12
+CONFIG_DIGEST_PREFIX = b"audit-config-v1\x00"
 DEFAULT_LOCK_TTL_SECONDS = 600
 LOCK_FILE_MODE = 0o644
 MODIFIED_SINCE_RANGE_TEMPLATE = "{prior_sha}..HEAD"
@@ -98,8 +100,10 @@ BaseRefNotConfiguredError = _changeset_scope.BaseRefNotConfiguredError
 DetachedHeadError = _changeset_scope.DetachedHeadError
 expand_diff_range = _changeset_scope.expand_diff_range
 branch_scope = _changeset_scope.branch_scope
+commit_oid = _changeset_scope.commit_oid
 detect_base_ref = _changeset_scope.detect_base_ref
 detect_current_branch = _changeset_scope.detect_current_branch
+remote_tracking_ref = _changeset_scope.remote_tracking_ref
 branch_slug = _changeset_scope.branch_slug
 
 
@@ -157,6 +161,20 @@ def compute_scope_hash(files: list[tuple[str, str]]) -> str:
         digest.update(NULL_BYTE)
         digest.update(content_bytes)
     return digest.hexdigest()[:SCOPE_HASH_LENGTH]
+
+
+def compute_config_digest(payload: str) -> str:
+    """Return a stable digest of the audit run's configuration payload.
+
+    The payload is the caller's serialized description of the validation
+    command, test command, overlays, and language partitions that shaped the
+    run. It is separate from the frozen-scope hash because configuration can
+    change while the audited file list stays the same.
+    """
+    digest = hashlib.sha256()
+    digest.update(CONFIG_DIGEST_PREFIX)
+    digest.update(payload.encode("utf-8"))
+    return digest.hexdigest()
 
 
 def uncommitted_scope(
@@ -1016,6 +1034,21 @@ def _cmd_branch_slug(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_remote_tracking_ref(args: argparse.Namespace) -> int:
+    sys.stdout.write(remote_tracking_ref(args.base) + "\n")
+    return 0
+
+
+def _cmd_commit_oid(args: argparse.Namespace) -> int:
+    try:
+        oid = commit_oid(args.ref, repo=args.repo)
+    except subprocess.CalledProcessError as exc:
+        sys.stderr.write(f"{args.ref} does not resolve to a commit: {exc}\n")
+        return 1
+    sys.stdout.write(oid + "\n")
+    return 0
+
+
 def _cmd_scope_hash(args: argparse.Namespace) -> int:
     paths = [line for line in sys.stdin.read().splitlines() if line]
     pairs: list[tuple[str, str]] = []
@@ -1024,6 +1057,11 @@ def _cmd_scope_hash(args: argparse.Namespace) -> int:
         content = absolute.read_text(encoding="utf-8") if absolute.is_file() else ""
         pairs.append((path, content))
     sys.stdout.write(compute_scope_hash(pairs) + "\n")
+    return 0
+
+
+def _cmd_config_digest(_: argparse.Namespace) -> int:
+    sys.stdout.write(compute_config_digest(sys.stdin.read()) + "\n")
     return 0
 
 
@@ -1291,8 +1329,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Derive the on-disk state-file slug for the given branch.",
     )
     branch_slug_cmd.add_argument("--branch", required=True)
-    branch_slug_cmd.add_argument("--state-dir", required=True, type=pathlib.Path)
+    branch_slug_cmd.add_argument("--state-dir", type=pathlib.Path)
     branch_slug_cmd.set_defaults(func=_cmd_branch_slug)
+
+    remote_tracking_ref_cmd = subparsers.add_parser(
+        "remote-tracking-ref",
+        help="Compose the remote-tracking ref for a bare base name.",
+    )
+    remote_tracking_ref_cmd.add_argument("--base", required=True)
+    remote_tracking_ref_cmd.set_defaults(func=_cmd_remote_tracking_ref)
+
+    commit_oid_cmd = subparsers.add_parser(
+        "commit-oid", help="Resolve a ref to the full object ID of a commit."
+    )
+    commit_oid_cmd.add_argument("--ref", required=True)
+    _add_repo_arg(commit_oid_cmd)
+    commit_oid_cmd.set_defaults(func=_cmd_commit_oid)
 
     scope_hash = subparsers.add_parser(
         "scope-hash",
@@ -1303,6 +1355,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_repo_arg(scope_hash)
     scope_hash.set_defaults(func=_cmd_scope_hash)
+
+    config_digest = subparsers.add_parser(
+        "config-digest",
+        help="Read the audit configuration payload from stdin and print its digest.",
+    )
+    config_digest.set_defaults(func=_cmd_config_digest)
 
     branch_scope_cmd = subparsers.add_parser(
         "branch-scope",

@@ -1,6 +1,10 @@
 ---
 name: project-run-journal
-description: ALWAYS invoke this skill when building a verification run's spx journal events, computing its rollup, or rendering its verdict from the run journal. NEVER hand-build journal events or re-implement the rollup inside an audit or review skill.
+user-invocable: false
+description: >-
+  Verification run-journal projection methodology loaded by audit and review
+  skills when building spx journal events, computing rollups, or rendering verdict
+  surfaces.
 ---
 
 <objective>
@@ -27,11 +31,11 @@ An append event is a JSON object with non-empty `id`, `source`, `type`, and `tim
 
 The projection lives in `${SKILL_DIR}/scripts/journal_projection.py`, imported by sibling skills' scripts through the marketplace skill-co-located importlib convention (no path is hardcoded in agent prose). It is pure — it touches no journal backend, filesystem, or network — so it is verified at `l1` without a real journal and without mocking.
 
-| Symbol                                      | Purpose                                                                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `build_events(run_result, *, now, attempt)` | Ordered channel event inputs from a run's results: a scope-entered event, one finding-reported event per finding, a terminal run-completed event |
-| `compute_overall(events)`                   | The rollup over an event prefix: any `REJECT` finding maps to a rejected overall, else any `UNKNOWN` finding to unknown, else approved           |
-| `render_surface(events)`                    | The human-readable verdict surface rendered from an event prefix                                                                                 |
+| Symbol                                      | Purpose                                                                                                                                                                                                                       |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build_events(run_result, *, now, attempt)` | Ordered channel event inputs from a run's results: a scope-entered event, one finding-reported event per finding, a terminal `com.outcomeeng.spx.journal.run.completed` event whose data is the core journal run-state record |
+| `compute_overall(events)`                   | The rollup over an event prefix: any `REJECT` finding maps to a rejected overall, else any `UNKNOWN` finding to unknown, else approved                                                                                        |
+| `render_surface(events)`                    | The human-readable verdict surface rendered from an event prefix                                                                                                                                                              |
 
 </api_surface>
 
@@ -40,7 +44,7 @@ The projection lives in `${SKILL_DIR}/scripts/journal_projection.py`, imported b
 To record a verification run, the consuming skill drives the channel (Bash) and passes event data to and from the pure projection:
 
 1. `spx journal open --type <type>` for the run's verification kind; capture the run token.
-2. `build_events(run_result, now=<utc>, attempt=<n>)` to derive the ordered event inputs.
+2. `build_events(run_result, now=<utc>, attempt=<n>)` to derive the ordered event inputs. The run result carries scope hash, branch name, branch slug, target kind, head SHA, base ref, optional base SHA, config digest, participants, path-filter scope, timestamps, and output paths so the terminal event can fold through the core journal run-state projection.
 3. `spx journal append --type <type> --run <token>` once per event, reading each event from stdin.
 4. `spx journal seal --type <type> --run <token>` to finalize the sequence.
 5. `spx journal read --type <type> --run <token> --from 0` to read the sealed event prefix, then `compute_overall` for the verdict and `render_surface` for the human-readable surface.
@@ -57,3 +61,11 @@ The consuming skill elaborates the generic core (scope-entered, finding-reported
 - `journal_projection.py` imports only the Python standard library.
 
 </success_criteria>
+
+<failure_modes>
+
+**Incomplete terminal identity.** Claude emitted a reduced completion event with only an overall verdict. The `spx journal` fold requires the core `com.outcomeeng.spx.journal.run.completed` event, including branch slug, head/base identity, config digest, timestamps, scope, outputs, and terminal status. Avoid this by building the terminal event through `journal_projection.py` and asserting every run-state field in `l1` tests.
+
+**Scope/config collapse.** Claude reused the scope hash as the config digest. The two fields answer different questions: `scopeHash` identifies the audited file set, while `configDigest` identifies the run configuration. Avoid this by requiring both fields in the run result and testing that audit metadata supplies them separately.
+
+</failure_modes>

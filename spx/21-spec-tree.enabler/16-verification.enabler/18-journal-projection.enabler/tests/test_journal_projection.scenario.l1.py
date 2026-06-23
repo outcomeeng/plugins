@@ -25,7 +25,17 @@ def _run_with(findings: tuple[Any, ...]) -> Any:
     return jp.RunResult(
         target="spx/example.enabler",
         scope_hash="abc123def456",
-        branch="work/example",
+        branch_name="work/example",
+        branch_slug="work__example",
+        head_sha="1" * 40,
+        base_ref="main",
+        base_sha="2" * 40,
+        config_digest="cfg-abc123",
+        participants=("audit",),
+        scope={"include": ["src/example.py"]},
+        started_at="2026-06-22T00:00:00Z",
+        completed_at="2026-06-22T00:00:05Z",
+        output_paths=("audit-results.json",),
         findings=tuple(findings),
     )
 
@@ -47,6 +57,37 @@ def test_build_events_emits_scope_findings_run_in_order() -> None:
     assert types.count(jp.FINDING_REPORTED) == len(findings)
     # The generic core is exactly scope-entered + one-per-finding + run-completed.
     assert len(events) == len(findings) + 2
+
+
+def test_build_events_terminal_event_carries_core_run_state() -> None:
+    findings = (
+        jp.Finding(
+            file="a.py",
+            line=10,
+            rule="r",
+            severity=jp.Severity.UNKNOWN,
+            message="cannot decide",
+        ),
+    )
+    events = jp.build_events(_run_with(findings), now="2026-06-22T00:00:06Z")
+    completed = events[-1]
+    data = completed["data"]
+
+    assert completed["source"] == jp.EVENT_SOURCE
+    assert completed["type"] == jp.RUN_COMPLETED
+    assert data[jp.RUN_STATE_BRANCH_NAME] == "work/example"
+    assert data[jp.RUN_STATE_BRANCH_SLUG] == "work__example"
+    assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.BRANCH
+    assert data[jp.RUN_STATE_HEAD_SHA] == "1" * 40
+    assert data[jp.RUN_STATE_BASE_REF] == "main"
+    assert data[jp.RUN_STATE_BASE_SHA] == "2" * 40
+    assert data[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
+    assert data[jp.RUN_STATE_PARTICIPANTS] == ["audit"]
+    assert data[jp.RUN_STATE_SCOPE] == {"include": ["src/example.py"]}
+    assert data[jp.RUN_STATE_STARTED_AT] == "2026-06-22T00:00:00Z"
+    assert data[jp.RUN_STATE_COMPLETED_AT] == "2026-06-22T00:00:05Z"
+    assert data[jp.RUN_STATE_OUTPUT_PATHS] == ["audit-results.json"]
+    assert data[jp.RUN_STATE_STATUS] == jp.JournalRunStatus.FAILED
 
 
 def test_build_events_emits_valid_channel_inputs() -> None:
@@ -102,6 +143,7 @@ def test_render_surface_heads_lists_findings_and_footers() -> None:
         for line in lines
     )
 
-    # The footer carries the run-completed overall, read from the terminal event.
-    overall = events[-1]["data"]["overall"]
-    assert f"**Overall: {overall}**" in surface
+    # The footer carries the projection's verdict rollup and the core terminal
+    # status read from the run-completed event.
+    status = events[-1]["data"][jp.RUN_STATE_STATUS]
+    assert f"**Overall: {jp.compute_overall(events)} (status: {status})**" in surface

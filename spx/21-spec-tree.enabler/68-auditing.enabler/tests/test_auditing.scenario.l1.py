@@ -1654,6 +1654,22 @@ def test_cli_branch_slug_prints_slug(tmp_path: pathlib.Path) -> None:
     assert out.strip() == "feature__foo"
 
 
+def test_cli_branch_slug_accepts_no_state_dir() -> None:
+    """``branch-slug`` can derive a slug without a state-file collision check."""
+    rc, out, _ = _run_cli("branch-slug", "--branch", "feature/foo")
+
+    assert rc == 0
+    assert out.strip() == "feature__foo"
+
+
+def test_cli_remote_tracking_ref_prints_origin_ref() -> None:
+    """``remote-tracking-ref`` composes the remote-tracking base ref."""
+    rc, out, _ = _run_cli("remote-tracking-ref", "--base", "main")
+
+    assert rc == 0
+    assert out.strip() == "origin/main"
+
+
 def test_cli_scope_hash_hashes_listed_files(repo: pathlib.Path) -> None:
     """``scope-hash`` reads paths from stdin, hashes their contents, prints hex."""
     (repo / "a.py").write_text("x", encoding="utf-8")
@@ -1665,6 +1681,25 @@ def test_cli_scope_hash_hashes_listed_files(repo: pathlib.Path) -> None:
     hash_value = out.strip()
     assert len(hash_value) == 12
     assert all(c in "0123456789abcdef" for c in hash_value)
+
+
+def test_cli_config_digest_hashes_stdin_payload() -> None:
+    """``config-digest`` prints a stable SHA-256 digest for config payloads."""
+    payload_a = "validation=just check\nlanguage=python\n"
+    payload_b = "validation=just validation\nlanguage=python\n"
+
+    rc_a1, out_a1, _ = _run_cli("config-digest", stdin=payload_a)
+    rc_a2, out_a2, _ = _run_cli("config-digest", stdin=payload_a)
+    rc_b, out_b, _ = _run_cli("config-digest", stdin=payload_b)
+
+    assert rc_a1 == 0
+    assert rc_a2 == 0
+    assert rc_b == 0
+    digest = out_a1.strip()
+    assert digest == out_a2.strip()
+    assert digest != out_b.strip()
+    assert len(digest) == 64
+    assert all(c in "0123456789abcdef" for c in digest)
 
 
 def test_cli_branch_scope_prints_changed_files(repo: pathlib.Path) -> None:
@@ -1689,6 +1724,16 @@ def test_cli_modified_since_prints_changed_files(repo: pathlib.Path) -> None:
 
     assert rc == 0
     assert out.splitlines() == ["v2.ts"]
+
+
+def test_cli_commit_oid_prints_full_commit_oid(repo: pathlib.Path) -> None:
+    """``commit-oid`` prints the full object ID for a commit ref."""
+    sha = _commit_files(repo, {"seed.ts": "x"}, "seed")
+
+    rc, out, _ = _run_cli("commit-oid", "--ref", "HEAD", "--repo", str(repo))
+
+    assert rc == 0
+    assert out.strip() == sha
 
 
 def test_cli_sha_reachable_exit_codes(repo: pathlib.Path) -> None:

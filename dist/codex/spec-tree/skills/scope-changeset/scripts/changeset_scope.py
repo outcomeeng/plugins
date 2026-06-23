@@ -29,6 +29,7 @@ ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
 ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
 FRONTMATTER_DELIMITER = "---"
+COMMIT_PEEL_SUFFIX = "^{commit}"
 
 
 class BaseRefNotConfiguredError(RuntimeError):
@@ -193,6 +194,23 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     if branch == "HEAD":
         raise DetachedHeadError(f"detached HEAD at {repo}")
     return branch
+
+
+def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
+    """Resolve ``ref`` to the full object ID of a commit.
+
+    The journal run-state identity records concrete head/base commit IDs, not
+    symbolic refs. Peeling through ``^{commit}`` rejects blobs and trees while
+    accepting commits and tags that point at commits.
+    """
+    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, ref is caller-controlled
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}{COMMIT_PEEL_SUFFIX}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
 
 
 def _read_frontmatter_branch(path: pathlib.Path) -> str | None:

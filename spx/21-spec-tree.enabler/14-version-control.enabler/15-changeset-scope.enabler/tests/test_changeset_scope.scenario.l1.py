@@ -24,6 +24,7 @@ expected on a working machine.
 from __future__ import annotations
 
 import pathlib
+import subprocess
 
 import pytest
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -124,6 +125,25 @@ def test_detect_current_branch_returns_name_then_raises_on_detached_head(
     detach_head(repo)
     with pytest.raises(module.DetachedHeadError):
         module.detect_current_branch(repo)
+
+
+def test_commit_oid_resolves_commit_ref(tmp_path: pathlib.Path) -> None:
+    module = load_changeset_scope_module()
+    stale = build_stale_local_base_repo(_repo(tmp_path))
+
+    head_oid = module.commit_oid("HEAD", repo=stale.repo)
+    base_oid = module.commit_oid(
+        module.remote_tracking_ref(stale.base_ref), repo=stale.repo
+    )
+
+    assert len(head_oid) == 40
+    assert all(char in "0123456789abcdef" for char in head_oid)
+    assert base_oid != head_oid
+    subprocess.run(
+        ["git", "cat-file", "-e", f"{head_oid}^{{commit}}"],
+        cwd=stale.repo,
+        check=True,
+    )
 
 
 def test_branch_slug_disambiguates_on_state_dir_collision(
