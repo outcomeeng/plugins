@@ -1,17 +1,17 @@
-"""Reconcile a handoff session file's recorded claims against current state.
+"""Reconcile a handoff session's recorded claims against current state.
 
 `/pickup` runs this after bringing the checkout current and before its
 post-context checkpoint, so the resuming agent acts on what the repository
 supports now rather than on the snapshot frozen at handoff time. Each recorded
-claim resolves to exactly one verdict — ``Confirmed`` when current state matches,
-``Discrepancy`` when it differs, ``Unverifiable`` when the check cannot run — and
+claim resolves to exactly one verdict -- ``Confirmed`` when current state matches,
+``Discrepancy`` when it differs, ``Unverifiable`` when the check cannot run -- and
 the verdicts are emitted as JSON for the workflow to render in place of the
 recorded snapshot.
 
 Stdlib-only ``python3`` shipped inside the pickup skill; runs under the two most
 recent Python feature releases. Every ``spx``, ``gh``, and ``git`` call is issued
 through an injected ``CommandRunner`` so the claim-checking logic is testable
-without mocking, and the script only reads — it never mutates the working tree,
+without mocking, and the script only reads -- it never mutates the working tree,
 the index, or the session file.
 """
 
@@ -22,10 +22,14 @@ import json
 import re
 import subprocess
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Protocol, cast
+from typing import Final, Protocol, cast
+
+
+COMMAND_UNAVAILABLE_EXIT: Final = 127
 
 
 class Verdict(StrEnum):
@@ -52,13 +56,17 @@ class CommandRunner(Protocol):
 class SubprocessRunner:
     """Default runner: array-argument subprocess rooted at the repository."""
 
-    def __init__(self, repo: Path) -> None:
+    def __init__(self, repo: Path, env: Mapping[str, str] | None = None) -> None:
         self._repo = repo
+        self._env = dict(env) if env is not None else None
 
     def run(self, cmd: list[str]) -> tuple[int, str, str]:
-        proc = subprocess.run(  # noqa: S603 - array args, no shell
-            cmd, cwd=self._repo, capture_output=True, text=True
-        )
+        try:
+            proc = subprocess.run(  # noqa: S603 - array args, no shell
+                cmd, cwd=self._repo, capture_output=True, text=True, env=self._env
+            )
+        except OSError as exc:
+            return COMMAND_UNAVAILABLE_EXIT, "", str(exc)
         return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -80,78 +88,63 @@ class Session:
 
 
 def load_session(
-    session_path: Path, runner: CommandRunner
+    session_id: str, runner: CommandRunner
 ) -> tuple[Session | None, ClaimVerdict | None]:
-    """Load producer-parsed session metadata through ``spx session show --json``."""
-    session_id = (
-        session_path.stem if session_path.suffix == ".md" else session_path.name
-    )
-    sessions_dir = _sessions_dir(session_path)
-    code, out, err = runner.run(
-        [
-            "spx",
-            "session",
-            "show",
-            "--json",
-            "--sessions-dir",
-            str(sessions_dir),
-            session_id,
-        ]
-    )
+    """Read session claims through the spx session API, never a worktree path."""
+    code, out, err = runner.run(["spx", "session", "show", "--json", session_id])
     if code != 0:
-        return None, ClaimVerdict(
-            ClaimKind.SESSION_METADATA,
-            session_id,
-            Verdict.UNVERIFIABLE,
-            f"spx session show unavailable: {err.strip() or 'non-zero exit'}",
+        return None, _session_unverifiable(
+            session_id, f"spx session show --json unavailable: {_detail(err)}"
         )
     try:
-        payload_obj = json.loads(out)
-    except json.JSONDecodeError as exc:
-        return None, ClaimVerdict(
-            ClaimKind.SESSION_METADATA,
-            session_id,
-            Verdict.UNVERIFIABLE,
-            f"spx session show returned invalid JSON: {exc.msg}",
+        record = _single_session_record(json.loads(out))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        return None, _session_unverifiable(
+            session_id, f"spx session show --json returned invalid JSON: {exc}"
         )
-    if not isinstance(payload_obj, dict):
-        return None, ClaimVerdict(
-            ClaimKind.SESSION_METADATA,
-            session_id,
-            Verdict.UNVERIFIABLE,
-            "spx session show returned JSON that was not an object",
-        )
-    payload = cast("dict[str, object]", payload_obj)
-    shape_error = _metadata_shape_error(payload)
+    shape_error = _metadata_shape_error(record)
     if shape_error is not None:
-        return None, ClaimVerdict(
-            ClaimKind.SESSION_METADATA,
-            session_id,
-            Verdict.UNVERIFIABLE,
-            f"spx session show returned malformed metadata: {shape_error}",
+        return None, _session_unverifiable(
+            session_id, f"spx session show returned malformed metadata: {shape_error}"
         )
-    text = _read_optional_text(session_path)
+
+    raw_code, raw_out, raw_err = runner.run(["spx", "session", "show", session_id])
+    if raw_code != 0:
+        return None, _session_unverifiable(
+            session_id, f"spx session show unavailable: {_detail(raw_err)}"
+        )
+    return parse_session(record, raw_out), None
+
+
+def parse_session(record: dict[str, object], text: str) -> Session:
+    """Extract structured claims from parsed frontmatter plus session prose."""
+    payload = cast("dict[str, object]", record)
     git_ref = payload["git_ref"]
     return Session(
         git_ref=git_ref if isinstance(git_ref, str) else None,
         git_status=_body_git_status(text),
-        specs=tuple(cast("list[str]", payload["specs"])),
-        files=tuple(cast("list[str]", payload["files"])),
+        specs=_string_tuple(payload["specs"]),
+        files=_string_tuple(payload["files"]),
         pr_numbers=_pr_numbers(text),
-    ), None
+    )
 
 
-def _sessions_dir(session_path: Path) -> Path:
-    if session_path.parent.name in {"todo", "doing", "archive"}:
-        return session_path.parent.parent
-    return session_path.parent
+def _session_unverifiable(session_id: str, evidence: str) -> ClaimVerdict:
+    return ClaimVerdict(
+        ClaimKind.SESSION_METADATA, session_id, Verdict.UNVERIFIABLE, evidence
+    )
 
 
-def _read_optional_text(path: Path) -> str:
-    try:
-        return path.read_text()
-    except OSError:
-        return ""
+def _detail(stderr: str) -> str:
+    return stderr.strip() or "non-zero exit"
+
+
+def _single_session_record(data: object) -> dict[str, object]:
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, list) and len(data) == 1 and isinstance(data[0], dict):
+        return data[0]
+    raise ValueError("expected one session record")
 
 
 def _metadata_shape_error(payload: dict[str, object]) -> str | None:
@@ -174,6 +167,12 @@ def _metadata_shape_error(payload: dict[str, object]) -> str | None:
     return None
 
 
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
+
+
 def _body_git_status(text: str) -> str | None:
     meta = re.search(r"^\s*git_status:\s*(clean|dirty)\s*$", text, re.MULTILINE)
     return meta.group(1) if meta else None
@@ -190,7 +189,7 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
     branch_code, _, _ = runner.run(
         ["git", "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{ref}"]
     )
-    if branch_code >= 128:
+    if branch_code == COMMAND_UNAVAILABLE_EXIT or branch_code >= 128:
         return ClaimVerdict(
             ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
         )
@@ -211,7 +210,7 @@ def check_git_ref(session: Session, runner: CommandRunner) -> ClaimVerdict | Non
     code, _, _ = runner.run(
         ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"]
     )
-    if code >= 128:
+    if code == COMMAND_UNAVAILABLE_EXIT or code >= 128:
         return ClaimVerdict(
             ClaimKind.GIT_REF, ref, Verdict.UNVERIFIABLE, "git unavailable"
         )
@@ -305,18 +304,15 @@ def check_external_ids(session: Session, runner: CommandRunner) -> list[ClaimVer
     return verdicts
 
 
-def verify(session_path: Path, repo: Path, runner: CommandRunner) -> list[ClaimVerdict]:
+def verify(session_id: str, repo: Path, runner: CommandRunner) -> list[ClaimVerdict]:
     """Reconcile every parseable recorded claim against current state."""
-    session, load_error = load_session(session_path, runner)
-    if load_error is not None:
-        return [load_error]
+    session, load_error = load_session(session_id, runner)
     if session is None:
+        if load_error is not None:
+            return [load_error]
         return [
-            ClaimVerdict(
-                ClaimKind.SESSION_METADATA,
-                session_path.stem,
-                Verdict.UNVERIFIABLE,
-                "spx session show returned no session metadata",
+            _session_unverifiable(
+                session_id, "internal: load_session returned no session and no error"
             )
         ]
     verdicts: list[ClaimVerdict] = []
@@ -334,14 +330,14 @@ def verify(session_path: Path, repo: Path, runner: CommandRunner) -> list[ClaimV
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Reconcile a session file's claims against current state."
+        description="Reconcile a session's claims against current state."
     )
-    parser.add_argument("session", type=Path, help="Path to the claimed session file")
+    parser.add_argument("session_id", help="Claimed session id")
     parser.add_argument(
         "--repo", type=Path, default=Path.cwd(), help="Repository root (default: cwd)"
     )
     args = parser.parse_args(argv)
-    verdicts = verify(args.session, args.repo, SubprocessRunner(args.repo))
+    verdicts = verify(args.session_id, args.repo, SubprocessRunner(args.repo))
     json.dump([asdict(v) for v in verdicts], sys.stdout, indent=2, default=str)
     sys.stdout.write("\n")
     return 0

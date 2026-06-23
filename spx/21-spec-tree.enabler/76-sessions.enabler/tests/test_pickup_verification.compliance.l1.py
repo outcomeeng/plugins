@@ -7,10 +7,10 @@ Covers the script-behavior Compliance assertions in ``../sessions.md``:
   node's test suite or mutates the working tree, index, or session file.
 
 The workflow-ordering rules (sync before presenting, reconcile before the
-checkpoint) carry ``[audit]`` — the skill body is the implementation, judged by
-the skill auditor — so they are not asserted here as behavioral tests.
+checkpoint) carry ``[audit]`` -- the skill body is the implementation, judged by
+the skill auditor -- so they are not asserted here as behavioral tests.
 
-``l1`` — exercises the script in-process with the injected recording runner. No
+``l1`` -- exercises the script in-process with the injected recording runner. No
 mocking.
 """
 
@@ -19,16 +19,15 @@ from __future__ import annotations
 import ast
 import inspect
 import json
-import pathlib
 
 from outcomeeng_testing.harnesses.git_context import accepted_git_context
 from outcomeeng_testing.harnesses.verify_session_claims import (
     VERIFY_MODULE_PATH,
     RecordingRunner,
+    SESSION_ID,
     head_sha,
     load_verify_session_claims_module,
-    session_show_response,
-    write_session_file,
+    session_command_scripts,
 )
 
 STDLIB_IMPORT_ROOTS = frozenset(
@@ -68,18 +67,6 @@ TEST_INVOCATIONS = (
     ("python", "-m", "pytest"),
     ("python3", "-m", "pytest"),
 )
-
-
-def _session_show_command(session: pathlib.Path) -> tuple[str, ...]:
-    return (
-        "spx",
-        "session",
-        "show",
-        "--json",
-        "--sessions-dir",
-        str(session.parent),
-        session.stem,
-    )
 
 
 def test_verify_accepts_injected_runner() -> None:
@@ -131,36 +118,44 @@ def test_external_calls_go_through_the_runner() -> None:
     )
 
 
+def test_default_runner_launch_failure_emits_unverifiable() -> None:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        verdicts = module.verify(
+            SESSION_ID, repo, module.SubprocessRunner(repo, env={"PATH": ""})
+        )
+
+    assert len(verdicts) == 1
+    assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
+    assert verdicts[0].verdict == module.Verdict.UNVERIFIABLE
+
+
 def test_verification_is_read_only_and_uses_spec_status() -> None:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session = write_session_file(
-            repo.parent,
-            git_ref="0" * 40,
-            git_status="clean",
-            specs=("spx/21-x.enabler/x.md",),
-            pr_numbers=("256",),
-        )
-        before = session.read_bytes()
         runner = RecordingRunner(
             repo=repo,
-            scripted={
-                _session_show_command(session): session_show_response(
-                    git_ref="0" * 40,
-                    git_status="clean",
-                    specs=("spx/21-x.enabler/x.md",),
-                    pr_numbers=("256",),
-                ),
+            scripted=session_command_scripts(
+                git_ref="0" * 40,
+                git_status="clean",
+                specs=("spx/21-x.enabler/x.md",),
+                pr_numbers=("256",),
+            )
+            | {
                 ("spx", "spec", "status"): (0, '{"status": "passing"}', ""),
                 ("gh", "pr", "view"): (0, '{"state": "MERGED"}', ""),
             },
         )
 
-        module.verify(session, repo, runner)
+        module.verify(SESSION_ID, repo, runner)
 
-        assert _session_show_command(session) in map(tuple, runner.calls), (
-            "session metadata must come from spx session show"
-        )
+        assert any(
+            call == ["spx", "session", "show", "--json", SESSION_ID]
+            for call in runner.calls
+        ), "session claims must come from spx session show --json"
+        assert any(
+            call == ["spx", "session", "show", SESSION_ID] for call in runner.calls
+        ), "session prose must come from spx session show"
         assert any(call[:3] == ["spx", "spec", "status"] for call in runner.calls), (
             "node status must come from spx spec status"
         )
@@ -173,7 +168,6 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
                 assert tuple(call[: len(prefix)]) != prefix, (
                     f"test suite executed: {call}"
                 )
-        assert session.read_bytes() == before, "session file must not be mutated"
         dirty = RecordingRunner(repo=repo).run(["git", "status", "--porcelain"])[1]
         assert dirty.strip() == "", "verification must not mutate the working tree"
 
@@ -181,13 +175,12 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
 def test_invalid_session_metadata_is_unverifiable() -> None:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session = write_session_file(repo.parent, git_ref="0" * 40)
         runner = RecordingRunner(
             repo=repo,
-            scripted={_session_show_command(session): (0, "{", "")},
+            scripted={("spx", "session", "show", "--json", SESSION_ID): (0, "{", "")},
         )
 
-        verdicts = module.verify(session, repo, runner)
+        verdicts = module.verify(SESSION_ID, repo, runner)
 
         assert len(verdicts) == 1
         assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
@@ -198,18 +191,17 @@ def test_invalid_session_metadata_is_unverifiable() -> None:
 def test_wrong_shape_session_metadata_is_unverifiable() -> None:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session = write_session_file(repo.parent, git_ref="0" * 40)
         runner = RecordingRunner(
             repo=repo,
-            scripted={_session_show_command(session): (0, "[]", "")},
+            scripted={("spx", "session", "show", "--json", SESSION_ID): (0, "[]", "")},
         )
 
-        verdicts = module.verify(session, repo, runner)
+        verdicts = module.verify(SESSION_ID, repo, runner)
 
         assert len(verdicts) == 1
         assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
         assert verdicts[0].verdict == module.Verdict.UNVERIFIABLE
-        assert "not an object" in verdicts[0].evidence
+        assert "expected one session record" in verdicts[0].evidence
 
 
 def test_malformed_session_metadata_fields_are_unverifiable() -> None:
@@ -225,13 +217,18 @@ def test_malformed_session_metadata_fields_are_unverifiable() -> None:
     )
     for payload in cases:
         with accepted_git_context() as repo:
-            session = write_session_file(repo.parent, git_ref="0" * 40)
             runner = RecordingRunner(
                 repo=repo,
-                scripted={_session_show_command(session): (0, json.dumps(payload), "")},
+                scripted={
+                    ("spx", "session", "show", "--json", SESSION_ID): (
+                        0,
+                        json.dumps(payload),
+                        "",
+                    )
+                },
             )
 
-            verdicts = module.verify(session, repo, runner)
+            verdicts = module.verify(SESSION_ID, repo, runner)
 
             assert len(verdicts) == 1
             assert verdicts[0].kind == module.ClaimKind.SESSION_METADATA
@@ -239,20 +236,15 @@ def test_malformed_session_metadata_fields_are_unverifiable() -> None:
             assert "malformed metadata" in verdicts[0].evidence
 
 
-def test_metadata_loading_does_not_require_readable_session_file_body() -> None:
+def test_metadata_loading_does_not_require_local_session_file_body() -> None:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:
-        session = repo.parent / "missing-session.md"
         runner = RecordingRunner(
             repo=repo,
-            scripted={
-                _session_show_command(session): session_show_response(
-                    git_ref=head_sha(repo)
-                ),
-            },
+            scripted=session_command_scripts(git_ref=head_sha(repo)),
         )
 
-        verdicts = module.verify(session, repo, runner)
+        verdicts = module.verify(SESSION_ID, repo, runner)
 
         assert len(verdicts) == 1
         assert verdicts[0].kind == module.ClaimKind.GIT_REF
