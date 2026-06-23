@@ -74,13 +74,14 @@ def test_update_propagates_new_section_and_preserves_languages() -> None:
     )
 
     new_template = build_template(NEW_VERSION, extra_section=True)
-    updated = module.render(
-        new_template, module.parse_languages(guide), NEW_VERSION, RUNTIME_CLAUDE
-    )
+    languages = module.parse_languages(guide)
 
-    assert f"## {NEW_SECTION}" in updated
-    assert f"### {LANG_PRIMARY.capitalize()}" in updated
-    assert f"### {LANG_SECONDARY.capitalize()}" not in updated
+    # Both runtime files pick up the new section and keep the recorded languages.
+    for runtime in (RUNTIME_CLAUDE, RUNTIME_CODEX):
+        updated = module.render(new_template, languages, NEW_VERSION, runtime)
+        assert f"## {NEW_SECTION}" in updated
+        assert f"### {LANG_PRIMARY.capitalize()}" in updated
+        assert f"### {LANG_SECONDARY.capitalize()}" not in updated
 
 
 def _write_both_guides(

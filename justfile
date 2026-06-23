@@ -34,6 +34,9 @@ guide-check:
     python3 src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py \
       --template src/plugins/spec-tree/skills/understand/templates/spx-claude.md \
       --spx-dir spx --write
+    # --intent-to-add so an absent-from-index pair (first run) is treated as drift;
+    # git diff alone ignores untracked files and would pass silently.
+    git add --intent-to-add spx/CLAUDE.md spx/AGENTS.md
     git diff --exit-code spx/CLAUDE.md spx/AGENTS.md
 
 # Regenerate the plugin catalog in README.md from manifests and frontmatter

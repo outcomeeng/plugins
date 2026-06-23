@@ -87,9 +87,11 @@ def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
     ]
     assert module.main([*args, "--write"]) == 0
 
-    # Drift one guide by hand, then regenerate — the gate's basis is that --write
+    # Drift both guides by hand, then regenerate — the gate's basis is that --write
     # overwrites the drift, so a regenerate-and-diff catches a tampered guide.
-    claude = tmp_path / module.RUNTIME_GUIDE_FILENAMES[RUNTIME_CLAUDE]
-    claude.write_text(claude.read_text() + "\n\nHAND DRIFT\n", encoding="utf-8")
+    guides = [tmp_path / name for name in module.RUNTIME_GUIDE_FILENAMES.values()]
+    for guide in guides:
+        guide.write_text(guide.read_text() + "\n\nHAND DRIFT\n", encoding="utf-8")
     assert module.main([*args, "--write"]) == 0
-    assert "HAND DRIFT" not in claude.read_text(encoding="utf-8")
+    for guide in guides:
+        assert "HAND DRIFT" not in guide.read_text(encoding="utf-8")
