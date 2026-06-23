@@ -4,7 +4,7 @@ The session file content has two parts: a header of caller-supplied fields and t
 **Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying it exists on `origin`. The JSON header carries the caller-supplied fields:
 
 ```text
-{"priority": "medium", "goal": "[Why this continuation exists]", "next_step": "[The first concrete action for pickup]", "git_ref": "[work branch the work is pushed to — the stable anchor /pickup checks out]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
+{"priority": "medium", "goal": "[Output-shaped deliverable or target end-state]", "next_step": "[The first concrete action for pickup]", "git_ref": "[work branch the work is pushed to — the stable anchor /pickup checks out]", "specs": ["spx/{path-to-node}/{node-file}.md"], "files": ["src/{path-to-file}"]}
 ```
 
 Path C chooses its stdin form by harness: interactive Claude Code and Codex sessions use a quoted heredoc; programmatic runners that require one physical command line use `printf '%s\n'` with one argument per output line piped to `spx session handoff`. Both forms send the same bytes to stdin. Never assemble the body through temporary files, helper files, command substitution, or post-hoc text substitution.
@@ -17,7 +17,7 @@ created_at: [preserve on rewrite]
 agent_session_id: [preserve on rewrite]
 priority: medium
 git_ref: [preserve on rewrite]
-goal: [Why this continuation exists]
+goal: [Output-shaped deliverable or target end-state]
 next_step: [The first concrete action for pickup]
 specs:
   - spx/{path-to-node}/{node-file}.md
@@ -125,8 +125,10 @@ history.
 <field_guidance>
 
 - **`priority`**: `high` if tests are failing or a blocker exists; `medium` for normal continuation; `low` for exploratory or low-urgency work.
-- **`goal`**: Required, non-empty continuation objective. Use one sentence that identifies the user-visible outcome, not a generic handoff phrase.
-- **`next_step`**: Required, non-empty first action for pickup. Name the skill, command, review step, or file inspection that should happen first.
+- **`goal`**: Required, non-empty continuation objective. Write the field in the output-shaped style from `develop:agent-prompt-standards` `<objective_shape>`: name the deliverable or target end-state, not the activity that will produce it. Avoid opening activity verbs such as "Fix", "Finish", "Author", "Implement", or "Update"; `spx session list` and `spx session todo` truncate this field, so the first words carry the scanning value. A skill `<objective>` is atemporal ("X that does Y"); a session `goal` is a one-time target state, so present or past-participle end-states often read best ("X passing", "Y built and Z un-EXCLUDEd", "The N-case eval suite merged"). Examples:
+  - `Fix spec-tree /contextualize so explicit full-path governing references load` -> `spec-tree /contextualize that loads explicit full-path governing references`
+  - `Author the develop plugin's first audit-skills [eval] suite` -> `The develop plugin's first audit-skills [eval] suite`
+- **`next_step`**: Required, non-empty first action for pickup. Write this field imperatively: name the skill, command, review step, or file inspection that should happen first.
 - **Path C JSON header**: Carries the caller-supplied fields — `priority`, `goal`, `next_step`, `git_ref`, optional `specs`, optional `files`. Do not put `created_at` or `agent_session_id` in the header; `spx session handoff` prefills those when it renders the stored frontmatter.
 - **Path C stdin form**: In interactive Claude Code and Codex sessions, use a quoted heredoc whose first line is the JSON header and whose remaining lines are the body. In programmatic runners that require one physical command line, use `printf '%s\n'` with each argument representing one output line and pipe it to `spx session handoff`; keep the pipeline on one physical shell line. Literal apostrophes inside a single-quoted `printf` line use `'"'"'`.
 - **`git_ref`**: For Path C, supply the pushed work branch in the JSON header; `spx session handoff` records it after verifying the branch exists on `origin` (omit it only when the work landed on the default branch with no feature branch, and the command derives the base from git context — a branch name for a main checkout, a commit SHA for a detached or pool-worktree handoff). `git_ref` is the single anchor `/pickup` reads: it fetches and checks out the branch `git_ref` names in a pool worktree, and reads in place when `git_ref` is the default branch or a commit SHA. The persistence precondition (`workflows/04-execute.md` `<release_work_branch>`) guarantees the work branch exists on origin and is not behind local. Preserve the value as written; do not overwrite it during Path B rewrites.

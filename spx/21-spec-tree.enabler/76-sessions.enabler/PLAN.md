@@ -109,21 +109,3 @@ A prior plan section assumed `spx session handoff` rejects detached HEAD in a ma
 **Boundary — do not re-add branch-prefill assertions here.** The git-context contract is owned by the external `spx` CLI repo (`~/Code/outcomeeng/spx/`), not this node's spec. This node specifies the plugin surface (handoff/pickup skills); its tests merely establish the precondition the external tool requires. The current `spx` 0.5.2 contract, for reference: handoff is accepted from a root worktree (on a branch → records the branch name; detached → records the HEAD SHA) or a clean linked worktree detached at the tip of `origin/<default>` (records that SHA), and refused from any other linked-worktree state or a non-git directory with `SessionHandoffBaseError` — a single error class, not the two the old plan named.
 
 **Already done as part of the fix:** the dead `SESSION_RESUME` reference and the stale assertion-count docstring were removed from `test_sessions.scenario.l1.py`; the stale "release not supported" note in `src/plugins/spec-tree/skills/handoff/SKILL.md` `<arguments>` was corrected to point at `spx session release <id>`.
-
----
-
-## Plan: output-shape the session `goal` field
-
-The session `goal` is the session's objective, but the handoff skill and operators write it activity-first (`Fix…`, `Finish…`, `Author…`). `spx session list`/`todo` truncate the goal to ~70 chars, so an opening verb spends the operator's only scanning surface on the least informative word — the same activity-vs-output failure the `objective_shape` reframe (PRs #317, #319) fixed for skill `<objective>` blocks.
-
-**Fix:** govern the `goal` field with the output-shape principle.
-
-- Add an assertion to `sessions.md` that a handoff's `goal` names the session's deliverable / target end-state (output-shaped, no opening verb), while `next_step` stays imperative (the action). The `goal`/`next_step` split mirrors `<objective>`/`<workflow>`.
-- Add `goal`-field guidance + before/after examples to `src/plugins/spec-tree/skills/handoff/references/session-format.md`, cross-referencing `develop:agent-prompt-standards` `<objective_shape>`. State the one difference: a skill objective is atemporal ("X that does Y"); a session goal is a one-time target state, so present/past-participle end-states ("X passing", "Y built and Z un-EXCLUDEd") read more naturally than a bare noun phrase.
-
-Operator's 70-char view, before → after:
-
-- `Fix spec-tree /contextualize so explicit full-path governing references…` → `spec-tree /contextualize that loads explicit full-path governing references…`
-- `Author the develop plugin's first audit-skills [eval] suite — eight…` → `The develop plugin's first audit-skills [eval] suite — eight observable…`
-
-Surfaced while handing off the objective-shape follow-ups — the handoff that recorded those (session `2026-06-23_07-39-18`) was itself verb-first (`Finish the marketplace…`), which prompted this item. That session's goal was reworded output-first when this plan was committed.
