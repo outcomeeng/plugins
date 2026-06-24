@@ -204,8 +204,12 @@ def test_metadata_scope_hash_includes_changed_file_set(
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
     monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
-    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
     monkeypatch.setattr(
         je.changeset_scope,
         "expand_diff_range",
@@ -244,8 +248,12 @@ def test_metadata_for_worktree_records_pull_request_target(
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "origin/work/example")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
     monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
-    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
     monkeypatch.setattr(
         je.changeset_scope,
         "expand_diff_range",
@@ -275,8 +283,12 @@ def test_metadata_scope_hash_includes_full_review_input(
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
     monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(je.changeset_scope, "branch_slug", lambda branch: "work__example")
-    monkeypatch.setattr(je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
     monkeypatch.setattr(
         je.changeset_scope,
         "expand_diff_range",
@@ -298,9 +310,10 @@ def test_metadata_scope_hash_includes_full_review_input(
     )
 
     assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
-    assert first[jp.RUN_STATE_SCOPE]["reviewInputSha256"] != second[
-        jp.RUN_STATE_SCOPE
-    ]["reviewInputSha256"]
+    assert (
+        first[jp.RUN_STATE_SCOPE]["reviewInputSha256"]
+        != second[jp.RUN_STATE_SCOPE]["reviewInputSha256"]
+    )
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
 
 

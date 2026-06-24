@@ -279,7 +279,9 @@ def _resolve_pull_request_number(target_kind: object) -> int | None:
     value = os.environ.get(ENV_PULL_REQUEST_NUMBER, "").strip()
     if target_kind == jp.JournalTargetKind.PULL_REQUEST:
         if value == "":
-            raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} is required for pull-request target")
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER} is required for pull-request target"
+            )
         number = int(value)
         if number <= 0:
             raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} must be positive")
@@ -289,7 +291,9 @@ def _resolve_pull_request_number(target_kind: object) -> int | None:
     return None
 
 
-def _review_scope(*, base_ref: str, head_ref: str, repo: pathlib.Path) -> dict[str, object]:
+def _review_scope(
+    *, base_ref: str, head_ref: str, repo: pathlib.Path
+) -> dict[str, object]:
     range_spec = f"{base_ref}...{head_ref}"
     changed_files = changeset_scope.expand_diff_range(range_spec, repo=repo)
     review_input = compute_diff.combined_diff(base_ref, head_ref)
@@ -354,13 +358,9 @@ def metadata_for_worktree(
         jp.RUN_STATE_BRANCH_NAME: branch_name,
         jp.RUN_STATE_BRANCH_SLUG: str(changeset_scope.branch_slug(branch_name)),
         jp.RUN_STATE_TARGET_KIND: str(target_kind),
-        jp.RUN_STATE_HEAD_SHA: str(
-            changeset_scope.commit_oid(head_ref, repo=repo)
-        ),
+        jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
         jp.RUN_STATE_BASE_REF: base_ref,
-        jp.RUN_STATE_BASE_SHA: str(
-            changeset_scope.commit_oid(base_ref, repo=repo)
-        ),
+        jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
         jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
