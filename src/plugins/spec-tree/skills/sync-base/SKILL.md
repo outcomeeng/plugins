@@ -43,7 +43,7 @@ A `dirty_tree` outcome means uncommitted tracked changes block the rebase — al
    - **An unrelated coordination note** — a `PLAN.md` / `ISSUES.md` recording future work that is not part of the objective → commit it onto its own local branch, and record in the imperfection ledger that the branch is pending `/merge`. At session end `/merge` routes a coordination-note-only changeset to the default branch on origin through its direct-push transport, exactly as the merge guidance prescribes for such a changeset.
 3. **Re-run sync-base.** With the tree clean and the work carried on a branch, sync-base rebases (or advances) normally.
 
-The branch routing above is the merge lifecycle's routing applied early — the same destinations `/merge` selects at session end. sync-base itself never commits or stashes, so commit policy stays with `/commit-changes`.
+The branch routing above is the merge lifecycle's routing applied early — the same destinations `/merge` selects at session end.
 
 **Read-only caller note.** When `/contextualize` loads context and the dirty tree is the operator's pre-existing work Claude did not author, context loading surfaces that loaded context may be stale and proceeds — it does not commit the operator's in-progress work. That narrow read-only case is the caller's, not sync-base's, and is still not a `SYNC_BASE` conflict.
 
