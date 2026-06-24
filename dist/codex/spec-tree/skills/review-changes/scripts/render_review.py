@@ -154,7 +154,22 @@ def _render_markdown(result: "object") -> str:
 def _read_payload(path: str | None) -> str:
     if path is None:
         return sys.stdin.read()
-    return pathlib.Path(path).read_text(encoding="utf-8")
+    return _validated_payload_path(path).read_text(encoding="utf-8")
+
+
+def _validated_payload_path(path: str) -> pathlib.Path:
+    """Return a regular file path contained by the current working directory."""
+    root = pathlib.Path.cwd().resolve(strict=True)
+    candidate = pathlib.Path(path).resolve(strict=True)
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"review-result path must stay within current working directory: {path}"
+        ) from exc
+    if not candidate.is_file():
+        raise ValueError(f"review-result path must be a regular file: {path}")
+    return candidate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -168,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         payload = _read_payload(args.file)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
 

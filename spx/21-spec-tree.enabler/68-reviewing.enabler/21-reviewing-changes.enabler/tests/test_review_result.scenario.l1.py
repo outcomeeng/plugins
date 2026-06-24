@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import pathlib
 from typing import Any
 
 import pytest
@@ -335,6 +336,50 @@ class TestSeverityToRenderClassMapping:
         buckets = render_review._partition_findings(findings)
         assert {f.id for f in buckets["blocking"]} == {"F-001", "F-004"}
         assert {f.id for f in buckets["debt"]} == {"F-002", "F-003"}
+
+
+class TestRenderPayloadFileInput:
+    """``render_review --file`` reads only regular files under the cwd."""
+
+    def test_read_payload_accepts_file_under_current_directory(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        render_review = load_render_review_module()
+        root = tmp_path / "repo"
+        root.mkdir()
+        payload = root / "review-result.json"
+        payload.write_text("{}", encoding="utf-8")
+        monkeypatch.chdir(root)
+
+        assert render_review._read_payload("review-result.json") == "{}"
+
+    def test_read_payload_rejects_file_outside_current_directory(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        render_review = load_render_review_module()
+        root = tmp_path / "repo"
+        root.mkdir()
+        outside = tmp_path / "review-result.json"
+        outside.write_text("{}", encoding="utf-8")
+        monkeypatch.chdir(root)
+
+        with pytest.raises(ValueError, match="current working directory"):
+            render_review._read_payload(str(outside))
+
+    def test_read_payload_rejects_symlink_escape(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        render_review = load_render_review_module()
+        root = tmp_path / "repo"
+        root.mkdir()
+        outside = tmp_path / "review-result.json"
+        outside.write_text("{}", encoding="utf-8")
+        link = root / "linked-review-result.json"
+        link.symlink_to(outside)
+        monkeypatch.chdir(root)
+
+        with pytest.raises(ValueError, match="current working directory"):
+            render_review._read_payload(str(link))
 
 
 class TestRuleCitationForm:
