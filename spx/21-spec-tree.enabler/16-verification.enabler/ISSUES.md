@@ -9,8 +9,8 @@ Current disposition:
 - `/audit` default local emit is on `spx journal` and the shared consumer projection; focused tests and live smoke tests passed. It still needs one real `/audit` workflow run before review migration starts.
 - `review-changes` now persists through `spx journal --type review` and requires sealed terminal state matching the reviewed diff's `headSha`/`baseRef`/`baseSha`, `changedFiles`, `configDigest`, and status.
 - Stateful audit-orchestrator cross-run folding is blocked until `@outcomeeng/spx` exposes an ordered read/list of a branch/type scope's sealed runs. Upstream session: `2026-06-23_07-42-10`.
-- `spx journal render` is identity by design. Consumer-owned markdown/findings/check surfaces replace `emit_verdict.py`; they are not channel render output.
-- Keep the verdict toolchain only while child audit skills still emit verdict JSON. Delete it and `thread_store` after their consumers migrate.
+- `spx journal render` is identity by design. Consumer-owned markdown/findings/check surfaces are projections over journal events; they are not channel render output.
+- Keep the verdict schema and rollup helpers only while child audit skills still emit verdict JSON. Delete the remaining verdict toolchain and `thread_store` after their consumers migrate.
 
 Use `PLAN.md` as the authoritative continuation map.
 

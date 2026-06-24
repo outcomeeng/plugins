@@ -218,7 +218,7 @@ Scan all findings across all assertions, including any folded in from the compos
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `${CLAUDE_SKILL_DIR}/../audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery). Skills never hand-format markdown verdicts — deterministic rendering lives in the verdict toolchain.
+Emit the verdict as JSON conforming to the canonical schema in `${CLAUDE_SKILL_DIR}/../audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path. Skills never hand-format markdown verdicts.
 
 The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
 

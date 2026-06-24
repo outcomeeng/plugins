@@ -203,7 +203,8 @@ def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
     symbolic refs. Peeling through ``^{commit}`` rejects blobs and trees while
     accepting commits and tags that point at commits.
     """
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, ref is caller-controlled
+    # Fixed argv, no shell, ref is caller-controlled.
+    result = subprocess.run(  # noqa: S603
         ["git", "rev-parse", "--verify", "--quiet", f"{ref}{COMMIT_PEEL_SUFFIX}"],
         cwd=repo,
         capture_output=True,

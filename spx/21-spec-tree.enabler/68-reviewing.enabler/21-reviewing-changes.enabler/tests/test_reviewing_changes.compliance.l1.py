@@ -315,6 +315,21 @@ class TestWrapperAgentFrontmatter:
             f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:review-changes"
         )
 
+    def test_agent_when_present_exports_branch_identity_for_explicit_scope(
+        self,
+    ) -> None:
+        if not WRAPPER_AGENT_PATH.is_file():
+            pytest.skip(
+                f"wrapper agent {WRAPPER_AGENT_PATH.name} not yet authored — "
+                "branch export assertion deferred"
+            )
+        content = WRAPPER_AGENT_PATH.read_text(encoding="utf-8")
+        assert "SPX_VERIFY_BRANCH=<branch_name>" in content, (
+            f"{WRAPPER_AGENT_PATH.name} must export SPX_VERIFY_BRANCH with "
+            "non-empty review scopes so detached CI checkouts can record "
+            "branch run identity"
+        )
+
 
 class TestComputeDiffHasNoThreadAddressing:
     """``compute_diff.py`` does not accept thread-addressing arguments."""

@@ -39,16 +39,16 @@ echo "id=${CLAUDE_SESSION_ID:-UNSET} claimed=${CLAUDE_WORKTREE_CLAIMED:-UNSET} p
 spx worktree status --format json
 ```
 
-`spx worktree status --format json` reports the worktree state in its `.status` field (`occupied`, `unclaimed`, or `stale`). A `stale` reading for the current worktree — a lingering claim from a dead session — matches no row below and falls to `unknown` per step 4. Classify:
+`spx worktree status --format json` reports the worktree state in its `.status` field (`running` or `free`). A `free` reading means no live session holds the worktree; it covers both a never-claimed worktree and a dead holder's residual claim. Classify:
 
-| Reading                                                                                                    | Verdict            | Bucket         | Remediation                                                                                                                                                                                                                   |
-| ---------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id` is a session identifier, `claimed=1`, `proj` set, and worktree status reports the worktree `occupied` | **working**        | healthy        | None — the hook reached `spx`, which wrote identity and project dirs and claimed the worktree, and `spx` recognizes the claim.                                                                                                |
-| `id` is a session identifier, `claimed=UNSET`, worktree status `unclaimed`                                 | **identity-only**  | degraded       | An older hook that does not delegate to `spx` is active for this session. Update the plugin to the version whose `SessionStart` hook delegates to `spx`, then start a new session.                                            |
-| `id=UNSET` and worktree status `unclaimed`, on a runtime that ships the hook                               | **silent no-op**   | degraded       | `spx` is not on the hook's PATH, or the hook kill switch is set. Put `spx` on PATH, unset the hook's disable variable, then start a new session. The hook fails open, so nothing is broken — only session identity is absent. |
-| The runtime ships no such hook (for example Codex)                                                         | **not-applicable** | not-applicable | None — this runtime has no spec-tree `SessionStart` hook, so session-identity delivery does not apply.                                                                                                                        |
+| Reading                                                                                                   | Verdict            | Bucket         | Remediation                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id` is a session identifier, `claimed=1`, `proj` set, and worktree status reports the worktree `running` | **working**        | healthy        | None — the hook reached `spx`, which wrote identity and project dirs and claimed the worktree, and `spx` recognizes the claim.                                                                                                |
+| `id` is a session identifier, `claimed=UNSET`, worktree status `free`                                     | **identity-only**  | degraded       | An older hook that does not delegate to `spx` is active for this session. Update the plugin to the version whose `SessionStart` hook delegates to `spx`, then start a new session.                                            |
+| `id=UNSET` and worktree status `free`, on a runtime that ships the hook                                   | **silent no-op**   | degraded       | `spx` is not on the hook's PATH, or the hook kill switch is set. Put `spx` on PATH, unset the hook's disable variable, then start a new session. The hook fails open, so nothing is broken — only session identity is absent. |
+| The runtime ships no such hook (for example Codex)                                                        | **not-applicable** | not-applicable | None — this runtime has no spec-tree `SessionStart` hook, so session-identity delivery does not apply.                                                                                                                        |
 
-The strongest single signal is worktree status `occupied` together with `claimed=1`: that pair is reachable only when the hook reached `spx`, `spx` claimed the worktree, and the claim's controlling process — the live session — is alive.
+The strongest single signal is worktree status `running` together with `claimed=1`: that pair is reachable only when the hook reached `spx`, `spx` claimed the worktree, and the claim's controlling process — the live session — is alive.
 
 This check calls `spx` before the spx-reachability check runs; that ordering is intentional and the two checks classify different conditions. When `spx` is missing from the hook's PATH but installed where the skill runs, this check reads `silent no-op` while spx-reachability reads `reachable`. When `spx` is absent from the system entirely, `spx worktree status` errors and this check falls to `unknown` per step 4 while spx-reachability reads `unreachable`. Neither check depends on the other, so the report's line order is stable.
 
@@ -56,27 +56,27 @@ This check calls `spx` before the spx-reachability check runs; that ordering is 
 
 <check name="spx-reachability">
 
-Verifies that the `spx` CLI is installed and on PATH, reports its version, and judges that version against the floor the spec-tree skills depend on. That floor is `0.6.1` — the lowest `spx` version whose capabilities the shipped skills assume.
+Verifies that the `spx` CLI is installed and on PATH, reports its version, and judges that version against the floor the spec-tree skills depend on. That floor is `0.6.3` — the lowest `spx` version whose capabilities the shipped skills assume.
 
 ```bash
 command -v spx && spx --version
 ```
 
-Classify the resolution, reporting the resolved path and version verbatim and comparing the reported version against the floor `0.6.1` by dotted-numeric order:
+Classify the resolution, reporting the resolved path and version verbatim and comparing the reported version against the floor `0.6.3` by dotted-numeric order:
 
 | Reading                                                               | Verdict         | Bucket   | Remediation                                                                                                                    |
 | --------------------------------------------------------------------- | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `spx` resolves on PATH and its version is at or above `0.6.1`         | **reachable**   | healthy  | None — report the resolved path and version verbatim.                                                                          |
-| `spx` resolves on PATH and reports a version, but it is below `0.6.1` | **below-floor** | degraded | Update `spx` to at least `0.6.1`; the spec-tree skills assume its capabilities. Report the resolved path and version verbatim. |
+| `spx` resolves on PATH and its version is at or above `0.6.3`         | **reachable**   | healthy  | None — report the resolved path and version verbatim.                                                                          |
+| `spx` resolves on PATH and reports a version, but it is below `0.6.3` | **below-floor** | degraded | Update `spx` to at least `0.6.3`; the spec-tree skills assume its capabilities. Report the resolved path and version verbatim. |
 | `command -v spx` finds nothing                                        | **unreachable** | broken   | Install `spx` and put it on PATH; the spec-tree skills and the `SessionStart` hook depend on it.                               |
 
-A reported version that is not dotted-numeric — a prerelease or build-tagged value that cannot be ordered against `0.6.1` — matches no row and falls to `unknown` per step 4, reported with the version verbatim.
+A reported version that is not dotted-numeric — a prerelease or build-tagged value that cannot be ordered against `0.6.3` — matches no row and falls to `unknown` per step 4, reported with the version verbatim.
 
 </check>
 
 <check name="worktree-pool">
 
-Verifies the repository's git worktree layout and flags stale occupancy claims. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as `occupied`, `unclaimed`, or `stale` — a claim whose holding session is dead.
+Verifies the repository's git worktree layout and reports worktree occupancy. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as `running` or `free`.
 
 Read the worktree set, then query each non-bare worktree's occupancy:
 
@@ -87,21 +87,20 @@ git worktree list --porcelain |
   while IFS= read -r wt; do spx worktree status --format json "$wt"; done
 ```
 
-`git worktree list --porcelain` puts each worktree on its own `worktree <path>` line and marks the bare entry with a `bare` line; the `awk` extracts the non-bare paths verbatim (spaces preserved) and the loop queries each with single-path `spx worktree status --format json "$wt"` — the path is quoted, so a path containing spaces stays one argument, and the single-path form is the one existing skills already rely on. Each call returns a `{worktree, status}` object whose `status` is `occupied`, `unclaimed`, or `stale`; a bare path is excluded because `spx worktree status` resolves occupancy only for real worktrees. Classify:
+`git worktree list --porcelain` puts each worktree on its own `worktree <path>` line and marks the bare entry with a `bare` line; the `awk` extracts the non-bare paths verbatim (spaces preserved) and the loop queries each with single-path `spx worktree status --format json "$wt"` — the path is quoted, so a path containing spaces stays one argument, and the single-path form is the one existing skills already rely on. Each call returns a `{worktree, status}` object whose `status` is `running` or `free`; a bare path is excluded because `spx worktree status` resolves occupancy only for real worktrees. Classify:
 
-| Reading                                                                                               | Verdict           | Bucket   | Remediation                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------- | ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| A lone working tree, or a bare-repository pool with linked worktrees, and no worktree reports `stale` | **compliant**     | healthy  | None — report the layout shape and worktree count.                                                                                 |
-| A recognized layout (lone tree or bare pool), but one or more worktrees report `stale`                | **stale-claims**  | degraded | Release each stale claim — run `spx worktree release` from that worktree, or let a live session reclaim it.                        |
-| Linked worktrees attached to a non-bare repository                                                    | **non-compliant** | broken   | The layout is neither a lone working tree nor a bare-repository pool. Provision the pool so worktrees attach to a bare repository. |
+| Reading                                                              | Verdict           | Bucket  | Remediation                                                                                                                        |
+| -------------------------------------------------------------------- | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| A lone working tree, or a bare-repository pool with linked worktrees | **compliant**     | healthy | None — report the layout shape and the `running` / `free` worktree counts.                                                         |
+| Linked worktrees attached to a non-bare repository                   | **non-compliant** | broken  | The layout is neither a lone working tree nor a bare-repository pool. Provision the pool so worktrees attach to a bare repository. |
 
-`spx worktree status` exposes occupancy and staleness; this check reports the worktree set, the layout shape, and any stale claim, but does not re-derive the full repository-layout compliance rules — the repository-name main checkout, the `.spx/` placement beside the git-common-dir. Auditing those is test-bearing classification that belongs in the `spx` CLI; surface it here once `spx` exposes it.
+`spx worktree status` exposes occupancy; this check reports the worktree set, the layout shape, and the `running` / `free` counts, but does not re-derive the full repository-layout compliance rules — the repository-name main checkout, the `.spx/` placement beside the git-common-dir. Auditing those is test-bearing classification that belongs in the `spx` CLI; surface it here once `spx` exposes it.
 
 </check>
 
 <check name="session-store">
 
-Verifies the `.spx/` session store reads consistently and flags orphaned `doing` claims. `spx session list --json` returns `{"doing": [...], "todo": [...]}`, each session carrying its `git_ref` and `agent_session_id`; `spx session list --status archive --json` reports the archive. A `doing` session is orphaned when the agent that claimed it is gone — observable through the worktree that backs the claim: the worktree on the session's `git_ref` reporting `stale` occupancy, or no worktree existing on that branch.
+Verifies the `.spx/` session store reads consistently and flags orphaned `doing` claims. `spx session list --json` returns `{"doing": [...], "todo": [...]}`, each session carrying its `git_ref` and `agent_session_id`; `spx session list --status archive --json` reports the archive. A `doing` session is orphaned when the agent that claimed it is gone — observable through the worktree that backs the claim: the worktree on the session's `git_ref` reporting `free` occupancy, or no worktree existing on that branch.
 
 Read the store and the worktree occupancy backing each doing claim:
 
@@ -117,10 +116,10 @@ spx worktree status --format json "<resolved worktree path>"
 
 The `awk` matches the doing session's `git_ref` to a worktree's branch and prints that worktree's path (spaces preserved); if it prints nothing, the branch has no worktree and the claim is `absent`. Join each `doing` session to that occupancy and classify:
 
-| Reading                                                                                                                                                  | Verdict             | Bucket   | Remediation                                                                                                                                            |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The store reads and every `doing` session's backing worktree is `occupied` (holder live)                                                                 | **consistent**      | healthy  | None — report the doing / todo / archive counts.                                                                                                       |
-| The store reads but one or more `doing` sessions are orphaned — the worktree on the session's `git_ref` is `stale`, or no worktree exists on that branch | **orphaned-claims** | degraded | Release or archive each orphaned session — `spx session release <id>` returns it to the queue, or `spx session archive <id>` once its work has landed. |
+| Reading                                                                                                                                                 | Verdict             | Bucket   | Remediation                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The store reads and every `doing` session's backing worktree is `running` (holder live)                                                                 | **consistent**      | healthy  | None — report the doing / todo / archive counts.                                                                                                       |
+| The store reads but one or more `doing` sessions are orphaned — the worktree on the session's `git_ref` is `free`, or no worktree exists on that branch | **orphaned-claims** | degraded | Release or archive each orphaned session — `spx session release <id>` returns it to the queue, or `spx session archive <id>` once its work has landed. |
 
 `spx session` exposes the store but reports no holder-liveness signal of its own, so this check infers it from the worktree-claim occupancy that backs each doing session; a reading that cannot be joined falls to `unknown` per step 4. When `.spx/` does not exist or `spx session list` errors, the check falls to `unknown` per step 4 — there is no not-applicable case for this surface, since any spec-tree environment has a session store. A future `spx session` orphan signal would replace the join.
 
@@ -165,9 +164,9 @@ Emit one report. Each check is one line: its name, its verdict, and a trailing d
 ```text
 diagnose — environment report
 
-  session-environment   unknown — id set, claimed=1, but spx worktree status reports unclaimed
+  session-environment   unknown — id set, claimed=1, but spx worktree status reports free
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
-  worktree-pool         stale-claims — plugins-c holds a stale claim
+  worktree-pool         compliant — bare-repository pool, 7 worktrees, 2 running, 5 free
   session-store         consistent — 1 doing, 4 todo, 22 archived
   marketplace-install   drifted — develop installed below offered version on the claude surface
 
@@ -181,7 +180,7 @@ diagnose — environment report
 
   session-environment   not-applicable — runtime has no spec-tree SessionStart hook
   spx-reachability      reachable — /opt/homebrew/bin/spx, 0.61.0
-  worktree-pool         compliant — bare-repository pool, 7 worktrees, no stale claims
+  worktree-pool         compliant — bare-repository pool, 7 worktrees, 2 running, 5 free
   session-store         consistent — 2 doing, 3 todo, 22 archived
   marketplace-install   installed — outcomeeng registered, 4 plugins current on codex
 

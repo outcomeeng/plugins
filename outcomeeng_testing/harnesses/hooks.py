@@ -43,7 +43,7 @@ KILL_SWITCH_DISABLED = "1"
 
 # The spx hook runner records this PID as the worktree claim's controlling
 # process; spx worktree status reads it back and checks liveness, so a claim is
-# `occupied` only while this process is alive. A test sets it to its own PID.
+# `running` only while this process is alive. A test sets it to its own PID.
 WORKTREE_CONTROLLING_PID_ENV = "SPX_WORKTREE_CONTROLLING_PID"
 
 # Env vars dropped from the child so the hook command sees only what the call

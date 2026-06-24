@@ -2,9 +2,8 @@
 
 This module is the marketplace's single source of truth for what an audit
 verdict looks like. Every audit skill emits a JSON document that conforms
-to the schema declared here. The companion CLI scripts (``emit_verdict.py``,
-``read_verdict.py``, ``aggregate_verdicts.py``) read and write that JSON;
-skills never hand-format markdown verdicts.
+to the schema declared here. Companion CLI scripts validate, aggregate,
+and journal-render that JSON; skills never hand-format markdown verdicts.
 
 Portability: stdlib only. No third-party imports. See the Plugin Portability
 Constraints section in the marketplace ``AGENTS.md``.
@@ -34,13 +33,6 @@ SCHEMA_VERSION = 1
 ROOT_STATUSES: frozenset[str] = frozenset({"APPROVED", "REJECTED", "UNKNOWN"})
 SKILL_STATUSES: frozenset[str] = frozenset({"PASS", "FAIL", "UNKNOWN"})
 SEVERITIES: frozenset[str] = frozenset({"REJECT", "WARNING", "INFO"})
-
-# HTML-comment-delimited JSON-block markers for the ``markdown+json`` carrier
-# surface. Defined here as the single canonical source so producer
-# (``emit_verdict.py``) and consumer (``read_verdict.py``) cannot drift —
-# both import these constants rather than re-declaring them.
-JSON_BLOCK_BEGIN = "<!-- AUDIT_VERDICT_JSON_BEGIN -->"
-JSON_BLOCK_END = "<!-- AUDIT_VERDICT_JSON_END -->"
 
 
 class Status(StrEnum):

@@ -21,6 +21,10 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    FIXTURE_ADR_RULE_CITATION,
+    FIXTURE_AGENTS_RULE_CITATION,
+    FIXTURE_RULE_CITATION,
+    FIXTURE_SKILL_RULE_CITATION,
     load_review_result_module,
 )
 
@@ -53,11 +57,13 @@ def _finding_strategy() -> st.SearchStrategy[dict[str, Any]]:
         severity=st.sampled_from(_severity_values()),
         file=st.from_regex(r"[a-z_]{1,12}\.py", fullmatch=True),
         line=st.integers(min_value=1, max_value=10_000),
-        # Rule citation form: a full path-style string accepted by the
-        # review_result._RULE_CITATION_PATTERNS validator.
-        rule=st.from_regex(
-            r"spx/[a-z]{1,8}\.md:(ALWAYS|NEVER|MUST):[1-9][0-9]?",
-            fullmatch=True,
+        rule=st.sampled_from(
+            [
+                FIXTURE_RULE_CITATION,
+                FIXTURE_ADR_RULE_CITATION,
+                FIXTURE_SKILL_RULE_CITATION,
+                FIXTURE_AGENTS_RULE_CITATION,
+            ]
         ),
         message=st.text(
             alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd", "Zs", "Po")),

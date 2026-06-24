@@ -249,11 +249,11 @@ def _require_run_state(run: RunResult) -> None:
         raise ValueError(f"{RUN_STATE_BASE_SHA} must be non-empty when present")
     if not run.participants:
         raise ValueError(f"{RUN_STATE_PARTICIPANTS} must contain at least one entry")
-    if not all(participant for participant in run.participants):
+    if not all(run.participants):
         raise ValueError(
             f"{RUN_STATE_PARTICIPANTS} must contain only non-empty strings"
         )
-    if not all(path for path in run.output_paths):
+    if not all(run.output_paths):
         raise ValueError(
             f"{RUN_STATE_OUTPUT_PATHS} must contain only non-empty strings"
         )

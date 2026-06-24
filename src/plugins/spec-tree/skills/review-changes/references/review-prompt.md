@@ -113,8 +113,7 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 
 - `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS>:<n>` — a spec assertion under the spec tree.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
-- `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule.
-- `SKILL.md:<rule-slug>` — a skill rule referenced by relative name where the surrounding context disambiguates.
+- `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule resolved by the arbiter against the plugin roots available to the current runtime.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention rule.
 
-Before citing a rule, verify that the cited repository file exists and contains the cited rule, assertion, or governing section. Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action`. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.
+Before citing a rule, verify that the cited repository file exists and contains the cited rule, assertion, or governing section. Never use relative `SKILL.md:<rule-slug>` citations — they are not mechanically verifiable by the arbiter. Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action`. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.

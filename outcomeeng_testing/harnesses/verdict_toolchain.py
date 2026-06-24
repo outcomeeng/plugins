@@ -6,10 +6,6 @@ Provides the shared scaffolding consumed by every test file under
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. Without a single
   source, every test file walks ``__file__.parents[...]`` to find
   ``src/plugins/spec-tree/skills/audit/scripts``.
-- ``JSON_BLOCK_BEGIN`` / ``JSON_BLOCK_END``. The HTML-comment delimiters used
-  by ``markdown+json`` are defined in ``verdict.py`` (the production module).
-  Importing them here means tests cannot disagree with the producer/consumer
-  toolchain about the delimiter pair — there is exactly one definition.
 - ``run_script``. A thin ``subprocess.run`` wrapper with the defaults every
   test uses (``capture_output=True``, ``text=True``, optional stdin).
 
@@ -39,8 +35,6 @@ SCRIPTS_DIR = (
 )
 
 VERDICT_MODULE_PATH = SCRIPTS_DIR / "verdict.py"
-EMIT_SCRIPT = SCRIPTS_DIR / "emit_verdict.py"
-READ_SCRIPT = SCRIPTS_DIR / "read_verdict.py"
 AGGREGATE_SCRIPT = SCRIPTS_DIR / "aggregate_verdicts.py"
 PASS_RESULTS_SCRIPT = SCRIPTS_DIR / "pass_results.py"
 AUDIT_ORCHESTRATOR_SCRIPT = SCRIPTS_DIR / "audit_orchestrator.py"
@@ -70,14 +64,6 @@ def load_verdict_module() -> ModuleType:
     sys.modules["verdict"] = module
     spec.loader.exec_module(module)
     return module
-
-
-# Load once at module import so ``JSON_BLOCK_BEGIN`` / ``JSON_BLOCK_END`` come
-# from the production module. A test file that hardcodes the delimiter
-# strings could drift from the producer/consumer; this import closes that gap.
-_verdict = load_verdict_module()
-JSON_BLOCK_BEGIN: str = _verdict.JSON_BLOCK_BEGIN
-JSON_BLOCK_END: str = _verdict.JSON_BLOCK_END
 
 
 def run_script(

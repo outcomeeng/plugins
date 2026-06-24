@@ -274,6 +274,49 @@ def test_metadata_for_worktree_records_pull_request_target(
     assert metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
 
 
+def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_current_branch(repo: pathlib.Path) -> str:
+        raise je.changeset_scope.DetachedHeadError(f"detached HEAD at {repo}")
+
+    monkeypatch.setenv("SPX_VERIFY_BASE_REF", "origin/main")
+    monkeypatch.setenv("SPX_VERIFY_HEAD_REF", "origin/work/example")
+    monkeypatch.setenv("SPX_VERIFY_BRANCH", "work/example")
+    monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
+    monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(
+        je.changeset_scope, "detect_current_branch", fail_current_branch
+    )
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert metadata[jp.RUN_STATE_BRANCH_NAME] == "work/example"
+    assert metadata[jp.RUN_STATE_BRANCH_SLUG] == "work__example"
+    assert metadata[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
+    assert metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
+
+
 def test_metadata_scope_hash_includes_full_review_input(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -321,15 +364,18 @@ def test_metadata_cli_reports_git_failure_without_traceback(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    def fail_expand_diff_range(
+        range_spec: str, *, repo: pathlib.Path
+    ) -> je.changeset_scope.DiffIdentity:
+        raise subprocess.CalledProcessError(128, ["git", "diff", range_spec])
+
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/nope")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
     monkeypatch.setattr(
         je.changeset_scope,
         "expand_diff_range",
-        lambda range_spec, *, repo: (_ for _ in ()).throw(
-            subprocess.CalledProcessError(128, ["git", "diff", range_spec])
-        ),
+        fail_expand_diff_range,
     )
 
     exit_code = je.main(

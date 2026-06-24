@@ -20,18 +20,6 @@ A verdict on Python implementation code — APPROVED, or REJECTED with each find
 
 </objective>
 
-<quick_start>
-
-1. Read `/test` for methodology + `/test-python` for Python patterns
-2. Load product config: `CLAUDE.md`, `pyproject.toml` (Phase 0)
-3. Run automated gates -- product validation command (Phase 1, blocking)
-4. Run tests -- verify all pass (Phase 2, blocking)
-5. **Comprehend every function** -- predict, verify, investigate (Phase 3)
-6. Check ADR/PDR compliance (Phase 4)
-7. Produce structured verdict: APPROVED or REJECTED
-
-</quick_start>
-
 <repo_local_overlay>
 Standards are pre-loaded above. Check for `spx/local/python.md` at the repository root. Read it if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
 </repo_local_overlay>
@@ -56,7 +44,7 @@ APPROVED means every concern passes. REJECTED means at least one fails. APPROVED
 
 </essential_principles>
 
-<process>
+<audit_workflow>
 
 Execute phases IN ORDER. Do not skip.
 
@@ -164,7 +152,7 @@ Find applicable ADRs/PDRs in the spec hierarchy (`*.adr.md`, `*.pdr.md`). Verify
 | "No ORM" (ADR)                       | SQLAlchemy models introduced        | REJECTED |
 | "Lifecycle is Draft→Published" (PDR) | Added hidden `Archived` state       | REJECTED |
 
-</process>
+</audit_workflow>
 
 <failure_modes>
 
@@ -182,9 +170,9 @@ These are real failures from past audits. Study them to avoid repeating them.
 
 </failure_modes>
 
-<output_format>
+<verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 
@@ -208,7 +196,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 
 Each finding carries `file`, `line`, `rule` (the concern name from the verdict table or a specific violation name), `severity: "REJECT"`, and `message` (the one-line "why this fails"). Include correct-approach code samples and required changes directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
-</output_format>
+</verdict_format>
 
 <what_to_avoid>
 

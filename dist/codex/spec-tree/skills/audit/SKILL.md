@@ -2,8 +2,9 @@
 name: audit
 description: >-
   Generic end-to-end code-scope audit orchestration preloaded by audit agents.
-  Dispatch the audit agent that fits the requested surface; the main conversation
+  Dispatch the audit agent that fits the requested run surface; the main conversation
   reaches a generic audit only through an audit agent.
+arguments: request
 ---
 
 <dispatch_gate>
@@ -23,6 +24,12 @@ One wrapper verdict over a code scope: three orchestrator-owned rows (`automated
 Read-only over the audited code: this skill produces a wrapper verdict and records it on the `spx journal`; it never edits, fixes, commits, or modifies the audited project tree. Its writes are limited to journal append/seal operations the channel owns and temporary scratch files used to aggregate child verdicts. Subagents it dispatches are read-only too.
 
 </constraints>
+
+<input_contract>
+
+The invocation request `$request` carries the audit scope and optional PR identity. Run the standard six-phase audit path over the requested scope. When `$request` carries `REPO` and `PR NUMBER`, stamp the wrapper metadata with target kind `pull-request` and `pullRequestNumber` so the journal backend can project prior audit runs for the same PR. Never read state from rendered PR comments; the journal is the audit source of truth.
+
+</input_contract>
 
 <determinism_contract>
 
@@ -89,13 +96,13 @@ Do not read source files for comprehension during Phase 0. Phase 0 only inventor
 
 <phase number="1" name="automated-gates">
 
-Run the project's canonical validation command (discovered in Phase 0 step 5). Any non-zero exit code is REJECT for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
+Run the project's canonical validation command (discovered in Phase 0 step 5). Any non-zero exit code is `FAIL` for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
 
 </phase>
 
 <phase number="2" name="test-execution">
 
-Run the project's canonical test command. Any failure is REJECT for row 2. Halt before subsequent phases.
+Run the project's canonical test command. Any failure is `FAIL` for row 2. Halt before subsequent phases.
 
 </phase>
 
@@ -164,6 +171,12 @@ CONFIG_DIGEST=$(printf '%s\n' <audit-config-digest-input-lines> \
   | python3 "${SKILL_DIR}/scripts/audit_orchestrator.py" config-digest)
 PARTICIPANTS_JSON='["audit"]'
 OUTPUT_PATHS_JSON='[]'
+TARGET_KIND='branch'
+PULL_REQUEST_METADATA_ARGS=()
+if [ -n "${PR_NUMBER:-}" ]; then
+  TARGET_KIND='pull-request'
+  PULL_REQUEST_METADATA_ARGS=(--metadata pullRequestNumber="$PR_NUMBER")
+fi
 
 # Assemble the wrapper verdict. This is the run's verdict artifact.
 WRAPPER_JSON=$(python3 "${SKILL_DIR}/scripts/aggregate_verdicts.py" \
@@ -183,7 +196,9 @@ WRAPPER_JSON=$(python3 "${SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --metadata participants="$PARTICIPANTS_JSON" \
   --metadata scope="$SCOPE_JSON" \
   --metadata startedAt="$RUN_STARTED_AT" \
-  --metadata outputPaths="$OUTPUT_PATHS_JSON")
+  --metadata outputPaths="$OUTPUT_PATHS_JSON" \
+  --metadata targetKind="$TARGET_KIND" \
+  "${PULL_REQUEST_METADATA_ARGS[@]}")
 
 # Default stateless local emit: record the run on the spx journal and read
 # its verdict back from the sealed event prefix. journal_emit maps the
@@ -225,7 +240,7 @@ The canonical schema is declared in `${SKILL_DIR}/scripts/verdict.py` (`Status`,
     {"name": "determinism-contract", "status": "PASS | FAIL | UNKNOWN", "findings": []}
   ],
   "children": [
-    { "skill": "audit-typescript", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
+    { "skill": "audit-{lang}*", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
   ],
   "metadata": {
     "scopeHash": "<12-char-hex>",
@@ -273,6 +288,8 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 - The wrapper has three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one child per partition.
 - The wrapper's `overall` is APPROVED, REJECTED, or UNKNOWN per `verdict.roll_up` applied to wrapper rows plus children overalls.
 - The wrapper verdict is assembled via `aggregate_verdicts.py`; the default stateless local run is recorded on the `spx journal` and its verdict read back through `journal_emit.py render`, the overall preserved across the journal.
+- Pull-request audit runs stamp `pullRequestNumber` and target kind into wrapper metadata and read prior state through the journal backend, never from rendered PR comments.
+- Resolved/reopened projection uses content identity `(file, line, rule, message)` and treats a first PR run as empty prior state.
 - The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `audit-{lang}*` and the language placeholder `<lang>`.
 - The scope hash is reproducible: re-running the skill on the same frozen scope produces the same hash.
 - If the run halts, the halt reason is reported on the row the halt condition owns and no subsequent phase runs: a Phase 1 non-zero validation exit on `automated-gates` (FAIL), a Phase 2 non-zero test exit on `test-execution` (FAIL), and an empty scope or a missing `audit-{lang}*` trio (a Phase 0 halt before a frozen scope exists) on `determinism-contract` (UNKNOWN).

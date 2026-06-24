@@ -37,6 +37,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_MALFORMED_RULE_CITATION,
     FIXTURE_RULE_CITATION,
+    FIXTURE_SKILL_RULE_CITATION,
     load_render_review_module,
     load_review_result_module,
     make_review_result_dict,
@@ -389,29 +390,30 @@ class TestRuleCitationForm:
     ``spx/<path>/<n>-<slug>.adr.md``,
     ``spx/<path>/<n>-<slug>.pdr.md``,
     ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
-    ``AGENTS.md:<rule-slug>``, ``CLAUDE.md:<rule-slug>``, and
-    ``SKILL.md:<rule-slug>``. The semantic check (cited rule exists at
-    the location) is the review prompt's concern and is not enforced at
-    parse time.
+    ``AGENTS.md:<rule-slug>``, and ``CLAUDE.md:<rule-slug>``.
+    The parser rejects citations whose file or rule slug cannot be
+    verified mechanically.
     """
 
     @pytest.mark.parametrize(
         "rule",
         [
-            "spx/21-spec-tree.enabler/spec-tree.md:ALWAYS:1",
-            "spx/21-spec-tree.enabler/spec-tree.md:SCENARIO:1",
-            "spx/21-spec-tree.enabler/spec-tree.md:MAPPING:2",
-            "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:3",
-            "spx/21-spec-tree.enabler/spec-tree.md:PROPERTY:4",
-            "spx/21-spec-tree.enabler/spec-tree.md:COMPLIANCE:5",
-            "spx/1-root.adr.md",
+            FIXTURE_RULE_CITATION,
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:NEVER:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:2",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:2",
+            "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
-            "spx/21-spec-tree.enabler/132-reviewing-changes.pdr.md",
             "spx/15-merging.pdr.md",
-            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
-            "AGENTS.md:critical-rules",
-            "CLAUDE.md:imperfection-protocol",
-            "SKILL.md:render-templates-as-data",
+            FIXTURE_SKILL_RULE_CITATION,
+            "plugins/spec-tree/skills/understand/SKILL.md:principles",
+            "CLAUDE.md:critical-rules",
+            FIXTURE_AGENTS_RULE_CITATION,
         ],
     )
     def test_parser_accepts_path_style_rule(self, rule: str) -> None:
@@ -431,6 +433,64 @@ class TestRuleCitationForm:
             json.dumps(make_review_result_dict(findings=[finding]))
         )
 
+    def test_plugin_skill_rule_can_resolve_absolute_runtime_path(self) -> None:
+        review_result = load_review_result_module()
+        skill_path = pathlib.Path(
+            "dist/claude/spec-tree/skills/review-changes/SKILL.md"
+        ).resolve(strict=True)
+
+        review_result._validate_slug(
+            skill_path,
+            "api-surface",
+            FIXTURE_SKILL_RULE_CITATION,
+        )
+
+    def test_plugin_skill_rule_resolves_from_runtime_layout_without_repo_tree(
+        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        review_result = load_review_result_module()
+        monkeypatch.chdir(tmp_path)
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_SKILL_RULE_CITATION,
+            "message": "m",
+            "action": "a",
+        }
+
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[finding]))
+        )
+
+    def test_rule_slug_discovery_rejects_bold_marker_prose(self) -> None:
+        review_result = load_review_result_module()
+        document = """# Rules
+
+### Narrative
+
+This paragraph names **ALWAYS** as prose, not as a rule marker.
+
+### Critical Rules
+
+- ⚠️ **NEVER answer** without loading the rule source.
+
+<principles>
+
+ALWAYS: pseudo-XML sections are rule-bearing surfaces.
+
+</principles>
+"""
+
+        slugs = review_result._declared_rule_slugs(document)
+
+        assert "narrative" not in slugs
+        assert "critical-rules" in slugs
+        assert "principles" in slugs
+        assert "rules" not in slugs
+
     @pytest.mark.parametrize(
         "rule",
         [
@@ -444,12 +504,27 @@ class TestRuleCitationForm:
             "spx/rules.md",
             "spx/rules.md:ALWAYS",
             "spx/rules.md:SCENARIO",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:999",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:2",
             "plugins/foo",
             "plugins/foo/skills/bar",
             "plugins/foo/skills/bar/SKILL.md",
+            "plugins/python/skills/standardizing-python/SKILL.md:atemporal-voice",
+            "plugins/spec-tree/skills/review-changes/SKILL.md:objective",
+            "plugins/spec-tree/skills/review-changes/SKILL.md:review",
+            "plugins/spec-tree/skills/review-changes/SKILL.md:workflow",
             "AGENTS.md",
+            "AGENTS.md:plugins",
+            "AGENTS.md:two-audiences-two-design-surfaces",
+            "AGENTS.md:documentation",
+            "AGENTS.md:plugin-catalog",
+            "AGENTS.md:why",
+            "AGENTS.md:not-a-real-rule-slug",
             "CLAUDE.md",
+            "CLAUDE.md:plugins",
+            "CLAUDE.md:never-use",
             "SKILL.md",
+            "SKILL.md:render-templates-as-data",
         ],
     )
     def test_parser_rejects_non_citation_rule(self, rule: str) -> None:

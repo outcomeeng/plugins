@@ -75,7 +75,10 @@ FIXTURE_ADR_RULE_CITATION = (
     "spx/21-spec-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
 )
-FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:never-maintain-backward-compatibility"
+FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:critical-rules"
+FIXTURE_SKILL_RULE_CITATION = (
+    "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
+)
 FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 
 
