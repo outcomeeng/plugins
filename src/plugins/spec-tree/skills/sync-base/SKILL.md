@@ -45,7 +45,7 @@ A `dirty_tree` outcome means uncommitted tracked changes block the rebase — al
 
 The branch routing above is the merge lifecycle's routing applied early — the same destinations `/merge` selects at session end.
 
-**Read-only caller note.** When `/contextualize` loads context and the dirty tree is the operator's pre-existing work Claude did not author, context loading surfaces that loaded context may be stale and proceeds — it does not commit the operator's in-progress work. That narrow read-only case is the caller's, not sync-base's, and is still not a `SYNC_BASE` conflict.
+**Read-only caller note.** `/contextualize` loads context read-only: on a `dirty_tree` outcome it surfaces that loaded context may be stale and proceeds, committing nothing — neither the operator's work-in-progress nor a file Claude created this session. The mutating caller that next runs sync-base (the merge lifecycle or `/pickup`) performs the commit per the steps above; this `/contextualize` dirty_tree outcome is the read-only caller's concern, not sync-base's, and is never a `SYNC_BASE` conflict.
 
 </dirty_tree_resolution>
 
