@@ -16,7 +16,11 @@ This is a reference skill. /merge, /manage-github-pr, /open-pr, and /manage-pr l
 </reference_note>
 
 <repo_local_overlay>
-When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth. Topics the overlay MAY refine:
+When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
+
+`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, post-merge steps) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`AGENTS.md`, `spx/AGENTS.md`, `CLAUDE.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
+
+Topics the overlay MAY refine:
 
 - Extra pre-flight checks beyond `<branch_hygiene>`.
 - The project's local deterministic-verification scope for `REVIEW_READINESS`: validation and testing commands for the touched scope by default, plus any documented escalation cases that require a wider local run. Full-repository validation and testing are CI's responsibility unless the overlay explicitly requires a local full-repository predicate for a class of change.
@@ -53,20 +57,33 @@ Run long or verbose deterministic commands with complete stdout/stderr redirecte
 
 </local_deterministic_scope>
 
+<assigned_cwd_worktree_discipline>
+
+The merge lifecycle operates only in the **assigned worktree** — the repository working directory the session started in. Claude stays in that worktree for every lifecycle step (branch, commit, push, base-sync, PR management, merge, cleanup) unless the operator names a different directory for the task in the same turn.
+
+- NEVER run a lifecycle command in a sibling checkout, a sibling worktree, a parent directory, or another repository.
+- NEVER create a worktree to carry the work, and NEVER use `git stash` — a dirty tree is cleared by committing per `<base_sync>`, never by stashing.
+
+A worktree conflict is never a stopping point — it is a branch-here-and-continue. When the assigned worktree is on the default branch, on a detached HEAD, on a dirty branch, or on a branch name another worktree already owns, create a fresh task branch in the assigned worktree from the resolved base and continue. When a PR branch is checked out in another worktree it is unavailable locally: stay in the assigned worktree, create a fresh branch there from the correct base or remote head, and push or open the PR from that branch.
+
+Claude NEVER stops with blocked-by-worktree, cannot-use-other-worktree, or cannot-create-worktree reasoning. Branch in the assigned worktree and continue. The only worktree this lifecycle ever detaches, cleans, or deletes a branch in is the assigned one (`<merge_cleanup>`).
+
+</assigned_cwd_worktree_discipline>
+
 <branch_hygiene>
 
-Conditions that must hold before every push (initial or follow-up). Failure stops the calling flow.
+Conditions that must hold before every push (initial or follow-up). A branch-state failure is resolved in place per `<assigned_cwd_worktree_discipline>` — branch in the assigned worktree and continue, never switch to another worktree and never stash; the remaining conditions stop the calling flow until resolved.
 
-| Condition (must hold)                                        | Failure response                                                      |
-| ------------------------------------------------------------ | --------------------------------------------------------------------- |
-| Current branch is not `main`, `master`, or detached HEAD     | STOP. Switch to a feature branch.                                     |
-| Working tree is clean (no uncommitted changes)               | STOP. Commit via /commit-changes before pushing — never stash.        |
-| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.               |
-| Branch is not behind the resolved base (no upstream commits) | Rebase onto `origin/<base>` per `<base_sync>`, then re-run this gate. |
-| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.                    |
-| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                            |
-| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.        |
-| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                                 |
+| Condition (must hold)                                        | Failure response                                                                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Current branch is not `main`, `master`, or detached HEAD     | Create a fresh task branch in the assigned worktree from the resolved base and continue, per `<assigned_cwd_worktree_discipline>`. |
+| Working tree is clean (no uncommitted changes)               | Commit via /commit-changes before pushing — never stash.                                                                           |
+| Branch is at least one commit ahead of the resolved base     | STOP. Confirm the base branch — there is nothing to PR.                                                                            |
+| Branch is not behind the resolved base (no upstream commits) | Rebase onto `origin/<base>` per `<base_sync>`, then re-run this gate.                                                              |
+| Branch topology is classified as peer or stacked             | STOP. Apply `<branch_topology>` before continuing.                                                                                 |
+| Work branch is not tracking the default branch               | STOP. Replace the upstream before pushing.                                                                                         |
+| No PR already exists for this branch (initial push only)     | STOP. Surface the existing PR URL via `gh pr view --json url`.                                                                     |
+| `gh auth status` reports an authenticated token              | STOP. Resolve auth before continuing.                                                                                              |
 
 Commands:
 
@@ -237,7 +254,7 @@ Claude NEVER asks the operator to choose between auto-merge, hold-at-green, or p
 
 <merge_cleanup>
 
-Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
+Once `MERGE_READINESS ∧ PRODUCTION_READINESS` authorize the merge and the mutation-point guard has produced `MERGE_READY:<head-sha>`, Claude merges and then deletes the branch. All cleanup is scoped to the assigned worktree per `<assigned_cwd_worktree_discipline>` — Claude NEVER enters, detaches, switches, cleans, or deletes a branch in any other worktree; if the merged branch is checked out elsewhere, it is left untouched. The universal default — used whenever the overlay declares no merge command — is rebase merge with an explicit **`--delete-branch=false`**, followed by a worktree-safe manual deletion:
 
 ```bash
 base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
@@ -415,6 +432,8 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - A committed changeset ahead of its resolved base is treated as unfinished until it reaches the default branch on origin through the selected lifecycle, or stops at an explicit `<action_tokens>` emission with no independent local action remaining.
 - Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions.
+- Every lifecycle step runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` — no sibling-worktree command, no created worktree, no `git stash`; a branch-state conflict is resolved by branching in the assigned worktree and continuing, never by stopping or switching elsewhere.
+- `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.
 - Merge runs via rebase merge followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; Claude does not enforce it), not Claude's choice from the gate alone.
 - The lifecycle runs from the determined changeset autonomously when the overlay declares no pre-mutation confirmation; when the overlay opts in, the structured-question plan presentation precedes the first mutating action and Claude waits for confirmation.
 - Each pass that does not fire an autonomous action emits exactly one token from `<action_tokens>`.
