@@ -210,9 +210,9 @@ def _metadata_pull_request_number(wrapper: verdict_schema.Verdict) -> int | None
     if value is None:
         return None
     parsed = int(value)
-    if parsed < 0:
+    if parsed <= 0:
         raise ValueError(
-            f"wrapper metadata {jp.RUN_STATE_PULL_REQUEST_NUMBER!r} must be non-negative"
+            f"wrapper metadata {jp.RUN_STATE_PULL_REQUEST_NUMBER!r} must be positive"
         )
     return parsed
 

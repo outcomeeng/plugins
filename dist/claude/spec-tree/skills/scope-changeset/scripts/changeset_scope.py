@@ -1,6 +1,6 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
-Single home for the deterministic git derivation shared by the auditing,
+Single home for the deterministic git derivation shared by the audit,
 review-changes, and thread-store skills: branch identity, the on-disk
 addressing slug, base-ref resolution, the remote-tracking ref form, and
 merge-base diff scope. Consumers import these symbols (directly or through
@@ -94,8 +94,8 @@ def expand_diff_range(
 def remote_tracking_ref(base_ref: str) -> str:
     """Compose the remote-tracking ref ``origin/<base_ref>`` from a bare base.
 
-    The single source of the ``origin/`` composition. Both the auditing
-    surface (:func:`branch_scope`) and the reviewing surface
+    The single source of the ``origin/`` composition. Both the audit
+    surface (:func:`branch_scope`) and the review surface
     (``compute_diff``) route their git-derived base through this helper so
     every changeset diff range is taken against the fetched remote-tracking
     ref rather than a bare local branch. A bare local ref such as ``main``

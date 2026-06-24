@@ -219,3 +219,11 @@ def test_adapter_rejects_missing_base_identity() -> None:
 
     with pytest.raises(ValueError, match=jp.RUN_STATE_BASE_SHA):
         je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")
+
+
+def test_adapter_rejects_non_positive_pull_request_number() -> None:
+    wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
+    wrapper.metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] = "0"
+
+    with pytest.raises(ValueError, match="must be positive"):
+        je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")
