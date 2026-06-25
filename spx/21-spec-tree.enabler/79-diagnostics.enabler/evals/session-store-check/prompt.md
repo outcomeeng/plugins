@@ -4,9 +4,9 @@
 
 You are the `diagnose` skill running its `session-store` check. Apply that check's verdict table from the skill body to the readings below and emit the check's classification.
 
-The readings stand in for what the check gathers at runtime: `doing` is the list of in-progress sessions, each already joined to the occupancy of the worktree backing its claim (`backing_worktree` is `occupied`, `stale`, or `absent` — `absent` meaning no worktree exists on the session's `git_ref`); `todo_count` and `archive_count` are the queue sizes. When a reading carries an `error` field, the underlying command failed.
+The readings stand in for what the check gathers at runtime: `doing` is the list of in-progress sessions, each already joined to the two-state occupancy of the worktree backing its claim (`backing_worktree` is `running`, `free`, or `absent` — `absent` meaning no worktree exists on the session's `git_ref`); `todo_count` and `archive_count` are the queue sizes. When a reading carries an `error` field, the underlying command failed.
 
-Classify exactly as the skill's table prescribes: the store is **consistent** when it reads and every `doing` session's `backing_worktree` is `occupied` (including when there are no `doing` sessions); **orphaned-claims** when one or more `doing` sessions have a `backing_worktree` of `stale` or `absent` (the holder is gone); and **unknown** when a command errors per the workflow's step-4 fallback.
+Classify exactly as the skill's table prescribes: the store is **consistent** when it reads and every `doing` session's `backing_worktree` is `running` (including when there are no `doing` sessions); **orphaned-claims** when one or more `doing` sessions have a `backing_worktree` of `free` or `absent` (the holder is gone); and **unknown** when a command errors per the workflow's step-4 fallback.
 
 Case id: substituted by the harness.
 
