@@ -31,6 +31,7 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 6. Passing deterministic verification is the floor: it shows the changed code meets the deterministic checks that exist, establishes nothing about review or audit, and never on its own authorizes publishing.
 7. A valid review or audit finding is a defect class: the agent fixes every same-class instance across the touched node(s), and a single-site fix stands only when a sweep shows no parallel instance.
 8. An agentic verification gate confirms an artifact the agent has already stabilized by reading it; it is not the loop that discovers the design.
+9. The main agent brings the deterministic types (validate, test, evaluate) to passing on the changeset before it dispatches an agentic type (review, audit); a dispatched agentic verifier reads and judges the already-passing changeset and never re-runs deterministic verification. Each deterministic check runs to passing once on the changeset, not once per dispatched verifier — re-running the suite the main agent already passed inside every audit and review sub-agent only multiplies cost. CI re-runs all verification over the whole repository, so a deterministic regression the local changeset run missed is still caught.
 
 ## Verification
 
@@ -49,3 +50,5 @@ Deterministic types widen to the whole repository in CI because CI is the full-r
 - NEVER: passing deterministic verification on its own authorizes publishing — it establishes nothing about review or audit ([audit])
 - ALWAYS: a valid review or audit finding is fixed as a defect class across the touched node(s), a single-site fix standing only when a sweep shows no parallel instance ([audit])
 - ALWAYS: an agentic verification gate confirms an artifact already stabilized by the agent's reading, not the loop that discovers the design ([audit])
+- ALWAYS: the main agent brings deterministic verification (validate, test, evaluate) to passing on the changeset before dispatching an agentic verification (review, audit) ([audit])
+- NEVER: a dispatched agentic verification skill (review, audit) runs deterministic verification (validate, test, evaluate) — the main agent passes it on the changeset before dispatch, and CI re-runs all verification over the whole repository; re-running it inside each dispatched verifier only multiplies cost ([audit])
