@@ -67,29 +67,9 @@ For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phr
 
 When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRODUCTION_READINESS` also holds, run the mutation-point guard from /merging-standards `<authority_gates>` immediately before the merge command. The guard re-reads live PR state and returns either `MERGE_READY:<head-sha>` or one existing action token. Do not run `gh pr merge` unless the guard returns `MERGE_READY:<head-sha>` for the head SHA just inspected.
 
-- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** -> merge using the project's merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`. Claude follows the overlay's declared command if any. When the overlay is silent on the merge command, the universal default is rebase merge followed by the worktree-safe manual branch deletion in /merging-standards `<merge_cleanup>` — `gh pr merge <pr-number> --rebase --delete-branch=false`, then detach this worktree onto the refreshed base tip and delete the local and remote branches separately. Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `gh pr merge --rebase --delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides.
+- **Not production-relevant (per the overlay's recognition mechanism, or no mechanism declared), or operator-approved** -> merge using the project's merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`. Claude follows the overlay's declared command if any; when the overlay is silent, the universal default is the rebase-merge-then-worktree-safe-deletion sequence defined single-source in /merging-standards `<merge_cleanup>` (run it there, do not transcribe the commands here). Claude never selects a merge commit or squash command from the gate alone; those require the overlay to opt in. An overlay MAY opt into inline `--delete-branch` for always-single-worktree projects, where `gh`'s post-merge switch-to-base never collides, per /merging-standards `<repo_local_overlay>`.
 
-  Overlay-silent default (per /merging-standards `<merge_cleanup>`):
-
-  ```bash
-  base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
-  branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-  git fetch origin "${base}" "${branch}"
-  gh pr view <pr-number> --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments
-  gh pr checks <pr-number>
-  gh api repos/<owner>/<repo>/pulls/<pr-number>/comments
-  # Continue only after the guard verdict is MERGE_READY:<head-sha>.
-  # mergeable / mergeStateStatus / gh acceptance are not authority.
-  # explicit --delete-branch=false — never rely on gh's default for the omitted flag
-  # (varies by version/config, unknowable across consumers); =false skips gh's switch to
-  # "${base}", which would fail when "${base}" is checked out in another worktree
-  gh pr merge <pr-number> --rebase --delete-branch=false
-  git fetch origin "${base}"
-  git switch --detach "origin/${base}"   # step this worktree off the merged branch
-  git branch -D "${branch}" 2>/dev/null || true   # delete the local branch (tolerate "not found")
-  git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
-  git status --porcelain
-  ```
+  Run the mutation-point guard inspection per /merging-standards `<authority_gates>`, continue only after it returns `MERGE_READY:<head-sha>`, then execute the merge and branch deletion using the single-source rebase-merge-then-worktree-safe-deletion sequence in /merging-standards `<merge_cleanup>` — do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
 
   Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
 - **Production-relevant and not yet approved** -> emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
@@ -145,22 +125,11 @@ gh api graphql --silent \
   -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' \
   -F id=<review-thread-node-id>
 
-# Merge (only after MERGE_READINESS, PRODUCTION_READINESS, and the mutation-point guard hold;
-# per /merging-standards <authority_gates> + <merge_cleanup>)
-# Overlay-silent universal default: rebase merge, then worktree-safe manual branch deletion.
-base=$(gh pr view <pr-number> --json baseRefName --jq '.baseRefName')
-branch=$(gh pr view <pr-number> --json headRefName --jq '.headRefName')
-git fetch origin "${base}" "${branch}"
-gh pr view <pr-number> --json number,state,isDraft,headRefName,headRefOid,baseRefName,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments
-gh pr checks <pr-number>
-gh api repos/<owner>/<repo>/pulls/<pr-number>/comments
-# Continue only after the guard verdict is MERGE_READY:<head-sha>.
-gh pr merge <pr-number> --rebase --delete-branch=false   # explicit; see <merge_cleanup>
-git fetch origin "${base}"
-git switch --detach "origin/${base}"
-git branch -D "${branch}" 2>/dev/null || true
-git ls-remote --exit-code --heads origin "${branch}" >/dev/null 2>&1 && git push origin --delete "${branch}"
-git status --porcelain
+# Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
+# rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,
+# and the local + remote branch deletion). Run it only after the mutation-point guard returns
+# MERGE_READY:<head-sha> per /merging-standards <authority_gates>; cleanup stays in the assigned
+# worktree per /merging-standards <assigned_cwd_worktree_discipline>. Not transcribed here.
 ```
 
 </commands_reference>

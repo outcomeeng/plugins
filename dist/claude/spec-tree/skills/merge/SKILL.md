@@ -8,7 +8,7 @@ allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
 <objective>
-A changeset reaches the default branch on origin through exactly one merge transport, selected from the project's `spx/local/merging.md` and delegated to that transport's skills.
+A changeset reaches the default branch on origin through exactly one merge transport.
 </objective>
 
 <context>
@@ -43,7 +43,7 @@ The transport binds the gate predicates (which review attests `MERGE_READINESS`,
 
 <workflow>
 
-**Step 1 — Load foundation and vocabulary.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first. Invoke `/merging-standards` for the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Read `spx/local/merging.md` for the transport selector and per-transport configuration.
+**Step 1 — Load foundation and vocabulary.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first. Invoke `/merging-standards` for the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Read `spx/local/merging.md` for the transport selector and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`AGENTS.md`, `spx/AGENTS.md`, `CLAUDE.md`) to change it — `/merge` and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
 
 **Step 2 — Select the transport.** Compute the changeset classification by running the classification script, which routes base-ref and committed branch-scope derivation through the canonical `changeset_scope` primitives:
 
@@ -88,6 +88,7 @@ The direct-push transport publishes a verified changeset straight to the default
 - MUST proceed autonomously from the determined changeset by default; present a pre-mutation confirmation through the runtime's structured-question tool and obtain confirmation before any mutating action only when the merge overlay opts into it — for the direct-push path /merge presents it, for the GitHub-PR path `/manage-github-pr` presents it.
 - NEVER merge directly outside a transport's authority — the direct-push push executes only under `MERGE_READINESS` ∧ `PRODUCTION_READINESS`, and the GitHub-PR merge executes only through `/manage-pr`'s gates.
 - NEVER surface a `dirty_tree` base-sync outcome as `SYNC_BASE` — commit the working changes through `/commit-changes`, then re-run `/sync-base`; never stash.
+- MUST drive every transport in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>` — never cross into a sibling worktree, never create a worktree, never stash; a branch-state conflict is resolved by branching in the assigned worktree and continuing.
 
 </constraints>
 
