@@ -40,10 +40,7 @@ def _write_child(path: pathlib.Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _run(
-    *args: str,
-    extra_env: dict[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
+def _run(*args: str) -> subprocess.CompletedProcess[str]:
     return run_script(AGGREGATE_SCRIPT, *args)
 
 
