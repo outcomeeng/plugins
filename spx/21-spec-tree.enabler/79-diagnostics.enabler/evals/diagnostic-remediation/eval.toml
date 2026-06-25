@@ -7,7 +7,7 @@ owned_paths = [
   "src/plugins/spec-tree/skills/diagnose/**",
   "dist/claude/spec-tree/skills/diagnose/**",
 ]
-smoke_cases = ["broken-cli-missing", "degraded-below-floor"]
+smoke_cases = ["broken-cli-missing", "degraded-multiple-remediations"]
 threshold = 0.8
 trials = 1
 ci_policy = "manual" # excluded from automatic CI grading
