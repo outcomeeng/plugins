@@ -127,14 +127,14 @@ Every closure ends with **zero, one, or several** session files — one canonica
 </write_canonical_continuation>
 
 <release_work_branch>
-A handoff RELEASES the work branch, and it is valid only when the work it points at is recoverable from origin. The precondition is: every session-owned change is committed, the work branch is published to origin, its `@{upstream}` exists, and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. Unrelated dirty worktree changes are handled by the `<commit>` dirty-worktree rules; they do not make session-owned work uncommitted, but if they prevent the checkout transition or the CLI git-context gate, STOP and ask the owner to resolve them before writing a Path C session document. A chat-only or local-only handoff is never valid.
+A handoff frees the work branch for a future checkout, and it is valid only when the work it points at is recoverable from origin. The precondition is: every session-owned change is committed, the work branch is published to origin, its `@{upstream}` exists, and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. Unrelated dirty worktree changes are handled by the `<commit>` dirty-worktree rules; they do not make session-owned work uncommitted, but if they prevent the checkout transition or the CLI git-context gate, STOP and ask the owner to resolve them before writing a Path C session document. A chat-only or local-only handoff is never valid.
 
-**Why this precondition exists.** A handoff promises cold Claude two things — the work is safe, and Claude can claim it — and running the handoff from the worktree that holds the work, released, enforces both at once:
+**Why this precondition exists.** A handoff promises cold Claude two things — the work is safe, and Claude can claim it — and running the handoff from the worktree that holds the work, stepped off the work branch, enforces both at once:
 
-1. **The work is really pushed.** Detaching a pool worktree onto `origin/<default-branch>` is lossless only because the commits live on the branch ref and on origin, so the release forces the push — turning the promise from a claim into a proof. An unpushed branch is invisible to every other checkout and machine; a session document pointing at it dangles.
+1. **The work is really pushed.** Detaching a pool worktree onto `origin/<default-branch>` is lossless only because the commits live on the branch ref and on origin, so the branch handoff step forces the push — turning the promise from a claim into a proof. An unpushed branch is invisible to every other checkout and machine; a session document pointing at it dangles.
 2. **The branch is free to claim.** `/pickup` checks the work branch out in a pool worktree, and git refuses a branch already checked out elsewhere. A branch left occupied is precisely the one the next agent cannot use.
 
-Run the handoff FROM the worktree that holds the work and release THAT worktree; passing the work branch as `git_ref` then anchors the recorded ref to where the work actually is — the branch `/pickup` fetches and checks out.
+Run the handoff FROM the worktree that holds the work and step THAT worktree off the work branch; passing the work branch as `git_ref` then anchors the recorded ref to where the work actually is — the branch `/pickup` fetches and checks out.
 
 **Two seductive instincts that each break a guarantee — act on neither:**
 
@@ -162,11 +162,7 @@ NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occup
 <archive_claimed_sessions>
 After the canonical continuation is written and verified (Path B or C), or immediately under Path A, archive every session in the resolved claimed-session set plus any mid-session artifact that was NOT rewritten in place.
 
-Release the running worktree's occupancy claim here, as the session closes — Path A, Path B, and Path C all reach this step, so a closing session never leaves its worktree marked occupied for the next agent (the claim is written at session start regardless of checkout kind):
-
-```bash
-spx worktree release   # frees the running worktree's claim; a missing worktree command, a non-zero exit, or a slow release is harmless — the claim ages out via liveness when the process exits
-```
+Leave the running worktree's occupancy claim intact. Handoff archives or rewrites session documents and may step off a Git branch, but the runtime worktree claim belongs to the live process and remains until a later claim replaces it or liveness marks it free.
 
 Archive order:
 
@@ -214,7 +210,7 @@ Put session mechanics only after the product summary:
 - Session-owned work was committed before closure
 - Every session id archived from the resolved claimed-session set (and any artifact NOT rewritten in place)
 - Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
-- Worktree occupancy claim released via `spx worktree release`, or left to age out on process exit when the `worktree` command is unavailable
+- Worktree occupancy claim preserved for the live process; session-store cleanup used `spx session archive` for claimed sessions and `spx session release` only for verified stale `doing/` records
 
 </confirm>
 

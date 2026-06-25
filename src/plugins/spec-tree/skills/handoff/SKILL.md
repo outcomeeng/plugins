@@ -3,7 +3,7 @@ name: handoff
 description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
 arguments: [session_mode, prune_mode]
-allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
 ---
 
 <context>
@@ -15,9 +15,6 @@ allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bas
 
 **Current Branch:**
 !`git branch --show-current || echo "Not in a git repo"`
-
-**Current Sessions:**
-!`spx session list --status doing || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
 **Spec Tree:**
 !`ls spx/*.product.md 2>/dev/null || echo "No spec tree found"`
@@ -63,7 +60,7 @@ Closing without creating a session file is appropriate when no continuation read
 
 When the invocation of **`spx session handoff` refuses to create a session file,** e.g. on a linked worktree that is not cleanly detached at `origin/<default>` because the persist-then-detach precondition is unmet (see `workflows/04-execute.md` `<release_work_branch>`), address the problem by properly executing `workflows/04-execute.md` rather than rationalizing that no session file is needed.
 
-The refusal is not satisfied by **relocating** — running the handoff from a different worktree that is already clean while the work worktree keeps its branch. That records `git_ref` at unrelated state and leaves the work branch occupied, so `/pickup` cannot claim it: the handoff then points at the wrong place AND strands the work. The "keep the work worktree on its branch so it's ready to continue" instinct is the trap — that worktree is exactly the one the next agent cannot use. Release the worktree that holds the work — commit, push the work branch, detach it to `origin/<default>` — and run the handoff there, so the recorded anchor and the freed branch both point at the work.
+The refusal is not satisfied by **relocating** — running the handoff from a different worktree that is already clean while the work worktree keeps its branch. That records `git_ref` at unrelated state and leaves the work branch occupied, so `/pickup` cannot claim it: the handoff then points at the wrong place AND strands the work. The "keep the work worktree on its branch so it's ready to continue" instinct is the trap — that worktree is exactly the one the next agent cannot use. Step the worktree that holds the work off the branch — commit, push the work branch, detach it to `origin/<default>` — and run the handoff there, so the recorded anchor and the freed branch both point at the work.
 
 **Foreign-pool guardrail.** The worktree that holds the work is always one in Claude's own pool. Never relocate the work into, or run the handoff against, a `.spx/` pool Claude does not participate in — another product's checkout. A foreign pool's worktree is off-limits regardless of how free its git state looks; treat it as occupied, because the claim protocol coordinates only agents that share one pool. Relocating a continuation into a separate live product's pool is the exact boundary this guardrail exists to stop.
 
