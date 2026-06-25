@@ -6,13 +6,13 @@ Loaded by `/open-pr` when working in this repository. Marketplace-specific addit
 
 In addition to `/open-pr`'s branch hygiene, verify before opening:
 
-| Check                                                                       | If failing                                                 |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `just check` passes                                                         | STOP. Fix lint, format, and validation drift first.        |
-| Plugin manifest version bumped when the change warrants it                  | STOP. Bump per `spx/local/commit-changes.md`.              |
-| Both marketplace catalogs updated when adding or removing a plugin          | STOP. `just check` enforces; run it.                       |
-| `AGENTS.md` skills, commands, and agents tables updated to match the change | STOP. New or removed artifacts must appear in the catalog. |
-| `understand/templates/spx-claude.md` updated when skill structure changes   | STOP. New projects inherit this template.                  |
+| Check                                                                                                       | If failing                                                           |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| The touched-scope deterministic verification selected by `spx/local/merging.md` and root `AGENTS.md` passes | STOP. Fix the failing touched-scope lane first.                      |
+| Plugin manifest version bumped when the change warrants it                                                  | STOP. Bump per `spx/local/commit-changes.md`.                        |
+| Both marketplace catalogs updated when adding or removing a plugin                                          | STOP. Run the catalog or manifest command named by root `AGENTS.md`. |
+| `AGENTS.md` skills, commands, and agents tables updated to match the change                                 | STOP. New or removed artifacts must appear in the catalog.           |
+| `understand/templates/spx-claude.md` updated when skill structure changes                                   | STOP. New projects inherit this template.                            |
 
 ## Required body sections
 
@@ -25,7 +25,7 @@ Append to the default template from `/open-pr`:
 
 ## Validation
 
-- [ ] `just check` passes
+- [ ] Touched-scope deterministic verification passes
 - [ ] `/reload-plugins` confirms the change loads in a running session
 ```
 

@@ -89,13 +89,21 @@ Historical plugin implementations are pruned from this repository. The history t
 
 - 🛑 **STOP TRIGGER — NEVER abbreviate a session ID, or any identity value** - A session ID is `YYYY-MM-DD_HH-MM-SS` and is reproduced **verbatim and in full** every single time — in prose, questions, commits, and tool calls. NEVER shorten it to a fragment (e.g. the `HH-MM-SS` tail, the date, or any substring): a fragment identifies nothing, is ambiguous across sessions, breaks `spx session show/pickup/archive` lookups, and obscures the user's comparison against the source. The same rule binds every agent-surfaced identity value — commit SHA, run ID, `owner/repo`, host account, agent-session ID: copy it exactly from its source, never paraphrase or truncate it (this is the product-level verbatim-identity compliance rule in `spx/outcomeeng.product.md`). If a value is long, paste the whole value; do not "tidy" it.
 
-- ✅ **Always use `just test`** - Never bare pytest (just run loads .env automatically)
-- ✅ **Use the Justfile as this repo's command interface** - When this repository exposes a `Justfile`, agents run repository commands through the governed recipes named by the repo instructions, active skill, workflow, or user request: `just test` for tests, `just validation` for deterministic validation, `just check` for the full gate when appropriate, and named recipes such as `just build-skills`, `just docs-check`, or `just push-marketplace` when the workflow calls for them. Use `just --list` / `just help` only to confirm the exact spelling and availability of a recipe after the governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. `python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations inside the `Justfile` are recipe implementation details. The wrapping `just` recipe is the agent-facing command surface. Do not probe those modules as though they were CLIs, do not append `--help` to a recipe implementation command, and do not substitute a direct module invocation for the corresponding `just` recipe unless a repository instruction or recipe explicitly directs that exact command. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
+- ✅ **Use this repo's command surface exactly** - Skills decide when validation, tests, review, audit, merge, and marketplace sync are required. `AGENTS.md` records this repo's concrete command forms and how to pass the file set:
+  - `[test]` evidence: `just test <pytest-target>...`. Pass co-located spec test files, node test directories, or pytest node IDs, for example `just test spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py`. When a source file under `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/`, or `src/plugins/` changes, pass the spec test file(s) or node test directory that exercise it; do not pass implementation paths as if they were tests. Never run bare `pytest`.
+  - Verbose failing test rerun: `just test-v <same pytest-target>...`.
+  - Spec-only or Markdown-instruction-only changes: `spx validation markdown` and `spx spec status --format json`. These commands take no changed-file list; the scope is the markdown/spec lane.
+  - Markdown formatting: `just fmt <changed-markdown-file>...`. Pass every changed Markdown file that dprint formats, for example `just fmt AGENTS.md spx/local/open-pr.md`.
+  - Skill or plugin Markdown under `src/plugins/` or generated `dist/`: `just check-skills` and `just docs-check`. These commands take no changed-file list; they check the committed skill/catalog surfaces.
+  - Full local deterministic gate: `just check`. Run this only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate, such as shared validation/test infrastructure, package-manager files, generated catalog output, or distribution build machinery.
+  - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
+  - Marketplace install refresh after merged plugin-distribution changes: `just sync-marketplace <previous-main-ref>` from the marketplace-source worktree, as directed by `spx/local/merging.md`.
+- ✅ **Use the Justfile as this repo's command interface** - Use `just --list` / `just help` only to confirm exact recipe spelling after a governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. `python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations inside the `Justfile` are recipe implementation details. The wrapping `just` recipe is the agent-facing command surface. Plugin-shipped skill scripts are different: when an active skill instructs a direct `python3 "${SKILL_DIR}/scripts/..."` command, run that exact skill script. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
 - ✅ **When uncertain, ASK STRUCTURED QUESTIONS. Never guess implementation patterns, test methodology or requirements.**
 - ✅ **ALWAYS USE the runtime's structured-question tool for questions with predefined options.** Claude Code uses `AskUserQuestion`; Codex uses `request_user_input`. Do NOT use structured questions for open-ended questions where the user needs to provide free-form context — ask in plain text instead.
 - ✅ **When you are wrong, KEEP ASKING STRUCTURED QUESTIONS. Never assume that you are bothering the user. As long as you are thinking deeply and asking high-leverage questions, you are doing the right thing.**
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
-- ⚠️ **Spec-only validation stays on the spec lane** - When the change only adds or edits specs, decisions, EXCLUDE entries, or Markdown instructions, run `spx validation markdown` and `spx spec status --format json`. Do not run `spx validation all`, install Node dependencies, or run ESLint/TypeScript validation unless JavaScript/TypeScript source, package manager files, validation config, or the validation pipeline changed, or the user explicitly asks for the full gate.
+- ⚠️ **Spec-only validation stays on the spec lane** - When the change only adds or edits specs, decisions, EXCLUDE entries, or Markdown instructions, use the spec-only command pair in this repo's command surface above. Do not run `spx validation all`, install Node dependencies, or run ESLint/TypeScript validation unless JavaScript/TypeScript source, package manager files, validation config, or the validation pipeline changed, or the user explicitly asks for the full gate.
 
 ## Process hygiene
 
@@ -103,20 +111,15 @@ This harness spawns helper processes — a periodic `pgrep` to monitor backgroun
 
 ### Waiting and re-checking never use shell polling
 
-No `while`/`until` poll loop. No `gh run watch`, in any form. No `sleep` to wait or pace work — foreground *or* backgrounded, on its own or in a loop. To wait for a build, CI run, process, or PR review to resolve, or to re-check on an interval, prefer the runtime timer and let it re-invoke you:
-
-- **Claude Code:** `/loop` for recurring work; `ScheduleWakeup` for a single delayed re-check (pass the continuation prompt so the next firing resumes the task).
-- **Codex:** for waits where no process needs to stay open, such as GitHub PR reviews or CI runs, create a thread heartbeat through the Automations UI or any available runtime automation tool. The heartbeat may start a new thread, so the prompt must name the repository, PR number, branch, current thread purpose, and the exact state to inspect. Use a minute-based cadence such as every 3 minutes. Prefer this over keeping `exec_command` sessions open.
-
-Example heartbeat prompt for a new thread: `In outcomeeng/plugins PR #25 on branch work/python-test-pdr-alignment, inspect checks, formal reviews, PR comments, and inline review threads. Report only material changes. Continue the repository-governed review loop, and stop this heartbeat when the PR is merged, closed, or has no remaining review action.`
-
-When no runtime heartbeat or timer exists and an open GitHub PR is blocked by check completion — a non-terminal required check, a non-terminal reviewing-kind check, or absent review output while another current-head check is non-terminal — run exactly one foreground watcher:
+No `while`/`until` poll loop. No `gh run watch`, in any form. No `sleep` to wait or pace work — foreground *or* backgrounded, on its own or in a loop. For GitHub PR checks inside the merge lifecycle, the exact wait command is:
 
 ```bash
 gh pr checks <pr-number> --watch --fail-fast --interval 30
 ```
 
 Run it as the active wait command. Do not append `&`, do not wrap it in a loop, and do not substitute `gh run watch`. After it exits, inspect the terminal check result, then run one full merge-gate inspection before acting: PR state, check rollup, PR-level comments, formal reviews, and review-thread comments. The foreground watcher exception applies only to `gh pr checks` inside the PR lifecycle.
+
+For non-PR waits where no process needs to stay open, use the runtime timer or automation facility instead of shell polling. The scheduled prompt must name the repository, branch or PR, current thread purpose, and exact state to inspect.
 
 If an earlier turn left a `sleep` or a poll loop running, identify it and terminate it by PID before doing anything else.
 
@@ -248,7 +251,7 @@ just build-skills   # uv run python -m outcomeeng.distribution.build src dist
 
 The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/` — so a `src/plugins/` change and its regenerated `dist/` land in the same commit. Because the hook regenerates `dist/` at commit time, an uncommitted working tree that has `src/plugins/` edits but no matching `dist/` change is the **expected** mid-edit state — never report it as a defect, a review finding, or a merge blocker (for example "the generated trees have not been rebuilt" or "`dist/` is out of sync"). Only a `src/`↔`dist/` divergence that survives into a commit is a problem, and the hook prevents that. Never hand-edit `dist/`; edit `src/plugins/` and rebuild.
 
-Commit and open the PR through the steps in [Git workflow](#git-workflow) — `/merge` dispatches to the selected transport; for the GitHub-PR transport it delegates to `/manage-github-pr`, which routes committing, opening, management, merge, and closure.
+Continue through [Git workflow](#git-workflow) when the change is destined for the default branch. `/merge` dispatches to the selected transport; for the GitHub-PR transport it delegates to `/manage-github-pr`, which routes committing, opening, management, merge, and closure.
 
 **When adding a new plugin**, register it in **both** marketplace catalogs:
 
@@ -277,21 +280,19 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### Autonomy
 
-In this product the agent operates the git workflow autonomously. The conservative system default — "ask before every commit, push, and PR action" — is **overridden** here: `/merge` and `/manage-github-pr` state the plan in prose and drive the lifecycle without an up-front proposal-and-confirm pause.
+`spx/AGENTS.md` is the skill router for spec-tree work. For any change destined for the default branch, invoke `/merge`; it classifies the changeset, reads `spx/local/merging.md` when present, selects the transport, and delegates to the transport skills. Do not reimplement transport selection, gate predicates, review disposition, base-sync, or PR management from this root guide.
 
-The skills are mandatory: every shipping flow goes through `/merge`, the transport dispatcher. It selects the transport from `spx/local/merging.md` and delegates — to `/manage-github-pr` for the GitHub-PR transport (which invokes `/commit-changes`, the opening protocol, and the managing protocol), or to the direct-push transport for a coordination-note-only changeset. The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the skill flow.
+The agent never invokes `git commit`, `git push`, `gh pr create`, or `gh pr merge` outside the governing skill flow. The only permitted direct git/GitHub command forms are those an active skill or this repository command section names exactly.
 
-The autonomy does **not** cover: blind force-push (`git push --force`) or force-push of any shared or protected branch, branch deletion on the remote outside the merge flow, direct push to `main` outside `just push-marketplace` or `/merge`'s direct-push transport for a coordination-note-only changeset, skipping pre-commit hooks (`--no-verify`), skipping commit signing, or any action explicitly forbidden by the Git Safety Protocol or `<self_reference_policy>`. Those still require explicit human instruction in the same turn. The `--force-with-lease` push of the PR's own feature branch that `/manage-github-pr` performs after a base-sync rebase is covered by the standing authorization above — it is a guarded non-fast-forward push of the agent's own branch, not a blind overwrite.
-
-Use the workflow the user chooses for the current change. Pull requests are the default path for feature work, production behavior changes, broad refactors, publishing changes, and anything that needs review. Node-local `PLAN.md` and `ISSUES.md` coordination files may be committed directly when the user needs collaborators to see the coordination state immediately.
+The autonomy does **not** cover blind force-push (`git push --force`), force-push of a shared or protected branch, branch deletion outside the merge flow, skipping pre-commit hooks (`--no-verify`), skipping commit signing, or any action explicitly forbidden by the Git Safety Protocol or `<self_reference_policy>`. Those require explicit human instruction in the same turn. The guarded `--force-with-lease` push that `/manage-github-pr` performs for its own PR branch after base-sync is part of the skill flow.
 
 ### Lifecycle
 
-`/merge` drives the merge lifecycle — transport selection, the gates, and the commit/open/manage protocols are injected by `/merge`, `/merging-standards`, and `/manage-github-pr` when invoked. The product-specific multi-worktree post-merge marketplace sync (fast-forward the marketplace-source worktree's `main`, then `just sync-marketplace`) is the "Post-merge marketplace sync" section of [`spx/local/merging.md`](spx/local/merging.md), the overlay the merge skills read.
+The lifecycle authority is: `spx/AGENTS.md` routes to skills; `/merge`, `/merging-standards`, `/manage-github-pr`, `/open-pr`, and `/manage-pr` define behavior; `spx/local/merging.md` provides this product's overlay values. Root `AGENTS.md` supplies exact repository commands only where a skill asks for this product's concrete command surface.
 
-### Publishing directly to `main`
+### Marketplace Publish Commands
 
-When the user chooses direct `main` publication, commit intentionally, run the relevant validation gate for the files changed, and push using the product's publishing command when one exists. In this product, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files:
+When an active workflow calls for the product's marketplace push wrapper, use `just push-marketplace` rather than bare `git push`; the recipe pushes first, then refreshes the local marketplace only when the pushed range changed plugin distribution files. Pass the same remote and ref arguments that would have gone to `git push`:
 
 ```bash
 just push-marketplace               # git push (current branch) + just sync-marketplace
