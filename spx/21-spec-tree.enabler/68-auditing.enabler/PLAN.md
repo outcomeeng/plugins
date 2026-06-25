@@ -24,11 +24,23 @@ contradict the declaration:
 `/audit` dispatches `audit-{lang}-tests` as its test-evidence phase, so a normal `/audit` run still
 executes the deterministic work the declaration moved to the main agent and CI.
 
+## Observed behavior
+
+Dispatching `test-evidence-auditor` (which composes `audit-python-tests`) against a single test file
+ran, in one audit: `pytest --collect-only`, a full deterministic test run, `ruff check`, `mypy`, and
+then the coverage measurement — `pytest --cov` executed **three times** (baseline excluding the file,
+with-test, and an isolated `--cov-append` run). The coverage step, not `gate_0_deterministic`, is the
+heavier cost: it runs the node's pytest suite three times per single test-evidence audit. Removing
+`gate_0_deterministic` alone does not close the gap — the coverage-run machinery is the larger
+re-execution of the project's tests.
+
 ## Remaining work
 
-1. Remove or re-scope the deterministic gates from the three `audit-{lang}-tests` skills so the
+1. Remove or re-scope the deterministic work from the three `audit-{lang}-tests` skills so the
    test-evidence audits judge evidence quality only, matching the implementation-code audits already
-   updated. Rebuild `dist/`, run `develop:skill-auditor` on each edited skill, and re-verify.
+   updated. This covers both `gate_0_deterministic` (collect/lint/type) and the coverage measurement
+   (the repeated `pytest --cov` runs). Rebuild `dist/`, run `develop:skill-auditor` on each edited
+   skill, and re-verify.
 2. Sweep the full set of dispatched language audit skills — the three `audit-{lang}-architecture`
    skills, and any other dispatched concern — for residual deterministic verification. A token search
    over the `-architecture` skills surfaced no gate commands (`pytest`, `ruff`, `mypy`, `cargo`,
