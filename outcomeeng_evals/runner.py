@@ -1,26 +1,15 @@
 """Model runners that produce assistant messages for an eval prompt.
 
-``ClaudeCliRunner`` shells out to ``claude --print --output-format json``
-and derives ``--bare`` from the inherited environment by default.
-``--bare`` accepts auth only from ``ANTHROPIC_API_KEY`` or
-``apiKeyHelper`` (configured via ``--settings``); under ``--bare``,
-``claude`` never reads ``CLAUDE_CODE_OAUTH_TOKEN`` or an OAuth login
-session, and ambient ``~/.claude/CLAUDE.md`` and the cwd's ``AGENTS.md``
-are not auto-discovered. When ``ANTHROPIC_API_KEY`` is set to a non-empty
-value the runner passes ``--bare``; otherwise — unset, or an empty value a
-workflow forwards from an absent secret — the runner omits ``--bare`` so
-OAuth or the user's existing auth path continues to work. The derivation
-only checks the env-var form, so a developer using ``apiKeyHelper`` must opt
-into isolation explicitly with ``bare=True``. Callers may force the flag on
-or off by passing ``bare=True`` or ``bare=False`` to the constructor;
-the default ``bare=None`` is derivation.
-
-A developer with ``ANTHROPIC_API_KEY`` exported gets isolation locally
-without further setup. The CI eval workflow forwards both
-``CLAUDE_CODE_OAUTH_TOKEN`` and ``ANTHROPIC_API_KEY``: when the repo/org
-provides the latter the derive rule passes ``--bare`` for an isolated run,
-and when it is absent GitHub forwards an empty string that the non-empty
-derivation treats as unset, falling back to the OAuth path.
+``ClaudeCliRunner`` shells out to ``claude --print --output-format json``.
+The runner follows the auth mode already provisioned in the inherited
+environment: when ``ANTHROPIC_API_KEY`` is set to a non-empty value it passes
+``--bare``; when ``ANTHROPIC_API_KEY`` is unset or empty it omits ``--bare``
+and preserves the inherited environment, including ``CLAUDE_CODE_OAUTH_TOKEN``
+when present. Agents use the provisioned mode as found and do not ask operators
+to add, remove, or switch auth secrets for an eval run.
+Callers may force the flag on or off by passing ``bare=True`` or
+``bare=False`` to the constructor for direct test coverage and explicit
+embedding use; the default ``bare=None`` follows the inherited environment.
 
 Each call is a single bounded subprocess invocation; no polling, no
 streaming watchers. The runner strips ``CLAUDECODE`` from the inherited
@@ -126,15 +115,12 @@ class ClaudeCliRunner:
     def _effective_bare(self) -> bool:
         """Return True iff ``--bare`` should be added to the argv.
 
-        ``bare=True`` or ``bare=False`` is an explicit caller override.
-        ``bare=None`` (the default) derives from the inherited environment:
-        ``--bare`` only when ``ANTHROPIC_API_KEY`` is set to a non-empty
-        value, because that is the only ``--bare``-compatible auth source
-        ``claude`` accepts without ambient discovery. An empty value — what a
-        workflow forwards from an absent secret — is not usable auth, so it
-        derives no ``--bare`` and the call falls back to OAuth
-        (``CLAUDE_CODE_OAUTH_TOKEN`` or an OAuth login session) rather than
-        failing before grading on an empty-key ``--bare`` call.
+        ``bare=True`` or ``bare=False`` is an explicit caller override for
+        direct test coverage and embedding. ``bare=None`` (the default)
+        follows the inherited environment: ``--bare`` is added only when
+        ``ANTHROPIC_API_KEY`` is set to a non-empty value. An empty value is
+        treated as unset, so the call omits ``--bare`` and leaves inherited
+        non-bare auth variables available to the subprocess.
         """
         if self.bare is not None:
             return self.bare
@@ -145,29 +131,11 @@ def _subprocess_env() -> dict[str, str]:
     """Return a copy of the parent env with the Claude Code nesting guard removed.
 
     The full parent environment is passed through deliberately: ``claude``
-    resolves auth from any source it supports
-    (``CLAUDE_CODE_OAUTH_TOKEN``, ``ANTHROPIC_API_KEY``, ``apiKeyHelper``,
-    or — without ``--bare`` — an OAuth login session) using values found
-    among the inherited variables, so narrowing the env to an allow-list
-    would break authentication. The only key dropped is ``CLAUDECODE`` —
-    leaving it set would make the nested call take the interactive-guard
-    path instead of the print-mode subprocess contract. Do not narrow
-    this in a future refactor.
-
-    In CI, the job supplies both ``CLAUDE_CODE_OAUTH_TOKEN`` and
-    ``ANTHROPIC_API_KEY`` through the environment, and they reach the
-    subprocess by this same pass-through. When the repo/org provides
-    ``ANTHROPIC_API_KEY`` the derive rule flips the invocation onto the
-    isolated ``--bare`` path; when it is absent GitHub forwards an empty
-    string that ``ClaudeCliRunner._effective_bare`` treats as unset, so
-    the call omits ``--bare`` and resolves auth from
-    ``CLAUDE_CODE_OAUTH_TOKEN`` instead. Other job-level secrets
-    (deployment tokens, cloud credentials)
-    are forwarded too; that is acceptable — ``claude`` consumes only
-    what it needs. The env is not narrowed to an allow-list because an
-    ``apiKeyHelper`` is an arbitrary command that may read arbitrary
-    inherited variables of its own, so an allow-list cannot safely
-    predict what authentication needs.
+    resolves auth from the environment the operator already provisioned, so
+    narrowing the env to an allow-list could drop required auth variables. The
+    only key dropped is ``CLAUDECODE``; leaving it set would make the nested
+    call take the interactive-guard path instead of the print-mode subprocess
+    contract.
     """
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)
