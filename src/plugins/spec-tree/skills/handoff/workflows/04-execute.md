@@ -148,7 +148,7 @@ NEVER re-check-out the handed-off branch "to return to the prior spot." Re-occup
 <archive_claimed_sessions>
 After the canonical continuation is written and verified (Path B or C), or immediately under Path A, archive every session in the resolved claimed-session set plus any mid-session artifact that was NOT rewritten in place.
 
-Release the running worktree's occupancy claim here, as the session closes — Path A, Path B, and Path C all reach this step, so a closing session never leaves its worktree marked occupied for the next agent (the claim is written at session start regardless of checkout kind):
+Release the running worktree's occupancy claim here, as the session closes — Path A, Path B, and Path C all reach this step, so a closing session never leaves its worktree marked `running` for the next agent (the claim is written at session start regardless of checkout kind):
 
 ```bash
 spx worktree release   # frees the running worktree's claim; a missing worktree command, a non-zero exit, or a slow release is harmless — the claim ages out via liveness when the process exits

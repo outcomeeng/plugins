@@ -39,8 +39,13 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.1 introduced `spx session show --json`, the producer-owned
-# session-frontmatter parser that /pickup claim verification consumes. spx 0.6.0
+# above it. spx 0.6.3 introduced the stateless two-state (`running` | `free`)
+# worktree-occupancy model the /pickup and /handoff skills and the
+# 19-worktree-occupancy and 13-agent-environment specs and tests now read; the
+# retired three-state vocabulary (`occupied` | `unclaimed` | `stale`) is gone
+# from `spx worktree status`. spx 0.6.1 introduced `spx session show --json`, the
+# producer-owned session-frontmatter parser that /pickup claim verification
+# consumes. spx 0.6.0
 # introduced the `spx journal` channel (open/append/seal/read/render over a
 # type-agnostic append-only run journal), the run-journal contract the agentic
 # verification skills bind for their durable run state (0.5.6 introduced `spx
@@ -48,7 +53,7 @@ from typing import Final
 # SessionStart hook delegates to for session identity, project-dir exports, and
 # worktree occupancy; 0.5.4 introduced the explicit work-branch git_ref the
 # /handoff and /pickup skills depend on).
-REQUIRED_SPX_VERSION: Final = "0.6.1"
+REQUIRED_SPX_VERSION: Final = "0.6.3"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"

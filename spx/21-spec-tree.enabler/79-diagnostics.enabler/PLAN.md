@@ -31,3 +31,15 @@ The session-environment check reuses the env-var + `spx worktree status` round-t
 3. **Rewire this repo** — ship the diagnose manifest inside the plugin tree (floor build-rendered); collapse `diagnose/SKILL.md` to a thin invoker (guard `spx` ≥ floor with a `diagnose` subcommand, run `spx diagnose --manifest … --format json`, relay verbatim, reason remediation on a non-healthy verdict); migrate `diagnostics.md` evidence — the five per-check `[eval]` classification suites retire (the classification is `[test]` in the `spx` repo), one `[eval]` covers the skill's relay + remediation behavior, and the manifest gets a `[test]` (parses, declares the rendered floor, names the right marketplace/plugins); update `15-version-floor.adr.md` to the manifest render target.
 
 A future surface still grows the report by extension per the node's `<extending>` model; once the engine is in `spx diagnose`, a new check is a new verdict table in the CLI, not new skill prose.
+
+## Pending: two-state occupancy migration (spx 0.6.3)
+
+spx 0.6.3 collapsed `spx worktree status` to a stateless two-state model — `running` | `free` — retiring the three-state vocabulary `occupied` | `unclaimed` | `stale`; a dead claim now reads `free`, not `stale` (`spx` repo commits `c8e2db9e` two-state model, `7cea8886` spec collapse, `7e1fa72f` "stop treating a free worktree as a fault"). The canonical `spx/21-spec-tree.enabler/19-worktree-occupancy.enabler` spec, `13-agent-environment.enabler`, and the pickup/handoff skills migrated to `running`/`free` with the floor advance to 0.6.3.
+
+This node's three occupancy-reading checks still classify on the retired vocabulary and need the redesign (a word-swap is insufficient — `stale` is no longer observable, so verdicts predicated on detecting it must change):
+
+- `diagnostics.md` line 19 — **worktree-pool check**: the `stale-claims` (degraded) verdict is predicated on a worktree reporting `stale`; under two-state a dead claim reads `free`, so `stale-claims` cannot be computed from `spx worktree status` alone. Drop or redefine it. `evals/worktree-pool-check/` (`eval.toml`, `prompt.md`, `cases.jsonl`) encode `occupied`/`unclaimed`/`stale` inputs and the `stale-claims` verdict.
+- `diagnostics.md` line 20 — **session-store check**: "backing worktree is occupied" → `running`; the `orphaned-claims` verdict keyed on a worktree reading `stale` needs the dead-claim-reads-`free` rethink. `evals/session-store-check/` encodes the old vocabulary.
+- `diagnostics.md` line 17 — **session-environment check**: "the current worktree's status is stale" as an inconsistency signal needs restating against `running`/`free` (the live session's own worktree should read `running`). `evals/session-environment-check/` encodes the old vocabulary.
+
+Reconcile this with the diagnose-engine rewire above: if the rewire lands first, the two-state classification belongs in `spx diagnose`; if this lands first, update the shipped-skill assertions and eval suites to two-state. Either way the three eval suites and the three `diagnostics.md` assertions move off `occupied`/`unclaimed`/`stale`.
