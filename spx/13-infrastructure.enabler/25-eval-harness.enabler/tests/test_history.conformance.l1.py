@@ -1,4 +1,4 @@
-"""Scenario tests for the history.jsonl append-only writer.
+"""Conformance tests for the history.jsonl append-only writer.
 
 Each suite run appends one row capturing the suite verdict and aggregate
 metrics. The file is the durable trend record; runs/ holds the full
