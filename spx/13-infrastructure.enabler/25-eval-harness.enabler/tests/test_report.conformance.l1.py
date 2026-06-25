@@ -290,8 +290,8 @@ def test_trial_stability_for_k1_reports_zero_or_one_pass_rate_per_case() -> None
     assert stability["max_trials_per_case"] == 1
     assert stability["min_trials_per_case"] == 1
     assert stability["mean_trial_pass_rate"] == pytest.approx(2 / 3)
-    assert stability["min_trial_pass_rate"] == 0.0
-    assert stability["max_trial_pass_rate"] == 1.0
+    assert stability["min_trial_pass_rate"] == pytest.approx(0.0)
+    assert stability["max_trial_pass_rate"] == pytest.approx(1.0)
     assert stability["stddev_trial_pass_rate"] is not None
 
 

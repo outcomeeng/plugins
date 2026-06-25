@@ -304,7 +304,7 @@ def test_run_suite_passes_when_canned_verdict_matches(tmp_path: Path) -> None:
         build_prompt=lambda case: "ignored",
     )
     assert result.passed
-    assert result.pass_rate == 1.0
+    assert result.pass_rate == pytest.approx(1.0)
 
 
 def test_run_suite_fails_when_threshold_not_met(tmp_path: Path) -> None:
