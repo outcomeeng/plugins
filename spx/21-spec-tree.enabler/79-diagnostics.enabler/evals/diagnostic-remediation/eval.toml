@@ -1,4 +1,4 @@
-title = "session-store-check"
+title = "diagnostic-remediation"
 cases = "cases.jsonl"
 prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
@@ -7,7 +7,7 @@ owned_paths = [
   "src/plugins/spec-tree/skills/diagnose/**",
   "dist/claude/spec-tree/skills/diagnose/**",
 ]
-smoke_cases = ["consistent-all-holders-live", "orphaned-stale-backing-worktree"]
+smoke_cases = ["broken-cli-missing", "degraded-below-floor"]
 threshold = 0.8
 trials = 1
 ci_policy = "manual" # excluded from automatic CI grading

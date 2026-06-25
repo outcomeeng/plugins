@@ -23,7 +23,11 @@ The manifest is declarative because the facts that vary by consumer — the floo
 
 The marketplace-install check reads the runtime plugin CLIs (`claude plugin`, `codex plugin`), which are runtime-specific where the rest of the pipeline is runtime-agnostic. `spx diagnose` shells out to each present surface, skips an absent one, and reports not-applicable when neither is present, so one command covers every check while staying usable wherever a surface is missing.
 
-This decision leads its implementing skill and spec. The shipped `diagnose` skill classifies in its own body and `diagnostics.md` declares that current behavior; this decision governs the target engine architecture, and the audit rules below state that target. The implementation conforms to the decision, per the spec tree's truth hierarchy — not the reverse — and `PLAN.md` records the publish-gated rewire and the in-transit contradictions between the two.
+The shipped `diagnose` skill depends on the published `spx diagnose` command
+and carries no in-body check classification. The implementation conforms to
+this decision: the skill passes the plugin-shipped manifest to `spx diagnose`,
+relays the deterministic report, and adds remediation judgment from the report's
+non-healthy verdicts.
 
 ## Invariants
 
