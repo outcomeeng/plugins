@@ -35,6 +35,26 @@ executes the deterministic work the declaration moved to the main agent and CI.
    `spx validation`); the authoritative confirmation that the whole family conforms is part of this
    sweep, not a precondition assumed here.
 
+## Related: stale audit examples
+
+The `audit-{lang}` skills' bundled examples are inconsistent with the skills' own verdict contract,
+independent of the gate-removal change:
+
+- `src/plugins/python/skills/audit-python/references/example-audit.md`,
+  `src/plugins/rust/skills/audit-rust/references/example-audit.md`, and
+  `src/plugins/typescript/skills/audit-typescript/references/example-audit.md` show a Markdown
+  "CODE REVIEW" table, while each skill's `<verdict_format>` declares JSON output conforming to the
+  canonical `verdict.py` schema. An auditor following the example emits Markdown the verdict
+  toolchain cannot parse.
+- The same examples still carry `Automated gates` and `Test execution` rows and "after Phase 1 and
+  Phase 2 passed" framing — the phases removed from the skill bodies — plus a `rejected-gates-failed`
+  example built entirely on the removed Phase-1 gate. The rust example also omits the
+  `unsafe-soundness` row the skill's schema declares.
+
+Rewrite the three examples to the JSON verdict shape with the current semantic-only row set when the
+test-evidence sweep lands, so the example format and the gate-row removal are fixed together rather
+than patching stale rows inside an already-obsolete format.
+
 ## Why separate from the originating PR
 
 The originating change targeted the urgent machine-load source — the implementation-code audit skills
