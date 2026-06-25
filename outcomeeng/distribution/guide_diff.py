@@ -2,9 +2,11 @@
 
 The gate's ``guide-diff`` step and the ``just guide-check`` recipe run this module
 to enforce the render-model ADR's gate: regenerate ``spx/CLAUDE.md`` and
-``spx/AGENTS.md`` from the canonical template via the shipped update-spx generator,
-then fail when either drifts from its committed content. It is the guide analogue of
-``dist-diff``.
+``spx/AGENTS.md`` from the canonical source template via the shipped update-spx
+generator, then fail when either drifts from its committed content. The source
+template first runs through the build renderer for the Codex target so runtime
+tokens become plain guide text while the gate still observes source-template
+drift. It is the guide analogue of ``dist-diff``.
 
 A guide absent from the index — a first run, or a worktree where the guides were
 never committed — registers as drift via ``--intent-to-add``, because a plain
@@ -17,9 +19,13 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Final
+
+from outcomeeng.distribution.build import render_text
+from outcomeeng.distribution.contracts import Target
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 _GENERATOR: Final = (
@@ -58,17 +64,24 @@ def guide_paths() -> tuple[str, ...]:
 
 def regenerate_guides() -> None:
     """Render both guide files in place via the shipped update-spx generator."""
-    _run(
-        [
-            "python3",
-            str(_GENERATOR),
-            "--template",
-            str(_TEMPLATE),
-            "--spx-dir",
-            "spx",
-            "--write",
-        ]
+    rendered_template = render_text(
+        _TEMPLATE.read_text(encoding="utf-8"),
+        variables={"target": Target.CODEX.value},
     )
+    with tempfile.TemporaryDirectory(prefix="spx-guide-template-") as tmp:
+        template = Path(tmp) / _TEMPLATE.name
+        template.write_text(rendered_template, encoding="utf-8")
+        _run(
+            [
+                "python3",
+                str(_GENERATOR),
+                "--template",
+                str(template),
+                "--spx-dir",
+                "spx",
+                "--write",
+            ]
+        )
 
 
 def drifting_guides() -> list[str]:

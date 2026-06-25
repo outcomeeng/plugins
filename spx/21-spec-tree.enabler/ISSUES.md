@@ -20,18 +20,6 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 `outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the EXCLUDE + derived-state model. The upstream needs to be rewritten to match.
 
-## 12. Repo-wide evidence links still contain legacy test naming (RESOLVED)
-
-Resolved 2026-05-13. Every filename-shaped legacy reference (`*.unit.test.{ext}`, `*.integration.test.{ext}`, `*.e2e.test.{ext}`, `test_*.unit.{ext}`, `test_*.integration.{ext}`, `test_*.e2e.{ext}`) in spec assertions, spec-tree templates, examples, and methodology references was rewritten to the canonical `<subject>.<evidence>.<level>[.<runner>]` form, splitting mixed-evidence specs across one file per evidence type. Remaining mentions of the legacy tokens are scoped to:
-
-- `plugins/{python,typescript}/skills/{python,typescript}-test-standards/SKILL.md` — the forbidden-patterns lists that define what counts as legacy.
-- `plugins/typescript/skills/audit-typescript-tests/SKILL.md` and `plugins/develop/skills/audit-skills/references/operational-effectiveness-examples.md` — historical failure cases that contrast legacy with canonical naming.
-- `plugins/spec-tree/skills/author/SKILL.md` and `plugins/spec-tree/skills/test/SKILL.md` — authoring/audit checklists that name the forbidden patterns so agents recognize and reject them.
-
-## 13. Marketplace-scoped test-infrastructure evidence needs product-specific checks (RESOLVED)
-
-Resolved 2026-06-15. `spx/13-infrastructure.enabler/21-test-infrastructure.enabler` now carries an `ALWAYS` compliance assertion backed by `tests/test_infra_placement.compliance.l1.py`: the marketplace's `outcomeeng_testing/` home is verified — against the repository's git-tracked files and against synthetic violating placements — to live outside `spx/` and outside any `tests/` directory. `tests/` filename-shape conformance stays with `spx/15-test-language.adr.md` and the validator under `spx/15-validation.enabler/`, not duplicated; `[audit]` remains correct in `spx/15-test-infrastructure.pdr.md` for the cross-product natural-placement rule this repository cannot structurally assert for other products.
-
 ## 14. PDR Rust row lacks the hyphen→underscore explanation
 
 `spx/15-test-infrastructure.pdr.md` shows both `<product>-testing` (Cargo package name) and `<product>_testing` (Rust import path) in the per-language table. Cargo normalizes hyphens to underscores in import paths, but readers unfamiliar with this convention may read the two forms as a contradiction. A single inline sentence — *Cargo normalizes hyphens to underscores in the import path: package `product-testing` → `use product_testing::...`* — closes the gap.
@@ -100,16 +88,6 @@ Required handling:
 - Sweep `merging-standards/SKILL.md` and any other PR-flow skill that mixes the conventions.
 
 Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens scope across multiple PR-flow skills; the rebase-merge PR scope is intentionally narrow.
-
-## 20. Hook output-contract vocabulary is not source-owned across hooks and their tests (RESOLVED)
-
-Resolved by removing the hooks. The spec-tree plugin now ships a single `SessionStart` hook (`src/plugins/spec-tree/hooks/hooks.json`) that delegates to `spx hook run session-start` through a fail-open inline guard — no `<SPEC-TREE_*>` markers, no gate argv tokens, no transcript parsing. The `PreToolUse` gate, the compaction hooks, and the `PostToolUse` gate-reminder were removed (`spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`), so the cross-hook inline-token coupling this item described no longer exists.
-
-## 21. spx-claude template test-naming examples are scenario-only
-
-The shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` (rendered into each product's `spx/CLAUDE.md`) shows the Python test-naming pattern with `scenario` as the example evidence token for all three levels — `test_parsing.scenario.l1.py`, `test_cli.scenario.l2.py`, `test_workflow.scenario.l3.py` — and names no other evidence type. `scenario` is the existential type; a reader mapping a `### Compliance` / `### Mappings` / universal assertion to a filename has no example showing the universal tokens (`compliance`/`mapping`/`conformance`/`property`), so the table nudges authors toward `scenario` even for universals. This is the exact mis-typing the verdict-toolchain node hit (universal `ALWAYS` assertions filed under `*.scenario.l1.py`).
-
-**Resolution shape**: in the template, either add a row/example using a universal token (e.g. `test_rollup.mapping.l1.py`) alongside the `scenario` example, or annotate that the evidence segment is one of `scenario`/`mapping`/`conformance`/`property`/`compliance` chosen per `/test` routing (a universal is never `scenario`). Editing the rendered `spx/CLAUDE.md` directly is not the fix — it re-renders from the template via `/update-spx`; change the template. Surfaced by the local `review-changes` review on PR #300 (dropped there as out-of-scope for that PR).
 
 ## 22. PR #329 surfaced instruction gaps in spec-tree operations
 

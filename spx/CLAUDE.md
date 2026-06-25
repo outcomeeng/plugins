@@ -68,7 +68,7 @@ Default-branch work is complete only when it reaches the default branch on origi
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context, returning structured APPROVED/REJECTED verdicts. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
+Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; reviewer agents return findings for the main conversation to validate and apply through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
 | User Says...                               | Skill            | Agent                   |
 | ------------------------------------------ | ---------------- | ----------------------- |
@@ -98,15 +98,15 @@ Per-language code, architecture, and test audits ship as `audit-{lang}*` skills 
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
+Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This guide renders only the languages listed in its `languages` frontmatter; `/update-spx` re-renders from the installed template when the methodology advances.
 
 ### Python
 
 | Level | Pattern                           | Example                        |
 | ----- | --------------------------------- | ------------------------------ |
 | 1     | `test_{subject}.{evidence}.l1.py` | `test_parsing.scenario.l1.py`  |
-| 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.scenario.l2.py`      |
-| 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.scenario.l3.py` |
+| 2     | `test_{subject}.{evidence}.l2.py` | `test_cli.mapping.l2.py`       |
+| 3     | `test_{subject}.{evidence}.l3.py` | `test_workflow.property.l3.py` |
 
 ---
 
