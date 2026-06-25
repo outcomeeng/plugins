@@ -25,11 +25,9 @@ Standards are pre-loaded above. Check for `spx/local/rust.md` at the repository 
 
 <constraints>
 
-Automated gates are the entry ticket. If formatting, linting, or tests fail, reject immediately and stop. Manual review starts only after the code passes the mechanical bar.
+Comprehension is the whole job. This skill runs no deterministic verification of its own — no formatter, linter, or test run. The main agent brings the project's formatting, linting, and tests to passing on the changeset before dispatching this audit, and CI re-runs them over the whole repository. Read names and signatures first, predict behavior, then read the body and look for surprises. Review time belongs to design and semantics, not restating what `clippy` already checked or re-running what the main agent already passed.
 
-Comprehension is the main job. Read names and signatures first, predict behavior, then read the body and look for surprises. Review time belongs to design and semantics, not restating what `clippy` already checked.
-
-This skill audits implementation code. Test evidence quality belongs to `/audit-rust-tests`. If test files are in scope, load `/rust-test-standards`, verify they pass, then hand off evidence judgments to the test auditor.
+This skill audits implementation code. Test evidence quality belongs to `/audit-rust-tests`. If test files are in scope, load `/rust-test-standards` and hand off evidence judgments to the test auditor — do not run the test suite; the main agent already passed it before dispatch.
 
 The verdict is binary. APPROVED means every concern passes. REJECTED means at least one concern fails.
 
@@ -42,27 +40,15 @@ Execute the phases in order.
 **Phase 0: Scope and product config**
 
 1. Determine the production files in scope
-2. Read `CLAUDE.md` and `README.md` for product commands and review constraints
+2. Read `CLAUDE.md` and `README.md` for review constraints and naming conventions that inform comprehension — read for context, never to run a gate
 3. Read `Cargo.toml` and `rust-toolchain.toml` when present
 4. Identify applicable ADRs and PDRs in the spec hierarchy if the code belongs to a spec-tree node
 
-**Phase 1: Automated gates** (blocking)
-
-Run the repository's canonical validation command. If the repository does not publish one, use the fallback sequence from `rules/validation-sequence.json`.
-
-Non-zero exit means REJECTED. Do not proceed to manual review.
-
-**Phase 2: Test execution** (blocking)
-
-Run the full test suite. If the repo has a stricter documented command, use it. Otherwise `cargo test --all-targets` is the minimum bar.
-
-Any failing test means REJECTED. Do not proceed.
-
-**Phase 3: Code comprehension**
+**Phase 1: Code comprehension**
 
 Read every production file. Do not skim.
 
-**3.1 Per-function protocol**
+**1.1 Per-function protocol**
 
 For each function or method:
 
@@ -82,7 +68,7 @@ Use this table to classify surprises:
 | branch appears impossible from call sites | dead branch or mismatched abstraction                       |
 | error loses source context                | weak error boundary                                         |
 
-**3.2 Design evaluation**
+**1.2 Design evaluation**
 
 Evaluate the codebase for:
 
@@ -92,7 +78,7 @@ Evaluate the codebase for:
 - typed errors where the boundary is public or domain-facing
 - narrow modules with coherent responsibility
 
-**3.3 Module and `use` evaluation**
+**1.3 Module and `use` evaluation**
 
 Classify `use` paths like this:
 
@@ -113,11 +99,11 @@ Import rules:
 
 Use `references/false-positive-handling.md` when a suspicious pattern might still be correct in context.
 
-**3.4 Unsafe and FFI soundness**
+**1.4 Unsafe and FFI soundness**
 
 When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `extern "C"` / `#[no_mangle]` boundary, run the soundness pass in `references/unsafe-soundness.md`: enumerate every unsafe site, check each block for a `SAFETY:` comment tied to the real invariant and against the pointer, aliasing, lifetime, validity, FFI, and `Send`/`Sync` hazard categories, and check each FFI boundary for ABI-stable types, panic containment, and documented pointer contracts. A single soundness violation is REJECT. A scope with no unsafe sites skips this subsection.
 
-**Phase 4: ADR and PDR compliance**
+**Phase 2: ADR and PDR compliance**
 
 Verify each relevant architectural or product constraint is reflected in the code shape. Undocumented deviations are REJECTED.
 
@@ -128,9 +114,6 @@ Verify each relevant architectural or product constraint is reflected in the cod
 - `references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
 - `references/unsafe-soundness.md` -- soundness pass for `unsafe` blocks and FFI boundaries
 - `references/example-audit.md` -- complete APPROVED and REJECTED examples
-- `rules/validation-sequence.json` -- fallback validation sequence metadata
-- `rules/review-prompts.js` -- fallback manual review prompts
-- `rules/security-signals.yaml` -- fallback security review signals
 
 </reference_guides>
 
@@ -147,8 +130,6 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
   "target": "<scope-target>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
-    { "name": "automated-gates", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
-    { "name": "test-execution", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "function-comprehension", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "design-coherence", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
     { "name": "import-structure", "status": "PASS | FAIL | UNKNOWN", "findings": [] },
@@ -165,7 +146,7 @@ Each finding carries `file`, `line`, `rule` (the concern name or specific violat
 
 <failure_modes>
 
-**Failure 1: Approved code after mechanical gates passed.** Claude saw `cargo fmt`, `cargo clippy`, and `cargo test` pass, then treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift. How to avoid: run Phases 1-2 first, then still execute Phase 3's predict-and-verify pass over every production function in scope.
+**Failure 1: Approved code on the strength of green mechanical gates.** The main agent's `cargo fmt`, `cargo clippy`, and `cargo test` passed before dispatch, and Claude treated the audit as complete without reading every function. Why it failed: mechanical gates do not catch functions that mix pure logic with I/O, unclear ownership flow, weak seams, or ADR/PDR drift — and this audit does not re-run them anyway. How to avoid: spend the whole audit on Phase 1's predict-and-verify pass over every production function in scope; the green gates are a precondition, not the audit.
 
 **Failure 2: Missed a boundary dependency hidden behind a coherent module.** Claude approved a module whose imports looked organized, while a concrete external client was still imported directly inside business logic. Why it failed: import coherence is separate from boundary design; `crate::` paths can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and FFI boundary to an injected trait or narrow function seam.
 
