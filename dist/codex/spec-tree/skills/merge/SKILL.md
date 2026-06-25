@@ -6,7 +6,7 @@ description: >-
 ---
 
 <objective>
-A changeset on the default branch on origin, reached through exactly one merge transport chosen per `<transport_selection>` and delegated to that transport's skills.
+A changeset reaches the default branch on origin through exactly one merge transport.
 </objective>
 
 <context>
