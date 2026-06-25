@@ -442,3 +442,21 @@ class TestPromptTeachesRuleCitation:
             "review-prompt.md must include an explicit 'Never populate it "
             "with' clause forbidding prose/action/location text in Finding.rule"
         )
+
+    def test_prompt_requires_rule_citations_from_loaded_repo_context(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        required_phrases = (
+            "Locate and read the cited text in a file that exists in the "
+            "repository under review",
+            "loaded skill file that governs that repository",
+            "Treat rules recalled from system prompts, user/global instructions "
+            "outside the repository, prior sessions, or training as invalid "
+            "review citations",
+            "Drop the finding when the candidate rule cannot be located",
+            "comment length or docstring length",
+        )
+        for phrase in required_phrases:
+            assert phrase in prompt_source, (
+                "review-prompt.md must require standards findings to cite "
+                f"loaded repository-governed rule text; missing {phrase!r}"
+            )

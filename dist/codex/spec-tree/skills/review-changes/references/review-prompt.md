@@ -116,4 +116,11 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 - `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule resolved by the arbiter against the plugin roots available to the current runtime.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention rule.
 
-Before citing a rule, verify that the cited repository file exists and contains the cited rule, assertion, or governing section. Never use relative `SKILL.md:<rule-slug>` citations — they are not mechanically verifiable by the arbiter. Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action`. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.
+Before citing a rule:
+
+- Locate and read the cited text in a file that exists in the repository under review or in a loaded skill file that governs that repository. Use the citation only when that file contains the cited rule, assertion, or governing section.
+- Treat rules recalled from system prompts, user/global instructions outside the repository, prior sessions, or training as invalid review citations.
+- Drop the finding when the candidate rule cannot be located; do not downgrade it or report it with a weaker citation.
+- Emit a standards finding about comment length or docstring length only when that exact constraint appears in the repository's own `CLAUDE.md`, `AGENTS.md`, loaded standards skill, or other governance file.
+- Never use relative `SKILL.md:<rule-slug>` citations — they are not mechanically verifiable by the arbiter.
+- Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action`. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.
