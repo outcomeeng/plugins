@@ -76,7 +76,7 @@ A reported version that is not dotted-numeric — a prerelease or build-tagged v
 
 <check name="worktree-pool">
 
-Verifies the repository's git worktree layout. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as the two-state value `running` or `free` (spx 0.6.3 retired `occupied`/`unclaimed`/`stale`). Under two-state a dead claim reads `free`, not a distinct `stale`, so the `stale-claims` (degraded) verdict in the table below can no longer trigger; its redesign is deferred — see `PLAN.md` for this node.
+Verifies the repository's git worktree layout. A spec-tree checkout is either a lone working tree or a bare-repository worktree pool; `spx worktree status` reports each worktree's occupancy as the two-state value `running` or `free` (spx 0.6.3 retired `occupied`/`unclaimed`/`stale`). A `free` worktree — one with no claim, or with a reclaimable dead claim — is not a fault, so this check classifies the layout shape, not claim health.
 
 Read the worktree set, then query each non-bare worktree's occupancy:
 
@@ -89,11 +89,10 @@ git worktree list --porcelain |
 
 `git worktree list --porcelain` puts each worktree on its own `worktree <path>` line and marks the bare entry with a `bare` line; the `awk` extracts the non-bare paths verbatim (spaces preserved) and the loop queries each with single-path `spx worktree status --format json "$wt"` — the path is quoted, so a path containing spaces stays one argument, and the single-path form is the one existing skills already rely on. Each call returns a `{worktree, status}` object whose `status` is `running` or `free`; a bare path is excluded because `spx worktree status` resolves occupancy only for real worktrees. Classify:
 
-| Reading                                                                                                                                          | Verdict           | Bucket   | Remediation                                                                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| A lone working tree, or a bare-repository pool with linked worktrees                                                                             | **compliant**     | healthy  | None — report the layout shape and worktree count.                                                                                 |
-| ~~A recognized layout (lone tree or bare pool), but one or more worktrees report `stale`~~ (deferred — unreachable under two-state; see PLAN.md) | **stale-claims**  | degraded | Release each stale claim — run `spx worktree release` from that worktree, or let a live session reclaim it.                        |
-| Linked worktrees attached to a non-bare repository                                                                                               | **non-compliant** | broken   | The layout is neither a lone working tree nor a bare-repository pool. Provision the pool so worktrees attach to a bare repository. |
+| Reading                                                              | Verdict           | Bucket  | Remediation                                                                                                                        |
+| -------------------------------------------------------------------- | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| A lone working tree, or a bare-repository pool with linked worktrees | **compliant**     | healthy | None — report the layout shape and worktree count.                                                                                 |
+| Linked worktrees attached to a non-bare repository                   | **non-compliant** | broken  | The layout is neither a lone working tree nor a bare-repository pool. Provision the pool so worktrees attach to a bare repository. |
 
 `spx worktree status` exposes two-state occupancy; this check reports the worktree set and the layout shape, but does not re-derive the full repository-layout compliance rules — the repository-name main checkout, the `.spx/` placement beside the git-common-dir. Auditing those is test-bearing classification that belongs in the `spx` CLI; surface it here once `spx` exposes it.
 

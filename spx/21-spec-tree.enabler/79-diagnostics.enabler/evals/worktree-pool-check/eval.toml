@@ -7,7 +7,7 @@ owned_paths = [
   "src/plugins/spec-tree/skills/diagnose/**",
   "dist/claude/spec-tree/skills/diagnose/**",
 ]
-smoke_cases = ["compliant-bare-pool", "stale-claims-in-pool", "non-compliant-linked-on-non-bare"]
+smoke_cases = ["compliant-bare-pool", "compliant-bare-pool-free-from-dead-claim", "non-compliant-linked-on-non-bare"]
 threshold = 0.8
 trials = 1
 ci_policy = "manual" # excluded from automatic CI grading
