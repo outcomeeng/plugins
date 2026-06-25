@@ -1,0 +1,25 @@
+{
+  "spx_floor": "0.6.3",
+  "marketplace": {
+    "name": "outcomeeng",
+    "source": "outcomeeng/plugins"
+  },
+  "expected_plugins": [
+    "develop",
+    "frontend",
+    "hdl",
+    "prose",
+    "python",
+    "rust",
+    "spec-tree",
+    "typescript",
+    "work"
+  ],
+  "checks": [
+    "session-environment",
+    "spx-reachability",
+    "worktree-pool",
+    "session-store",
+    "marketplace-install"
+  ]
+}

@@ -43,6 +43,7 @@ venv/
 # Build outputs
 build/
 out/
+/outcomeeng-spx-*.tgz
 
 # Temporary files
 *.tmp
