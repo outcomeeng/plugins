@@ -1,6 +1,6 @@
 # Spec Coverage Scope
 
-Every checked-in marketplace plugin has at least one enabler node in the spec tree. Plugins with implementation code carry `[test]` evidence on assertions about executable behavior. Plugins whose deliverable is LLM-driven behavior — auditing skills, classifiers, content producers — carry `[eval]` evidence scored against curated cases through the eval harness governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Assertions whose subject is the design or intent of a skill rather than its runtime behavior carry `[audit]` evidence.
+Every checked-in marketplace plugin has at least one enabler node in the spec tree. Plugins with implementation code carry `[test]` evidence on assertions about executable behavior. Plugins whose deliverable is LLM-driven behavior — audit skills, classifiers, content producers — carry `[eval]` evidence scored against curated cases through the eval harness governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Assertions whose subject is the design or intent of a skill rather than its runtime behavior carry `[audit]` evidence.
 
 ## Rationale
 

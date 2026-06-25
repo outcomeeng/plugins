@@ -16,4 +16,4 @@ Rust currently has only the top-level Rust node for these concerns, so this note
 
 ## Revisit condition
 
-Pick this up after the `review-changes` vocabulary boundary is clarified, so Rust standards work is reviewed with the corrected distinction between reviewing and auditing.
+Pick this up after the `review-changes` vocabulary boundary is clarified, so Rust standards work is reviewed with the corrected distinction between review and audit.

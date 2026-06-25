@@ -30,6 +30,7 @@ Tested with:
 from __future__ import annotations
 
 import json
+import pathlib
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -141,22 +142,34 @@ _REQUIRED_FINDING_KEYS = (
 )
 
 # Accepted ``Finding.rule`` citation forms. A rule must cite an existing rule in
-# the spec-tree or skill ecosystem; the parser enforces the structural form here.
-# The semantic check — that the cited rule actually exists at the referenced
-# location — is the review prompt's concern and the future deterministic
-# diff-reference check's concern; it is not enforced at parse time.
-_RULE_CITATION_PATTERNS = (
-    re.compile(
-        r"spx/[^\s:]+\.md:"
-        r"(?:ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE):"
-        r"[1-9][0-9]*"
-    ),
-    re.compile(r"spx/(?:[^\s:]+/)*[1-9][0-9]*-[A-Za-z0-9-]+\.(?:adr|pdr)\.md"),
-    re.compile(
-        r"plugins/[A-Za-z0-9_-]+/skills/[A-Za-z0-9_-]+/"
-        r"SKILL\.md:[A-Za-z0-9][A-Za-z0-9_-]*"
-    ),
-    re.compile(r"(?:AGENTS|CLAUDE|SKILL)\.md:[A-Za-z0-9][A-Za-z0-9_-]*"),
+# the spec-tree or skill ecosystem; the parser verifies both the cited file and
+# the cited assertion/rule slug where the citation carries one.
+_SPEC_ASSERTION_RE = re.compile(
+    r"(?P<path>spx/[^\s:]+\.md):"
+    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE):"
+    r"(?P<index>[1-9][0-9]*)"
+)
+_DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
+_PLUGIN_SKILL_RE = re.compile(
+    r"plugins/(?P<plugin>[A-Za-z0-9_-]+)/skills/(?P<skill>[A-Za-z0-9_-]+)/"
+    r"SKILL\.md:(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
+)
+_ROOT_RULE_RE = re.compile(
+    r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
+)
+_SECTION_TITLES = {
+    "SCENARIO": "Scenarios",
+    "MAPPING": "Mappings",
+    "CONFORMANCE": "Conformance",
+    "PROPERTY": "Properties",
+    "COMPLIANCE": "Compliance",
+}
+_RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
+_RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
+    {
+        "api_surface",
+        "principles",
+    }
 )
 
 
@@ -274,23 +287,248 @@ def _parse_finding(data: Any) -> Finding:
 
 
 def _validate_rule_citation(rule: str) -> None:
-    """Reject ``rule`` values that are not path-style citations.
-
-    Accepts the structural citation forms in ``_RULE_CITATION_PATTERNS``.
-    Rejects empty strings, bare path prefixes, free-form prose, action text,
-    and tracking locations. The semantic check (that the cited rule exists at
-    the location) is not enforced here.
-    """
+    """Reject ``rule`` values that do not cite a repository rule."""
     if not rule:
         raise ReviewResultValidationError("finding 'rule' must be a non-empty string")
-    if not any(pattern.fullmatch(rule) for pattern in _RULE_CITATION_PATTERNS):
-        raise ReviewResultValidationError(
-            "finding 'rule' must be a full path-style citation such as "
-            "'spx/<path>.md:ALWAYS:1', "
-            "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
-            "'AGENTS.md:<rule-slug>', 'CLAUDE.md:<rule-slug>', or "
-            f"'SKILL.md:<rule-slug>'; got {rule!r}"
+    if match := _SPEC_ASSERTION_RE.fullmatch(rule):
+        _validate_spec_assertion(match)
+        return
+    if match := _DECISION_RE.fullmatch(rule):
+        _validate_decision_path(match.group("path"), rule)
+        _require_repo_file(match.group("path"), rule)
+        return
+    if match := _PLUGIN_SKILL_RE.fullmatch(rule):
+        path = _resolve_plugin_skill_path(
+            match.group("plugin"), match.group("skill"), rule
         )
+        _validate_slug(path, match.group("slug"), rule)
+        return
+    if match := _ROOT_RULE_RE.fullmatch(rule):
+        _validate_slug(pathlib.Path(match.group("path")), match.group("slug"), rule)
+        return
+    raise ReviewResultValidationError(
+        "finding 'rule' must be a verifiable citation such as "
+        "'spx/<path>.md:ALWAYS:1', "
+        "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
+        "'AGENTS.md:<rule-slug>', or 'CLAUDE.md:<rule-slug>'; "
+        f"got {rule!r}"
+    )
+
+
+def _validate_spec_assertion(match: re.Match[str]) -> None:
+    path = pathlib.Path(match.group("path"))
+    text = _require_repo_file(path, match.group(0))
+    kind = match.group("kind")
+    expected_index = int(match.group("index"))
+    if kind in {"ALWAYS", "NEVER", "MUST"}:
+        pattern = re.compile(rf"^\s*-\s*{kind}:", re.MULTILINE)
+        assertion_count = len(pattern.findall(text))
+    else:
+        assertion_count = len(_section_assertions(text, _SECTION_TITLES[kind]))
+    if assertion_count < expected_index:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites {kind}:{expected_index}, "
+            f"but {path} does not contain that assertion"
+        )
+
+
+def _validate_decision_path(path: str, rule: str) -> None:
+    filename = pathlib.PurePosixPath(path).name
+    if filename.endswith(".adr.md"):
+        stem = filename.removesuffix(".adr.md")
+    elif filename.endswith(".pdr.md"):
+        stem = filename.removesuffix(".pdr.md")
+    else:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites an invalid decision file: {rule}"
+        )
+    index, separator, slug = stem.partition("-")
+    if not separator or not index.isdigit() or int(index) <= 0 or not _is_slug(slug):
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites an invalid decision file: {rule}"
+        )
+
+
+def _section_assertions(text: str, section_title: str) -> list[str]:
+    assertions: list[str] = []
+    in_section = False
+    section_pattern = re.compile(rf"^\s*###\s+{re.escape(section_title)}\s*$")
+    next_section_pattern = re.compile(r"^\s*#{1,3}\s+")
+    for line in text.splitlines():
+        if section_pattern.match(line):
+            in_section = True
+            continue
+        if in_section and next_section_pattern.match(line):
+            break
+        if in_section and re.match(r"^\s*-\s+", line):
+            assertions.append(line)
+    return assertions
+
+
+def _validate_slug(path: pathlib.Path, slug: str, rule: str) -> None:
+    text = _require_repo_file(path, rule)
+    if slug not in _declared_rule_slugs(text):
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites slug {slug!r}, but {path} does not contain it"
+        )
+
+
+def _declared_rule_slugs(text: str) -> set[str]:
+    slugs: set[str] = set()
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        heading = _markdown_heading_text(line)
+        if heading and _heading_section_has_rule_marker(lines, index):
+            slugs.add(_slugify(heading))
+            continue
+        tag = _pseudo_xml_tag(line)
+        if tag and _pseudo_xml_section_has_rule_marker(lines, index, tag):
+            slugs.add(_slugify(tag))
+    return {slug for slug in slugs if slug}
+
+
+def _pseudo_xml_section_has_rule_marker(
+    lines: list[str], tag_index: int, tag: str
+) -> bool:
+    if tag in _RULE_BEARING_PSEUDO_XML_TAGS:
+        return True
+    body: list[str] = []
+    closing_tag = f"</{tag}>"
+    for line in lines[tag_index + 1 :]:
+        if line.strip() == closing_tag:
+            break
+        body.append(line)
+    return any(_is_rule_marker_line(line) for line in body)
+
+
+def _heading_section_has_rule_marker(lines: list[str], heading_index: int) -> bool:
+    body: list[str] = []
+    for line in lines[heading_index + 1 :]:
+        if _markdown_heading_text(line):
+            break
+        body.append(line)
+    return any(_is_rule_marker_line(line) for line in body)
+
+
+def _is_rule_marker_line(line: str) -> bool:
+    stripped = line.strip()
+    bullet = stripped[2:].lstrip() if stripped.startswith(("- ", "* ")) else stripped
+    while bullet and not (bullet[0].isalnum() or bullet[0] == "*"):
+        bullet = bullet[1:].lstrip()
+    for marker in _RULE_MARKERS:
+        if bullet.startswith(f"{marker}:"):
+            return True
+        if bullet.startswith(f"**{marker}**"):
+            rest = bullet[len(marker) + 4 :].lstrip()
+            return rest.startswith(("-", ":"))
+        if bullet.startswith(f"**{marker} "):
+            return True
+    return False
+
+
+def _markdown_heading_text(line: str) -> str | None:
+    stripped = line.lstrip()
+    prefix_length = len(stripped) - len(stripped.lstrip("#"))
+    if prefix_length < 1 or prefix_length > 6:
+        return None
+    if len(stripped) == prefix_length or stripped[prefix_length] != " ":
+        return None
+    return stripped[prefix_length:].strip().strip("#").strip()
+
+
+def _pseudo_xml_tag(line: str) -> str | None:
+    stripped = line.strip()
+    if not stripped.startswith("<") or not stripped.endswith(">"):
+        return None
+    tag = stripped[1:-1]
+    if tag.startswith("/") or " " in tag or not tag:
+        return None
+    if not (tag[0].isalpha() and all(char.isalnum() or char in "_-" for char in tag)):
+        return None
+    return tag
+
+
+def _is_slug(text: str) -> bool:
+    return bool(text) and all(char.isalnum() or char == "-" for char in text)
+
+
+def _slugify(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Path:
+    suffix = pathlib.Path(plugin) / "skills" / skill / "SKILL.md"
+    candidates = (
+        pathlib.Path("src") / "plugins" / suffix,
+        pathlib.Path("dist") / "claude" / suffix,
+        pathlib.Path("dist") / "codex" / suffix,
+        *_runtime_plugin_skill_candidates(plugin, skill),
+        *(ancestor / suffix for ancestor in pathlib.Path(__file__).resolve().parents),
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise ReviewResultValidationError(
+        f"finding 'rule' cites a missing plugin skill file: {rule}"
+    )
+
+
+def _runtime_plugin_skill_candidates(
+    plugin: str, skill: str
+) -> tuple[pathlib.Path, ...]:
+    candidates: list[pathlib.Path] = []
+    for ancestor in pathlib.Path(__file__).resolve().parents:
+        skills_dir = ancestor / "skills"
+        if not skills_dir.is_dir():
+            continue
+        if ancestor.name != plugin and ancestor.parent.name != plugin:
+            continue
+        candidates.append(skills_dir / skill / "SKILL.md")
+    return tuple(candidates)
+
+
+def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:
+    repo_path = pathlib.Path(path)
+    if repo_path.is_absolute():
+        return _read_existing_file(repo_path, rule)
+    if ".." in repo_path.parts:
+        raise ReviewResultValidationError(
+            f"finding 'rule' must cite a repository-relative file; got {rule!r}"
+        )
+    try:
+        resolved = repo_path.resolve(strict=True)
+        root = pathlib.Path.cwd().resolve(strict=True)
+        resolved.relative_to(root)
+        return _read_existing_file(resolved, rule)
+    except ValueError as exc:
+        raise ReviewResultValidationError(
+            f"finding 'rule' must cite a repository-relative file; got {rule!r}"
+        ) from exc
+    except FileNotFoundError as exc:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites a missing file: {repo_path}"
+        ) from exc
+    except OSError as exc:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cannot read cited file {repo_path}: {exc}"
+        ) from exc
+
+
+def _read_existing_file(path: pathlib.Path, rule: str) -> str:
+    try:
+        if not path.is_file():
+            raise ReviewResultValidationError(
+                f"finding 'rule' cites a non-file path: {path}"
+            )
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cites a missing file: {path}"
+        ) from exc
+    except OSError as exc:
+        raise ReviewResultValidationError(
+            f"finding 'rule' cannot read cited file for {rule}: {exc}"
+        ) from exc
 
 
 def _parse_enum(value: str, enum_cls: type[StrEnum], *, field: str) -> Any:

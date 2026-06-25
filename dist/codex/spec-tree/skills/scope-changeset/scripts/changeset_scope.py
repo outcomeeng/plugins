@@ -1,6 +1,6 @@
 """Canonical git-derived changeset primitives shipped with the spec-tree plugin.
 
-Single home for the deterministic git derivation shared by the auditing,
+Single home for the deterministic git derivation shared by the audit,
 review-changes, and thread-store skills: branch identity, the on-disk
 addressing slug, base-ref resolution, the remote-tracking ref form, and
 merge-base diff scope. Consumers import these symbols (directly or through
@@ -29,13 +29,14 @@ ORIGIN_HEAD_REF_PREFIX = "refs/remotes/origin/"
 ORIGIN_REF_PREFIX = "origin/"
 BRANCH_SCOPE_RANGE_TEMPLATE = "{origin_ref}...HEAD"
 FRONTMATTER_DELIMITER = "---"
+COMMIT_PEEL_SUFFIX = "^{commit}"
 
 
 class BaseRefNotConfiguredError(RuntimeError):
     """Raised by ``detect_base_ref(strict=True)`` when origin/HEAD is absent.
 
     The default ``detect_base_ref(strict=False)`` falls back to
-    ``DEFAULT_BASE_REF`` because the auditing skill tolerates a missing
+    ``DEFAULT_BASE_REF`` because the audit skill tolerates a missing
     remote (single-developer repos, fresh bootstraps). The strict
     variant exists for the review-changes skill, which refuses to
     pick a fallback because the operator needs a definitive answer
@@ -93,8 +94,8 @@ def expand_diff_range(
 def remote_tracking_ref(base_ref: str) -> str:
     """Compose the remote-tracking ref ``origin/<base_ref>`` from a bare base.
 
-    The single source of the ``origin/`` composition. Both the auditing
-    surface (:func:`branch_scope`) and the reviewing surface
+    The single source of the ``origin/`` composition. Both the audit
+    surface (:func:`branch_scope`) and the review surface
     (``compute_diff``) route their git-derived base through this helper so
     every changeset diff range is taken against the fetched remote-tracking
     ref rather than a bare local branch. A bare local ref such as ``main``
@@ -147,7 +148,7 @@ def detect_base_ref(repo: pathlib.Path, *, strict: bool = False) -> str:
     bootstrap, solo developer repo):
 
     - ``strict=False`` (default): returns ``DEFAULT_BASE_REF`` so callers
-      can still compose diff ranges without halting. The auditing skill
+      can still compose diff ranges without halting. The audit skill
       relies on this fallback.
     - ``strict=True``: raises ``BaseRefNotConfiguredError``. The
       review-changes skill uses this variant so the operator gets a
@@ -193,6 +194,24 @@ def detect_current_branch(repo: pathlib.Path) -> str:
     if branch == "HEAD":
         raise DetachedHeadError(f"detached HEAD at {repo}")
     return branch
+
+
+def commit_oid(ref: str, *, repo: pathlib.Path) -> str:
+    """Resolve ``ref`` to the full object ID of a commit.
+
+    The journal run-state identity records concrete head/base commit IDs, not
+    symbolic refs. Peeling through ``^{commit}`` rejects blobs and trees while
+    accepting commits and tags that point at commits.
+    """
+    # Fixed argv, no shell, ref is caller-controlled.
+    result = subprocess.run(  # noqa: S603
+        ["git", "rev-parse", "--verify", "--quiet", f"{ref}{COMMIT_PEEL_SUFFIX}"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
 
 
 def _read_frontmatter_branch(path: pathlib.Path) -> str | None:

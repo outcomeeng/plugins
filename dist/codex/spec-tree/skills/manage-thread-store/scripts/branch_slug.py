@@ -4,7 +4,7 @@ The canonical git-derivation primitives live in
 ``plugins/spec-tree/skills/scope-changeset/scripts/changeset_scope.py``.
 This module loads that file via ``importlib`` (the changeset-scope scripts
 are not a package — they ship as bare modules under a runtime-substituted
-plugin directory) and re-exports the symbols so the thread-store, auditing,
+plugin directory) and re-exports the symbols so the thread-store, audit,
 and review-changes surfaces share one slug and base-ref rule.
 
 The re-exported symbols are identity-equal to their canonical

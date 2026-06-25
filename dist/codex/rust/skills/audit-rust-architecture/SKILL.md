@@ -19,13 +19,12 @@ This audit runs inside a dispatched auditor's verifier context — the generic `
 A structured verdict on an ADR's Rust-specific architecture concerns — testability in Verification (dependency injection), the mocking prohibition, execution-level accuracy, and Rust anti-patterns.
 </objective>
 
-<context_loading>
+<audit_workflow>
 When this skill is composed for a spec-tree work item, the dispatching `adr-auditor` has already invoked `spec-tree:contextualize` and loaded the full ADR/PDR hierarchy; review the target ADR's Rust concerns against that hierarchy.
 
 After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/local/rust-architecture.md`, and `spx/local/rust-tests.md` at the repository root. Read each file that exists and apply each as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth.
-</context_loading>
 
-<process>
+**Procedure:**
 
 1. Read repo-local Rust overlays when present (`spx/local/rust.md`, `spx/local/rust-architecture.md`, `spx/local/rust-tests.md`)
 2. Read the ADR completely, focusing on the Rust-specific concerns below
@@ -36,7 +35,7 @@ After loading the shared Rust standards, check for `spx/local/rust.md`, `spx/loc
 7. Check consistency with ancestor ADRs/PDRs when applicable
 8. Output APPROVED or REJECTED with a concern table
 
-</process>
+</audit_workflow>
 
 <principles_to_enforce>
 
@@ -64,9 +63,9 @@ Section structure, atemporal voice, and per-rule tag validity are NOT this skill
 
 </failure_modes>
 
-<output_format>
+<verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 
@@ -89,7 +88,7 @@ The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/
 
 Each finding's `rule` carries the violation pattern (e.g., `missing-testability`, `mocking-language`, `saas-l2`); `file` is the ADR path; `message` carries the one-line "why this fails". Include the correct-approach Rust sample and required-changes summary directly in the finding's `message` field — the JSON verdict is the complete output of this skill.
 
-</output_format>
+</verdict_format>
 
 <example_reference>
 

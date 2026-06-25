@@ -4,9 +4,9 @@ Covers the Compliance clauses in ``../reviewing-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
 - Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
-  performs filesystem effects only through ``thread_store`` — no script
-  calls ``open()``, ``Path.write_*``, ``os.remove``, ``os.unlink``,
-  ``shutil.rmtree``, or any other direct filesystem-write primitive.
+  performs no direct storage writes — no script calls ``open()`` for writing,
+  ``Path.write_*``, ``os.remove``, ``os.unlink``, ``shutil.rmtree``, or any
+  other direct filesystem-write primitive.
 - The swappable prompt template lives at
   ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
@@ -41,6 +41,7 @@ import pytest
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
+    JOURNAL_EMIT_SCRIPT,
     RENDER_REVIEW_SCRIPT,
     RENDER_TEMPLATES_DIR,
     REVIEW_PROMPT_PATH,
@@ -55,8 +56,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
 # Filesystem-write primitives the scripts MUST NOT use directly. Read
 # primitives (``open(..., 'rb')``, ``Path.read_bytes``, ``Path.read_text``)
 # are permitted because ``compute_diff.py`` legitimately reads the diff
-# subprocess's stdout and reads the optional ``changes.json`` override via
-# ``thread_store``.
+# subprocess's stdout and read user-provided payload/template files.
 FORBIDDEN_NAME_CALLS = {"open"}
 FORBIDDEN_ATTR_CALLS = {
     ("os", "remove"),
@@ -74,7 +74,7 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
         "validate_review_result",
         "compute_diff",
         "render_review",
-        "thread_store",
+        "journal_emit",
     }
 )
 
@@ -122,8 +122,8 @@ def _imported_modules(source: str) -> list[str]:
     return modules
 
 
-class TestScriptsRouteThroughThreadStore:
-    """Every script delegates filesystem effects to the ``thread_store`` facade."""
+class TestScriptsDoNotWriteStorageDirectly:
+    """Review scripts do not write storage directly."""
 
     @pytest.mark.parametrize(
         "script_path",
@@ -132,6 +132,7 @@ class TestScriptsRouteThroughThreadStore:
             VALIDATE_REVIEW_RESULT_SCRIPT,
             COMPUTE_DIFF_SCRIPT,
             RENDER_REVIEW_SCRIPT,
+            JOURNAL_EMIT_SCRIPT,
         ],
     )
     def test_script_uses_no_direct_write_primitives(
@@ -314,36 +315,31 @@ class TestWrapperAgentFrontmatter:
             f"{WRAPPER_AGENT_PATH.name} 'skills:' must list spec-tree:review-changes"
         )
 
+    def test_agent_when_present_exports_branch_identity_for_explicit_scope(
+        self,
+    ) -> None:
+        if not WRAPPER_AGENT_PATH.is_file():
+            pytest.skip(
+                f"wrapper agent {WRAPPER_AGENT_PATH.name} not yet authored — "
+                "branch export assertion deferred"
+            )
+        content = WRAPPER_AGENT_PATH.read_text(encoding="utf-8")
+        assert "SPX_VERIFY_BRANCH=<branch_name>" in content, (
+            f"{WRAPPER_AGENT_PATH.name} must export SPX_VERIFY_BRANCH with "
+            "non-empty review scopes so detached CI checkouts can record "
+            "branch run identity"
+        )
 
-class TestComputeDiffSlugIsOptional:
-    """``compute_diff.py --slug`` is optional — the script derives the slug.
 
-    Guards against an accidental regression where ``--slug`` is made
-    required again. The agent never names a slug in its prose; the script
-    falls back to ``thread_store.current_slug()`` when ``--slug`` is
-    omitted. Inspecting the argparse parser directly is faster than
-    fixturing a git repo + running subprocess.
-    """
+class TestComputeDiffHasNoThreadAddressing:
+    """``compute_diff.py`` does not accept thread-addressing arguments."""
 
-    def test_compute_diff_slug_argument_is_optional(self) -> None:
+    def test_compute_diff_has_no_slug_argument(self) -> None:
         if not COMPUTE_DIFF_SCRIPT.is_file():
             pytest.skip("compute_diff.py not yet present")
-        # Source-level check: argparse declares --slug with required=False
-        # (the default) or omits required=True from add_argument.
         source = COMPUTE_DIFF_SCRIPT.read_text(encoding="utf-8")
-        # Look for the add_argument call for --slug and confirm
-        # required=True is NOT set on it.
-        slug_arg_match = re.search(
-            r"add_argument\(\s*['\"]--slug['\"][^)]*\)", source, re.DOTALL
-        )
-        assert slug_arg_match is not None, (
-            "compute_diff.py must declare a --slug argparse argument "
-            "(even if optional) so callers can override slug derivation"
-        )
-        assert "required=True" not in slug_arg_match.group(0), (
-            "compute_diff.py --slug must NOT be required=True — the script "
-            "derives the slug via thread_store.current_slug() when omitted"
-        )
+        assert "--slug" not in source
+        assert "thread_store" not in source
 
 
 REQUIRED_RENDER_TEMPLATES = (

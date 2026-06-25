@@ -25,7 +25,7 @@ The derivation lives in `${CLAUDE_SKILL_DIR}/scripts/changeset_scope.py`, import
 
 <scoping_invariant>
 
-Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through `remote_tracking_ref` — `branch_scope` for the auditing surface and `compute_diff` for the reviewing surface. A bare local branch ref can lag `origin/<base>` in a multi-worktree checkout; scoping against the remote-tracking ref keeps the merge base at the true branch point so already-merged commits do not re-enter the scope.
+Every changeset diff range over a git-derived base is composed against the remote-tracking ref `origin/<base>` through `remote_tracking_ref` — `branch_scope` for the audit surface and `compute_diff` for the review surface. A bare local branch ref can lag `origin/<base>` in a multi-worktree checkout; scoping against the remote-tracking ref keeps the merge base at the true branch point so already-merged commits do not re-enter the scope.
 
 </scoping_invariant>
 

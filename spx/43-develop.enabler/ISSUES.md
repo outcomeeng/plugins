@@ -152,15 +152,10 @@ subjects verbatim.
     supported artifact per `spx/13-plugin-and-runtime-conventions.adr.md` — so they drop out of this
     sweep's scope.)
 
-  - **Verdict-toolchain path portability — marketplace-wide.** Every `audit-*` skill's
-    `<output_format>` / `<verdict_format>` cites the JSON schema as the bare path
-    `plugins/spec-tree/skills/audit/scripts/verdict.py` and names `emit_verdict.py` as the renderer.
-    The `develop:skill-auditor` gate flagged this as a consumer-portability concern (an installed
-    consumer tree resolves `plugins/` differently); the inline JSON schema block in each skill is
-    already self-contained, so the citation is removable. The deterministic `check-skills` /
-    reference-portability gates do not flag it, and the pattern is identical across ~15 skills
-    (touched and untouched), so the coherent fix is one marketplace-wide pass, not a per-touched-file
-    edit. Out of scope for the agent-only-audit-dispatch change; tracked here for that pass.
+  - **Verdict-toolchain path portability — marketplace-wide.** Fixed in the audit-journal state
+    migration pass: every touched `audit-*` skill now describes canonical verdict JSON as input to
+    the composing audit workflow's journal path, and the obsolete standalone rendered-surface carrier
+    scripts were removed from authored source and generated plugin output.
 
   - **Verdict-schema row-taxonomy divergence — marketplace-wide.** The `audit-*` skills do not agree
     on `<output_format>` verdict row names: `audit-skills` emits the three-row
@@ -171,7 +166,7 @@ subjects verbatim.
     `audit/scripts/verdict.py`. Reconciling requires deciding whether `verdict.py` mandates a uniform
     row taxonomy or treats row names as free-form labels over a fixed envelope — a verification-contract
     question governed by `spx/15-audit-result-delivery.pdr.md` and the auditing nodes, affecting
-    `emit_verdict.py` rendering and any auditor agent that indexes on row names. The class spans the
+    journal-rendered surfaces and any auditor agent that indexes on row names. The class spans the
     13 verdict-emitting skills (touched and untouched), so the coherent fix is one marketplace-wide
     pass, not a per-touched-file edit. Surfaced by the `develop:skill-auditor` gate during the PR3
     `Skill`-append; out of scope for that frontmatter change.

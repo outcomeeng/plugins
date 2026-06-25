@@ -1,30 +1,37 @@
 ---
 name: audit
 description: >-
-  Generic end-to-end code-scope audit orchestration preloaded by the auditor,
-  audit-orchestrator, pr-reviewer, and pr-review-orchestrator agents. Dispatch the
-  audit agent that fits the scope; the main conversation reaches a generic audit
-  only through one of those agents.
+  Generic end-to-end code-scope audit orchestration preloaded by audit agents.
+  Dispatch the audit agent that fits the requested run surface; the main conversation
+  reaches a generic audit only through an audit agent.
+argument-hint: "[scope]"
+arguments: request
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 <dispatch_gate>
 
-This orchestration runs in an audit agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch the audit agent that fits the scope (auditor for a one-off, audit-orchestrator for a stateful local run, pr-reviewer or pr-review-orchestrator for a pull request) instead of running it here. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This orchestration runs in an audit agent's isolated context. When this skill loads in the main conversation rather than inside a dispatched audit agent, STOP — dispatch `auditor` for a one-off run over the requested scope. The separate context keeps the verdict free of the bias the main conversation accumulates while doing the work under audit. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 
 <objective>
 
-One wrapper verdict over a code scope: three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`), one dispatched child verdict per language partition in `children`, a canonical rollup from `aggregate_verdicts.py`, and a rendered surface derived from the sealed `spx journal` event prefix.
+One wrapper verdict over a code scope: three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`), one dispatched child verdict per language partition in `children`, a canonical rollup, and a rendered surface derived from the sealed run journal.
 
 </objective>
 
 <constraints>
 
-Read-only over the audited code: this skill produces a wrapper verdict and records it on the `spx journal`; it never edits, fixes, or commits, and never modifies the audited project tree. The only writes it performs are the journal append/seal the channel owns and — in the stateful mode — the gitignored `.spx/audits/` partition. Subagents it dispatches are read-only too.
+Read-only over the audited code: this skill produces a wrapper verdict and records it on the `spx journal`; it never edits, fixes, commits, or modifies the audited project tree. Its writes are limited to journal append/seal operations the channel owns and temporary scratch files used to aggregate child verdicts. Subagents it dispatches are read-only too.
 
 </constraints>
+
+<input_contract>
+
+The invocation request `$request` carries the audit scope and optional PR identity. Run the standard six-phase audit path over the requested scope. When `$request` carries `REPO` and `PR NUMBER`, stamp the wrapper metadata with target kind `pull-request` and `pullRequestNumber` so the journal backend can project prior audit runs for the same PR. Never read state from rendered PR comments; the journal is the audit source of truth.
+
+</input_contract>
 
 <determinism_contract>
 
@@ -77,11 +84,13 @@ If any of the three dispatched skills is missing for the target language, halt b
 
 3. **Partition by language.** Group files by extension into per-language partitions. The remainder of the protocol runs once per partition; per-partition verdicts are aggregated in Phase 6 into one wrapper verdict whose `children` array carries them. If any partition's `audit-{lang}*` trio is missing, halt now with `missing required skill: audit-{lang}-{kind}` before any phase runs.
 
-4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scope_hash`.
+4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scopeHash`.
 
 5. **Read project config.** `CLAUDE.md`, `AGENTS.md`, and any language-native configuration the dispatched `audit-{lang}` skill expects. Identify the canonical validation command and the canonical test command for the project (the precedence convention in marketplace projects: `CLAUDE.md`/`AGENTS.md` → `justfile`/`Makefile` → language-native config; closer to repo root wins). If neither is discoverable from project files, halt — do not guess.
 
 6. **Read repo-local overlays.** `spx/local/audit.md` and `spx/local/audit-{lang}*.md` for each language in scope — read each that exists. Local overlays supersede the pre-loaded standards from the dispatched skill.
+
+7. **Compute the config digest.** Invoke `config-digest` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py` over a stable newline-separated payload naming the selected validation command, selected test command, repo-local overlays read, and language partitions. The digest identifies the run configuration and travels in the wrapper verdict's `metadata.configDigest`; never reuse the scope hash for this field.
 
 Do not read source files for comprehension during Phase 0. Phase 0 only inventories.
 
@@ -89,13 +98,13 @@ Do not read source files for comprehension during Phase 0. Phase 0 only inventor
 
 <phase number="1" name="automated-gates">
 
-Run the project's canonical validation command (discovered in Phase 0 step 5). Any non-zero exit code is REJECT for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
+Run the project's canonical validation command (discovered in Phase 0 step 5). Any non-zero exit code is `FAIL` for row 1. Halt before subsequent phases — rows 2–6 are not evaluated.
 
 </phase>
 
 <phase number="2" name="test-execution">
 
-Run the project's canonical test command. Any failure is REJECT for row 2. Halt before subsequent phases.
+Run the project's canonical test command. Any failure is `FAIL` for row 2. Halt before subsequent phases.
 
 </phase>
 
@@ -121,7 +130,7 @@ Dispatch to `audit-{lang}-architecture`. Findings populate row 5. If no ADRs or 
 
 For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) are then passed to `aggregate_verdicts.py` as repeatable `--row name=STATUS` arguments — `automated-gates` reflects Phase 1's validation-command exit (PASS on zero, FAIL otherwise), `test-execution` reflects Phase 2's test-command exit, and `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts. The aggregator assembles one wrapper verdict whose `children` array carries the per-language verdicts. The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills reading the same Phase 1/2 tool output) demands a directory.
 
-The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type auditing` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
+The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type audit` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
@@ -142,32 +151,72 @@ trap 'rm -rf "$CHILDREN_DIR"' EXIT
 # or UNKNOWN when Phase 0 halted before producing a frozen scope
 # (determinism-contract).
 #
-# Assemble the wrapper verdict. This is the run's verdict artifact; the
-# stateful and PR-thread modes below consume $WRAPPER_JSON unchanged.
+# Stamp the journal run-state identity through the shared git derivation
+# helpers. The base SHA is resolved through remote_tracking_ref, not by
+# composing origin/<base> in prose.
+RUN_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+BRANCH_NAME=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" current-branch)
+BRANCH_SLUG=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" branch-slug \
+  --branch "$BRANCH_NAME")
+BASE_REF=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" base-ref)
+BASE_REMOTE_REF=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" remote-tracking-ref \
+  --base "$BASE_REF")
+HEAD_SHA=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" commit-oid \
+  --ref HEAD)
+BASE_SHA=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" commit-oid \
+  --ref "$BASE_REMOTE_REF")
+SCOPE_HASH=$(printf '%s\n' <frozen-scope-paths> \
+  | python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" scope-hash)
+SCOPE_JSON=$(printf '%s\n' <frozen-scope-paths> \
+  | python3 -c 'import json,sys; print(json.dumps({"include":[line for line in sys.stdin.read().splitlines() if line]}))')
+CONFIG_DIGEST=$(printf '%s\n' <audit-config-digest-input-lines> \
+  | python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" config-digest)
+PARTICIPANTS_JSON='["audit"]'
+OUTPUT_PATHS_JSON='[]'
+TARGET_KIND='branch'
+PULL_REQUEST_METADATA_ARGS=()
+if [ -n "${PR_NUMBER:-}" ]; then
+  TARGET_KIND='pull-request'
+  PULL_REQUEST_METADATA_ARGS=(--metadata pullRequestNumber="$PR_NUMBER")
+fi
+
+# Assemble the wrapper verdict. This is the run's verdict artifact.
 WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --directory "$CHILDREN_DIR" \
   --row automated-gates=PASS \
   --row test-execution=PASS \
   --row determinism-contract=PASS \
-  --skill auditing \
+  --skill audit \
   --target <scope-target> \
-  --metadata branch=<branch-name> \
-  --metadata scope_hash=<scope-hash>)
+  --metadata scopeHash="$SCOPE_HASH" \
+  --metadata branchName="$BRANCH_NAME" \
+  --metadata branchSlug="$BRANCH_SLUG" \
+  --metadata headSha="$HEAD_SHA" \
+  --metadata baseRef="$BASE_REF" \
+  --metadata baseSha="$BASE_SHA" \
+  --metadata configDigest="$CONFIG_DIGEST" \
+  --metadata participants="$PARTICIPANTS_JSON" \
+  --metadata scope="$SCOPE_JSON" \
+  --metadata startedAt="$RUN_STARTED_AT" \
+  --metadata outputPaths="$OUTPUT_PATHS_JSON" \
+  --metadata targetKind="$TARGET_KIND" \
+  "${PULL_REQUEST_METADATA_ARGS[@]}")
 
 # Default stateless local emit: record the run on the spx journal and read
 # its verdict back from the sealed event prefix. journal_emit maps the
 # wrapper onto channel events (one per line) and renders the verdict —
 # overall plus human-readable surface — from the prefix.
-RUN_TOKEN=$(spx journal open --type auditing \
+RUN_TOKEN=$(spx journal open --type audit \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["runToken"])')
+RUN_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 printf '%s' "$WRAPPER_JSON" \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" build-events \
-    --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --now "$RUN_COMPLETED_AT" \
   | while IFS= read -r EVENT; do
-      printf '%s' "$EVENT" | spx journal append --type auditing --run "$RUN_TOKEN" >/dev/null
+      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
     done
-spx journal seal --type auditing --run "$RUN_TOKEN" >/dev/null
-spx journal read --type auditing --run "$RUN_TOKEN" --from 0 \
+spx journal seal --type audit --run "$RUN_TOKEN" >/dev/null
+spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render
 ```
 
@@ -193,9 +242,21 @@ The canonical schema is declared in `${CLAUDE_SKILL_DIR}/scripts/verdict.py` (`S
     {"name": "determinism-contract", "status": "PASS | FAIL | UNKNOWN", "findings": []}
   ],
   "children": [
-    { "skill": "audit-typescript", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
+    { "skill": "audit-{lang}*", "overall": "PASS | FAIL | UNKNOWN", "rows": [...] }
   ],
-  "metadata": {"branch": "<branch>", "scope_hash": "<12-char-hex>"}
+  "metadata": {
+    "scopeHash": "<12-char-hex>",
+    "branchName": "<branch>",
+    "branchSlug": "<branch-slug>",
+    "headSha": "<head-oid>",
+    "baseRef": "<base-ref>",
+    "baseSha": "<base-oid>",
+    "configDigest": "<config-digest>",
+    "participants": "[\"audit\"]",
+    "scope": "{\"include\":[\"<path>\"]}",
+    "startedAt": "<utc-timestamp>",
+    "outputPaths": "[]"
+  }
 }
 ```
 
@@ -223,126 +284,14 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 
 </failure_modes>
 
-<stateful_orchestration>
-
-Callers that need cross-run continuity — carrying open finding IDs forward, resolving findings that have been fixed, reopening regressions under their original IDs — invoke this skill with the stateful-orchestration mode enabled. The mode is opt-in: a caller activates it by requesting state persistence (e.g., the `audit-orchestrator` agent in its prompt). When inactive, the skill runs the stateless protocol above unchanged.
-
-The stateful mode routes through the verdict toolchain, not the journal: Phase 6 assembles `$CHILDREN_DIR` and `$WRAPPER_JSON`, and the state-transition flow below replaces the default `spx journal` emit. The default journal emit and the stateful mode are mutually exclusive — an active stateful run drives the state-transition flow rather than the journal channel.
-
-State partitioning and naming are deterministic. State files live at `.spx/audits/<lang>/<branch-slug>.md` rooted in the repo working tree, with the run lock at `<state-file>.lock`. The `.spx/` root is gitignored — state is local development scratch, not product truth. Language partition is the same `<lang>` the orchestrator dispatches against in Phase 3–5; branch slug is derived from the current branch via the CLI.
-
-The skill drives every CLI invocation from inside its own prose so Claude never constructs a path into `scripts/`. Each command below is invoked exactly once per language partition as part of the stateful flow. Every shell variable below is set within these blocks — there are no upward references to undefined names — so running each block in order keeps every value in scope.
-
-1. **Resolve the branch and the state path.** `LANG` is the partition language identifier from Phase 0 step 3 (`python`, `typescript`, `rust`, …). The block assumes `LANG` is set in the environment — one invocation per partition with `LANG` set accordingly.
-
-   ```bash
-   BRANCH=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" current-branch)
-   BASE=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" base-ref)
-   STATE_DIR=".spx/audits/${LANG}"
-   SLUG=$(python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" \
-     branch-slug --branch "$BRANCH" --state-dir "$STATE_DIR")
-   STATE_FILE="$STATE_DIR/${SLUG}.md"
-   LOCK_FILE="${STATE_FILE}.lock"
-   ```
-
-2. **Acquire the lock before any state read or write.** A fresh held lock means another run is in progress on this branch — halt the audit and report the lock holder so the caller can decide whether to wait or abort.
-
-   ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" acquire-lock \
-     --path "$LOCK_FILE" || exit 1
-   ```
-
-   Crash recovery is the TTL's responsibility, not a shell `trap`. Claude invokes the stateful flow as a sequence of separate `Bash` tool calls, each spawning a fresh shell; a `trap EXIT` registered in the acquisition call does not survive into later calls. If Claude or the session aborts between this step and step 5's explicit release, the lock file persists until its mtime exceeds `DEFAULT_LOCK_TTL_SECONDS` (600 s), after which the next acquire-lock invocation overwrites it. The clean-exit release lives in step 5 below.
-
-3. **Run the audit (stateless Phases 0–6).** Phase 6 writes per-language verdict JSON files into the scratch directory `$CHILDREN_DIR` defined inside the Phase 6 `<phase number="6">` block above. Read this partition's verdict back into a shell variable with `read_verdict.py`:
-
-   ```bash
-   FINDINGS_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/read_verdict.py" \
-     --file "$CHILDREN_DIR/${LANG}.json" --field findings)
-   ```
-
-4. **Apply the state transition.** Pipe `FINDINGS_JSON` into `state-transition`. The CLI writes the new state file atomically and emits the `{open, resolved, reopened}` classification on stdout. `VERDICT` is the wrapper verdict's `overall` from Phase 6 (`APPROVED`, `REJECTED`, or `UNKNOWN`).
-
-   ```bash
-   CURRENT_SHA=$(git rev-parse HEAD)
-   NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-   printf '%s' "$FINDINGS_JSON" | \
-     python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" state-transition \
-       --state-file "$STATE_FILE" \
-       --branch "$BRANCH" \
-       --current-sha "$CURRENT_SHA" \
-       --now "$NOW" \
-       --verdict "$VERDICT"
-   ```
-
-   The stdin payload conforms to the `state-transition` contract: a JSON object with a top-level `findings` array, each entry carrying `file_line`, `concern`, `root_cause`, and `required_fix` strings. Construct `FINDINGS_JSON` as that shape (the Phase 6 dispatched-skill verdicts already populate the four fields per finding).
-
-5. **Release the lock and render the emitted output.** Run `release-lock` as the final step of the clean-exit path; the call is idempotent so re-running is safe.
-
-   ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" release-lock \
-     --path "$LOCK_FILE"
-   ```
-
-   Then render with the state classification merged into the wrapper verdict's metadata (`state.open_count`, `state.resolved_this_run`, `state.reopened_this_run`). The verdict surface form follows the caller's format flag; the orchestration mode does not change which format is rendered.
-
-The lock TTL defaults to `DEFAULT_LOCK_TTL_SECONDS` (600 seconds). A lock with mtime older than the TTL is treated as stale (left by a crashed run) and overwritten; this is the crash-recovery path. The explicit `release-lock` above is the clean-exit path.
-
-The state-transition CLI distinguishes three failure modes by exit code: `1` for lock-held / acquisition failure, `2` for `StateFileCorruptError` (the on-disk state file failed to parse), `3` for malformed stdin JSON (missing required finding keys). Exit `2` is Claude's signal to surface the state-file path and ask the caller whether to discard it for a clean re-run or keep it for inspection.
-
-The stateful mode never writes outside `.spx/audits/`. The wrapper verdict, dispatched children, and `$CHILDREN_DIR` scratch space remain ephemeral per the stateless contract.
-
-</stateful_orchestration>
-
-<verdict_thread_orchestration>
-
-CI callers that need cross-CI-run continuity over a pull request — surfacing what got fixed and what regressed across iterations — invoke this skill with one of the two PR-thread modes. Both are opt-in via an explicit `MODE:` line in the invocation prompt. The skill keys on the line: `MODE: prior-verdict-read` for the prior-verdict ingest, `MODE: with-prior-verdict` for the audit that diffs against a prior verdict. State for these modes lives in the PR comment thread itself — the durable cross-CI-run surface for an audit verdict — the skill writes nothing to `.spx/` in either mode.
-
-The PR-thread modes route through the verdict toolchain, not the journal: Phase 6 assembles `$WRAPPER_JSON`, and the verdict-diff and `emit_verdict.py` flow below replaces the default `spx journal` emit. The default journal emit and the PR-thread modes are mutually exclusive — an active PR-thread run drives that flow rather than the journal channel.
-
-The `MODE:` line is the explicit signal — a free-text description of the intent may accompany it for human readability but the skill matches on the `MODE:` line, not on the prose. Exactly one `MODE:` line must appear per invocation: if the invocation contains no recognised `MODE: prior-verdict-read` or `MODE: with-prior-verdict` line and the standard six-phase audit is not in scope either, OR contains both `MODE:` lines (a template copy-paste accident), STOP and return an error naming which condition was hit — never default silently and never pick one of the conflicting modes. Silent defaulting produces spurious extra PR comments or wrong resolved/reopened classifications when a caller's wording drifts; loud failure surfaces the drift on the next CI run.
-
-**MODE: prior-verdict-read.** Pull the prior audit verdict, if any, from the target PR's comment thread. The caller supplies `REPO` (owner/repo) and `PR NUMBER`. The skill drives the pipeline below from inside its own prose so Claude never constructs a path into `scripts/`.
-
-```bash
-PRIOR_RAW=$(gh -R "$REPO" pr view "$PR_NUMBER" --json comments --jq \
-  '[.comments[] | select(.body | contains("<!-- AUDIT_VERDICT_JSON_BEGIN -->"))] | last | .body')
-if [ -z "$PRIOR_RAW" ] || [ "$PRIOR_RAW" = "null" ]; then
-  printf '{"prior": null}\n'
-else
-  PRIOR_JSON=$(printf '%s' "$PRIOR_RAW" | python3 "${CLAUDE_SKILL_DIR}/scripts/read_verdict.py")
-  printf '{"prior": %s}\n' "$PRIOR_JSON"
-fi
-```
-
-The skill returns `{"prior": null}` when no comment carries the `<!-- AUDIT_VERDICT_JSON_BEGIN -->` delimiter (first run on a new PR), or `{"prior": <parsed verdict>}` when the most recent audit comment is found. The caller (the `pr-review-orchestrator` agent) tolerates both shapes — the no-prior case yields empty `resolved` and `reopened` in the next mode.
-
-**MODE: with-prior-verdict.** Run the standard stateless six-phase audit, then diff the emitted verdict against the prior verdict to compute `resolved` and `reopened`, populating those arrays in the wrapper verdict that gets rendered. The caller supplies the prior verdict as a JSON file path (typically the `prior` payload returned by `prior-verdict-read`, written to a temp file).
-
-```bash
-PRIOR_FILE=$(mktemp)
-printf '%s' "$PRIOR_VERDICT_JSON" > "$PRIOR_FILE"
-# Run Phases 0–6 as documented above; capture the wrapper verdict JSON in $WRAPPER_JSON.
-ENRICHED_JSON=$(printf '%s' "$WRAPPER_JSON" | \
-  python3 "${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py" verdict-diff \
-    --prior "$PRIOR_FILE")
-rm -f "$PRIOR_FILE"
-printf '%s' "$ENRICHED_JSON" | python3 "${CLAUDE_SKILL_DIR}/scripts/emit_verdict.py" \
-  --format "${AUDIT_FORMAT:-markdown+json}"
-```
-
-`compute_verdict_diff` (see `audit_orchestrator.py`) computes resolved + reopened by content identity `(file, line, rule, message)` — `id` and `severity` are deliberately excluded so a regenerated finding with a fresh ID or an upgraded severity matches its prior counterpart. The diff carries forward state across runs: `resolved` accumulates findings that have been resolved at any point in the PR's history (minus anything currently reopened), and `reopened` is the set of currently-open findings that match a previously-resolved entry. First-run (`PRIOR_FILE` absent or `--prior` omitted) yields empty `resolved` and `reopened` in the enriched verdict.
-
-When the caller composes a single combined PR comment from the rendered enriched verdict plus a review prose section (the `pr-review-orchestrator` flow), the JSON payload's `<!-- AUDIT_VERDICT_JSON_BEGIN --> ... <!-- AUDIT_VERDICT_JSON_END -->` delimiters are preserved verbatim so the next iteration's `prior-verdict-read` can recover this verdict as the prior. The caller MUST NOT wrap the JSON in a markdown fence and MUST NOT post the verdict as a separate comment — both would break the next ingest.
-
-</verdict_thread_orchestration>
-
 <success_criteria>
 
 - One wrapper verdict emitted, with one child verdict per language partition in the frozen scope.
 - The wrapper has three orchestrator-owned rows (`automated-gates`, `test-execution`, `determinism-contract`) and one child per partition.
 - The wrapper's `overall` is APPROVED, REJECTED, or UNKNOWN per `verdict.roll_up` applied to wrapper rows plus children overalls.
 - The wrapper verdict is assembled via `aggregate_verdicts.py`; the default stateless local run is recorded on the `spx journal` and its verdict read back through `journal_emit.py render`, the overall preserved across the journal.
+- Pull-request audit runs stamp `pullRequestNumber` and target kind into wrapper metadata and read prior state through the journal backend, never from rendered PR comments.
+- Resolved/reopened projection uses content identity `(file, line, rule, message)` and treats a first PR run as empty prior state.
 - The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `audit-{lang}*` and the language placeholder `<lang>`.
 - The scope hash is reproducible: re-running the skill on the same frozen scope produces the same hash.
 - If the run halts, the halt reason is reported on the row the halt condition owns and no subsequent phase runs: a Phase 1 non-zero validation exit on `automated-gates` (FAIL), a Phase 2 non-zero test exit on `test-execution` (FAIL), and an empty scope or a missing `audit-{lang}*` trio (a Phase 0 halt before a frozen scope exists) on `determinism-contract` (UNKNOWN).

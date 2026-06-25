@@ -1,6 +1,6 @@
 # Issues: Reviewing Changes Enabler
 
-## 1. Caller-narrowing prompt-content assertion is `[review]`, could be `[test]` (FOLLOW-UP)
+## 1. Caller-narrowing prompt-content assertion is `[review]`, could be `[test]` (DEBT)
 
 The assertion added to `reviewing-changes.md` —
 
@@ -34,7 +34,7 @@ Until then, agents running the local review in this multi-worktree repo keep `ma
 
 Surfaced during the `fix/sessions-test-hermeticity` change review (PR #105).
 
-## 3. Local census markers diverge from the GH CI clean-review message (FOLLOW-UP)
+## 3. Local census markers diverge from the GH CI clean-review message (DEBT)
 
 The local `review-changes` render emits a per-severity census for the no-findings state — `BLOCKING: none` / `DEBT: none` — while the GH-hosted `spec-tree-review` workflow (in `outcomeeng/gh-actions`) emits a single composite clean-review line, `No BLOCKING or DEBT findings.`. The `21-script-decomposition.adr.md` "one source of truth" rationale assumes the two surfaces share the rendered shape; for the no-findings state they now differ.
 
@@ -150,71 +150,56 @@ Required handling:
 
 Surfaced by the `changes-reviewer` runs on `outcomeeng/plugins` PR #148.
 
-## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED — cascade pending)
+## 6. Collapse the reviewer severity set to `blocking`/`debt` and move disposition to the author (DECIDED)
 
 **Decided (2026-06-10).** Governing decision recorded at
-`spx/15-merging.pdr.md`:
-two severities `blocking`/`debt`; the reviewer judges finding validity and
-severity, the author judges disposition (fix-in-PR or track-out-of-scope in the
-owning node's `ISSUES.md`/`PLAN.md` with a recorded reason); the reviewer's
-render carries the two severity buckets and no disposition axis. The root
-`spx/15-merging.pdr.md` gate clauses were amended in-place to read "a
-`DEBT` finding the author tracks out of scope with a recorded reason is
-non-blocking" in place of the `FOLLOW-UP` severity. The specs, implementation,
-evals, and template below still declare the three-severity taxonomy and are in
-violation of the new decision until the cascade lands.
+`spx/15-merging.pdr.md`: two severities `blocking`/`debt`; the reviewer judges
+finding validity and severity, the author judges disposition (fix-in-PR or
+track-out-of-scope in the owning node's `ISSUES.md`/`PLAN.md` with a recorded
+reason); the reviewer's render carries the two severity buckets and no
+disposition axis. The root `spx/15-merging.pdr.md` gate clauses read "a `DEBT`
+finding the author tracks out of scope with a recorded reason is non-blocking."
 
-The shared taxonomy declares three severities — `blocking`, `debt`, `follow_up`
-(`reviewing.md`, `reviewing-changes.md`'s severity rubric `[eval]`,
-`REVIEW.template.md`, the `Severity` enum and render templates). `follow_up` is
-defined as *"out-of-scope items that would extend the blast-radius of the PR"* — a
-**scope** judgment, not a severity one.
-
-**Proposal.** The reviewer emits only `blocking` (merge-safety defect) and `debt`
+**Decision.** The reviewer emits only `blocking` (merge-safety defect) and `debt`
 (real defect) — the **validity/severity** axis it judges from the code and the
 rules — and the **author** maps each `debt` to `{fix-in-PR |
-track-out-of-scope-in-ISSUES/PLAN-with-justification}` along the **disposition**
-axis, which only the author — holding the changeset's intended scope and its
-`PLAN.md` — is positioned to judge.
+track-out-of-scope-in-ISSUES/PLAN-with-justification}` along the
+**disposition** axis, which only the author — holding the changeset's intended
+scope and its `PLAN.md` — is positioned to judge.
 
 **Rationale (this session).** On PR #148 the reviewer labeled a CLI-scenario
-assertion gap `follow_up`; the author tracked it in `ISSUES.md` rather than fixing
-it, deferring to the reviewer's scope call — and the operator then asked why a
-small, in-scope fix had been merely tracked. The `follow_up` label outsourced a
-scope decision the reviewer is not positioned to make. The skill already declares
-the reviewer "carries findings only … never decides" (`reviewing.md`) and that the
-consumer "acts by validity and phase, never by severity"
-(`spx/15-merging.pdr.md`); `follow_up` is the one place the reviewer
-still makes a disposition call, in tension with that stance.
+assertion gap as a separate scope-disposition class; the author tracked it in
+`ISSUES.md` rather than fixing it, deferring to the reviewer's scope call — and
+the operator then asked why a small, in-scope fix had been merely tracked. That
+outsourced a scope decision the reviewer is not positioned to make. The skill
+already declares the reviewer "carries findings only … never decides"
+(`reviewing.md`) and that the consumer "acts by validity and phase, never by
+severity" (`spx/15-merging.pdr.md`).
 
 **Cascade landed (2026-06-10).** The decision records, the specs (`reviewing.md`,
 `reviewing-changes.md`), `REVIEW.template.md`, the implementation (the `Severity`
-enum at schema v3, `render_review.py`, `review-prompt.md`, and the deleted
-`finding-followup.md`/`none-followup.md` render templates), the four test files,
-and the eval files (`severity-classification` cases plus the three prompt schema
-blocks) all moved to the two-severity model; `dist/` was rebuilt. **Residual:** the
-live eval suite (`severity-classification`, `judgment-grounding`, `findings-direction`)
-needs a re-run to confirm calibration under two severities — that runs out-of-band
-(API cost) per the repo's eval process, and the `severity-classification` case-diff
+enum at schema v3, `render_review.py`, `review-prompt.md`, and the two removed
+scope-disposition render templates), the four test files, and the eval files
+(`severity-classification` cases plus the three prompt schema blocks) all moved to
+the two-severity model; `dist/` was rebuilt. **Residual:** the live eval suite
+(`severity-classification`, `judgment-grounding`, `findings-direction`) needs a
+re-run to confirm calibration under two severities — that runs out-of-band (API
+cost) per the repo's eval process, and the `severity-classification` case-diff
 recalibration the prior `PLAN.md` flagged still applies. The blast-radius surfaces
 this change touched:
 
-- `reviewing.md` three-severity Compliance assertions (the
-  `blocking`/`debt`/`follow_up` set and the severity-rank NEVER).
+- `reviewing.md` severity Compliance assertions.
 - `reviewing-changes.md`: the `Severity` enum wire-value Mapping, the
   `Severity → render-class` Mapping, the render census/label-asymmetry Compliance,
   and the severity-rubric `[eval]` (`evals/severity-classification/`).
 - `Severity` enum and `from_json_dict` in the `review_result.py` policy module;
-  render templates `references/render/finding-followup.md` and `none-followup.md`.
+  render templates for the removed scope-disposition bucket.
 - `evals/severity-classification/` cases — this node's `PLAN.md` already records
-  them as calibration-fragile at the `follow_up` boundary (cases 3–4 flip
-  `debt`/`follow_up` across trials); a two-severity rubric would likely *improve*
-  eval stability.
+  them as calibration-fragile; a two-severity rubric reduces that ambiguity.
 - `REVIEW.template.md` (the consumer-override taxonomy surface at repo root).
-- `spx/15-merging.pdr.md` — `MERGE_READINESS` reads the taxonomy; its
-  "`FOLLOW-UP` tracked, not blocking" clause becomes "a `debt` the author tracked
-  out-of-scope, with a recorded reason, is not blocking." Same gate strength,
-  ownership corrected.
+- `spx/15-merging.pdr.md` — `MERGE_READINESS` reads the taxonomy; a `debt` the
+  author tracks out-of-scope, with a recorded reason, is not blocking. Same gate
+  strength, ownership corrected.
 
 **Decided (render shape).** The reviewer's render carries exactly two buckets,
 `BLOCKING` and `DEBT`, each reporting its census in the empty state. The
@@ -227,6 +212,12 @@ Surfaced from the operator review of `changes-reviewer` behavior on
 `outcomeeng/plugins` PR #148 (2026-06-09).
 
 ## 7. Thread-store slug resolves a stale branch name in a reused worktree
+
+**Resolved for review persistence by the 2026-06-23 journal migration.** The
+review-changes skill no longer writes `review-result.json` / `review.md` under a
+branch-slugged Thread Store path. Durable review state is now the sealed
+`spx journal --type review` prefix, whose terminal event records `branchSlug`,
+`headSha`, `baseRef`, `baseSha`, `configDigest`, `scope`, and `status`.
 
 `review-changes` persists `review-result.json` / `review.md` under a
 thread-store slug derived from the branch identity by the `scope-changeset` skill
@@ -253,7 +244,8 @@ consumer reading the thread store for branch B finds the wrong branch's record (
 none), and any cross-branch artifact lookup by slug is unreliable in the
 multi-worktree layout.
 
-**Required handling (investigate in `scope-changeset`, the governing node):**
+**Residual handling (investigate in `scope-changeset`, the governing node, if
+branch identity is observed stale outside Thread Store):**
 
 - Confirm how the branch slug is derived — current checked-out branch vs a stale or
   cached ref — and key it off `git branch --show-current` (or the
@@ -270,6 +262,12 @@ Surfaced during the PR #149 local review (2026-06-09), branch
 `work__handoff-lint-enforcement`.
 
 ## 8. The persisted review carries no head identity, so a re-review can return a stale verdict
+
+**Resolved by the 2026-06-23 journal migration.** The review-changes skill now
+derives run metadata from the current worktree and env refs before appending
+review journal events. The terminal `com.outcomeeng.spx.journal.run.completed`
+event carries `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`,
+`scope`, and `status`; the skill reads the sealed prefix back before reporting.
 
 `review-result.json` records findings, acknowledgements, and a summary, but no
 identity of the diff it reviewed — no head OID and no base OID. The thread store
@@ -288,15 +286,15 @@ observed on `outcomeeng/plugins` PR #260 (2026-06-18), where the agent re-read t
 pre-fix record and reported the prior diff's findings. Had that stale verdict been
 *clean*, the path would authorize merging a diff no review ever saw.
 
-**Required handling — a safety property the thread-store replacement must keep.**
-The thread-store backend is being replaced; whatever replaces it must:
+**Resolved handling — the journal replacement keeps this safety property:**
 
-- Stamp the resolved head OID (and base OID) into the review record when
-  `compute_diff` runs.
-- Make `changes-reviewer` / `review-changes` always recompute against the current
-  head and refuse to return a record whose stamped head ≠ the current head.
-- Let the `MERGE_READINESS` evaluation read that stamp to confirm the local review
-  is current, at parity with how the CI review's currency is established.
+- Stamp the resolved head OID and base OID into the terminal journal run-state
+  event.
+- Make `changes-reviewer` / `review-changes` recompute against the current refs
+  and record a fresh journal run.
+- Let `MERGE_READINESS` read the sealed prefix's terminal run-state to confirm
+  the local review is current, at parity with how the CI review's currency is
+  established.
 
 Same stale-ref family as items 2 and 7 (base ref, slug); this one is the
 record-identity gap and the only one with a direct merge-safety consequence.

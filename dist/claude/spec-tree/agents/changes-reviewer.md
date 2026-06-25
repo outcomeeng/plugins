@@ -10,20 +10,20 @@ skills:
 
 <role>
 
-Resolve the input scope into a `(from_ref, to_ref)` pair, export the refs as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.
+Resolve the input scope into `(from_ref, to_ref, branch_name)`, export the refs, branch identity, and target identity as env vars when the input is non-empty, then invoke `spec-tree:review-changes`. The skill owns the rest of the chain.
 
 </role>
 
 <input_resolution>
 
-Parse the optional input into `(from_ref, to_ref)`:
+Parse the optional input into `(from_ref, to_ref, branch_name)`:
 
-| Input form            | Recognized by                                                                                           | `from_ref` (base)                            | `to_ref` (head)               |
-| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------- |
-| **Empty / none**      | input omitted                                                                                           | derived by the skill (`origin/HEAD`)         | derived by the skill (`HEAD`) |
-| **PR reference**      | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n>` | `origin/<headRefName>`        |
-| **Branch reference**  | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | derived by the skill (`origin/HEAD`)         | the supplied token            |
-| **`from...to` range** | contains `...` (three dots) as a delimiter                                                              | the token before `...`                       | the token after `...`         |
+| Input form            | Recognized by                                                                                           | `from_ref` (base)                            | `to_ref` (head)               | `branch_name`         |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------- | --------------------- |
+| **Empty / none**      | input omitted                                                                                           | derived by the skill (`origin/HEAD`)         | derived by the skill (`HEAD`) | derived by the skill  |
+| **PR reference**      | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n>` | `origin/<headRefName>`        | `<headRefName>`       |
+| **Branch reference**  | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | derived by the skill (`origin/HEAD`)         | the supplied token            | the supplied token    |
+| **`from...to` range** | contains `...` (three dots) as a delimiter                                                              | the token before `...`                       | the token after `...`         | the token after `...` |
 
 Disambiguation: a token containing `...` is always a range; a bare `#<digits>` is always a PR reference. For a branch name that collides with a PR number, use `<owner>/<repo>#<n>` to force PR handling.
 
@@ -31,11 +31,11 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <workflow>
 
-1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
+1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
 
-2. **Export the refs for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>` and `SPX_VERIFY_HEAD_REF=<to_ref>`. For empty input, export nothing — the skill auto-resolves both refs.
+2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
 
-3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, and persists `review-result.json` and `review.md` to the current thread.
+3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, records the run on `spx journal --type review`, and renders the sealed prefix.
 
 </workflow>
 
@@ -48,19 +48,20 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <output_format>
 
-Two artifacts under the thread-store backend's storage paths (default `.spx/reviews/<branch-slug>/`):
+The skill reports:
 
-- `review-result.json` — structured result (findings, acknowledgements).
-- `review.md` — rendered prose plus findings table.
+- the `spx journal --type review` run token
+- the `BLOCKING: <n>, DEBT: <n>` count line
+- the rendered review surface when findings are present
 
-The skill writes both. The `.spx/` root is gitignored.
+The sealed review journal prefix is the durable run state.
 
 </output_format>
 
 <success_criteria>
 
-- The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` were exported; for empty input, neither was set.
+- The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were exported; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were exported; for empty input, none of those vars were set.
 - The skill ran to completion and the arbiter accepted the emitted JSON.
-- `review-result.json` and `review.md` exist in the current thread.
+- The review journal run was sealed and read back before reporting the result.
 
 </success_criteria>

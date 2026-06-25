@@ -155,6 +155,68 @@ def _project_child(child: verdict_schema.Verdict) -> list[_ProjectedFinding]:
     return findings
 
 
+def _required_metadata(wrapper: verdict_schema.Verdict, key: str) -> str:
+    value = wrapper.metadata.get(key)
+    if value is None or value == "":
+        raise ValueError(f"wrapper metadata {key!r} is required")
+    return value
+
+
+def _optional_metadata(wrapper: verdict_schema.Verdict, key: str) -> str | None:
+    value = wrapper.metadata.get(key)
+    if value == "":
+        raise ValueError(f"wrapper metadata {key!r} must be non-empty when present")
+    return value
+
+
+def _metadata_json_object(wrapper: verdict_schema.Verdict, key: str) -> dict:
+    raw = _required_metadata(wrapper, key)
+    value = json.loads(raw)
+    if not isinstance(value, dict):
+        raise ValueError(f"wrapper metadata {key!r} must be a JSON object")
+    return value
+
+
+def _metadata_json_string_array(
+    wrapper: verdict_schema.Verdict,
+    key: str,
+    *,
+    default: tuple[str, ...] | None = None,
+) -> tuple[str, ...]:
+    raw = wrapper.metadata.get(key)
+    if raw is None:
+        if default is None:
+            raise ValueError(f"wrapper metadata {key!r} is required")
+        return default
+    value = json.loads(raw)
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item for item in value
+    ):
+        raise ValueError(
+            f"wrapper metadata {key!r} must be a JSON array of non-empty strings"
+        )
+    return tuple(value)
+
+
+def _metadata_target_kind(wrapper: verdict_schema.Verdict) -> object:
+    value = wrapper.metadata.get(
+        jp.RUN_STATE_TARGET_KIND, str(jp.JournalTargetKind.BRANCH)
+    )
+    return jp.JournalTargetKind(value)
+
+
+def _metadata_pull_request_number(wrapper: verdict_schema.Verdict) -> int | None:
+    value = _optional_metadata(wrapper, jp.RUN_STATE_PULL_REQUEST_NUMBER)
+    if value is None:
+        return None
+    parsed = int(value)
+    if parsed <= 0:
+        raise ValueError(
+            f"wrapper metadata {jp.RUN_STATE_PULL_REQUEST_NUMBER!r} must be positive"
+        )
+    return parsed
+
+
 def events_for_wrapper(
     wrapper: verdict_schema.Verdict, *, now: str, attempt: int = 1
 ) -> list[dict[str, object]]:
@@ -169,8 +231,24 @@ def events_for_wrapper(
     projected = _project_verdict(wrapper)
     run = jp.RunResult(
         target=wrapper.target,
-        scope_hash=wrapper.metadata.get("scope_hash", ""),
-        branch=wrapper.metadata.get("branch", ""),
+        scope_hash=_required_metadata(wrapper, jp.RUN_STATE_SCOPE_HASH),
+        branch_name=_required_metadata(wrapper, jp.RUN_STATE_BRANCH_NAME),
+        branch_slug=_required_metadata(wrapper, jp.RUN_STATE_BRANCH_SLUG),
+        head_sha=_required_metadata(wrapper, jp.RUN_STATE_HEAD_SHA),
+        base_ref=_required_metadata(wrapper, jp.RUN_STATE_BASE_REF),
+        config_digest=_required_metadata(wrapper, jp.RUN_STATE_CONFIG_DIGEST),
+        participants=_metadata_json_string_array(
+            wrapper, jp.RUN_STATE_PARTICIPANTS, default=(wrapper.skill,)
+        ),
+        scope=_metadata_json_object(wrapper, jp.RUN_STATE_SCOPE),
+        started_at=wrapper.metadata.get(jp.RUN_STATE_STARTED_AT, now),
+        completed_at=wrapper.metadata.get(jp.RUN_STATE_COMPLETED_AT, now),
+        output_paths=_metadata_json_string_array(
+            wrapper, jp.RUN_STATE_OUTPUT_PATHS, default=()
+        ),
+        target_kind=_metadata_target_kind(wrapper),
+        base_sha=_required_metadata(wrapper, jp.RUN_STATE_BASE_SHA),
+        pull_request_number=_metadata_pull_request_number(wrapper),
         findings=tuple(
             jp.Finding(
                 file=finding.file,

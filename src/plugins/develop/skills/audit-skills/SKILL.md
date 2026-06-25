@@ -4,7 +4,6 @@ description: >-
   SKILL.md audit methodology preloaded by the skill-auditor agent. Dispatch
   skill-auditor to audit SKILL.md files; the main conversation reaches this audit
   only through that agent.
-argument-hint: <skill-path>
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
@@ -282,7 +281,7 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The caller captures the JSON and routes it through `emit_verdict.py` with the requested `--format` (defaulting to `markdown+json` for PR-comment delivery).
+Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
 

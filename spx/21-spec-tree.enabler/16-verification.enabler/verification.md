@@ -1,12 +1,12 @@
 # Verification
 
-PROVIDES the run-journal architecture shared by the agentic verification types — reviewing and auditing — under which their skills and thin wrapper agents record changeset-scoped runs
+PROVIDES the run-journal architecture shared by the agentic verification types — review and audit — under which their skills and thin wrapper agents record changeset-scoped runs
 SO THAT authors of agentic verification skills and the wrapper agents that drive them
 CAN compose against one append-only run-journal contract, one projection discipline, and one wrapper-agent shape
 
 ## Verification types
 
-The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understand` foundation reference `src/plugins/spec-tree/skills/understand/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; reviewing and auditing implement it.
+The five verification types and the two axes that classify them — verdict mode and purpose — are declared in the `/understand` foundation reference `src/plugins/spec-tree/skills/understand/references/verification-kinds.md` and grounded for this product in `spx/14-verification.pdr.md`. This enabler is the home of the agentic types' shared architecture, decided in `spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`; review and audit implement it.
 
 ## Assertions
 

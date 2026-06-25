@@ -110,3 +110,47 @@ Resolved by removing the hooks. The spec-tree plugin now ships a single `Session
 The shipped template `src/plugins/spec-tree/skills/understand/templates/spx-claude.md` (rendered into each product's `spx/CLAUDE.md`) shows the Python test-naming pattern with `scenario` as the example evidence token for all three levels — `test_parsing.scenario.l1.py`, `test_cli.scenario.l2.py`, `test_workflow.scenario.l3.py` — and names no other evidence type. `scenario` is the existential type; a reader mapping a `### Compliance` / `### Mappings` / universal assertion to a filename has no example showing the universal tokens (`compliance`/`mapping`/`conformance`/`property`), so the table nudges authors toward `scenario` even for universals. This is the exact mis-typing the verdict-toolchain node hit (universal `ALWAYS` assertions filed under `*.scenario.l1.py`).
 
 **Resolution shape**: in the template, either add a row/example using a universal token (e.g. `test_rollup.mapping.l1.py`) alongside the `scenario` example, or annotate that the evidence segment is one of `scenario`/`mapping`/`conformance`/`property`/`compliance` chosen per `/test` routing (a universal is never `scenario`). Editing the rendered `spx/CLAUDE.md` directly is not the fix — it re-renders from the template via `/update-spx`; change the template. Surfaced by the local `review-changes` review on PR #300 (dropped there as out-of-scope for that PR).
+
+## 22. PR #329 surfaced instruction gaps in spec-tree operations
+
+PR #329 exposed avoidable workflow failures where clearer local instructions or skill guidance would have forced the right action earlier. The incidents below are coordination notes; each item needs a follow-up change in the named surface.
+
+- **Verification-kind vocabulary.** Treated `reviewing` as a skill-naming violation when it was the verification-kind vocabulary, predating the gerund-to-imperative skill rename.
+  Preventing instruction: when a term can belong to both a skill-name grammar and the verification taxonomy, inspect the governing vocabulary source and file history before classifying it as a naming defect.
+  Suggested surfaces: `spec-tree:understand` `verification-kinds.md`; `develop:skill-standards`; `spx/AGENTS.md` historical-context guidance.
+
+- **Declared source first.** Looked at implementation/code surfaces before resolving the user-named source of truth.
+  Preventing instruction: for vocabulary, taxonomy, and methodology questions, read the declared source first, then use implementation as lower-layer evidence.
+  Suggested surfaces: `spx/AGENTS.md`; `spec-tree:understand`; `spec-tree:align`.
+
+- **Mutation status wording.** Used operator-facing shorthand such as "direct config patch" without explaining the exact file and lifecycle impact.
+  Preventing instruction: status updates for repository mutations must name the target file, the intended edit, and why it is local enough to proceed.
+  Suggested surfaces: `spx/AGENTS.md` clarity rules; `spec-tree:merge`; `spec-tree:manage-pr`.
+
+- **Hosted-service verification.** Answered the SonarQube wildcard question from weak references before testing SonarQube Cloud behavior.
+  Preventing instruction: for hosted-tool behavior that differs between cloud and server products, verify against the hosted surface or an experiment before recommending config.
+  Suggested surfaces: `spx/AGENTS.md`; a future SonarQube validation note under `spx/15-validation.enabler`.
+
+- **Sibling config comparison.** Set the SonarQube Python version from `/Users/shz/Code/outcomeeng/spx/spx/.sonarcloud.properties` only after explicit correction.
+  Preventing instruction: when importing a config pattern from a sibling Outcome Engineering repository, compare the full relevant property set alongside the property under active discussion.
+  Suggested surfaces: `spx/AGENTS.md`; `spx/15-validation.enabler` SonarQube guidance.
+
+- **Tool-reported issues.** Saw SonarQube Cloud issue output and continued PR management instead of fixing surfaced issues immediately.
+  Preventing instruction: PR management must treat tool-reported issue links and PR comments as actionable review surfaces when they name new-code defects.
+  Suggested surfaces: `spec-tree:manage-pr`; `spec-tree:inspect-github-actions`; `spx/AGENTS.md` imperfection protocol examples.
+
+- **Rendered floor output.** Advanced `REQUIRED_SPX_VERSION` and `.github/workflows/check.yml` without immediately rebuilding generated diagnose skill output.
+  Preventing instruction: any floor rendered into shipped skill content requires `just build-skills` in the same edit batch before push.
+  Suggested surfaces: `spec-tree:commit-changes`; `spx/local/commit-changes.md`; `outcomeeng/validation/spx_version.py` module doc.
+
+- **Ship request status.** Failed to translate "ship it" into the exact current gate state until after another CI pass.
+  Preventing instruction: a ship request during an open PR should report the live gate tuple first: head SHA, current-head review state, required checks, production-readiness rule, and next autonomous action.
+  Suggested surfaces: `spec-tree:merge`; `spec-tree:manage-pr`; `spx/AGENTS.md` status-update examples.
+
+Suggested `spx/AGENTS.md` additions:
+
+- Add a **source-of-truth first** rule for methodology vocabulary: read specs, decisions, local skill policy, and file history before treating implementation or generated output as authority.
+- Add a **hosted-service verification** rule: when a tool has Cloud and Server variants, test or cite the exact hosted variant before changing config.
+- Add a **mutation status shape** for operator-facing updates: target path, action, reason, validation plan, and gate impact.
+- Add a **rendered-output reminder** for source constants that build into `dist/`: source edits that affect generated plugin content require `just build-skills` before any push.
+- Add a **PR gate status shape** for terse prompts such as "check" or "ship it": full head SHA, current-head review verdict, required-check rollup, and the next allowed action token.

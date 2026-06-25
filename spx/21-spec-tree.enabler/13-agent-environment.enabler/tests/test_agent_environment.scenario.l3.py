@@ -5,12 +5,12 @@ L3: the shipped `hooks.json` command runs through `/bin/sh` against the real
 session's controlling process. It is the fullest reproduction of a real
 SessionStart: no env stubbing of spx's effects, and the claim is verified by
 asking spx itself — `spx worktree status` — whether it recognizes the worktree
-as occupied, closing the round-trip rather than inspecting a claim file on disk.
+as running, closing the round-trip rather than inspecting a claim file on disk.
 
 Assertion covered (agent-environment.md, L3 scenario):
   - The hook delegates to spx, which writes each session-environment variable to
     `$CLAUDE_ENV_FILE` with its correct value and records a worktree-occupancy
-    claim that `spx worktree status` reports as `occupied`.
+    claim that `spx worktree status` reports as `running`.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def test_session_start_delivers_correct_env_and_a_claim_spx_recognizes(
         env_file=env_file,
         project_dir=tmp_path,
         # The test process is the session's controlling process: alive when spx
-        # reads liveness below, so its claim resolves to `occupied`, not `stale`.
+        # reads liveness below, so its claim resolves to `running`, not `free`.
         env_overrides={WORKTREE_CONTROLLING_PID_ENV: str(os.getpid())},
     )
     assert result.returncode == 0
@@ -65,4 +65,4 @@ def test_session_start_delivers_correct_env_and_a_claim_spx_recognizes(
     # The round-trip: spx itself recognizes the worktree the hook claimed.
     occupancy = worktree_occupancy(tmp_path)
     assert len(occupancy) == 1
-    assert occupancy[0]["status"] == "occupied"
+    assert occupancy[0]["status"] == "running"

@@ -17,6 +17,7 @@ so the adapter cannot rely on a real finding to carry those outcomes.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -94,7 +95,20 @@ def _wrapper(rows: tuple[Any, ...], children: tuple[Any, ...]) -> Any:
         overall=overall,
         rows=rows,
         children=children,
-        metadata={"branch": "work/example", "scope_hash": "abc123def456"},
+        metadata={
+            jp.RUN_STATE_SCOPE_HASH: "abc123def456",
+            jp.RUN_STATE_BRANCH_NAME: "work/example",
+            jp.RUN_STATE_BRANCH_SLUG: "work__example",
+            jp.RUN_STATE_HEAD_SHA: "1" * 40,
+            jp.RUN_STATE_BASE_REF: "main",
+            jp.RUN_STATE_BASE_SHA: "2" * 40,
+            jp.RUN_STATE_CONFIG_DIGEST: "cfg-abc123",
+            jp.RUN_STATE_PARTICIPANTS: json.dumps(["audit"]),
+            jp.RUN_STATE_SCOPE: json.dumps({"include": ["src/example.py"]}),
+            jp.RUN_STATE_STARTED_AT: "2026-06-22T00:00:00Z",
+            jp.RUN_STATE_COMPLETED_AT: "2026-06-22T00:00:05Z",
+            jp.RUN_STATE_OUTPUT_PATHS: json.dumps(["audit-results.json"]),
+        },
     )
 
 
@@ -167,3 +181,49 @@ def test_adapter_overall_equals_rollup(case_name: str) -> None:
         child.overall for child in wrapper.children
     )
     assert _journal_overall(wrapper) == _expected_outcome(contributor_statuses)
+
+
+def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
+    wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
+    events = je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")
+    data = events[-1]["data"]
+
+    assert events[-1]["type"] == jp.RUN_COMPLETED
+    assert data[jp.RUN_STATE_BRANCH_NAME] == wrapper.metadata[jp.RUN_STATE_BRANCH_NAME]
+    assert data[jp.RUN_STATE_BRANCH_SLUG] == wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG]
+    assert data[jp.RUN_STATE_HEAD_SHA] == wrapper.metadata[jp.RUN_STATE_HEAD_SHA]
+    assert data[jp.RUN_STATE_BASE_REF] == wrapper.metadata[jp.RUN_STATE_BASE_REF]
+    assert data[jp.RUN_STATE_BASE_SHA] == wrapper.metadata[jp.RUN_STATE_BASE_SHA]
+    assert (
+        data[jp.RUN_STATE_CONFIG_DIGEST] == wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST]
+    )
+    assert data[jp.RUN_STATE_PARTICIPANTS] == ["audit"]
+    assert data[jp.RUN_STATE_SCOPE] == {"include": ["src/example.py"]}
+    assert data[jp.RUN_STATE_STARTED_AT] == "2026-06-22T00:00:00Z"
+    assert data[jp.RUN_STATE_COMPLETED_AT] == "2026-06-22T00:00:05Z"
+    assert data[jp.RUN_STATE_OUTPUT_PATHS] == ["audit-results.json"]
+    assert data[jp.RUN_STATE_STATUS] == jp.JournalRunStatus.APPROVED
+
+
+def test_adapter_rejects_missing_head_identity() -> None:
+    wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
+    del wrapper.metadata[jp.RUN_STATE_HEAD_SHA]
+
+    with pytest.raises(ValueError, match=jp.RUN_STATE_HEAD_SHA):
+        je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")
+
+
+def test_adapter_rejects_missing_base_identity() -> None:
+    wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
+    del wrapper.metadata[jp.RUN_STATE_BASE_SHA]
+
+    with pytest.raises(ValueError, match=jp.RUN_STATE_BASE_SHA):
+        je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")
+
+
+def test_adapter_rejects_non_positive_pull_request_number() -> None:
+    wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
+    wrapper.metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] = "0"
+
+    with pytest.raises(ValueError, match="must be positive"):
+        je.events_for_wrapper(wrapper, now="2026-06-22T00:00:06Z")

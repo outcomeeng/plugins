@@ -1,18 +1,14 @@
-"""CLI: render a review-result into the human-readable ``review.md`` surface.
+"""CLI: render a review-result into the human-readable review surface.
 
-Reads ``review-result.json`` from the thread store under the given
-slug, parses it through ``review_result.parse_json`` (which enforces
-the canonical schema), and writes a
-markdown surface to stdout. The wrapper agent pipes the stdout payload
-into ``write_record.py`` to persist ``review.md``.
+Reads a review-result JSON document from stdin by default, or from ``--file``,
+parses it through ``review_result.parse_json`` (which enforces the canonical
+schema), and writes a markdown surface to stdout.
 
 Exit codes:
 
 - ``0`` — markdown was rendered.
-- non-zero — the slug has no ``review-result.json``, or the document
-  fails ``parse_json``; no markdown is emitted on the rejection path.
-
-Every filesystem effect routes through the ``thread_store`` facade.
+- non-zero — the document fails ``parse_json`` or cannot be read; no markdown
+  is emitted on the rejection path.
 
 Stdlib-only.
 """
@@ -25,27 +21,6 @@ import pathlib
 import string
 import sys
 from types import ModuleType
-
-REVIEW_RESULT_RECORD_NAME = "review-result.json"
-
-
-def _load_thread_store() -> ModuleType:
-    cached = sys.modules.get("thread_store")
-    if cached is not None:
-        return cached
-    path = (
-        pathlib.Path(__file__).resolve().parent.parent.parent
-        / "manage-thread-store"
-        / "scripts"
-        / "thread_store.py"
-    )
-    spec = importlib.util.spec_from_file_location("thread_store", path)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load thread_store from {path}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["thread_store"] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def _load_review_result() -> ModuleType:
@@ -128,7 +103,7 @@ def _partition_findings(
 
 
 def _render_markdown(result: "object") -> str:
-    """Render a parsed ``ReviewResult`` into the ``review.md`` surface.
+    """Render a parsed ``ReviewResult`` into the human-readable surface.
 
     Loads per-section templates from ``references/render/``, partitions
     findings by severity, substitutes placeholders via stdlib
@@ -176,40 +151,45 @@ def _render_markdown(result: "object") -> str:
     )
 
 
+def _read_payload(path: str | None) -> str:
+    if path is None:
+        return sys.stdin.read()
+    return _validated_payload_path(path).read_text(encoding="utf-8")
+
+
+def _validated_payload_path(path: str) -> pathlib.Path:
+    """Return a regular file path contained by the current working directory."""
+    root = pathlib.Path.cwd().resolve(strict=True)
+    candidate = pathlib.Path(path).resolve(strict=True)
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"review-result path must stay within current working directory: {path}"
+        ) from exc
+    if not candidate.is_file():
+        raise ValueError(f"review-result path must be a regular file: {path}")
+    return candidate
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Render a review-result JSON document into review.md content."
+        description="Render a review-result JSON document into review markdown."
     )
     parser.add_argument(
-        "--slug",
-        default=None,
-        help="thread slug; derived via thread_store.current_slug() when omitted",
+        "--file", default=None, help="read review-result JSON from PATH"
     )
     args = parser.parse_args(argv)
 
-    thread_store = _load_thread_store()
-    slug = args.slug
-    if slug is None:
-        try:
-            slug = thread_store.current_slug()
-        except thread_store.ConfigurationError as exc:
-            sys.stderr.write(f"{exc}\n")
-            return 1
     try:
-        payload = thread_store.read(slug, REVIEW_RESULT_RECORD_NAME)
-    except thread_store.NotFound as exc:
-        sys.stderr.write(f"{exc}\n")
-        return 1
-    except thread_store.ThreadStoreError as exc:
+        payload = _read_payload(args.file)
+    except (OSError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
 
     review_result = _load_review_result()
     try:
-        result = review_result.parse_json(payload.decode("utf-8"))
-    except UnicodeDecodeError as exc:
-        sys.stderr.write(f"{REVIEW_RESULT_RECORD_NAME} is not valid UTF-8: {exc}\n")
-        return 1
+        result = review_result.parse_json(payload)
     except review_result.ReviewResultValidationError as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
