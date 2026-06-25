@@ -30,17 +30,13 @@ each selected suite's exit code.
 The workflow triggers on PRs touching declared eval ownership surfaces, pushes
 to `main` for the same surfaces, a weekly `schedule`, and `workflow_dispatch`.
 PR execution is gated by collaborator authorization so untrusted PRs never
-receive secrets. The runner derives `--bare` from the inherited environment by
-default per `eval-harness.md`: it passes `--bare` when `ANTHROPIC_API_KEY` is
-set to a non-empty value (the only `--bare`-compatible auth source), otherwise
-— unset or empty — it omits `--bare` so `CLAUDE_CODE_OAUTH_TOKEN` /
-`apiKeyHelper` / an OAuth login session is accepted. A developer with `ANTHROPIC_API_KEY` exported locally gets
-`--bare` isolation from ambient `~/.claude/CLAUDE.md` and the cwd's
-`AGENTS.md` without further setup. The workflow now forwards
-`secrets.ANTHROPIC_API_KEY` into the job env alongside the OAuth token; CI
-takes the isolated `--bare` path once that secret is provisioned, and the
-runner's non-empty derivation falls back to OAuth while it is absent. See the
-workflow-env TODO below.
+receive secrets. The runner follows the auth mode already provisioned in the
+inherited environment per `eval-harness.md`: a non-empty `ANTHROPIC_API_KEY`
+selects the `--bare` path, and an absent or empty `ANTHROPIC_API_KEY` keeps the
+non-bare path while preserving the inherited environment, including
+`CLAUDE_CODE_OAUTH_TOKEN` when present. Agents use the provisioned mode as found
+and do not ask the operator to add, remove, or switch auth secrets for an eval
+run.
 
 CI owns the canonical appends on main: `spec-tree-evals.yml`'s commit-back step pushes them with `[skip ci]` via the `OUTCOMEENG_EVAL_STORE` PAT. Developer-machine runs still append local rows that show up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
@@ -72,26 +68,6 @@ Action required for commit-back to work on a protected `main`:
 - When enabling branch protection on `main`, add the token's account to the
   protection bypass-allowances so its push is not rejected.
 
-## TODO: provision `ANTHROPIC_API_KEY` in Actions secrets so CI runs isolated
-
-`spec-tree-evals.yml`'s `evals` job env now forwards `ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}` alongside `CLAUDE_CODE_OAUTH_TOKEN`, and the runner's derive rule treats an empty value (what GitHub forwards from an absent secret) as unset — so it omits `--bare` and falls back to OAuth rather than failing on an empty-key `--bare` call. The workflow side is wired; what remains is operator-only.
-
-Action required (operator):
-
-- Add `ANTHROPIC_API_KEY` to the repo's Actions secrets (org-scope or repo-scope; either is fine for this workflow).
-
-Once the secret is present, every CI invocation derives `--bare` and runs isolated from ambient `~/.claude/CLAUDE.md` and the cwd's `AGENTS.md`. Until then, the empty forwarded value derives no `--bare` and CI runs under OAuth (functional, but not the spec-canonical isolated surface). CI's runner image happens to have no `~/.claude/CLAUDE.md` or repo `AGENTS.md` in the standard locations, so the contamination surface is narrow in the meantime.
-
-## CLI `--bare` / `--no-bare` overrides
-
-The runner exposes `bare: bool | None = None`: `None` derives `--bare` from the inherited environment (`ANTHROPIC_API_KEY` non-empty → pass `--bare`), `True` and `False` force the flag on or off regardless of env. The derivation covers the common case — a developer with `ANTHROPIC_API_KEY` exported gets isolation automatically — so the canonical entry point does not need a flag to make `--bare` reachable. The overrides remain useful for two narrow cases: (a) exercising the ambient-discovery code path under test even when `ANTHROPIC_API_KEY` happens to be set (`bare=False`), and (b) forcing isolation when the auth source is `apiKeyHelper` rather than the env-var form (`bare=True`). Add a `--bare` / `--no-bare` flag pair to `outcomeeng-evals run` (wired through `build_claude_runner`) so the two overrides are reachable from the canonical entry point; defer until either need surfaces in a real session.
-
-## FOLLOW-UP: cover the empty-auth-env path in `_effective_bare` tests
-
-The spec assertion at `eval-harness.md:16` names three OAuth-side auth sources under which `--bare` is omitted: `CLAUDE_CODE_OAUTH_TOKEN`, `apiKeyHelper`, and "an OAuth login session". The scenario tests in `tests/test_runner.scenario.l1.py` cover five derive/override cases — `ANTHROPIC_API_KEY` non-empty derives `--bare`, `ANTHROPIC_API_KEY` absent omits `--bare` (`test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set`), `ANTHROPIC_API_KEY` empty omits `--bare` (`test_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty`), `bare=True` forces it, and `bare=False` suppresses it. The remaining gap: the path where neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set in env — the "OAuth login session" or "no env-form auth" case — has no dedicated scenario. `_effective_bare` returns `False` in that case (correct: derivation only flips to `--bare` when `ANTHROPIC_API_KEY` is set to a non-empty value), but the assertion mapping to the OAuth-login-session path is untested.
-
-Add a scenario test that monkeypatches both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` out of the env, runs `ClaudeCliRunner(plugin_dir=tmp_path)`, and asserts `--bare` is absent from the captured argv. Co-locate in `test_runner.scenario.l1.py` alongside the existing five derive/override cases.
-
 ## Independent uv project for `outcomeeng_evals`
 
 `outcomeeng_evals` builds from the single repo `pyproject.toml`. Split into an independent uv project only when it is published to PyPI or its dependency surfaces diverge from the marketplace's.
@@ -122,8 +98,21 @@ The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether t
 
 ## Node-wide evidence-type mismatch: universal assertions tagged `scenario`
 
-Every `ALWAYS` / `NEVER` assertion in `eval-harness.md`'s `### Compliance` section carries a `[test]` link to a `*.scenario.l1.py` file. The methodology rule (`/understand` `references/assertion-types.md`) is that a universal claim is never `scenario` — it takes `conformance`, `mapping`, `compliance`, or `property` by its quantifier; `scenario` proves one case and cannot establish a claim about every case. `spec-auditor` flags the whole node on this.
+Many `ALWAYS` / `NEVER` assertions in `eval-harness.md`'s `### Compliance`
+section still carry `[test]` links to `*.scenario.l1.py` files. The
+methodology rule (`/understand` `references/assertion-types.md`) is that a
+universal claim is never `scenario`; it takes `conformance`, `mapping`,
+`compliance`, or `property` by its quantifier. `scenario` proves one case and
+cannot establish a claim about every case. The runner authentication,
+`CLAUDECODE`, and observability-metadata assertions now link to
+`tests/test_runner.compliance.l1.py`; the remaining universal assertions still
+need retyping.
 
-This is a pre-existing node-wide convention established when the node was authored, not introduced by any single assertion edit. Resolving it is a dedicated migration: retype each universal assertion to its proper evidence type by quantifier, split the `scenario` test files into the matching `conformance` / `mapping` / `compliance` / `property` files (renaming and re-grouping their cases), and re-audit. The migration is independent of any one assertion's content and belongs in its own slice, not folded into an unrelated change to a single assertion's prose.
+Resolving the remaining mismatch is a dedicated migration: retype each
+remaining universal assertion to its proper evidence type by quantifier, split
+the `scenario` test files into the matching `conformance` / `mapping` /
+`compliance` / `property` files (renaming and re-grouping their cases), and
+re-audit the node.
 
-Surfaced by `spec-auditor` (2026-06-21) while auditing a `--bare`-derivation prose alignment that did not touch the assertion tags.
+Surfaced by `spec-auditor` (2026-06-21) while auditing a `--bare` derivation
+prose alignment.

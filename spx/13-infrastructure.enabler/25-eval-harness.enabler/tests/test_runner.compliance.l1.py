@@ -1,4 +1,4 @@
-"""Scenario tests for runner metadata parsing and subprocess env hygiene."""
+"""Compliance tests for runner metadata parsing and subprocess env hygiene."""
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ def test_subprocess_env_strips_claudecode_marker(
 
 def test_metadata_from_envelope_extracts_duration_and_cost() -> None:
     md = _metadata_from_envelope(dict(_ENVELOPE_SAMPLE), wall_clock_ms=9999.0)
-    assert md.duration_ms == 2608.0
+    assert md.duration_ms == pytest.approx(2608.0)
     assert md.total_cost_usd == pytest.approx(0.2207325)
 
 
@@ -71,7 +71,7 @@ def test_metadata_from_envelope_falls_back_to_wall_clock_when_duration_missing()
     envelope = dict(_ENVELOPE_SAMPLE)
     envelope.pop("duration_ms")
     md = _metadata_from_envelope(envelope, wall_clock_ms=1234.5)
-    assert md.duration_ms == 1234.5
+    assert md.duration_ms == pytest.approx(1234.5)
 
 
 def test_metadata_from_envelope_returns_none_for_missing_fields() -> None:
@@ -114,7 +114,7 @@ def test_claude_cli_runner_returns_text_and_metadata_from_envelope(
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)):
         result = runner.run("any prompt")
     assert result.text == "hi"
-    assert result.metadata.duration_ms == 2608.0
+    assert result.metadata.duration_ms == pytest.approx(2608.0)
     assert result.metadata.total_cost_usd == pytest.approx(0.2207325)
 
 
@@ -144,10 +144,8 @@ def test_claude_cli_runner_raises_with_diagnostic_on_nonzero_exit(
 def test_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # ANTHROPIC_API_KEY is the only --bare-compatible auth source claude
-    # accepts without ambient discovery. When it is set in the inherited
-    # env, the default-derive rule passes --bare so the run executes
-    # isolated from ~/.claude/CLAUDE.md and the cwd's AGENTS.md.
+    # The runner follows the operator-provisioned auth mode from the inherited
+    # env. A non-empty ANTHROPIC_API_KEY selects the --bare path.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     runner = ClaudeCliRunner(plugin_dir=tmp_path)
@@ -166,29 +164,27 @@ def test_claude_cli_runner_derives_bare_when_anthropic_api_key_is_set(
 def test_claude_cli_runner_omits_bare_when_only_oauth_token_is_set(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # claude rejects --bare under CLAUDE_CODE_OAUTH_TOKEN (or an OAuth login
-    # session). When ANTHROPIC_API_KEY is absent the derive rule omits
-    # --bare so the OAuth token is accepted; passing it would make the run
-    # exit non-zero before grading.
+    # The runner follows the operator-provisioned auth mode from the inherited
+    # env. An OAuth token without an API key selects the non-bare path.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-oauth-test")
     runner = ClaudeCliRunner(plugin_dir=tmp_path)
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
+    call_kwargs = mock_run.call_args.kwargs
     assert "--bare" not in argv, (
         "without ANTHROPIC_API_KEY the derive rule must omit --bare so the"
-        " OAuth auth source is accepted"
+        " OAuth token path is selected"
     )
+    assert call_kwargs["env"]["CLAUDE_CODE_OAUTH_TOKEN"] == "sk-oauth-test"
 
 
 def test_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # A workflow that forwards ANTHROPIC_API_KEY from an absent secret sets the
-    # variable to an empty string. An empty value is not usable --bare auth, so
-    # the derive rule treats it as unset and omits --bare, falling back to the
-    # OAuth token rather than failing the run with an empty-key --bare call.
+    # GitHub forwards an empty string for an absent secret. The runner treats
+    # that as no API-key mode and uses the non-bare mode already provisioned.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-oauth-test")
     runner = ClaudeCliRunner(plugin_dir=tmp_path)
@@ -196,17 +192,33 @@ def test_claude_cli_runner_omits_bare_when_anthropic_api_key_is_empty(
         runner.run("any prompt")
     argv = mock_run.call_args.args[0]
     assert "--bare" not in argv, (
-        "an empty ANTHROPIC_API_KEY must derive no --bare so the OAuth auth"
-        " source is accepted"
+        "an empty ANTHROPIC_API_KEY must derive no --bare so the OAuth token"
+        " path remains available"
+    )
+
+
+def test_claude_cli_runner_omits_bare_when_no_env_auth_is_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # With no auth environment variables present, the runner still omits
+    # --bare. Agents do not propose switching auth modes from inside the run.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    runner = ClaudeCliRunner(plugin_dir=tmp_path)
+    with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
+        runner.run("any prompt")
+    argv = mock_run.call_args.args[0]
+    assert "--bare" not in argv, (
+        "without env-form auth the default path must omit --bare and avoid"
+        " switching the operator's auth mode"
     )
 
 
 def test_claude_cli_runner_forces_bare_when_override_is_true(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # The bare=True override passes --bare regardless of env. Used by callers
-    # that genuinely want isolation and have arranged a --bare-compatible
-    # auth source out of band.
+    # The constructor override remains available for direct embedding and tests;
+    # normal eval runs follow the inherited environment.
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     runner = ClaudeCliRunner(plugin_dir=tmp_path, bare=True)
@@ -219,9 +231,8 @@ def test_claude_cli_runner_forces_bare_when_override_is_true(
 def test_claude_cli_runner_forces_no_bare_when_override_is_false(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # The bare=False override omits --bare regardless of env. Used by callers
-    # that explicitly want ambient discovery even when ANTHROPIC_API_KEY is
-    # set (e.g. exercising the auto-discover code path under test).
+    # The constructor override remains available for direct embedding and tests;
+    # normal eval runs follow the inherited environment.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     runner = ClaudeCliRunner(plugin_dir=tmp_path, bare=False)
     with _patched_subprocess(json.dumps(_ENVELOPE_SAMPLE)) as mock_run:
