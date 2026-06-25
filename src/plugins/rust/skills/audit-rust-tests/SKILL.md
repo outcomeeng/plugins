@@ -42,111 +42,22 @@ Read `spx/local/rust-tests.md` if it exists; otherwise apply the loaded skills o
 
 3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
-Gate 0 tool dependencies:
-
-- `cargo fmt --check` and `cargo clippy` must be runnable (V1)
-- `cargo llvm-cov` or the product's declared coverage tool (C1)
-
-If any tool is unavailable, Gate 0 records a terminal finding and the audit aborts.
-
-Repository-specific rules:
-
-- Coverage audits use the repository's declared Rust coverage tool; do not infer coverage from imports or test names.
-- When `spx` test files are included through `#[path = "..."]` modules in source files, coverage commands target Cargo test filters and source-file deltas.
+This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`, `cargo test`, `cargo llvm-cov`, or any other project command. The main agent brings the project's formatting, linting, tests, and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit reading the evidence chain.
 
 </prerequisites>
 
-<gate_0_deterministic>
-Run deterministic checks before judging evidence.
+<structural_reading>
+Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
-<check id="F1" name="filename_policy">
-List Rust test files under the target node:
+- **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a `challenge` finding, do not re-validate it.
+- **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Fixture reads under `spx/.../tests/` are fine.
+- **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. The credentialed `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and is not a defect in `.l3.rs` files; outside `.l3.rs` it is misplaced.
+- **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
 
-```bash
-rg --files <spec-node-path>/tests
-```
-
-Each file must match `<subject>.<evidence>.<level>[.<runner>].rs` where:
-
-- `<evidence>` is one of: `scenario`, `mapping`, `conformance`, `property`, `compliance`
-- `<level>` is one of: `l1`, `l2`, `l3`
-- `<runner>` is optional (e.g., `tokio`, `actix`)
-
-Fail Gate 0 for files that do not match this pattern, unless a governing product spec or decision declares a different Rust test filename convention and a repo-local overlay points to it. If governing product truth disables Level 3, fail `.l3.rs` files for that product.
-</check>
-
-<check id="R1" name="source_file_reads">
-Scan target tests for source-file reads:
-
-```bash
-rg -n 'read_to_string|include_str!|std::fs::read|std::fs::read_to_string' <spec-node-path>/tests
-```
-
-Fail Gate 0 when a test reads files under `src/` or other production source paths. Fixture reads under `spx/.../tests/` proceed to Gate 1.
-</check>
-
-<check id="S1" name="skipped_tests">
-Scan target tests for disabled evidence:
-
-```bash
-rg -n '#\[ignore\]|return;|panic!\("skip|todo!\(|unimplemented!\(' <spec-node-path>/tests
-```
-
-Fail Gate 0 for bare `#[ignore]` (no reason string), skip-by-early-return, `todo!`, or `unimplemented!` in test bodies.
-
-The credentialed form `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and must **not** be failed in `.l3.rs` files. Check for misuse in non-Level-3 files:
-
-```bash
-rg -n '#\[ignore = ' <spec-node-path>/tests --glob '!*.l3.rs'
-```
-
-Any `#[ignore = "..."]` outside `.l3.rs` files is a misplaced credentialed annotation → fail Gate 0.
-</check>
-
-<check id="M1" name="generated_mock_signal">
-Scan target tests for generated mock frameworks:
-
-```bash
-rg -n 'mockall|automock|faux|double::' <spec-node-path>/tests
-```
-
-Do not fail Gate 0 solely for this signal. Pass the finding to Gate 1 step `controlled_implementations`, where it is judged against `/test` Stage 5 exceptions.
-</check>
-
-<check id="V1" name="rust_validation">
-Run the repository validation sequence:
-
-```bash
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all-targets
-```
-
-Fail Gate 0 if any command fails. A non-compiling or failing test suite has no auditable evidence surface.
-</check>
-
-<check id="C1" name="coverage_tool">
-Check coverage availability:
-
-```bash
-cargo llvm-cov --version
-```
-
-Fail Gate 0 when product instructions require measured coverage and this command fails. Otherwise record coverage tooling as unavailable and continue with the other evidence properties.
-</check>
-
-Gate 0 status:
-
-| Condition                   | Status | Action                              |
-| --------------------------- | ------ | ----------------------------------- |
-| F1, R1, S1, V1, or C1 fails | FAIL   | Record findings, skip Gates 1 and 2 |
-| M1 only                     | PASS   | Carry warnings into Gate 1          |
-| all checks pass             | PASS   | Proceed to Gate 1                   |
-
-</gate_0_deterministic>
+</structural_reading>
 
 <gate_1_assertion>
-Runs only if Gate 0 is PASS. Entry point is the spec, not the test file.
+Entry point is the spec, not the test file.
 
 For each assertion in the spec's Assertions section, execute steps 1-8 in order. First step failure rejects that assertion and moves to the next assertion.
 
@@ -225,31 +136,21 @@ Apply the Rust supplements:
 - Coupling: direct, indirect, transitive, false, partial
 - Falsifiability: concrete mutation named for every codebase path or binary contract
 - Alignment: every assertion clause maps to exercised test behavior
-- Coverage: `cargo llvm-cov` reports measured coverage for the governed source files
+- Coverage: read whether the test drives execution into the governed source path; no coverage tool is run
 
 First property failure rejects the assertion.
 </step>
 
 <step name="coverage">
-Run measured coverage for the governed source files.
+Establish coverage by reading, never by running `cargo llvm-cov` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the main agent passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
 
-Use `cargo llvm-cov --json --summary-only --output-path <path>` when file-level deltas are enough. Use `cargo llvm-cov --text --show-missing-lines --output-path <path>` when line-level evidence is needed.
+Trace, by reading, whether the test drives execution into the governed source path:
 
-For tests included through `#[path = "spx/.../tests/..."]` modules, gather:
+1. Read the governed source the assertion names and identify the assertion-relevant functions, branches, and lines.
+2. Read the test and follow what it calls into that source — directly, through a harness, or through `cargo_bin(...)` for a binary contract.
+3. Judge whether the test's execution reaches the assertion-relevant path.
 
-1. Full-suite coverage:
-
-   ```bash
-   cargo llvm-cov --all-targets --json --summary-only --output-path /tmp/rust-coverage-all.json
-   ```
-
-2. Targeted coverage using the narrowest stable test-name filter or module filter:
-
-   ```bash
-   cargo llvm-cov test --all-targets --json --summary-only --output-path /tmp/rust-coverage-target.json -- <test-filter>
-   ```
-
-Report the governed file coverage from both reports. If the full suite is saturated, annotate `saturated`. If the targeted run does not execute the governed file, reject with `coverage`.
+A test that compiles against the governed module but never drives execution into the assertion-relevant path → REJECT with `coverage`; name the path the test fails to reach, traced from the code. When the assertion-relevant path is trivially total, annotate `saturated`.
 </step>
 
 Gate 1 status:
@@ -318,7 +219,7 @@ Reject when the test covers a nearby behavior, collapses clauses, uses one examp
 </supplement>
 
 <supplement property="coverage">
-Coverage passes when `cargo llvm-cov` shows the targeted run executes the governed source file or the full-suite report is saturated for that file and the other three properties pass.
+Coverage passes when reading the test against the governed source shows the test drives execution into the assertion-relevant path, or that path is trivially total (`saturated`) and the other three properties pass. No coverage tool is run — the main agent and CI own coverage measurement.
 
 Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 </supplement>
@@ -329,7 +230,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/audit-tests`. Gate 0 check IDs for Rust: F1, R1, S1, M1, V1, C1 (see `<gate_0_deterministic>` for the check-to-command mapping). Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+Follow `<verdict_format>` in `/audit-tests`. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
 </verdict_format>
 
@@ -344,7 +245,7 @@ How to avoid: Count `assert_cmd::Command::cargo_bin(...)` as direct coupling to 
 
 Claude accepted a test that read `src/rules.rs` and searched for a string. The implementation could satisfy the source-text assertion while runtime behavior was broken.
 
-How to avoid: Gate 0 fails production source-file reads from tests.
+How to avoid: `<structural_reading>` reads in-scope tests for production source-file reads; a test asserting on `src/` text is prose-coupling → REJECT in Gate 1.
 
 **Failure 3: Hard-coded a product-specific Level 3 restriction**
 
@@ -357,8 +258,8 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 
 Audit is complete when:
 
-- [ ] Gate 0 run: filename policy, source-file reads, skipped tests, mock signals, Rust validation, coverage tool
-- [ ] Gate 1 complete: every assertion evaluated through all 8 steps (if Gate 0 PASS)
+- [ ] No deterministic verification run inside the audit — fmt, clippy, tests, and coverage are the main agent's gate; structural defects (filename, source-reads, disabled evidence, mock signals) are read per `<structural_reading>`
+- [ ] Gate 1 complete: every assertion evaluated through all 8 steps
 - [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
 - [ ] Verdict issued: APPROVED or REJECT
 - [ ] For REJECT: each finding has gate, step, and specific detail

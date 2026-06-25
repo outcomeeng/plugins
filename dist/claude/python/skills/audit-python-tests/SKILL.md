@@ -52,21 +52,9 @@ For every in-scope test assertion, inspect the full evidence chain:
 Do not approve a test by looking only at the test file. Laundering and severed coupling can live in generators, harnesses, fixture path providers, and pytest discovery shims.
 </audit_scope>
 
-<gate_0_deterministic>
-Run deterministic checks before judgment when the repository provides the tools. Prefer the repository's canonical commands — those its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document; the `python3 -m …` forms below are the portable fallback when the product ships no wrapper:
-
-```bash
-bad_test_names="$(rg --files <spec-node-path>/tests/ --glob '*.py' | rg -v '/test_[^.]+\.(scenario|mapping|conformance|property|compliance)\.l[123](\.[^.]+)?\.py$' || true)"
-test -z "$bad_test_names"
-python3 -m pytest --collect-only -q <spec-node-path>/tests/
-python3 -m ruff check <spec-node-path>/tests/
-python3 -m mypy <spec-node-path>/tests/
-```
-
-Report unavailable tools separately instead of silently skipping them.
-
-If collection, linting, type checking, or repository-canonical deterministic checks fail, halt the audit and emit `REJECT` with the failing command and diagnostic. Do not proceed to semantic evidence judgment on uncollectable, untyped, or lint-failing tests.
-</gate_0_deterministic>
+<no_deterministic_verification>
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The main agent brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the main agent owns, not a step this audit re-pays.
+</no_deterministic_verification>
 
 <coupling_audit>
 Classify imports by runtime coupling:
@@ -228,7 +216,7 @@ For each finding, include:
 - The imported chain when the defect is outside the test file
 - Required fix
 
-Emit `APPROVED` only when Gate 0 and all evidence-property checks pass. Emit `REJECT` when any property fails.
+Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECT` when any property fails.
 </verdict_format>
 
 <failure_modes>
@@ -264,7 +252,7 @@ Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an H
 <success_criteria>
 A Python test audit succeeds when:
 
-- Gate 0 deterministic checks are run or unavailable tools are reported
+- No deterministic verification is run inside the audit — collection, lint, type-check, and coverage are the main agent's gate, passed before dispatch
 - Every test is traced to the spec assertion and selected assertion type
 - Runtime coupling reaches production behavior directly or through audited harnesses
 - No framework mock, monkeypatch, or import trick replaces the behavior under test
