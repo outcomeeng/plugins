@@ -66,8 +66,6 @@ The changeset's git work — branch, commit, push, base-sync, PR management, mer
 
 Claude NEVER stops with blocked-by-worktree, cannot-use-other-worktree, or cannot-create-worktree reasoning. Branch in the assigned worktree and continue.
 
-A post-merge maintenance step the merge overlay directs to a specific worktree — for example a marketplace-install refresh in the main checkout — is **not** the changeset's git work and is not barred by the above. It MUST run in the named worktree only when that worktree is **free** (no live agent holds it), advancing the claimable default branch there as the overlay directs; NEVER run it in a worktree a live agent holds.
-
 </assigned_cwd_worktree_discipline>
 
 <branch_hygiene>
@@ -432,7 +430,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - A committed changeset ahead of its resolved base is treated as unfinished until it reaches the default branch on origin through the selected lifecycle, or stops at an explicit `<action_tokens>` emission with no independent local action remaining.
 - Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions.
-- The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` — never in a worktree a live agent holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing, and an overlay-directed post-merge maintenance step runs only in a worktree no live agent holds.
+- The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` — never in a worktree a live agent holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
 - `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.
 - Merge runs via rebase merge followed by the worktree-safe manual branch deletion in `<merge_cleanup>` (`gh pr merge --rebase --delete-branch=false`, then detach this worktree onto the refreshed base and delete the local and remote branches separately) unless the overlay declares a different command or opts into inline `--delete-branch` — merge commit and squash are overlay opt-ins (overlay rationale documents the choice for human reviewers; Claude does not enforce it), not Claude's choice from the gate alone.
 - The lifecycle runs from the determined changeset autonomously when the overlay declares no pre-mutation confirmation; when the overlay opts in, the structured-question plan presentation precedes the first mutating action and Claude waits for confirmation.
