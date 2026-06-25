@@ -20,10 +20,11 @@ from outcomeeng_evals.runner import RunMetadata
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
-# Upper bound on parallel case workers — caps concurrent `claude`
-# subprocesses so a misconfigured worker count cannot fork-burst the
-# Claude API (the no-fork-bomb stance the eval-harness spec inherits from
-# the plugin runtime conventions).
+# Worker bounds for parallel case execution. The upper bound caps concurrent
+# `claude` subprocesses so a misconfigured worker count cannot fork-burst the
+# Claude API (the no-fork-bomb stance the eval-harness spec inherits from the
+# plugin runtime conventions).
+MIN_WORKERS = 1
 MAX_WORKERS = 16
 
 
@@ -40,8 +41,8 @@ MAX_WORKERS = 16
 )
 @click.option(
     "--workers",
-    type=click.IntRange(min=1, max=MAX_WORKERS),
-    default=1,
+    type=click.IntRange(min=MIN_WORKERS, max=MAX_WORKERS),
+    default=MIN_WORKERS,
     show_default=True,
     help=(
         "Parallel case workers (case-file order is preserved in outcomes). "
@@ -84,15 +85,18 @@ def run_command(
         timeout_seconds=timeout_seconds,
     )
     template = definition.prompt_template_path.read_text(encoding="utf-8")
-    result = run_suite(
-        cases_path=definition.cases_path,
-        runner=runner,
-        build_prompt=lambda case: _render_prompt(template, case) + _FORMAT_SUFFIX,
-        trials_per_case=definition.trials,
-        suite_threshold=definition.threshold,
-        workers=workers,
-        case_ids=case_ids,
-    )
+    try:
+        result = run_suite(
+            cases_path=definition.cases_path,
+            runner=runner,
+            build_prompt=lambda case: _render_prompt(template, case) + _FORMAT_SUFFIX,
+            trials_per_case=definition.trials,
+            suite_threshold=definition.threshold,
+            workers=workers,
+            case_ids=case_ids,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
 
     eval_dir = eval_toml.parent
     timestamp_label = _timestamp_label()

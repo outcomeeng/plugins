@@ -95,24 +95,3 @@ The runner ships fakes and factories under `outcomeeng_evals.testing`. Whether t
 ## Drop `[review]` once the `[audit]` migration completes
 
 `spx/14-verification.pdr.md` introduces the `[audit]` verification type (backed by the auditing type) and runs it alongside the legacy `[review]` tag during migration. This validator (`outcomeeng/validation/eval_links.py` → `outcomeeng_testing/evals/link_integrity.py`) resolves only the path-bearing `[test]` and `[eval]` links; `[audit]` and `[review]` are pathless and not resolved here. Once every assertion carrying `[review]` is reclassified — to `[audit]` (agentic checklist evidence) or to a reviewing gate (no lane) — drop `[review]` from the recognized evidence tags in `references/assertion-types.md`, `references/verification-kinds.md`, and any validator or lint rule that enumerates the lane set.
-
-## Node-wide evidence-type mismatch: universal assertions tagged `scenario`
-
-Many `ALWAYS` / `NEVER` assertions in `eval-harness.md`'s `### Compliance`
-section still carry `[test]` links to `*.scenario.l1.py` files. The
-methodology rule (`/understand` `references/assertion-types.md`) is that a
-universal claim is never `scenario`; it takes `conformance`, `mapping`,
-`compliance`, or `property` by its quantifier. `scenario` proves one case and
-cannot establish a claim about every case. The runner authentication,
-`CLAUDECODE`, and observability-metadata assertions now link to
-`tests/test_runner.compliance.l1.py`; the remaining universal assertions still
-need retyping.
-
-Resolving the remaining mismatch is a dedicated migration: retype each
-remaining universal assertion to its proper evidence type by quantifier, split
-the `scenario` test files into the matching `conformance` / `mapping` /
-`compliance` / `property` files (renaming and re-grouping their cases), and
-re-audit the node.
-
-Surfaced by `spec-auditor` (2026-06-21) while auditing a `--bare` derivation
-prose alignment.

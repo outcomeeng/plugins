@@ -1,4 +1,4 @@
-"""Scenario tests for the eval harness. l1 — no real Claude calls."""
+"""Compliance tests for the eval harness. l1: no real Claude calls."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Scenario tests for the evidence-link-integrity walker.
+"""Conformance tests for the evidence-link-integrity walker.
 
 The walker scans markdown files for ``[eval](path)`` and ``[test](path)``
 references and asserts each target resolves to an existing, correctly
@@ -66,7 +66,7 @@ def test_find_eval_links_ignores_non_eval_markdown_links(tmp_path: Path) -> None
     node_dir.mkdir(parents=True)
     spec = node_dir / "spec.md"
     spec.write_text(
-        "- ALWAYS: do thing ([test](tests/test_thing.scenario.l1.py))\n"
+        "- ALWAYS: do thing ([test](tests/test_thing.conformance.l1.py))\n"
         "- See [related doc](other.md)\n",
         encoding="utf-8",
     )
@@ -219,9 +219,9 @@ def _write_test_file(directory: Path, name: str) -> Path:
 
 
 def test_find_test_links_finds_resolvable_link(tmp_path: Path) -> None:
-    _write_test_file(tmp_path, "test_thing.scenario.l1.py")
+    _write_test_file(tmp_path, "test_thing.conformance.l1.py")
     (tmp_path / "spec.md").write_text(
-        "Assertion ([test](tests/test_thing.scenario.l1.py))\n",
+        "Assertion ([test](tests/test_thing.conformance.l1.py))\n",
         encoding="utf-8",
     )
 
@@ -229,7 +229,7 @@ def test_find_test_links_finds_resolvable_link(tmp_path: Path) -> None:
 
     assert len(links) == 1
     assert isinstance(links[0], TestLink)
-    assert links[0].target.name == "test_thing.scenario.l1.py"
+    assert links[0].target.name == "test_thing.conformance.l1.py"
 
 
 def test_find_test_links_ignores_inline_code_spans(tmp_path: Path) -> None:
@@ -255,9 +255,9 @@ def test_find_test_links_ignores_fenced_code_blocks(tmp_path: Path) -> None:
 
 
 def test_validate_test_links_returns_empty_when_all_resolve(tmp_path: Path) -> None:
-    _write_test_file(tmp_path, "test_x.scenario.l1.py")
+    _write_test_file(tmp_path, "test_x.conformance.l1.py")
     (tmp_path / "spec.md").write_text(
-        "([test](tests/test_x.scenario.l1.py))\n",
+        "([test](tests/test_x.conformance.l1.py))\n",
         encoding="utf-8",
     )
 
@@ -312,9 +312,9 @@ def test_validate_test_links_rejects_non_python_target(tmp_path: Path) -> None:
 def test_validate_test_links_resolves_paths_relative_to_source(tmp_path: Path) -> None:
     deep_node = tmp_path / "spx" / "a" / "b"
     deep_node.mkdir(parents=True)
-    _write_test_file(deep_node, "test_deep.scenario.l1.py")
+    _write_test_file(deep_node, "test_deep.conformance.l1.py")
     (deep_node / "spec.md").write_text(
-        "([test](tests/test_deep.scenario.l1.py))\n",
+        "([test](tests/test_deep.conformance.l1.py))\n",
         encoding="utf-8",
     )
 
@@ -326,10 +326,10 @@ def test_validate_test_links_resolves_paths_relative_to_source(tmp_path: Path) -
 def test_validate_test_links_rejects_target_outside_tests_dir(tmp_path: Path) -> None:
     node_dir = tmp_path / "spx" / "node"
     node_dir.mkdir(parents=True)
-    loose_test = node_dir / "test_loose.scenario.l1.py"
+    loose_test = node_dir / "test_loose.conformance.l1.py"
     loose_test.write_text("def test_placeholder() -> None: pass\n", encoding="utf-8")
     (node_dir / "spec.md").write_text(
-        "([test](test_loose.scenario.l1.py))\n",
+        "([test](test_loose.conformance.l1.py))\n",
         encoding="utf-8",
     )
 

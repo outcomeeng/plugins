@@ -1,4 +1,4 @@
-"""Scenario tests for EvalDefinition TOML loading.
+"""Conformance tests for EvalDefinition TOML loading.
 
 The definition is the single declarative entry point for an eval; it
 declares title, cases path, prompt template path, threshold, and trials.
