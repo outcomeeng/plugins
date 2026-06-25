@@ -87,20 +87,6 @@ Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
 ```
 
-8. Check the product's spx-level guides for template drift (once per session — the step 1 foundation-marker guard makes this run on first load only). The guide is two generated files, `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex, rendered from the canonical template at `${CLAUDE_SKILL_DIR}/templates/spx-claude.md`. Do NOT judge staleness or detect languages in this conversation — run the deterministic checker, which reads the enabled languages from the project's `spx/**/tests/` extensions and compares both guide files against the installed template:
-
-   ```bash
-   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/templates/spx-claude.md" --spx-dir "$(git rev-parse --show-toplevel)/spx" --check
-   ```
-
-   It prints one of `current`, `stale`, or `absent` — the worst status across the two guide files. Emit the staleness marker when the output is `stale` or `absent`, and nothing when it is `current`. The marker lets `/handoff` carry the staleness into the persistence proposal so the operator can run `/update-spx`, which regenerates both guides from the installed template:
-
-```text
-<SPX_CLAUDE_STALE status="[stale|absent]">
-spx/CLAUDE.md and spx/AGENTS.md [are behind the installed template or scoped to the wrong languages | are not both present]; run /update-spx to reconcile.
-</SPX_CLAUDE_STALE>
-```
-
 </workflow>
 
 <failure_modes>
@@ -138,6 +124,5 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 - [ ] Methodology loaded: a clean working tree with committed changes ahead of the resolved base is unfinished, and passing validation, tests, review, or audit gates are progress gates, not a stopping point, for changes destined for the default branch
 - [ ] Methodology loaded: imperfection ledger is maintained per-turn; unresolved entries are fixed, escalated for operator judgment, or written to the correct durable artifact
 - [ ] Methodology loaded: five verification types (validation, testing, reviewing, auditing, evaluating) across verdict mode (deterministic/agentic) and purpose (conformance/correctness); three back the assertion tags (`[test]`, `[eval]`, `[audit]`)
-- [ ] Two-file guide drift check run once per session via the deterministic `update_spx.py --check --spx-dir spx` (no in-conversation staleness judgment or language detection); `<SPX_CLAUDE_STALE>` marker emitted when its output is `stale` or `absent`, nothing when `current`
 
 </success_criteria>
