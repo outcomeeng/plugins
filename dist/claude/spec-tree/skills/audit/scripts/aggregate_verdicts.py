@@ -89,7 +89,7 @@ def aggregate(
 
     The wrapper's ``overall`` is derived via ``verdict.roll_up`` over
     the union of row statuses and children overalls — so a FAIL
-    wrapper row (e.g., a failing automated-gates row) propagates to
+    wrapper row (e.g., a failing determinism-contract row) propagates to
     REJECTED even when every child verdict is APPROVED/PASS. ``rows``
     defaults to empty so callers that pass none get the original
     children-only rollup.

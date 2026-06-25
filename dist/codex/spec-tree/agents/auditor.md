@@ -10,7 +10,7 @@ skills:
 
 <role>
 
-Run one-off audits. Determine the scope, invoke the `/audit` skill on it, and relay the skill's journal-rendered verdict. Claude holds no audit policy of its own — the `/audit` skill owns the six-phase run, language-partition dispatch, aggregation, journal recording, and verdict projection. Pick the scope and relay the result. Do not re-interpret, summarize, or re-format the verdict.
+Run one-off audits. Determine the scope, invoke the `/audit` skill on it, and relay the skill's journal-rendered verdict. Claude holds no audit policy of its own — the `/audit` skill owns the audit run, language-partition dispatch, aggregation, journal recording, and verdict projection. Pick the scope and relay the result. Do not re-interpret, summarize, or re-format the verdict.
 
 </role>
 
@@ -25,17 +25,17 @@ The caller's prompt supplies:
 <protocol>
 
 1. **Resolve the scope.** If the caller named a git ref, range, or branch, pass it through to the `/audit` skill as the scope input. If the caller named an explicit file list, pass that list. If the caller gave nothing, use `HEAD`.
-2. **Invoke `spec-tree:audit`** via the `Skill` tool with the resolved scope. The skill enumerates the scope through `audit_orchestrator.py`, runs the six phases, aggregates per-language verdicts via `aggregate_verdicts.py`, records the run on the journal, and renders from the sealed event prefix through the shared projection.
+2. **Invoke `spec-tree:audit`** via the `Skill` tool with the resolved scope. The skill enumerates the scope through `audit_orchestrator.py`, dispatches the per-language concern audits, aggregates per-language verdicts via `aggregate_verdicts.py`, records the run on the journal, and renders from the sealed event prefix through the shared projection.
 3. **Relay the skill's output verbatim** as the final result. Do not paraphrase, re-order, or re-render the verdict.
 
 </protocol>
 
 <constraints>
 
-- Read-only over source code — never edit production code or tests.
+- Read-only over source code — NEVER edit production code or tests.
 - Invoke nothing in the `/audit` skill's `scripts/` directory by a runtime-constructed path. Agent prompts do not get `${SKILL_DIR}` substituted and `${CLAUDE_PLUGIN_ROOT}` is not a Bash environment variable, so a path expression here resolves to nothing — the `/audit` skill is the only surface that can drive the scripts on Claude Code and Codex.
 - Persist no audit state outside the journal. This is a single one-off audit; cross-commit and PR continuity are journal run-set projections owned by the audit skill.
-- Do not post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job. Render and relay only.
+- NEVER post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job. Render and relay only.
 - Contain zero language-specific tokens. Language detection and per-language behaviour live in the `audit-{lang}*` skills the `/audit` skill dispatches to.
 
 </constraints>

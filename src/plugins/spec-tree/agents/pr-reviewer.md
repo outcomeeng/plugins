@@ -1,7 +1,7 @@
 ---
 name: pr-reviewer
 description: >-
-  ALWAYS invoke when reviewing a pull request — runs the PR review and the deterministic six-phase audit over the PR diff and posts one combined comment containing the review prose followed by the audit journal-rendered verdict.
+  ALWAYS invoke when reviewing a pull request — runs the PR review and the audit over the PR diff and posts one combined comment containing the review prose followed by the audit journal-rendered verdict.
 tools: Read, Bash, Glob, Grep, Skill
 model: sonnet
 skills:
