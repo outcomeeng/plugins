@@ -648,12 +648,13 @@ def main(argv: list[str] | None = None) -> int:
 def _make_kind_global(kind: str) -> Callable[..., str]:
     """Build the template global that renders the named registry ``kind``.
 
-    Each kind (`tool`, `field`, `term`) is exposed under its own name. The global
-    renders the build target's name by default; a runtime-explicit second argument
-    (`tool('ask_user', 'claude')`) renders the named runtime's name regardless of
-    target. Resolution is delegated to ``resolve_runtime_token`` so every kind
-    shares one path. Raises RuntimeTokenError when no target is in context for the
-    default form, or when the capability has no name for the resolved runtime.
+    Each kind (`tool`, `field`, `term`, `file`) is exposed under its own name. The
+    global renders the build target's name by default; a runtime-explicit second
+    argument (`tool('ask_user', 'claude')`) renders the named runtime's name
+    regardless of target. Resolution is delegated to ``resolve_runtime_token`` so
+    every kind shares one path. Raises RuntimeTokenError when no target is in
+    context for the default form, or when the capability has no name for the
+    resolved runtime.
     """
 
     @pass_context
@@ -684,7 +685,7 @@ def make_jinja_environment(shared_root: Path | None = None) -> Environment:
         keep_trailing_newline=True,
     )
     # One template global per registry kind, named after the kind: tool(), field(),
-    # term(). A new kind in the registry is exposed automatically.
+    # term(), file(). A new kind in the registry is exposed automatically.
     for kind in RUNTIME_TOKEN_REGISTRY:
         environment.globals[kind] = _make_kind_global(kind)
     return environment
