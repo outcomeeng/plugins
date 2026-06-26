@@ -85,27 +85,6 @@ Auditing `src/orders/` for an e-commerce service.
 }
 ```
 
-Correct approach for the cited findings:
-
-```typescript
-interface EmailSender {
-  send(to: string, subject: string, body: string): Promise<void>;
-}
-
-function computeOrderTotals(orders: Order[]): OrderSummary[] {
-  // Pure computation -- no IO
-}
-
-async function processOrders(
-  orders: Order[],
-  deps: { sendEmail: EmailSender },
-): Promise<void> {
-  for (const summary of computeOrderTotals(orders)) {
-    await deps.sendEmail.send(summary.to, summary.subject, summary.body);
-  }
-}
-```
-
 </example>
 
 </examples>

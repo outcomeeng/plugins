@@ -85,23 +85,4 @@ Auditing `src/orders/`.
 }
 ```
 
-Correct approach for the cited findings:
-
-```rust
-trait EmailSender {
-    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;
-}
-
-fn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {
-    orders.iter().map(OrderSummary::from).collect()
-}
-
-fn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {
-    for summary in compute_order_summaries(orders) {
-        sender.send(&summary)?;
-    }
-    Ok(())
-}
-```
-
 </rejected_design_review>

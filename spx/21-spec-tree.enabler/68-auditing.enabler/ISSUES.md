@@ -9,9 +9,7 @@ and reference-polish gaps, independent of the no-deterministic-verification work
   than verdict-soundness properties (the auditor skeleton's `<success_criteria_shape>`).
 - `audit-typescript` has no `<constraints>` section (prohibitions split across `<essential_principles>`
   and `<what_to_avoid>`), and its `<verdict_format>` sits after `<failure_modes>` rather than before.
-- `audit-{python,typescript,rust}` reference polish: `references/example-audit.md` carries
-  correct-approach samples outside the JSON verdict; `audit-rust` also has
-  `references/unsafe-soundness.md` markdown headings,
+- `audit-rust` reference polish: `references/unsafe-soundness.md` has markdown headings,
   and `references/false-positive-handling.md` has a stray trailing code fence.
 
 ## Why tracked, not fixed here

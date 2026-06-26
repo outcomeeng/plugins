@@ -85,26 +85,6 @@ Auditing `product/orders/` for a web service.
 }
 ```
 
-Correct approach for the cited findings:
-
-```python
-from typing import Protocol
-
-
-class EmailSender(Protocol):
-    async def send(self, to: str, subject: str, body: str) -> None: ...
-
-
-def compute_order_totals(orders: list[Order]) -> list[OrderSummary]:
-    """Pure computation -- no IO."""
-    ...
-
-
-async def process_orders(orders: list[Order], *, send_email: EmailSender) -> None:
-    for summary in compute_order_totals(orders):
-        await send_email.send(summary.to, summary.subject, summary.body)
-```
-
 </example>
 
 </examples>
