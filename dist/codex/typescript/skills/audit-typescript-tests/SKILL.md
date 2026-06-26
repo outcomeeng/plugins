@@ -367,8 +367,8 @@ How to avoid: Gate 1 step 6 rejects imports from `@testing/fixtures/*`. Fixture 
 The TypeScript test verdict is sound when:
 
 - Every in-scope assertion was judged on all seven Gate 1 steps and Gate 2 with none skipped — coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
-- The verdict states an overall `APPROVED` / `REJECT` with no assertion left unevaluated.
+- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
-- No deterministic verification was run inside the audit; the same node yields the same verdict.
+- The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>

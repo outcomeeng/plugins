@@ -258,9 +258,9 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 
 The Rust test verdict is sound when:
 
-- Every in-scope assertion was judged on all eight Gate 1 steps and Gate 2 with none skipped — coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals).
+- Every in-scope assertion was judged on every Gate 1 step and Gate 2 with none skipped — challenge, scope, evidence-method, controlled implementations, oracle independence, harness-chain tracing, the four properties (coupling, falsifiability, alignment, coverage by reading), and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals).
 - The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
-- No deterministic verification was run inside the audit; the same node yields the same verdict.
+- The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>
