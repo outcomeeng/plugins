@@ -3,6 +3,7 @@ name: audit-python-tests
 description: >-
   Python test-evidence audit methodology composed by a dispatched auditor agent for the Python tests in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `python:python-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

@@ -3,6 +3,7 @@ name: typescript-test-standards
 user-invocable: false
 description: >-
   TypeScript testing standards enforced across all skills. Loaded by other skills, not invoked directly.
+allowed-tools: Read
 ---
 
 <objective>

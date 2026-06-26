@@ -3,6 +3,7 @@ name: audit-rust
 description: >-
   Rust implementation-code audit methodology — design flaws, ADR compliance, and unsafe/FFI soundness — composed by a generic auditor agent for the Rust files in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
+allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -119,7 +120,7 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 

@@ -2,6 +2,7 @@
 name: update-spx
 description: >-
   ALWAYS invoke this skill when manually regenerating, refreshing, or scaffolding a product's two spx-level guide files (spx/CLAUDE.md and spx/AGENTS.md) from the installed spec-tree template. NEVER hand-edit either guide file to a new template version without this skill.
+allowed-tools: Bash(python3:*), Read
 ---
 
 <objective>

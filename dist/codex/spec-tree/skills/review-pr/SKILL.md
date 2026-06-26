@@ -2,6 +2,7 @@
 name: review-pr
 description: >-
   ALWAYS invoke this skill when reviewing a pull request or when the user asks to invoke the PR review skill.
+allowed-tools: Read, Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr comment:*), Glob, Grep, Skill
 ---
 
 <objective>

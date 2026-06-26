@@ -3,6 +3,7 @@ name: manage-github-pr
 description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
+allowed-tools: Skill, request_user_input, Bash, Read
 ---
 
 <objective>

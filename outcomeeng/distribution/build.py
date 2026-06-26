@@ -101,7 +101,6 @@ COMMENT_DELIMITER_END: Final = "#!}"
 
 # Frontmatter fields that appear in dist/claude/ and are stripped from dist/codex/.
 CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (
-    "allowed-tools",
     "disable-model-invocation",
     "argument-hint",
 )
@@ -117,6 +116,11 @@ SKILL_DIR_REWRITE_PLACEHOLDER: Final = "__OUTCOMEENG_CLAUDE_SKILL_DIR_LITERAL__"
 # Protects the escape directive (which shares Jinja's {!# #!} comment syntax) across
 # the Jinja render pass so it reaches rewrite_paths_for_target unstripped.
 SKILL_DIR_REWRITE_ESCAPE_PLACEHOLDER: Final = "__OUTCOMEENG_SKILL_DIR_REWRITE_ESCAPE__"
+
+FORMATTER_COMMAND_NAME: Final = "dprint"
+FORMATTER_FILE_GLOB: Final = "**/*.{md,json,toml,py,yaml,yml,js,html}"
+FormatterProbe = Callable[[str], str | None]
+FormatterRunner = Callable[[tuple[str, ...]], subprocess.CompletedProcess[str]]
 
 
 @dataclass(frozen=True)
@@ -806,17 +810,28 @@ def _copy_unrendered_file(
     shutil.copy2(source_file, destination)
 
 
-def _format_dist(dist_root: Path) -> None:
-    formatter = shutil.which("dprint")
-    if formatter is None:
-        raise BuildError("dprint is required to format generated dist output")
-    file_pattern = str(dist_root / "**" / "*.{md,json,toml,py,yaml,yml,js,html}")
-    result = subprocess.run(
-        (formatter, "fmt", "--allow-no-files", file_pattern),
+def _run_formatter(command: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
         check=False,
         capture_output=True,
         text=True,
     )
+
+
+def _format_dist(
+    dist_root: Path,
+    *,
+    formatter_probe: FormatterProbe = shutil.which,
+    runner: FormatterRunner = _run_formatter,
+) -> None:
+    formatter = formatter_probe(FORMATTER_COMMAND_NAME)
+    if formatter is None:
+        raise BuildError(
+            f"{FORMATTER_COMMAND_NAME} is required to format generated dist output"
+        )
+    file_pattern = str(dist_root / FORMATTER_FILE_GLOB)
+    result = runner((formatter, "fmt", "--allow-no-files", file_pattern))
     if result.returncode != 0:
         details = (result.stderr or result.stdout).strip()
         raise BuildError(f"dprint failed while formatting dist: {details}")

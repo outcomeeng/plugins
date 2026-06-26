@@ -62,6 +62,7 @@ During audits, prioritize evaluation of:
    - If `/skill-standards` or `/agent-prompt-standards` is unreadable, note under "Configuration Issues" and proceed with available content.
    - If YAML frontmatter is malformed, flag as critical issue.
    - If the skill references external files that don't exist, flag as critical issue and recommend fixing broken references.
+   - If the skill references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token, flag as a portable file-reference defect.
    - If the skill is under 100 lines, note as "simple skill" in the context line and evaluate accordingly.
 6. Evaluate the target skill against the standards loaded in steps 1-2.
 
@@ -164,6 +165,12 @@ Check the capability surface a SKILL.md carries that a slash command also had, a
 - Destructive and network tools (`Write`, `Bash`, `WebFetch`) are absent unless the task genuinely needs them — a read-only or analysis skill cannot delete, force-push, deploy, or exfiltrate
 - An `audit-*` skill carries `Read, Grep, Glob, Bash` (plus `Skill` when composing) and never `Write`/`Edit`
 
+**File-reference portability**:
+
+- Skill-bundled files use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` in authored source.
+- Generated Codex output may contain Codex's skill-directory token; authored source must not.
+- Repository-local authored or generated plugin paths and legacy plugin-root paths are defects in skill prose when they identify bundled plugin files.
+
 </area>
 
 <area name="prompt_craft">
@@ -207,6 +214,7 @@ Flag these issues:
 - **codex_rendering_assumption**: authored source claims Codex directly consumes Claude-only SKILL.md syntax rather than treating Codex output as a generated rendering concern. Flag as recommendation when wording only confuses authors; flag as critical when it causes a broken generated Codex surface.
 - **overbroad_allowed_tools**: `allowed-tools` grants bare `Bash`, `Bash(git *)`, or a destructive/network tool the skill's task does not need, re-admitting the destructive or exfiltrating commands a narrower grant would bar. Flag as critical for security-sensitive skills.
 - **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Flag as recommendation — it taxes every load without payoff.
+- **nonportable_bundled_file_reference**: skill prose references a bundled plugin file through repository-local authored or generated plugin paths, legacy plugin-root paths, or an authored Codex-only skill-directory token. Flag as critical: authored source must use `${CLAUDE_SKILL_DIR}/references/...` or `${CLAUDE_SKILL_DIR}/scripts/...` for files bundled with the current skill, or describe the owning workflow/capability when the file belongs elsewhere.
 
 </area>
 </evaluation_areas>
@@ -285,7 +293,7 @@ Read `${CLAUDE_SKILL_DIR}/references/operational-effectiveness-examples.md` for 
 </operational_effectiveness_examples>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff the `must-fix` row has no findings; `FAIL` if any must-fix finding has severity `REJECT`. Worth-improving and Keep-these-aspects observations land as `WARNING` and `INFO` severity findings respectively under the corresponding rows — they do not flip the overall to `FAIL`.
 
@@ -401,20 +409,3 @@ Before presenting audit findings, verify:
 
 Only present findings after all checks pass.
 </validation>
-
-<final_step>
-Before offering next steps, reason about the findings:
-
-1. **Identify sequencing conflicts** — do any must-fix items interfere with or subsume others? (e.g., extracting to a workflow file makes heading conversion happen inside the new file — fixing headings in-place first means redoing them during extraction)
-2. **Find the forcing decision** — which choice, once made, determines the shape of everything else?
-3. **Group remaining fixes** — which can be committed immediately vs which depend on the forcing decision?
-
-Present the forcing decision as a structured choice. Each option MUST name a real trade-off — what this approach does AND what it defers or makes easier. Never offer options where one sounds obviously correct.
-
-**Good option**: "Restructure first — extract workflow → headings disappear naturally in the new file. One pass, no rework. Higher upfront effort."
-
-**Bad option**: "Fix everything" — no trade-off stated, sounds obviously correct, requires no judgment.
-
-If one option sounds obviously better than the others, the option set is wrong — redesign it.
-
-</final_step>

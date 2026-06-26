@@ -3,6 +3,7 @@ name: task-tracking-standards
 user-invocable: false
 description: >-
   Runtime task-tracking standards for skills that schedule heartbeats or timers. Loaded by other skills, not invoked directly.
+allowed-tools: Read
 ---
 
 <objective>

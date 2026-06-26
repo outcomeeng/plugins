@@ -1,6 +1,11 @@
 ---
 name: review-changes
 description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading persisted review artifacts directly.
+allowed-tools:
+  - Bash
+  - Grep
+  - Glob
+  - Read
 ---
 
 <objective>

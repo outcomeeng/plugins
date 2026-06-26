@@ -3,6 +3,7 @@ name: audit-python-architecture
 description: >-
   Python-specific ADR architecture audit — dependency injection, no-mocking, level accuracy — composed by the generic adr-auditor agent for the Python concerns in scope.
   Reached only through a dispatched auditor agent, never the main conversation.
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 Invoke the `python:python-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
@@ -84,7 +85,7 @@ Section structure, atemporal voice, and per-rule tag validity are NOT this skill
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff every concern row is `PASS` or `UNKNOWN` (N/A maps to `UNKNOWN`); `FAIL` if any concern is `FAIL`. Findings carry severity `REJECT` for blocking violations.
 

@@ -1,6 +1,7 @@
 ---
 name: manage-thread-store
 description: ALWAYS invoke this skill when persisting or retrieving branch-scoped verification records. NEVER read or write a verification record directly from the filesystem.
+allowed-tools: Bash, Read
 ---
 
 <objective>

@@ -3,6 +3,7 @@ name: commit-changes
 description: >-
   ALWAYS invoke this skill when committing changes or when user says "commit".
   NEVER run git commit without this skill.
+allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git branch:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 <objective>

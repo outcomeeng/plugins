@@ -2,6 +2,7 @@
 name: code-typescript
 description: >-
   ALWAYS invoke this skill when writing or fixing implementation code for TypeScript.
+allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 ---
 
 Invoke the `typescript:typescript-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

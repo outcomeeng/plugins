@@ -2,6 +2,7 @@
 name: manage-pr
 description: >-
   Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /manage-github-pr.
+allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
 ---
 
 <objective>

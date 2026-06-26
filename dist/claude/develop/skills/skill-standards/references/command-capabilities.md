@@ -64,6 +64,15 @@ A skill injects state-dependent context with the `!`-backtick form inside `<cont
 
 <file_references>
 
-A skill body references a specific file with the `@` prefix (`@path/to/file`), injecting its content — the same affordance a command had. Use it for a file the skill always reads; combine it with an argument (`@$target`) for a caller-named file. Prefer a `${CLAUDE_SKILL_DIR}` path for skill-bundled files (see `references/runtime-variables.md`); `@` is for product files in the consumer's tree.
+A skill body references a specific product file with the `@` prefix (`@path/to/file`), injecting its content — the same affordance a command had. Use `@` for product files in the consumer's tree; combine it with an argument (`@$target`) for a caller-named product file.
+
+For skill-bundled files, use the runtime's skill-directory token instead of `@` or a repository path. In authored source, write the Claude Code token named `CLAUDE_SKILL_DIR`; the build emits Codex runtime output with the Codex token named `SKILL_DIR`:
+
+```markdown
+Read `${CLAUDE_SKILL_DIR}/references/<bundled-reference>.md`
+Run `python3 "${CLAUDE_SKILL_DIR}/scripts/<bundled-script>.py" <args>`
+```
+
+NEVER write Codex's skill-directory token in source. NEVER reference bundled plugin files with repository-local authored or generated plugin paths, or with legacy plugin-root paths. If a skill needs a file owned by another skill or another plugin, name the owning workflow or capability rather than manufacturing a cross-plugin filesystem path.
 
 </file_references>

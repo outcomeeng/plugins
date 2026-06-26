@@ -40,9 +40,7 @@ A verdict on one subagent configuration file (`agents/*.md`) against the create-
 <audit_workflow>
 **MANDATORY**: Read best practices FIRST, before auditing:
 
-1. Both skills are already injected above. Read the create-subagents reference files:
-   - `${CLAUDE_SKILL_DIR}/../create-subagents/references/subagents.md`
-   - `${CLAUDE_SKILL_DIR}/../create-subagents/references/write-subagent-prompts.md`
+1. Both skills are already injected above. Read the `develop:create-subagents` skill guidance, specifically its **Subagent usage and configuration** and **Writing effective prompts** reference topics.
 2. The agent-prompt-standards skill is already injected above — covers voice, description style, constraint language, and anti-patterns.
 3. Before penalizing any missing section, search entire file for equivalent content under different tag names
 4. Read the subagent configuration file at `$subagent_path`
@@ -219,7 +217,7 @@ Generic tag names like `<section1>`, `<part2>`, `<content>`.
 </anti_patterns>
 
 <verdict_format>
-Emit the verdict as JSON conforming to the canonical schema in `plugins/spec-tree/skills/audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
+Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path.
 
 The skill's `overall` is `PASS` iff the `critical-issues` row has no findings with severity `REJECT`; `FAIL` if any critical finding is `REJECT`; `UNKNOWN` if the subagent file cannot be read or the audit cannot complete. Recommendations land as `WARNING` findings; strengths and quick fixes land as `INFO` findings.
 
@@ -290,13 +288,3 @@ Before completing the audit, verify:
 7. **Examples**: At least one concrete example given for major issues
 
 </validation>
-
-<final_step>
-After presenting findings, offer:
-
-1. Return the prioritized findings to the caller for implementation
-2. Show detailed examples for specific issues
-3. Focus on critical issues only
-4. Other
-
-</final_step>

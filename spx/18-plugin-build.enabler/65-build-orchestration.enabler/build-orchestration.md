@@ -10,6 +10,8 @@ CAN run the build deterministically and install from the committed generated tre
 
 - Given `dist/` differs from the build output and `src/plugins/` carries matching uncommitted edits, when the dist-diff drift reporter runs, then it lists the drifting `dist/` paths, names the change as the expected pre-commit state to commit alongside `src/`, and exits non-zero — never a raw unified diff ([test](tests/test_build_orchestration.scenario.l1.py))
 - Given `dist/` differs from the build output and `src/plugins/` has no uncommitted edits, when the dist-diff drift reporter runs, then it lists the drifting `dist/` paths, reports the drift with a `just build-skills` rebuild remediation, and exits non-zero ([test](tests/test_build_orchestration.scenario.l1.py))
+- Given the formatter executable is unavailable, when the build formatter boundary runs, then it reports the missing formatter by command name without spawning a child process ([test](tests/test_build_orchestration.scenario.l1.py))
+- Given the formatter executable reports failure, when the build formatter boundary runs, then it reports the formatter's diagnostic output through the build error ([test](tests/test_build_orchestration.scenario.l1.py))
 
 ### Compliance
 

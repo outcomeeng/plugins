@@ -3,6 +3,7 @@ name: skill-standards
 user-invocable: false
 description: >-
   Skill authoring standards enforced across all creating and auditing skills. Loaded by other skills, not invoked directly.
+allowed-tools: Read
 ---
 
 <objective>

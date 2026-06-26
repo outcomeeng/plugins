@@ -3,6 +3,7 @@ name: merge
 description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
+allowed-tools: Skill, request_user_input, Bash, Read
 ---
 
 <objective>

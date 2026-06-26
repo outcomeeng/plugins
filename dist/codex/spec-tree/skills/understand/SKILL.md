@@ -1,6 +1,7 @@
 ---
 name: understand
 description: ALWAYS invoke this skill before any spec-tree work to load methodology. NEVER create, read, or modify spec tree files without loading this foundation first.
+allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
 <objective>

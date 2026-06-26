@@ -3,6 +3,7 @@ name: prose-standards
 user-invocable: false
 description: >-
   Prose anti-patterns enforced across all skills. Loaded by other skills, not invoked directly.
+allowed-tools: Read
 ---
 
 <objective>
