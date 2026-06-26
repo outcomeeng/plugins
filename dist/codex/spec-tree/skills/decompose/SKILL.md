@@ -190,7 +190,7 @@ Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For
 
 **Step 8: Assign sparse integer indices**
 
-Use sparse indices to encode the ordering-evidence matrix. The horizon math below composes a set of new children from scratch; when adding one child beside existing siblings, skip the distribution math and take the same index as the existing sibling the disposition checkpoint marked its independent peer, assigning a different index only for a pair the matrix proved ordered.
+Use sparse indices to encode the ordering-evidence matrix. The horizon math below composes a set of new children from scratch. When adding a child beside existing siblings, skip the distribution math and read the child's index from its disposition-checkpoint rows against each existing sibling: it shares the index of a sibling the checkpoint marked its independent peer, and takes a higher or lower index only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once — a proven edge to an existing sibling places the child above that predecessor or below that successor, and that placement, never a guessed slot, sets its index.
 
 1. Choose the horizon:
    - Full composition of all known child concerns → use the full [10, 99] range.
