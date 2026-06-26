@@ -49,7 +49,7 @@ This audit runs no deterministic verification — no `cargo fmt`, `cargo clippy`
 <structural_reading>
 Before judging evidence, read the in-scope test files for structural defects — by reading, never by running the project's gate. These are reading observations folded into Gate 1, not a separate deterministic gate:
 
-- **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a `challenge` finding, do not re-validate it.
+- **Filename policy** — each file should match `<subject>.<evidence>.<level>[.<runner>].rs` (`<evidence>` ∈ scenario/mapping/conformance/property/compliance, `<level>` ∈ l1/l2/l3). The project's validation owns this convention; note a mismatch as a finding, do not re-validate it.
 - **Source-file reads** — a test that reads `src/` production files (`read_to_string`, `include_str!`, `std::fs::read`) asserts on source text, not behavior → prose-coupling REJECT in Gate 1 step `four_properties`. Fixture reads under `spx/.../tests/` are fine.
 - **Disabled evidence** — a bare `#[ignore]` (no reason), skip-by-early-return, `todo!`, or `unimplemented!` in a test body provides no evidence → REJECT in Gate 1. The credentialed `#[ignore = "..."]` is the declared Level 3 lane pattern from `/rust-test-standards` and is not a defect in `.l3.rs` files; outside `.l3.rs` it is misplaced.
 - **Generated mock signal** — `mockall`, `automock`, `faux`, `double::` in a test is read and judged in Gate 1 step `controlled_implementations` against `/test` Stage 5 exceptions.
