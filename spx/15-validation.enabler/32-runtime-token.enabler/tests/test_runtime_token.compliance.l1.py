@@ -3,9 +3,10 @@
 Spec: spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md
 
 The validator never passes a raw runtime-divergent name in a non-ignored file, derives
-its forbidden-name set from the guard-enforced kinds (tool, field) of the build's
-runtime-token registry while excluding the review-only term kind, and enforces every file
-under src/plugins/ by default — a file not on the ignore-list is checked without opt-in.
+its forbidden-name set from the guard-enforced kinds (tool, field, file) of the
+build's runtime-token registry while excluding the review-only term kind, and enforces
+every file under src/plugins/ by default — a file not on the ignore-list is checked
+without opt-in.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from outcomeeng.validation.runtime_tokens import (
     scan_paths,
 )
 
-# The names the live registry's guard-enforced kinds (tool, field) own — the
+# The names the live registry's guard-enforced kinds (tool, field, file) own — the
 # single source of truth the validator forbids raw. Sourced through the same
 # derivation the validator uses, so the test restates no copied literal.
 _FORBIDDEN_NAMES = frozenset(forbidden_names())
@@ -50,15 +51,18 @@ def test_forbidden_set_derives_from_the_registry() -> None:
 
 def test_forbidden_set_excludes_review_only_term_kind() -> None:
     # The forbidden set is derived only from guard-enforced kinds. A controlled
-    # registry mixes an enforced tool name, an enforced field name, and a
-    # review-only term: the derivation keeps the first two and drops the term,
-    # whose common-word concept terms a whole-token match would flag in prose.
+    # registry mixes enforced tool, field, and file names with a review-only
+    # term: the derivation keeps the first three and drops the term, whose
+    # common-word concept terms a whole-token match would flag in prose.
     registry = {
         "tool": RuntimeTokenKind(
             lint_enforced=True, names={"ask_user": {"claude": "AskUserQuestion"}}
         ),
         "field": RuntimeTokenKind(
             lint_enforced=True, names={"tools_list": {"codex": "tools"}}
+        ),
+        "file": RuntimeTokenKind(
+            lint_enforced=True, names={"root_guide": {"claude": "CLAUDE.md"}}
         ),
         "term": RuntimeTokenKind(
             lint_enforced=False, names={"research_agent": {"codex": "agent"}}
@@ -67,6 +71,7 @@ def test_forbidden_set_excludes_review_only_term_kind() -> None:
     forbidden = set(forbidden_names(registry=registry))
     assert "AskUserQuestion" in forbidden  # tool kind — guard-enforced
     assert "tools" in forbidden  # field kind — guard-enforced
+    assert "CLAUDE.md" in forbidden  # file kind — guard-enforced
     assert "agent" not in forbidden  # term kind — review-covered, excluded
 
 
@@ -99,9 +104,10 @@ def test_enforced_by_default_only_ignored_files_exempt(tmp_path: Path) -> None:
         tmp_path / "plugins" / "live" / "SKILL.md", ignore=ignore, repo_root=tmp_path
     )
 
-    # The live exemption set holds only the guide generator — it defines the
-    # file-kind names as runtime data and cannot consume a build token; every other
-    # authored plugin file is enforced.
+    # The live exemption set covers the guide-generation node files, which define
+    # file-kind names as runtime data and cannot consume a build token, plus
+    # review-changes neutral citation surfaces that name both guide filenames as
+    # citation targets rather than runtime-resolved guide reads.
     assert RUNTIME_TOKEN_IGNORE == frozenset(
         {
             "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py",
@@ -132,8 +138,8 @@ def test_real_tree_scan_passes() -> None:
     assert gate_files  # the gate scans a non-empty authored set
     assert scan_paths(gate_files) == []
 
-    # The only exemption is the guide generator — it defines the file-kind names as
-    # runtime data and cannot consume a build token; every other gate file is checked.
+    # The live exemptions are the guide-generation node files and the review-changes
+    # neutral citation surfaces; every other gate file is checked.
     assert RUNTIME_TOKEN_IGNORE == frozenset(
         {
             "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py",

@@ -16,6 +16,18 @@ Status value space:
 
 Rollup rule (``roll_up``): any ``FAIL`` or ``REJECTED`` child → ``REJECTED``.
 Otherwise, if any child is ``UNKNOWN`` → ``UNKNOWN``. Otherwise → ``APPROVED``.
+
+Portability: stdlib only — no third-party packages, no ``uv``, no
+``outcomeeng_*`` imports. This script ships into consumer plugin trees where
+only the standard library is available.
+
+Tested inputs and error cases: ``test_verdict.compliance.l1.py`` exercises
+valid wrapper and leaf verdict dicts, optional ``children``/``metadata``,
+resolved and reopened finding arrays, JSON round trips, rollup combinations,
+and row-status derivation. The same suite covers malformed JSON, non-object
+documents, missing required keys, schema-version mismatches, unknown overall
+values, unknown row statuses, unknown finding severities, and null metadata
+values before this script is bundled.
 """
 
 from __future__ import annotations

@@ -168,7 +168,7 @@ Run the command once per id. NEVER archive sessions classified as **unrelated** 
 
 **Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
-**If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
+**If `--prune` is in `$session_mode` or `$prune_mode`** (only after the canonical continuation is successfully written):
 
 ```bash
 spx session list --status archive --json
