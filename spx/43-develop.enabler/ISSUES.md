@@ -1,245 +1,65 @@
 # Issues: Develop Plugin
 
-## 0. Skill `<objective>` is an output statement, not a behavioral claim — marketplace-wide reframe (OPEN; supersedes the §1 "the skill" voice question)
+Current develop-plugin follow-ups. Coordination note; not spec truth.
 
-A skill `<objective>` states the observable **output** the skill produces — its shape — not an actor's action ("The skill produces X" / "Claude produces X"), and not a behavioral claim. Because an objective is not a behavioral claim, the `agent-prompt-standards` `<voice>` rule (which governs behavioral claims) never governed it — the "the skill vs Claude" debate at the end of §1 was a category error, not a conflict. The output framing reuses the methodology's existing **output / outcome / impact** vocabulary (`spec-tree/skills/understand/references/node-types.md`: "Assertions specify the output — not the outcome or impact"); it does not coin "program logic model" as a term. `<success_criteria>` proves the output: objective = the output, success_criteria = how it is proven.
+## 1. Audit-skill skeleton sweep
 
-**Settled decisions:**
+The canonical auditor shape lives in `src/plugins/develop/skills/skill-standards/references/auditor-skeleton.md`: verdict-shaped `<objective>`, `<audit_workflow>`, `<verdict_format>`, `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>`.
 
-- Language plugins ship only alongside spec-tree — the node specs scope them to "projects using spec-tree" — so the **"architect-\* / code-\* product-path portability" class is CLOSED as mis-framed**: the `spx/` references are correct and there is no standalone-consumer scenario to conditionalize. (Also closed in `spx/43-typescript.enabler/ISSUES.md`.)
-- The reframe is marketplace-wide (every skill `<objective>`), codified in `skill-standards` + `agent-prompt-standards` FIRST, then swept per-plugin.
-- `architect-python`'s in-skill reviewer phase (Phase 5 + `<authority_model>` + the output_format reviewer-status) is dropped to match `architect-typescript`: `/apply` Step 4 (`gate="true"`) owns the architecture audit for every language, so removing it opens no gap. Folded into python's objective sweep.
+Open work: sweep the remaining `audit-*` skills onto that skeleton. Keep the post-collapse composition exception: generic composing auditors that invoke language audits require `Skill` in `allowed-tools`.
 
-**Plan of record:**
+Before starting, reconcile this work with:
 
-1. PR A (branch `work/architect-code-path-portability`, repurposed): amend `skill-standards` + `agent-prompt-standards` with the output-objective rule, the objective-is-not-a-behavioral-claim boundary, and the objective↔success_criteria division; make `develop:skill-auditor` enforce it; close the portability class here + in the typescript tracker; gate, build, bump develop, `/merge`.
-2. PRs B+: per-plugin objective sweeps to output shape, one plugin per PR with its own version bump.
-3. Separate session: Class 1 (verdict-path) + Class 4 (quick_start), reconciled with the run-journal migration (session `2026-06-21_10-07-44`) and the live structural-conformance session (`2026-06-16_12-47-44`).
+- `spx/21-spec-tree.enabler/32-decisions.enabler/ISSUES.md` for the artifact-type auditor family.
+- `spx/21-spec-tree.enabler/16-verification.enabler/PLAN.md` for the run-journal migration.
+- Any active structural-conformance session touching the same audit-skill family.
 
-**Settled and codified (this PR):** the canonical auditor formulation — a verdict-shaped `<objective>`, `<audit_workflow>` (not `process`/`critical_workflow`), `<verdict_format>` (not `output_format`), `<failure_modes>`, soundness `<success_criteria>`, and no `<quick_start>` — lives in `skill-standards`'s `references/auditor-skeleton.md`, and `audit-skills` is brought to it as the reference-conformant auditor. **Open:** sweeping the other 17 `audit-*` skills onto the skeleton (section renames + missing `<failure_modes>`) — structural-conformance work that overlaps the Class-4 / `2026-06-16_12-47-44` structural-conformance session; reconcile with it before starting.
+Gate changed skills with `develop:skill-auditor`, then `just build-skills`, `just check-skills`, and `just docs-check`.
 
-**Tracked (separate effort) — audit-skills eval coverage.** The objective-output enforcement added three observable `audit-skills` flags (`actor_or_activity_objective`, `objective_criteria_duplication`, `auditor_skeleton_violation`) with no `[eval]` case verifying detection. `develop` carries no skill eval suite today (its skills are `[review]`-only per `develop.md`), so covering these flags means establishing the first audit-skills eval suite and the `[eval]` assertions to govern it — a separate eval-authoring effort larger than this PR's diff, not a bounded fix to it. **Author it before the per-plugin objective sweeps (PRs B+) begin** — those sweeps depend on the auditor correctly flagging violations, so an unverified detector makes them unreliable. Gate with the eval harness. The command-tooling retirement (folding the command-capability checks into `audit-skills`) added five more observable flags to the same uncovered set — `orphaned_argument`, `missing_argument_hint`, `command_style_arguments`, `overbroad_allowed_tools`, `irrelevant_dynamic_context` — whose `[eval]` cases belong in this suite.
+## 2. `<quick_start>` policy enforcement on reference skills
 
-## 1. Named-subject convention sweep — prose swept; scoped residuals remain (OPEN)
+`skill-standards` already requires foundation, gate, validator, reference, and auditor skills to omit `<quick_start>`. The remaining live violation class is reference-skill enforcement: `src/plugins/typescript/skills/typescript-standards/SKILL.md` still carries a `<quick_start>` block.
 
-The `develop` plugin's `agent-prompt-standards` `<voice>` rule requires authored prompt
-content to drop the subject (imperative mood) by default and name **"Claude"** for behavioral
-claims, tendencies, and failure modes. **"the agent"**, **"an agent"**, **"the model"**, and
-**"you"** are banned subjects. The build ships authored content verbatim to both runtimes, so the
-authored canon is always "Claude".
+Required handling:
 
-**Done (this sweep):** every executing-instance agent-subject in authored prompt prose — SKILL.md
-bodies, slash-command bodies, and skill `references/*.md` — is swept to imperative or "Claude".
-This includes the **compound** forms a naive `\bthe agent\b` grep misses: `the wrapper agent`
-(review-changes, thread-store), `the calling agent` / `the calling agent or orchestrator` →
-`the caller` (the verdict-emission boilerplate across `audit`, `audit-tests`, `audit-adr`,
-`audit-pdr`, `audit-skills`, `audit-commands`, `audit-subagents`, `audit-python`,
-`audit-python-architecture`, `audit-rust`, `audit-rust-architecture`,
-`audit-typescript`, `audit-typescript-architecture`, `review-pr`), `the orchestrating
-agent` (architect-python), and `the next agent` → `the next session` (handoff). Verify with a
-**PCRE, case-insensitive** survey — `git grep -niP '\b(the|an|a|this|next|calling|wrapper) (\w+ )?agent\b'`
-over `src/plugins/**/*.md` — not POSIX `-E` (git's `-E` does not honor `\b` and silently matches
-nothing).
+- Update `audit-skills` enforcement if reference-skill `<quick_start>` detection is not already mechanical.
+- Sweep reference skills for `<quick_start>` blocks and remove any abbreviated path that contradicts their foundation/reference role.
+- Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
 
-**Two non-voice REJECTs the skill-auditor surfaced and this change also fixes (bounded):**
+Gate changed skills with `develop:skill-auditor`.
 
-- `inspect-github-actions` invoked `uv run python "${CLAUDE_SKILL_DIR}/scripts/gh_access.py"` and declared
-  `Bash(uv run:*)` — a portability break (`uv` is absent in consumer repos). Now `python3` +
-  `Bash(python3:*)`, per the `python3`-only plugin constraint.
-- `audit`'s description was passive (`Use when asked by the user to invoke the audit skill`). Now
-  directive (`ALWAYS invoke … NEVER …`).
+## 3. Verdict row taxonomy
 
-**Legitimate keeps (distinct entity / domain / not the executing instance):** named agents
-(`changes-reviewer`/`pr-reviewer`/`Explore`/`applier`/`*-auditor` agent, the operator's `main
-agent`, the review command's `main agent`); the `agent` frontmatter field name; multi-agent
-orchestration domain content in `create-subagents/references/`; `coding agent` as an external
-*product* category and user-facing "your coding agent" (draw-excalidraw README); "a separate agent"
-delegation advice (large-diagrams); `local agent instructions` (a repo-file category, coding/test-typescript);
-the `<self_reference>` blocks that document banned output-artifact identity strings; and the
-rule-documentation lines in `agent-prompt-standards` / `audit-*` that quote the banned
-subjects verbatim.
+Verdict-emitting skills use different row taxonomies while claiming the canonical verdict envelope. For example, `audit-skills` uses `keep-these-aspects` / `worth-improving` / `must-fix`, while `audit-subagents` uses `critical-issues` / `recommendations` / `strengths` / `quick-fixes`.
 
-**Residuals (genuinely larger / distinct concern — tracked, not deferred-by-origin):**
+Required handling: decide whether `verdict.py` mandates a uniform row taxonomy or treats row names as free-form labels inside a fixed envelope. This decision affects journal projections, rendered audit surfaces, and any auditor agent that indexes on row names.
 
-- **Subagent definition voice** (`spec-tree/agents/audit-orchestrator.md`, `auditor.md`,
-  `pr-review-orchestrator.md`, `spx-updater.md`): pervasive `this agent` / `the agent` referring to
-  the *defined* agent (`This agent holds no audit policy of its own`, `as this agent's result`,
-  `constructed in this agent`). Whether a subagent definition naming itself counts as the banned
-  generic subject is a distinct question governed by the **subagent**-auditor (`audit-subagents`,
-  not the skill-auditor run for this sweep), and the referential forms (`this agent's prose`) do not
-  map cleanly to imperative/"Claude". Sweep it as a dedicated subagent-voice pass with a
-  `develop:subagent-auditor` gate.
-- **`uv run` beyond `inspect-github-actions`** (`python` plugin `uv run pytest`/`ruff`/`mypy`; excalidraw
-  `uv run playwright`/`render_excalidraw.py`): a design decision about how each plugin invokes the
-  consumer's toolchain and the vendored excalidraw setup — distinct from the bundled-stdlib-helper
-  case fixed here.
-- **Skill-auditor WARNINGs** (worth-improving, not blocking): spec-tree review-change skill name vs the
-  imperative convention in `spx/local/skills.md`; orphaned `review-changes/references/render/*` and
-  `inspect-github-actions/scripts/workflow_inspect.py`. (`skill-standards` over the 500-line ceiling —
-  resolved: split into `references/runtime-variables.md` and `references/script-standards.md`.)
-- **Standalone `you` / `the model`** beyond prose: **DONE — complete across all six plugins.** The
-  executing-Claude `you`/`your`/`yourself` sweep ran as a per-plugin pass, converting executing-Claude
-  second-person to imperative/declarative and keeping user-facing intake/README/brand second-person,
-  subagent role-framing example prompts (`You are a …`), and rule-doc quotes of the banned term.
-  Merged: `rust` (#219, + reflexive cleanup #229), `work` (#221), `hdl` (#223), `develop` (#225),
-  `python` (#226, + behavioral-claim parity #230), `typescript` (#228). A behavioral claim in
-  `audit-python`/`audit-typescript` ("what the auditor catches beyond automated tools") was
-  named to **"Claude"** (`Claude catches:`) per the `<voice>` behavioral-claim rule. Verify with the
-  PCRE survey `git grep -niP "\byou\b|\byour\b|\byourself\b" -- 'src/plugins/<plugin>/**/*.md'`:
-  `rust`/`python`/`typescript` return only keeps; `work`/`hdl`/`develop` return only intake/README/
-  role-framing/rule-quote keeps. The `the model` survey is clean. This completes the marketplace-wide
-  named-subject conformance for the executing-Claude axis.
+Govern with `spx/15-audit-result-delivery.pdr.md` and the audit nodes before editing individual skills.
 
-  **Tracked follow-ups — DONE (named-subject voice axes, branch `work/named-subject-voice-followups`):**
+## 4. Audit-skills eval coverage
 
-  - **Passive auditor-skill `description:` directiveness — DONE.** Converted the 9 passive
-    `audit-*` descriptions (`description: Use when asked by the user to invoke the … skill`,
-    ~77% activation) to the directive `ALWAYS invoke … NEVER …` folded-scalar form (~100%) per
-    `<description_style>`: `python` (audit-python, audit-python-architecture), `rust`
-    (audit-rust, audit-rust-architecture, audit-rust-tests), `spec-tree` (audit-tests),
-    `typescript` (audit-typescript, audit-typescript-architecture, audit-typescript-tests).
-    The `develop`/`prose` auditors and `audit-python-tests` were already directive.
-  - **Uniform `<what_you_do_not_do>` → `<out_of_scope>` tag rename — DONE.** Renamed the section
-    tag in the only two skills that carry it — `architect-rust` and `architect-typescript`
-    (identical sections, parity preserved). `architect-python` has no such section.
-  - **`<failure_modes>` "the auditor" role-noun → "Claude" — DONE.** Converted every executing-
-    instance "The auditor"/"This auditor" subject to "Claude" per `<failure_mode_writing>` in
-    `audit-python` (5 sites) and `audit-typescript` (5 sites). The `develop:skill-auditor`
-    gate surfaced the identical pattern in `audit-python-architecture` (6 sites) and
-    `audit-typescript-architecture` (5 sites) — both swept in the same change to keep parity (the
-    axis under-enumerated the architecture auditors). The deterministic PCRE survey returns clean.
+`audit-skills` now exposes observable flags with no eval suite proving detection, including objective-shape and command-capability findings:
 
-  **New tracked follow-up (surfaced by the skill-auditor gate during the voice sweep — separate, structural):**
+- `actor_or_activity_objective`
+- `objective_criteria_duplication`
+- `auditor_skeleton_violation`
+- `orphaned_argument`
+- `missing_argument_hint`
+- `argument_capture_regression`
+- `overbroad_allowed_tools`
+- `irrelevant_dynamic_context`
+- `codex_rendering_assumption`
 
-  - **Audit-skill structural conformance — marketplace-wide.** `skill-standards` mandates
-    `allowed-tools: Read, Grep, Glob, Bash` for every `audit-*` skill and (per `<xml_structure>`)
-    omitting `<quick_start>` on validator/gate skills.
+Required handling: author the first develop-plugin eval suite for `audit-skills`, add matching `[eval]` assertions, and run the eval harness before using the auditor as the gate for marketplace-wide objective or argument-syntax sweeps.
 
-    **⚠️ Post-collapse exception (PR #275, the auditor collapse — do NOT strip `Skill`).** The
-    generic composing auditors `audit-adr`, `audit-tests`, and `audit` now carry
-    `allowed-tools: Read, Grep, Glob, Bash, Skill` — the `Skill` tool is REQUIRED so they compose
-    `audit-{lang}*` by language partition per `spx/21-spec-tree.enabler/17-auditing.adr.md`.
-    Treating the blanket four-tool rule as absolute would revert the merged composition mechanism
-    (composition is unexecutable without `Skill`). Any marketplace-wide allowed-tools sweep must
-    keep `Skill` on those three skills. The 10 per-language auditor agents
-    (`{python,typescript,rust}-{architecture,code,test}-auditor`, `rust-unsafe-auditor`) were
-    removed in the same collapse, so the audit-skill set this sweep ranges over is the post-collapse
-    set, and the `<quick_start>`-on-validator question below is the same family-wide deviation now
-    tracked in `spx/21-spec-tree.enabler/32-decisions.enabler/ISSUES.md` — reconcile the two rather
-    than running parallel passes.
+## 5. Remaining `uv run` command policy
 
-    The touched-file portion is **fixed in this
-    PR** (the local `changes-reviewer` gate raised it as in-scope touched-file debt): `audit-tests`
-    gained `allowed-tools` and dropped its `<quick_start>` (its `/contextualize` prerequisite and
-    coupling-gate already live in `<essential_principles>`/`<audit_workflow>`/`<success_criteria>`),
-    and `audit-python-architecture` + `audit-typescript-architecture` completed their
-    `allowed-tools` (`Read, Grep` → `Read, Grep, Glob, Bash`). **Remaining (untouched files, dedicated
-    pass):** `allowed-tools` absent in `develop/audit-skills` and
-    `develop/audit-subagents`; `<quick_start>` carried by those 2 `develop` auditors plus the
-    complex code auditors `audit-python`, `audit-rust`, `audit-typescript` (whether a
-    multi-phase code auditor is a "validator" that must omit `<quick_start>` is the unsettled design
-    call for that pass — the skill-auditor split on it). Also:
-    `spec-tree/review-pr` carries the same passive `Use when asked by the user …` description (not
-    an `audit-*` skill, so outside the voice axis above) — fold into the directive-description pass
-    or this structural pass.
+`inspect-github-actions` no longer invokes bundled helper scripts through `uv`, but other plugin surfaces still document `uv run` for consumer toolchains or vendored local workflows. The remaining cases require a product decision per plugin surface: consumer-project tool invocation, local marketplace tooling, or shipped script execution.
 
-    **Update (agent-only-audit-dispatch change):** the missing `allowed-tools` on
-    `develop/audit-skills` and `develop/audit-subagents` is now **fixed**
-    — both gained `allowed-tools: Read, Grep, Glob, Bash` as touched-file debt while their
-    descriptions were converted to the agent-preloaded dispatch-steering form. The `<quick_start>`
-    question for the 2 develop auditors plus the complex code auditors remains for the dedicated pass.
-    (`develop/audit-commands` and its `command-auditor` agent were removed — commands are not a
-    supported artifact per `spx/13-plugin-and-runtime-conventions.adr.md` — so they drop out of this
-    sweep's scope.)
+Required handling: classify each remaining `uv run` occurrence by execution environment before changing it. Shipped plugin scripts stay `python3` and stdlib-only; consumer project commands may remain runtime-specific when the language plugin explicitly delegates to the consumer's toolchain.
 
-  - **Verdict-toolchain path portability — marketplace-wide.** Fixed in the audit-journal state
-    migration pass: every touched `audit-*` skill now describes canonical verdict JSON as input to
-    the composing audit workflow's journal path, and the obsolete standalone rendered-surface carrier
-    scripts were removed from authored source and generated plugin output.
+## 6. Cross-plugin architect objective subject
 
-  - **Verdict-schema row-taxonomy divergence — marketplace-wide.** The `audit-*` skills do not agree
-    on `<output_format>` verdict row names: `audit-skills` emits the three-row
-    `keep-these-aspects` / `worth-improving` / `must-fix` shape, while `audit-subagents` emits a
-    four-row `critical-issues` / `recommendations` / `strengths` / `quick-fixes` shape, and the
-    `overall` rule differs with it (`PASS` iff `must-fix` empty vs `PASS`
-    iff `critical-issues` carries no `REJECT`). All claim conformance to the canonical schema in
-    `audit/scripts/verdict.py`. Reconciling requires deciding whether `verdict.py` mandates a uniform
-    row taxonomy or treats row names as free-form labels over a fixed envelope — a verification-contract
-    question governed by `spx/15-audit-result-delivery.pdr.md` and the auditing nodes, affecting
-    journal-rendered surfaces and any auditor agent that indexes on row names. The class spans the
-    13 verdict-emitting skills (touched and untouched), so the coherent fix is one marketplace-wide
-    pass, not a per-touched-file edit. Surfaced by the `develop:skill-auditor` gate during the PR3
-    `Skill`-append; out of scope for that frontmatter change.
+Architect skills must use one objective-subject policy across Python, Rust, and TypeScript. The architect objectives and nearby body prose mix imperative output wording, artifact-shaped objective wording, and architect-skill subject claims across the three language plugins.
 
-**`"The skill"` as named subject in `architect-*` objectives — cross-language candidate (surfaced by the CI `spec-tree-review` on PR #286, NOT the skill-auditor).** The CI reviewer flagged `architect-typescript`'s `<objective>` sentence "The skill produces ADRs, never implementation code." as a `<voice>` named-subject violation (a behavioral/output claim should name **"Claude"**), and PR #286 changed it to "Claude produces ADRs, never implementation code." `architect-python` and `architect-rust` carry the identical "The skill produces ADRs, never implementation code…" phrasing in their objectives and now diverge from the typescript form. The nuance: the **authoritative** `develop:skill-auditor` gate did NOT flag this phrasing on `architect-typescript` (only the CI `spec-tree-review`, which does not load `agent-prompt-standards`, did) — so "the skill" as a subject is a borderline call, not a confirmed banned subject like "the agent"/"you"/"the model". Resolve as a deliberate decision in a marketplace-wide named-subject voice pass: either rule "the skill" an acceptable artifact-subject (and revert typescript for consistency) or a violation (and sweep `architect-python`/`architect-rust` to "Claude"). Each plugin touched gets its own patch bump; gate with `develop:skill-auditor`.
-
-**Verification gate:** `develop:skill-auditor` (`/audit-skills`) loads `agent-prompt-standards`;
-`develop:subagent-auditor` (`/audit-subagents`) governs the agent-definition files. Run both on
-changed targets; the deterministic PCRE `git grep` confirms the named-subject axis specifically.
-
-Surfaced 2026-06-12 while correcting a named-subject regression introduced in PR #169 and fixed in
-PR #171 (`understand` skill).
-
-## 2. Skill-delegation `Skill` allowed-tools gap — language + develop + prose plugins (OPEN)
-
-A skill whose body invokes another skill needs `Skill` in `allowed-tools`, or the delegation
-requires per-call approval. Two body patterns delegate: the `{!% require_skill … %!}` macro (which
-renders to "Invoke the `<skill>` skill before proceeding") and an explicit `Invoke /<skill>`
-prerequisite (for example `/understand`, `/contextualize`, the `/test` family). This is the same
-requirement the PR #275 composing auditors already satisfy (entry 1 above) — generalized to every
-delegating skill, not only `audit-adr` / `audit-tests` / `audit`.
-
-**Closed (PR #279, branch `fix/skill-delegation-allowed-tools`):** every affected skill in the three
-touched plugins — spec-tree (`decompose`, `refactor`, `test`, `audit-pdr`, `audit-specs`), python
-(`architect-python`, `code-python`, `test-python`, `audit-python`, `audit-python-tests`,
-`audit-python-architecture`), and rust (`architect-rust`, `code-rust`, `test-rust`, `audit-rust`,
-`audit-rust-tests`, `audit-rust-architecture`). The `audit-*` skills keep their read-only tool set
-(`Skill` added, no `Write`/`Edit`).
-
-**Remaining (untouched plugins — follow-up PRs, each its own version bump). Per-plugin playbooks live
-in each plugin's owning node; this section holds the develop half and the shared heuristic.**
-
-- **develop — PR3 (develop half) — CLOSED (this PR, branch `fix/skill-delegation-allowed-tools-develop-prose`).**
-  `Skill` appended to `allowed-tools` on the three read-only audit skills carrying the
-  `{!% require_skill … %!}` macro: `audit-commands`, `audit-skills`, `audit-subagents` (now
-  `Read, Grep, Glob, Bash, Skill`; no `Write`/`Edit`). `agent-prompt-standards` is a reference skill
-  ("invoke X **instead of me**") and was correctly NOT a gap. The `develop:skill-auditor` gate ran on
-  every changed SKILL.md and additionally surfaced a touched-file must-fix fixed in this PR — the
-  `<final_step>` "Implement all fixes automatically" option contradicted the read-only audit contract
-  in `audit-commands` and `audit-subagents` (both reworded to "Return the prioritized findings to the
-  caller for implementation"). The marketplace-wide classes the gate re-flagged (`<quick_start>` on
-  validators, bare verdict-path citation, verdict-schema row-taxonomy) stay tracked in §1.
-- **typescript — PR2, entangled. CLOSED** (branch `fix/typescript-skill-delegation-allowed-tools`).
-  All 6 skills gained `Skill`; `architect-typescript` (`<objective>`) and `audit-typescript`
-  (`<repo_local_overlay>`, quick_start Read-rewrite, dangling `rules/` removal) remediated; the
-  typescript-unique `code-typescript` missing-`<objective>` and `audit-typescript` duplicate-prose
-  defects fixed as touched-file debt. Marketplace-wide classes the gate also surfaced are deferred and
-  recorded in `spx/43-typescript.enabler/ISSUES.md`.
-- **prose — PR3 (prose half) — CLOSED (this PR, same branch).** `Skill` appended to `audit-prose`,
-  `audit-internal-docs` (both now `Read, Glob, Grep, Bash, Skill`, read-only), and `write-internal-docs`
-  (now `Read, Edit, Write, Glob, Grep, Skill`). See `spx/43-prose.enabler/ISSUES.md`.
-
-**Detection heuristic (the lesson — for any future allowed-tools sweep).** A skill needs `Skill` in
-`allowed-tools` iff its body operationally invokes another skill. The two signals are the
-`{!% require_skill … %!}` macro (renders at build to "Invoke the `<skill>` skill before proceeding")
-and a `Invoke /<skill>` / `invoke /<skill>` prerequisite in **either** case. The PR #279 sweep
-initially missed ~14 skills because the discovery grep matched only lowercase `invoke /`. Enumerate a
-plugin's gaps with `grep -liE 'require_skill|invoke`?/[a-z]' src/plugins/<plugin>/skills/*/SKILL.md`,
-then DROP reference/standards skills (`*-standards`,`agent-prompt-standards`,`prose-standards`):
-they tell the reader to "invoke X **instead of** me" and do not themselves delegate, and skills with
-an **empty**`allowed-tools`are unrestricted (no gap). The`audit-*`read-only constraint permits`Skill`(it loads context, it is not`Write`/`Edit`).
-
-**Pre-existing skill-body quality debt surfaced by the `develop:skill-auditor` gate during the PR #279
-sweep (separate skill-quality pass — the `allowed-tools` change itself is auditor-confirmed clean on
-all 17 touched skills):** the gate, run per the AGENTS.md skill-auditor requirement on every edited
-SKILL.md, flagged pre-existing body defects unrelated to the one-line `allowed-tools` change. The two
-unambiguous structural bugs were fixed in PR #279 as touched-file debt — `rust/code-rust`'s
-`<testing_methodology>` / `</test_methodology>` tag mismatch, and the orphaned (uncited)
-`python/audit-python-tests/references/python-test-audit-examples.md` (now cited via `<reference_guides>`).
-The remaining items are the same already-tracked marketplace classes (entry 1 above) and belong to
-their dedicated passes, not this frontmatter sweep: the bare `plugins/spec-tree/skills/audit/scripts/verdict.py`
-path citation across the audit skills (verdict-toolchain portability); `<quick_start>` carried by the
-complex code/audit validators; and now also `rust/code-rust`'s duplicate `<reference_loading>` +
-`<repo_local_overlay>` blocks (one is redundant — the two auditor runs disagreed on which to keep, so
-it is a content judgment for the skill-quality pass) and `python/audit-python-tests`'s reference file
-using markdown headings rather than pure-XML structure.
+Required handling: decide whether objective statements may use the artifact subject `the skill` or must name `Claude` for this output claim, update `skill-standards` / `agent-prompt-standards` if the rule needs clarification, then sweep the architect skills consistently. Gate changed skills with `develop:skill-auditor`.
