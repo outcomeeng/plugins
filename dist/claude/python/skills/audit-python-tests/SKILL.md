@@ -52,21 +52,9 @@ For every in-scope test assertion, inspect the full evidence chain:
 Do not approve a test by looking only at the test file. Laundering and severed coupling can live in generators, harnesses, fixture path providers, and pytest discovery shims.
 </audit_scope>
 
-<gate_0_deterministic>
-Run deterministic checks before judgment when the repository provides the tools. Prefer the repository's canonical commands — those its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document; the `python3 -m …` forms below are the portable fallback when the product ships no wrapper:
-
-```bash
-bad_test_names="$(rg --files <spec-node-path>/tests/ --glob '*.py' | rg -v '/test_[^.]+\.(scenario|mapping|conformance|property|compliance)\.l[123](\.[^.]+)?\.py$' || true)"
-test -z "$bad_test_names"
-python3 -m pytest --collect-only -q <spec-node-path>/tests/
-python3 -m ruff check <spec-node-path>/tests/
-python3 -m mypy <spec-node-path>/tests/
-```
-
-Report unavailable tools separately instead of silently skipping them.
-
-If collection, linting, type checking, or repository-canonical deterministic checks fail, halt the audit and emit `REJECT` with the failing command and diagnostic. Do not proceed to semantic evidence judgment on uncollectable, untyped, or lint-failing tests.
-</gate_0_deterministic>
+<no_deterministic_verification>
+This audit runs no deterministic verification — no test collection, lint, type-check, coverage, or naming-convention command. The main agent brings the project's tests, linters, and type-checker to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Spend the whole audit on reading the evidence chain; the green deterministic gate is a precondition the main agent owns, not a step this audit re-pays.
+</no_deterministic_verification>
 
 <coupling_audit>
 Classify imports by runtime coupling:
@@ -219,7 +207,7 @@ Do not recommend `tests/helpers`, `tests/support`, node-local helper modules, or
 </audit_workflow>
 
 <verdict_format>
-Follow `<verdict_format>` in `/audit-tests`.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Python-specific finding detail into those rows.
 
 For each finding, include:
 
@@ -228,7 +216,7 @@ For each finding, include:
 - The imported chain when the defect is outside the test file
 - Required fix
 
-Emit `APPROVED` only when Gate 0 and all evidence-property checks pass. Emit `REJECT` when any property fails.
+Emit `APPROVED` only when all evidence-property checks pass. Emit `REJECT` when any property fails.
 </verdict_format>
 
 <failure_modes>
@@ -262,22 +250,12 @@ Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an H
 </failure_modes>
 
 <success_criteria>
-A Python test audit succeeds when:
+The Python test verdict is sound when:
 
-- Gate 0 deterministic checks are run or unavailable tools are reported
-- Every test is traced to the spec assertion and selected assertion type
-- Runtime coupling reaches production behavior directly or through audited harnesses
-- No framework mock, monkeypatch, or import trick replaces the behavior under test
-- Source-owned values come from source modules or owning packages
-- Every test case is traceable to a source independent of the author — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
-- Container keys are imported from the owning production module, not hand-written
-- Runner-tuning values live on the harness that owns the resource, not at test scope
-- Missing source-of-truth modules are named in the verdict and routed to source-shape improvement, not absorbed into the test
-- Generators represent meaningful variable domains
-- Harnesses manage resource lifecycle and cleanup without owning arbitrary data
-- Inert fixtures are consumed only as files
-- `conftest.py` is limited to discovery, registration, and explicit harness imports
-- The verdict lists exact evidence-property findings or emits `APPROVED`
+- Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
+- The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>
 

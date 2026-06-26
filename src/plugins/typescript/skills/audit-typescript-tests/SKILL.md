@@ -44,32 +44,22 @@ Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded sk
 
 3. Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1
 
-Optional preliminary tool: `spx validation literal` (ships with the `spx` CLI). If unavailable, proceed without cross-file literal findings.
+This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. The main agent brings the project's validation, type-checker, and tests to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Cross-file literal laundering is judged by reading.
 
 </prerequisites>
 
-<preliminary_check>
+<literal_laundering_by_reading>
 
-If `spx validation literal` is available, run it from the product root before Gate 1. Include the spec-node tests and generated-domain modules rooted at the product:
+Cross-file literal laundering is judged by reading the test's literals against their sources, not by running `spx validation literal`. The two laundering shapes the validator surfaces are read in Gate 1:
 
-```bash
-spx validation literal --files <spec-node-path>/tests/**/*.test.ts <product-root>/testing/generators/**/*.ts --json
-```
+| Shape                                                          | What to read                                                                                                    | Judged in                      |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| src-reuse — a test literal also present in a production module | Read the literal at its test callsite and search the production module the assertion governs for the same value | Gate 1 step `mocks` / `oracle` |
+| test-dupe — a literal duplicated across test files             | Read the literal at its callsite and the sibling test files in scope for the same value                         | Gate 1 step `four_properties`  |
 
-`<product-root>/testing/generators/**/*.ts` means the package or repository root that owns the test command. Resolve it before running; for a repo-root package, `$(git rev-parse --show-toplevel)/testing/generators/**/*.ts` is the same directory. In a monorepo package, use that package root instead. Never rewrite the glob as `<spec-node-path>/testing/generators/**/*.ts` unless the repository stores generators under each spec node.
+A test literal that re-declares a production-owned value instead of importing it is laundered coupling → REJECT. Fixture-as-module and generator-laundering shapes are read in Gate 1 step `harness_chain`.
 
-Findings feed into Gate 1:
-
-| check_id             | Source                                                                      | Hands to                               |
-| -------------------- | --------------------------------------------------------------------------- | -------------------------------------- |
-| L3                   | `spx validation literal` — src-reuse (literal appears in production module) | Gate 1 step `mocks` / `falsifiability` |
-| L4                   | `spx validation literal` — test-dupe (literal duplicated across test files) | Gate 1 step `four_properties`          |
-| fixture_import       | Gate 1 step `harness_chain` — fixture imported as a module                  | Gate 1 step `harness_chain`            |
-| generator_laundering | Gate 1 step `harness_chain` — generator wraps source-owned singleton values | Gate 1 step `harness_chain`            |
-
-If `spx validation literal` is unavailable, proceed to Gate 1 without these findings.
-
-</preliminary_check>
+</literal_laundering_by_reading>
 
 <gate_1_assertion>
 
@@ -187,7 +177,7 @@ Apply the supplements in `<typescript_supplements>` for each property:
 - **Coupling** — 5-category taxonomy (Direct / Indirect / Transitive / False / Partial), barrel resolution, type-only import handling.
 - **Falsifiability** — incorporates step 4 (mocks) and step 5 (oracle) judgments, plus snapshot rules.
 - **Alignment** — incorporates step 2 (clause enumeration) and step 3 (assertion type).
-- **Coverage** — package-manager detection, baseline vs. with-test deltas, saturation annotation.
+- **Coverage** — read whether the test drives execution into the assertion-relevant path; no coverage tooling is run.
 
 First property failure at this step → REJECT the assertion; move to the next.
 
@@ -299,45 +289,21 @@ Alignment fails when clauses are collapsed, evidence method mismatches the type,
 
 <supplement property="coverage">
 
-Detect the package manager:
+Establish coverage by reading, never by running `vitest --coverage` or any other coverage tool. A dispatched agentic audit runs no deterministic verification — the main agent passes the project's tests and coverage gate before dispatch, and CI re-runs them; re-running coverage here re-pays that cost.
 
-1. Read `package.json` `"packageManager"` field — use it if present.
-2. Else detect from the lockfile in the product root: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, `bun.lockb` → bun, `package-lock.json` → npm.
-3. Else read the product's CLAUDE.md or `justfile` for the canonical test command.
+Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
-Run coverage twice.
+1. Read the production module the assertion governs and identify the assertion-relevant functions, branches, and lines.
+2. Read the test and follow what it calls into that module.
+3. Judge whether the test's execution reaches the assertion-relevant path.
 
-Baseline (excluding the test under audit):
+Interpret the trace:
 
-```bash
-<pm> vitest run --coverage --exclude='<test-under-audit>'
-```
+- Reaches the assertion-relevant path — the test exercises the behavior the assertion claims, pass.
+- Imports the module but never drives execution into the assertion-relevant path → REJECT; name the specific path the test fails to reach, traced from the code.
+- The assertion-relevant path is trivially total — annotate `saturated` in the finding detail.
 
-With the test:
-
-```bash
-<pm> vitest run --coverage '<test-under-audit>'
-```
-
-Projects may use c8, istanbul, or v8 coverage providers — check `vitest.config.ts` `test.coverage.provider`.
-
-Report actual deltas per source file:
-
-```text
-Baseline: src/config-parser.ts — 43.2%
-With test: src/config-parser.ts — 67.8%
-Delta: +24.6%
-```
-
-Interpret:
-
-- Positive delta — new coverage, pass.
-- Zero delta, baseline < 100% — no coverage increase → REJECT.
-- Zero delta, baseline = 100% — saturated; annotate `saturated` in the finding detail.
-
-Coverage measures execution breadth, not assertion strength. A property-based test with a broader input domain adds evidence coverage cannot measure.
-
-If the product has no coverage tooling: record as a coverage note, do not REJECT solely for this.
+Coverage here is execution breadth (does the test reach the assertion-relevant lines), traced by reading — never a measured percentage and never an unbacked "probably covers." A property-based test with a broader input domain adds evidence a line count would not.
 
 </supplement>
 
@@ -347,7 +313,7 @@ If the product has no coverage tooling: record as a coverage note, do not REJECT
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/audit-tests`. Preliminary check IDs: L3, L4 (from `spx validation literal` — see `<preliminary_check>`). Gate 2 extraction target: `testing/harnesses/{name}.ts`.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
 </verdict_format>
 
@@ -399,15 +365,11 @@ How to avoid: Gate 1 step 6 rejects imports from `@testing/fixtures/*`. Fixture 
 
 <success_criteria>
 
-Audit is complete when:
+The TypeScript test verdict is sound when:
 
-- [ ] Preliminary check: `spx validation literal` run (or skipped if unavailable)
-- [ ] Gate 1 complete: every assertion evaluated through all 7 steps (if preliminary check complete or skipped)
-- [ ] Generator modules audited for literal laundering: constant-only wrappers for source-owned singletons
-- [ ] Fixture usage audited: fixtures are inert files, not imported modules or sources of test exports
-- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has gate, step, and specific detail
-- [ ] For REJECT: "how tests could pass while assertions fail" explained
+- Every in-scope assertion was judged on all seven Gate 1 steps and Gate 2 with none skipped — coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
+- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
+- The same test node yields the same verdict regardless of run order (reproducible).
 
 </success_criteria>

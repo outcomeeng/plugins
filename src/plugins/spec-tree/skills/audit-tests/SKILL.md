@@ -15,7 +15,7 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap. Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (measured deltas). A test missing any property has zero evidentiary value regardless of code quality.
+A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap. Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
 Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
@@ -27,15 +27,15 @@ Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidenc
 
 A test that imports nothing from the codebase will pass forever regardless of what any file contains. Check imports before anything else. This is not a heuristic — it is a prerequisite.
 
-**RUN COVERAGE, DON'T GUESS.**
+**JUDGE COVERAGE BY READING.**
 
-Read the product's CLAUDE.md for the test and coverage command. Run coverage without the test (baseline), then with the test. Report actual deltas per source file. Never reason about what paths a test "probably" covers.
+A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Establish coverage by reading whether the test drives execution into the assertion-relevant code path; never run the project's coverage command, test command, or any other deterministic verification inside the audit.
 
 **NO MECHANICAL DETECTION.**
 
 Mocking patterns, skip patterns, type annotations — these are linting concerns (SemGrep, ESLint). The auditor evaluates evidence quality, not code quality signals.
 
-Cross-file literal validation is TypeScript-only. The base audit and non-TypeScript wrappers must not require `spx validation literal`; TypeScript wrappers may run it as an optional preliminary check.
+The literal rule is applied by reading the test's literals against their sources, never by running a validation tool. No wrapper runs `spx validation literal` or any other deterministic check inside the audit — the main agent and CI own that gate.
 
 **BINARY VERDICT.**
 
@@ -46,7 +46,7 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <constraints>
 
 - NEVER modify the tests under audit or any other file — this audit produces a verdict, never a fix or a commit.
-- ALWAYS measure coverage by running the project's coverage command (baseline, then with the test) — never estimate which paths a test covers.
+- NEVER run the project's coverage command, test command, linter, type-checker, or any other deterministic verification inside the audit — the main agent passes them on the changeset before dispatch and CI re-runs them; establish coverage by reading whether the test drives execution into the assertion-relevant path.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the tests for it.
 
@@ -170,29 +170,23 @@ Check assertion-type-to-strategy alignment:
 
 **Step 3d: Coverage**
 
-Read the product's CLAUDE.md, package.json, pyproject.toml, or Justfile. Find the test and coverage command.
+Establish coverage by reading, never by running the project's coverage tooling. A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository. Re-running the coverage command here re-pays a cost already paid.
 
-1. Run coverage **excluding** the test file under audit — this is the baseline
-2. Run coverage **including** the test file under audit
-3. Compare coverage of the source files relevant to the assertion
+Trace, by reading, whether the test drives execution into the assertion-relevant code path:
 
-Report actual numbers:
+1. Read the production code the assertion governs and identify the assertion-relevant functions, branches, and lines.
+2. Read the test and follow what it calls into that production code.
+3. Judge whether the test's execution reaches the assertion-relevant path — the lines whose behavior the assertion claims.
 
-```text
-Baseline: src/config-parser.ts — 43.2%
-With test: src/config-parser.ts — 67.8%
-Delta: +24.6% — new coverage ✓
-```
+**Interpret the trace:**
 
-**Interpret the delta:**
+- **Reaches the assertion-relevant path**: the test exercises the behavior the assertion claims. ✓
+- **Imports the module but never drives execution into the assertion-relevant path**: REJECT — "no coverage." Name the specific assertion-relevant path the test fails to reach, traced from the code.
+- **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): annotate as `saturated` in the verdict table. The test's evidentiary value comes from the other three properties.
 
-- **Positive delta**: The test covers new lines or branches. ✓
-- **Zero delta, baseline < 100%**: REJECT — "no coverage increase." Uncovered paths exist and the test doesn't hit them.
-- **Zero delta, baseline = 100%**: Coverage is saturated — no uncovered paths exist. Annotate as `saturated` in the verdict table. The test's evidentiary value comes from the other three properties.
+Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds genuine evidence reading captures and a line count would not.
 
-Coverage measures execution breadth (which lines and branches are hit), not assertion strength. A property-based test that exercises fully-covered code with a broader input domain adds genuine evidence that coverage cannot measure.
-
-If the product has no coverage tooling configured: note as a finding but do not REJECT solely for this. The other three properties still apply.
+The judgment is traced from the code and named in the finding — never a measured percentage, and never an unbacked "probably covers."
 
 </step>
 
@@ -202,7 +196,7 @@ If the product has no coverage tooling configured: note as a finding but do not 
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Detect the test language from the node's scope — infer it from the file extension of the test files linked from the assertions (`.py` → python, `.ts`/`.tsx` → typescript, `.rs` → rust); on mixed extensions, prefer the one with the most linked files. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-0-deterministic`, `gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When no language is in scope or no matching skill exists, skip composition.
+Detect the test language from the node's scope — infer it from the file extension of the test files linked from the assertions (`.py` → python, `.ts`/`.tsx` → typescript, `.rs` → rust); on mixed extensions, prefer the one with the most linked files. When a language is in scope and an `audit-{lang}-tests` skill exists for it, invoke that skill via the Skill tool. It returns a verdict in this same row schema (`gate-1-assertion`, `gate-2-architectural`) carrying language-specific check IDs — it runs no deterministic verification, so it emits no `gate-0-deterministic` row. **Merge its findings into the matching rows by `name`** — append, never replace — and emit one merged verdict. When no language is in scope or no matching skill exists, skip composition.
 
 </step>
 
@@ -229,20 +223,6 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
   "target": "<spec-node-path>",
   "overall": "PASS | FAIL | UNKNOWN",
   "rows": [
-    {
-      "name": "gate-0-deterministic",
-      "status": "PASS | FAIL | UNKNOWN",
-      "findings": [
-        {
-          "id": "f-001",
-          "file": "<path>",
-          "line": null,
-          "rule": "<check-id>",
-          "severity": "REJECT",
-          "message": "<one-line>"
-        }
-      ]
-    },
     {
       "name": "gate-1-assertion",
       "status": "PASS | FAIL | UNKNOWN",
@@ -276,7 +256,7 @@ The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` 
 }
 ```
 
-Gate-skipped rows use `status: "UNKNOWN"`. Skills with no Gate 0 or Gate 2 omit those rows from the verdict. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
+Gate-skipped rows use `status: "UNKNOWN"`. A skill with no Gate 2 omits that row from the verdict; no skill emits a `gate-0-deterministic` row, because the audit runs no deterministic verification. Language-specific test audit skills inherit this shape — they add language-specific check IDs and extraction targets to the findings but do not change the row names or schema.
 
 </verdict_format>
 
@@ -294,11 +274,11 @@ Claude saw `import { database } from "../src/database"` and classified it as dir
 
 How to avoid: Step 3b checks for mocking AFTER confirming coupling. Import + mock = coupling severed.
 
-**Failure 3: Guessed coverage instead of measuring**
+**Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude said "this test covers the parser's edge cases" based on reading the test code. The test exercised paths already fully covered by other tests and added zero new coverage.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta — re-paying the deterministic gate the main agent already passed before dispatch and CI re-runs over the repository. The dispatched audit runs no deterministic verification.
 
-How to avoid: Step 3d runs the actual coverage command. Report numbers, not impressions.
+How to avoid: Step 3d traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
 **Failure 4: Distracted by code quality signals**
 
@@ -321,6 +301,6 @@ The verdict is sound when:
 - Every assertion's tests were judged on all four evidence properties with none skipped — coupling, falsifiability, alignment, and coverage; when a language is in scope, the composed `/audit-{lang}-tests` rows are judged too (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every gate row carrying its determination, with no assertion left unevaluated.
 - Each REJECT finding is falsifiable: it names the assertion, the failed property, and the evidentiary gap — and for a pass-while-assertion-fails risk, how the test could pass while the assertion is unfulfilled.
-- Coverage deltas are measured from the coverage command, never estimated; the same node yields the same verdict.
+- Coverage is established by reading whether the test drives execution into the assertion-relevant path — traced from the code and named in the finding, never measured by running the coverage command and never an unbacked estimate; the same node yields the same verdict.
 
 </success_criteria>

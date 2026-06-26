@@ -19,7 +19,7 @@ When testability passes, the audit checks four evidence properties in order:
 1. **Coupling** — the test imports and exercises code from the codebase
 2. **Falsifiability** — a breaking change to the implementation causes a test failure
 3. **Alignment** — the test verifies what the spec assertion claims, not something adjacent
-4. **Coverage** — the test measurably increases coverage of the code under test
+4. **Coverage** — the test drives execution into the assertion-relevant code path, established by reading the test against the production code, not by re-running coverage tooling
 
 A test missing any property has zero evidentiary value regardless of code quality.
 
@@ -46,22 +46,15 @@ Mocking severs coupling. A test that imports a module then replaces it with a mo
 
 ## Coverage Verification
 
-The auditor does not guess what code paths a test exercises.
+The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-auditing.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
 
-1. Read the product's CLAUDE.md for the test and coverage command (e.g., `just run test`, `pnpm vitest --coverage`)
-2. Run coverage **without** the test file under audit — this is the baseline
-3. Run coverage **with** the test file under audit
-4. Compare: if coverage of the assertion-relevant source files did not increase, the test provides no new evidence
+The auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
 
-The auditor reports actual numbers, not estimates:
+1. Read the production code the assertion governs and identify the assertion-relevant functions, branches, and lines.
+2. Read the test and follow what it calls into that production code.
+3. Judge whether the test's execution reaches the assertion-relevant path — the lines whose behavior the assertion claims.
 
-```text
-Baseline: src/tokens.ts — 43.2% (without test under audit)
-With test: src/tokens.ts — 67.8% (with test under audit)
-Delta: +24.6% — test provides new coverage
-```
-
-A test that produces zero coverage delta on the files it claims to verify is REJECT regardless of coupling, falsifiability, and alignment.
+A test that imports the module but never drives execution into the assertion-relevant path provides no coverage evidence — REJECT regardless of coupling, falsifiability, and alignment. The finding names the specific assertion-relevant path the test fails to reach, traced from the code, not a measured percentage.
 
 ## Literal Rule
 
@@ -101,8 +94,8 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - Given a test file where testability passes, the test imports the correct module, and the test verifies behavior matching the spec assertion, when audited and all four evidence properties hold, then the verdict is APPROVED ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that imports the correct module but asserts on a property unrelated to the spec assertion, when audited, then the verdict is REJECT with finding category "misaligned" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file where no mutation to the imported module would cause a failure, when audited, then the verdict is REJECT with finding category "unfalsifiable" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file that produces zero coverage delta on the assertion-relevant source files, when audited, then the verdict is REJECT with finding category "no coverage increase" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file under audit, when coverage is measured with and without the test, then the auditor reports actual percentage deltas per source file, not estimates ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a test file that does not drive execution into the assertion-relevant source path, established by reading the test against the production code, when audited, then the verdict is REJECT with finding category "no coverage" ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a test file under audit, when coverage is judged, then the auditor names the assertion-relevant code path the test drives execution into — traced by reading the test against the production code, never by running the project's coverage tooling ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file with a bare numeric literal outside the allowlist `{-1, 0, 1, 2}`, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file with a bare string literal outside `""` and descriptive callsites, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that sources every non-allowlist literal from a library origin, a production-owned constant object, or a generator, when audited, then the literal rule passes ([test](tests/test_test_auditing.scenario.l1.py))
@@ -125,11 +118,11 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
 - ALWAYS: check what the test imports from the codebase as the first audit phase after testability passes — coupling is prerequisite to all other evidence analysis ([review])
-- ALWAYS: run the product's coverage command to measure actual coverage delta — read CLAUDE.md for the correct command ([review])
+- ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the main agent and CI own coverage measurement, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([review])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([review])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([review])
-- NEVER: estimate or reason about what code paths a test "probably" covers — run coverage and report actual numbers ([review])
+- NEVER: run the project's coverage command, test command, or any other deterministic verification inside the audit — re-running what the main agent passed before dispatch is the duplication prohibited by `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-auditing.adr.md`; trace the exercised path by reading instead ([review])
 - NEVER: accept static-literal fixture files as a valid origin — fixtures that export hardcoded literals recreate laundered indirect coupling under a fixture name ([review])
