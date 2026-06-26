@@ -1,24 +1,19 @@
-# PLAN: Route context read-set enumeration to the spx CLI
+# PLAN: Land SPX-CLI context enumeration
 
-## Why this plan exists
+## Status
 
-`/contextualize` enumerates its read-set — product spec, ancestor specs, every
-ancestor-level ADR/PDR, lower-index sibling specs, coordination notes, local
-overlays — by agent-executed prose: the workflow globs each level and tells the
-agent to "read every file" with a self-reported "glob count == read count"
-check. Nothing forces it at runtime, so an agent can skip decision records and
-the manifest's counts still pass (the manifest is written by the same agent that
-was supposed to read). `context-loading.md` already declares the correct behavior
-(read all ancestor specs and governing ADRs/PDRs; read every ADR/PDR returned by
-globs; produce the same manifest for the same tree and target), but every one of
-those assertions is `[audit]` — verified by reading the skill body, not by a
-deterministic gate. A skip is the failure mode this work removes.
+The architecture is decided in
+`spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`:
+context loading derives a target's read-set from `spx spec context --json`, the
+deterministic tree walk living in the SPX CLI as a trusted third party per
+`spx/12-shipped-scripting.adr.md`. `context-loading.md` is re-founded on that ADR.
 
-The fix routes the deterministic part — the tree walk and the per-target
-read-set derivation — to the spx CLI, consumed by the plugins product as a
-trusted third party per `spx/12-shipped-scripting.adr.md` ("once proven, that
-logic belongs in the SPX CLI"). The complexity that resists isolated testing as
-agent prose becomes a tested CLI capability.
+What remains is implementation, and it is BLOCKED: the CLI capability does not yet
+exist, and the published-floor rule (`AGENTS.md`;
+`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`)
+forbids the consuming skill or its tests from depending on an unpublished `spx`
+capability. No manual fallback in the skill closes this gap — the ADR's NEVER
+rules forbid reconstructing the read-set outside the CLI.
 
 ## The data already exists in spx
 
@@ -30,15 +25,11 @@ agent prose becomes a tested CLI capability.
   `order`, `slug`.
 
 From those two structures the read-set for any target is a pure function: walk
-`nodes` to the target to get the ancestor chain; for each ancestor and the
-target, take its `{id}/{slug}.md` spec, the `decisions` whose `id` sits directly
-in that directory, and the lower-`order` sibling specs at that level; add
-product spec, coordination notes, and local overlays. No new traversal is
-needed — only the derivation.
-
-The precedent is already shipping: `spx session show --json` (consumed by the
-pickup verifier) landed the same "spx parses, the plugin consumes structured
-output" pattern. This plan applies it to context enumeration.
+`nodes` to the target for the ancestor chain; for each ancestor and the target,
+take its `{id}/{slug}.md` spec, the `decisions` whose `id` sits directly in that
+directory, and the lower-`order` sibling specs at that level; add product spec,
+coordination notes, and local overlays. No new traversal is needed — only the
+derivation.
 
 ## Target capability (spx repo `~/Code/outcomeeng/spx/`)
 
@@ -46,7 +37,7 @@ Add `spx spec context <path> --json` emitting the ordered read-set for a target.
 `spx spec --help` currently exposes only `status` and `next`; this is a new
 sibling subcommand, a thin derivation over the existing `spec status` internals.
 
-Output contract (ordered, top-down — the read order `/contextualize` must follow):
+Output contract (ordered, top-down — the read order `/contextualize` follows):
 
 ```text
 {
@@ -69,6 +60,7 @@ Output contract (ordered, top-down — the read order `/contextualize` must foll
     "same_index": ["spx/{...}"],
     "higher_index": ["spx/{...}"]
   },
+  "guides": ["spx/CLAUDE.md", "spx/{ancestor}/CLAUDE.md"],
   "local_overlays": ["spx/local/{...}.md"],
   "bootstrap": false
 }
@@ -78,14 +70,23 @@ Contract specifics:
 
 - **Read order is deterministic and total**: product → each ancestor top-down →
   target; within a level, spec before its decisions before its lower-index
-  siblings. The same tree and target always produce byte-identical `read_order`
-  (satisfies `context-loading.md`'s determinism assertion as code, not prose).
+  siblings. Entries sharing an `order` index are tie-broken by `slug`, so the same
+  tree and target always produce byte-identical `read_order` even where indices
+  repeat.
 - **All decisions at a level are emitted** — never filtered by title or by the
-  lower-index rule. Decision ordering within a level follows `order`.
+  lower-index rule. Decision ordering within a level follows `order`, then `slug`.
 - **Lower-index siblings only** carry their spec; same-index and higher-index
   siblings go to `siblings_listed_not_read`, never into `read_order`.
 - **Coordination notes** (`PLAN.md`/`ISSUES.md`) present at any level on the path
   are emitted with `role: coordination-note`.
+- **Guides and overlays sit outside `read_order`**: the product guide
+  (`spx/CLAUDE.md` plus any subdirectory guide on the path) is emitted in `guides`
+  and the local overlays in `local_overlays`. Guides are read outside the
+  `read_order` loop; among `local_overlays`, only the lifecycle overlay
+  (`spx/local/merging.md`) is read, and the rest are listed for the skills that
+  consume them. The skill rewrite preserves the current product-guide and
+  `merging.md` reads rather than dropping them, and does not start reading the
+  other overlays.
 - **Bootstrap**: a not-yet-existing target under an authoring operation returns
   `read_order` of the product spec only and `bootstrap: true`.
 - **Missing required spec** (an ancestor directory with no `{slug}.md`) is a
@@ -94,8 +95,7 @@ Contract specifics:
 
 ## Plugins-side consumption (BLOCKED on publish + floor advance)
 
-The published-floor rule (`AGENTS.md`; `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`)
-forbids depending on an unpublished spx capability. This slice cannot ship until:
+This slice cannot ship until:
 
 1. `spx spec context` is released to npm.
 2. `REQUIRED_SPX_VERSION` (`outcomeeng/validation/spx_version.py`) is advanced to
@@ -107,18 +107,21 @@ Once unblocked:
 
 - Rewrite `src/plugins/spec-tree/skills/contextualize/SKILL.md` Steps 1–3: replace
   the per-level "glob ADRs/PDRs, read every one, count must match" prose with
-  "run `spx spec context <target> --json`; read every path in `read_order`; the
-  `<SPEC_TREE_CONTEXT>` manifest enumerates exactly those paths." The agent no
-  longer eyeballs the file set, so the skip and the read-higher-index-sibling
-  failures become structurally impossible.
-- Add a `[test]`-backed assertion to `context-loading.md`: the read-set is the
-  ordered output of `spx spec context --json` and is a deterministic function of
-  the tree and target. This is the node's first `[test]` evidence — the
-  enumeration is now code, so the determinism claim (currently `[audit]`) gains a
-  real grader. The "read every ADR/PDR" and "lower-index siblings only"
-  assertions retag from `[audit]` to `[test]` against the CLI output.
+  "run `spx spec context <target> --json`; read every path in `read_order`, then
+  read the `guides` and the lifecycle overlay (`spx/local/merging.md`) outside the
+  `read_order` loop while listing the remaining `local_overlays` without reading
+  them; the `<SPEC_TREE_CONTEXT>` manifest enumerates exactly those paths."
+  Preserving the guide and `merging.md` reads keeps the product guide and
+  lifecycle overlay in every context load without pulling in unrelated skill
+  overlays. The agent no longer eyeballs the file set, so the skip and the
+  read-higher-index-sibling failures become structurally impossible.
+- Retag the read-completeness, lower-index-sibling, and determinism assertions in
+  `context-loading.md` from `[audit]` to `[test]` against the CLI output — the
+  enumeration is now code, so the determinism claim gains a real grader. This is
+  the node's first `[test]` evidence; until the capability publishes, the ADR's
+  rules and these assertions stay `[audit]`.
 - `just build-skills`, then `develop:skill-auditor` on the edited skill plus the
-  spec/test-evidence auditor gates.
+  spec and test-evidence auditor gates.
 
 ## Hand-off
 
@@ -128,7 +131,11 @@ same shape as the spx-CLI hand-offs tracked under
 `spx spec context` there against the contract above; return here for the
 consumption slice once it is published and the floor is advanced.
 
-## Done as part of this plan's changeset
+## Done in this changeset
 
-- `context-loading.md` assertions migrated from the legacy `[review]` tag
-  spelling to `[audit]`.
+- Authored `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`
+  deciding the SPX-CLI enumeration architecture and forbidding any manual
+  read-set reconstruction.
+- Re-founded `context-loading.md` on the ADR: the read-set is derived from
+  `spx spec context`, and the "read every ADR/PDR" assertion no longer names the
+  agent-glob mechanism.
