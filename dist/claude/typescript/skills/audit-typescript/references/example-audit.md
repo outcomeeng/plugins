@@ -1,27 +1,26 @@
 <examples>
 
+The skill's entire output is the JSON verdict (see `<verdict_format>` in the skill). These examples show the verdict shape for an APPROVED audit and a REJECTED audit; the audit runs no deterministic verification, so there is no automated-gates or test-execution row.
+
 <example name="approved">
 
-Auditing `src/config/` for a CLI tool after Phase 1 and Phase 2 passed.
+Auditing `src/config/` for a CLI tool.
 
-# CODE REVIEW
-
-**Decision:** APPROVED
-
-## Verdict
-
-| # | Concern                | Status | Detail                                 |
-| - | ---------------------- | ------ | -------------------------------------- |
-| 1 | Automated gates        | PASS   | `pnpm validate` -- zero warnings       |
-| 2 | Test execution         | PASS   | 47/47 tests, 84% coverage              |
-| 3 | Function comprehension | PASS   | 12 functions, no surprises             |
-| 4 | Design coherence       | PASS   | IO separated, DI used, SRP maintained  |
-| 5 | Import structure       | PASS   | All aliases correct, no deep relatives |
-| 6 | ADR/PDR compliance     | PASS   | 15-database.adr.md constraints met     |
-
----
-
-Code meets standards.
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-typescript",
+  "target": "src/config/",
+  "overall": "PASS",
+  "rows": [
+    { "name": "function-comprehension", "status": "PASS", "findings": [] },
+    { "name": "design-coherence", "status": "PASS", "findings": [] },
+    { "name": "import-structure", "status": "PASS", "findings": [] },
+    { "name": "adr-pdr-compliance", "status": "PASS", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
+```
 
 </example>
 
@@ -29,120 +28,60 @@ Code meets standards.
 
 Auditing `src/orders/` for an e-commerce service.
 
-# CODE REVIEW
-
-**Decision:** REJECTED
-
-## Verdict
-
-| # | Concern                | Status | Detail                                         |
-| - | ---------------------- | ------ | ---------------------------------------------- |
-| 1 | Automated gates        | PASS   | `just validate` -- zero warnings               |
-| 2 | Test execution         | PASS   | 23/23 tests pass                               |
-| 3 | Function comprehension | REJECT | processOrders tangles IO with logic            |
-| 4 | Design coherence       | REJECT | IO/logic separation violated                   |
-| 5 | Import structure       | PASS   | Aliases correctly configured                   |
-| 6 | ADR/PDR compliance     | REJECT | ADR mandates DI for all external service calls |
-
----
-
-## Findings
-
-### processOrders tangles IO with computation
-
-**Where:** `src/orders/processor.ts:42`
-**Concern:** Function comprehension, Design coherence
-**Why this fails:** Predict/verify revealed `processOrders` both computes order totals AND sends confirmation emails via `sendgrid.send()`. IO and logic are tangled -- the function cannot be tested without an email service.
-
-Predict: "Given the name `processOrders`, I predict this processes a list of orders and returns results."
-Verify: The body computes totals (expected), then calls `sendgrid.send()` for each order (surprise -- IO mixed with computation).
-
-**Correct approach:**
-
-```typescript
-// Separate computation from IO
-function computeOrderTotals(orders: Order[]): OrderSummary[] {
-  // Pure computation -- no IO
+````json
+{
+  "schema_version": 1,
+  "skill": "audit-typescript",
+  "target": "src/orders/",
+  "overall": "FAIL",
+  "rows": [
+    {
+      "name": "function-comprehension",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "src/orders/processor.ts",
+          "line": 42,
+          "rule": "io-logic-tangle",
+          "severity": "REJECT",
+          "message": "Predict/verify: `processOrders` is predicted to compute and return order results, but the body computes totals AND sends confirmation emails via `sendgrid.send()`. IO is tangled with logic — the function cannot be tested without an email service. Extract `computeOrderTotals` as a pure function and move sending behind an injected `EmailSender` dependency. Correct approach:\n\n```typescript\ninterface EmailSender {\n  send(to: string, subject: string, body: string): Promise<void>;\n}\n\nfunction computeOrderTotals(orders: Order[]): OrderSummary[] {\n  // Pure computation -- no IO\n}\n\nasync function processOrders(\n  orders: Order[],\n  deps: { sendEmail: EmailSender },\n): Promise<void> {\n  for (const summary of computeOrderTotals(orders)) {\n    await deps.sendEmail.send(summary.to, summary.subject, summary.body);\n  }\n}\n```"
+        }
+      ]
+    },
+    {
+      "name": "design-coherence",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-002",
+          "file": "src/orders/processor.ts",
+          "line": 42,
+          "rule": "io-logic-separation",
+          "severity": "REJECT",
+          "message": "Core logic cannot be tested without IO; pure computation and the email side effect are not separated. Inject the email boundary via a `deps` parameter so the totals logic is exercisable in isolation. Correct approach:\n\n```typescript\nfunction computeOrderTotals(orders: Order[]): OrderSummary[] {\n  // Pure computation -- no IO\n}\n\nasync function processOrders(orders: Order[], deps: { sendEmail: EmailSender }): Promise<void> {\n  for (const summary of computeOrderTotals(orders)) {\n    await deps.sendEmail.send(summary.to, summary.subject, summary.body);\n  }\n}\n```"
+        }
+      ]
+    },
+    { "name": "import-structure", "status": "PASS", "findings": [] },
+    {
+      "name": "adr-pdr-compliance",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-003",
+          "file": "src/orders/processor.ts",
+          "line": 3,
+          "rule": "dependency-injection",
+          "severity": "REJECT",
+          "message": "`import { send } from \"@sendgrid/mail\"` — the governing ADR requires external service calls to use dependency injection. A direct import creates a hard dependency. Accept an `EmailSender` via a `deps` parameter instead. Correct approach:\n\n```typescript\ninterface EmailSender {\n  send(to: string, subject: string, body: string): Promise<void>;\n}\n\nasync function processOrders(orders: Order[], deps: { sendEmail: EmailSender }): Promise<void> {\n  ...\n}\n```"
+        }
+      ]
+    }
+  ],
+  "metadata": { "branch": "<branch>" }
 }
-
-async function processOrders(
-  orders: Order[],
-  deps: { sendEmail: EmailSender },
-): Promise<void> {
-  const summaries = computeOrderTotals(orders);
-  for (const summary of summaries) {
-    await deps.sendEmail(summary.confirmation);
-  }
-}
-```
-
----
-
-### Direct SendGrid import violates ADR DI constraint
-
-**Where:** `src/orders/processor.ts:3`
-**Concern:** ADR/PDR compliance
-**Why this fails:** `import { send } from "@sendgrid/mail"` -- `15-email.adr.md` requires all external service calls to use dependency injection. Direct import creates a hard dependency on SendGrid.
-
-**Correct approach:**
-
-```typescript
-// Define interface for email sending
-interface EmailSender {
-  send(to: string, subject: string, body: string): Promise<void>;
-}
-
-// Inject dependency
-async function processOrders(
-  orders: Order[],
-  deps: { sendEmail: EmailSender },
-): Promise<void> {
-  // ...
-}
-```
-
----
-
-## Required Changes
-
-1. Extract `computeOrderTotals` as pure function (no IO)
-2. Inject email sending dependency via `deps` parameter
-3. Remove direct SendGrid import
-
----
-
-Fix issues and resubmit for review.
-
-</example>
-
-<example name="rejected-gates-failed">
-
-Short example showing early termination.
-
-# CODE REVIEW
-
-**Decision:** REJECTED
-
-## Verdict
-
-| # | Concern                | Status | Detail                     |
-| - | ---------------------- | ------ | -------------------------- |
-| 1 | Automated gates        | REJECT | 3 ESLint errors            |
-| 2 | Test execution         | --     | Blocked by Phase 1 failure |
-| 3 | Function comprehension | --     | Blocked by Phase 1 failure |
-| 4 | Design coherence       | --     | Blocked by Phase 1 failure |
-| 5 | Import structure       | --     | Blocked by Phase 1 failure |
-| 6 | ADR/PDR compliance     | --     | Blocked by Phase 1 failure |
-
----
-
-## Required Changes
-
-1. Fix 3 ESLint errors reported by `pnpm validate`
-
----
-
-Fix issues and resubmit for review.
+````
 
 </example>
 
