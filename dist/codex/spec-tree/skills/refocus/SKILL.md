@@ -3,6 +3,7 @@ name: refocus
 description: >-
   ALWAYS invoke this skill when running ad hoc commands, writing debug scripts, or writing code without a spec.
   NEVER run ad hoc commands or write throwaway scripts without invoking this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash
 ---
 
 <objective>

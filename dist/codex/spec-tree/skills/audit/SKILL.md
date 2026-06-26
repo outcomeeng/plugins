@@ -5,6 +5,7 @@ description: >-
   Dispatch the audit agent that fits the requested run surface; the main conversation
   reaches a generic audit only through an audit agent.
 arguments: request
+allowed-tools: Read, Bash, Glob, Grep, Skill
 ---
 
 <dispatch_gate>

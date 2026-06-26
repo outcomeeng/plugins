@@ -1,6 +1,7 @@
 ---
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring spec tree nodes. NEVER decompose specs without this skill.
+allowed-tools: Read, Glob, Grep, Write, Edit, Skill
 ---
 
 <objective>

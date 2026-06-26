@@ -2,16 +2,8 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[--list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
 ---
-
-<context>
-**Git status:**
-!`git status --short || echo "Not in a git repo"`
-
-**Available sessions:**
-!`spx session todo || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
-</context>
 
 <objective>
 A claimed handoff session — loaded, reconciled against current repository state, and marked with canonical pickup markers — ready to continue prior work without repeating earlier mistakes.

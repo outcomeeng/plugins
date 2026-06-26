@@ -4,6 +4,7 @@ description: >-
   Test-evidence audit methodology preloaded by the test-evidence-auditor agent.
   Dispatch test-evidence-auditor to audit test evidence against spec assertions;
   the main conversation reaches this audit only through that agent.
+allowed-tools: Read, Grep, Glob, Bash, Skill
 ---
 
 <dispatch_gate>
@@ -213,7 +214,7 @@ Scan all findings across all assertions, including any folded in from the compos
 
 <verdict_format>
 
-Emit the verdict as JSON conforming to the canonical schema in `${SKILL_DIR}/../audit/scripts/verdict.py`. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path. Skills never hand-format markdown verdicts.
+Emit the verdict as JSON conforming to the canonical audit-verdict schema consumed by the composing audit workflow. The skill's entire output is the JSON verdict. The composing audit workflow records and renders the verdict through the audit journal path. Skills never hand-format markdown verdicts.
 
 The skill's `overall` is `PASS` iff every applicable gate row is `PASS`; `FAIL` if any gate is `FAIL`; `UNKNOWN` if a gate could not be evaluated. Findings within each row carry severity `REJECT` for blocking findings (these are what flip a row to `FAIL`), `WARNING` or `INFO` for non-blocking observations.
 

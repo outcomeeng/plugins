@@ -3,6 +3,7 @@ name: open-pr
 user-invocable: false
 description: >-
   PR opening protocol for REVIEW_READINESS, branch push, ready PR creation, and first management pass. Loaded by /manage-github-pr.
+allowed-tools: Read, Glob, Grep, Bash(git branch:*), Bash(git push:*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Skill
 ---
 
 <objective>

@@ -4,6 +4,7 @@ user-invocable: false
 description: >-
   Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, the three authority gates (review / merge / production readiness), review classification, integration review surfaces, action tokens, delivered-value boundary, and repo-local overlay topics.
   Loaded by /merge, /manage-github-pr, /open-pr, and /manage-pr.
+allowed-tools: Read
 ---
 
 <objective>

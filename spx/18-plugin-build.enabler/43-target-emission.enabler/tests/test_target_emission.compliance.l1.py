@@ -14,6 +14,8 @@ from outcomeeng.distribution.build import (
     COMMAND_FILE_SUFFIX,
     COMMANDS_SUBDIR_NAME,
     IMPLEMENTED,
+    REFERENCES_SUBDIR_NAME,
+    SHARED_FRAGMENT_FILENAME,
     SKILL_FILENAME,
     SKILL_DIR_REWRITE_ESCAPE_DIRECTIVE,
     SKILLS_SUBDIR_NAME,
@@ -38,7 +40,10 @@ def _require_module_implemented() -> None:
 PLUGIN_NAME = "sample"
 SKILL_NAME = "example-skill"
 COMMAND_NAME = "example-command"
-CLAUDE_ONLY_FIELD = CLAUDE_ONLY_FRONTMATTER_FIELDS[0]
+SHARED_SCOPE = "shared-scope"
+SHARED_TOPIC = "shared-topic"
+SHARED_REFERENCE_FILENAME = "guide.md"
+STRIPPED_CODEX_FIELD = CLAUDE_ONLY_FRONTMATTER_FIELDS[0]
 SKILL_RELATIVE_PATH = "references/guide.md"
 CLAUDE_SKILL_REFERENCE = f"{CLAUDE_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
 CODEX_SKILL_REFERENCE = f"{CODEX_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
@@ -49,7 +54,7 @@ SOURCE_SKILL = (
     "---\n"
     "name: example-skill\n"
     "description: Example skill.\n"
-    f"{CLAUDE_ONLY_FIELD}: Read\n"
+    f"{STRIPPED_CODEX_FIELD}: true\n"
     "---\n"
     "\n"
     f"Read `{CLAUDE_SKILL_REFERENCE}`.\n"
@@ -174,6 +179,8 @@ def test_codex_skill_frontmatter_strips_claude_only_fields(tmp_path: Path) -> No
     for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
         assert f"{field}:" in claude_body
         assert f"{field}:" not in codex_body
+    assert "allowed-tools: Read" in claude_body
+    assert "allowed-tools: Read" in codex_body
     assert "description: Keep me." in codex_body
 
 
@@ -195,6 +202,7 @@ def test_codex_command_frontmatter_strips_claude_only_fields(tmp_path: Path) -> 
     codex_body = command_path.read_text(encoding="utf-8")
     for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
         assert f"{field}:" not in codex_body
+    assert "allowed-tools: Read" in codex_body
     assert "description: Keep me." in codex_body
 
 
@@ -217,7 +225,25 @@ def test_frontmatter_strip_is_idempotent() -> None:
 
 def test_outputs_do_not_contain_execution_time_cat_injection(tmp_path: Path) -> None:
     builder = SrcTreeBuilder(tmp_path)
-    builder.add_plugin(PLUGIN_NAME, skills={SKILL_NAME: SOURCE_SKILL})
+    builder.add_shared_topic(
+        SHARED_SCOPE,
+        SHARED_TOPIC,
+        "Shared body.\n",
+        references={SHARED_REFERENCE_FILENAME: "Reference body.\n"},
+    )
+    builder.add_plugin(
+        PLUGIN_NAME,
+        skills={
+            SKILL_NAME: (
+                "---\n"
+                "name: example-skill\n"
+                "description: Example skill.\n"
+                "---\n"
+                "\n"
+                f"{{!% include '{SHARED_SCOPE}/{SHARED_TOPIC}/{SHARED_FRAGMENT_FILENAME}' %!}}\n"
+            )
+        },
+    )
 
     build(builder.src_root, tmp_path / "dist")
 
@@ -228,3 +254,11 @@ def test_outputs_do_not_contain_execution_time_cat_injection(tmp_path: Path) -> 
                 encoding="utf-8"
             )
             assert "!`cat" not in body
+        assert (
+            reader.target_root(target)
+            / PLUGIN_NAME
+            / SKILLS_SUBDIR_NAME
+            / SKILL_NAME
+            / REFERENCES_SUBDIR_NAME
+            / SHARED_REFERENCE_FILENAME
+        ).is_file()

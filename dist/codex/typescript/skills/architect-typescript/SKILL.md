@@ -2,6 +2,7 @@
 name: architect-typescript
 description: >-
   ALWAYS invoke this skill when writing ADRs for TypeScript.
+allowed-tools: Read, Write, Glob, Grep, Skill
 ---
 
 Invoke the `typescript:typescript-architecture-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.

@@ -1,6 +1,7 @@
 ---
 name: code-rust
 description: ALWAYS invoke this skill when writing or fixing implementation code for Rust. NEVER write or repair Rust implementation code without this skill.
+allowed-tools: Read, Write, Bash, Glob, Grep, Edit, Skill
 ---
 
 Invoke the `rust:rust-standards` skill before proceeding. If that skill is unavailable, report the missing skill and continue with the closest available workflow.
