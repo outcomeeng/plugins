@@ -22,8 +22,6 @@ Auditing `src/config/` for a CLI tool.
 }
 ```
 
-Every concern passes: 12 functions read with no surprises, IO separated from logic with dependency injection, path aliases with no deep relatives, and the database ADR's constraints reflected in the code.
-
 </example>
 
 <example name="rejected-design-flaw">

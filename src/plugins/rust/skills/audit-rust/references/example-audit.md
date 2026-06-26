@@ -1,8 +1,8 @@
-<overview>
-The skill's entire output is the JSON verdict (see `<verdict_format>` in the skill). These examples show the verdict shape for an approved change and a design rejection; the audit runs no deterministic verification, so there is no automated-gates or test-execution row. A scope with no `unsafe` sites reports the `unsafe-soundness` row as `UNKNOWN`.
-</overview>
+<examples>
 
-<approved_review>
+The skill's entire output is the JSON verdict (see `<verdict_format>` in the skill). These examples show the verdict shape for an approved change and a design rejection; the audit runs no deterministic verification, so there is no automated-gates or test-execution row. A scope with no `unsafe` sites reports the `unsafe-soundness` row as `UNKNOWN`.
+
+<example name="approved">
 Auditing `src/config/` for a CLI crate.
 
 ```json
@@ -22,11 +22,9 @@ Auditing `src/config/` for a CLI crate.
 }
 ```
 
-Every applicable concern passes: 12 functions read with no surprises, explicit seams and clear ownership, coherent `crate::` and local `super::` usage, and the build ADR's constraints reflected in the code. The scope contains no `unsafe` sites, so `unsafe-soundness` is `UNKNOWN`.
+</example>
 
-</approved_review>
-
-<rejected_design_review>
+<example name="rejected-design-flaw">
 Auditing `src/orders/`.
 
 ````json
@@ -85,4 +83,6 @@ Auditing `src/orders/`.
 }
 ````
 
-</rejected_design_review>
+</example>
+
+</examples>
