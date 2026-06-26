@@ -16,6 +16,12 @@ For a target node, lower-index siblings are read before the target because the e
 
 </context_loading_rule>
 
+<assignment_is_the_inverse>
+
+This reference explains how an existing tree is read: the index a sibling already carries decides whether `/contextualize` reads it as a constraint. Assigning an index to a new child is the inverse operation, owned by `/decompose`: choosing a child's index chooses what every later context load treats as constraining for it. A higher index than a sibling declares that sibling constraining context for the new child; the same index declares an independent peer. A loaded `<SPEC_TREE_FOUNDATION>` marker records that this reading rule was read once — it neither assigns indices nor stands in for `/decompose` applying the rule in reverse when it chooses one.
+
+</assignment_is_the_inverse>
+
 <decision_records>
 
 ADRs and PDRs share the same numeric namespace as sibling nodes. A decision record at a lower index constrains higher-index siblings and their descendants. Decision records at the same index do not constrain each other through index order.

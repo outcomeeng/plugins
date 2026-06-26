@@ -20,9 +20,10 @@ Accept exactly one target:
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
-Read before composing:
+Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
 
 - `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
+- `${CLAUDE_SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
 - `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
@@ -177,7 +178,13 @@ Use different sibling indices only when the matrix contains concrete ordering ev
 
 Roadmap priority, chronology, theme grouping, and explanation order do not create ordering evidence by themselves.
 
+**What an index encodes.** Index assignment is the inverse of the context-loading rule in `ordering-rules.md`: a child assigned a higher index than a sibling makes `/contextualize` read that lower-index sibling as constraining context for it in every later load, while a same-index sibling is an independent peer that context loading lists but never reads as a constraint. A different-index assignment is therefore a standing claim that the successor's context must include the predecessor's spec — sound only when the matrix's Consequence-if-absent row names what becomes invalid without that predecessor in the successor's context.
+
+**Existing siblings are not precedents.** When decomposing under a node that already holds children, an existing lower-index child is not a precedent that a new child sits above it, and the next sparse integer after the highest existing index is not the default slot. A new child takes the same index as an existing sibling — an independent peer — unless the matrix proves one constrains the other.
+
 Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For new candidate children before the final index exists, include the full parent path plus candidate slug so the reference can be resolved after assignment.
+
+**Disposition checkpoint — mandatory before Step 8.** State every proposed sibling pair explicitly as one of: ordered (name the matrix row proving the edge), same-index (independent peers, no edge), or unordered. Assign no index until every different-index pair names its proving matrix row; a pair with no row is same-index, never a guessed slot.
 
 </step>
 
@@ -185,15 +192,15 @@ Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For
 
 **Step 8: Assign sparse integer indices**
 
-Use sparse indices to encode the ordering-evidence matrix:
+Use sparse indices to encode the ordering-evidence matrix. The horizon math below composes a set of new children from scratch. When adding a child beside existing siblings, skip the distribution math and read the child's index from its disposition-checkpoint rows against each existing sibling: it shares the index of a sibling the checkpoint marked its independent peer, and takes a higher or lower index only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once — a proven edge to an existing sibling places the child above that predecessor or below that successor, and that placement, never a guessed slot, sets its index.
 
 1. Choose the horizon:
    - Full composition of all known child concerns → use the full [10, 99] range.
    - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in `PLAN.md`.
 2. Count child nodes in the chosen horizon.
 3. Distribute ordered groups with `i_k = 10 + floor(k * 89 / (N + 1))`, adjusted to the selected horizon.
-4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor.
-5. Assign the same index, or leave siblings unordered relative to each other, when no ordering evidence exists.
+4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor — the higher index makes that predecessor constraining context for the successor in every later `/contextualize`.
+5. Assign the same index — an independent peer — when no ordering evidence exists, including a new child added beside an existing sibling with no proven edge.
 
 Files and directories share one numeric namespace within a parent. Numeric prefixes are sibling-unique only; always use full paths from `spx/` in references. Never refer to an ADR or PDR by bare filename because any directory can contain the same numeric prefix and slug.
 
@@ -247,7 +254,9 @@ Check each criterion:
 - [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
 - [ ] Shared enablers have at least two dependent children
 - [ ] Ordering-evidence matrix recorded before index assignment
+- [ ] Disposition checkpoint stated every sibling pair as ordered, same-index, or unordered before any index was assigned
 - [ ] Every different-index sibling relationship has ordering evidence
+- [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
 - [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
 - [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
 - [ ] Children collectively cover the parent or product scope
@@ -299,6 +308,12 @@ Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. A
 
 How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
 
+**Failure 7: Took the next sparse slot after an existing sibling**
+
+Claude decomposed under a node that already held `spx/.../21-journal.enabler`, proposed a new sibling, and assigned it `32` — the next sparse slot — with no ordering-evidence row. The higher index silently made journal constraining context for the new child in every later `/contextualize`, encoding a dependency no evidence proved. Claude treated the existing sibling's index as a precedent and the next sparse integer as the natural choice; the operator had to name the missing ordering reference before Claude saw that the index was context-loading semantics, not an index-budget slot.
+
+How to avoid: Run the disposition checkpoint before assigning any index. Treat a new child as an independent peer at the same index as an existing sibling unless the matrix proves one constrains the other — an existing lower-index sibling is never a precedent for the next slot.
+
 </failure_modes>
 
 <anti_patterns>
@@ -328,6 +343,7 @@ Decomposition is complete when:
 - [ ] Concern boundaries and node types assigned
 - [ ] Shared enablers extracted only for multi-child dependencies
 - [ ] Ordering-evidence matrix recorded
+- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
 - [ ] Sparse indices assigned from ordering evidence and selected horizon
 - [ ] Assertions redistributed without loss
 - [ ] Parent or product spec revised without temporal narration

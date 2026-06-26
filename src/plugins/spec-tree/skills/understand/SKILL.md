@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Bash(python3:*)
 
 <objective>
 
-The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds, so every subsequent spec-tree skill operates from a shared methodology foundation.
+The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the loaded truth hierarchy, node types, assertion types, ordering rules, imperfection protocol, and verification kinds.
 
 </objective>
 
@@ -32,7 +32,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <stop_triggers>
 
-About to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decompose`; this foundation only covers the context-loading meaning of existing order.
+About to create or restructure child nodes, assign node indices, decide sibling ordering, or reason about decomposition -> STOP. Invoke `/decompose`; this foundation only covers the context-loading meaning of existing order, and a present `<SPEC_TREE_FOUNDATION>` marker never substitutes for `/decompose` reading `references/ordering-rules.md` and applying the ordering model itself when it assigns indices.
 
 About to load context for an existing target and explain why lower-index siblings are read -> read `references/ordering-rules.md`.
 
