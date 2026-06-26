@@ -252,8 +252,8 @@ Claude saw a test that hand-copied a YAML field name (`"flatcar-version"`), an H
 <success_criteria>
 The Python test verdict is sound when:
 
-- Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage, source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
-- The verdict states an overall `APPROVED` / `REJECT` with no assertion left unevaluated.
+- Every in-scope test was judged on all evidence properties with none skipped — coupling, falsifiability, alignment, coverage (by reading), source ownership, and the Python-specific checks (generators, harnesses, fixtures, `conftest.py`).
+- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
 - Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, and the evidence — including, where the defect is a missing source contract, the production module that should own the vocabulary.
 - The same test node yields the same verdict regardless of run order (reproducible).
 
