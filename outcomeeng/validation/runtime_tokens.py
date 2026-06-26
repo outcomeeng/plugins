@@ -52,13 +52,13 @@ def forbidden_names(
 ) -> tuple[str, ...]:
     """Return the guard-enforced runtime-divergent names, longest first.
 
-    Derived only from the registry's lint-enforced kinds (``tool``, ``field``); the
-    review-only ``term`` kind is excluded because its common-word concept terms
-    would match throughout prose. Longest-first ordering lets the scanner's
-    alternation prefer the most specific match. The keyword-only ``registry`` seam
-    defaults to the build registry and is injectable so the kind-aware derivation
-    is exercised with a controlled registry independent of the live (tool-only)
-    names — the same seam shape ``is_ignored``/``scan_file`` use.
+    Derived only from the registry's lint-enforced kinds (``tool``, ``field``,
+    ``file``); the review-only ``term`` kind is excluded because its common-word
+    concept terms would match throughout prose. Longest-first ordering lets the
+    scanner's alternation prefer the most specific match. The keyword-only
+    ``registry`` seam defaults to the build registry and is injectable so the
+    kind-aware derivation is exercised with a controlled registry independent of
+    the live names — the same seam shape ``is_ignored``/``scan_file`` use.
     """
     return tuple(
         sorted(
