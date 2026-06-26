@@ -313,7 +313,7 @@ Coverage here is execution breadth (does the test reach the assertion-relevant l
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/audit-tests`. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes TypeScript-specific finding detail into those rows. Literal-laundering finding IDs: L3 (src-reuse), L4 (test-dupe) — judged by reading per `<literal_laundering_by_reading>`, not by running a validator. Gate 2 extraction target: `testing/harnesses/{name}.ts`.
 
 </verdict_format>
 
@@ -365,15 +365,11 @@ How to avoid: Gate 1 step 6 rejects imports from `@testing/fixtures/*`. Fixture 
 
 <success_criteria>
 
-Audit is complete when:
+The TypeScript test verdict is sound when:
 
-- [ ] No deterministic verification run inside the audit — validation, type-check, tests, and coverage are the main agent's gate; literal laundering judged by reading
-- [ ] Gate 1 complete: every assertion evaluated through all 7 steps
-- [ ] Generator modules audited for literal laundering: constant-only wrappers for source-owned singletons
-- [ ] Fixture usage audited: fixtures are inert files, not imported modules or sources of test exports
-- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has gate, step, and specific detail
-- [ ] For REJECT: "how tests could pass while assertions fail" explained
+- Every in-scope assertion was judged on all seven Gate 1 steps and Gate 2 with none skipped — coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and literal laundering.
+- The verdict states an overall `APPROVED` / `REJECT` with no assertion left unevaluated.
+- Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
+- No deterministic verification was run inside the audit; the same node yields the same verdict.
 
 </success_criteria>

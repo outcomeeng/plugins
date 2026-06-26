@@ -230,7 +230,7 @@ Coverage notes do not rescue missing coupling, falsifiability, or alignment.
 
 <verdict_format>
 
-Follow `<verdict_format>` in `/audit-tests`. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
+This skill composes the base `/audit-tests` verdict: the row names (`gate-1-assertion`, `gate-2-architectural`) and the JSON schema are defined in its `<verdict_format>` and are not redefined here. This skill contributes Rust-specific finding detail into those rows. The audit emits no `gate-0-deterministic` row — it runs no deterministic verification; the structural reading observations from `<structural_reading>` are folded into the Gate 1 (`gate-1-assertion`) findings. Gate 2 extraction target: a module under the `product-testing` workspace-member crate, e.g. `product_testing::harnesses::{name}`, `product_testing::generators::{name}`, or `product_testing::fixtures::{name}` — never `tests/support/` or `crate::test_support`, which are legacy non-canonical locations.
 
 </verdict_format>
 
@@ -256,13 +256,11 @@ How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejectio
 
 <success_criteria>
 
-Audit is complete when:
+The Rust test verdict is sound when:
 
-- [ ] No deterministic verification run inside the audit — fmt, clippy, tests, and coverage are the main agent's gate; structural defects (filename, source-reads, disabled evidence, mock signals) are read per `<structural_reading>`
-- [ ] Gate 1 complete: every assertion evaluated through all 8 steps
-- [ ] Gate 2 complete: in-scope tests scanned for repeated setup patterns (if Gate 1 PASS)
-- [ ] Verdict issued: APPROVED or REJECT
-- [ ] For REJECT: each finding has gate, step, and specific detail
-- [ ] For REJECT: "how tests could pass while assertions fail" explained
+- Every in-scope assertion was judged on all eight Gate 1 steps and Gate 2 with none skipped — coupling, falsifiability, alignment, coverage (by reading), oracle independence, harness-chain tracing, and the `<structural_reading>` observations (filename, source-reads, disabled evidence, mock signals).
+- The verdict states an overall `APPROVED` / `REJECTED` with no assertion left unevaluated.
+- Each `REJECT` finding is falsifiable: it names the assertion or evidence artifact, the failed property, the gate and step, and how the test could pass while the assertion is unfulfilled.
+- No deterministic verification was run inside the audit; the same node yields the same verdict.
 
 </success_criteria>
