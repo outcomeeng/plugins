@@ -3,15 +3,16 @@
 ## 1. Audit-skill `SKILL.md` bodies diverge from the auditor skeleton
 
 `develop:skill-auditor` flags structural-conformance gaps in the `audit-{lang}` skill **bodies**
-(not their reference files), pre-existing and independent of the no-deterministic-verification work:
+and reference-polish gaps, independent of the no-deterministic-verification work:
 
 - `audit-python` and `audit-typescript` `<success_criteria>` are checklists of workflow steps rather
   than verdict-soundness properties (the auditor skeleton's `<success_criteria_shape>`).
 - `audit-typescript` has no `<constraints>` section (prohibitions split across `<essential_principles>`
   and `<what_to_avoid>`), and its `<verdict_format>` sits after `<failure_modes>` rather than before.
-- `audit-rust` reference polish: `references/unsafe-soundness.md` uses markdown headings,
-  `references/false-positive-handling.md` has a stray trailing code fence, and the correct-approach
-  sample sits outside the JSON verdict in `references/example-audit.md`.
+- `audit-{python,typescript,rust}` reference polish: `references/example-audit.md` carries
+  correct-approach samples outside the JSON verdict; `audit-rust` also has
+  `references/unsafe-soundness.md` markdown headings,
+  and `references/false-positive-handling.md` has a stray trailing code fence.
 
 ## Why tracked, not fixed here
 
