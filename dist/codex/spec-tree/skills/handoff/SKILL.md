@@ -1,6 +1,7 @@
 ---
 name: handoff
-description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining or continuation by Claude is impossible (context exhausted, user halted, external blocker). NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
+description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
+arguments: [session_mode, prune_mode]
 ---
 
 <context>
@@ -14,7 +15,7 @@ description: ALWAYS invoke to close a claimed spec-tree session — archive it, 
 !`git branch --show-current || echo "Not in a git repo"`
 
 **Current Sessions:**
-!`spx session list || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
+!`spx session list --status doing || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
 **Spec Tree:**
 !`ls spx/*.product.md 2>/dev/null || echo "No spec tree found"`
@@ -85,7 +86,7 @@ Persist to the HIGHEST applicable tier.
 
 | Tier | Where                                   | Durability                 | When to use                                                                                                                                                                                           |
 | ---- | --------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | Methodology (skills, CLAUDE.md)         | Durable                    | Reusable patterns, gotchas, clarifications etc.                                                                                                                                                       |
+| 1    | Methodology (skills, AGENTS.md)         | Durable                    | Reusable patterns, gotchas, clarifications etc.                                                                                                                                                       |
 | 2    | Spec tree (`spx/`)                      | Durable                    | New or updated durable spec tree files such as decisions, specs and tests                                                                                                                             |
 | 3    | Coordination notes (PLAN.md, ISSUES.md) | Until resolved or disposed | Remaining steps, known gaps and defects — committed for cross-session coordination. CAUTION: coordination notes are prone to go stale; always reconcile before use, discoverable via `/contextualize` |
 | 4    | Session file                            | Ephemeral                  | Coordination only: node list, skill checklist, external-infrastructure state, cross-cutting context                                                                                                   |
@@ -109,7 +110,7 @@ NEVER archive others' work. `doing` = claimed by active contexts; archive only t
 - `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially claimed sessions, etc. The difference is that, when no continuation remains, Claude skips creating a session file. `--no-session` asserts that absence; it does not override a `present` `<CONTINUATION_SIGNAL>` — workflow 04 Path A surfaces the contradiction instead of silently skipping.
 - `--prune`: after writing the new handoff, delete archived sessions. Ignored under `--no-session`.
 
-Check `$ARGUMENTS` for these flags before starting the workflows below.
+Check `$session_mode` and `$prune_mode` for these flags before starting the workflows below.
 
 </arguments>
 
@@ -122,6 +123,18 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 4. `workflows/04-execute.md` — create or update coordination notes, commit, then write or omit the canonical continuation session file
 
 </workflows>
+
+<failure_modes>
+
+**Continuation written before durable persistence.** Claude created or rewrote the session file before approved coordination, spec, test, code, or generated-output changes were committed and pushed. Return to workflow 04 persistence, commit session-owned files first, push the work branch when it exists, then create or rewrite the canonical continuation.
+
+**Branch left occupied after handoff.** Claude wrote a continuation with a work-branch `git_ref` and kept the releasing worktree checked out on that same branch. Step off per `workflows/04-execute.md` `<release_work_branch>` so `/pickup` can claim the branch in another worktree.
+
+**Multiple canonical continuations kept for one thread.** Claude created a new handoff while a mid-session artifact still described the same continuation. Reconcile the artifacts: rewrite one in place when appropriate, archive every superseded artifact, and leave exactly one canonical TODO session for the thread.
+
+**Archive or prune touched unrelated sessions.** Claude archived a session outside `<RESOLVED_CLAIMED_SESSIONS>` or deleted a TODO/doing session during `--prune`. Stop and restore the queue state if possible; archive only resolved claimed sessions and superseded mid-session artifacts, and prune archive entries only.
+
+</failure_modes>
 
 <success_criteria>
 

@@ -46,7 +46,7 @@ After loading this skill, check whether `spx/local/commit-changes.md` exists (pa
 | **git status**   | Staged, unstaged, untracked files                       |
 | **git diff**     | Actual changes to commit                                |
 | **git log**      | Recent commit style for consistency                     |
-| **Product docs** | Custom commit types (CLAUDE.md, CONTRIBUTING.md)        |
+| **Product docs** | Custom commit types (AGENTS.md, CONTRIBUTING.md)        |
 | **Conversation** | User's intent - what story/issue does this commit solve |
 
 </context_gathering>
@@ -117,10 +117,10 @@ Changed files:
 
 **Step 0: Confirm Product-Specific Validation (BEFORE Staging)**
 
-Before staging any files, check CLAUDE.md for product-specific validation commands and confirm the active workflow has current green validation for the changeset. This skill is git-only: if validation is missing, stop and return the required command to the caller instead of committing.
+Before staging any files, check AGENTS.md for product-specific validation commands and confirm the active workflow has current green validation for the changeset. This skill is git-only: if validation is missing, stop and return the required command to the caller instead of committing.
 
 ```bash
-# CLAUDE.md may require commands like:
+# AGENTS.md may require commands like:
 just check        # Justfile task runner
 just validate
 pnpm run check    # pnpm scripts
@@ -237,7 +237,7 @@ Projects may define custom types:
 | **research** | Academic/books   | Research notes                 |
 | **meta**     | Process docs     | Process/workflow documentation |
 
-Check product's CLAUDE.md or commit-standards.md for custom types.
+Check product's AGENTS.md or commit-standards.md for custom types.
 
 **IMPORTANT:** NEVER USE `chore:`. Everything has purpose; use specific type instead
 

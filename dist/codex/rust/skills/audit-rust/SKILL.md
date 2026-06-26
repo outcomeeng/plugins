@@ -40,7 +40,7 @@ Execute the phases in order.
 **Phase 0: Scope and product config**
 
 1. Determine the production files in scope
-2. Read `CLAUDE.md` and `README.md` for review constraints and naming conventions that inform comprehension — read for context, never to run a gate
+2. Read `AGENTS.md` and `README.md` for review constraints and naming conventions that inform comprehension — read for context, never to run a gate
 3. Read `Cargo.toml` and `rust-toolchain.toml` when present
 4. Identify applicable ADRs and PDRs in the spec hierarchy if the code belongs to a spec-tree node
 

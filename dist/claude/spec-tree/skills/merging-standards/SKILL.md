@@ -18,7 +18,7 @@ This is a reference skill. /merge, /manage-github-pr, /open-pr, and /manage-pr l
 <repo_local_overlay>
 When loaded inside a repository, check for `spx/local/merging.md` at the repository root. Read it after this reference if present and apply it as the repo-local specialization; a local overlay supplements skill behavior and does not declare product truth.
 
-`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, post-merge steps) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`AGENTS.md`, `spx/AGENTS.md`, `CLAUDE.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
+`spx/local/merging.md` is a **conditional read** and an **optional file**: read it only when it exists, and treat its absence as normal — never a missing-state error or a blocker. When it is absent, the defaults in this reference apply and the lifecycle proceeds unchanged. It is the one place repository-specific merge behavior (transport, readiness, confirmation, merge command, post-merge steps) belongs. When the overlay is absent, NEVER reconstruct the transport or any merge behavior from incidental repository docs — invoke `/merge` and let the lifecycle apply the defaults — and NEVER edit a generated guide (`CLAUDE.md`, `spx/CLAUDE.md`) to change merge behavior; the authored skills and this overlay are the only surfaces that govern it.
 
 Topics the overlay MAY refine:
 
@@ -162,7 +162,7 @@ The bare `git push` and `git push -u origin <branch>` forms are forbidden becaus
 
 A rebase rewrites branch history, so the post-rebase push cannot fast-forward. `--force-with-lease` performs the non-fast-forward push but refuses if the remote branch advanced since the last fetch, which keeps it safe on a single-author PR branch. Plain `git push --force` stays forbidden — it overwrites the remote unconditionally.
 
-If the product defines a custom branch-push command, follow the product convention from CLAUDE.md / AGENTS.md — the explicit destination ref must remain part of any custom command.
+If the product defines a custom branch-push command, follow the product convention from CLAUDE.md — the explicit destination ref must remain part of any custom command.
 
 </push_semantics>
 
@@ -194,7 +194,7 @@ The local `review-changes` gate is the author-side, pre-push instance of the sam
 - **Let the review resolve its own scope.** `review-changes` self-discovers the worktree it runs in and computes the diff itself (`git diff <base_ref>...<head_ref>` — three-dot merge-base semantics, `head_ref` defaulting to `HEAD` and `base_ref` to `origin/HEAD`). The caller makes the base explicit only when the changeset's base is not `origin/HEAD` (a stacked PR), and passes nothing else — no file list, no changed-area summary, no "the important part is …".
 - **Add no interpretive scope.** Do not tell the reviewer which layers, files, or concerns to weight. It reviews the whole diff against the whole taxonomy.
 - **Add no severity pre-filter.** Do not ask only for `BLOCKING`, do not suppress `DEBT`. The reviewer emits every finding; handling is by validity and phase per `<review_classification>`, downstream of the review and never inside its invocation.
-- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md / AGENTS.md and the standards skills) and the shared taxonomy itself.
+- **Add no emphasis steering.** Do not tell the reviewer what to conclude or what matters most. It reads the repository's own instructions (CLAUDE.md and the standards skills) and the shared taxonomy itself.
 
 Run it via the `changes-reviewer` agent — isolated context, so the verdict is not biased by what the operator's main context has been doing — or the `/review-changes` command when `changes-reviewer` is not installed; both drive the same `review-changes` skill chain. Iterate to convergence: each round, act on findings by validity and phase per `<review_classification>`, until no valid finding remains unaddressed.
 

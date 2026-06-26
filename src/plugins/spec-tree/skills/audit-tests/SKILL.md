@@ -15,9 +15,7 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap. Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
-
-Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
+A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
 
 </objective>
 
@@ -26,6 +24,8 @@ Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidenc
 **COUPLING FIRST.**
 
 A test that imports nothing from the codebase will pass forever regardless of what any file contains. Check imports before anything else. This is not a heuristic — it is a prerequisite.
+
+Four properties must hold, checked in strict order: coupling (the test exercises codebase behavior, not authored prose), falsifiability (a named mutation breaks it), alignment (it exercises the asserted behavior), and coverage (the test drives execution into the assertion-relevant path). A test missing any property has zero evidentiary value regardless of code quality.
 
 **JUDGE COVERAGE BY READING.**
 
@@ -57,6 +57,8 @@ APPROVED or REJECTED. No middle ground. If any property is missing for any asser
 <step name="load_context">
 
 **Step 1: Load context**
+
+Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
 Invoke `/contextualize` on the spec node whose tests are being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and the full hierarchy context.
 

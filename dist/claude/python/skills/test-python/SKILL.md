@@ -72,7 +72,7 @@ If any answer is no, fix the source contract first. Do not hide the missing cont
 </source_contract_gate>
 
 <verification>
-Run the product's canonical test, lint, and type commands — the ones its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
+Run the product's canonical test, lint, and type commands — the ones its `CLAUDE.md`, Justfile, Makefile, or package scripts document. When the product ships no wrapper, fall back to the tools directly only when they are installed:
 
 ```bash
 python3 -m pytest <node-path>/tests/ -v

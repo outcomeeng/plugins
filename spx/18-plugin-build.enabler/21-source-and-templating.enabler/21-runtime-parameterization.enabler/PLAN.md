@@ -9,7 +9,8 @@ Registry-backed `tool(...)` token + runtime-explicit form, implemented in
 Runtime Guidance table. Every plugin's content is converted to tokens, and the runtime-token
 validation lint (`outcomeeng/validation/runtime_tokens.py`, governed by
 `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) enforces every authored
-file under `src/plugins/` and `src/_shared/` with `RUNTIME_TOKEN_IGNORE` empty — no exemptions.
+file under `src/plugins/` and `src/_shared/`, except the explicit files named in
+`RUNTIME_TOKEN_IGNORE` because they must name runtime guide filenames as data.
 The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the
 no-Codex-equivalent `ScheduleWakeup`; the ignore-list mechanism remains as the tracked exemption
 surface for any future not-yet-converted plugin.
@@ -19,17 +20,17 @@ surface for any future not-yet-converted plugin.
 The build-architecture ADR (`spx/18-plugin-build.enabler/15-build-architecture.adr.md`)
 declares the full symmetric model.
 
-### `field()` and `term()` token mechanism (complete)
+### `field()`, `term()`, and `file()` token mechanism (complete)
 
 `RUNTIME_TOKEN_REGISTRY` in `outcomeeng/distribution/build.py` is keyed by token kind. A
 `RuntimeTokenKind(lint_enforced, names)` carries each kind's per-runtime names and whether
-the source-layer guard enforces them. The `tool`, `field`, and `term` kinds are each exposed
-as their own build template global (`tool(…)`, `field(…)`, `term(…)`) rendering through one
-`resolve_runtime_token` path. The runtime-token lint
+the source-layer guard enforces them. The `tool`, `field`, `term`, and `file` kinds are each
+exposed as their own build template global (`tool(…)`, `field(…)`, `term(…)`, `file(…)`)
+rendering through one `resolve_runtime_token` path. The runtime-token lint
 (`outcomeeng/validation/runtime_tokens.py`, `forbidden_names`) derives its forbidden set from
-the lint-enforced kinds (`tool`, `field`) only — the review-only `term` kind is excluded
-because its common-word concept terms would false-positive across prose. The `field` and
-`term` registries ship empty; their consumers populate them.
+the lint-enforced kinds (`tool`, `field`, `file`) only — the review-only `term` kind is
+excluded because its common-word concept terms would false-positive across prose. The `field`
+and `term` registries ship empty; their consumers populate them.
 
 ### Remaining (declared ahead of implementation)
 

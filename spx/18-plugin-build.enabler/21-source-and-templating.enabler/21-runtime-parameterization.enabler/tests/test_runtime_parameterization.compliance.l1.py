@@ -35,6 +35,11 @@ SKILL_NAME = "example-skill"
 # The unique-token kind that carries the seeded tool capabilities.
 TOOL_KIND = "tool"
 
+# The unique-token kind that carries per-runtime filenames, and the capability for
+# the spx-level agent guide that diverges across both runtimes.
+FILE_KIND = "file"
+GUIDE_CAPABILITY = "spx_guide"
+
 # A capability that diverges across both runtimes, and one that exists for Claude
 # with no Codex equivalent — both drawn from the source-owned registry so the test
 # carries no copied name literals.
@@ -61,6 +66,24 @@ def test_registry_token_renders_each_target_name(tmp_path: Path) -> None:
     reader = _build_one_skill(
         tmp_path,
         f"Ask the user via {{{{! tool('{BOTH_RUNTIME_CAPABILITY}') !}}}} now.",
+    )
+
+    claude_body = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=Target.CLAUDE)
+    codex_body = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=Target.CODEX)
+    assert claude_name in claude_body
+    assert codex_name in codex_body
+    assert codex_name not in claude_body
+    assert claude_name not in codex_body
+
+
+def test_file_kind_renders_guide_filename_per_target(tmp_path: Path) -> None:
+    guide_names = RUNTIME_TOKEN_REGISTRY[FILE_KIND].names[GUIDE_CAPABILITY]
+    claude_name = guide_names["claude"]
+    codex_name = guide_names["codex"]
+
+    reader = _build_one_skill(
+        tmp_path,
+        f"Read the guide at {{{{! file('{GUIDE_CAPABILITY}') !}}}} once per session.",
     )
 
     claude_body = reader.read_skill_body(PLUGIN_NAME, SKILL_NAME, target=Target.CLAUDE)
@@ -122,16 +145,17 @@ def test_conditional_renders_absent_capability_only_where_present(
 
 def test_registry_keyed_by_kind_with_explicit_guard_enforcement() -> None:
     # The registry is keyed by token kind; each kind is a RuntimeTokenKind that
-    # declares whether the source-layer guard enforces its names. tool and field
-    # are unique-token kinds the guard enforces; term concept terms are common
+    # declares whether the source-layer guard enforces its names. tool, field, and
+    # file are unique-token kinds the guard enforces; term concept terms are common
     # words it excludes (review covers them).
-    assert set(RUNTIME_TOKEN_REGISTRY) == {"tool", "field", "term"}
+    assert set(RUNTIME_TOKEN_REGISTRY) == {"tool", "field", "term", "file"}
     assert all(
         isinstance(kind, RuntimeTokenKind) for kind in RUNTIME_TOKEN_REGISTRY.values()
     )
     assert RUNTIME_TOKEN_REGISTRY["tool"].lint_enforced is True
     assert RUNTIME_TOKEN_REGISTRY["field"].lint_enforced is True
     assert RUNTIME_TOKEN_REGISTRY["term"].lint_enforced is False
+    assert RUNTIME_TOKEN_REGISTRY["file"].lint_enforced is True
 
 
 def test_resolve_renders_each_kind_from_its_own_sub_registry() -> None:

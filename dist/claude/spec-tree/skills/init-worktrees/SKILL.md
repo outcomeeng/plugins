@@ -54,7 +54,7 @@ For a fresh layout with no prior checkout, pass `--origin <url>` in place of `--
 The carry moves **every** gitignored path into the main checkout — including regenerable bulk (`node_modules/`, `.venv/`, build output) whose absolute-path references break once moved. Purge it by running the repository's declared clean target in the main checkout, regenerating it fresh:
 
 ```bash
-just -d <main_worktree> clean   # or `pnpm --dir <main_worktree> run clean`, or the command the repo's AGENTS.md mandates
+just -d <main_worktree> clean   # or `pnpm --dir <main_worktree> run clean`, or the command the repo's CLAUDE.md mandates
 ```
 
 `.spx/` sits at the container level, outside the main checkout's working tree, so the clean never touches it — it is the one delicate piece of gitignored state, preserved. Skip this step only when the prior checkout carried no regenerable gitignored bulk.

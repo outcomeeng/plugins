@@ -26,14 +26,14 @@ Before reading the diff, invoke `/merging-standards` via the Skill tool. The two
 
 <scope>
 
-The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh pr diff <number>` and the PR description with `gh pr view <number>`; read the repository's `CLAUDE.md` / `AGENTS.md` for the conventions the review is held against. Do not widen the review beyond the PR's diff — comment on what changed, plus the immediate context needed to judge it.
+The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh pr diff <number>` and the PR description with `gh pr view <number>`; read the repository's `CLAUDE.md` for the conventions the review is held against. Do not widen the review beyond the PR's diff — comment on what changed, plus the immediate context needed to judge it.
 
 </scope>
 
 <process>
 
 1. **Load shared standards.** Invoke `/merging-standards` via the Skill tool to load the two-severity / six-category taxonomy and comment format used to label every finding.
-2. **Read the change.** `gh pr view <number>` for the title, description, and linked issues; `gh pr diff <number>` for the diff. Read the repository's `CLAUDE.md` / `AGENTS.md`, `REVIEW.template.md` when present, and any `REVIEW.md` repo-local override at the repository root so the review is grounded in the project's own style and conventions, not generic preferences.
+2. **Read the change.** `gh pr view <number>` for the title, description, and linked issues; `gh pr diff <number>` for the diff. Read the repository's `CLAUDE.md`, `REVIEW.template.md` when present, and any `REVIEW.md` repo-local override at the repository root so the review is grounded in the project's own style and conventions, not generic preferences.
 3. **Review across the six categories from `/merging-standards` `<review_classification>`:**
    - **`consistency`** — disagreement across layers (decisions / PDR / ADR ↔ spec ↔ tests ↔ implementation). Surface the disagreement; do not judge which side is right.
    - **`security`** — confidentiality, integrity, availability. Injection surfaces, leaked secrets, missing authorization checks.
@@ -54,7 +54,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 <constraints>
 
 - Read-only over the repository — never edit code or tests, never push.
-- Ground the review in the repository's `CLAUDE.md` / `AGENTS.md`. Do not invent style rules the project does not hold.
+- Ground the review in the repository's `CLAUDE.md`. Do not invent style rules the project does not hold.
 - Stay within the PR's diff plus the immediate context needed to judge it; do not turn a review into a whole-codebase audit.
 - Produce review prose, not a structured verdict. The deterministic audit verdict is the `/audit` skill's job; this skill does not emit one and does not re-implement one.
 - Contain zero language-specific tokens — the review concerns are language-agnostic; language-specific evaluation belongs in the language audit skills the `/audit` skill dispatches to.
@@ -66,7 +66,7 @@ The caller supplies the target PR (`REPO`, `PR NUMBER`). Read the diff with `gh 
 
 - `/merging-standards` is loaded before any finding is labeled.
 - The invocation prompt carried a recognised `MODE: composed` or `MODE: standalone` line; ambiguous invocations were rejected with an error, not silently defaulted.
-- The PR diff and description were read, and the review is grounded in the repository's `CLAUDE.md` / `AGENTS.md` conventions.
+- The PR diff and description were read, and the review is grounded in the repository's `CLAUDE.md` conventions.
 - Feedback covers the six categories (`consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`), with `file:line` citations and rationale.
 - Every finding is labeled with one severity × one category per `/merging-standards` `<review_classification>` — `BLOCKING` / `DEBT`, never `FOLLOW-UP`, never a severity rank, never a legacy class label.
 - A review with no `BLOCKING` or `DEBT` items says so directly rather than padding with lower-priority findings.

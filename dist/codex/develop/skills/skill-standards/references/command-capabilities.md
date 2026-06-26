@@ -1,21 +1,38 @@
 <overview>
 
-A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them. Author each capability the skill way, not the command way: a command's `$ARGUMENTS` / `$1` maps to a skill's `arguments` field with `$name` substitution.
+A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them.
+
+Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
+
+Prefer the intersection of Claude Code and Codex syntax only when it improves reliability or convenience:
+
+- Use `$ARGUMENTS` for free-form whole-instruction capture, especially when one skill forwards instructions to another skill or when a user-invoked skill accepts natural-language instructions.
+- Use positional or named arguments when each argument has a stable token boundary and a named variable improves reliability for a skill Claude or a wrapper agent invokes.
+- Use richer Claude-only authoring forms when they make the authored skill clearer; if Codex cannot consume that form directly, update build rendering rather than weakening the source.
 
 </overview>
 
 <arguments>
 
-A skill that operates on user-supplied input declares it explicitly:
+A skill that operates on user-supplied input handles it explicitly:
 
 - **`argument-hint`** — free-text autocomplete hint shown after `/skill-name`. Present whenever the skill takes arguments; omit for self-contained skills.
-- **`arguments`** — names the positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). This is the skill analog of a command's `$ARGUMENTS` (all args) and `$1`/`$2`/`$3` (positional): a command names positions by number, a skill names them by identifier.
-- **Integration** — reference each `$name` where the body consumes it (e.g. "Audit the skill at `$skill_path`"), never as unused decoration. An argument declared but never substituted, or substituted but never declared, is a defect.
-- **Empty arguments** — a skill that requires an argument states the requirement and what it does when the argument is absent; a skill that works with or without one states the fallback (e.g. "operate on the current selection when `$target` is empty").
+- **`$ARGUMENTS`** — consumes the full raw instruction string. Use it when preserving whitespace and multi-word intent matters, including forwarding instructions between lifecycle skills.
+- **`$ARGUMENTS[N]` or `$N`** — consumes a numbered positional value when the position is stable and a name would add no clarity.
+- **`arguments` with `$name`** — names positional arguments the body substitutes as `$name` (space-separated string or YAML list; names map to positions in order). Use it when a stable token has a domain name, such as `$subagent_path`.
+- **Integration** — reference each declared `$name` where the body consumes it (e.g. "Audit the skill at `$skill_path`"), never as unused decoration. An argument declared but never substituted, or substituted but never declared, is a defect.
+- **Empty arguments** — a skill that requires input states the requirement and what it does when input is absent; a skill that works with or without input states the fallback (e.g. "operate on the current selection when `$target` is empty" or "use the current changeset when `$ARGUMENTS` is empty").
 
 - ALWAYS: declare `argument-hint` when the skill takes arguments.
-- ALWAYS: substitute every declared argument in the body, and declare every `$name` the body substitutes.
-- NEVER: copy a command's bare `$ARGUMENTS` / `$1` into a skill body — skills name arguments through the `arguments` field.
+- ALWAYS: preserve whole-string capture with `$ARGUMENTS` when collapsing input into positional tokens would change behavior.
+- ALWAYS: substitute every declared named argument in the body, and declare every `$name` the body substitutes.
+- NEVER: migrate a free-form instruction skill from `$ARGUMENTS` to a named positional argument unless the runtime contract proves the named argument preserves the full rest-of-line input.
+- NEVER: require authored source to avoid Claude-supported syntax solely because Codex generated output may need a different form; fix the renderer for Codex.
+
+Examples:
+
+- Free-form forwarding: `/merge` reads `$ARGUMENTS` and forwards `$ARGUMENTS` verbatim to `/manage-github-pr`, preserving multi-word instructions.
+- Stable token: `arguments: subagent_path` with `$subagent_path` names one path-like positional value for an audit skill.
 
 </arguments>
 

@@ -2,7 +2,7 @@
 name: audit-prose
 description: >-
   ALWAYS invoke this skill when auditing reader-facing documents such as public docs, web pages, and product messages for outside readers like developers and customers.
-  NEVER invoke for chat responses to the user (no matter how long), operational prose like code comments, commit messages, or agent-facing instructions like AGENTS.md and SKILL.md.
+  NEVER invoke for chat responses to the user (no matter how long), operational prose like code comments, commit messages, or agent-facing instructions like SKILL.md.
 allowed-tools: Read, Glob, Grep, Bash, Skill
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: write-internal-docs
 description: >-
-  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content. Use this skill whenever the user is creating a doc intended for colleagues who already have context, not for strangers reading it for the first time. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use write-prose for those instead. NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions like SKILL.md and AGENTS.md.
+  ALWAYS invoke this skill when writing or editing internal team documents that live in a workspace: Notion pages, runbooks, hiring rubrics and scorecards, internal policies, decision records, design specs, competency models, onboarding guides, status pages, internal wiki content. Use this skill whenever the user is creating a doc intended for colleagues who already have context, not for strangers reading it for the first time. NEVER invoke for external-facing prose like READMEs, blog posts, web copy, customer release notes, or marketing material — use write-prose for those instead. NEVER invoke for chat replies, commit messages, code comments, or agent-facing instructions like SKILL.md.
 allowed-tools: Read, Edit, Write, Glob, Grep, Skill
 ---
 

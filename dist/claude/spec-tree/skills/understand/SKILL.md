@@ -13,7 +13,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 <principles>
 
 1. **TRUTH FLOWS DOWN** — Decisions (ADR: `{slug}.adr.md`/PDR: `{slug}.pdr.md`) decide. Specs (`{slug}.md`) declare in alignment with decisions. Tests derive from specs. Code derives from tests. When layers disagree, the lower layer is in violation. Never change a decision to match a spec. Never change a spec to match tests. Never change tests to match code. Read `references/durable-map.md`.
-2. **FOUNDATION, NOT PRODUCT CONTEXT** — This skill loads the foundation of the Spec Tree methodology; it does not load product-specific artifacts. Use `/contextualize` for target-specific context injection.
+2. **FOUNDATION AND RUNTIME ROUTING, NOT NODE CONTEXT** — This skill loads the methodology foundation and the product's spx-level routing guide (which skill to invoke when, for this runtime). It does not load node-and-spec product context — specs, ADRs, PDRs, node coordination notes. Use `/contextualize` for that target-specific context injection. The routing guide loads here, once per session, rather than on every `/contextualize`.
 3. **LOAD ONCE** — Check for `<SPEC_TREE_FOUNDATION>` marker before loading. If present, skip.
 4. **SPECS ARE DECLARATIONS** — The Spec Tree is a durable, declarative map. Nothing moves, nothing closes. Specs declare product truth.
 5. **TWO NODE TYPES** — Enablers (infrastructure) and outcomes (hypothesis + assertions). No other node types exist. Read `references/node-types.md`.
@@ -74,7 +74,9 @@ About to load context for an existing target and explain why lower-index sibling
    - `templates/nodes/enabler-name.md`
    - `templates/nodes/outcome-name.md`
    - `examples/` — concrete filled specs (read to see what a completed spec looks like)
-7. Emit the `<SPEC_TREE_FOUNDATION>` marker:
+7. Read the product's spx-level routing guide once, if present:
+   - `Read: spx/CLAUDE.md` — the product's WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename here. It is routing, not node/spec context, so it loads in this foundation step, once per session and again after every compaction event, rather than on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
+8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>
@@ -82,6 +84,7 @@ Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-p
 Operational references available: what-goes-where, excluded-nodes
 Local lifecycle route: changes route through /merge (classifies the changeset, selects the merge transport, delegates to the selected transport; reads spx/local/merging.md as an optional overlay only when present, and its absence applies the default lifecycle)
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
+Routing guide: loaded from spx/CLAUDE.md | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>
@@ -105,6 +108,7 @@ How to avoid: After a commit or push succeeds, check whether the user explicitly
 
 - [ ] Six core reference files read and understood
 - [ ] Operational reference, template, and example locations known
+- [ ] Product spx-level routing guide read once when present, rendered to this runtime's filename — not re-read per `/contextualize`
 - [ ] Local lifecycle route known: changes route through `/merge`, which classifies the changeset, selects the merge transport, and delegates to the selected transport, reading `spx/local/merging.md` as an optional overlay only when present (absence is normal and applies the default lifecycle)
 - [ ] `<SPEC_TREE_FOUNDATION>` marker emitted
 - [ ] Methodology loaded: truth hierarchy (PDR/ADR → Spec → Test → Code), lower layer is always in violation when layers disagree

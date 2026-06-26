@@ -10,8 +10,17 @@ Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
 stale local branch ref in a multi-worktree checkout cannot widen the scope.
 
-Stdlib-only, ``python3`` — no third-party packages, no ``uv``, no
-``outcomeeng_*`` imports, per the Plugin Portability Constraints in ``AGENTS.md``.
+Portability: stdlib only — no third-party packages, no ``uv``, no
+``outcomeeng_*`` imports. This script ships into consumer plugin trees where
+only the standard library is available.
+
+Tested inputs and error cases: ``test_auditing.scenario.l1.py`` and dependent
+scope/journal suites exercise origin/HEAD base detection, missing-origin
+fallbacks, named-branch detection, detached-HEAD refusal, branch slug collision
+suffixes, diff-range expansion with and without pathspec filters, empty diff
+matches, staged and unstaged changes, remote-tracking three-dot branch scope,
+arbitrary base refs, base-advanced-after-branch-off exclusion, and git failure
+propagation before this script is bundled.
 """
 
 from __future__ import annotations

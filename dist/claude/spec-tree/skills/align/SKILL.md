@@ -62,13 +62,13 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 | Spec file inside `*.outcome/` directory | Outcome        | `outcome-name.md`         |
 | Any other `.md` file                    | Unrecognized   | None                      |
 
-**Spec file** means the file whose name matches the directory slug. Example: `auth.md` inside `10-auth.enabler/`. Other `.md` files in the directory (like `CLAUDE.md`) are not spec files — skip them.
+**Spec file** means the file whose name matches the directory slug. Example: `auth.md` inside `10-auth.enabler/`. Other `.md` files in the directory (like `CLAUDE.md` and `AGENTS.md`) are not spec files — skip them.
 
 **Unrecognized** includes directories with suffixes like `.capability`, `.feature`, `.story`. These are not Spec Tree node types. Report the classification failure as a finding.
 
 **Files to skip entirely:**
 
-- `CLAUDE.md` files (product configuration, not specs)
+- `CLAUDE.md` and `AGENTS.md` files (agent guides, not specs)
 - Files inside `tests/` directories (test code, not specs)
 - `PLAN.md` and `ISSUES.md` files (stale-prone coordination notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
@@ -152,7 +152,7 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
 2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
 3. **Scope**: Use user-specified path, or default to `spx/` in the product root.
-4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` files and files inside `tests/` directories.
+4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
    - If classified: run structural, language, and placement checks

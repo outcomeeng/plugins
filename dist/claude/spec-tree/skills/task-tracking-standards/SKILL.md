@@ -44,7 +44,7 @@ Use pointers to these sources instead of copying their contents into a heartbeat
 
 - GitHub run state outside the PR-check lifecycle, comment state, and review-thread state
 - local branch, remote branch, base branch, and worktree status
-- repository specs, ADRs, PDRs, PLAN.md, ISSUES.md, AGENTS.md, and local overlays
+- repository specs, ADRs, PDRs, PLAN.md, ISSUES.md, CLAUDE.md, and local overlays
 - workflow handoff artifacts and command outputs stored in the repository or GitHub
 - current conversation approval, credential, and judgment decisions
 
@@ -68,7 +68,7 @@ NEVER copy these into a heartbeat:
 - long evidence summaries already posted to GitHub
 - outdated prior-head feedback except as a pointer to a URL when needed
 - expected future check conclusions that can be read from GitHub
-- repository policy text available from AGENTS.md, local overlays, or skills
+- repository policy text available from CLAUDE.md, local overlays, or skills
 - detailed implementation rationale already captured in commits, specs, or comments
 - the directive, the finding assessments, the rationale, or any reasoning the wake-up reconstructs from the reloaded skills and durable artifacts — the prompt names skills and pointers only
 

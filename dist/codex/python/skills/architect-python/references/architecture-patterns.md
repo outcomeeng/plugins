@@ -428,7 +428,7 @@ product/
 │   ├── harnesses/          # Resource and boundary mediators
 │   └── fixtures/           # Inert data files consumed by path
 └── spx/                    # Specs as durable map (Outcome Engineering framework)
-    ├── CLAUDE.md           # Navigation and work item management
+    ├── AGENTS.md           # Navigation and work item management
     └── NN-{slug}.enabler/
         └── NN-{slug}.outcome/
             └── tests/      # Co-located tests with evidence/level naming

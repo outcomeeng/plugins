@@ -28,7 +28,7 @@ See `<codebase_discovery>` in SKILL.md for complete guidance.
 
 ```bash
 # 1. Read product docs (highest authority)
-Read: README.md, docs/, CLAUDE.md
+Read: README.md, docs/, AGENTS.md
 
 # 2. Read the relevant skill/spec first
 Read: the skill and spec docs that define the pattern in use
@@ -52,7 +52,7 @@ Before proceeding to Phase 1, document:
 - **Reusable artifacts found**: (existing utilities, harnesses, fixtures, registries)
 - **Utilities to reuse**: (don't reinvent what exists)
 
-**Remember the hierarchy**: `docs/` > `CLAUDE.md` > `specs` > `SKILL.md` >>> existing code
+**Remember the hierarchy**: `docs/` > `AGENTS.md` > `specs` > `SKILL.md` >>> existing code
 
 Existing code is REFERENCE, not authority. Use code search to find artifacts, never to decide methodology or conventions. When docs and code conflict, docs win.
 

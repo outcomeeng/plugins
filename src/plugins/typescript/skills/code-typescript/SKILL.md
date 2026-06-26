@@ -112,13 +112,13 @@ async function syncFiles(
 <hierarchy_of_authority>
 **Where to look for guidance, in order of precedence:**
 
-| Priority | Source                    | What It Provides                                      |
-| -------- | ------------------------- | ----------------------------------------------------- |
-| 1        | `docs/`, `README.md`      | Product architecture, design decisions, intended APIs |
-| 2        | `CLAUDE.md`               | Product-specific rules for Claude                     |
-| 3        | ADRs/PDRs, specs          | Documented decisions and requirements                 |
-| 4        | This skill (`SKILL.md`)   | Generic TypeScript best practices                     |
-| 5        | Existing code (reference) | Evidence of implementation, NOT authority             |
+| Priority | Source                       | What It Provides                                      |
+| -------- | ---------------------------- | ----------------------------------------------------- |
+| 1        | `docs/`, `README.md`         | Product architecture, design decisions, intended APIs |
+| 2        | `{{! file('root_guide') !}}` | Product-specific rules for Claude                     |
+| 3        | ADRs/PDRs, specs             | Documented decisions and requirements                 |
+| 4        | This skill (`SKILL.md`)      | Generic TypeScript best practices                     |
+| 5        | Existing code (reference)    | Evidence of implementation, NOT authority             |
 
 **CRITICAL: Existing code is NOT authoritative.**
 
@@ -140,7 +140,7 @@ Run these searches before implementation:
 
 ```bash
 # 1. Read product documentation
-Read: README.md, docs/, CLAUDE.md, CONTRIBUTING.md
+Read: README.md, docs/, {{! file('root_guide') !}}, CONTRIBUTING.md
 
 # 2. Load the authoritative methodology
 Read: relevant skills and spec docs before inferring any convention
@@ -157,15 +157,15 @@ Read: existing files in the same target directory
 
 **What to Discover**
 
-| Question                                            | How to Answer It                                                                |
-| --------------------------------------------------- | ------------------------------------------------------------------------------- |
-| What conventions govern this work?                  | Read the relevant skill, spec, ADR/PDR, `CLAUDE.md`, and product docs first     |
-| What libraries are available?                       | `package.json` → dependencies                                                   |
-| What concrete modules already exist to reuse?       | `Glob`/`Grep` for actual modules, registries, harnesses, fixtures, and helpers  |
-| What error classes already exist?                   | Locate existing error modules; do not infer policy from random call sites       |
-| What logging facility already exists?               | Locate the logger module or logging package, then follow documented rules       |
-| How are configs structured?                         | Find config modules and config docs; do not infer config policy from ad hoc use |
-| If this is a script, which arg parser is canonical? | Read `package.json`, docs, and existing checked-in `scripts/` entrypoints       |
+| Question                                            | How to Answer It                                                                             |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| What conventions govern this work?                  | Read the relevant skill, spec, ADR/PDR, `{{! file('root_guide') !}}`, and product docs first |
+| What libraries are available?                       | `package.json` → dependencies                                                                |
+| What concrete modules already exist to reuse?       | `Glob`/`Grep` for actual modules, registries, harnesses, fixtures, and helpers               |
+| What error classes already exist?                   | Locate existing error modules; do not infer policy from random call sites                    |
+| What logging facility already exists?               | Locate the logger module or logging package, then follow documented rules                    |
+| How are configs structured?                         | Find config modules and config docs; do not infer config policy from ad hoc use              |
+| If this is a script, which arg parser is canonical? | Read `package.json`, docs, and existing checked-in `scripts/` entrypoints                    |
 
 **Discovery Anti-Patterns**
 
@@ -186,7 +186,7 @@ class MyError extends Error {} // Product has @/errors
 // "I saw three files use pattern X, so pattern X is the standard"
 ```
 
-**Authority rule**: Skills, specs, ADRs/PDRs, `CLAUDE.md`, and product docs answer "how should this be done?" Code search answers only "where is the existing artifact I should reuse?"
+**Authority rule**: Skills, specs, ADRs/PDRs, `{{! file('root_guide') !}}`, and product docs answer "how should this be done?" Code search answers only "where is the existing artifact I should reuse?"
 
 **Script Entry Points**
 

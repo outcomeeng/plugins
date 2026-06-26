@@ -51,7 +51,7 @@ Execute phases IN ORDER. Do not skip. This audit runs no deterministic verificat
 **Phase 0: Scope and Product Config**
 
 1. Determine target files/directories
-2. Check `pyproject.toml` and `CLAUDE.md`/`README.md` for tool and project configuration that informs comprehension (ruff, mypy, pytest settings; naming conventions) — read for context, never to run a gate. The linters already handled type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
+2. Check `pyproject.toml` and `{{! file('root_guide') !}}`/`README.md` for tool and project configuration that informs comprehension (ruff, mypy, pytest settings; naming conventions) — read for context, never to run a gate. The linters already handled type annotations, magic numbers, bare excepts, unused imports, commented-out code, modern syntax, and security rules; comprehension covers what they cannot — deep relative imports, `sys.path` manipulation, unqualified `Any`, and `# type: ignore` without justification.
 
 **Phase 1: Code Comprehension**
 

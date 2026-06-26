@@ -68,7 +68,7 @@ What was captured durably during session closure.
 
 - Committed: [files committed during this session, including the final handoff commit]
 - Uncommitted: [files still dirty after the handoff commit — foreign changes only]
-- Insights: [what was written to CLAUDE.md, memory, or skills]
+- Insights: [what was written to {{! file('root_guide') !}}, memory, or skills]
 - Coordination notes: [PLAN.md / ISSUES.md written and in which nodes]
 
 </persisted>
@@ -93,7 +93,7 @@ fixed if-then branches — the next session decides freely from the observed sta
 <constraints>
 OPTIONAL. Normative rules that hold for this continuation regardless of what the
 next session observes. Scope them to this session's work — a rule that always holds
-belongs in methodology or CLAUDE.md, not repeated in a per-session file. Omit this
+belongs in methodology or {{! file('root_guide') !}}, not repeated in a per-session file. Omit this
 section when there are none.
 
 - NEVER [action] — [reason]
@@ -139,7 +139,7 @@ history.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
 - **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next session cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next session needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
-- **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or CLAUDE.md, not a per-session file.
+- **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or {{! file('root_guide') !}}, not a per-session file.
 - **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
 - **`<incorporated_sessions>`**: Include ONLY when the claimed-session set resolved by `<resolve_claimed_sessions>` is non-empty (at least one session is being archived as part of this closure). Omit the section entirely on a fresh handoff with no pickup. Every listed session must also be archived by workflow 04. Do NOT list a mid-session artifact that is being rewritten in place — this file IS that artifact.
 

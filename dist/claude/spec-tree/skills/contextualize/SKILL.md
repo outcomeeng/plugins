@@ -83,9 +83,6 @@ Extract the path segments from product root to target. Each segment is a directo
 # Read product spec
 Read: spx/{product-name}.product.md
 
-# Read product guide if present
-Read: spx/CLAUDE.md  (if exists)
-
 # Read ALL product-level ADRs and PDRs
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"

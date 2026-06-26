@@ -12,7 +12,7 @@ Before writing a Path B or Path C session file, read `references/session-format.
 For each approved item from workflow 03:
 
 - **Spec amendments**: Edit the spec file directly.
-- **CLAUDE.md / memory / skill updates**: Write the insight to the correct target.
+- **AGENTS.md / memory / skill updates**: Write the insight to the correct target.
 - **ISSUES.md**: Write or update in the node directory. Remove fixed items, add new ones.
 - **PLAN.md**: Write, update, or remove in the node directory. Never leave a stale plan.
 
@@ -168,7 +168,7 @@ Run the command once per id. NEVER archive sessions classified as **unrelated** 
 
 **Closure is incomplete if it creates or keeps more than one canonical continuation in TODO, or if it leaves a claimed session in `todo/` or `doing/`.** Unrelated TODO sessions owned by other contexts are not this closure's concern and must be left untouched.
 
-**If `--prune` is in `$ARGUMENTS`** (only after the canonical continuation is successfully written):
+**If `--prune` is in `$session_mode` or `$prune_mode`** (only after the canonical continuation is successfully written):
 
 ```bash
 spx session list --status archive --json

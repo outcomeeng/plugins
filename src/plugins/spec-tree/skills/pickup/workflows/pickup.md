@@ -81,7 +81,7 @@ Show the `<persisted>` section:
 
 - What was committed (trust these are in place)
 - What is uncommitted (may need `/commit-changes` before continuing)
-- What insights were written to CLAUDE.md/memory/skills
+- What insights were written to {{! file('root_guide') !}}/memory/skills
 - What coordination notes were written and where
 
 **Step 7: Present coordination context**

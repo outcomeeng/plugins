@@ -74,7 +74,7 @@ Check for:
 
 - **name**: Lowercase-with-hyphens, max 64 chars, matches directory name, follows verb-noun convention (create-*, manage-*, setup-*, generate-*)
 - **description**: Max 1024 chars, directive style (ALWAYS invoke + NEVER without), no XML tags
-- **argument-hint**: Present when the skill takes arguments (the body substitutes a declared `$name`); omit for self-contained skills
+- **argument-hint**: Present when the skill takes arguments (`$ARGUMENTS`, `$ARGUMENTS[N]`, `$N`, or a declared `$name`); omit for self-contained skills
 
 </area>
 
@@ -145,10 +145,13 @@ Check the capability surface a SKILL.md carries that a slash command also had, a
 
 **Argument usage**:
 
-- Every argument declared in `arguments` is substituted as `$name` in the body, and every `$name` the body substitutes is declared — neither orphaned
-- `argument-hint` is present when the skill takes arguments
-- A bare command-style `$ARGUMENTS` / `$1` copied into a skill body is a defect — skills name arguments through the `arguments` field
-- Empty-argument handling is stated when the skill requires an argument or defines a no-argument fallback
+- `argument-hint` is present when the skill takes arguments.
+- `$ARGUMENTS` preserves the full instruction string. It is valid when the skill accepts free-form natural-language instructions, forwards instructions to another skill, or needs to distinguish empty input from an instructed change.
+- `$ARGUMENTS[N]` / `$N` are valid for stable positional tokens.
+- Every argument declared in `arguments` is substituted as `$name` in the body, and every `$name` the body substitutes is declared — neither orphaned.
+- A migration from `$ARGUMENTS` to `arguments` preserves behavior only when the named argument's token boundary matches the skill's intent. Flag free-form whole-string skills that use a single named positional argument without proving rest-of-line capture.
+- Empty-argument handling is stated when the skill requires an argument or defines a no-argument fallback.
+- Authored plugin source skills target Claude Code SKILL.md syntax. Codex-specific rendering belongs to the build step; flag source prose that claims Codex consumes a Claude-only form directly, but do not flag Claude-supported source syntax merely because Codex may need generated adaptation.
 
 **Dynamic-context safety** (`!`-backtick blocks inside `<context>`):
 
@@ -200,7 +203,8 @@ Flag these issues:
 - **heavy_context_block**: `<context>` bash commands that produce verbose or growing output (session lists, full file contents, cache enumerations) without filtering. The `<context>` block fires on every skill load — including false-positive activations from directive descriptions — so heavy commands compound. Flag as recommendation: filter the command (e.g., `--status doing,todo`, `head -N`) or move it to the workflow file that consumes the data.
 - **orphaned_argument**: an argument declared in `arguments` that the body never substitutes, or a `$name` substituted in the body that `arguments` never declares. Flag as critical — the skill takes input it ignores, or substitutes an undefined name.
 - **missing_argument_hint**: the skill takes arguments but omits `argument-hint`, so `/` autocomplete gives the user no signal about expected input. Flag as recommendation.
-- **command_style_arguments**: a bare `$ARGUMENTS` or `$1`/`$2` copied from a slash command into a skill body instead of a named `$name` declared in `arguments`. Flag as critical.
+- **argument_capture_regression**: a free-form instruction skill replaces `$ARGUMENTS` with a named positional argument or numbered token without proving the replacement captures the same whole input. Flag as critical — the skill can silently drop words from user instructions.
+- **codex_rendering_assumption**: authored source claims Codex directly consumes Claude-only SKILL.md syntax rather than treating Codex output as a generated rendering concern. Flag as recommendation when wording only confuses authors; flag as critical when it causes a broken generated Codex surface.
 - **overbroad_allowed_tools**: `allowed-tools` grants bare `Bash`, `Bash(git *)`, or a destructive/network tool the skill's task does not need, re-admitting the destructive or exfiltrating commands a narrower grant would bar. Flag as critical for security-sensitive skills.
 - **irrelevant_dynamic_context**: a `<context>` `!` block injecting state the skill never reads. Flag as recommendation — it taxes every load without payoff.
 
