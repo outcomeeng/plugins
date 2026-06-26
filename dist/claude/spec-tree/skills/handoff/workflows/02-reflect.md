@@ -1,9 +1,14 @@
 <objective>
-Work through five perspectives internally before presenting anything to the user. Produces the input for workflows 03 and 04. Do not skip perspectives.
+A complete closure reflection record containing classified imperfections, path-forward persistence targets, next-context notes, external-state notes, claimed-session resolution, existing-session reconciliation, and continuation signal.
+</objective>
 
 Lean on the imperfection ledger defined in `/understand` (loaded as a foundation before any spec-tree work). Reflection here classifies ledger items by destination and adds spec-tree-specific concerns the ledger does not cover: path forward, next-context notes, external-infrastructure state, claimed-session set.
 
-</objective>
+<required_reading>
+
+- `references/claimed-session-resolution.md` before resolving claimed sessions.
+
+</required_reading>
 
 <perspective_imperfections>
 Review remaining imperfections from this session — items observed but not yet resolved. These come from the running imperfection ledger maintained per `/understand`'s `references/imperfection-protocol.md`. If for any reason the ledger has been pruned (e.g., context compaction), reconstruct by scanning recent turns for: user corrections, methodology gaps, broken references, stale PLAN.md or ISSUES.md, untestable assertions, missing test coverage, library or API gotchas.
@@ -22,11 +27,11 @@ Classify each imperfection by nature to determine the persistence target. The de
 
 **Fix-now rule**: if Claude can fix the imperfection right now (broken link, stale path, wrong filename, simple correction), fix it immediately using Edit/Grep — do not propose it in workflow 03. Note what was fixed for the persisted log.
 
-**Defer rule**: a fix too large for this session becomes a Tier 3 coordination note (PLAN.md or ISSUES.md), proposed in workflow 03 and written in workflow 04.
+**Defer rule**: a fix too large for this session becomes a Tier 3 coordination note (PLAN.md or ISSUES.md), proposed in workflow 03 and written in workflow 04, only when the session already has a real stop condition: the user halted the work, context is exhausted, or an external blocker prevents the next action. If Claude can still act, do not defer; continue the work instead of closing.
 
 **Spec correction rule**: a wrong or incomplete assertion is fixed directly in the spec file — Tier 2, governed by the audit gate.
 
-Read existing PLAN.md and ISSUES.md for each anchored node. Check every item against the current specs, decisions, tests, implementation, and user intent — items listed as open may now be fixed; new items may not be listed. A stale coordination note is worse than none. If updates or removals are needed, propose them in workflow 03 — do not edit here.
+Read existing PLAN.md and ISSUES.md for each anchored node. Check every item against the current specs, decisions, tests, implementation, and user intent — items listed as open may now be fixed; new items may not be listed. A stale coordination note is worse than none. If updates or removals are safe local fixes, record them as fix-now items for workflow 04 and do not create a session file. If an item is actionable and Claude can still do the work, closure is blocked: stop this workflow and return to the governing implementation workflow. If a clearly wrong coordination note outside the original scope is observed, record it in the imperfection ledger and classify it the same way: fix safe local corrections now; ask the operator at the next checkpoint when ownership, scope, cost, or risk changes; never treat it as session-file-only context.
 
 </perspective_imperfections>
 
@@ -40,7 +45,7 @@ Identify what is now understood about how the remaining work should proceed:
 For each insight, propose the persistence target (workflow 03 confirms; workflow 04 writes):
 
 - Amend a spec (Tier 2, durable) — when the insight changes what the spec says
-- Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `AskUserQuestion` approval
+- Write or update PLAN.md in the node directory (Tier 3 coordination note) — requires `AskUserQuestion` approval and a real stop condition
 - Remove PLAN.md (a done plan is a stale plan) — also requires approval
 - Session file only — coordination context
 
@@ -84,20 +89,52 @@ A handoff replaces incorporated context. The existence of any session is not, by
 
 </perspective_claimed_sessions>
 
-<continuation_signal>
-Compute the continuation signal workflow 04 reads to decide session-file creation — the check that makes `--no-session` answerable to state rather than an unconditional skip.
+<perspective_existing_sessions>
+Before proposing or creating any continuation session, inspect the existing session queue:
 
-**The signal ranges over the nodes in scope this session (the anchored nodes from workflow 01), independently of `CLAIMED_SESSIONS`.** The claimed-session set decides only what gets archived; it never decides whether to hand off. An empty claimed-session set (no `/pickup` this conversation) therefore NEVER implies an absent signal — a fresh handoff whose anchored nodes carry unfinished work is `present` and requires a session file.
+```bash
+spx session list --json
+```
+
+Compare every `todo` and `doing` session against this closure's anchored nodes and topic terms:
+
+- Node overlap: any `specs` or `files` path under the same anchored node, or a `goal` / `next_step` naming the same full node path.
+- Topic overlap: meaningful terms from the unresolved note, blocker, or external state appear in the existing session's `goal` or `next_step`.
+- Ownership: whether the overlapping session is in this conversation's claimed-session set, a mid-session artifact created by this conversation, or another context's session.
+
+Classify overlaps:
+
+- **same-owner-continuation** — this conversation created the TODO artifact or claimed the doing session; workflow 04 may rewrite or archive it according to the claimed-session rules.
+- **existing-owner** — another `todo` or `doing` session already owns the continuation; do not create another session. Reconcile any facts into durable artifacts if needed, then leave the existing session untouched and close only if no other blocker remains.
+- **unrelated** — no overlapping node and topic.
+- **ambiguous** — overlap exists but ownership or topic match is unclear; STOP and ask the operator before any continuation session is proposed.
+
+Emit a marker:
+
+```text
+<EXISTING_SESSION_RECONCILIATION status="none|same-owner-continuation|existing-owner|ambiguous">
+summary: [what the queue search found]
+</EXISTING_SESSION_RECONCILIATION>
+```
+
+`status="none"` is the only state that permits a new Path C session, and only when continuation by Claude is impossible now. `status="existing-owner"` blocks Path C because adding a session would duplicate queue state.
+
+</perspective_existing_sessions>
+
+<continuation_signal>
+Compute the continuation signal workflow 04 reads to decide whether closure is allowed and whether a session reader is needed — the check that makes `--no-session` answerable to state rather than an unconditional skip.
+
+**The signal ranges over the nodes in scope this session (the anchored nodes from workflow 01), independently of `CLAIMED_SESSIONS`.** The claimed-session set decides only what gets archived; it never decides whether to hand off. An empty claimed-session set (no `/pickup` this conversation) therefore NEVER implies an absent signal.
 
 The signal is `present` when any of these holds for a node anchored this session:
 
-- a node-local `PLAN.md` exists — it is next-session work driven by a plan;
-- a node-local `ISSUES.md` carries an unresolved entry — it is next-session work driven by a defect or deviation needing major refactoring;
+- a node-local `PLAN.md` exists and its item is not already satisfied;
+- a node-local `ISSUES.md` carries an unresolved entry;
 - an `spx/EXCLUDE` entry names an anchored node (specified but unimplemented);
 - a spec assertion touched this session is declared but not yet satisfied (no passing `[test]`/`[eval]`, or an unmet `[audit]`);
 - the path-forward perspective named concrete remaining steps.
 
-A persisted `PLAN.md` or unresolved `ISSUES.md` IS continuation — both are work for a future session, differing only by driver (a plan vs a defect), never by whether they count. There is no "deferred notes but no session" state: if a note carries no future work, it is removed during closure, not kept while the session file is skipped. Small imperfections are fixed in-session, not deferred into a note.
+A `present` signal blocks closure while Claude can still act. It permits a session file only when continuation by Claude is impossible now: the user halted the work, context is exhausted, or an external blocker prevents the next action. There is no "deferred notes but no session" state: if a note carries no future work, it is removed during closure, not kept while the session file is skipped. Small imperfections are fixed in-session, not deferred into a note.
 
 Emit the signal so workflow 04 reads it from context:
 
@@ -107,15 +144,16 @@ Emit the signal so workflow 04 reads it from context:
 </CONTINUATION_SIGNAL>
 ```
 
-`--no-session` asserts `state="absent"` — it never authorizes skipping the session file when the signal is `present`. Workflow 04's `<write_canonical_continuation>` Path A acts on this: a `--no-session` invocation that meets a `present` signal surfaces the contradiction rather than silently omitting the session file.
+`--no-session` asserts either `state="absent"` or `status="existing-owner"` with no local blocker. It never authorizes skipping the session file when the signal is `present` and no existing owner exists. Workflow 04's `<write_canonical_continuation>` Path A acts on this: a `--no-session` invocation that meets a `present` signal without an existing owner surfaces the contradiction rather than silently omitting the session file.
 
 </continuation_signal>
 
 <success_criteria>
 
-- All five perspectives completed internally before proceeding to workflow 03.
+- All six perspectives completed internally before proceeding to workflow 03.
 - `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation.
+- `<EXISTING_SESSION_RECONCILIATION>` marker emitted into the conversation before any continuation proposal.
 - `<CONTINUATION_SIGNAL>` marker emitted into the conversation.
-- Stale PLAN.md or ISSUES.md items identified for proposal in workflow 03 (or fixed inline if safe).
+- Stale PLAN.md or ISSUES.md items identified as fix-now work, closure blockers, or operator decisions; no actionable coordination note is converted into a session-only continuation while Claude can still act.
 
 </success_criteria>

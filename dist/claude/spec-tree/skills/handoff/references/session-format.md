@@ -1,4 +1,11 @@
 <template>
+## Contents
+
+- Path C JSON header and stdin form
+- Path B stored-file format
+- Body template shared by Path B and Path C
+- Field guidance for frontmatter and body sections
+
 The session file content has two parts: a header of caller-supplied fields and the markdown body below. How the header is expressed depends on the path.
 
 **Path C (new session file)** pipes to `spx session handoff`. stdin is a single JSON header object on the first line, then the body bytes verbatim — no YAML frontmatter, and a leading `#` or `---` in the body is literal. The command writes `<SESSION_FILE>`, renders the stored YAML frontmatter from the header, prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying it exists on `origin`. The JSON header carries the caller-supplied fields:

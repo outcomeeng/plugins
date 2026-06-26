@@ -29,8 +29,7 @@ allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bas
 </precondition>
 
 <objective>
-A closed spec-tree session — session-owned work committed and pushed, coordination notes persisted, the imperfection ledger drained, and a continuation session file written unless every node anchored this session carries no unresolved continuation.
-
+A closed spec-tree session with session-owned work committed and pushed, encountered coordination notes reconciled or fixed, the imperfection ledger drained, and continuation disposition recorded.
 </objective>
 
 <session_file_purpose>
@@ -48,15 +47,17 @@ A session file initializes Claude in the next session. Claude starts from a blan
 
 </what_not_to_add>
 
-Create a session file unless absolutely no unresolved continuation remains.
+Create a session file only when continuation by Claude is impossible now: the user halted the work, context is exhausted, or an external blocker prevents the next action. A session file is not a disposal path for coordination notes Claude can reconcile now.
 
-**Nothing to archive is not nothing to hand off.** The claimed-session set (`CLAIMED_SESSIONS`, the `/pickup`'d sessions) decides only what gets archived. Whether to write a session file is a separate question decided by the continuation signal over the nodes anchored this session. Never infer one from the other: a fresh handoff with no `/pickup` (empty claimed-session set, nothing to archive) still requires a session file whenever an anchored node carries unfinished work.
+**Nothing to archive is not nothing to hand off.** The claimed-session set (`CLAIMED_SESSIONS`, the `/pickup`'d sessions) decides only what gets archived. Whether to write a session file is a separate question decided by the stop condition, the coordinated-node state, and the existing session queue. Never infer one from the other.
 
-**Unfinished work needs a session file, even when the remaining steps are written to a node's `PLAN.md`.** The `PLAN.md` is the *what* (the steps, on the branch); the session is the point-in-time *pointer* by which Claude in another worktree discovers the work exists and which branch carries it. They are not substitutes. A persisted `PLAN.md` or unresolved `ISSUES.md` entry on an anchored node IS continuation — both are next-session work, differing only by driver (a plan vs a defect), so both make the signal `present`.
+**Coordination notes block closure while Claude can act.** A persisted `PLAN.md` or unresolved `ISSUES.md` entry on an anchored node means the session is not over unless continuation is impossible now. Reconcile notes in the same session: remove stale entries, fix safe local defects, update imprecise entries, or continue into the work they describe. When a clearly wrong note outside the original scope is observed, record it in the imperfection ledger and fix it if the correction is safe and local; if ownership, scope, or cost changes, ask the operator at the next checkpoint. Do not convert it into a new session file.
 
-Closing without a session file is appropriate only when **no continuation remains** — workflow 02's `<CONTINUATION_SIGNAL>` is `absent`: the anchored nodes carry no `PLAN.md`, no unresolved `ISSUES.md` entry, no `spx/EXCLUDE` entry, and no declared-but-unsatisfied assertion. A persisted coordination note that represents no future work is not a reason to skip the file — it is removed during closure, because a note no one will act on is deleted, not kept. (`--no-session`, or words to that effect, asserts this `absent` state; it never authorizes skipping the file when the signal is `present`.)
+**Search before adding any continuation.** Before proposing or creating a continuation session, inspect existing `todo` and `doing` sessions with `spx session list --json`. Compare their `specs`, `files`, `goal`, and `next_step` against the nodes and topic terms from this closure. If an existing session already owns the same continuation, reconcile against it: rewrite a mid-session artifact only when this conversation created it, archive only sessions this conversation owns, and leave unrelated or ambiguous sessions untouched. Creating a new `todo` entry is valid only after this search shows no existing owner and continuation by Claude is impossible now.
 
-`--no-session` never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present`. When `--no-session` meets a `present` signal, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf while continuation work exists. In any other situation, a session file is required.
+Closing without creating a session file is appropriate when no continuation reader is needed from this closure. That is true when workflow 02's `<CONTINUATION_SIGNAL>` is `absent`: the anchored nodes carry no actionable `PLAN.md`, no unresolved `ISSUES.md` entry, no `spx/EXCLUDE` entry, no declared-but-unsatisfied assertion, and no external blocker. It is also true when `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` confirms another session already owns the only remaining continuation and this closure has no local blocker. A persisted coordination note that represents no future work is removed during closure, because a note no one will act on is deleted, not kept.
+
+`--no-session` never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present` and no existing owner exists. When `--no-session` meets that state, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf when a real stop condition requires a continuation reader. In any other situation, a session file is written only after the existing-session search completes.
 
 <no_excuses>
 
@@ -75,7 +76,7 @@ Three rules govern a conversation's claimed-session set:
 
 1. The claimed-session set grows only by user confirmation (via `/pickup`).
 2. Closure has exactly one acceptable end state per claimed session: archived after this workflow runs against it.
-3. Quick-release shortcut via `/handoff --no-session` for a wrongly-claimed session the user releases within a few turns of pickup — valid because such a session carries no continuation, so the `<CONTINUATION_SIGNAL>` is `absent`.
+3. Quick-release shortcut via `/handoff --no-session` for a wrongly-claimed session the user releases within a few turns of pickup — valid only when the session carries no actionable coordination note or do-able continuation, so the `<CONTINUATION_SIGNAL>` is `absent`.
 
 Permission to archive comes from completing this workflow against the claimed-session set named in `<CLAIMED_SESSIONS ids="…">` — never from queue inspection. A handoff replaces incorporated context, never supplements it. Mid-session session files created by this conversation are workflow artifacts, not members of the claimed-session set.
 
@@ -97,7 +98,8 @@ A Tier-3 coordination note holds remaining steps, known gaps and defects that Cl
 
 Session-owned spec edits, test edits, code edits, and coordination notes MUST be committed before session closure.
 Committing changes discovered during the handoff is expected, this is why the reflection is valuable. Coordination notes that are related to the main thread belong on the same branch. Coordination notes for a different concern belong on a fresh branch.
-Pushing all branches to origin is the most important and final persistence operation for the committed tiers (1–3); the Tier-4 session file is written separately by `spx session handoff` to the gitignored `.spx/` session store, which is not pushed. The push is followed by switching to and then detaching from the origin's default branch.
+Session files are not a lower tier for unresolved notes Claude can fix or reconcile. They are only a pointer for a real stop condition after durable and coordination tiers are already correct.
+Pushing the session-owned work branch to origin is the most important and final persistence operation for the committed tiers (1–3); the Tier-4 session file is written separately by `spx session handoff` to the gitignored `.spx/` session store, which is not pushed. The push is followed by switching to and then detaching from the origin's default branch.
 
 </persistence_hierarchy>
 
@@ -109,7 +111,7 @@ NEVER archive others' work. `doing` = claimed by active contexts; archive only t
 </multi_agent_awareness>
 
 <arguments>
-- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially claimed sessions, etc. The difference is that, when no continuation remains, Claude skips creating a session file. `--no-session` asserts that absence; it does not override a `present` `<CONTINUATION_SIGNAL>` — workflow 04 Path A surfaces the contradiction instead of silently skipping.
+- `--no-session`: complete all workflows as mandated by this skill, including persisting coordination notes on a remote branch, archiving potentially claimed sessions, etc. The difference is that Claude skips creating a new session file when no continuation remains or when another existing session already owns the only remaining continuation. It does not override a `present` `<CONTINUATION_SIGNAL>` with no existing owner — workflow 04 Path A surfaces that contradiction instead of silently skipping.
 - `--prune`: after writing the new handoff, delete archived sessions. Ignored under `--no-session`.
 
 Check `$session_mode` and `$prune_mode` for these flags before starting the workflows below.
@@ -143,10 +145,11 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 A successful closure or handoff:
 
 - [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All five perspectives worked through (workflow 02)
-- [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness — updated or removed if stale (workflow 02)
+- [ ] All six perspectives worked through (workflow 02)
+- [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness and reconciled before closure — updated, removed, or pursued now when Claude can still act (workflows 02–04)
+- [ ] Existing `todo` and `doing` sessions searched by node path and topic before any continuation session is proposed or created (workflow 02)
 - [ ] `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation by workflow 02
-- [ ] `<CONTINUATION_SIGNAL>` marker emitted by workflow 02, and `--no-session` honored only when it is `absent`
+- [ ] `<CONTINUATION_SIGNAL>` marker emitted by workflow 02, and `--no-session` honored only when it is `absent` or `status="existing-owner"` confirms another session owns the only remaining continuation and no local blocker remains
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
 - [ ] Session-owned spec, test, code, and coordination-note changes committed before closure (workflow 04)
 - [ ] Continuation need explicitly decided: session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)

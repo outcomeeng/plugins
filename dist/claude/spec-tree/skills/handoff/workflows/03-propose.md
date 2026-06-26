@@ -1,7 +1,8 @@
 <objective>
-A persistence proposal carrying only the items that require user approval, derived from the four reflection perspectives of workflow 02. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
-
+A persistence proposal containing the approval-required closure decisions and canonical session disposition.
 </objective>
+
+Use the six reflection perspectives from workflow 02 as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
 
 <session_disposition_header>
 Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
@@ -15,7 +16,9 @@ The list comes from the `<RESOLVED_CLAIMED_SESSIONS ids="…" artifact_id="…">
 
 This header is declared intent, not a vote. Default path is archive-all-listed. If the user wants to exclude any id, they raise it in free text before the workflow executes. Never leave a claimed session beside the new continuation.
 
-When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is mandatory unless the user disputes the signal. Do not present "omit handoff" as a normal option. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, archive the completed session and carry the remaining node work through the canonical continuation: rewrite the mid-session artifact in place when `artifact_id` is present, otherwise create a new thin handoff. If the user passed `--no-session`, workflow 04 Path A handles that as a contradiction to resolve, not as a normal proposal choice.
+When `<CONTINUATION_SIGNAL state="present">` exists, a canonical continuation is allowed only if continuation by Claude is impossible now. Do not present "create handoff" as a normal option for actionable coordination notes. A completed claimed session can anchor a node that still has unrelated `PLAN.md` or `ISSUES.md` continuation; in that case, closure is blocked while Claude can still reconcile or execute the note. If a real stop condition exists, workflow 04 may create or rewrite the canonical continuation only after `<EXISTING_SESSION_RECONCILIATION status="none">` or `status="same-owner-continuation"` confirms the queue will not receive a duplicate.
+
+If `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` exists, report that an existing session already owns the continuation and do not propose a new session. If `status="ambiguous"` exists, STOP and ask the operator to resolve ownership before any continuation proposal.
 
 When no persistence items require user approval, do not call `AskUserQuestion` only to approve the disposition. State the header, name that there are no approval-required persistence edits, and proceed to workflow 04. A structured question is reserved for approval-required persistence edits, ambiguous session disposition, user-disputed disposition, or the explicit `--no-session` contradiction handled by workflow 04 Path A.
 
@@ -81,6 +84,6 @@ Don't collapse a long list into a terse summary option to fit the limit. Each ac
 
 <failure_modes>
 
-**Asked whether to omit a required continuation.** Claude completed the claimed session's original deliverable, saw that the anchored node still had unrelated `PLAN.md` or `ISSUES.md` continuation, then asked the operator to approve either creating or omitting a handoff. That wasted a turn and implied the continuation signal was optional. When continuation is present, create the canonical continuation by default; ask only if the user explicitly requested `--no-session`, disputes the signal, or a separate persistence edit needs approval.
+**Turned an actionable note into a queue entry.** Claude completed the claimed session's original deliverable, saw that the anchored node still had unrelated `PLAN.md` or `ISSUES.md` continuation, then proposed a new handoff instead of reconciling the note. That inflated the session queue and split work away from the durable map. When a coordination note is actionable and Claude can still act, return to the work; propose a continuation only after a real stop condition exists and the existing-session search proves no other session owns it.
 
 </failure_modes>
