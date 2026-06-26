@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[--list] [--auto-continue]"
-allowed-tools: Read, Bash(spx:*), Bash(git:*), Bash(python3:*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
 ---
 
 <context>
@@ -19,7 +19,7 @@ A claimed handoff session — loaded, reconciled against current repository stat
 
 <constraints>
 
-- Pickup opens session responsibility and never releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
+- Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
 
 </constraints>
@@ -194,13 +194,13 @@ Claude loaded `/contextualize`, then invoked `/apply` or started writing ADRs, t
 
 How to avoid: After `/contextualize`, present the loaded state and stop. Use `AskUserQuestion` unless `$ARGUMENTS` explicitly includes `--auto-continue`. Do not invoke `/apply` or edit files before that checkpoint completes.
 
-**Failure 2: Later handoff archived only the most recent doing session, orphaning earlier pickups**
+**Failure 2: Claude orphaned earlier pickups by archiving only the most recent doing session at handoff**
 
 Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. The next Claude context then had to read multiple handoff files to reconstruct the continuation.
 
 How to avoid: Emit (or extend) `<CLAIMED_SESSIONS ids="...">` on every pickup so the latest marker names the full claimed-session set. Handoff workflow 04 reads the set and archives every id. Closure ends with zero or one handoff incorporating everything — never a sidecar.
 
-**Failure 3: Treated the existence of a new handoff session as permission to close a claimed session**
+**Failure 3: Claude treated the existence of a new handoff session as permission to close a claimed session**
 
 Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
 
@@ -219,6 +219,7 @@ A successful pickup:
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
 - [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
+- [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
