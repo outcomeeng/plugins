@@ -151,7 +151,7 @@ Check the capability surface a SKILL.md carries that a slash command also had, a
 - Every argument declared in `arguments` is substituted as `$name` in the body, and every `$name` the body substitutes is declared — neither orphaned.
 - A migration from `$ARGUMENTS` to `arguments` preserves behavior only when the named argument's token boundary matches the skill's intent. Flag free-form whole-string skills that use a single named positional argument without proving rest-of-line capture.
 - Empty-argument handling is stated when the skill requires an argument or defines a no-argument fallback.
-- Authored `src/plugins/` skills target Claude Code SKILL.md syntax. Codex-specific rendering belongs to the build step; flag source prose that claims Codex consumes a Claude-only form directly, but do not flag Claude-supported source syntax merely because Codex may need generated adaptation.
+- Authored plugin source skills target Claude Code SKILL.md syntax. Codex-specific rendering belongs to the build step; flag source prose that claims Codex consumes a Claude-only form directly, but do not flag Claude-supported source syntax merely because Codex may need generated adaptation.
 
 **Dynamic-context safety** (`!`-backtick blocks inside `<context>`):
 

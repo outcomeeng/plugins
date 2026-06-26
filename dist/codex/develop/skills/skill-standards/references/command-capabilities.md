@@ -2,7 +2,7 @@
 
 A SKILL.md carries every capability a slash command had — arguments, `!`-dynamic context injection, tool restriction, and `@` file references. These rules govern that surface; `/audit-skills` enforces them and `/create-skills` teaches them.
 
-Author `src/plugins/` skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the generated `dist/codex/` tree instead of constraining authored source to Codex's currently documented subset.
+Author plugin source skills in Claude Code's supported SKILL.md syntax. Generated Codex output is a build-rendering concern: when Codex needs a different invocation surface, the renderer adapts the Codex runtime tree instead of constraining authored source to Codex's currently documented subset.
 
 Prefer the intersection of Claude Code and Codex syntax only when it improves reliability or convenience:
 
