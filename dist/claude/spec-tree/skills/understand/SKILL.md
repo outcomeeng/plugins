@@ -92,7 +92,8 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
      "${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md" \
      "${CLAUDE_SKILL_DIR}/examples/"*.md
    ```
-7. Emit the `<SPEC_TREE_FOUNDATION>` marker:
+7. Read the product's spx-level routing guide once, if present — `Read: spx/CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
+8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
 ```text
 <SPEC_TREE_FOUNDATION>
