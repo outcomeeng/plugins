@@ -30,7 +30,7 @@ Every concern passes: 12 functions read with no surprises, IO separated from log
 
 Auditing `src/orders/` for an e-commerce service.
 
-```json
+````json
 {
   "schema_version": 1,
   "skill": "audit-typescript",
@@ -47,7 +47,7 @@ Auditing `src/orders/` for an e-commerce service.
           "line": 42,
           "rule": "io-logic-tangle",
           "severity": "REJECT",
-          "message": "Predict/verify: `processOrders` is predicted to compute and return order results, but the body computes totals AND sends confirmation emails via `sendgrid.send()`. IO is tangled with logic — the function cannot be tested without an email service. Extract `computeOrderTotals` as a pure function and move sending behind an injected `EmailSender` dependency."
+          "message": "Predict/verify: `processOrders` is predicted to compute and return order results, but the body computes totals AND sends confirmation emails via `sendgrid.send()`. IO is tangled with logic — the function cannot be tested without an email service. Extract `computeOrderTotals` as a pure function and move sending behind an injected `EmailSender` dependency. Correct approach:\n\n```typescript\ninterface EmailSender {\n  send(to: string, subject: string, body: string): Promise<void>;\n}\n\nfunction computeOrderTotals(orders: Order[]): OrderSummary[] {\n  // Pure computation -- no IO\n}\n\nasync function processOrders(\n  orders: Order[],\n  deps: { sendEmail: EmailSender },\n): Promise<void> {\n  for (const summary of computeOrderTotals(orders)) {\n    await deps.sendEmail.send(summary.to, summary.subject, summary.body);\n  }\n}\n```"
         }
       ]
     },
@@ -61,7 +61,7 @@ Auditing `src/orders/` for an e-commerce service.
           "line": 42,
           "rule": "io-logic-separation",
           "severity": "REJECT",
-          "message": "Core logic cannot be tested without IO; pure computation and the email side effect are not separated. Inject the email boundary via a `deps` parameter so the totals logic is exercisable in isolation."
+          "message": "Core logic cannot be tested without IO; pure computation and the email side effect are not separated. Inject the email boundary via a `deps` parameter so the totals logic is exercisable in isolation. Correct approach:\n\n```typescript\nfunction computeOrderTotals(orders: Order[]): OrderSummary[] {\n  // Pure computation -- no IO\n}\n\nasync function processOrders(orders: Order[], deps: { sendEmail: EmailSender }): Promise<void> {\n  for (const summary of computeOrderTotals(orders)) {\n    await deps.sendEmail.send(summary.to, summary.subject, summary.body);\n  }\n}\n```"
         }
       ]
     },
@@ -76,14 +76,14 @@ Auditing `src/orders/` for an e-commerce service.
           "line": 3,
           "rule": "dependency-injection",
           "severity": "REJECT",
-          "message": "`import { send } from \"@sendgrid/mail\"` — the governing ADR requires external service calls to use dependency injection. A direct import creates a hard dependency. Accept an `EmailSender` via a `deps` parameter instead."
+          "message": "`import { send } from \"@sendgrid/mail\"` — the governing ADR requires external service calls to use dependency injection. A direct import creates a hard dependency. Accept an `EmailSender` via a `deps` parameter instead. Correct approach:\n\n```typescript\ninterface EmailSender {\n  send(to: string, subject: string, body: string): Promise<void>;\n}\n\nasync function processOrders(orders: Order[], deps: { sendEmail: EmailSender }): Promise<void> {\n  ...\n}\n```"
         }
       ]
     }
   ],
   "metadata": { "branch": "<branch>" }
 }
-```
+````
 
 </example>
 

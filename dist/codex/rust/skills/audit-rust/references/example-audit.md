@@ -29,7 +29,7 @@ Every applicable concern passes: 12 functions read with no surprises, explicit s
 <rejected_design_review>
 Auditing `src/orders/`.
 
-```json
+````json
 {
   "schema_version": 1,
   "skill": "audit-rust",
@@ -46,7 +46,7 @@ Auditing `src/orders/`.
           "line": 42,
           "rule": "io-logic-tangle",
           "severity": "REJECT",
-          "message": "Predict/verify: `process_orders` is predicted to compute and return order summaries, but the body computes totals, persists state, and sends emails through a concrete client. The boundary call prevents isolated verification of the pricing logic. Extract `compute_order_summaries` as a pure function and move sending behind an injected `EmailSender` trait."
+          "message": "Predict/verify: `process_orders` is predicted to compute and return order summaries, but the body computes totals, persists state, and sends emails through a concrete client. The boundary call prevents isolated verification of the pricing logic. Extract `compute_order_summaries` as a pure function and move sending behind an injected `EmailSender` trait. Correct approach:\n\n```rust\ntrait EmailSender {\n    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;\n}\n\nfn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {\n    orders.iter().map(OrderSummary::from).collect()\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    for summary in compute_order_summaries(orders) {\n        sender.send(&summary)?;\n    }\n    Ok(())\n}\n```"
         }
       ]
     },
@@ -60,7 +60,7 @@ Auditing `src/orders/`.
           "line": 42,
           "rule": "io-logic-separation",
           "severity": "REJECT",
-          "message": "Pure computation and boundary calls are tangled; the pricing logic cannot be exercised without the email client. Inject the email boundary through a trait or narrow function seam."
+          "message": "Pure computation and boundary calls are tangled; the pricing logic cannot be exercised without the email client. Inject the email boundary through a trait or narrow function seam. Correct approach:\n\n```rust\nfn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {\n    orders.iter().map(OrderSummary::from).collect()\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    for summary in compute_order_summaries(orders) {\n        sender.send(&summary)?;\n    }\n    Ok(())\n}\n```"
         }
       ]
     },
@@ -76,13 +76,13 @@ Auditing `src/orders/`.
           "line": 3,
           "rule": "dependency-injection",
           "severity": "REJECT",
-          "message": "The module imports a concrete email client directly, while the governing ADR requires an injected seam for external services. Depend on an `EmailSender` trait passed in instead."
+          "message": "The module imports a concrete email client directly, while the governing ADR requires an injected seam for external services. Depend on an `EmailSender` trait passed in instead. Correct approach:\n\n```rust\ntrait EmailSender {\n    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;\n}\n\nfn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {\n    ...\n}\n```"
         }
       ]
     }
   ],
   "metadata": { "branch": "<branch>" }
 }
-```
+````
 
 </rejected_design_review>
