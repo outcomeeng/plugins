@@ -1,71 +1,102 @@
 <overview>
-These examples show the expected review shape for an approved change, a design rejection, and a mechanical-gate rejection.
+The skill's entire output is the JSON verdict (see `<verdict_format>` in the skill). These examples show the verdict shape for an approved change and a design rejection; the audit runs no deterministic verification, so there is no automated-gates or test-execution row. A scope with no `unsafe` sites reports the `unsafe-soundness` row as `UNKNOWN`.
 </overview>
 
 <approved_review>
-Auditing `src/config/` for a CLI crate after the repository validation sequence passed.
+Auditing `src/config/` for a CLI crate.
 
-```text
-CODE REVIEW
-
-Decision: APPROVED
-
-Verdict
-
-| # | Concern                | Status | Detail                                          |
-| - | ---------------------- | ------ | ----------------------------------------------- |
-| 1 | Automated gates        | PASS   | `cargo fmt --check`, `clippy`, and tests passed |
-| 2 | Test execution         | PASS   | 47/47 tests pass                                |
-| 3 | Function comprehension | PASS   | 12 functions, no surprises                      |
-| 4 | Design coherence       | PASS   | seams are explicit and ownership is clear       |
-| 5 | Import structure       | PASS   | `crate::` and local `super::` usage is coherent |
-| 6 | ADR/PDR compliance     | PASS   | build ADR constraints are reflected in code     |
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-rust",
+  "target": "src/config/",
+  "overall": "PASS",
+  "rows": [
+    { "name": "function-comprehension", "status": "PASS", "findings": [] },
+    { "name": "design-coherence", "status": "PASS", "findings": [] },
+    { "name": "import-structure", "status": "PASS", "findings": [] },
+    { "name": "unsafe-soundness", "status": "UNKNOWN", "findings": [] },
+    { "name": "adr-pdr-compliance", "status": "PASS", "findings": [] }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
-Code meets standards.
+Every applicable concern passes: 12 functions read with no surprises, explicit seams and clear ownership, coherent `crate::` and local `super::` usage, and the build ADR's constraints reflected in the code. The scope contains no `unsafe` sites, so `unsafe-soundness` is `UNKNOWN`.
+
 </approved_review>
 
 <rejected_design_review>
 Auditing `src/orders/`.
 
-```text
-CODE REVIEW
-
-Decision: REJECTED
-
-Verdict
-
-| # | Concern                | Status | Detail                                             |
-| - | ---------------------- | ------ | -------------------------------------------------- |
-| 1 | Automated gates        | PASS   | full validation sequence passed                    |
-| 2 | Test execution         | PASS   | 23/23 tests pass                                   |
-| 3 | Function comprehension | REJECT | `process_orders` mixes pricing logic and email I/O |
-| 4 | Design coherence       | REJECT | pure computation and boundary calls are tangled    |
-| 5 | Import structure       | PASS   | module imports are coherent                        |
-| 6 | ADR/PDR compliance     | REJECT | ADR requires injected email boundary               |
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-rust",
+  "target": "src/orders/",
+  "overall": "FAIL",
+  "rows": [
+    {
+      "name": "function-comprehension",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "src/orders/processor.rs",
+          "line": 42,
+          "rule": "io-logic-tangle",
+          "severity": "REJECT",
+          "message": "Predict/verify: `process_orders` is predicted to compute and return order summaries, but the body computes totals, persists state, and sends emails through a concrete client. The boundary call prevents isolated verification of the pricing logic. Extract `compute_order_summaries` as a pure function and move sending behind an injected `EmailSender` trait."
+        }
+      ]
+    },
+    {
+      "name": "design-coherence",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-002",
+          "file": "src/orders/processor.rs",
+          "line": 42,
+          "rule": "io-logic-separation",
+          "severity": "REJECT",
+          "message": "Pure computation and boundary calls are tangled; the pricing logic cannot be exercised without the email client. Inject the email boundary through a trait or narrow function seam."
+        }
+      ]
+    },
+    { "name": "import-structure", "status": "PASS", "findings": [] },
+    { "name": "unsafe-soundness", "status": "UNKNOWN", "findings": [] },
+    {
+      "name": "adr-pdr-compliance",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "f-003",
+          "file": "src/orders/processor.rs",
+          "line": 3,
+          "rule": "dependency-injection",
+          "severity": "REJECT",
+          "message": "The module imports a concrete email client directly, while the governing ADR requires an injected seam for external services. Depend on an `EmailSender` trait passed in instead."
+        }
+      ]
+    }
+  ],
+  "metadata": { "branch": "<branch>" }
+}
 ```
 
-<findings>
-<finding name="process_orders_tangles_logic_with_io">
-Where: `src/orders/processor.rs:42`
-Concern: Function comprehension, Design coherence
-Why this fails: Predict: `process_orders` computes and returns order summaries. Verify: the function computes totals, persists state, and sends emails through a concrete client. The boundary call prevents isolated verification of the pricing logic.
-
-Correct approach:
+Correct approach for the cited findings:
 
 ```rust
-fn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {
-    orders.iter().map(OrderSummary::from).collect()
-}
-
 trait EmailSender {
     fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;
 }
 
-fn process_orders<S: EmailSender>(
-    orders: &[Order],
-    sender: &S,
-) -> Result<(), ProcessOrdersError> {
+fn compute_order_summaries(orders: &[Order]) -> Vec<OrderSummary> {
+    orders.iter().map(OrderSummary::from).collect()
+}
+
+fn process_orders<S: EmailSender>(orders: &[Order], sender: &S) -> Result<(), ProcessOrdersError> {
     for summary in compute_order_summaries(orders) {
         sender.send(&summary)?;
     }
@@ -73,55 +104,4 @@ fn process_orders<S: EmailSender>(
 }
 ```
 
-</finding>
-
-<finding name="direct_email_client_dependency_violates_adr">
-Where: `src/orders/processor.rs:3`
-Concern: ADR/PDR compliance
-Why this fails: The module imports a concrete email client directly even though the ADR requires an injected seam for external services.
-
-Correct approach:
-
-```rust
-trait EmailSender {
-    fn send(&self, summary: &OrderSummary) -> Result<(), EmailError>;
-}
-```
-
-</finding>
-</findings>
-
-<required_changes>
-
-1. Extract pure pricing logic from `process_orders`
-2. Inject the email boundary through a trait or narrow function seam
-3. Add a regression test covering the separated logic path
-
-</required_changes>
 </rejected_design_review>
-
-<rejected_mechanical_gate_review>
-
-```text
-CODE REVIEW
-
-Decision: REJECTED
-
-Verdict
-
-| # | Concern                | Status | Detail                         |
-| - | ---------------------- | ------ | ------------------------------ |
-| 1 | Automated gates        | REJECT | `cargo clippy` reports warning |
-| 2 | Test execution         | --     | Blocked by Phase 1 failure     |
-| 3 | Function comprehension | --     | Blocked by Phase 1 failure     |
-| 4 | Design coherence       | --     | Blocked by Phase 1 failure     |
-| 5 | Import structure       | --     | Blocked by Phase 1 failure     |
-| 6 | ADR/PDR compliance     | --     | Blocked by Phase 1 failure     |
-```
-
-<required_changes>
-
-1. Fix the `clippy` failure and rerun the full validation sequence
-
-</required_changes>
-</rejected_mechanical_gate_review>
