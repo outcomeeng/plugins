@@ -9,9 +9,6 @@ merge-base diff scope. Consumers import these symbols (directly or through
 Every changeset diff range over a git-derived base is composed against the
 remote-tracking ref ``origin/<base>`` through :func:`remote_tracking_ref`, so a
 stale local branch ref in a multi-worktree checkout cannot widen the scope.
-
-Stdlib-only, ``python3`` — no third-party packages, no ``uv``, no
-``outcomeeng_*`` imports, per the Plugin Portability Constraints in ``AGENTS.md``.
 """
 
 from __future__ import annotations

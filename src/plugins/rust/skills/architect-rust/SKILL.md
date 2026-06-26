@@ -65,7 +65,7 @@ Before creating ADRs, understand:
 
 Read these files to understand product structure and workflow:
 
-- `spx/CLAUDE.md` - Product navigation, work item status, BSP dependencies
+- `{{! file('spx_guide') !}}` - Product navigation, work item status, BSP dependencies
 
 For Rust test standards and methodology, read `/rust-test-standards`, then invoke `/test-rust`.
 
@@ -111,7 +111,7 @@ Execute these phases IN ORDER.
 
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
-   - `spx/CLAUDE.md` - Product structure, navigation, work item management
+   - `{{! file('spx_guide') !}}` - Product structure, navigation, work item management
 3. Read `/rust-standards`, then `/rust-architecture-standards`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists

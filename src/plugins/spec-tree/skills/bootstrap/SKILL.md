@@ -74,7 +74,7 @@ Proposed root scaffold:
 
 spx/
 ├── {product-name}.product.md
-├── CLAUDE.md
+├── {{! file('root_guide') !}}
 └── PLAN.md        # optional top-level composition intent for /decompose spx/
 ```
 
@@ -102,7 +102,7 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Render the runtime's spx-level guide — `spx/CLAUDE.md` under Claude Code, `spx/AGENTS.md` under Codex — from the template via the update-spx helper, passing the project's enabled languages so the guide records its `languages` config (and a later `/update-spx` re-renders from it, scoped to those languages):
+3. Render the runtime's spx-level guide — `{{! file('spx_guide', 'claude') !}}` under Claude Code, `{{! file('spx_guide', 'codex') !}}` under Codex — from the template via the update-spx helper, passing the project's enabled languages so the guide records its `languages` config (and a later `/update-spx` re-renders from it, scoped to those languages):
 
    ```bash
    python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --product <runtime-guide-path> --languages <comma-separated-languages> --write
@@ -130,7 +130,7 @@ After the root scaffold exists, invoke `/decompose spx/` to compose top-level ch
 Summarize what was created:
 
 - Product spec path
-- `spx/CLAUDE.md` path
+- `{{! file('spx_guide') !}}` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
 
@@ -181,7 +181,7 @@ Bootstrapping is complete when:
 - [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `spx/CLAUDE.md` created from template, scoped to the project's enabled languages
+- [ ] `{{! file('spx_guide') !}}` created from template, scoped to the project's enabled languages
 - [ ] `spx/PLAN.md` created when top-level intent exists
 - [ ] Top-level structure delegated to `/decompose spx/`
 - [ ] Next steps recommended

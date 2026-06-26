@@ -126,10 +126,10 @@ class RuntimeTokenKind:
     ``names`` maps a capability to its per-runtime names (capability -> runtime ->
     name). ``lint_enforced`` marks whether the runtime-token validation gate forbids
     a raw appearance of these names in authored source: the unique-token kinds
-    (``tool``, ``field``) are enforced, while the common-word concept-term kind
-    (``term``) is not — a whole-token match on a word like "agent" would flag every
-    prose mention, so terms are covered by review instead. A new kind opts into or
-    out of guard enforcement explicitly through this flag.
+    (``tool``, ``field``, ``file``) are enforced, while the common-word concept-term
+    kind (``term``) is not — a whole-token match on a word like "agent" would flag
+    every prose mention, so terms are covered by review instead. A new kind opts into
+    or out of guard enforcement explicitly through this flag.
     """
 
     lint_enforced: bool
@@ -142,10 +142,12 @@ class RuntimeTokenKind:
 # renders the current target's name from that kind's sub-registry. A capability
 # with no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
 # per-runtime conditional so the token is never evaluated for the missing runtime.
-# The `tool` kind is seeded from the Agent Runtime Guidance table in AGENTS.md;
-# `field` and `term` carry the rendering mechanism ahead of their first authored
-# consumers. Enforcement that a raw name never appears in authored source is the
-# runtime-token validation lint (outcomeeng.validation.runtime_tokens), which
+# The `tool` kind is seeded from the Agent Runtime Guidance table in AGENTS.md; the
+# `file` kind holds per-runtime filenames — the agent guide a consumer reads is
+# `CLAUDE.md` under Claude Code and `AGENTS.md` under Codex, and the spx-level guide
+# likewise. `field` and `term` carry the rendering mechanism ahead of their first
+# authored consumers. Enforcement that a raw name never appears in authored source is
+# the runtime-token validation lint (outcomeeng.validation.runtime_tokens), which
 # derives its forbidden set from the lint-enforced kinds only — not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     "tool": RuntimeTokenKind(
@@ -157,6 +159,13 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     ),
     "field": RuntimeTokenKind(lint_enforced=True, names={}),
     "term": RuntimeTokenKind(lint_enforced=False, names={}),
+    "file": RuntimeTokenKind(
+        lint_enforced=True,
+        names={
+            "spx_guide": {"claude": "spx/CLAUDE.md", "codex": "spx/AGENTS.md"},
+            "root_guide": {"claude": "CLAUDE.md", "codex": "AGENTS.md"},
+        },
+    ),
 }
 
 

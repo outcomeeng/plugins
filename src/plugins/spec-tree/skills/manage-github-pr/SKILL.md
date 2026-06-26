@@ -4,6 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
+arguments: instructions
 allowed-tools: Skill, {{! tool('ask_user') !}}, Bash, Read
 ---
 
@@ -14,7 +15,7 @@ A changeset merged into the default branch on origin through the GitHub-PR trans
 <context>
 Live repository state for mode detection, read at invocation.
 
-**Arguments:** `$ARGUMENTS`
+**Arguments:** `$instructions`
 
 **Current branch:**
 !`git branch --show-current || echo '(not a git repo)'`
@@ -31,18 +32,18 @@ Live repository state for mode detection, read at invocation.
 </context>
 
 <mode_detection>
-Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
+Read `$instructions` and the injected state, then pick exactly one mode:
 
-- **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
-- **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
-- **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
-- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
+- **Open PR** — `$instructions` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
+- **Instructed** — `$instructions` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
+- **Existing changeset** — `$instructions` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
+- **Empty** — `$instructions` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
 
 </mode_detection>
 
 <workflow>
 
-**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per CLAUDE.md. `spx/local/merging.md` configures this transport (merge command, production-relevance recognition, pre-flight, post-merge) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`; whether a PR is the transport at all is `/merge`'s selection, not this skill's.
+**Step 1 — Establish intent and route.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first so the foundation is loaded. Per the detected mode, gather what is being shipped. In Open PR mode, resolve the PR pointer and proceed directly to Step 6. In Empty mode, invoke `/interview` to elicit the change. In Instructed mode, resolve the instruction against the repository — when it touches the spec tree, load context through `/contextualize` first per {{! file('root_guide') !}}. `spx/local/merging.md` configures this transport (merge command, production-relevance recognition, pre-flight, post-merge) and is read by `/open-pr`, `/manage-pr`, and `/merging-standards`; whether a PR is the transport at all is `/merge`'s selection, not this skill's.
 
 **Step 2 — State the plan; confirm only if the overlay opts in.** Read `spx/local/merging.md` (via `/merging-standards` `<repo_local_overlay>`) for the pre-mutation-confirmation setting. By default — no setting declared — state the plan in prose (the change to make, the branch, the commit shape, and that the flow runs through PR open, merge, and closure unless the user instruction says otherwise) and proceed autonomously; there is no confirmation pause. Only when the overlay opts into a pre-mutation confirmation, present that same plan through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` on Claude Code, `{{! tool('ask_user', 'codex') !}}` on Codex) and obtain confirmation before the first mutating action — never branch, commit, push, open, or merge before that confirmation. Establishing *what* to ship in Empty mode (Step 1, `/interview`) is requirements work, not this confirmation, and always proceeds.
 
@@ -64,13 +65,13 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 - MUST drive every stage by invoking its governing skill — `/commit-changes`, `/open-pr`, `/manage-pr`, and `/apply` or the coding skills — never reimplementing their protocols inline. Drift between a reimplementation and the source skill is the failure this skill exists to prevent.
 - MUST read `spx/local/merging.md` for the GitHub-PR transport's configuration (merge command, production-relevance recognition, pre-flight, post-merge) through `/open-pr`, `/manage-pr`, and `/merging-standards`. Transport selection — whether a PR is the transport at all — is `/merge`'s, never this skill's.
 - NEVER merge directly — the merge executes only through `/manage-pr`'s `MERGE_READINESS` ∧ `PRODUCTION_READINESS` authority.
-- MUST follow CLAUDE.md and the loaded skills exactly — /manage-github-pr changes who invokes the lifecycle, not what the lifecycle does.
+- MUST follow {{! file('root_guide') !}} and the loaded skills exactly — /manage-github-pr changes who invokes the lifecycle, not what the lifecycle does.
 
 </constraints>
 
 <success_criteria>
 
-- The detected mode matches `$ARGUMENTS` and the injected repository state.
+- The detected mode matches `$instructions` and the injected repository state.
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The GitHub-PR transport was assumed (transport selection having been made by `/merge`), and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.

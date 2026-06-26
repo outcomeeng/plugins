@@ -12,7 +12,7 @@ Before writing a Path B or Path C session file, read `references/session-format.
 For each approved item from workflow 03:
 
 - **Spec amendments**: Edit the spec file directly.
-- **CLAUDE.md / memory / skill updates**: Write the insight to the correct target.
+- **AGENTS.md / memory / skill updates**: Write the insight to the correct target.
 - **ISSUES.md**: Write or update in the node directory. Remove fixed items, add new ones.
 - **PLAN.md**: Write, update, or remove in the node directory. Never leave a stale plan.
 

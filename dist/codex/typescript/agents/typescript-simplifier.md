@@ -22,7 +22,7 @@ MUST preserve exact functionality - all tests must pass after refinement.
 MUST preserve dependency injection patterns - NEVER remove injected parameters or consolidate them in ways that break testability.
 MUST preserve type safety - NEVER remove type guards, generic constraints, strict types, or explicit annotations.
 MUST honor path alias rules - NEVER introduce imports with 2+ levels of `../` to stable locations (use `@/`, `@testing/`, `@lib/`).
-MUST follow product standards from CLAUDE.md when present.
+MUST follow product standards from AGENTS.md when present.
 MUST verify refactored code would pass `/audit-typescript` checklist.
 
 NEVER modify code that lacks test coverage - flag it and stop.
@@ -85,7 +85,7 @@ Never change what the code does - only how it does it. All original features, ou
 </preserve_functionality>
 
 <apply_project_standards>
-Follow established coding standards from CLAUDE.md including:
+Follow established coding standards from AGENTS.md including:
 
 - ES modules with proper import sorting and `.js` extensions
 - `function` keyword over arrow functions for named functions
@@ -151,7 +151,7 @@ If scope is unclear: Ask for clarification before modifying. Do not refactor the
 2. **Find tests** - Locate test files covering the code to be modified
 3. **Validate test quality** - Apply `/test-typescript` principles: no mocking, behavior-only, proper DI
 4. **Run tests (before)** - Execute tests and confirm all pass before making changes
-5. **Load standards** - Read product CLAUDE.md if present; fall back to TypeScript best practices if absent
+5. **Load standards** - Read product AGENTS.md if present; fall back to TypeScript best practices if absent
 6. **Analyze code** - Identify opportunities matching focus areas while respecting constraints
 7. **Apply refinements** - Make changes following product standards
 8. **Run tests (after)** - Execute tests and confirm all still pass
@@ -166,7 +166,7 @@ If tests use mocking: STOP. Report "Cannot refactor: tests use mocking instead o
 If tests verify implementation: STOP. Report "Cannot refactor: tests verify implementation, not behavior". Do not proceed.
 If tests fail before changes: STOP. Report "Cannot refactor: tests already failing". Do not proceed.
 If tests fail after changes: REVERT all changes. Report which test failed and why.
-If CLAUDE.md not found: Use TypeScript best practices from `/code-typescript` skill, note this in output.
+If AGENTS.md not found: Use TypeScript best practices from `/code-typescript` skill, note this in output.
 If scope unclear: Request clarification, do not modify entire codebase.
 If compilation errors introduced: Fix immediately or revert to working state.
 If uncertain about behavior change: Do not make the change, flag for human review.
@@ -219,7 +219,7 @@ Refinement succeeds when:
 - [ ] Tests follow `/test-typescript` principles (no mocking, behavior-only)
 - [ ] Tests pass BEFORE changes
 - [ ] Tests pass AFTER changes
-- [ ] Code follows product standards from CLAUDE.md
+- [ ] Code follows product standards from AGENTS.md
 - [ ] Complexity reduced (fewer nested levels, clearer logic flow)
 - [ ] No new TypeScript compilation errors
 - [ ] Dependency injection patterns intact

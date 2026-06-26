@@ -46,7 +46,7 @@ If tests don't exist or aren't approved, go back to earlier steps.
 
 <write_mode_workflow>
 
-Run the product's own canonical commands when it documents them — a `CLAUDE.md` / `AGENTS.md` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
+Run the product's own canonical commands when it documents them — a `CLAUDE.md` instruction, a Justfile or Makefile recipe, or a package script. The `python3 -m …` invocations below are the portable fallback for a product that ships no wrapper; report any tool the product lacks rather than skipping it.
 
 **Step 1 — Understand the tests.** Read the existing tests to understand:
 

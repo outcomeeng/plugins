@@ -1,12 +1,9 @@
 """Audit verdict toolchain — canonical schema and rollup logic.
 
-This module is the marketplace's single source of truth for what an audit
+This module is the single source of truth for what an audit
 verdict looks like. Every audit skill emits a JSON document that conforms
 to the schema declared here. Companion CLI scripts validate, aggregate,
 and journal-render that JSON; skills never hand-format markdown verdicts.
-
-Portability: stdlib only. No third-party imports. See the Plugin Portability
-Constraints section in the marketplace ``AGENTS.md``.
 
 Status value space:
 

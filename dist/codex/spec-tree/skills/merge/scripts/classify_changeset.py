@@ -10,9 +10,6 @@ canonical `changeset_scope` module — never re-implemented here — per the
 `scope-changeset` skill's contract.
 Working-tree status is /merge's own concern: `changeset_scope` owns committed
 diff scope against the remote-tracking base only, not the uncommitted index.
-
-Stdlib-only, `python3` (3.11+). No third-party packages, no `uv`, no
-`outcomeeng_*` imports, per the Plugin Portability Constraints in `AGENTS.md`.
 """
 
 from __future__ import annotations

@@ -12,7 +12,7 @@ The governing category is **test infrastructure** — never "test utilities", "s
 
 ## Running Tests And The Environment
 
-Run the product's canonical test command — the one its `CLAUDE.md` / `AGENTS.md`, Justfile, Makefile, or package scripts document. The direct `python3 -m pytest` invocations below are the portable fallback for a product that ships no wrapper.
+Run the product's canonical test command — the one its `CLAUDE.md`, Justfile, Makefile, or package scripts document. The direct `python3 -m pytest` invocations below are the portable fallback for a product that ships no wrapper.
 
 ### Symptom: "Module not found" When Running Tests
 

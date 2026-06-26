@@ -18,9 +18,10 @@ which also renders rather than embeds the literal.
 Every authored-source file the build renders or inlines — plugin content under
 ``src/plugins/`` and the shared fragments under ``src/_shared/`` that plugin files
 include — is enforced by default.  ``RUNTIME_TOKEN_IGNORE`` is the exemption surface:
-it is empty (every authored file is converted, so the marketplace is fully enforced),
-and remains the explicit, tracked hatch for any future not-yet-converted file.  A newly
-added plugin or shared fragment is enforced without being opted in.
+it holds only the guide-generation node's authored files, which name the two guide
+filenames as their subject and so cannot consume a build token; every other authored
+file is converted and enforced, and the hatch remains for any future not-yet-converted
+file.  A newly added plugin or shared fragment is enforced without being opted in.
 
 Usage::
 
@@ -94,13 +95,36 @@ def compile_forbidden_pattern(names: tuple[str, ...]) -> re.Pattern[str]:
 _FORBIDDEN_NAMES: Final = forbidden_names()
 _RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = compile_forbidden_pattern(_FORBIDDEN_NAMES)
 
-# Files under src/plugins/ exempt from enforcement until their content is
-# converted to runtime-token tokens. Repo-relative POSIX paths. Empty: every
-# authored file is converted, so the marketplace is fully enforced with no
-# exemptions. The mechanism remains as the explicit, tracked exemption surface
-# for any future not-yet-converted plugin or shared fragment — an entry added
-# here exempts that one file without opting the rest of the tree out.
-RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset()
+# Files under src/plugins/ exempt from enforcement. Repo-relative POSIX paths.
+# An entry exempts that one file without opting the rest of the tree out, and is
+# either a not-yet-converted plugin or shared fragment, or an authored file of the
+# guide-generation node, whose subject is the two guide files named CLAUDE.md and
+# AGENTS.md. That node names both literals as data, not as a reference a reader
+# resolves to its own runtime: the generator's RUNTIME_GUIDE_FILENAMES must hold
+# the literals when it runs from src (its tests) and dist alike, so it cannot
+# consume a build token, and its skill and agent describe generating both named
+# files. The canonical guide template the generator renders is the same case: it is
+# read per output by update_spx.py (not the build's Jinja), so one template produces
+# both guides and a build token could not diverge per output — it names the filenames
+# as data too. The node is the source of the `file` kind's names, not a consumer.
+#
+# A second exempt category is a runtime-neutral citation surface. The review-changes
+# reviewer prompt and verdict validator name both CLAUDE.md and AGENTS.md as rule
+# citation targets and as the repo-under-review's instruction files — for any repo,
+# regardless of the reviewer's own runtime, since the repo under review may carry
+# either name. That deliberate both-naming is not a runtime-divergent guide read, but
+# the guard's whole-name match would false-positive on it, so review covers it (as for
+# the common-word `term` kind).
+RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
+    {
+        "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py",
+        "src/plugins/spec-tree/skills/update-spx/SKILL.md",
+        "src/plugins/spec-tree/agents/spx-updater.md",
+        "src/plugins/spec-tree/skills/understand/templates/spx-claude.md",
+        "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
+        "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -131,7 +155,7 @@ def is_ignored(
 
     ``ignore`` and ``repo_root`` default to the module-level exemption set and
     repository root; both are injectable so the exemption mechanism is testable
-    with a controlled ignore-list and root independent of the live (empty) set.
+    with a controlled ignore-list and root independent of the live set.
     """
     try:
         relative = path.resolve().relative_to(repo_root).as_posix()

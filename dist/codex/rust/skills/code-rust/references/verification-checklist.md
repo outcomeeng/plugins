@@ -28,7 +28,7 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
 ```
 
-If the repository publishes stricter wrapper commands in `CLAUDE.md` or `README.md`, use those instead of the fallback commands above.
+If the repository publishes stricter wrapper commands in `AGENTS.md` or `README.md`, use those instead of the fallback commands above.
 </tool_commands>
 
 <review_focus>

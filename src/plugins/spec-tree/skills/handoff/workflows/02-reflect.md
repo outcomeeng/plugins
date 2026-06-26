@@ -14,7 +14,7 @@ Classify each imperfection by nature to determine the persistence target. The de
 | --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
 | **Library / API**     | API change, library behavior, version gotcha                 | Language plugin `code-*` skill references (e.g., `code-typescript/references/`) |
 | **Methodology**       | Skill invocation order, audit interpretation, process error  | Spec-tree plugin skill (amend skill instructions)                               |
-| **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `CLAUDE.md`                                                             |
+| **Product rule**      | Convention specific to this codebase, forbidden pattern      | Product `{{! file('root_guide') !}}`                                            |
 | **Interaction style** | Response format, verbosity, tone — NOT coding patterns       | Memory (`feedback` type)                                                        |
 | **Domain knowledge**  | Who's doing what, external system locations, product context | Memory (`product`/`reference` type)                                             |
 | **Spec correction**   | Assertion was wrong or incomplete                            | Amend the spec file directly                                                    |
@@ -78,7 +78,7 @@ mid_session_artifact: id-or-none
 
 Use `ids=""` (empty) for a fresh handoff with no prior pickup. Use `artifact_id="none"` when no mid-session artifact exists.
 
-For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, CLAUDE.md, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by rewrite-in-place or archival.
+For each claimed session, fold every still-relevant fact into durable targets first (spec tree, skills, {{! file('root_guide') !}}, memory), then into the canonical continuation's coordination section only when no higher tier fits. Mid-session artifacts are reconciled in workflow 04 by rewrite-in-place or archival.
 
 A handoff replaces incorporated context. The existence of any session is not, by itself, permission to archive a claimed session — permission flows from completing this workflow.
 

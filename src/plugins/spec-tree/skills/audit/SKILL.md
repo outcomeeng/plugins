@@ -84,7 +84,7 @@ If any of the three dispatched skills is missing for the target language, halt b
 
 4. **Compute the scope hash.** Invoke `compute_scope_hash` from `${CLAUDE_SKILL_DIR}/scripts/audit_orchestrator.py`. Pass the frozen scope as `list[tuple[path, content]]`; the function returns a 12-character hex string. The hash identifies this exact scope and travels in the wrapper verdict's `metadata.scopeHash`.
 
-5. **Read project config.** `CLAUDE.md`, `AGENTS.md`, and any language-native configuration the dispatched `audit-{lang}` skill expects.
+5. **Read project config.** `{{! file('root_guide', 'claude') !}}`, `{{! file('root_guide', 'codex') !}}`, and any language-native configuration the dispatched `audit-{lang}` skill expects.
 
 6. **Read repo-local overlays.** `spx/local/audit.md` and `spx/local/audit-{lang}*.md` for each language in scope — read each that exists. Local overlays supersede the pre-loaded standards from the dispatched skill.
 

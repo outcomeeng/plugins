@@ -24,7 +24,7 @@ If the requirement is unclear, resolve that before implementation.
 <phase name="codebase_discovery">
 Read:
 
-- `README.md`, `docs/`, `CLAUDE.md`
+- `README.md`, `docs/`, `{{! file('root_guide') !}}`
 - `Cargo.toml`
 - `rust-toolchain.toml` when present
 

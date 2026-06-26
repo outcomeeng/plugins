@@ -4,6 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request, or runs /manage-github-pr.
   NEVER open or manage a GitHub pull request — whether invoked directly or delegated by /merge — without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
+arguments: instructions
 allowed-tools: Skill, AskUserQuestion, Bash, Read
 ---
 
@@ -14,7 +15,7 @@ A changeset merged into the default branch on origin through the GitHub-PR trans
 <context>
 Live repository state for mode detection, read at invocation.
 
-**Arguments:** `$ARGUMENTS`
+**Arguments:** `$instructions`
 
 **Current branch:**
 !`git branch --show-current || echo '(not a git repo)'`
@@ -31,12 +32,12 @@ Live repository state for mode detection, read at invocation.
 </context>
 
 <mode_detection>
-Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
+Read `$instructions` and the injected state, then pick exactly one mode:
 
-- **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
-- **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
-- **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
-- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
+- **Open PR** — `$instructions` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
+- **Instructed** — `$instructions` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
+- **Existing changeset** — `$instructions` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
+- **Empty** — `$instructions` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through `/interview` before any mutation.
 
 </mode_detection>
 
@@ -70,7 +71,7 @@ Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
 <success_criteria>
 
-- The detected mode matches `$ARGUMENTS` and the injected repository state.
+- The detected mode matches `$instructions` and the injected repository state.
 - By default the lifecycle ran autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, the plan was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The GitHub-PR transport was assumed (transport selection having been made by `/merge`), and `spx/local/merging.md` configured the transport through `/open-pr`, `/manage-pr`, and `/merging-standards`.
 - Each lifecycle stage ran through its governing skill, not an inline reimplementation.

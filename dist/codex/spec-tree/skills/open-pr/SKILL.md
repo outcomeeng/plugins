@@ -14,7 +14,7 @@ After loading this skill, check whether `spx/local/open-pr.md` exists at the rep
 
 The overlay MUST NOT: skip or weaken the local deterministic-verification or local-review predicates of `REVIEW_READINESS`, open the PR before `REVIEW_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
 
-Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `CLAUDE.md` / `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
+Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
 </project_specialization>
 
 <the_opening_flow>
@@ -46,7 +46,7 @@ branch=$(git branch --show-current)
 git push -u origin HEAD:refs/heads/"${branch}"
 ```
 
-If the product defines a custom branch-push command, follow CLAUDE.md / AGENTS.md instead — the explicit destination ref must remain part of any custom command.
+If the product defines a custom branch-push command, follow AGENTS.md instead — the explicit destination ref must remain part of any custom command.
 
 **Step 5 — Open the PR ready.** Pipe the curated body to gh on stdin via `--body-file -`. The PR opens `ready_for_review` because `REVIEW_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Choose the stdin form by harness.
 

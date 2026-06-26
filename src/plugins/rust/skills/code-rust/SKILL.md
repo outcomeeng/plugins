@@ -61,7 +61,7 @@ After loading `/rust-standards` and `/rust-test-standards`, check for `spx/local
 Use guidance in this order:
 
 1. `README.md`, `docs/`, and other product documentation
-2. `CLAUDE.md`
+2. `{{! file('root_guide') !}}`
 3. ADRs, PDRs, and spec-tree artifacts
 4. this skill and its helper files
 5. existing code as reference only
@@ -74,7 +74,7 @@ Before writing code, discover what already exists.
 
 Read:
 
-- `README.md`, `docs/`, `CLAUDE.md`, and `CONTRIBUTING.md` when present
+- `README.md`, `docs/`, `{{! file('root_guide') !}}`, and `CONTRIBUTING.md` when present
 - `Cargo.toml` for crate layout, features, lints, and dependencies
 - `rust-toolchain.toml` when present
 
