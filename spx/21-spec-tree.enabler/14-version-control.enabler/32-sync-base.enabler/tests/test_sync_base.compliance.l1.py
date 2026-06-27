@@ -88,7 +88,7 @@ def test_clean_rebase_has_no_conflict_details_conflict_does(
     assert conflict.status is module.SyncStatus.CONFLICT
     assert conflict.conflict is not None
     assert conflict.conflict.summary == module.CONFLICT_SUMMARY
-    assert "CONFLICT (content): Merge conflict in" in conflict.conflict.stderr
+    assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
 
 
 @pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])

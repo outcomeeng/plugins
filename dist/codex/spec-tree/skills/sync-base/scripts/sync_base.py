@@ -186,8 +186,8 @@ class ConflictDetails:
     instead of a token. ``conflicted_paths`` comes from the active index's
     unmerged entries. ``old_head_oid`` and ``new_base_oid`` name the exact replay
     that stopped. The path sets mirror the preservation proof's git facts so the
-    caller can classify overlap without hardcoded project paths. ``stderr``
-    carries Git's combined rebase-conflict output because Git may emit the
+    caller can classify overlap without hardcoded project paths. ``git_output``
+    carries the combined rebase-conflict output because Git may emit the
     conflict summary on stdout and the follow-up hints on stderr.
     ``operator_options`` lists safe manual commands the operator may choose
     after autonomous reconciliation is exhausted; sync-base does not run the
@@ -201,7 +201,7 @@ class ConflictDetails:
     base_delta_paths: list[str] | None
     branch_paths_before: list[str] | None
     path_overlap: list[str] | None
-    stderr: str
+    git_output: str
     operator_options: list[str]
 
     def to_json_dict(self) -> dict[str, object]:
@@ -214,7 +214,7 @@ class ConflictDetails:
             "base_delta_paths": self.base_delta_paths,
             "branch_paths_before": self.branch_paths_before,
             "path_overlap": self.path_overlap,
-            "stderr": self.stderr,
+            "git_output": self.git_output,
             "operator_options": self.operator_options,
         }
 
@@ -432,7 +432,7 @@ def _build_conflict_details(
         base_delta_paths=base_delta,
         branch_paths_before=paths_before,
         path_overlap=overlap,
-        stderr=git_output,
+        git_output=git_output,
         operator_options=[
             CONFLICT_INSPECT_STATUS,
             CONFLICT_INSPECT_DIFF,

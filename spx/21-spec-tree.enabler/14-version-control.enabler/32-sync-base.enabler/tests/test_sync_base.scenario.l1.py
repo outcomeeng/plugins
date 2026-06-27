@@ -102,7 +102,7 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert result.conflict.summary == module.CONFLICT_SUMMARY
     assert result.conflict.conflicted_paths == [handle.conflict_file]
     assert f"CONFLICT (content): Merge conflict in {handle.conflict_file}" in (
-        result.conflict.stderr
+        result.conflict.git_output
     )
     assert module.CONFLICT_ABORT in result.conflict.operator_options
     assert module.CONFLICT_CONTINUE in result.conflict.operator_options
@@ -113,6 +113,8 @@ def test_rebase_conflict_stops_with_active_conflict_details(
     assert "<<<<<<<" in (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
     payload = result.to_json_dict()
     assert payload["conflict"] is not None
+    assert "git_output" in payload["conflict"]
+    assert "stderr" not in payload["conflict"]
     assert "action_token" not in payload
 
 
