@@ -65,6 +65,20 @@ def test_handoff_searches_existing_sessions_before_new_continuation() -> None:
         assert field in reflect
 
 
+def test_existing_owner_allows_no_duplicate_session() -> None:
+    skill = _read("SKILL.md")
+    execute = _read("workflows/04-execute.md")
+
+    assert '<EXISTING_SESSION_RECONCILIATION status="existing-owner">' in skill
+    assert "another session already owns the only remaining continuation" in skill
+    assert (
+        'status="existing-owner"` confirms another session already owns the only remaining continuation'
+        in execute
+    )
+    assert "Path C is forbidden" in execute
+    assert "no handoff file is created" in execute
+
+
 def test_handoff_reconciles_out_of_scope_wrong_notes() -> None:
     skill = _read("SKILL.md")
     reflect = _read("workflows/02-reflect.md")
