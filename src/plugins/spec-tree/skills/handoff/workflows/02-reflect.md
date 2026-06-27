@@ -150,7 +150,7 @@ Emit the signal so workflow 04 reads it from context:
 
 <success_criteria>
 
-- All six perspectives completed internally before proceeding to workflow 03.
+- All seven perspectives completed internally before proceeding to workflow 03.
 - `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation.
 - `<EXISTING_SESSION_RECONCILIATION>` marker emitted into the conversation before any continuation proposal.
 - `<CONTINUATION_SIGNAL>` marker emitted into the conversation.

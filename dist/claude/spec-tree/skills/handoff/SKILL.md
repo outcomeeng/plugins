@@ -142,7 +142,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 A successful closure or handoff:
 
 - [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All six perspectives worked through (workflow 02)
+- [ ] All seven perspectives worked through (workflow 02)
 - [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness and reconciled before closure — updated, removed, or pursued now when Claude can still act (workflows 02–04)
 - [ ] Existing `todo` and `doing` sessions searched by node path and topic before any continuation session is proposed or created (workflow 02)
 - [ ] `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation by workflow 02
@@ -153,6 +153,6 @@ A successful closure or handoff:
 - [ ] Every session in the resolved claimed-session set archived after the canonical continuation is written, rewritten, or intentionally omitted (workflow 04)
 - [ ] Any session file created is a thin coordination envelope — bulk of value persisted durably
 - [ ] End state has zero, one, or several completely independent session files incorporating everything within the resolved claimed-session set
-- [ ] Closure order followed: reflect → propose → persist → commit → canonical continuation decided → archive the claimed sessions
+- [ ] Closure proof is present: workflow 02 markers exist, workflow 03 disposition names the canonical continuation and archive list, and workflow 04 confirmation names the committed work and archived sessions
 
 </success_criteria>
