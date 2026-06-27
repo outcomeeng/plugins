@@ -9,6 +9,7 @@ CAN operate with complete, verified context before any work begins
 ### Compliance
 
 - ALWAYS: bring a behind-base branch current through sync-base (`spx/21-spec-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md`) before reading product or spec context, so loaded context reflects current product truth rather than a stale branch ([audit])
+- ALWAYS: when sync-base reports `already_current` or `rebased` during context loading, record the sync status only as context-load state and continue directly to locating the same target before answering or doing branch lifecycle work; loading the skill and completing sync-base are prerequisites, not context ([audit])
 - ALWAYS: when sync-base reports `dirty_tree` during context loading — uncommitted tracked changes block the rebase so the branch may still be behind — surface that loaded context may be stale and proceed; context loading never commits or stashes the operator's in-progress work, distinguishing it from the merge lifecycle, which commits then re-syncs ([audit])
 - ALWAYS: derive the target read-set from the deterministic enumeration decided in `spx/21-spec-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`, reading the ordered read-set in its enumerated order, reading the guides and the lifecycle overlay outside that order, and listing the remaining local overlays without reading them ([audit])
 - ALWAYS: abort with the missing file path and remediation guidance when a required ancestor spec is absent ([audit])
