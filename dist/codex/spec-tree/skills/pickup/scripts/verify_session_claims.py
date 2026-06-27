@@ -26,11 +26,11 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Final, Protocol, TypeAlias, TypeGuard, cast
+from typing import Final, Protocol, TypeGuard, cast
 
 
 COMMAND_UNAVAILABLE_EXIT: Final = 127
-JsonScalar: TypeAlias = str | int | float | bool | None
+type JsonScalar = str | int | float | bool | None
 
 
 class Verdict(StrEnum):
@@ -276,14 +276,14 @@ def _node_status_evidence(node: str, stdout: str) -> str:
         return stdout.strip()
     summary: dict[str, JsonScalar] = {}
     for key in ("node", "path", "spec", "status", "state", "result"):
+        if key not in payload:
+            continue
         value = payload.get(key)
         if _is_json_scalar(value):
             summary[key] = value
     if "node" not in summary:
         summary["node"] = node
-    if summary:
-        return json.dumps(summary, sort_keys=True)
-    return stdout.strip()
+    return json.dumps(summary, sort_keys=True)
 
 
 def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
