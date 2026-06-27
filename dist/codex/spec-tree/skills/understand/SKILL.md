@@ -1,6 +1,7 @@
 ---
 name: understand
 description: ALWAYS invoke this skill at the beginning of each session and after compaction. NEVER read, create, or modify any file in this repository other than the root agent guide without loading this skill and all its references first.
+allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
 <objective>
