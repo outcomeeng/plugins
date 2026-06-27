@@ -7,18 +7,18 @@ branch's own commits onto that ref. The mechanism is rebase, never
 preserving the branch's work, where ``reset`` would repoint the branch while
 leaving the working tree at the old base and silently revert merged changes.
 
-A clean rebase runs without operator interaction. The only operator
-touch-point is a rebase conflict that cannot be resolved autonomously or a
-hard git failure; on a conflict the rebase is aborted (leaving the branch and
-working tree intact) and the ``SYNC_BASE`` action token is surfaced.
+A clean rebase runs without operator interaction. A rebase conflict leaves the
+rebase state active so the caller can inspect and reconcile the conflicted
+stages. When autonomous reconciliation cannot resolve it, the human-facing
+report names the conflicted paths, the attempted sync, and the operator's
+manual options, including continuing or aborting the rebase.
 
 A working tree with uncommitted changes to tracked files blocks the rebase
 before it starts. This is reported as the distinct ``dirty_tree`` outcome with
-no rebase attempted, no ``SYNC_BASE`` token, and the working tree left
-untouched: a dirty tree is a precondition the caller clears by committing
-through the commit workflow, not a rebase conflict, and synchronization never
-commits or stashes on the caller's behalf. Untracked files do not block a
-rebase and are not a dirty tree.
+no rebase attempted and the working tree left untouched: a dirty tree is a
+precondition the caller clears by committing through the commit workflow, not a
+rebase conflict, and synchronization never commits or stashes on the caller's
+behalf. Untracked files do not block a rebase and are not a dirty tree.
 
 A detached HEAD — a worktree with no branch checked out, the normal parked state
 of a bare-repository worktree pool — is brought current by fetch-and-compare
@@ -68,8 +68,12 @@ _CHANGESET_SCOPE_PATH = (
     / "changeset_scope.py"
 )
 
-#: Action token surfaced when a rebase conflict needs operator resolution.
-SYNC_BASE_TOKEN = "SYNC_BASE"
+CONFLICT_SUMMARY = "Base sync stopped: rebase conflict requires reconciliation"
+CONFLICT_INSPECT_STATUS = "git status"
+CONFLICT_INSPECT_DIFF = "git diff"
+CONFLICT_INSPECT_STAGES = "git ls-files -u"
+CONFLICT_CONTINUE = "git add <resolved-paths> && git rebase --continue"
+CONFLICT_ABORT = "git rebase --abort"
 
 #: Schema version of the readiness-preservation proof embedded in the result.
 READINESS_SCHEMA_VERSION = 1
@@ -175,6 +179,47 @@ class Preservation:
 
 
 @dataclass(frozen=True)
+class ConflictDetails:
+    """Inspectable conflict state left active for reconciliation.
+
+    ``summary`` is the human-facing headline; it is deliberately descriptive
+    instead of a token. ``conflicted_paths`` comes from the active index's
+    unmerged entries. ``old_head_oid`` and ``new_base_oid`` name the exact replay
+    that stopped. The path sets mirror the preservation proof's git facts so the
+    caller can classify overlap without hardcoded project paths. ``git_output``
+    carries the combined rebase-conflict output because Git may emit the
+    conflict summary on stdout and the follow-up hints on stderr.
+    ``operator_options`` lists safe manual commands the operator may choose
+    after autonomous reconciliation is exhausted; sync-base does not run the
+    abort option at handoff.
+    """
+
+    summary: str
+    conflicted_paths: list[str]
+    old_head_oid: str | None
+    new_base_oid: str | None
+    base_delta_paths: list[str] | None
+    branch_paths_before: list[str] | None
+    path_overlap: list[str] | None
+    git_output: str
+    operator_options: list[str]
+
+    def to_json_dict(self) -> dict[str, object]:
+        """Serialize conflict details with stable keys."""
+        return {
+            "summary": self.summary,
+            "conflicted_paths": self.conflicted_paths,
+            "old_head_oid": self.old_head_oid,
+            "new_base_oid": self.new_base_oid,
+            "base_delta_paths": self.base_delta_paths,
+            "branch_paths_before": self.branch_paths_before,
+            "path_overlap": self.path_overlap,
+            "git_output": self.git_output,
+            "operator_options": self.operator_options,
+        }
+
+
+@dataclass(frozen=True)
 class SyncBaseResult:
     """The outcome of a synchronization run.
 
@@ -183,7 +228,8 @@ class SyncBaseResult:
     branch, or ``None`` when no branch could be resolved (detached HEAD).
     ``preservation`` carries the readiness-preservation proof on a clean
     outcome, and is ``None`` for ``dirty_tree``, ``conflict``, and
-    ``git_failure``.
+    ``git_failure``. ``conflict`` carries inspectable conflict state only for a
+    rebase conflict left active for reconciliation.
     """
 
     status: SyncStatus
@@ -192,11 +238,7 @@ class SyncBaseResult:
     branch: str | None
     detail: str
     preservation: Preservation | None = None
-
-    @property
-    def action_token(self) -> str | None:
-        """``SYNC_BASE`` when a conflict needs the operator, else ``None``."""
-        return SYNC_BASE_TOKEN if self.status is SyncStatus.CONFLICT else None
+    conflict: ConflictDetails | None = None
 
     @property
     def exit_code(self) -> int:
@@ -211,11 +253,13 @@ class SyncBaseResult:
             "remote_ref": self.remote_ref,
             "branch": self.branch,
             "detail": self.detail,
-            "action_token": self.action_token,
             "preservation": (
                 self.preservation.to_json_dict()
                 if self.preservation is not None
                 else None
+            ),
+            "conflict": (
+                self.conflict.to_json_dict() if self.conflict is not None else None
             ),
         }
 
@@ -260,6 +304,14 @@ def _diff_paths(repo: pathlib.Path, spec: str) -> list[str] | None:
     result = _git(repo, "diff", "--name-only", "--no-renames", spec)
     if result.returncode != 0:
         return None
+    return sorted(p for p in result.stdout.splitlines() if p)
+
+
+def _conflicted_paths(repo: pathlib.Path) -> list[str]:
+    """Return sorted paths with unmerged index entries in the active conflict."""
+    result = _git(repo, "diff", "--name-only", "--diff-filter=U")
+    if result.returncode != 0:
+        return []
     return sorted(p for p in result.stdout.splitlines() if p)
 
 
@@ -344,6 +396,50 @@ def _build_preservation(
         path_overlap=overlap,
         branch_patch_changed=branch_patch_changed,
         branch_diff_unchanged=branch_diff_unchanged,
+    )
+
+
+def _build_conflict_details(
+    repo: pathlib.Path,
+    *,
+    old_base_oid: str | None,
+    new_base_oid: str | None,
+    old_head_oid: str | None,
+    git_output: str,
+) -> ConflictDetails:
+    """Build the active-conflict report without resolving or aborting it."""
+    base_delta = (
+        _diff_paths(repo, f"{old_base_oid}..{new_base_oid}")
+        if old_base_oid and new_base_oid
+        else None
+    )
+    paths_before = (
+        _diff_paths(repo, f"{old_base_oid}...{old_head_oid}")
+        if old_base_oid and old_head_oid
+        else None
+    )
+    conflicted = _conflicted_paths(repo)
+    overlap = (
+        sorted(set(base_delta) & set(paths_before))
+        if base_delta is not None and paths_before is not None
+        else None
+    )
+    return ConflictDetails(
+        summary=CONFLICT_SUMMARY,
+        conflicted_paths=conflicted,
+        old_head_oid=old_head_oid,
+        new_base_oid=new_base_oid,
+        base_delta_paths=base_delta,
+        branch_paths_before=paths_before,
+        path_overlap=overlap,
+        git_output=git_output,
+        operator_options=[
+            CONFLICT_INSPECT_STATUS,
+            CONFLICT_INSPECT_DIFF,
+            CONFLICT_INSPECT_STAGES,
+            CONFLICT_CONTINUE,
+            CONFLICT_ABORT,
+        ],
     )
 
 
@@ -592,14 +688,22 @@ def sync_base(
             ),
         )
 
-    # abort the partial rebase to restore the pre-rebase tree; never git reset
-    _git(repo, "rebase", "--abort")
+    conflict_details = _build_conflict_details(
+        repo,
+        old_base_oid=old_base_oid,
+        new_base_oid=new_base_oid,
+        old_head_oid=old_head_oid,
+        git_output="\n".join(
+            part for part in (rebased.stdout.strip(), rebased.stderr.strip()) if part
+        ),
+    )
     return SyncBaseResult(
         SyncStatus.CONFLICT,
         base_ref,
         remote_ref,
         branch,
-        f"rebase of {branch} onto {remote_ref} conflicts; manual resolution required",
+        f"rebase of {branch} onto {remote_ref} stopped with active conflicts",
+        conflict=conflict_details,
     )
 
 

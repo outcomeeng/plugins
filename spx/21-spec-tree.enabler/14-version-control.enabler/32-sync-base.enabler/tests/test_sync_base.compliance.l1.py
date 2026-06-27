@@ -8,11 +8,11 @@ Covers the Compliance assertions in ``../sync-base.md``:
 - sync-base brings a behind-base branch current by rebasing, preserving the
   branch's commits — never by ``git reset``, which would strand the working
   tree at the old base and drop the branch's commit.
-- sync-base surfaces no operator decision for a routine, clean rebase — the
-  ``SYNC_BASE`` action token appears only on a conflict.
+- sync-base surfaces no operator decision for a routine, clean rebase; conflict
+  stops carry structured details instead of an opaque action token.
 - sync-base neither commits nor stashes a dirty working tree and does not
-  surface it as a ``SYNC_BASE`` conflict — a dirty tree is a distinct
-  precondition the caller clears through the commit workflow.
+  surface it as a conflict — a dirty tree is a distinct precondition the caller
+  clears through the commit workflow.
 - sync-base advances a clean ancestor-behind detached HEAD rather than waving it
   through; it never advances a dirty or diverged detached HEAD, preserving the
   diverged commits.
@@ -71,7 +71,7 @@ def test_rebase_preserves_branch_commit_rather_than_resetting(
     assert (handle.repo / handle.base_file).exists()
 
 
-def test_clean_rebase_surfaces_no_operator_token_only_conflict_does(
+def test_clean_rebase_has_no_conflict_details_conflict_does(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
@@ -80,13 +80,15 @@ def test_clean_rebase_surfaces_no_operator_token_only_conflict_does(
     clean_root.mkdir()
     clean = module.sync_base(build_behind_base_repo(clean_root).repo)
     assert clean.status is module.SyncStatus.REBASED
-    assert clean.action_token is None
+    assert clean.conflict is None
 
     conflict_root = tmp_path / "conflict"
     conflict_root.mkdir()
     conflict = module.sync_base(build_conflicting_repo(conflict_root).repo)
     assert conflict.status is module.SyncStatus.CONFLICT
-    assert conflict.action_token == module.SYNC_BASE_TOKEN
+    assert conflict.conflict is not None
+    assert conflict.conflict.summary == module.CONFLICT_SUMMARY
+    assert "CONFLICT (content): Merge conflict in" in conflict.conflict.git_output
 
 
 @pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
@@ -94,16 +96,16 @@ def test_dirty_tree_is_neither_committed_stashed_nor_a_conflict(
     tmp_path: pathlib.Path, stage: bool
 ) -> None:
     # An unstaged change and a staged-but-uncommitted change are both dirty: in
-    # neither case does sync-base commit, stash, or surface a SYNC_BASE conflict.
+    # neither case does sync-base commit, stash, or surface a rebase conflict.
     module = load_sync_base_module()
     handle = build_dirty_behind_base_repo(_root(tmp_path), stage=stage)
 
     result = module.sync_base(handle.repo)
 
-    # A dirty tree is reported as its own precondition, never as a SYNC_BASE
-    # conflict, and synchronization does not clear it.
+    # A dirty tree is reported as its own precondition, never as a conflict, and
+    # synchronization does not clear it.
     assert result.status is module.SyncStatus.DIRTY_TREE
-    assert result.action_token is None
+    assert result.conflict is None
     # The edit is still an uncommitted tracked change: sync-base neither
     # committed it (the tree would be clean) nor stashed it (the edit would be
     # gone). Both the dirty state and the edit's content confirm it is untouched.
@@ -141,7 +143,7 @@ def test_dirty_detached_head_is_never_advanced(
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.DIRTY_TREE
-    assert result.action_token is None
+    assert result.conflict is None
     # The worktree did not advance, and the uncommitted edit is untouched.
     assert head_oid(handle.repo) == handle.detached_oid
     assert working_tree_has_tracked_changes(handle.repo)

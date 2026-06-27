@@ -5,8 +5,8 @@ Covers the Scenario assertions in ``../sync-base.md``:
 - A branch behind its fetched base has its own commits replayed onto
   ``origin/<base>`` with the base's changes present.
 - A branch already current with its fetched base performs no rebase.
-- A rebase conflict stops with the ``SYNC_BASE`` action token, leaving the
-  branch and working tree intact.
+- A rebase conflict stops with an active rebase state and structured conflict
+  details, leaving stages inspectable for reconciliation.
 - A dirty working tree behind its base reports the distinct ``dirty_tree``
   outcome without rebasing, leaving the uncommitted edit untouched.
 - A behind-base tree carrying only an untracked file rebases normally — an
@@ -86,10 +86,10 @@ def test_branch_already_current_performs_no_rebase(
 
     assert result.status is module.SyncStatus.ALREADY_CURRENT
     assert result.branch == handle.feature_branch
-    assert result.action_token is None
+    assert result.conflict is None
 
 
-def test_rebase_conflict_stops_with_sync_base_token_intact(
+def test_rebase_conflict_stops_with_active_conflict_details(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_sync_base_module()
@@ -98,14 +98,24 @@ def test_rebase_conflict_stops_with_sync_base_token_intact(
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.CONFLICT
-    assert result.action_token == module.SYNC_BASE_TOKEN
-    # The aborted rebase leaves no rebase in progress...
-    assert not (handle.repo / ".git" / "rebase-merge").exists()
-    assert not (handle.repo / ".git" / "rebase-apply").exists()
-    # ...and the feature's own edit is intact, not a conflicted blend.
-    assert (handle.repo / handle.conflict_file).read_text(
-        encoding="utf-8"
-    ) == "feature edit\n"
+    assert result.conflict is not None
+    assert result.conflict.summary == module.CONFLICT_SUMMARY
+    assert result.conflict.conflicted_paths == [handle.conflict_file]
+    assert f"CONFLICT (content): Merge conflict in {handle.conflict_file}" in (
+        result.conflict.git_output
+    )
+    assert module.CONFLICT_ABORT in result.conflict.operator_options
+    assert module.CONFLICT_CONTINUE in result.conflict.operator_options
+    # The rebase remains active so the operator can inspect, continue, or abort.
+    assert (handle.repo / ".git" / "rebase-merge").exists() or (
+        handle.repo / ".git" / "rebase-apply"
+    ).exists()
+    assert "<<<<<<<" in (handle.repo / handle.conflict_file).read_text(encoding="utf-8")
+    payload = result.to_json_dict()
+    assert payload["conflict"] is not None
+    assert "git_output" in payload["conflict"]
+    assert "stderr" not in payload["conflict"]
+    assert "action_token" not in payload
 
 
 @pytest.mark.parametrize("stage", [False, True], ids=["unstaged", "staged"])
@@ -119,9 +129,9 @@ def test_dirty_tree_behind_base_reports_dirty_tree_without_rebasing(
 
     result = module.sync_base(handle.repo)
 
-    # A dirty tree is a distinct precondition, not a conflict: no SYNC_BASE.
+    # A dirty tree is a distinct precondition, not a conflict.
     assert result.status is module.SyncStatus.DIRTY_TREE
-    assert result.action_token is None
+    assert result.conflict is None
     assert result.branch == handle.feature_branch
     # The rebase never ran, so the base advance did not enter the working tree...
     assert not (handle.repo / handle.base_file).exists()
@@ -144,7 +154,7 @@ def test_untracked_only_behind_base_rebases_not_dirty_tree(
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.REBASED
-    assert result.action_token is None
+    assert result.conflict is None
     # The rebase ran: the base advance is present and the feature commit survived.
     assert (handle.repo / handle.base_file).exists()
     assert (handle.repo / handle.feature_file).exists()
@@ -166,7 +176,7 @@ def test_diverged_detached_head_reports_hard_git_failure(
 
     assert result.status is module.SyncStatus.GIT_FAILURE
     assert result.branch is None
-    assert result.action_token is None
+    assert result.conflict is None
     # The detached commit is untouched: its feature commit was not discarded.
     assert head_oid(handle.repo) == feature_oid_before
     assert (handle.repo / handle.feature_file).exists()
@@ -186,7 +196,7 @@ def test_clean_behind_detached_head_is_advanced_to_base_tip(
 
     assert result.status is module.SyncStatus.REBASED
     assert result.branch is None
-    assert result.action_token is None
+    assert result.conflict is None
     # The worktree advanced to the fetched base tip...
     assert head_oid(handle.repo) == resolve_ref(handle.repo, handle.remote_ref)
     # ...so the base advance the worktree was behind is now present.
@@ -206,7 +216,7 @@ def test_clean_detached_head_at_base_tip_is_already_current(
 
     assert result.status is module.SyncStatus.ALREADY_CURRENT
     assert result.branch is None
-    assert result.action_token is None
+    assert result.conflict is None
     assert head_oid(handle.repo) == handle.detached_oid
 
 
@@ -214,15 +224,15 @@ def test_dirty_behind_detached_head_reports_dirty_tree_without_advancing(
     tmp_path: pathlib.Path,
 ) -> None:
     # A behind-base detached worktree carrying an uncommitted tracked edit reports
-    # the distinct dirty_tree outcome: no advance, no SYNC_BASE token, and the
-    # edit and the parked commit left untouched for the caller to commit.
+    # the distinct dirty_tree outcome with the edit and the parked commit left
+    # untouched for the caller to commit.
     module = load_sync_base_module()
     handle = build_detached_dirty_behind_base_repo(_root(tmp_path))
 
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.DIRTY_TREE
-    assert result.action_token is None
+    assert result.conflict is None
     # The worktree did not advance: HEAD is still the parked commit...
     assert head_oid(handle.repo) == handle.detached_oid
     # ...the base advance never entered the tree...
@@ -249,7 +259,7 @@ def test_detached_untracked_only_behind_base_is_advanced(
     result = module.sync_base(handle.repo)
 
     assert result.status is module.SyncStatus.REBASED
-    assert result.action_token is None
+    assert result.conflict is None
     # The worktree advanced to the fetched base tip, base advance now present.
     assert head_oid(handle.repo) == resolve_ref(handle.repo, handle.remote_ref)
     assert handle.base_file is not None
@@ -269,7 +279,7 @@ def test_detached_head_with_no_remote_reports_hard_git_failure(
 
     assert result.status is module.SyncStatus.GIT_FAILURE
     assert result.branch is None
-    assert result.action_token is None
+    assert result.conflict is None
 
 
 def test_explicit_base_ref_overrides_origin_head(

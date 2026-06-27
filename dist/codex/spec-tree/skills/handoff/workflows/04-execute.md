@@ -1,7 +1,8 @@
 <objective>
-Execute all approved persistence decisions, commit session-owned work, and either write or omit the canonical continuation. This workflow closes the session — work not committed here is not persisted.
-
+A completed closure execution state: approved persistence written, session-owned work committed, claimed sessions archived, and canonical continuation written, rewritten, or intentionally omitted.
 </objective>
+
+Work not committed here is not persisted.
 
 <required_reading>
 Before writing a Path B or Path C session file, read `references/session-format.md` for the required template.
@@ -56,12 +57,24 @@ The existence of any session is never permission to archive a claimed session �
 
 </resolve_claimed_sessions>
 
+<resolve_existing_sessions>
+Read the `<EXISTING_SESSION_RECONCILIATION status="…">` marker emitted by workflow 02. If the marker is missing, STOP and return to workflow 02; never create or propose a continuation session before the existing `todo` and `doing` queues have been searched by node path and topic.
+
+Act on the marker:
+
+- `status="none"` — Path C may create a new session only when `<CONTINUATION_SIGNAL state="present">` is backed by a real stop condition.
+- `status="same-owner-continuation"` — Path B may rewrite the existing artifact, or the workflow may archive a same-owner duplicate according to the claimed-session rules.
+- `status="existing-owner"` — Path C is forbidden. Another session already owns the continuation; leave that session untouched and close only if no other blocker remains.
+- `status="ambiguous"` — STOP and ask the operator to choose ownership before mutating sessions.
+
+</resolve_existing_sessions>
+
 <write_canonical_continuation>
 Every closure ends with **zero, one, or several** session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Pick the path for each and execute it. Zero is correct when no continuation reader exists.
 
 **Worktree precondition:** any path that invokes `spx session handoff` (Path C) requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
-**Path A — `--no-session` (zero handoffs)**: valid only when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`. When the signal is `present`, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the unresolved continuation work and ask whether to (a) create the continuation instead (Path C) or (b) confirm there is genuinely no continuation and proceed to omit. NEVER silently honor `--no-session` against a `present` signal; automation must not skip the session file on the user's behalf when continuation remains. When the signal is `absent`, or the user explicitly re-confirms omission, skip to `<archive_claimed_sessions>`: all claimed sessions are archived, no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — `--no-session` (zero handoffs)**: valid only when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`, or when `status="existing-owner"` confirms another session already owns the only remaining continuation and no local blocker remains. When the signal is `present` and no existing owner exists, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`AskUserQuestion` / `request_user_input`): name the unresolved stop condition and ask whether to create the continuation or confirm there is no continuation. NEVER silently honor `--no-session` against a `present` signal without an existing owner; automation must not skip a session file required by a real stop condition. When the signal is `absent`, `status="existing-owner"` owns the only remaining continuation with no local blocker, or the user explicitly re-confirms omission, skip to `<archive_claimed_sessions>`: all claimed sessions are archived, no handoff file is created. After archiving, confirm: "Closed without continuation. All approved items persisted and committed. Archived: <list>." Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 
@@ -73,6 +86,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 **Path C — new handoff (one handoff, no artifact)**:
 
+0. Confirm `<EXISTING_SESSION_RECONCILIATION status="none">` and a real stop condition. Path C is forbidden for ordinary actionable coordination notes and forbidden when another `todo` or `doing` session already owns the same node/topic continuation.
 1. Compose the canonical continuation using `references/session-format.md`: a JSON header object of caller fields (non-empty `goal` and `next_step`, plus `git_ref` naming the pushed work branch) and the markdown body.
 2. Pipe the JSON header on the first line, then the body bytes verbatim, to `spx session handoff`. Do not run `spx session handoff` with empty stdin, and do not pipe YAML frontmatter — the command rejects input that opens with `---`. It prefills `created_at` and `agent_session_id`, and records the header's `git_ref` as the work branch after verifying that branch exists on `origin`; omit `git_ref` only when the work landed on the default branch with no feature branch, in which case the command derives the base from the git context.
 
@@ -113,7 +127,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 </write_canonical_continuation>
 
 <release_work_branch>
-A handoff RELEASES the work branch, and it is valid only when the work it points at is recoverable from origin. The precondition is: the working tree is clean AND the work branch is published to origin — its `@{upstream}` exists and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. A chat-only or local-only handoff is never valid.
+A handoff RELEASES the work branch, and it is valid only when the work it points at is recoverable from origin. The precondition is: every session-owned change is committed, the work branch is published to origin, its `@{upstream}` exists, and the branch is not ahead of it. When that does not hold, commit the work (the `<commit>` step) and push the work branch to origin **before** writing the session document. Unrelated dirty worktree changes are handled by the `<commit>` dirty-worktree rules; they do not make session-owned work uncommitted, but if they prevent the checkout transition or the CLI git-context gate, STOP and ask the owner to resolve them before writing a Path C session document. A chat-only or local-only handoff is never valid.
 
 **Why this precondition exists.** A handoff promises cold Claude two things — the work is safe, and Claude can claim it — and running the handoff from the worktree that holds the work, released, enforces both at once:
 
@@ -195,6 +209,7 @@ State:
 - All approved persistence items written.
 - Session-owned files committed — `git status` shows no session-owned staged or unstaged changes.
 - Committed vs uncommitted state recorded for each anchored node.
+- Existing `todo` and `doing` sessions searched by node path and topic before any Path C handoff, with `<EXISTING_SESSION_RECONCILIATION>` present.
 - Exactly zero or one canonical continuation per independent continuation thread created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two for the same thread. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
 - Continuation path executed via Path A (--no-session), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the claimed-session set is non-empty.

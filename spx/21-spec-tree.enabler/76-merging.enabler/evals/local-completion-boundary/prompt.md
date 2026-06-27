@@ -18,7 +18,7 @@ For work destined for the repository's default branch:
 - do not ask what to do next after local readiness is established;
 - do not ask for confirmation before entering `/merge` unless the merge overlay explicitly opted into pre-mutation confirmation;
 - terse follow-ups such as "so?", "continue", "ship it", "finish", and "go on" mean continue the already-governed merge lifecycle;
-- `/merge` classifies the changeset, selects the merge transport, and either ships it to the default branch on origin or stops at an explicit merge lifecycle gate.
+- `/merge` classifies the changeset, selects the merge transport, and either ships it to the default branch on origin or stops at an explicit merge lifecycle gate or structured stop report.
 
 Case id: substituted by the harness.
 
@@ -34,7 +34,7 @@ Verdict schema — six fields, all mandatory:
 - `next_action`: `"ENTER_MERGE"`, `"PRESENT_PRE_MUTATION_CONFIRMATION"`, `"STOP_AT_LIFECYCLE_GATE"`, `"STOP_LOCAL_SCOPE"`, or `"NO_MERGE_NEEDED"`.
 - `confirmation_required`: boolean; true only when the merge overlay explicitly opted into pre-mutation confirmation.
 - `operator_input_required`: boolean; true only when an explicit lifecycle gate requires operator input before any further independent local action exists.
-- `blocking_gate`: the lifecycle gate token when `next_action` is `"STOP_AT_LIFECYCLE_GATE"`, otherwise `"none"`.
+- `blocking_gate`: the lifecycle gate label when `next_action` is `"STOP_AT_LIFECYCLE_GATE"`, otherwise `"none"`.
 - `reason`: `"branch-ahead"`, `"terse-followup"`, `"overlay-confirmation"`, `"local-only"`, `"lifecycle-gate"`, or `"no-ahead-commits"`.
 
 Decision rules:
