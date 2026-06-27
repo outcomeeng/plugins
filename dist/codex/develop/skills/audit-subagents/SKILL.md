@@ -4,6 +4,7 @@ description: >-
   Subagent-configuration audit methodology preloaded by the subagent-auditor agent.
   Dispatch subagent-auditor to audit subagent configuration files; the main
   conversation reaches this audit only through that agent.
+argument-hint: <subagent-path>
 arguments: subagent_path
 allowed-tools: Read, Grep, Glob, Bash, Skill
 ---

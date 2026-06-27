@@ -1,6 +1,7 @@
 ---
 name: handoff
 description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
+argument-hint: "[--no-session] [--prune]"
 arguments: [session_mode, prune_mode]
 allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), request_user_input, Glob, Grep, Skill
 ---

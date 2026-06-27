@@ -22,11 +22,15 @@ import pytest
 
 from outcomeeng.distribution.bump import (
     ChangedPath,
+    DIST_CLAUDE_PLUGINS_DIR,
+    DIST_CODEX_PLUGINS_DIR,
     FileStatus,
     Segment,
+    SOURCE_PLUGINS_DIR,
     Version,
     auto_segment,
 )
+from outcomeeng_testing.generators.bump import distribution_relpath
 
 SEGMENT_DISPATCH: dict[Segment, Callable[[Version], Version]] = {
     Segment.PATCH: Version.bump_patch,
@@ -68,38 +72,137 @@ def test_segment_increment_matches_mapping(
 # plugin whose only change is this one path).
 AUTO_SEGMENT_CASES: tuple[tuple[FileStatus, str, Segment], ...] = (
     # Minor-triggering: A/C/D/R on structural surfaces.
-    (FileStatus.ADDED, "src/plugins/foo/skills/new-skill/SKILL.md", Segment.MINOR),
-    (FileStatus.COPIED, "src/plugins/foo/skills/copied-skill/SKILL.md", Segment.MINOR),
-    (FileStatus.DELETED, "src/plugins/foo/skills/old-skill/SKILL.md", Segment.MINOR),
-    (FileStatus.RENAMED, "src/plugins/foo/skills/renamed/SKILL.md", Segment.MINOR),
-    (FileStatus.ADDED, "src/plugins/foo/commands/new-command.md", Segment.MINOR),
-    (FileStatus.DELETED, "src/plugins/foo/commands/old-command.md", Segment.MINOR),
-    (FileStatus.ADDED, "src/plugins/foo/agents/new-agent.md", Segment.MINOR),
-    (FileStatus.ADDED, "src/plugins/foo/.claude-plugin/plugin.json", Segment.MINOR),
-    (FileStatus.ADDED, "src/plugins/foo/.codex-plugin/plugin.json", Segment.MINOR),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/new-skill/SKILL.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.COPIED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/copied-skill/SKILL.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.DELETED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/old-skill/SKILL.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.RENAMED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/renamed/SKILL.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "commands/new-command.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.DELETED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "commands/old-command.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "agents/new-agent.md"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".claude-plugin/plugin.json"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".codex-plugin/plugin.json"),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(
+            DIST_CLAUDE_PLUGINS_DIR,
+            "foo",
+            "skills/generated-skill/SKILL.md",
+        ),
+        Segment.MINOR,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(
+            DIST_CODEX_PLUGINS_DIR,
+            "foo",
+            "skills/generated-skill/SKILL.md",
+        ),
+        Segment.MINOR,
+    ),
     # Patch-only: M on anything (status is the disqualifier).
-    (FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md", Segment.PATCH),
-    (FileStatus.MODIFIED, "src/plugins/foo/commands/existing.md", Segment.PATCH),
-    (FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json", Segment.PATCH),
+    (
+        FileStatus.MODIFIED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/existing/SKILL.md"),
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.MODIFIED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "commands/existing.md"),
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.MODIFIED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".claude-plugin/plugin.json"),
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.MODIFIED,
+        distribution_relpath(
+            DIST_CODEX_PLUGINS_DIR,
+            "foo",
+            "skills/generated-skill/SKILL.md",
+        ),
+        Segment.PATCH,
+    ),
     # Patch-only: A/C/D/R on non-structural paths.
     (
         FileStatus.ADDED,
-        "src/plugins/foo/skills/existing/scripts/helper.py",
+        distribution_relpath(
+            SOURCE_PLUGINS_DIR,
+            "foo",
+            "skills/existing/scripts/helper.py",
+        ),
         Segment.PATCH,
     ),
     (
         FileStatus.COPIED,
-        "src/plugins/foo/skills/existing/scripts/copied_helper.py",
+        distribution_relpath(
+            SOURCE_PLUGINS_DIR,
+            "foo",
+            "skills/existing/scripts/copied_helper.py",
+        ),
         Segment.PATCH,
     ),
     (
         FileStatus.ADDED,
-        "src/plugins/foo/skills/existing/references/notes.md",
+        distribution_relpath(
+            SOURCE_PLUGINS_DIR,
+            "foo",
+            "skills/existing/references/notes.md",
+        ),
         Segment.PATCH,
     ),
-    (FileStatus.ADDED, "src/plugins/foo/templates/new-template.md", Segment.PATCH),
-    (FileStatus.ADDED, "src/plugins/foo/hooks/hooks.json", Segment.PATCH),
-    (FileStatus.DELETED, "src/plugins/foo/.gitignore", Segment.PATCH),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "templates/new-template.md"),
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.ADDED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "hooks/hooks.json"),
+        Segment.PATCH,
+    ),
+    (
+        FileStatus.DELETED,
+        distribution_relpath(SOURCE_PLUGINS_DIR, "foo", ".gitignore"),
+        Segment.PATCH,
+    ),
 )
 
 
@@ -117,18 +220,40 @@ def test_auto_segment_returns_minor_when_any_change_is_minor_triggering() -> Non
     patch changes still yields MINOR for the plugin.
     """
     changes = (
-        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json"),
-        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, "src/plugins/foo/skills/new/SKILL.md"),
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", ".claude-plugin/plugin.json"
+            ),
+        ),
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/existing/SKILL.md"),
+        ),
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(DIST_CODEX_PLUGINS_DIR, "foo", "skills/new/SKILL.md"),
+        ),
     )
     assert auto_segment(changes) == Segment.MINOR
 
 
 def test_auto_segment_returns_patch_when_no_change_triggers_minor() -> None:
     changes = (
-        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/.claude-plugin/plugin.json"),
-        ChangedPath(FileStatus.MODIFIED, "src/plugins/foo/skills/existing/SKILL.md"),
-        ChangedPath(FileStatus.ADDED, "src/plugins/foo/templates/foo.md"),
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(
+                SOURCE_PLUGINS_DIR, "foo", ".claude-plugin/plugin.json"
+            ),
+        ),
+        ChangedPath(
+            FileStatus.MODIFIED,
+            distribution_relpath(SOURCE_PLUGINS_DIR, "foo", "skills/existing/SKILL.md"),
+        ),
+        ChangedPath(
+            FileStatus.ADDED,
+            distribution_relpath(DIST_CLAUDE_PLUGINS_DIR, "foo", "templates/foo.md"),
+        ),
     )
     assert auto_segment(changes) == Segment.PATCH
 

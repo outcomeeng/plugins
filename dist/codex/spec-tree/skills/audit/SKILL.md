@@ -4,6 +4,7 @@ description: >-
   Generic end-to-end code-scope audit orchestration preloaded by audit agents.
   Dispatch the audit agent that fits the requested run surface; the main conversation
   reaches a generic audit only through an audit agent.
+argument-hint: "[scope]"
 arguments: request
 allowed-tools: Read, Bash, Glob, Grep, Skill
 ---

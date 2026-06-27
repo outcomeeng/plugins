@@ -2,8 +2,8 @@
 
 Covers the scenario assertions in `bump.md`:
 
-- Selective bump: a plugin with changes under its `src/plugins/{name}/**` prefix
-  gets bumped; a plugin without changes does not.
+- Selective bump: a plugin with changes under a recognized
+  distribution-surface root gets bumped; a plugin without changes does not.
 - Lockstep dual manifests: a plugin owning both `.claude-plugin/plugin.json`
   and `.codex-plugin/plugin.json` writes the same new version to both.
 - Segment selection: `patch` (default), `minor`, and `major` segment
@@ -540,3 +540,4 @@ def test_real_change_probe_detects_untracked_new_skill_as_added(
     # ...and the untracked new skill is now detected, tagged Added, rather than
     # missed by the diff against the base.
     assert by_path[handle.untracked_added_path].status is FileStatus.ADDED
+    assert by_path[handle.untracked_codex_added_path].status is FileStatus.ADDED

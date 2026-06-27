@@ -5,6 +5,7 @@ description: >-
   artifact (spec, ADR, PDR, test, code, doc). Triggers: request_user_input,
   seeking draft approval, stuck on scope or design. NEVER ask without this
   skill.
+argument-hint: <file-path-or-requirement>
 ---
 
 <objective>

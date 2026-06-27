@@ -3,14 +3,15 @@
 Provides domain-shaped input construction for manifest text, manifest
 relative paths, resolution of inert manifest fixtures, and Hypothesis
 strategies for diff-path domains. Generators emit canonical-form JSON
-and `src/plugins/{name}/...` paths so test files do not duplicate the
-construction logic; the fixture resolver returns absolute paths into
+and recognized distribution-surface paths so test files do not duplicate
+the construction logic; the fixture resolver returns absolute paths into
 `outcomeeng_testing/fixtures/bump/` so tests can read real-shaped
 manifest payloads by path; the path strategies vary, compose, and
 shrink across the change-detection input space.
 
-All vocabulary (`SOURCE_PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST`) comes
-from the source module `outcomeeng.distribution.bump`.
+All vocabulary (`SOURCE_PLUGINS_DIR`, `DIST_CLAUDE_PLUGINS_DIR`,
+`DIST_CODEX_PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST`) comes from
+the source module `outcomeeng.distribution.bump`.
 """
 
 from __future__ import annotations
@@ -24,6 +25,8 @@ from hypothesis import strategies as st
 
 from outcomeeng.distribution.bump import (
     CLAUDE_MANIFEST,
+    DIST_CLAUDE_PLUGINS_DIR,
+    DIST_CODEX_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
     ChangedPath,
     FileStatus,
@@ -35,6 +38,16 @@ _FIXTURES_ROOT: Path = Path(outcomeeng_testing.__file__).parent / "fixtures" / "
 def manifest_relpath(plugin: str, manifest: str) -> str:
     """Return the repository-relative manifest path for `plugin`/`manifest`."""
     return f"{SOURCE_PLUGINS_DIR}/{plugin}/{manifest}"
+
+
+def distribution_roots() -> tuple[str, ...]:
+    """Return every source-owned root that contributes bump-triggering paths."""
+    return (SOURCE_PLUGINS_DIR, DIST_CLAUDE_PLUGINS_DIR, DIST_CODEX_PLUGINS_DIR)
+
+
+def distribution_relpath(root: str, plugin: str, subpath: str) -> str:
+    """Return a repository-relative path under a recognized distribution root."""
+    return f"{root}/{plugin}/{subpath}"
 
 
 def manifest_text(name: str, version: str) -> str:
@@ -71,7 +84,11 @@ def minor_change(plugin: str, *, slug: str = "new-skill") -> tuple[ChangedPath, 
     return (
         ChangedPath(
             status=FileStatus.ADDED,
-            path=f"{SOURCE_PLUGINS_DIR}/{plugin}/skills/{slug}/SKILL.md",
+            path=distribution_relpath(
+                SOURCE_PLUGINS_DIR,
+                plugin,
+                f"skills/{slug}/SKILL.md",
+            ),
         ),
     )
 
@@ -115,15 +132,18 @@ def arbitrary_diff_paths() -> st.SearchStrategy[str]:
     """Arbitrary text representing diff paths — including pathological cases.
 
     Covers any string a `git diff --name-only` line might carry: paths
-    outside `src/plugins/`, paths with empty segments (`src/plugins//foo`),
-    paths that equal the prefix without a name (`src/plugins/`, `src/plugins`),
-    and paths under the prefix with valid plugin names.
+    outside recognized roots, paths with empty segments
+    (`src/plugins//foo`), paths that equal a prefix without a name
+    (`src/plugins/`, `src/plugins`), and paths under recognized roots
+    with valid plugin names.
     """
     return st.text(alphabet=st.characters(blacklist_characters=("\x00",)))
 
 
 __all__ = [
     "arbitrary_diff_paths",
+    "distribution_relpath",
+    "distribution_roots",
     "manifest_fixture_path",
     "manifest_relpath",
     "manifest_text",

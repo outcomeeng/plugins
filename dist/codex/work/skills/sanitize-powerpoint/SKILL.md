@@ -2,6 +2,7 @@
 name: sanitize-powerpoint
 description: >-
   ALWAYS invoke this skill when sanitizing, cleaning up, auditing, or aligning a PowerPoint (.pptx) deck — slide-master and layout structure, layout type attributes, stray fonts, non-theme colors, or layout naming. NEVER hand-edit pptx XML without this skill.
+argument-hint: "[path/to/deck.pptx]"
 ---
 
 <objective>

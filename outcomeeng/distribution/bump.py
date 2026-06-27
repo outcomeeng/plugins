@@ -1,16 +1,17 @@
 """Manifest version-bumping orchestration.
 
-Bumps the manifest version of every plugin whose `src/plugins/{name}/**` tree
-has changes since a base reference (default `origin/main`). Each changed
-plugin's version is incremented exactly once across every manifest it
-owns (`.claude-plugin/plugin.json` always; `.codex-plugin/plugin.json`
-when present). The increment segment defaults to `patch`; `minor` and
-`major` are explicit opt-ins.
+Bumps the manifest version of every plugin whose authored source tree or
+generated runtime tree has changes since a base reference (default
+`origin/main`). Each changed plugin's version is incremented exactly once
+across every manifest it owns (`.claude-plugin/plugin.json` always;
+`.codex-plugin/plugin.json` when present). The increment segment defaults
+to `patch`; `minor` and `major` are explicit opt-ins.
 
 The module's contract:
 
-- `SOURCE_PLUGINS_DIR`, `CLAUDE_MANIFEST`, `CODEX_MANIFEST` name the path prefix
-  and manifest filenames the orchestration recognizes.
+- `SOURCE_PLUGINS_DIR`, `DIST_CLAUDE_PLUGINS_DIR`,
+  `DIST_CODEX_PLUGINS_DIR`, `CLAUDE_MANIFEST`, and `CODEX_MANIFEST` name
+  the path prefixes and manifest filenames the orchestration recognizes.
 - `REQUIRED_TOOLS` names the external binaries `main()` shells out to.
 - `Version`, `Segment`, and `ManifestRecord` are the domain dataclasses.
 - `ChangeProbe`, `ContentProbe`, `ManifestReader`, `ManifestWriter`,
@@ -38,9 +39,16 @@ from typing import Protocol
 
 REQUIRED_TOOLS: tuple[str, ...] = ("git",)
 SOURCE_PLUGINS_DIR: str = "src/plugins"
+DIST_CLAUDE_PLUGINS_DIR: str = "dist/claude"
+DIST_CODEX_PLUGINS_DIR: str = "dist/codex"
 CLAUDE_MANIFEST: str = ".claude-plugin/plugin.json"
 CODEX_MANIFEST: str = ".codex-plugin/plugin.json"
 
+_PLUGIN_CHANGE_ROOTS: tuple[str, ...] = (
+    SOURCE_PLUGINS_DIR,
+    DIST_CLAUDE_PLUGINS_DIR,
+    DIST_CODEX_PLUGINS_DIR,
+)
 _KNOWN_MANIFESTS: tuple[str, ...] = (CLAUDE_MANIFEST, CODEX_MANIFEST)
 _DEFAULT_BASE_REF: str = "origin/main"
 
@@ -134,7 +142,7 @@ class ManifestRecord:
 
 class ChangeProbe(Protocol):
     """Returns a mapping from plugin name to the file-status-tagged paths
-    that changed under `src/plugins/{name}/**` since `base_ref`."""
+    that changed under a recognized distribution-surface root since `base_ref`."""
 
     def __call__(self, base_ref: str) -> Mapping[str, tuple[ChangedPath, ...]]: ...
 
@@ -167,16 +175,23 @@ class ToolProbe(Protocol):
 def changed_plugins_from_diff(paths: Iterable[str]) -> frozenset[str]:
     """Filter diff paths to the set of plugin names changed."""
     plugins: set[str] = set()
-    source_parts = SOURCE_PLUGINS_DIR.split("/")
     for path in paths:
-        parts = path.split("/")
-        if (
-            len(parts) > len(source_parts)
-            and parts[: len(source_parts)] == source_parts
-            and parts[len(source_parts)]
-        ):
-            plugins.add(parts[len(source_parts)])
+        if plugin := _plugin_from_changed_path(path):
+            plugins.add(plugin)
     return frozenset(plugins)
+
+
+def _plugin_from_changed_path(path: str) -> str | None:
+    parts = path.split("/")
+    for root in _PLUGIN_CHANGE_ROOTS:
+        root_parts = root.split("/")
+        if (
+            len(parts) > len(root_parts)
+            and parts[: len(root_parts)] == root_parts
+            and parts[len(root_parts)]
+        ):
+            return parts[len(root_parts)]
+    return None
 
 
 def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
@@ -186,7 +201,7 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
     `MINOR`; every other pattern yields `PATCH`. Auto-detection never
     selects `MAJOR`; major bumps require explicit human opt-in.
 
-    Structural paths (relative to `src/plugins/{name}/`):
+    Structural paths (relative to any recognized distribution-surface root):
 
     - `skills/{slug}/SKILL.md`
     - `commands/{slug}.md`
@@ -203,14 +218,18 @@ def auto_segment(changes: Iterable[ChangedPath]) -> Segment:
 
 def _is_minor_triggering_path(path: str) -> bool:
     parts = path.split("/")
-    source_parts = SOURCE_PLUGINS_DIR.split("/")
-    if (
-        len(parts) < len(source_parts) + 3
-        or parts[: len(source_parts)] != source_parts
-        or not parts[len(source_parts)]
-    ):
+    rest: list[str] | None = None
+    for root in _PLUGIN_CHANGE_ROOTS:
+        root_parts = root.split("/")
+        if (
+            len(parts) >= len(root_parts) + 3
+            and parts[: len(root_parts)] == root_parts
+            and parts[len(root_parts)]
+        ):
+            rest = parts[len(root_parts) + 1 :]
+            break
+    if rest is None:
         return False
-    rest = parts[len(source_parts) + 1 :]
     if len(rest) == 3 and rest[0] == "skills" and rest[2] == "SKILL.md":
         return True
     if len(rest) == 2 and rest[0] in ("commands", "agents") and rest[1].endswith(".md"):
@@ -397,10 +416,18 @@ def _real_change_probe(
     )
     # `git diff` against the base sees only tracked changes; a new skill,
     # command, or agent that is not yet committed is untracked and invisible to
-    # it. Enumerate untracked, non-ignored files under the plugins prefix and
-    # tag each Added, so the segment reflects the change the branch will commit.
+    # it. Enumerate untracked, non-ignored files under every distribution root
+    # and tag each Added, so the segment reflects the change the branch will
+    # commit.
     others = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard", "--", SOURCE_PLUGINS_DIR],
+        [
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            *_PLUGIN_CHANGE_ROOTS,
+        ],
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -413,15 +440,10 @@ def _real_change_probe(
     )
     changes: dict[str, list[ChangedPath]] = {}
     for parsed_change in (*tracked, *untracked):
-        parts = parsed_change.path.split("/")
-        source_parts = SOURCE_PLUGINS_DIR.split("/")
-        if (
-            len(parts) <= len(source_parts)
-            or parts[: len(source_parts)] != source_parts
-            or not parts[len(source_parts)]
-        ):
+        plugin = _plugin_from_changed_path(parsed_change.path)
+        if plugin is None:
             continue
-        changes.setdefault(parts[len(source_parts)], []).append(parsed_change)
+        changes.setdefault(plugin, []).append(parsed_change)
     return {plugin: tuple(paths) for plugin, paths in changes.items()}
 
 
@@ -480,9 +502,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="outcomeeng.distribution.bump",
         description=(
-            "Bump the manifest version of every plugin whose `src/plugins/{name}/**` "
-            "tree has changes since base_ref. Each changed plugin's version is "
-            "incremented exactly once across every manifest it owns."
+            "Bump the manifest version of every plugin whose authored source or "
+            "generated runtime tree has changes since base_ref. Each changed "
+            "plugin's version is incremented exactly once across every manifest "
+            "it owns."
         ),
     )
     parser.add_argument(
@@ -498,9 +521,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Semver segment to increment. When omitted, the segment is "
             "auto-detected per plugin from the file-status pattern of "
-            "changes under src/plugins/<name>/**. When provided, overrides "
-            "auto-detection for every changed plugin and emits a stderr "
-            "warning naming any plugin whose detected segment differs."
+            "changes under src/plugins/<name>/**, dist/claude/<name>/**, "
+            "or dist/codex/<name>/**. When provided, overrides auto-detection "
+            "for every changed plugin and emits a stderr warning naming any "
+            "plugin whose detected segment differs."
         ),
     )
     mode_group = parser.add_mutually_exclusive_group()
@@ -523,6 +547,8 @@ def _build_parser() -> argparse.ArgumentParser:
 __all__ = [
     "CLAUDE_MANIFEST",
     "CODEX_MANIFEST",
+    "DIST_CLAUDE_PLUGINS_DIR",
+    "DIST_CODEX_PLUGINS_DIR",
     "SOURCE_PLUGINS_DIR",
     "REQUIRED_TOOLS",
     "ChangeProbe",

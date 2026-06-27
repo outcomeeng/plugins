@@ -2,10 +2,11 @@
 
 Covers the path-prefix allow-list compliance assertion in `bump.md`:
 
-    ALWAYS: changes are detected only under `src/plugins/{name}/**` — any
-    file change inside that prefix counts as a distribution-surface
-    change for plugin `{name}`, and no path outside that prefix
-    triggers any bump.
+    ALWAYS: changes are detected only under `src/plugins/{name}/**`,
+    `dist/claude/{name}/**`, or `dist/codex/{name}/**` — any file change
+    inside one of those prefixes counts as a distribution-surface change
+    for plugin `{name}`, and no path outside those prefixes triggers any
+    bump.
 
 The ALWAYS framing is a universal claim over the diff-path domain. The
 evidence is property-based: Hypothesis strategies from
@@ -19,48 +20,57 @@ from __future__ import annotations
 from hypothesis import given
 from hypothesis import strategies as st
 
-from outcomeeng.distribution.bump import SOURCE_PLUGINS_DIR, changed_plugins_from_diff
+from outcomeeng.distribution.bump import changed_plugins_from_diff
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
+    distribution_relpath,
+    distribution_roots,
     plugin_names,
     relative_subpaths,
 )
 
 
-_PREFIX: str = f"{SOURCE_PLUGINS_DIR}/"
+_ROOT_PREFIXES: tuple[str, ...] = tuple(f"{root}/" for root in distribution_roots())
 
 
 def _expected_plugins(paths: list[str]) -> frozenset[str]:
     """Independent oracle: derive the expected plugin set from the spec rule.
 
-    A path contributes plugin name `n` to the output iff it begins with
-    `src/plugins/` followed by a non-empty `n` that ends at the next `/` or
-    end-of-string. Restated here as a `startswith`/`find` walk so the
+    A path contributes plugin name `n` to the output iff it begins with a
+    recognized root followed by a non-empty `n` that ends at the next `/`
+    or end-of-string. Restated here as a `startswith`/`find` walk so the
     oracle's algorithm differs from the implementation's `split`-based
     approach — a mutation in either path is detectable.
     """
     plugins: set[str] = set()
     for path in paths:
-        if not path.startswith(_PREFIX):
-            continue
-        rest = path[len(_PREFIX) :]
-        next_slash = rest.find("/")
-        name = rest if next_slash == -1 else rest[:next_slash]
-        if name:
-            plugins.add(name)
+        for prefix in _ROOT_PREFIXES:
+            if not path.startswith(prefix):
+                continue
+            rest = path[len(prefix) :]
+            next_slash = rest.find("/")
+            name = rest if next_slash == -1 else rest[:next_slash]
+            if name:
+                plugins.add(name)
+            break
     return frozenset(plugins)
 
 
-@given(plugin=plugin_names(), subpath=relative_subpaths())
-def test_any_path_under_a_plugin_directory_extracts_that_plugin(
+@given(
+    root=st.sampled_from(distribution_roots()),
+    plugin=plugin_names(),
+    subpath=relative_subpaths(),
+)
+def test_any_path_under_a_recognized_distribution_root_extracts_that_plugin(
+    root: str,
     plugin: str,
     subpath: str,
 ) -> None:
     """For every non-empty `plugin` segment and any nested subpath, the path
-    `src/plugins/{plugin}/{subpath}` contributes exactly `{plugin}` and nothing
-    else — the allow-list claims the entire `src/plugins/{name}/**` subtree.
+    `{root}/{plugin}/{subpath}` contributes exactly `{plugin}` and nothing
+    else — the allow-list claims each recognized `{root}/{name}/**` subtree.
     """
-    path = f"{SOURCE_PLUGINS_DIR}/{plugin}/{subpath}"
+    path = distribution_relpath(root, plugin, subpath)
     assert changed_plugins_from_diff([path]) == frozenset({plugin})
 
 
