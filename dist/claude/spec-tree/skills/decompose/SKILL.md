@@ -74,9 +74,12 @@ For a node target, decompose when at least one trigger applies:
 | Separate validation  | Parts could be validated independently                 |
 | Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
 
-Do not decompose when a single coherent hypothesis or enables statement covers all assertions, assertions are tightly coupled and meaningless in isolation, or decomposition would create children with only 1-2 trivial assertions.
+Classify the target with `/product-domain-shapes` before deciding whether to split it:
 
-This no-decomposition rule applies only to one coherent concern. When the input names an aggregate domain or capability and a concrete behavior inside it, analyze them as parent and child. Create both levels from the first slice when the child has its own validation contract; never collapse the child into the aggregate parent merely because no sibling child exists yet.
+- **One coherent concern**: keep the target whole when one hypothesis or enables statement covers all assertions, assertions are tightly coupled, or proposed children would carry only 1-2 trivial assertions.
+- **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions and the concrete behavior owns an independently validated contract.
+- **Implementation layer**: translate code-shaped names back to product dimensions before proposing nodes.
+- **Unsettled boundary**: invoke `/interview` with the unresolved boundary as the current coverage area.
 
 </step>
 
@@ -98,7 +101,7 @@ Each area is complete when:
 - **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
 - **Evidence Strategy** — each concern has a verification type: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
 - **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
-- **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has genuine outcome uncertainty.
+- **Enabler/Outcome Type** — each candidate can be written as a stable enabler or has real outcome uncertainty.
 - **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
 - **Index Budget** — full-vs-partial composition horizon is known.
 - **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale coordination notes, and known issues have a destination.
@@ -123,7 +126,7 @@ Use these seam-finding heuristics:
 - Different data domains, runtime surfaces, commands, or validation mechanisms can indicate separate concerns.
 - Setup, packaging, state, credentials, safety, or workflow substrate can indicate enabler concerns.
 - Behavior slices can be valid vertical slices when each slice has its own testable contract and later slices extend or depend on earlier contracts.
-- An aggregate domain plus its first concrete behavior is two concerns when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions, and the concrete behavior owns an independently validated contract.
+- Apply `/product-domain-shapes` when the input mixes an aggregate domain with its first concrete behavior.
 - Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
 - Assertions that span multiple children stay in the parent as cross-cutting assertions.
 
@@ -145,7 +148,7 @@ Apply these rules to each concern:
 | Output is fully determined by specification and assertions grow by addition                  | Enabler   |
 | Concern exists to provide runtime, data, validation, workflow, packaging, state, or safety   | Enabler   |
 | Goal is a behavior-change bet and most assertions could change while the goal remains stable | Outcome   |
-| Child carries its own genuine uncertainty about which output achieves the desired behavior   | Outcome   |
+| Child carries its own real uncertainty about which output achieves the desired behavior      | Outcome   |
 
 Use an outcome only when the forcing question fails: "Can this be written as PROVIDES X SO THAT Y CAN Z with stable assertions?" If yes, make it an enabler. When unclear after the clarity gate and interview, default to enabler.
 
@@ -336,7 +339,7 @@ How to avoid: When the aggregate owns shared scope or cross-child policy and the
 
 **Implementation-layer decomposition.** Children named only "frontend," "backend," or "database" are usually layers, not independently validated concerns.
 
-**Outcome inflation.** Use outcomes only for genuine uncertainty. Stable, specified outputs are enablers even when users see them.
+**Outcome inflation.** Use outcomes only for real uncertainty. Stable, specified outputs are enablers even when users see them.
 
 **Narrative ordering.** A list that is easy to explain in order is not automatically a dependency chain.
 
