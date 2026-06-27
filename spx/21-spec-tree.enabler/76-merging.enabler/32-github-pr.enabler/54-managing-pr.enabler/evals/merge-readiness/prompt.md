@@ -6,6 +6,8 @@ Closed classification task. Do not invoke skills, do not inspect a repository, d
 
 Classify whether the PR may run a merge command at the mutation point.
 
+`ci_review.findings` is the union of findings from every current-head review surface and reviewer already inspected by the managing flow. Optional metadata such as `ci_review.no_findings_reviewers` records reviewers that reported no findings on the same head; it never cancels a finding present in `ci_review.findings`.
+
 Rules, in order:
 
 1. If `ci_review.present` is `false`, return:
