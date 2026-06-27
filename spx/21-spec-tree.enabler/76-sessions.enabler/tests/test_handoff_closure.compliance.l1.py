@@ -54,7 +54,10 @@ def test_handoff_searches_existing_sessions_before_new_continuation() -> None:
 
     assert "Search before adding any continuation" in skill
     assert "spx session list --json" in reflect
-    assert '<EXISTING_SESSION_RECONCILIATION status="none|same-owner-continuation|existing-owner|ambiguous">' in reflect
+    assert (
+        '<EXISTING_SESSION_RECONCILIATION status="none|same-owner-continuation|existing-owner|ambiguous">'
+        in reflect
+    )
     assert '`status="existing-owner"` blocks Path C' in reflect
     assert "If the marker is missing, STOP and return to workflow 02" in execute
     assert "Path C is forbidden" in execute
