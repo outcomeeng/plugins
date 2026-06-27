@@ -23,6 +23,8 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Final, Protocol, cast
 
+from outcomeeng.distribution.contracts import DIST_DIR_NAME
+
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 _GENERATOR: Final = (
     REPO_ROOT / "src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py"
@@ -91,7 +93,7 @@ def guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
 
 def dist_template_path(runtime: str, *, repo_root: Path = REPO_ROOT) -> Path:
     """Return the rendered runtime template path for one guide runtime."""
-    return repo_root / "dist" / runtime / DIST_TEMPLATE_RELATIVE_PATH
+    return repo_root / DIST_DIR_NAME / runtime / DIST_TEMPLATE_RELATIVE_PATH
 
 
 def load_runtime_templates(
