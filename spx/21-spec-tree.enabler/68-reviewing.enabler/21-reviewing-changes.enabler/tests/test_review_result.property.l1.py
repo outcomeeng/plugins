@@ -79,18 +79,15 @@ def _finding_strategy() -> st.SearchStrategy[dict[str, Any]]:
 
 
 def _conforming_review_result_dicts() -> st.SearchStrategy[dict[str, Any]]:
-    """Generate conforming review-result dicts — findings only, no decision."""
+    """Generate conforming review-result dicts — findings only, no summary,
+    acknowledgement, decision, or verdict field."""
     review_result = load_review_result_module()
     return st.builds(
-        lambda findings, acks, summary: {
+        lambda findings: {
             "schema_version": review_result.SCHEMA_VERSION,
-            "summary": summary,
             "findings": findings,
-            "acknowledgements": acks,
         },
         findings=st.lists(_finding_strategy(), max_size=4),
-        acks=st.lists(st.text(min_size=0, max_size=32), max_size=3),
-        summary=st.text(min_size=0, max_size=64),
     )
 
 

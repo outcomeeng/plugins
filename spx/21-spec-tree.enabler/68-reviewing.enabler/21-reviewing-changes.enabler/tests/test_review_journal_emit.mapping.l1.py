@@ -1,12 +1,16 @@
 """Mapping evidence for the review consumer's run-journal adapter.
 
-Covers the reviewing-changes assertions that the skill records the validated
-review result on ``spx journal --type review`` through the shared projection,
-and that the terminal event carries the reviewed diff's identity.
+Covers the reviewing-changes assertions that the streaming review records the
+run on ``spx journal --type review`` through the shared projection's per-event
+builders — a finding maps onto a finding-reported event and the terminal
+run-completed event carries the reviewed diff's identity — and that the
+per-finding parse (``journal_emit.py finding-reported``) is the live validity
+gate before any journal append.
 """
 
 from __future__ import annotations
 
+import json
 import pathlib
 import subprocess
 
@@ -19,16 +23,20 @@ from outcomeeng_testing.harnesses.journal_projection import (
 from outcomeeng_testing.harnesses.reviewing_changes import (
     load_journal_emit_module,
     load_review_result_module,
-    make_review_result_dict,
+    make_finding_dict,
+    run_journal_emit_in_process,
 )
 
 je = load_journal_emit_module()
 jp = load_journal_projection_module()
 review_result = load_review_result_module()
 
+NOW = "2026-06-23T00:00:06Z"
+COMPLETED_AT = "2026-06-23T00:00:05Z"
+
 
 def _metadata() -> Any:
-    return je.ReviewRunMetadata(
+    return jp.RunMetadata(
         target="working-diff",
         scope_hash="abc123def456",
         branch_name="work/example",
@@ -40,29 +48,42 @@ def _metadata() -> Any:
         participants=("review",),
         scope={"include": ["README.md"]},
         started_at="2026-06-23T00:00:00Z",
-        completed_at="2026-06-23T00:00:05Z",
+        completed_at="2026-06-23T00:00:00Z",
         output_paths=(),
     )
 
 
-def _review_with_findings(findings: list[dict[str, Any]]) -> Any:
-    return review_result.from_json_dict(make_review_result_dict(findings=findings))
+def _finding(*, severity: Any, identifier: str) -> Any:
+    return review_result.parse_finding_json(
+        json.dumps(
+            make_finding_dict(
+                id=identifier,
+                severity=severity,
+                file="README.md",
+                line=1,
+                rule=(
+                    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+                    "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
+                ),
+                message=f"{identifier} evidence",
+                action=f"{identifier} action",
+            )
+        )
+    )
 
 
-def _finding(*, severity: Any, identifier: str) -> dict[str, Any]:
-    return {
-        "id": identifier,
-        "concern": review_result.Concern.STANDARDS,
-        "severity": severity,
-        "file": "README.md",
-        "line": 1,
-        "rule": (
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/"
-            "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
-        ),
-        "message": f"{identifier} evidence",
-        "action": f"{identifier} action",
-    }
+def _streamed_events(metadata: Any, findings: tuple[Any, ...]) -> list[dict[str, Any]]:
+    """Assemble the event prefix the streaming review appends as it advances."""
+    events = [je.scope_entered_event(metadata, now=NOW, attempt=1)]
+    events.extend(
+        je.finding_reported_event(finding, now=NOW, attempt=1) for finding in findings
+    )
+    events.append(
+        je.run_completed_event(
+            metadata, events, completed_at=COMPLETED_AT, now=NOW, attempt=1
+        )
+    )
+    return events
 
 
 @pytest.mark.parametrize(
@@ -75,21 +96,23 @@ def _finding(*, severity: Any, identifier: str) -> dict[str, Any]:
 def test_adapter_maps_review_severity_to_projection(
     severity: Any, expected_severity: Any, expected_overall: Any
 ) -> None:
-    result = _review_with_findings([_finding(severity=severity, identifier="F-001")])
-    events = je.events_for_review(result, _metadata(), now="2026-06-23T00:00:06Z")
-    finding_events = [event for event in events if event["type"] == jp.FINDING_REPORTED]
+    event = je.finding_reported_event(
+        _finding(severity=severity, identifier="F-001"), now=NOW, attempt=1
+    )
 
-    assert finding_events[0]["data"]["severity"] == expected_severity
-    assert jp.compute_overall(events) == expected_overall
+    assert event["type"] == jp.FINDING_REPORTED
+    assert event["data"]["severity"] == expected_severity
+    assert jp.compute_overall([event]) == expected_overall
 
 
 def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
-    result = _review_with_findings([])
     metadata = _metadata()
-    events = je.events_for_review(result, metadata, now="2026-06-23T00:00:06Z")
-    data = events[-1]["data"]
+    event = je.run_completed_event(
+        metadata, [], completed_at=COMPLETED_AT, now=NOW, attempt=1
+    )
+    data = event["data"]
 
-    assert events[-1]["type"] == jp.RUN_COMPLETED
+    assert event["type"] == jp.RUN_COMPLETED
     assert data[jp.RUN_STATE_BRANCH_NAME] == metadata.branch_name
     assert data[jp.RUN_STATE_BRANCH_SLUG] == metadata.branch_slug
     assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.BRANCH
@@ -99,12 +122,14 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_CONFIG_DIGEST] == metadata.config_digest
     assert data[jp.RUN_STATE_PARTICIPANTS] == ["review"]
     assert data[jp.RUN_STATE_SCOPE] == {"include": ["README.md"]}
+    # The run-completed event carries the real completion time, not the
+    # provisional start-time the start-of-run metadata bakes in.
+    assert data[jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
     assert data[jp.RUN_STATE_STATUS] == jp.JournalRunStatus.APPROVED
 
 
 def test_adapter_terminal_event_carries_pull_request_identity() -> None:
-    result = _review_with_findings([])
-    metadata = je.ReviewRunMetadata(
+    metadata = jp.RunMetadata(
         target="working-diff",
         scope_hash="abc123def456",
         branch_name="work/example",
@@ -116,25 +141,27 @@ def test_adapter_terminal_event_carries_pull_request_identity() -> None:
         participants=("review",),
         scope={"include": ["README.md"]},
         started_at="2026-06-23T00:00:00Z",
-        completed_at="2026-06-23T00:00:05Z",
+        completed_at="2026-06-23T00:00:00Z",
         target_kind=jp.JournalTargetKind.PULL_REQUEST,
         pull_request_number=123,
     )
-    events = je.events_for_review(result, metadata, now="2026-06-23T00:00:06Z")
-    data = events[-1]["data"]
+    event = je.run_completed_event(
+        metadata, [], completed_at=COMPLETED_AT, now=NOW, attempt=1
+    )
+    data = event["data"]
 
     assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
     assert data[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
 
 
 def test_render_events_counts_review_findings_by_render_class() -> None:
-    result = _review_with_findings(
-        [
+    events = _streamed_events(
+        _metadata(),
+        (
             _finding(severity=review_result.Severity.BLOCKING, identifier="F-001"),
             _finding(severity=review_result.Severity.DEBT, identifier="F-002"),
-        ]
+        ),
     )
-    events = je.events_for_review(result, _metadata(), now="2026-06-23T00:00:06Z")
     rendered = je.render_events(events)
 
     assert rendered["blocking"] == "1"
@@ -142,9 +169,8 @@ def test_render_events_counts_review_findings_by_render_class() -> None:
     assert rendered["countLine"] == "BLOCKING: 1, DEBT: 1"
 
 
-def test_adapter_rejects_missing_base_identity() -> None:
-    result = _review_with_findings([])
-    metadata = je.ReviewRunMetadata(
+def test_terminal_event_rejects_missing_base_identity() -> None:
+    metadata = jp.RunMetadata(
         target="working-diff",
         scope_hash="abc123def456",
         branch_name="work/example",
@@ -156,22 +182,19 @@ def test_adapter_rejects_missing_base_identity() -> None:
         participants=("review",),
         scope={"include": ["README.md"]},
         started_at="2026-06-23T00:00:00Z",
-        completed_at="2026-06-23T00:00:05Z",
+        completed_at="2026-06-23T00:00:00Z",
     )
 
     with pytest.raises(ValueError, match=jp.RUN_STATE_BASE_SHA):
-        je.events_for_review(result, metadata, now="2026-06-23T00:00:06Z")
+        je.run_completed_event(
+            metadata, [], completed_at=COMPLETED_AT, now=NOW, attempt=1
+        )
 
 
-def _write_skill_config(
-    root: pathlib.Path, *, prompt: str, document_template: str = "document"
-) -> None:
+def _write_skill_config(root: pathlib.Path, *, prompt: str) -> None:
     references = root / "references"
-    render = references / "render"
-    render.mkdir(parents=True)
+    references.mkdir(parents=True)
     (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
-    (render / "document.md").write_text(document_template, encoding="utf-8")
-    (render / "finding.md").write_text("finding", encoding="utf-8")
 
 
 def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
@@ -179,17 +202,6 @@ def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> Non
     second = tmp_path / "second"
     _write_skill_config(first, prompt="review prompt one")
     _write_skill_config(second, prompt="review prompt two")
-
-    assert je.review_config_digest(first) != je.review_config_digest(second)
-
-
-def test_config_digest_changes_with_render_template(tmp_path: pathlib.Path) -> None:
-    first = tmp_path / "first"
-    second = tmp_path / "second"
-    _write_skill_config(first, prompt="review prompt", document_template="document one")
-    _write_skill_config(
-        second, prompt="review prompt", document_template="document two"
-    )
 
     assert je.review_config_digest(first) != je.review_config_digest(second)
 
@@ -392,3 +404,111 @@ def test_metadata_cli_reports_git_failure_without_traceback(
     assert exit_code == 1
     assert "returned non-zero exit status 128" in captured.err
     assert "Traceback" not in captured.err
+
+
+def _metadata_wire_json() -> str:
+    """Serialize ``_metadata()`` to the wire shape the streaming CLI reads.
+
+    Mirrors ``metadata_for_worktree``'s output so the CLI-path tests exercise
+    the real ``--metadata`` parse without spawning git.
+    """
+    m = _metadata()
+    return json.dumps(
+        {
+            "target": m.target,
+            jp.RUN_STATE_SCOPE_HASH: m.scope_hash,
+            jp.RUN_STATE_BRANCH_NAME: m.branch_name,
+            jp.RUN_STATE_BRANCH_SLUG: m.branch_slug,
+            jp.RUN_STATE_TARGET_KIND: str(jp.JournalTargetKind.BRANCH),
+            jp.RUN_STATE_HEAD_SHA: m.head_sha,
+            jp.RUN_STATE_BASE_REF: m.base_ref,
+            jp.RUN_STATE_BASE_SHA: m.base_sha,
+            jp.RUN_STATE_CONFIG_DIGEST: m.config_digest,
+            jp.RUN_STATE_PARTICIPANTS: list(m.participants),
+            jp.RUN_STATE_SCOPE: dict(m.scope),
+            jp.RUN_STATE_STARTED_AT: m.started_at,
+            jp.RUN_STATE_COMPLETED_AT: m.completed_at,
+            jp.RUN_STATE_OUTPUT_PATHS: [],
+        }
+    )
+
+
+def test_scope_entered_cli_emits_identity_event() -> None:
+    result = run_journal_emit_in_process(
+        "scope-entered",
+        "--now",
+        NOW,
+        "--metadata",
+        _metadata_wire_json(),
+    )
+    assert result.returncode == 0, result.stderr
+    event = json.loads(result.stdout)
+    assert event["type"] == jp.SCOPE_ENTERED
+    assert event["data"]["target"] == "working-diff"
+    assert event["data"][jp.RUN_STATE_HEAD_SHA] == "1" * 40
+
+
+def test_scope_advanced_cli_names_the_unit() -> None:
+    result = run_journal_emit_in_process(
+        "scope-advanced", "--now", NOW, "--unit", "README.md"
+    )
+    assert result.returncode == 0, result.stderr
+    event = json.loads(result.stdout)
+    assert event["type"] == jp.SCOPE_ADVANCED
+    assert event["data"]["unit"] == "README.md"
+
+
+# finding-reported is the per-finding validity gate: a conforming finding maps
+# to one finding-reported event (exit 0); a malformed finding maps to a
+# non-zero exit naming the violation with no event emitted. The domain is the
+# finite {conforming, malformed} set — the per-finding parse rejection is the
+# live gate before any journal append.
+def test_finding_reported_cli_maps_conforming_finding_to_event() -> None:
+    result = run_journal_emit_in_process(
+        "finding-reported", "--now", NOW, stdin=json.dumps(make_finding_dict())
+    )
+    assert result.returncode == 0, result.stderr
+    event = json.loads(result.stdout)
+    assert event["type"] == jp.FINDING_REPORTED
+
+
+def test_finding_reported_cli_maps_malformed_finding_to_error_with_no_event() -> None:
+    malformed = make_finding_dict()
+    del malformed["action"]
+    result = run_journal_emit_in_process(
+        "finding-reported", "--now", NOW, stdin=json.dumps(malformed)
+    )
+    assert result.returncode != 0
+    assert "action" in result.stderr
+    assert result.stdout.strip() == ""
+
+
+def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
+    metadata_json = _metadata_wire_json()
+    scope_entered = run_journal_emit_in_process(
+        "scope-entered", "--now", NOW, "--metadata", metadata_json
+    ).stdout.strip()
+    finding = run_journal_emit_in_process(
+        "finding-reported",
+        "--now",
+        NOW,
+        stdin=json.dumps(make_finding_dict(severity=review_result.Severity.BLOCKING)),
+    ).stdout.strip()
+    prefix = json.dumps([json.loads(scope_entered), json.loads(finding)])
+
+    result = run_journal_emit_in_process(
+        "run-completed",
+        "--now",
+        NOW,
+        "--completed-at",
+        COMPLETED_AT,
+        "--metadata",
+        metadata_json,
+        stdin=prefix,
+    )
+    assert result.returncode == 0, result.stderr
+    event = json.loads(result.stdout)
+    assert event["type"] == jp.RUN_COMPLETED
+    assert event["data"][jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
+    # A blocking finding in the streamed prefix rolls up to a rejected run.
+    assert event["data"][jp.RUN_STATE_STATUS] == jp.JournalRunStatus.REJECTED

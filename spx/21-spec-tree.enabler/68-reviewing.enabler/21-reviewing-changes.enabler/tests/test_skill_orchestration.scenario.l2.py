@@ -29,13 +29,9 @@ from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
-    RENDER_REVIEW_SCRIPT,
-    VALIDATE_REVIEW_RESULT_SCRIPT,
     make_review_result_dict,
     run_compute_diff_in_process,
     run_journal_emit_in_process,
-    run_render_review_in_process,
-    run_script,
 )
 
 
@@ -96,22 +92,77 @@ def _make_env(cwd: pathlib.Path) -> dict[str, str]:
     return env
 
 
+NOW = "2026-06-23T00:00:06Z"
+COMPLETED_AT = "2026-06-23T00:00:05Z"
+
+
+def _stream_review_prefix(
+    env: dict[str, str],
+    metadata_json: str,
+    findings: list[dict[str, object]],
+    *,
+    units: list[str],
+) -> list[dict[str, object]]:
+    """Drive the streaming review chain and return the sealed event prefix.
+
+    Mirrors what the skill appends live: a scope-entered event, a
+    scope-advanced event per examined file, a finding-reported event per
+    finding (each emitted through the per-finding parse gate), and the
+    terminal run-completed event whose status the adapter derives from the
+    streamed prefix.
+    """
+    events: list[dict[str, object]] = []
+    scope_entered = run_journal_emit_in_process(
+        "scope-entered", "--now", NOW, "--metadata", metadata_json, env=env
+    )
+    assert scope_entered.returncode == 0, scope_entered.stderr
+    events.append(json.loads(scope_entered.stdout))
+    for unit in units:
+        advanced = run_journal_emit_in_process(
+            "scope-advanced", "--now", NOW, "--unit", unit, env=env
+        )
+        assert advanced.returncode == 0, advanced.stderr
+        events.append(json.loads(advanced.stdout))
+    for finding in findings:
+        reported = run_journal_emit_in_process(
+            "finding-reported", "--now", NOW, stdin=json.dumps(finding), env=env
+        )
+        assert reported.returncode == 0, reported.stderr
+        events.append(json.loads(reported.stdout))
+    completed = run_journal_emit_in_process(
+        "run-completed",
+        "--now",
+        NOW,
+        "--completed-at",
+        COMPLETED_AT,
+        "--metadata",
+        metadata_json,
+        stdin=json.dumps(events),
+        env=env,
+    )
+    assert completed.returncode == 0, completed.stderr
+    events.append(json.loads(completed.stdout))
+    return events
+
+
 @pytest.mark.skipif(
-    not COMPUTE_DIFF_SCRIPT.exists()
-    or not RENDER_REVIEW_SCRIPT.exists()
-    or not VALIDATE_REVIEW_RESULT_SCRIPT.exists()
-    or not JOURNAL_EMIT_SCRIPT.exists(),
+    not COMPUTE_DIFF_SCRIPT.exists() or not JOURNAL_EMIT_SCRIPT.exists(),
     reason=(
         "Reviewing-changes scripts are not yet present; the orchestration "
         "test runs once the verification skill scripts are implemented."
     ),
 )
 class TestSkillOrchestrationChain:
-    """End-to-end chain: diff -> review-result -> arbiter -> render."""
+    """End-to-end streaming chain: diff -> live journal events -> render.
 
-    def test_chain_validates_and_renders_review_result(
-        self, tmp_path: pathlib.Path
-    ) -> None:
+    Audit-parity shape: there is no arbiter and no parallel renderer. The run
+    streams its events live — scope-entered, a scope-advanced per examined
+    file, a finding-reported per finding (the per-finding parse is the
+    validity gate), and a run-completed sealing the run — and the human
+    surface is rendered only from the sealed event prefix.
+    """
+
+    def test_chain_streams_and_renders_review_run(self, tmp_path: pathlib.Path) -> None:
         # 1. Real git repo with a base branch and a feature branch.
         repo = tmp_path / "repo"
         repo.mkdir()
@@ -127,117 +178,65 @@ class TestSkillOrchestrationChain:
         # means compute_diff did not pick up the base ref correctly.
         assert "README.md" in diff_result.stdout
 
-        # 3. Synthesise a conforming review-result JSON payload. The "model emit"
-        #    step in production is the LLM agent; the test substitutes a
-        #    fixed conforming document and validates it through the
-        #    arbiter to exercise the validation hand-off.
-        review_result_payload = json.dumps(make_review_result_dict())
-        arbiter_result = run_script(
-            VALIDATE_REVIEW_RESULT_SCRIPT,
-            stdin=review_result_payload,
-            env=env,
-        )
-        assert arbiter_result.returncode == 0, arbiter_result.stderr
-
-        # 4. render_review.py reads the validated JSON payload and writes the
-        #    human-readable surface to stdout.
-        render_result = run_render_review_in_process(stdin=review_result_payload)
-        assert render_result.returncode == 0, render_result.stderr
-        rendered = render_result.stdout
-        # Two-severity render shape (matches the REVIEW.template.md
-        # taxonomy): the default fixture has one debt-severity finding and
-        # no blocking. Render reports both severities uniformly — the empty
-        # BLOCKING bucket as its `none` census marker, the debt finding as a
-        # DEBT heading. FOLLOW-UP is no longer part of the taxonomy and must
-        # not appear; the legacy class labels NEEDS-ANSWER and NOTE must not
-        # appear either.
-        assert "## Change Review" in rendered, (
-            "review.md must carry the Change Review title from document.md template"
-        )
-        assert "BLOCKING: none" in rendered, (
-            "empty BLOCKING bucket must render its none-blocking.md census marker"
-        )
-        assert "### DEBT [standards]:" in rendered, (
-            "debt-severity finding must render as DEBT via finding-debt.md"
-        )
-        # Both BLOCKING and DEBT render message as Evidence and action as
-        # Required.
-        assert "Evidence: " in rendered, (
-            "DEBT finding must render its message under the Evidence label"
-        )
-        assert "Required: " in rendered, (
-            "DEBT finding must render its action under the Required label"
-        )
-        # The removed FOLLOW-UP severity and the legacy four-class headings
-        # must not appear — the taxonomy is the two severities blocking/debt
-        # over six categories.
-        for forbidden in ("FOLLOW-UP", "### NEEDS-ANSWER", "### NOTE"):
-            assert forbidden not in rendered, (
-                f"render must not emit {forbidden!r} — it is not part of the "
-                f"two-severity taxonomy from REVIEW.template.md"
-            )
-        # The legacy table format must NOT appear — confirms the
-        # template-driven render replaces the f-string-table render.
-        assert "| Severity |" not in rendered, (
-            "legacy findings table must not appear in the rendered markdown"
-        )
-
+        # 3. Derive run identity once at the start of the run.
         metadata_result = run_journal_emit_in_process(
-            "metadata",
-            "--started-at",
-            "2026-06-23T00:00:00Z",
-            "--completed-at",
-            "2026-06-23T00:00:05Z",
-            repo=repo,
-            env=env,
+            "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
         )
         assert metadata_result.returncode == 0, metadata_result.stderr
 
-        events_result = run_journal_emit_in_process(
-            "build-events",
-            "--now",
-            "2026-06-23T00:00:06Z",
-            "--metadata",
-            metadata_result.stdout,
-            stdin=review_result_payload,
-            env=env,
+        # 4. Stream the run: scope-entered, a scope-advanced for the examined
+        #    file, one finding-reported per finding (each through the parse
+        #    gate), and the terminal run-completed. The default fixture carries
+        #    one debt-severity finding under the standards concern.
+        findings = make_review_result_dict()["findings"]
+        sealed_prefix = _stream_review_prefix(
+            env, metadata_result.stdout, findings, units=["README.md"]
         )
-        assert events_result.returncode == 0, events_result.stderr
-        sealed_prefix = [
-            json.loads(line) for line in events_result.stdout.splitlines() if line
-        ]
 
+        # 5. The human surface is rendered only from the sealed event prefix.
         prefix_render = run_journal_emit_in_process(
-            "render",
-            stdin=json.dumps(sealed_prefix),
-            env=env,
+            "render", stdin=json.dumps(sealed_prefix), env=env
         )
         assert prefix_render.returncode == 0, prefix_render.stderr
         prefix_surface = json.loads(prefix_render.stdout)
         assert prefix_surface["countLine"] == "BLOCKING: 0, DEBT: 1"
-        assert "- [warning] example.py:10" in prefix_surface["surface"]
+        # The surface shows the run advancing: a progress line for the examined
+        # file precedes the finding line.
+        surface = prefix_surface["surface"]
+        assert "- examined README.md" in surface
+        # The finding event carries the full review finding: severity maps to
+        # the audit-shared `warning`, and the concern and action ride along.
+        assert "- [warning standards] example.py:10" in surface
+        assert "Required: Rename the symbol to convey its role." in surface
+        # No verdict the reviewer decides; the rollup footer is a computed
+        # status, not a `decision` field.
+        assert "decision" not in surface
 
-    def test_render_emits_census_marker_for_every_empty_severity(
-        self, tmp_path: pathlib.Path
-    ) -> None:
-        # A fully-clean review (no findings) leaves both severity buckets
-        # empty, so render reports each uniformly as its `<SEVERITY>: none`
-        # census marker — privileging no severity. The default fixture
-        # carries a debt finding, so the none-debt.md path is exercised here.
-        clean_payload = json.dumps(make_review_result_dict(findings=[]))
-        arbiter = run_script(VALIDATE_REVIEW_RESULT_SCRIPT, stdin=clean_payload)
-        assert arbiter.returncode == 0, arbiter.stderr
+    def test_clean_review_streams_a_zero_count(self, tmp_path: pathlib.Path) -> None:
+        # A fully-clean review (no findings) streams scope-entered, the examined
+        # file, and run-completed, and renders a zero count line with no finding
+        # body to act on.
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_branch(repo)
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
 
-        render = run_script(RENDER_REVIEW_SCRIPT, stdin=clean_payload)
-        assert render.returncode == 0, render.stderr
-        rendered = render.stdout
-        for marker in ("BLOCKING: none", "DEBT: none"):
-            assert marker in rendered, (
-                f"empty severity bucket must render its census marker {marker!r}"
-            )
-        assert "FOLLOW-UP" not in rendered, (
-            "FOLLOW-UP is not part of the two-severity taxonomy"
+        metadata_result = run_journal_emit_in_process(
+            "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
         )
+        assert metadata_result.returncode == 0, metadata_result.stderr
+        sealed_prefix = _stream_review_prefix(
+            env, metadata_result.stdout, [], units=["README.md"]
+        )
+        prefix_render = run_journal_emit_in_process(
+            "render", stdin=json.dumps(sealed_prefix), env=env
+        )
+        assert prefix_render.returncode == 0, prefix_render.stderr
+        surface = json.loads(prefix_render.stdout)
+        assert surface["countLine"] == "BLOCKING: 0, DEBT: 0"
+        assert surface["blocking"] == "0"
+        assert surface["debt"] == "0"
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
