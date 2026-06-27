@@ -66,11 +66,17 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
      --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --unit "<changed-file>" \
      | spx journal append --type review --run "$RUN_TOKEN" >/dev/null
 
-   # The instant you raise a finding ($FINDING_JSON is one Finding object):
-   printf '%s' "$FINDING_JSON" \
-     | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" finding-reported \
-       --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-     | spx journal append --type review --run "$RUN_TOKEN" >/dev/null
+   # The instant you raise a finding ($FINDING_JSON is one Finding object).
+   # finding-reported is the validity gate: it prints the event only on a
+   # successful parse and exits non-zero otherwise. Append ONLY when the gate
+   # succeeds, so a failed parse never lets `spx journal append` run on empty
+   # output.
+   if FINDING_EVENT=$(printf '%s' "$FINDING_JSON" \
+       | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" finding-reported \
+         --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"); then
+     printf '%s' "$FINDING_EVENT" \
+       | spx journal append --type review --run "$RUN_TOKEN" >/dev/null
+   fi
    ```
 
    `finding-reported` parses the one finding; on a non-zero exit read the stderr message verbatim, repair the finding JSON (the missing key or unknown enum value), and re-emit before appending. Appending only the events the builders print, never hand-composed JSON.

@@ -18,8 +18,7 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 
 ```
 {
-  "schema_version": 3,
-  "summary": "<one to three sentence prose summary>",
+  "schema_version": 4,
   "findings": [
     {
       "id": "F-001",
@@ -31,11 +30,10 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
       "message": "<concise finding message>",
       "action": "<required change>"
     }
-  ],
-  "acknowledgements": ["<string>"]
+  ]
 }
 ```
 
 The reviewer emits findings only — no decision or verdict. A diff with blocking issues yields at least one `severity == "blocking"` finding; a clean diff or one with only debt findings yields no blocking finding.
 
-Required fields: `schema_version` (always 3), `summary`, `findings` (may be empty list), `acknowledgements` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.
+Required fields: `schema_version` (always 4), `findings` (may be empty list). Required finding fields: `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`. The harness parses your entire response with `json.loads` and structurally subset-matches against expected fields.
