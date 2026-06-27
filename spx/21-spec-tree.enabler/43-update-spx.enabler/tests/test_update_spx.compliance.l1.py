@@ -1,18 +1,24 @@
 """Compliance evidence for the two-file guide generator.
 
-Three rules in ``update-spx.md`` with deterministic test evidence:
+Rules in ``update-spx.md`` with deterministic test evidence:
 
 - NEVER: the render substitutes a product-specific string — a brace-delimited illustration
   token in the template passes through to the output unchanged.
 - NEVER: an update keeps an unmodeled hand-prose edit — a tampered guide re-renders to the
   same output as a clean render from the same languages.
 - ALWAYS: generation writes both guide files, never one without the other.
+- ALWAYS: product guides render from runtime-specific templates under ``dist/``.
+- NEVER: guide generation writes output from a template with unresolved build macros.
 """
 
 from __future__ import annotations
 
 import pathlib
 
+import pytest
+
+from outcomeeng.distribution import guide_diff
+from outcomeeng.distribution.contracts import DIST_DIR_NAME
 from outcomeeng_testing.harnesses.update_spx import (
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
@@ -25,6 +31,7 @@ from outcomeeng_testing.harnesses.update_spx import (
     extract_markdown_section,
     load_update_spx_module,
     read_canonical_spx_template,
+    render_build_macro,
     write_template,
 )
 
@@ -78,6 +85,53 @@ def test_generation_writes_both_guide_files(tmp_path: pathlib.Path) -> None:
         if (tmp_path / name).is_file()
     }
     assert written == set(module.RUNTIME_GUIDE_FILENAMES.values())
+
+
+def test_guide_templates_are_loaded_from_runtime_specific_dist_outputs(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_update_spx_module()
+    expected: dict[str, str] = {}
+    for runtime in module.RUNTIME_GUIDE_FILENAMES:
+        path = guide_diff.dist_template_path(runtime)
+        assert (
+            path
+            == guide_diff.REPO_ROOT
+            / DIST_DIR_NAME
+            / runtime
+            / guide_diff.DIST_TEMPLATE_RELATIVE_PATH
+        )
+        template = build_template(f"{VERSION}.{runtime}")
+        expected[runtime] = template
+        dist_path = guide_diff.dist_template_path(runtime, repo_root=tmp_path)
+        dist_path.parent.mkdir(parents=True, exist_ok=True)
+        dist_path.write_text(template, encoding="utf-8")
+
+    assert guide_diff.load_runtime_templates(module, repo_root=tmp_path) == expected
+
+
+def test_guide_render_rejects_unresolved_build_macro() -> None:
+    module = load_update_spx_module()
+    runtime_templates = {
+        runtime: build_template(VERSION) for runtime in module.RUNTIME_GUIDE_FILENAMES
+    }
+    runtime_templates[RUNTIME_CODEX] += render_build_macro()
+
+    with pytest.raises(guide_diff.UnresolvedGuideTemplateError):
+        guide_diff.render_guides_from_runtime_templates(
+            module, runtime_templates, (LANG_PRIMARY,)
+        )
+
+
+def test_justfile_exposes_guide_writer_and_gate() -> None:
+    justfile = guide_diff.REPO_ROOT.joinpath(guide_diff.JUSTFILE_NAME).read_text(
+        encoding="utf-8"
+    )
+
+    assert f"\n{guide_diff.BUILD_GUIDES_RECIPE}:" in justfile
+    assert f"\n{guide_diff.GUIDE_CHECK_RECIPE}:" in justfile
+    assert f"outcomeeng.distribution.guide_diff {guide_diff.WRITE_FLAG}" in justfile
+    assert "outcomeeng.distribution.guide_diff\n" in justfile
 
 
 def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
