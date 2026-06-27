@@ -1,6 +1,6 @@
 # Update spx/
 
-PROVIDES deterministic generation of a product's two spx-level guide files — `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex — from one installed template, scoped to the project's enabled languages and rendered per agent runtime
+PROVIDES deterministic generation of a product's two spx-level guide files — `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex — from the rendered runtime templates committed under `dist/`, scoped to the project's enabled languages and rendered per agent runtime
 SO THAT every agent working a spec-tree project
 CAN read its own runtime's guidance, kept current by a gate without manual template tracking or agent judgment
 
@@ -28,7 +28,10 @@ CAN read its own runtime's guidance, kept current by a gate without manual templ
 ### Compliance
 
 - ALWAYS: generation writes both `spx/CLAUDE.md` and `spx/AGENTS.md`, never one without the other — each agent reading the same repository gets its own runtime's guide ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: product guide generation reads the runtime-specific guide templates from `dist/claude/` and `dist/codex/`, so the guide update surface consumes the same rendered output this product ships to installed plugin runtimes ([test](tests/test_update_spx.compliance.l1.py))
+- ALWAYS: guide writing is exposed to agents through the repository Justfile recipe `just build-guides`; `just guide-check` is the drift gate over the same writer ([test](tests/test_update_spx.compliance.l1.py))
 - ALWAYS: regenerating a drifted guide overwrites the drift — a re-render restores the template's content over any hand-edit, the basis of the regenerate-and-diff gate that keeps both files current without an agent invocation ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: the render substitutes a product-specific string into a guide body — a brace-delimited token in the template passes through unchanged ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: an update keeps an unmodeled hand-prose edit to a guide body — a re-render reflects only the template, the recorded enabled languages, and the runtime ([test](tests/test_update_spx.compliance.l1.py))
 - NEVER: any rendered guide file instructs agents to add, maintain, or require a `result` session frontmatter property — session archival follows the sessions model without that field ([test](tests/test_update_spx.compliance.l1.py))
+- NEVER: guide generation writes output from a runtime template that still contains unresolved build-template delimiters such as `{{! ... !}}` ([test](tests/test_update_spx.compliance.l1.py))
