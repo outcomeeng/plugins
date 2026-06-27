@@ -14,10 +14,19 @@ from typing import Final
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[4]
 HANDOFF_DIR: Final = REPO_ROOT / "src/plugins/spec-tree/skills/handoff"
+CLAUDE_HANDOFF_DIR: Final = REPO_ROOT / "dist/claude/spec-tree/skills/handoff"
+CODEX_HANDOFF_DIR: Final = REPO_ROOT / "dist/codex/spec-tree/skills/handoff"
+SESSIONS_SPEC: Final = (
+    REPO_ROOT / "spx/21-spec-tree.enabler/76-sessions.enabler/sessions.md"
+)
 
 
 def _read(relative_path: str) -> str:
     return (HANDOFF_DIR / relative_path).read_text()
+
+
+def _read_handoff_surface(root: Path, relative_path: str) -> str:
+    return (root / relative_path).read_text()
 
 
 def test_coordination_notes_block_closure_while_claude_can_act() -> None:
@@ -90,3 +99,79 @@ def test_handoff_reconciles_out_of_scope_wrong_notes() -> None:
     assert "clearly wrong coordination note outside the original scope" in reflect
     assert "fix safe local corrections now" in reflect
     assert "ownership, scope, cost, or risk changes" in reflect
+
+
+def test_handoff_final_confirmation_is_operator_useful() -> None:
+    source_execute = _read("workflows/04-execute.md")
+    claude_execute = _read_handoff_surface(
+        CLAUDE_HANDOFF_DIR, "workflows/04-execute.md"
+    )
+    codex_execute = _read_handoff_surface(CODEX_HANDOFF_DIR, "workflows/04-execute.md")
+    sessions_spec = SESSIONS_SPEC.read_text()
+    surfaces = (source_execute, claude_execute, codex_execute)
+
+    required_summary_fields = (
+        "Product outcome",
+        "Changed surface",
+        "Human-readable change summary",
+        "Verification evidence",
+        "Inspection surface",
+        "Delivered state",
+        "Remaining work",
+    )
+    for execute in surfaces:
+        product_outcome_index = execute.index("Product outcome")
+        changed_surface_index = execute.index("Changed surface")
+        human_summary_index = execute.index("Human-readable change summary")
+        verification_index = execute.index("Verification evidence")
+        inspection_index = execute.index("Inspection surface")
+        delivered_state_index = execute.index("Delivered state")
+        remaining_work_index = execute.index("Remaining work")
+        mechanics_index = execute.index(
+            "Put session mechanics only after the product summary"
+        )
+        canonical_continuation_index = execute.index("Canonical continuation")
+
+        assert product_outcome_index < changed_surface_index
+        assert changed_surface_index < human_summary_index
+        assert human_summary_index < verification_index
+        assert verification_index < inspection_index
+        assert inspection_index < delivered_state_index
+        assert delivered_state_index < remaining_work_index
+        assert remaining_work_index < mechanics_index
+        assert mechanics_index < canonical_continuation_index
+
+        for field in required_summary_fields:
+            assert field in execute
+
+        assert "merge receipt" in execute
+        assert "PR URL" in execute
+        assert "running URL" in execute
+        assert "session mechanics only after the product summary" in execute
+        assert (
+            "Include whichever surfaces apply; omit unavailable surfaces rather than inventing one."
+            in execute
+        )
+        assert "State:\n" not in execute[:product_outcome_index]
+
+    for spec_field in (
+        "product outcome",
+        "changed surface",
+        "human-readable change summary",
+        "verification evidence",
+        "inspection surface when available",
+        "delivered state",
+        "remaining work when any exists",
+    ):
+        assert spec_field in sessions_spec
+    assert "operator-useful terms before mechanics" in sessions_spec
+
+    weak_receipts = (
+        "State:\n",
+        'State: "PR merged"',
+        'State: "Archived"',
+        "open with branch cleanup",
+    )
+    for execute in surfaces:
+        for receipt in weak_receipts:
+            assert receipt not in execute

@@ -194,7 +194,21 @@ NEVER delete todo or doing sessions. `--prune` only affects archive.
 </archive_claimed_sessions>
 
 <confirm>
-State:
+State a human-readable closeout first, then the session mechanics. The operator has not read the command output, the PR page, or the changed files. A merge receipt or archive receipt alone is not enough.
+
+The closeout MUST include:
+
+- **Product outcome**: what capability, behavior, document, skill, page, test, or infrastructure state is now true in product terms. Say what changed for the user or maintainer, not only which branch or session changed.
+- **Changed surface**: the meaningful files, sections, generated outputs, running service, or deployed surface. For skill and plugin work, name authored source and generated runtime output when both changed. For web app work, name the page or flow and the running URL when one exists. For pull-request work, include the PR URL.
+- **Human-readable change summary**: the key sections, controls, behaviors, checks, or workflow rules changed, written so the operator can inspect the result without reconstructing it from the diff.
+- **Verification evidence**: commands, audits, reviews, CI checks, screenshots, or manual inspections that passed, including exact session ids, run ids, PR numbers, or commit SHAs verbatim when they are part of the evidence.
+- **Inspection surface**: a PR URL, merged commit, local file path, running URL, screenshot path, generated artifact path, or other place the operator can inspect the result. Include whichever surfaces apply; omit unavailable surfaces rather than inventing one.
+- **Delivered state**: where the work now lives — default branch on origin, local branch, running dev server, generated plugin install, archived session state, or intentionally local output.
+- **Remaining work**: open follow-up only when one exists, with its owner or tracking location. Say when none remains for this closure.
+
+Use domain-specific closeout content. In a plugin marketplace repository, a useful closeout usually names the skill or spec-tree behavior changed, authored source paths, generated `dist/` paths when regenerated, verification commands, auditor or reviewer verdict ids, PR URL, merged commit, marketplace sync status, and any active PLAN.md or ISSUES.md continuation. In a web app, a useful closeout usually names the changed page or flow, the running URL, the test page or route, browser verification, screenshots if captured, and any known UI follow-up.
+
+Put session mechanics only after the product summary:
 
 - Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (--no-session)"
 - Session-owned work was committed before closure
