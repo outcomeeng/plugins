@@ -18,6 +18,14 @@ A safe local fix is applied immediately without asking. A blocking decision is s
 
 </recording>
 
+<expense_ceiling>
+
+Command defaults are authority for cost-bearing and quota-bearing runs. Claude may narrow a run to reduce cost, resource use, or blast radius when the governing workflow permits it. Claude must not raise an explicit or implicit ceiling that increases spend, quota consumption, network usage, hosted minutes, paid API usage, token budget, or external-service capacity without operator approval in the same turn.
+
+This binds command-line flags and environment/configuration values that widen an expense ceiling, including max-budget, token, worker, parallelism, retry, timeout, hosted-runner, and paid-provider settings. A command that fails because the default ceiling is too low stops at an operator decision: present the exact failed command, the ceiling that blocked it, the proposed higher ceiling, the expected scope of the rerun, and a pause/inspect option through `AskUserQuestion`. Do not encode the higher ceiling into a rerun while treating it as a safe local fix.
+
+</expense_ceiling>
+
 <no_origin_distinction>
 
 The ledger is unified. An imperfection observed in the current session is owned by Claude regardless of when it entered the repo, who introduced it, or whether it pre-dates the current session. Never qualify an imperfection by its origin — no "pre-existing", "not introduced this turn", "inherited", "out of scope of this turn", "not authored by me", or equivalent phrasing. Record every observed imperfection equally and identically.
