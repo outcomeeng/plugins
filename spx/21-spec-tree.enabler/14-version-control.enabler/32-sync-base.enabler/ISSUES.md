@@ -10,11 +10,11 @@ base advance adds a path the working tree already holds as an untracked file,
 working tree file would be overwritten" guard `git checkout` applies.
 
 In that case sync-base falls through to the rebase, the rebase exits non-zero
-before replaying, and the existing mapping reports `conflict`/`SYNC_BASE`. That
-is a precondition the caller clears (remove or commit the colliding untracked
-file), not a content conflict to resolve — so the reported outcome is
-imprecise, and the ADR's "untracked files do not block a rebase" holds only for
-the non-colliding case.
+before replaying, and the existing mapping reports `conflict` with conflict
+details. That is a precondition the caller clears (remove or commit the
+colliding untracked file), not a content conflict to resolve — so the reported
+outcome is imprecise, and the ADR's "untracked files do not block a rebase"
+holds only for the non-colliding case.
 
 Scope: narrow edge case, no regression — before the `dirty_tree` change this
 same case also surfaced `conflict`. Resolving it needs a new detection step
