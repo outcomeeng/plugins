@@ -6,7 +6,7 @@ allowed-tools: Read, Glob, Grep, Skill
 
 <objective>
 
-A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, and the local lifecycle overlay read into the conversation, with no heuristic selection.
+A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manifest for a target node — every ancestor spec, lower-index sibling spec, ADR, PDR, guide file, and the local lifecycle overlay read into the conversation, with no heuristic selection.
 
 </objective>
 
@@ -19,6 +19,7 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 - Read order: product root → ancestors → target (top-down)
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
+- A context-grounded answer requires the matching `<SPEC_TREE_CONTEXT target="...">` marker. Loading this skill and completing `/sync-base` are prerequisites, not context.
 - Test files are not read by `/contextualize`. The target spec already exposes inline `[test](tests/...)` links; list those links and the `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use full paths** from `spx/` for targets and references. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.outcome`
@@ -45,7 +46,7 @@ If absent → STOP. Invoke `/understand` first, then resume from Step 0.
 
 Before reading any product or spec content, invoke `/sync-base` so the loaded context reflects current product truth rather than a stale checkout — a branch or detached worktree behind its base reads superseded specs and decisions. `/sync-base` fetches the base and brings the checkout current automatically from observable git state — rebasing a branch, or advancing a clean detached worktree to the base tip; never ask the operator whether to rebase. Act on its result:
 
-- `already_current` or `rebased` → proceed to Step 0 on the now-current checkout. This also covers a detached worktree `/sync-base` advanced to the base tip — the loaded context reads the current base, not the stale parked commit.
+- `already_current` or `rebased` → record the status for the eventual context marker, then immediately proceed to Step 0 for the same target on the now-current checkout. This also covers a detached worktree `/sync-base` advanced to the base tip — the loaded context reads the current base, not the stale parked commit. Do not answer the context-grounded question, inspect pull-request state, push, or manage branch ahead/behind status between the clean sync result and Step 0; those are caller lifecycle concerns after context loading completes.
 - `conflict` → STOP and surface the `/sync-base` `conflict` details. The branch cannot be brought current autonomously, and reading stale-or-conflicted context is the failure this gate prevents; leave the rebase active and resume once the operator resolves, continues, or aborts it.
 - `dirty_tree` → proceed to Step 0, noting that loaded context may be stale. Uncommitted tracked changes block the rebase (or the detached advance), so the checkout may still be behind its base. Context loading is read-only: it never commits or stashes to clear the tree — whether the changes are the operator's work-in-progress or a file Claude created this session — surfacing the staleness rather than mutating the working tree. Committing those changes is the mutating caller's job: the merge lifecycle or `/pickup`, via `/sync-base`'s `<dirty_tree_resolution>`, commits then re-syncs. This is not a rebase conflict and is never a reason to ask the operator to resolve a merge conflict.
 - `git_failure` → distinguish by the reported `detail`. A `git_failure` detached outcome is the genuinely non-advanceable case: a diverged detached HEAD carrying its own commits (no branch to rebase them onto), or one with no resolvable remote base; a clean behind-base detached HEAD is not a `git_failure` — `/sync-base` advances it and returns `rebased`/`already_current` above. The non-advanceable cases are not applicable — proceed to Step 0; this is not a merge gate, so do not block on a non-advanceable checkout. A failed fetch or an unresolved base on a configured remote leaves currency unestablished — the checkout may still be behind its base — so surface the `detail` and that the loaded context may be stale before proceeding; never silently treat unverified currency as current.
@@ -83,6 +84,9 @@ Extract the path segments from product root to target. Each segment is a directo
 # Read product spec
 Read: spx/{product-name}.product.md
 
+# Read runtime product guide if present
+Read: spx/CLAUDE.md  (if exists)
+
 # Read ALL product-level ADRs and PDRs
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"
@@ -97,6 +101,8 @@ Read: spx/local/merging.md  (if exists)
 **Read EVERY file returned by the ADR/PDR globs.** Do not filter by title. Decision records contain cross-cutting constraints that may not be obvious from the title.
 
 **Verification**: Count files returned by globs. Count files actually read. These must match.
+
+**Guide files**: Read `spx/CLAUDE.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -113,9 +119,14 @@ For each directory along the path from product root to the target node:
 ```bash
 # The spec file is {slug}.md (no type suffix, no numeric prefix)
 Read: spx/{path-to-dir}/{slug}.md
+
+# Read runtime guide in this directory if present
+Read: spx/{path-to-dir}/CLAUDE.md  (if exists)
 ```
 
 ABORT if the spec file is missing.
+
+A missing on-path guide is normal. Read a guide only when it exists, and record every guide read in the manifest.
 
 **2b. Read all ADRs and PDRs in this directory**
 
@@ -202,6 +213,8 @@ Documents loaded:
   Lower-index sibling specs: {count} read
   ADRs: {count} found, {count} read
   PDRs: {count} found, {count} read
+  Guide files: {list} | none
+Sync-base status: {already_current|rebased|dirty_tree|git_failure plus detail}
 
 Hierarchy:
   {product-name}
@@ -279,6 +292,10 @@ Claude loaded `/understand`, completed edits, passed deterministic verification,
 
 Claude answered a progress question by reporting the clean worktree and local verification, then ended the turn while the branch still carried changes destined for the default branch. Context loading now requires a progress verdict and continuation action: complete only after the change reaches the default branch on origin, continuing when `/merge` remains available, or blocked when an explicit lifecycle gate leaves no independent local action.
 
+**Failure 8: Let sync-base become the task**
+
+Claude invoked `/sync-base`, received `already_current` or completed a clean rebase, then drifted into branch or pull-request lifecycle work before emitting `<SPEC_TREE_CONTEXT>`. The context-grounded question stayed unanswered because the prerequisite displaced the workflow. Clean sync results are recorded only as context-load state; the next action is Step 0 for the same target, and lifecycle work waits until context loading completes.
+
 </failure_modes>
 
 <success_criteria>
@@ -289,6 +306,7 @@ Context loading is complete when:
 - [ ] Product spec located and read
 - [ ] All product-level ADRs/PDRs read (glob count = read count)
 - [ ] Every ancestor along the path: spec read, ADRs/PDRs read
+- [ ] Runtime guide files checked at product root and on each directory along the target path; present guides read and listed
 - [ ] Lower-index siblings' specs read at each directory level
 - [ ] Target spec read
 - [ ] Target ADRs/PDRs read
@@ -298,6 +316,7 @@ Context loading is complete when:
 - [ ] Coordination notes (PLAN.md, ISSUES.md) checked and read if present at each ancestor AND at target
 - [ ] Local skill overlays enumerated from `spx/local/` and listed in manifest
 - [ ] `spx/local/merging.md` read when present and lifecycle continuation state emitted in the manifest
+- [ ] A clean `/sync-base` result is recorded as context-load state and followed immediately by Step 0 for the same target before any answer or branch lifecycle work
 - [ ] Status and progress contexts include a lifecycle verdict and continuation action rather than treating local verification, commits, or worktree cleanliness as completion
 - [ ] All node, ADR, PDR, test, and coordination-note references in the manifest use full paths from `spx/`
 - [ ] `<SPEC_TREE_CONTEXT target="...">` marker emitted with full manifest
