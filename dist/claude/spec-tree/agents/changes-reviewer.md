@@ -35,7 +35,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
 
-3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, validates the emitted JSON through the arbiter, records the run on `spx journal --type review`, and renders the sealed prefix.
+3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, and streams the run live on `spx journal --type review` — scope-entered, a scope-advanced per examined file, a finding-reported the instant each finding is raised (the per-finding parse through `journal_emit.py finding-reported` is the validity gate), and run-completed — then renders the human-readable surface from the sealed prefix.
 
 </workflow>
 
@@ -61,7 +61,7 @@ The sealed review journal prefix is the durable run state.
 <success_criteria>
 
 - The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were exported; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were exported; for empty input, none of those vars were set.
-- The skill ran to completion and the arbiter accepted the emitted JSON.
+- The skill ran to completion, streaming its events live, and `journal_emit.py finding-reported` parsed each emitted finding without error.
 - The review journal run was sealed and read back before reporting the result.
 
 </success_criteria>

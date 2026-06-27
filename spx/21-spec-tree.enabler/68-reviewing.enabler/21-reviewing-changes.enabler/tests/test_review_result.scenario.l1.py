@@ -5,7 +5,7 @@ Covers these clauses in ``../reviewing-changes.md``:
 Scenarios
 - ``review_result.parse_json`` returns a ``ReviewResult`` dataclass on a
   conforming document and raises ``ReviewResultValidationError`` on
-  every violation surfaced by the arbiter.
+  every schema violation.
 - ``review_result.to_json_dict`` and ``review_result.from_json_dict``
   round-trip a ``ReviewResult`` instance without loss.
 
@@ -28,7 +28,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import pathlib
-from typing import Any
 
 import pytest
 
@@ -38,7 +37,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_MALFORMED_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
-    load_render_review_module,
     load_review_result_module,
     make_review_result_dict,
 )
@@ -120,16 +118,16 @@ class TestParseJsonConforming:
 
 class TestParseJsonRejection:
     """``parse_json`` raises ``ReviewResultValidationError`` on every
-    schema violation surfaced by the arbiter."""
+    schema violation."""
 
     def test_missing_required_key_raises(self) -> None:
         review_result = load_review_result_module()
         document = make_review_result_dict()
-        del document["summary"]
+        del document["findings"]
         payload = json.dumps(document)
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(payload)
-        assert "summary" in str(excinfo.value)
+        assert "findings" in str(excinfo.value)
 
     def test_unknown_severity_raises_with_value_and_allowed_set(self) -> None:
         review_result = load_review_result_module()
@@ -283,104 +281,6 @@ class TestRoundTrip:
         with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
             review_result.parse_json(json.dumps(document))
         assert "action" in str(excinfo.value)
-
-
-class TestSeverityToRenderClassMapping:
-    """``Severity`` members map to render classes via the partitioning function.
-
-    ``blocking`` → BLOCKING bucket.
-    ``debt`` → DEBT bucket.
-
-    The mapping is total over ``Severity`` and lives in
-    ``render_review._partition_findings``. Asserting it directly closes the
-    Mapping-typed evidence the spec declares for the severity → render-class
-    rule.
-    """
-
-    def _make_finding(self, severity: str, finding_id: str) -> Any:
-        review_result = load_review_result_module()
-        return review_result.Finding(
-            id=finding_id,
-            concern=review_result.Concern("consistency"),
-            severity=review_result.Severity(severity),
-            file="example.py",
-            line=1,
-            rule=FIXTURE_RULE_CITATION,
-            message="m",
-            action="a",
-        )
-
-    def test_blocking_partitions_into_blocking_bucket(self) -> None:
-        render_review = load_render_review_module()
-        buckets = render_review._partition_findings(
-            [self._make_finding("blocking", "F-001")]
-        )
-        assert [f.id for f in buckets["blocking"]] == ["F-001"]
-        assert buckets["debt"] == []
-
-    def test_debt_partitions_into_debt_bucket(self) -> None:
-        render_review = load_render_review_module()
-        buckets = render_review._partition_findings(
-            [self._make_finding("debt", "F-002")]
-        )
-        assert buckets["blocking"] == []
-        assert [f.id for f in buckets["debt"]] == ["F-002"]
-
-    def test_mixed_severities_split_across_buckets(self) -> None:
-        render_review = load_render_review_module()
-        findings = [
-            self._make_finding("blocking", "F-001"),
-            self._make_finding("debt", "F-002"),
-            self._make_finding("debt", "F-003"),
-            self._make_finding("blocking", "F-004"),
-        ]
-        buckets = render_review._partition_findings(findings)
-        assert {f.id for f in buckets["blocking"]} == {"F-001", "F-004"}
-        assert {f.id for f in buckets["debt"]} == {"F-002", "F-003"}
-
-
-class TestRenderPayloadFileInput:
-    """``render_review --file`` reads only regular files under the cwd."""
-
-    def test_read_payload_accepts_file_under_current_directory(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        render_review = load_render_review_module()
-        root = tmp_path / "repo"
-        root.mkdir()
-        payload = root / "review-result.json"
-        payload.write_text("{}", encoding="utf-8")
-        monkeypatch.chdir(root)
-
-        assert render_review._read_payload("review-result.json") == "{}"
-
-    def test_read_payload_rejects_file_outside_current_directory(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        render_review = load_render_review_module()
-        root = tmp_path / "repo"
-        root.mkdir()
-        outside = tmp_path / "review-result.json"
-        outside.write_text("{}", encoding="utf-8")
-        monkeypatch.chdir(root)
-
-        with pytest.raises(ValueError, match="current working directory"):
-            render_review._read_payload(str(outside))
-
-    def test_read_payload_rejects_symlink_escape(
-        self, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        render_review = load_render_review_module()
-        root = tmp_path / "repo"
-        root.mkdir()
-        outside = tmp_path / "review-result.json"
-        outside.write_text("{}", encoding="utf-8")
-        link = root / "linked-review-result.json"
-        link.symlink_to(outside)
-        monkeypatch.chdir(root)
-
-        with pytest.raises(ValueError, match="current working directory"):
-            render_review._read_payload(str(link))
 
 
 class TestRuleCitationForm:

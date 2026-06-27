@@ -5,17 +5,30 @@ Bridges the review-result schema to the shared run-journal projection.
 the run journal records one review run as ``spx journal`` events and derives
 the run status from the sealed event prefix through ``journal_projection.py``.
 
-Two CLI subcommands drive the stateless local emit:
+The review streams its events live: it opens the journal, appends a
+scope-entered event, appends a scope-advanced event as it examines each
+changed file, appends a finding-reported event the instant it raises each
+finding, appends a run-completed event, and seals — never a single batch of
+events built from a finished result, so a reader resuming from a cursor
+watches the run advance. One CLI subcommand builds each domain event so the
+consuming skill appends it the moment the run reaches it:
 
-- ``build-events`` reads a review-result JSON document on stdin and prints
-  ordered ``spx journal`` channel event inputs, one JSON object per line.
+- ``metadata`` derives the run identity from the current worktree and env refs.
+- ``scope-entered`` prints the scope-entered event from that metadata.
+- ``scope-advanced`` prints a scope-advanced event naming one examined file.
+- ``finding-reported`` reads one finding JSON on stdin, parses it through
+  ``review_result.parse_finding_json`` (the per-finding validity gate), and
+  prints the finding-reported event; a malformed finding exits non-zero
+  before any event is printed.
+- ``run-completed`` reads the streamed event prefix on stdin, derives the
+  terminal status from it, and prints the terminal run-completed event.
 - ``render`` reads a sealed event prefix on stdin and prints the shared
   projection's rollup and human-readable surface as JSON.
 
 Review findings map into the shared projection as findings: ``blocking`` is a
-rejecting finding, while ``debt`` is a warning finding. The review-result
-itself still carries no decision or verdict field; terminal status belongs to
-the channel projection over the recorded event prefix.
+rejecting finding, while ``debt`` is a warning finding. A review carries no
+decision or verdict field; terminal status belongs to the channel projection
+over the recorded event prefix.
 """
 
 from __future__ import annotations
@@ -28,9 +41,9 @@ import os
 import pathlib
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import replace
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Mapping, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import review_result as review_schema
@@ -71,26 +84,6 @@ DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
-RENDER_TEMPLATES = pathlib.Path("references") / "render"
-
-
-@dataclass(frozen=True)
-class ReviewRunMetadata:
-    target: str
-    scope_hash: str
-    branch_name: str
-    branch_slug: str
-    head_sha: str
-    base_ref: str
-    base_sha: str
-    config_digest: str
-    participants: tuple[str, ...]
-    scope: Mapping[str, Any]
-    started_at: str
-    completed_at: str
-    output_paths: tuple[str, ...] = ()
-    target_kind: object = None
-    pull_request_number: int | None = None
 
 
 def _project_severity(severity: object) -> object:
@@ -102,47 +95,47 @@ def _project_severity(severity: object) -> object:
 
 
 def _project_finding(finding: review_schema.Finding) -> object:
+    # Carry the full review finding into the shared journal Finding: the
+    # concern (category) and action (required change) are optional projection
+    # fields the review kind populates, so the sealed events are the complete
+    # source for the local surface, the hosted PR-review render, and the
+    # cross-run fold — none folded into ``message`` and none dropped.
     return jp.Finding(
         file=finding.file,
         line=finding.line,
         rule=finding.rule,
         severity=_project_severity(finding.severity),
-        message=f"{finding.message} Required: {finding.action}",
+        message=finding.message,
+        concern=str(finding.concern),
+        action=finding.action,
     )
 
 
-def events_for_review(
-    result: review_schema.ReviewResult,
-    metadata: ReviewRunMetadata,
+def scope_entered_event(metadata: Any, *, now: str, attempt: int) -> dict:
+    return jp.scope_entered_event(
+        jp.run_from_metadata(metadata), now=now, attempt=attempt
+    )
+
+
+def finding_reported_event(
+    finding: review_schema.Finding, *, now: str, attempt: int
+) -> dict:
+    return jp.finding_reported_event(
+        _project_finding(finding), now=now, attempt=attempt
+    )
+
+
+def run_completed_event(
+    metadata: Any,
+    prefix: list[dict[str, object]],
     *,
+    completed_at: str,
     now: str,
-    attempt: int = 1,
-) -> list[dict[str, object]]:
-    run = jp.RunResult(
-        target=metadata.target,
-        scope_hash=metadata.scope_hash,
-        branch_name=metadata.branch_name,
-        branch_slug=metadata.branch_slug,
-        head_sha=metadata.head_sha,
-        base_ref=metadata.base_ref,
-        base_sha=metadata.base_sha,
-        config_digest=metadata.config_digest,
-        participants=metadata.participants,
-        scope=metadata.scope,
-        started_at=metadata.started_at,
-        completed_at=metadata.completed_at,
-        output_paths=metadata.output_paths,
-        findings=tuple(_project_finding(finding) for finding in result.findings),
-        target_kind=(
-            jp.JournalTargetKind.BRANCH
-            if metadata.target_kind is None
-            else jp.JournalTargetKind(metadata.target_kind)
-        ),
-        pull_request_number=metadata.pull_request_number,
-    )
-    return cast(
-        "list[dict[str, object]]", jp.build_events(run, now=now, attempt=attempt)
-    )
+    attempt: int,
+) -> dict:
+    status = jp.terminal_status(jp.compute_overall(prefix))
+    run = replace(jp.run_from_metadata(metadata), completed_at=completed_at)
+    return jp.run_completed_event(run, status=status, now=now, attempt=attempt)
 
 
 def render_events(events: list[dict[str, object]]) -> dict[str, str]:
@@ -164,90 +157,6 @@ def render_events(events: list[dict[str, object]]) -> dict[str, str]:
         "countLine": f"BLOCKING: {counts['blocking']}, DEBT: {counts['debt']}",
         "surface": str(jp.render_surface(events)),
     }
-
-
-def _json_object(text: str, *, name: str) -> dict[str, Any]:
-    value = json.loads(text)
-    if not isinstance(value, dict):
-        raise ValueError(f"{name} must be a JSON object")
-    return value
-
-
-def _json_string_array(text: str, *, name: str) -> tuple[str, ...]:
-    value = json.loads(text)
-    if not isinstance(value, list) or not all(
-        isinstance(item, str) and item for item in value
-    ):
-        raise ValueError(f"{name} must be a JSON array of non-empty strings")
-    return tuple(value)
-
-
-def _metadata_from_args(args: argparse.Namespace) -> ReviewRunMetadata:
-    return _metadata_from_json(args.metadata)
-
-
-def _metadata_from_json(text: str) -> ReviewRunMetadata:
-    data = _json_object(text, name="metadata")
-    return ReviewRunMetadata(
-        target=_required_string(data, "target"),
-        scope_hash=_required_string(data, jp.RUN_STATE_SCOPE_HASH),
-        branch_name=_required_string(data, jp.RUN_STATE_BRANCH_NAME),
-        branch_slug=_required_string(data, jp.RUN_STATE_BRANCH_SLUG),
-        head_sha=_required_string(data, jp.RUN_STATE_HEAD_SHA),
-        base_ref=_required_string(data, jp.RUN_STATE_BASE_REF),
-        base_sha=_required_string(data, jp.RUN_STATE_BASE_SHA),
-        config_digest=_required_string(data, jp.RUN_STATE_CONFIG_DIGEST),
-        participants=_required_string_tuple(data, jp.RUN_STATE_PARTICIPANTS),
-        scope=_required_mapping(data, jp.RUN_STATE_SCOPE),
-        started_at=_required_string(data, jp.RUN_STATE_STARTED_AT),
-        completed_at=_required_string(data, jp.RUN_STATE_COMPLETED_AT),
-        output_paths=_optional_string_tuple(data, jp.RUN_STATE_OUTPUT_PATHS),
-        target_kind=_required_string(data, jp.RUN_STATE_TARGET_KIND),
-        pull_request_number=_optional_positive_int(
-            data, jp.RUN_STATE_PULL_REQUEST_NUMBER
-        ),
-    )
-
-
-def _required_string(data: Mapping[str, Any], key: str) -> str:
-    value = data.get(key)
-    if not isinstance(value, str) or value == "":
-        raise ValueError(f"metadata {key!r} must be a non-empty string")
-    return value
-
-
-def _required_mapping(data: Mapping[str, Any], key: str) -> Mapping[str, Any]:
-    value = data.get(key)
-    if not isinstance(value, dict):
-        raise ValueError(f"metadata {key!r} must be a JSON object")
-    return value
-
-
-def _required_string_tuple(data: Mapping[str, Any], key: str) -> tuple[str, ...]:
-    value = data.get(key)
-    if not isinstance(value, list) or not all(
-        isinstance(item, str) and item for item in value
-    ):
-        raise ValueError(f"metadata {key!r} must be a JSON array of non-empty strings")
-    return tuple(value)
-
-
-def _optional_string_tuple(data: Mapping[str, Any], key: str) -> tuple[str, ...]:
-    value = data.get(key, [])
-    if not isinstance(value, list) or not all(
-        isinstance(item, str) and item for item in value
-    ):
-        raise ValueError(f"metadata {key!r} must be a JSON array of non-empty strings")
-    return tuple(value)
-
-
-def _optional_positive_int(data: Mapping[str, Any], key: str) -> int | None:
-    value = data.get(key)
-    if value is None:
-        return None
-    if not isinstance(value, int) or value <= 0:
-        raise ValueError(f"metadata {key!r} must be a positive integer when present")
-    return value
 
 
 def _resolve_base_ref() -> str:
@@ -320,8 +229,6 @@ def _file_digest(path: pathlib.Path) -> str:
 def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
     root = skill_dir or _HERE.parent
     prompt_path = root / REVIEW_PROMPT
-    render_dir = root / RENDER_TEMPLATES
-    template_paths = sorted(path for path in render_dir.glob("*.md") if path.is_file())
     return _digest(
         {
             "skill": "review-changes",
@@ -331,13 +238,6 @@ def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
                 "path": str(REVIEW_PROMPT),
                 "sha256": _file_digest(prompt_path),
             },
-            "renderTemplates": [
-                {
-                    "path": str(path.relative_to(root)),
-                    "sha256": _file_digest(path),
-                }
-                for path in template_paths
-            ],
         }
     )
 
@@ -373,17 +273,58 @@ def metadata_for_worktree(
     return metadata
 
 
-def _build_events(args: argparse.Namespace) -> int:
+def _emit_event(event: dict) -> int:
+    sys.stdout.write(json.dumps(event) + "\n")
+    return 0
+
+
+def _scope_entered(args: argparse.Namespace) -> int:
     try:
-        result = review_result.parse_json(sys.stdin.read())
-        metadata = _metadata_from_args(args)
-        events = events_for_review(result, metadata, now=args.now, attempt=args.attempt)
+        metadata = jp.run_metadata_from_json(args.metadata)
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    return _emit_event(
+        scope_entered_event(metadata, now=args.now, attempt=args.attempt)
+    )
+
+
+def _scope_advanced(args: argparse.Namespace) -> int:
+    return _emit_event(
+        jp.scope_advanced_event(args.unit, now=args.now, attempt=args.attempt)
+    )
+
+
+def _finding_reported(args: argparse.Namespace) -> int:
+    try:
+        finding = review_result.parse_finding_json(sys.stdin.read())
     except (ValueError, review_result.ReviewResultValidationError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
-    for event in events:
-        sys.stdout.write(json.dumps(event) + "\n")
-    return 0
+    return _emit_event(
+        finding_reported_event(finding, now=args.now, attempt=args.attempt)
+    )
+
+
+def _run_completed(args: argparse.Namespace) -> int:
+    try:
+        metadata = jp.run_metadata_from_json(args.metadata)
+        prefix = json.load(sys.stdin)
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    if not isinstance(prefix, list):
+        sys.stderr.write("event prefix must be a JSON array\n")
+        return 1
+    return _emit_event(
+        run_completed_event(
+            metadata,
+            prefix,
+            completed_at=args.completed_at,
+            now=args.now,
+            attempt=args.attempt,
+        )
+    )
 
 
 def _render() -> int:
@@ -392,10 +333,16 @@ def _render() -> int:
 
 
 def _emit_metadata(args: argparse.Namespace) -> int:
+    # The run derives its identity at the start, when only the start time is
+    # known; the terminal ``run-completed`` event carries the real completion
+    # time through its ``--completed-at`` flag, so ``--completed-at`` here
+    # defaults to the start time as a provisional value the streaming flow
+    # overrides at seal.
+    completed_at = args.completed_at or args.started_at
     try:
         metadata = metadata_for_worktree(
             started_at=args.started_at,
-            completed_at=args.completed_at,
+            completed_at=completed_at,
             target=args.target,
         )
     except (
@@ -417,13 +364,39 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    build = subparsers.add_parser(
-        "build-events",
-        help="map a review-result JSON document to spx journal event inputs",
+    def _add_event_args(sub: argparse.ArgumentParser) -> None:
+        sub.add_argument("--now", required=True, help="UTC timestamp for the event")
+        sub.add_argument("--attempt", type=int, default=1, help="run attempt number")
+
+    scope_entered = subparsers.add_parser(
+        "scope-entered",
+        help="print the scope-entered event opening a streaming review run",
     )
-    build.add_argument("--now", required=True, help="UTC timestamp for every event")
-    build.add_argument("--attempt", type=int, default=1, help="run attempt number")
-    build.add_argument("--metadata", required=True, help="metadata JSON object")
+    _add_event_args(scope_entered)
+    scope_entered.add_argument("--metadata", required=True, help="metadata JSON object")
+
+    scope_advanced = subparsers.add_parser(
+        "scope-advanced",
+        help="print a scope-advanced event naming one examined changed file",
+    )
+    _add_event_args(scope_advanced)
+    scope_advanced.add_argument("--unit", required=True, help="the examined unit")
+
+    finding_reported = subparsers.add_parser(
+        "finding-reported",
+        help="parse one finding JSON (stdin) and print its finding-reported event",
+    )
+    _add_event_args(finding_reported)
+
+    run_completed = subparsers.add_parser(
+        "run-completed",
+        help="print the terminal run-completed event from the streamed prefix (stdin)",
+    )
+    _add_event_args(run_completed)
+    run_completed.add_argument("--metadata", required=True, help="metadata JSON object")
+    run_completed.add_argument(
+        "--completed-at", required=True, help="UTC run completion timestamp"
+    )
 
     subparsers.add_parser(
         "render",
@@ -435,14 +408,20 @@ def main(argv: list[str] | None = None) -> int:
         help="derive review journal metadata from the current worktree",
     )
     metadata.add_argument("--started-at", required=True)
-    metadata.add_argument("--completed-at", required=True)
+    metadata.add_argument("--completed-at", default="")
     metadata.add_argument("--target", default=DEFAULT_TARGET)
 
     args = parser.parse_args(argv)
-    if args.command == "build-events":
-        return _build_events(args)
-    if args.command == "metadata":
-        return _emit_metadata(args)
+    handlers = {
+        "scope-entered": _scope_entered,
+        "scope-advanced": _scope_advanced,
+        "finding-reported": _finding_reported,
+        "run-completed": _run_completed,
+        "metadata": _emit_metadata,
+    }
+    handler = handlers.get(args.command)
+    if handler is not None:
+        return handler(args)
     return _render()
 
 

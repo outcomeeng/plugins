@@ -2,7 +2,7 @@
 
 PROVIDES the review verification kind — judgment-style assessment of a changeset for consistency among its specification, tests, and implementation and for the quality of each level
 SO THAT developers reviewing their own changes before opening a pull request, and CI reviewing a branch against its base ref
-CAN obtain a structured, arbiter-validated review — findings classified by one shared taxonomy — that stays comparable across every review surface
+CAN obtain a structured, schema-validated review — findings classified by one shared taxonomy — that stays comparable across every review surface
 
 ## Assertions
 

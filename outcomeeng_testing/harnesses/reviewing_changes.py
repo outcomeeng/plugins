@@ -54,15 +54,12 @@ REFERENCES_DIR = SKILL_DIR / "references"
 REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 
 REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
-VALIDATE_REVIEW_RESULT_SCRIPT = SCRIPTS_DIR / "validate_review_result.py"
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
-RENDER_REVIEW_SCRIPT = SCRIPTS_DIR / "render_review.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
 )
-RENDER_TEMPLATES_DIR = REFERENCES_DIR / "render"
 
 # Fixture rule citation: a real path-style citation that satisfies the
 # parser's rule-form check. Points at this verification skill's own spec so the citation
@@ -111,26 +108,6 @@ def load_review_result_module() -> ModuleType:
     return module
 
 
-def load_render_review_module() -> ModuleType:
-    """Load the ``render_review`` script as a module via importlib.
-
-    Mirrors :func:`load_review_result_module`. Tests that introspect the
-    severity → render-class partitioning function or the template-loading
-    helpers load the module here. ``render_review`` itself imports
-    ``review_result`` via sibling importlib in the script.
-    """
-    cached = sys.modules.get("render_review")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location("render_review", RENDER_REVIEW_SCRIPT)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load render_review from {RENDER_REVIEW_SCRIPT}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["render_review"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
 def load_compute_diff_module() -> ModuleType:
     """Load the ``compute_diff`` script as a module via importlib."""
 
@@ -142,25 +119,6 @@ def load_compute_diff_module() -> ModuleType:
         raise RuntimeError(f"Cannot load compute_diff from {COMPUTE_DIFF_SCRIPT}")
     module = importlib.util.module_from_spec(spec)
     sys.modules["compute_diff"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def load_validate_review_result_module() -> ModuleType:
-    """Load the ``validate_review_result`` script as a module via importlib."""
-
-    cached = sys.modules.get("validate_review_result")
-    if cached is not None:
-        return cached
-    spec = importlib.util.spec_from_file_location(
-        "validate_review_result", VALIDATE_REVIEW_RESULT_SCRIPT
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(
-            f"Cannot load validate_review_result from {VALIDATE_REVIEW_RESULT_SCRIPT}"
-        )
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["validate_review_result"] = module
     spec.loader.exec_module(module)
     return module
 
@@ -214,56 +172,6 @@ def run_compute_diff_in_process(
             returncode = _module_main(module)([])
     finally:
         os.chdir(old_cwd)
-    return subprocess.CompletedProcess(
-        argv,
-        returncode,
-        stdout=stdout.getvalue(),
-        stderr=stderr.getvalue(),
-    )
-
-
-def run_validate_review_result_in_process(
-    *args: str,
-    stdin: str | None = None,
-) -> subprocess.CompletedProcess[str]:
-    """Run ``validate_review_result.main`` in-process with CLI-shaped outputs."""
-
-    module = load_validate_review_result_module()
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-    input_stream = io.StringIO(stdin or "")
-    argv = [sys.executable, str(VALIDATE_REVIEW_RESULT_SCRIPT), *args]
-    with (
-        patch.object(sys, "stdin", input_stream),
-        redirect_stdout(stdout),
-        redirect_stderr(stderr),
-    ):
-        returncode = _module_main(module)(list(args))
-    return subprocess.CompletedProcess(
-        argv,
-        returncode,
-        stdout=stdout.getvalue(),
-        stderr=stderr.getvalue(),
-    )
-
-
-def run_render_review_in_process(
-    *,
-    stdin: str,
-) -> subprocess.CompletedProcess[str]:
-    """Run ``render_review.main`` in-process with CLI-shaped outputs."""
-
-    module = load_render_review_module()
-    stdout = io.StringIO()
-    stderr = io.StringIO()
-    input_stream = io.StringIO(stdin)
-    argv = [sys.executable, str(RENDER_REVIEW_SCRIPT)]
-    with (
-        patch.object(sys, "stdin", input_stream),
-        redirect_stdout(stdout),
-        redirect_stderr(stderr),
-    ):
-        returncode = _module_main(module)([])
     return subprocess.CompletedProcess(
         argv,
         returncode,
@@ -332,18 +240,17 @@ def run_script(
 def make_review_result_dict(
     *,
     findings: list[dict[str, Any]] | None = None,
-    acknowledgements: list[str] | None = None,
-    summary: str = "Synthetic review for harness tests.",
     schema_version: int | None = None,
 ) -> dict[str, Any]:
     """Return a synthetic review-result dict with every required field.
 
-    Default shape: one ``debt``-severity finding under the
-    ``standards`` concern, one acknowledgement, and a summary. The debt
-    finding carries an ``action`` populated with a required change to
-    satisfy the required-field check. The defaults make the conforming
-    case the trivial caller; rejection-path tests mutate one field on the
-    returned dict to construct each violation.
+    Default shape: one ``debt``-severity finding under the ``standards``
+    concern. A review carries findings only — no summary, acknowledgement,
+    decision, or verdict field — so the dict has exactly ``schema_version``
+    and ``findings``. The debt finding carries an ``action`` populated with
+    a required change to satisfy the required-field check. The defaults make
+    the conforming case the trivial caller; rejection-path tests mutate one
+    field on the returned dict to construct each violation.
 
     ``schema_version`` defaults to the module-level ``SCHEMA_VERSION``
     from the loaded ``review_result`` module so tests automatically pick
@@ -366,11 +273,32 @@ def make_review_result_dict(
                 "action": "Rename the symbol to convey its role.",
             }
         ]
-    if acknowledgements is None:
-        acknowledgements = ["The change improves type coverage."]
     return {
         "schema_version": version,
-        "summary": summary,
         "findings": findings,
-        "acknowledgements": acknowledgements,
     }
+
+
+def make_finding_dict(**overrides: Any) -> dict[str, Any]:
+    """Return one synthetic finding dict with every required field populated.
+
+    The streaming review emits findings one at a time, so the per-finding
+    validity gate (``review_result.parse_finding_json`` /
+    ``journal_emit.py finding-reported``) parses a single finding document.
+    The default is a ``debt``/``standards`` finding with a valid rule
+    citation; callers pass ``**overrides`` to vary a field or construct a
+    rejection-path document.
+    """
+    review_result = load_review_result_module()
+    finding = {
+        "id": "F-001",
+        "concern": review_result.Concern.STANDARDS,
+        "severity": review_result.Severity.DEBT,
+        "file": "example.py",
+        "line": 10,
+        "rule": FIXTURE_RULE_CITATION,
+        "message": "The identifier is not descriptive.",
+        "action": "Rename the symbol to convey its role.",
+    }
+    finding.update(overrides)
+    return finding

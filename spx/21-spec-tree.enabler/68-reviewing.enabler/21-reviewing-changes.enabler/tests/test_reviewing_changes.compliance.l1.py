@@ -15,19 +15,15 @@ universal rules across the skill's files rather than per-case scenarios:
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
   listing ``spec-tree:review-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
-- The per-section render templates live under
-  ``plugins/spec-tree/skills/review-changes/references/render/`` and
-  ``render_review.py`` loads them via stdlib ``string.Template`` —
-  rendered shape is data the script substitutes, not f-string
-  concatenation in code.
+- The scripts/ directory holds the audit-parity set — the policy module
+  plus ``compute_diff.py`` and ``journal_emit.py`` — with no arbiter and
+  no parallel renderer, so the human surface comes only from the sealed
+  journal prefix.
 - No script under the skill's ``scripts/`` directory imports a third-party
   package, depends on ``uv`` at runtime, or imports any ``outcomeeng_*``
   module.
 - The judgment-style review prompt is NEVER embedded inside ``SKILL.md``
   or any ``.py`` file — the prompt is one standalone markdown file.
-- The render templates are NEVER embedded inside ``render_review.py`` as
-  f-string literals — the templates are standalone markdown files under
-  ``references/render/``.
 """
 
 from __future__ import annotations
@@ -42,14 +38,11 @@ import pytest
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
-    RENDER_REVIEW_SCRIPT,
-    RENDER_TEMPLATES_DIR,
     REVIEW_PROMPT_PATH,
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
     SKILL_DIR,
     SKILL_FILE,
-    VALIDATE_REVIEW_RESULT_SCRIPT,
     WRAPPER_AGENT_PATH,
 )
 
@@ -71,9 +64,7 @@ FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink"}
 LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
     {
         "review_result",
-        "validate_review_result",
         "compute_diff",
-        "render_review",
         "journal_emit",
     }
 )
@@ -83,10 +74,10 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
 # of these show up in SKILL.md or a .py file, the prompt body has leaked
 # from the reference file into a place it should not live.
 #
-# Schema vocabulary (``blocking``, ``request_changes``, ``acknowledgements``)
-# is excluded because those tokens legitimately appear in rendering code
-# (e.g., to switch on severity) and in skill-prose orchestration
-# (referring to the schema the agent emits).
+# Schema vocabulary (``blocking``, ``debt``, ``concern``) is excluded
+# because those tokens legitimately appear in the adapter (switching on
+# severity) and in skill-prose orchestration (naming the schema the agent
+# emits).
 PROMPT_FINGERPRINT_PHRASES = (
     "Review a labeled diff bundle",
     "Inspect every section",
@@ -129,9 +120,7 @@ class TestScriptsDoNotWriteStorageDirectly:
         "script_path",
         [
             REVIEW_RESULT_MODULE_PATH,
-            VALIDATE_REVIEW_RESULT_SCRIPT,
             COMPUTE_DIFF_SCRIPT,
-            RENDER_REVIEW_SCRIPT,
             JOURNAL_EMIT_SCRIPT,
         ],
     )
@@ -342,78 +331,59 @@ class TestComputeDiffHasNoThreadAddressing:
         assert "thread_store" not in source
 
 
-REQUIRED_RENDER_TEMPLATES = (
-    "document.md",
-    "finding-blocking.md",
-    "finding-debt.md",
-    "none-blocking.md",
-    "none-debt.md",
-    "acknowledgements.md",
+# The audit-parity script set: the policy module plus the two CLI scripts.
+# No arbiter (`validate_review_result.py`) and no parallel renderer
+# (`render_review.py`) — validity is the `journal_emit finding-reported`
+# per-finding parse, and the human surface is rendered only from the sealed
+# journal prefix.
+EXPECTED_SCRIPT_NAMES = frozenset(
+    {"__init__.py", "review_result.py", "compute_diff.py", "journal_emit.py"}
 )
 
 
-class TestRenderTemplatesAreDataFiles:
-    """Render templates live under ``references/render/`` as standalone files.
+class TestNoParallelReviewResultRenderer:
+    """The human surface is rendered only from the sealed journal prefix.
 
-    The rendered ``review.md`` shape (two-severity headings,
-    per-severity ``none`` census markers, finding body shape) is the externally
-    observable verdict format. Two surfaces consume it (the local verification skill
-    and the GH ``spec-tree-review`` workflow); both must read from the
-    same source.
-    These tests guard the file enumeration, the template-loading
-    discipline of ``render_review.py``, and the absence of embedded
-    f-string render literals.
+    ``reviewing-changes.md`` NEVER clause: no script renders a parallel
+    surface from the review-result JSON payload — the journal is the
+    review's sole source of truth. The deleted ``render_review.py`` was
+    exactly that parallel renderer; its absence, and the absence of a
+    render-templates directory it consumed, is the falsifiable evidence.
     """
 
-    @pytest.mark.parametrize("template_name", REQUIRED_RENDER_TEMPLATES)
-    def test_template_file_exists(self, template_name: str) -> None:
-        path = RENDER_TEMPLATES_DIR / template_name
-        assert path.is_file(), (
-            f"required render template {template_name!r} missing at {path}"
+    def test_script_set_is_the_audit_parity_set(self) -> None:
+        present = {p.name for p in _script_files()}
+        unexpected = present - EXPECTED_SCRIPT_NAMES
+        assert not unexpected, (
+            "review-changes scripts/ carries unexpected scripts "
+            f"(audit parity is {sorted(EXPECTED_SCRIPT_NAMES)}): {sorted(unexpected)}"
+        )
+        assert "render_review.py" not in present, (
+            "render_review.py renders a parallel surface from the review-result "
+            "JSON — the surface is rendered only from the sealed journal prefix"
+        )
+        assert "validate_review_result.py" not in present, (
+            "validate_review_result.py is the removed arbiter — validity is the "
+            "journal_emit finding-reported per-finding parse, matching the audit "
+            "kind"
         )
 
-    def test_render_review_loads_templates_via_string_template(self) -> None:
-        if not RENDER_REVIEW_SCRIPT.is_file():
-            pytest.skip("render_review.py not yet present")
-        source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
-        # Source-level checks: the script imports `string` and uses
-        # `string.Template` for substitution. Both are required for the
-        # render-shape-as-data invariant.
-        assert re.search(r"^import\s+string\b", source, re.MULTILINE), (
-            "render_review.py must import the stdlib `string` module to "
-            "use string.Template for render substitution"
+    def test_no_render_templates_directory(self) -> None:
+        render_dir = REVIEW_PROMPT_PATH.parent / "render"
+        assert not render_dir.exists(), (
+            f"{render_dir} holds render templates for the removed parallel "
+            "renderer — the surface comes from the shared journal projection"
         )
-        assert "string.Template(" in source, (
-            "render_review.py must instantiate string.Template — required "
-            "by the render-templates-as-data invariant"
-        )
-
-    def test_render_review_does_not_embed_template_headings(self) -> None:
-        if not RENDER_REVIEW_SCRIPT.is_file():
-            pytest.skip("render_review.py not yet present")
-        source = RENDER_REVIEW_SCRIPT.read_text(encoding="utf-8")
-        # Render-class heading prefixes must NOT appear as literal
-        # strings in the script — they belong in the template files.
-        forbidden_in_script = (
-            "### BLOCKING",
-            "### DEBT",
-            "### FOLLOW-UP",
-            "### NEEDS-ANSWER",
-        )
-        for needle in forbidden_in_script:
-            assert needle not in source, (
-                f"render_review.py must not embed the render-template "
-                f"literal {needle!r} — move it to references/render/"
-            )
 
 
 class TestPromptTeachesRuleCitation:
     """The review prompt instructs the model to populate ``Finding.rule`` as a citation.
 
-    The arbiter enforces structural form; the prompt enforces the semantic
-    that ``rule`` cites an existing rule in the spec-tree or skill
-    ecosystem. The prompt must contain a Rule citation section that names
-    the accepted path forms and forbids text/action/location populations.
+    The ``journal_emit finding-reported`` parse enforces structural form; the
+    prompt enforces the semantic that ``rule`` cites an existing rule in the
+    spec-tree or skill ecosystem. The prompt must contain a Rule citation
+    section that names the accepted path forms and forbids text/action/
+    location populations.
     """
 
     def test_prompt_contains_rule_citation_section(self) -> None:

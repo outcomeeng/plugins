@@ -1,6 +1,6 @@
 # Reviewing Changes Prompt
 
-Review a labeled diff bundle. It may contain committed changes from the base ref to HEAD plus staged, unstaged, and untracked worktree sections. Inspect every section and classify findings using the taxonomy below. Emit one JSON document conforming to the `review-result` schema. The arbiter CLI validates every emitted document; on a non-zero exit, fix the issue surfaced in stderr and re-emit.
+Review a labeled diff bundle. It may contain committed changes from the base ref to HEAD plus staged, unstaged, and untracked worktree sections. Inspect every section and classify findings using the taxonomy below. The review **streams**: emit each finding the instant you raise it as one JSON `Finding` object — the skill pipes each finding through `journal_emit.py finding-reported` (the per-finding validity gate) and appends it; on a non-zero exit, fix the issue surfaced in stderr and re-emit that finding. Do not gather findings into one document and emit them at the end.
 
 Report findings only — no praise, no open questions, no commentary that is neither a finding nor a tracking commitment.
 
@@ -17,7 +17,6 @@ Report findings only — no praise, no open questions, no commentary that is nei
 - Severity
 - Finding labels
 - Completeness
-- Acknowledgements
 - No findings
 - Output shape
 - Rule citation
@@ -28,14 +27,14 @@ Review the whole diff bundle — every emitted section, including committed, sta
 
 ## Coverage procedure
 
-Before emitting the JSON document, enumerate the review surface:
+Before raising any finding, enumerate the review surface:
 
 1. Every changed file in every emitted diff-bundle section.
 2. Every touched spec assertion and its linked `[test]`, `[eval]`, or `[audit]` evidence.
 3. Every changed test or eval case and the source contract it claims to exercise.
 4. Every changed implementation file and the governing spec, ADR, PDR, or standards rule it must satisfy.
 
-Visit each item before composing findings. A pass that samples one obvious defect and stops is incomplete.
+Visit every item; emit each finding the instant you raise it. A pass that samples one obvious defect and stops is incomplete.
 
 ## Defect-class handling
 
@@ -73,39 +72,30 @@ Judge validity and severity only. Whether each `debt` finding is fixed in this P
 
 ## Finding labels
 
-The render templates label every finding uniformly. Populate the `message` and `action` fields so the rendered output matches:
+Every finding carries the same fields. Populate `message` and `action` so the rendered surface is complete:
 
-- Both `blocking` and `debt` require an action. The render emits `Reference: <rule>` from the `rule` field, `Evidence: <message>` from `message`, and `Required: <action>` from `action`. Populate `message` with the diff quote and failure explanation; populate `action` with the concrete change.
+- Both `blocking` and `debt` require an action. Populate `message` with the diff quote and failure explanation; populate `action` with the concrete change. The `rule` field carries the cited rule.
 
 ## Completeness
 
-Each review pass is independent and self-contained — there is no cross-pass continuity. Surface every finding the changeset exhibits in the first pass against that changeset; a finding missed on this pass has no second chance unless the diff itself changes. Read the diff once, methodically, across all categories before composing the document.
-
-## Acknowledgements
-
-Emit at least one acknowledgement when the changeset makes a positive change — a defect fixed, a test added, a refactor that improves clarity, a doc that explains a non-obvious behaviour. Acknowledgements are short strings; the author reads them as confirmation that the review noticed the good as well as the bad.
+Each review pass is independent and self-contained — there is no cross-pass continuity. Surface every finding the changeset exhibits in the first pass against that changeset; a finding missed on this pass has no second chance unless the diff itself changes. Read the diff once, methodically, across all categories, emitting each finding the instant you raise it.
 
 ## No findings
 
-When the changeset has no `blocking` or `debt` findings, say so plainly — the document carries the observed findings (or an empty `findings` array) plus any acknowledgements. The reviewer emits no decision or verdict; each consumer applies its own policy (by validity and phase, never by severity). NEVER invent lower-priority findings to prove the review happened.
+When the changeset has no `blocking` or `debt` findings, emit no finding objects — the run records scope and completion only, and that empty result is the plain statement that the change is clean. A review carries findings only: no summary, no acknowledgement, no praise. The reviewer emits no decision or verdict; each consumer applies its own policy (by validity and phase, never by severity). NEVER invent lower-priority findings to prove the review happened.
 
 ## Output shape
 
-Emit exactly one JSON document conforming to the canonical schema. Required keys:
+Emit each finding as one JSON `Finding` object the instant you raise it — never a batch document gathering all findings. The skill's `journal_emit.py finding-reported` parses each finding and owns the journal envelope; you emit the `Finding` object only. Each `Finding` object carries:
 
-- `schema_version` — the integer schema version (the policy module declares the current value as a module constant).
-- `summary` — a free-form paragraph the renderer surfaces at the top of `review.md`.
-- `findings` — an array of finding objects. Each finding carries `id`, `concern`, `severity`, `file`, `line`, `rule`, `message`, `action`.
-- `acknowledgements` — an array of strings (may be empty).
-
-Findings must use the wire values declared by the policy module:
-
+- `id` — a stable identifier of the form `F-NNN` so the finding can be referenced unambiguously.
 - `concern` ∈ `consistency`, `security`, `performance`, `evidence`, `standards`, `architecture`.
 - `severity` ∈ `blocking`, `debt`.
+- `file`, `line` — the cited location.
+- `rule` — the cited rule (see Rule citation).
+- `message`, `action` — the evidence and the required change.
 
-Assign each finding a stable identifier of the form `F-NNN` so it can be referenced unambiguously.
-
-Do not embed the diff, the prompt, or any other side data inside the JSON document. The document is the structured judgment only.
+There is no top-level `schema_version` or `findings` array to emit — those belong to the document-level schema the streaming review does not produce. Do not embed the diff, the prompt, or any other side data inside the `Finding` object. The object is the structured judgment only.
 
 ## Rule citation
 
@@ -113,7 +103,7 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 
 - `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS>:<n>` — a spec assertion under the spec tree.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
-- `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule resolved by the arbiter against the plugin roots available to the current runtime.
+- `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule, resolved against the plugin roots available to the current runtime.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention rule.
 
 Before citing a rule:
@@ -122,5 +112,5 @@ Before citing a rule:
 - Treat rules recalled from system prompts, user/global instructions outside the repository, prior sessions, or training as invalid review citations.
 - Drop the finding when the candidate rule cannot be located; do not downgrade it or report it with a weaker citation.
 - Emit a standards finding about comment length or docstring length only when that exact constraint appears in the repository's own `CLAUDE.md`, `AGENTS.md`, loaded standards skill, or other governance file.
-- Never use relative `SKILL.md:<rule-slug>` citations — they are not mechanically verifiable by the arbiter.
+- Never use relative `SKILL.md:<rule-slug>` citations — they are not uniquely resolvable to a file.
 - Never populate it with free-form prose, the required action, the tracking location, or an invented label. The Required change goes in `action`. Inventing a citation that does not name a real rule in the loaded context is a finding this skill must not produce.

@@ -1,5 +1,18 @@
 # PLAN: Verification run-journal migration
 
+## DONE: streaming implementation (phase 2)
+
+`13-run-journal.adr.md`, `verification.md`, and `18-journal-projection.enabler/journal-projection.md` declare that a run **streams** its events live — opens the journal, appends each domain event at the moment the run reaches it (`scope.entered` → `scope.advanced` per unit of scope examined → `finding.reported` the instant raised → `run.completed`), and seals — per `spx/15-audit-result-delivery.pdr.md`. Phase 2 landed the implementation against those specs:
+
+1. **Shared projection.** `build_events(run)` is replaced by four per-event builders (`scope_entered_event`, `scope_advanced_event`, `finding_reported_event`, `run_completed_event`) plus the new `verification.scope.advanced` event type. `render_surface` renders any prefix (partial in-flight or sealed); `compute_overall` unchanged. Tests rewritten.
+2. **Review.** `journal_emit.py` exposes per-event subcommands (`scope-entered`, `scope-advanced`, `finding-reported`, `run-completed`); `review_result.parse_finding_json` is the per-finding validity gate; the SKILL, `changes-reviewer` agent, `review-prompt.md`, node spec, `21-script-decomposition.adr.md`, tests, and wrapper-protocol eval stream per-finding.
+3. **Audit.** The orchestrator still aggregates the per-language children into the wrapper verdict (the verdict artifact + cross-run-fold key) but streams the journal per partition: `scope-entered`, `determinism-row`, `partition-events` per partition, `run-completed`. `17-auditing.adr.md` + the node spec carry the streaming ALWAYS and the NEVER-batch.
+
+### Remaining streaming follow-ups (not blocking)
+
+- **True in-flight interleaving for audit.** Phase 4 streams per-partition *after* dispatch (the children are collected in `$CHILDREN_DIR`, then streamed). Genuine in-flight legibility during the dispatch phase would append each partition's events as that partition's `audit-{lang}` subagent returns, moving journal-open + `scope-entered` before the dispatch loop. Deferred because it restructures the audit phase flow; the per-partition appends already remove the single batch dump.
+- **Stream eval coverage.** The wrapper-protocol eval now lists the streaming subcommands; an audit equivalent asserting `scope.advanced` per partition between the floor and ceiling is not yet authored.
+
 ## Target
 
 `spx journal` is the source of truth for every agentic verification run. Audit and review open one run, append CloudEvents, seal it, read the sealed event prefix, and compute all verdict/check/comment surfaces as consumer-side projections. The journal backend is selected at the edge; skills do not name storage paths or parse rendered comments as state.

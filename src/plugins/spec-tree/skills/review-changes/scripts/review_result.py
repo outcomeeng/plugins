@@ -9,10 +9,12 @@ review-changes skill produces. Declares:
 - Frozen ``Finding`` and ``ReviewResult`` dataclasses — values that cross
   the parse → validate → render boundary.
 - ``ReviewResultValidationError`` — raised on every schema violation.
-- ``parse_json``, ``to_json_dict``, ``from_json_dict`` — the parser entry
-  points. ``parse_json`` validates the schema before returning, so direct
-  Python callers that bypass the arbiter CLI still surface malformed
-  documents as exceptions.
+- ``parse_json``, ``parse_finding_json``, ``to_json_dict``,
+  ``from_json_dict`` — the parser entry points. ``parse_finding_json``
+  validates one streamed finding (the per-finding validity gate the
+  ``journal_emit.py finding-reported`` caller invokes); ``parse_json``
+  validates a whole document. Both surface malformed input as exceptions
+  before any journal append.
 
 Stdlib-only. Mirrors the verdict-toolchain precedent in
 ``plugins/spec-tree/skills/audit/scripts/verdict.py``.
@@ -25,6 +27,10 @@ Tested with:
 - Unknown severity and concern values -> names the value and allowed set.
 - Malformed JSON -> raises ``ReviewResultValidationError``.
 - Round trips through ``to_json_dict`` and ``from_json_dict`` -> preserve equality.
+
+A review carries findings only — no summary, acknowledgement, decision, or
+verdict field. The journal-rendered findings surface is the review's whole
+human surface, the same shape the audit kind produces.
 """
 
 from __future__ import annotations
@@ -36,7 +42,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, cast
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class Severity(StrEnum):
@@ -77,9 +83,10 @@ class Concern(StrEnum):
 class ReviewResultValidationError(ValueError):
     """Raised when a review-result document does not conform to the schema.
 
-    Used by both the parser entry point and the arbiter CLI; agents
-    consume the error message verbatim to correlate the failure with the
-    JSON document they just emitted.
+    Raised by the parser ``journal_emit.py finding-reported`` invokes per
+    streamed finding; agents consume the error message verbatim to correlate
+    the failure with the finding they just emitted and re-emit before that
+    finding's journal append.
     """
 
 
@@ -107,24 +114,21 @@ class Finding:
 class ReviewResult:
     """A complete review result.
 
-    Holds the (possibly empty) tuple of findings, an acknowledgement
-    list, a free-form summary, and the schema version. Frozen so the
-    parse → validate hand-off cannot mutate the value silently.
+    Holds the (possibly empty) tuple of findings and the schema version.
+    A review carries findings only — no summary or acknowledgement field —
+    so the journal-rendered findings surface is the review's whole surface.
+    Frozen so the parse → validate hand-off cannot mutate the value silently.
     """
 
     schema_version: int
-    summary: str
     findings: tuple[Finding, ...]
-    acknowledgements: tuple[str, ...]
 
 
-# Required keys at the document level. ``acknowledgements`` and
-# ``findings`` are required; both may be empty lists.
+# Required keys at the document level. ``findings`` is required and may be
+# an empty list.
 _REQUIRED_DOCUMENT_KEYS = (
     "schema_version",
-    "summary",
     "findings",
-    "acknowledgements",
 )
 
 # Required keys per finding. ``action`` carries the Required change for
@@ -185,9 +189,11 @@ def parse_json(text: str) -> ReviewResult:
     3. ``from_json_dict`` — convert to the frozen dataclass, parsing
        enums and findings along the way.
 
-    Validation is enforced inside this function (not only in the CLI) so
-    Python callers that bypass ``validate_review_result.py`` still
-    surface violations. The CLI is a thin shell over this parser.
+    Validation is enforced inside this function so a caller validating a
+    whole document surfaces violations before use; the streaming review
+    validates one finding at a time through ``parse_finding_json``. The
+    journal channel's append and seal are the durable validity signal for the
+    recorded run.
     """
     try:
         raw = json.loads(text)
@@ -198,6 +204,25 @@ def parse_json(text: str) -> ReviewResult:
             "review-result document must be a JSON object"
         )
     return from_json_dict(raw)
+
+
+def parse_finding_json(text: str) -> Finding:
+    """Parse and validate one finding JSON object into a :class:`Finding`.
+
+    The streaming review appends a ``finding.reported`` event the instant it
+    raises each finding, so it emits one finding JSON document at a time.
+    This is the per-finding validity gate ``journal_emit.py finding-reported``
+    invokes before the event is appended — the same enum, required-key, and
+    ``rule``-citation checks ``parse_json`` applies to a whole document,
+    scoped to one finding. Every violation raises
+    :class:`ReviewResultValidationError`, so a malformed finding is surfaced
+    before any journal append, never appended.
+    """
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ReviewResultValidationError(f"invalid JSON: {exc.msg}") from exc
+    return _parse_finding(raw)
 
 
 def from_json_dict(data: dict[str, Any]) -> ReviewResult:
@@ -215,23 +240,14 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
             f"unsupported schema_version {schema_version}; expected {SCHEMA_VERSION}"
         )
 
-    summary = _require_str(data, "summary")
-
     findings_raw = data["findings"]
     if not isinstance(findings_raw, list):
         raise ReviewResultValidationError("findings must be a JSON array")
     findings = tuple(_parse_finding(entry) for entry in findings_raw)
 
-    acks_raw = data["acknowledgements"]
-    if not isinstance(acks_raw, list):
-        raise ReviewResultValidationError("acknowledgements must be a JSON array")
-    acknowledgements = tuple(_require_str_in_list(acks_raw, "acknowledgements"))
-
     return ReviewResult(
         schema_version=schema_version,
-        summary=summary,
         findings=findings,
-        acknowledgements=acknowledgements,
     )
 
 
@@ -244,9 +260,7 @@ def to_json_dict(result: ReviewResult) -> dict[str, Any]:
     """
     return {
         "schema_version": result.schema_version,
-        "summary": result.summary,
         "findings": [_finding_to_dict(f) for f in result.findings],
-        "acknowledgements": list(result.acknowledgements),
     }
 
 
@@ -565,14 +579,3 @@ def _require_int(data: dict[str, Any], key: str) -> int:
             f"{key!r} must be an integer, got {type(value).__name__}"
         )
     return cast(int, value)
-
-
-def _require_str_in_list(items: list[Any], field: str) -> list[str]:
-    out: list[str] = []
-    for index, entry in enumerate(items):
-        if not isinstance(entry, str):
-            raise ReviewResultValidationError(
-                f"{field}[{index}] must be a string, got {type(entry).__name__}"
-            )
-        out.append(entry)
-    return out
