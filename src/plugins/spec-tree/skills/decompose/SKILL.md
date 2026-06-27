@@ -20,6 +20,8 @@ Accept exactly one target:
 - `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
+If no target is provided, stop before reading or writing product files. State that `/decompose` requires exactly one target and give the two accepted forms above.
+
 Read before composing — read these directly each run. A present `<SPEC_TREE_FOUNDATION>` marker records only that the foundation was loaded once; it never proves the ordering model is active in the current reasoning, so index assignment reads `ordering-rules.md` here rather than trusting the marker:
 
 - `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
@@ -74,6 +76,8 @@ For a node target, decompose when at least one trigger applies:
 
 Do not decompose when a single coherent hypothesis or enables statement covers all assertions, assertions are tightly coupled and meaningless in isolation, or decomposition would create children with only 1-2 trivial assertions.
 
+This no-decomposition rule applies only to one coherent concern. When the input names an aggregate domain or capability and a concrete behavior inside it, analyze them as parent and child. Create both levels from the first slice when the child has its own validation contract; never collapse the child into the aggregate parent merely because no sibling child exists yet.
+
 </step>
 
 <step name="clarity_gate">
@@ -119,8 +123,11 @@ Use these seam-finding heuristics:
 - Different data domains, runtime surfaces, commands, or validation mechanisms can indicate separate concerns.
 - Setup, packaging, state, credentials, safety, or workflow substrate can indicate enabler concerns.
 - Behavior slices can be valid vertical slices when each slice has its own testable contract and later slices extend or depend on earlier contracts.
+- An aggregate domain plus its first concrete behavior is two concerns when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions, and the concrete behavior owns an independently validated contract.
 - Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
 - Assertions that span multiple children stay in the parent as cross-cutting assertions.
+
+When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Record deferred siblings or reserved horizon in `PLAN.md`; keep cross-slice assertions on the parent and child-specific assertions on the child.
 
 Present concern groupings to the user before writing files.
 
@@ -251,6 +258,7 @@ Check each criterion:
 - [ ] Delivery substrate and evidence strategy accounted for
 - [ ] Concern groupings presented before writing files
 - [ ] No child has only 1-2 trivial assertions
+- [ ] Any named aggregate boundary with an independently validated first concrete slice became parent plus child, with deferred siblings or reserved horizon recorded when known
 - [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
 - [ ] Shared enablers have at least two dependent children
 - [ ] Ordering-evidence matrix recorded before index assignment
@@ -259,7 +267,7 @@ Check each criterion:
 - [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
 - [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
 - [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
-- [ ] Children collectively cover the parent or product scope
+- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in `PLAN.md`
 - [ ] Assertions are not lost during redistribution
 - [ ] Spec files use atemporal voice
 - [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
@@ -314,6 +322,12 @@ Claude decomposed under a node that already held `spx/.../21-journal.enabler`, p
 
 How to avoid: Run the disposition checkpoint before assigning any index. Treat a new child as an independent peer at the same index as an existing sibling unless the matrix proves one constrains the other — an existing lower-index sibling is never a precedent for the next slot.
 
+**Failure 8: Collapsed the first concrete slice into the aggregate**
+
+Claude created only a parent domain node when the request named an aggregate domain plus its first concrete behavior. The parent then carried behavior-specific assertions, so adding the next behavior would require splitting the parent later and moving assertions that were specific from the start.
+
+How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record deferred sibling horizon in `PLAN.md` when the later slices are known.
+
 </failure_modes>
 
 <anti_patterns>
@@ -342,6 +356,7 @@ Decomposition is complete when:
 - [ ] Clarity gate completed or `/interview` used
 - [ ] Concern boundaries and node types assigned
 - [ ] Shared enablers extracted only for multi-child dependencies
+- [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
 - [ ] Ordering-evidence matrix recorded
 - [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
 - [ ] Sparse indices assigned from ordering evidence and selected horizon
