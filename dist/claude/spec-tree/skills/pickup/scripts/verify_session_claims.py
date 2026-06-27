@@ -26,10 +26,11 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path, PurePosixPath
-from typing import Final, Protocol, cast
+from typing import Final, Protocol, TypeGuard, cast
 
 
 COMMAND_UNAVAILABLE_EXIT: Final = 127
+type JsonScalar = str | int | float | bool | None
 
 
 class Verdict(StrEnum):
@@ -256,9 +257,37 @@ def check_node_status(session: Session, runner: CommandRunner) -> list[ClaimVerd
             )
             continue
         verdicts.append(
-            ClaimVerdict(ClaimKind.NODE_STATUS, node, Verdict.CONFIRMED, out.strip())
+            ClaimVerdict(
+                ClaimKind.NODE_STATUS,
+                node,
+                Verdict.CONFIRMED,
+                _node_status_evidence(node, out),
+            )
         )
     return verdicts
+
+
+def _node_status_evidence(node: str, stdout: str) -> str:
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        return stdout.strip()
+    if not isinstance(payload, dict):
+        return stdout.strip()
+    summary: dict[str, JsonScalar] = {}
+    for key in ("node", "path", "spec", "status", "state", "result"):
+        if key not in payload:
+            continue
+        value = payload.get(key)
+        if _is_json_scalar(value):
+            summary[key] = value
+    if "node" not in summary:
+        summary["node"] = node
+    return json.dumps(summary, sort_keys=True)
+
+
+def _is_json_scalar(value: object) -> TypeGuard[JsonScalar]:
+    return value is None or isinstance(value, str | int | float | bool)
 
 
 def check_uncommitted(session: Session, runner: CommandRunner) -> ClaimVerdict | None:

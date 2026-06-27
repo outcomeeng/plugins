@@ -172,6 +172,59 @@ def test_verification_is_read_only_and_uses_spec_status() -> None:
         assert dirty.strip() == "", "verification must not mutate the working tree"
 
 
+def test_node_status_evidence_keeps_target_node_scalar_fields_only() -> None:
+    module = load_verify_session_claims_module()
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
+            | {
+                ("spx", "spec", "status"): (
+                    0,
+                    json.dumps(
+                        {
+                            "node": "spx/21-x.enabler",
+                            "path": "spx/21-x.enabler/x.md",
+                            "spec": "spx/21-x.enabler/x.md",
+                            "state": "Specified",
+                            "status": "passing",
+                            "result": True,
+                            "children": [
+                                {
+                                    "node": "spx/21-x.enabler/32-y.enabler",
+                                    "status": "failing",
+                                }
+                            ],
+                            "messages": ["nested list values are excluded"],
+                            "metadata": {
+                                "summary": "nested object values are excluded"
+                            },
+                        }
+                    ),
+                    "",
+                )
+            },
+        )
+
+        verdicts = module.verify(SESSION_ID, repo, runner)
+
+        node_status = [
+            verdict
+            for verdict in verdicts
+            if verdict.kind == module.ClaimKind.NODE_STATUS
+        ]
+        assert len(node_status) == 1
+        evidence = json.loads(node_status[0].evidence)
+        assert evidence == {
+            "node": "spx/21-x.enabler",
+            "path": "spx/21-x.enabler/x.md",
+            "result": True,
+            "spec": "spx/21-x.enabler/x.md",
+            "state": "Specified",
+            "status": "passing",
+        }
+
+
 def test_invalid_session_metadata_is_unverifiable() -> None:
     module = load_verify_session_claims_module()
     with accepted_git_context() as repo:

@@ -12,6 +12,7 @@ mocking: the runner is an explicit injected double.
 
 from __future__ import annotations
 
+import json
 import pathlib
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -218,6 +219,39 @@ def test_node_status_surfaces_changed_value() -> None:
 
         assert verdict.verdict == Verdict.CONFIRMED
         assert "failing" in verdict.evidence
+
+
+def test_node_status_evidence_excludes_child_tree() -> None:
+    with accepted_git_context() as repo:
+        runner = RecordingRunner(
+            repo=repo,
+            scripted=session_command_scripts(specs=("spx/21-x.enabler/x.md",))
+            | {
+                SPX_STATUS: (
+                    0,
+                    json.dumps(
+                        {
+                            "node": "spx/21-x.enabler",
+                            "status": "passing",
+                            "children": [
+                                {
+                                    "node": "spx/21-x.enabler/32-y.enabler",
+                                    "status": "failing",
+                                }
+                            ],
+                        }
+                    ),
+                    "",
+                )
+            },
+        )
+
+        verdict = _only(module.verify(SESSION_ID, repo, runner), ClaimKind.NODE_STATUS)
+
+        assert verdict.verdict == Verdict.CONFIRMED
+        assert "passing" in verdict.evidence
+        assert "32-y.enabler" not in verdict.evidence
+        assert "children" not in verdict.evidence
 
 
 def test_external_id_surfaces_changed_state() -> None:
