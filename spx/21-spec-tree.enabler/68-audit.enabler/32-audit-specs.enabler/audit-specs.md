@@ -1,4 +1,4 @@
-# Spec Auditing
+# Audit Specs
 
 PROVIDES an audit methodology verifying a spec node declares a well-formed node whose assertions carry a valid verification-type tag that fits each claim — including that a claim about authored prose or documentation content never carries `[test]`
 SO THAT all spec-tree projects

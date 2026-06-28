@@ -9,11 +9,16 @@ audit wrapper verdict onto that projection's generic ``RunResult`` so the
 audit run records and renders through the one shared projection rather than
 re-implementing event construction, the rollup, or the render.
 
-Two CLI subcommands drive the stateless local emit:
+Per-event CLI subcommands drive the stateless local emit:
 
-- ``build-events`` reads a wrapper verdict (``verdict.py`` JSON) on stdin and
-  prints the ordered ``spx journal`` channel event inputs as a JSON array; the
-  consuming skill appends each to the channel.
+- ``metadata`` validates run identity fields and prints the JSON object passed
+  to event subcommands.
+- ``scope-entered`` prints the opening scope-entered event from metadata.
+- ``scope-advanced`` prints a progress event naming one completed partition.
+- ``findings-reported`` reads one verdict JSON on stdin and prints one
+  finding-reported event per projected finding.
+- ``run-completed`` reads the streamed event prefix on stdin and prints the
+  terminal run-completed event from metadata and that prefix.
 - ``render`` reads a sealed event prefix (``spx journal read`` JSON) on stdin
   and prints the run's rolled-up overall and the human-readable surface.
 
@@ -38,9 +43,9 @@ import importlib.util
 import json
 import pathlib
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from types import ModuleType
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import verdict as verdict_schema
@@ -103,6 +108,27 @@ class _ProjectedFinding:
     message: str
 
 
+@dataclass(frozen=True)
+class MetadataValues:
+    """Raw run metadata values before shared projection validation."""
+
+    target: str
+    scope_hash: str
+    branch_name: str
+    branch_slug: str
+    head_sha: str
+    base_ref: str
+    base_sha: str
+    config_digest: str
+    participants: tuple[str, ...]
+    scope: dict[str, Any]
+    started_at: str
+    completed_at: str
+    output_paths: tuple[str, ...]
+    target_kind: object
+    pull_request_number: int | None = None
+
+
 def _map_finding(finding: verdict_schema.Finding) -> _ProjectedFinding:
     # The verdict and journal severities share member names (REJECT/WARNING/
     # INFO), so the journal severity is the projection member of the same name
@@ -155,115 +181,98 @@ def _project_child(child: verdict_schema.Verdict) -> list[_ProjectedFinding]:
     return findings
 
 
-def _required_metadata(wrapper: verdict_schema.Verdict, key: str) -> str:
-    value = wrapper.metadata.get(key)
-    if value is None or value == "":
-        raise ValueError(f"wrapper metadata {key!r} is required")
-    return value
+def metadata_from_values(values: MetadataValues) -> object:
+    """Build validated run metadata for streaming audit events."""
+    payload: dict[str, object] = {
+        "target": values.target,
+        jp.RUN_STATE_SCOPE_HASH: values.scope_hash,
+        jp.RUN_STATE_BRANCH_NAME: values.branch_name,
+        jp.RUN_STATE_BRANCH_SLUG: values.branch_slug,
+        jp.RUN_STATE_TARGET_KIND: str(jp.JournalTargetKind(values.target_kind)),
+        jp.RUN_STATE_HEAD_SHA: values.head_sha,
+        jp.RUN_STATE_BASE_REF: values.base_ref,
+        jp.RUN_STATE_BASE_SHA: values.base_sha,
+        jp.RUN_STATE_CONFIG_DIGEST: values.config_digest,
+        jp.RUN_STATE_PARTICIPANTS: list(values.participants),
+        jp.RUN_STATE_SCOPE: values.scope,
+        jp.RUN_STATE_STARTED_AT: values.started_at,
+        jp.RUN_STATE_COMPLETED_AT: values.completed_at,
+        jp.RUN_STATE_OUTPUT_PATHS: list(values.output_paths),
+    }
+    if values.pull_request_number is not None:
+        payload[jp.RUN_STATE_PULL_REQUEST_NUMBER] = values.pull_request_number
+    return jp.run_metadata_from_json(json.dumps(payload))
 
 
-def _optional_metadata(wrapper: verdict_schema.Verdict, key: str) -> str | None:
-    value = wrapper.metadata.get(key)
-    if value == "":
-        raise ValueError(f"wrapper metadata {key!r} must be non-empty when present")
-    return value
-
-
-def _metadata_json_object(wrapper: verdict_schema.Verdict, key: str) -> dict:
-    raw = _required_metadata(wrapper, key)
-    value = json.loads(raw)
-    if not isinstance(value, dict):
-        raise ValueError(f"wrapper metadata {key!r} must be a JSON object")
-    return value
-
-
-def _metadata_json_string_array(
-    wrapper: verdict_schema.Verdict,
-    key: str,
-    *,
-    default: tuple[str, ...] | None = None,
-) -> tuple[str, ...]:
-    raw = wrapper.metadata.get(key)
-    if raw is None:
-        if default is None:
-            raise ValueError(f"wrapper metadata {key!r} is required")
-        return default
-    value = json.loads(raw)
-    if not isinstance(value, list) or not all(
-        isinstance(item, str) and item for item in value
-    ):
-        raise ValueError(
-            f"wrapper metadata {key!r} must be a JSON array of non-empty strings"
-        )
-    return tuple(value)
-
-
-def _metadata_target_kind(wrapper: verdict_schema.Verdict) -> object:
-    value = wrapper.metadata.get(
-        jp.RUN_STATE_TARGET_KIND, str(jp.JournalTargetKind.BRANCH)
+def scope_entered_event(
+    metadata: object, *, now: str, attempt: int = 1
+) -> dict[str, object]:
+    """Build the scope-entered event from the audit run metadata."""
+    return jp.scope_entered_event(
+        jp.run_from_metadata(metadata), now=now, attempt=attempt
     )
-    return jp.JournalTargetKind(value)
 
 
-def _metadata_pull_request_number(wrapper: verdict_schema.Verdict) -> int | None:
-    value = _optional_metadata(wrapper, jp.RUN_STATE_PULL_REQUEST_NUMBER)
-    if value is None:
-        return None
-    parsed = int(value)
-    if parsed <= 0:
-        raise ValueError(
-            f"wrapper metadata {jp.RUN_STATE_PULL_REQUEST_NUMBER!r} must be positive"
-        )
-    return parsed
+def scope_advanced_event(unit: str, *, now: str, attempt: int = 1) -> dict[str, object]:
+    """Build a scope-advanced event for one completed audit partition."""
+    return jp.scope_advanced_event(unit, now=now, attempt=attempt)
 
 
-def events_for_wrapper(
-    wrapper: verdict_schema.Verdict, *, now: str, attempt: int = 1
+def finding_events_for_verdict(
+    node: verdict_schema.Verdict, *, now: str, attempt: int = 1
 ) -> list[dict[str, object]]:
-    """Map an audit wrapper verdict onto the ordered journal event inputs.
-
-    The wrapper's orchestrator rows and per-language children become the run's
-    findings — each real finding mapped onto the projection's severity
-    vocabulary, every failing or unknown contributor without a representative
-    finding contributing a synthesized one — so the event prefix rolls up to
-    the toolchain's overall over the same wrapper.
-    """
-    projected = _project_verdict(wrapper)
-    run = jp.RunResult(
-        target=wrapper.target,
-        scope_hash=_required_metadata(wrapper, jp.RUN_STATE_SCOPE_HASH),
-        branch_name=_required_metadata(wrapper, jp.RUN_STATE_BRANCH_NAME),
-        branch_slug=_required_metadata(wrapper, jp.RUN_STATE_BRANCH_SLUG),
-        head_sha=_required_metadata(wrapper, jp.RUN_STATE_HEAD_SHA),
-        base_ref=_required_metadata(wrapper, jp.RUN_STATE_BASE_REF),
-        config_digest=_required_metadata(wrapper, jp.RUN_STATE_CONFIG_DIGEST),
-        participants=_metadata_json_string_array(
-            wrapper, jp.RUN_STATE_PARTICIPANTS, default=(wrapper.skill,)
-        ),
-        scope=_metadata_json_object(wrapper, jp.RUN_STATE_SCOPE),
-        started_at=wrapper.metadata.get(jp.RUN_STATE_STARTED_AT, now),
-        completed_at=wrapper.metadata.get(jp.RUN_STATE_COMPLETED_AT, now),
-        output_paths=_metadata_json_string_array(
-            wrapper, jp.RUN_STATE_OUTPUT_PATHS, default=()
-        ),
-        target_kind=_metadata_target_kind(wrapper),
-        base_sha=_required_metadata(wrapper, jp.RUN_STATE_BASE_SHA),
-        pull_request_number=_metadata_pull_request_number(wrapper),
-        findings=tuple(
+    """Build finding-reported events for one streamed audit verdict."""
+    return [
+        jp.finding_reported_event(
             jp.Finding(
                 file=finding.file,
                 line=finding.line,
                 rule=finding.rule,
                 severity=jp.Severity(finding.severity),
                 message=finding.message,
-            )
-            for finding in projected
-        ),
-    )
-    # ``jp`` is the file-relative-loaded shared projection (Any to the type
-    # checker); ``build_events`` returns the channel event-input list.
-    return cast(
-        "list[dict[str, object]]", jp.build_events(run, now=now, attempt=attempt)
+            ),
+            now=now,
+            attempt=attempt,
+        )
+        for finding in _project_verdict(node)
+    ]
+
+
+def finding_events_for_child(
+    child: verdict_schema.Verdict, *, now: str, attempt: int = 1
+) -> list[dict[str, object]]:
+    """Build finding events for a streamed child verdict contribution."""
+    return [
+        jp.finding_reported_event(
+            jp.Finding(
+                file=finding.file,
+                line=finding.line,
+                rule=finding.rule,
+                severity=jp.Severity(finding.severity),
+                message=finding.message,
+            ),
+            now=now,
+            attempt=attempt,
+        )
+        for finding in _project_child(child)
+    ]
+
+
+def run_completed_event(
+    metadata: object,
+    prefix: list[dict[str, object]],
+    *,
+    completed_at: str,
+    now: str,
+    attempt: int = 1,
+) -> dict[str, object]:
+    """Build the terminal run-completed event from the streamed prefix."""
+    run = replace(jp.run_from_metadata(metadata), completed_at=completed_at)
+    return jp.run_completed_event(
+        run,
+        status=jp.terminal_status(jp.compute_overall(prefix)),
+        now=now,
+        attempt=attempt,
     )
 
 
@@ -275,13 +284,107 @@ def render_events(events: list[dict[str, object]]) -> dict[str, str]:
     }
 
 
-def _build_events(now: str, attempt: int) -> int:
-    # One event per line so the consuming skill appends each to the channel
-    # with one `spx journal append` per line, no array splitting.
-    wrapper = verdict.parse_json(sys.stdin.read())
-    for event in events_for_wrapper(wrapper, now=now, attempt=attempt):
-        sys.stdout.write(json.dumps(event) + "\n")
+def _emit_event(event: dict[str, object]) -> int:
+    sys.stdout.write(json.dumps(event) + "\n")
     return 0
+
+
+def _emit_metadata(args: argparse.Namespace) -> int:
+    try:
+        participants = _json_string_tuple(args.participants_json, name="participants")
+        scope = _json_object(args.scope_json, name="scope")
+        output_paths = _json_string_tuple(args.output_paths_json, name="output paths")
+        metadata = metadata_from_values(
+            MetadataValues(
+                target=args.target,
+                scope_hash=args.scope_hash,
+                branch_name=args.branch_name,
+                branch_slug=args.branch_slug,
+                head_sha=args.head_sha,
+                base_ref=args.base_ref,
+                base_sha=args.base_sha,
+                config_digest=args.config_digest,
+                participants=participants,
+                scope=scope,
+                started_at=args.started_at,
+                completed_at=args.completed_at,
+                output_paths=output_paths,
+                target_kind=args.target_kind,
+                pull_request_number=args.pull_request_number,
+            )
+        )
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    payload = {
+        "target": metadata.target,
+        jp.RUN_STATE_SCOPE_HASH: metadata.scope_hash,
+        jp.RUN_STATE_BRANCH_NAME: metadata.branch_name,
+        jp.RUN_STATE_BRANCH_SLUG: metadata.branch_slug,
+        jp.RUN_STATE_HEAD_SHA: metadata.head_sha,
+        jp.RUN_STATE_BASE_REF: metadata.base_ref,
+        jp.RUN_STATE_BASE_SHA: metadata.base_sha,
+        jp.RUN_STATE_CONFIG_DIGEST: metadata.config_digest,
+        jp.RUN_STATE_PARTICIPANTS: list(metadata.participants),
+        jp.RUN_STATE_SCOPE: dict(metadata.scope),
+        jp.RUN_STATE_STARTED_AT: metadata.started_at,
+        jp.RUN_STATE_COMPLETED_AT: metadata.completed_at,
+        jp.RUN_STATE_OUTPUT_PATHS: list(metadata.output_paths),
+        jp.RUN_STATE_TARGET_KIND: str(metadata.target_kind),
+    }
+    if metadata.pull_request_number is not None:
+        payload[jp.RUN_STATE_PULL_REQUEST_NUMBER] = metadata.pull_request_number
+    json.dump(payload, sys.stdout)
+    return 0
+
+
+def _scope_entered(args: argparse.Namespace) -> int:
+    try:
+        metadata = jp.run_metadata_from_json(args.metadata)
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    return _emit_event(
+        scope_entered_event(metadata, now=args.now, attempt=args.attempt)
+    )
+
+
+def _scope_advanced(args: argparse.Namespace) -> int:
+    return _emit_event(
+        scope_advanced_event(args.unit, now=args.now, attempt=args.attempt)
+    )
+
+
+def _findings_reported(args: argparse.Namespace) -> int:
+    try:
+        node = verdict.parse_json(sys.stdin.read())
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    for event in finding_events_for_child(node, now=args.now, attempt=args.attempt):
+        _emit_event(event)
+    return 0
+
+
+def _run_completed(args: argparse.Namespace) -> int:
+    try:
+        metadata = jp.run_metadata_from_json(args.metadata)
+        prefix = json.load(sys.stdin)
+    except (ValueError, json.JSONDecodeError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 1
+    if not isinstance(prefix, list):
+        sys.stderr.write("event prefix must be a JSON array\n")
+        return 1
+    return _emit_event(
+        run_completed_event(
+            metadata,
+            prefix,
+            completed_at=args.completed_at,
+            now=args.now,
+            attempt=args.attempt,
+        )
+    )
 
 
 def _render() -> int:
@@ -289,18 +392,79 @@ def _render() -> int:
     return 0
 
 
+def _json_object(text: str, *, name: str) -> dict[str, Any]:
+    value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object")
+    return value
+
+
+def _json_string_tuple(text: str, *, name: str) -> tuple[str, ...]:
+    value = json.loads(text)
+    if not isinstance(value, list) or not all(
+        isinstance(item, str) and item for item in value
+    ):
+        raise ValueError(f"{name} must be a JSON array of non-empty strings")
+    return tuple(value)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    build = subparsers.add_parser(
-        "build-events",
-        help="map a wrapper verdict (stdin) to spx journal event inputs (stdout)",
+    def _add_event_args(sub: argparse.ArgumentParser) -> None:
+        sub.add_argument("--now", required=True, help="UTC timestamp for the event")
+        sub.add_argument(
+            "--attempt", type=int, default=1, help="run attempt number (default 1)"
+        )
+
+    metadata = subparsers.add_parser(
+        "metadata",
+        help="validate run identity fields and print metadata JSON",
     )
-    build.add_argument("--now", required=True, help="UTC timestamp for every event")
-    build.add_argument(
-        "--attempt", type=int, default=1, help="run attempt number (default 1)"
+    metadata.add_argument("--target", required=True)
+    metadata.add_argument("--scope-hash", required=True)
+    metadata.add_argument("--branch-name", required=True)
+    metadata.add_argument("--branch-slug", required=True)
+    metadata.add_argument("--head-sha", required=True)
+    metadata.add_argument("--base-ref", required=True)
+    metadata.add_argument("--base-sha", required=True)
+    metadata.add_argument("--config-digest", required=True)
+    metadata.add_argument("--participants-json", required=True)
+    metadata.add_argument("--scope-json", required=True)
+    metadata.add_argument("--started-at", required=True)
+    metadata.add_argument("--completed-at", required=True)
+    metadata.add_argument("--output-paths-json", required=True)
+    metadata.add_argument("--target-kind", default=str(jp.JournalTargetKind.BRANCH))
+    metadata.add_argument("--pull-request-number", type=int, default=None)
+
+    scope_entered = subparsers.add_parser(
+        "scope-entered",
+        help="print the scope-entered event opening a streaming audit run",
     )
+    _add_event_args(scope_entered)
+    scope_entered.add_argument("--metadata", required=True)
+
+    scope_advanced = subparsers.add_parser(
+        "scope-advanced",
+        help="print a scope-advanced event naming one completed audit partition",
+    )
+    _add_event_args(scope_advanced)
+    scope_advanced.add_argument("--unit", required=True)
+
+    findings_reported = subparsers.add_parser(
+        "findings-reported",
+        help="read one verdict JSON and print finding-reported events",
+    )
+    _add_event_args(findings_reported)
+
+    run_completed = subparsers.add_parser(
+        "run-completed",
+        help="print the terminal run-completed event from streamed prefix JSON",
+    )
+    _add_event_args(run_completed)
+    run_completed.add_argument("--metadata", required=True)
+    run_completed.add_argument("--completed-at", required=True)
 
     subparsers.add_parser(
         "render",
@@ -308,8 +472,16 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    if args.command == "build-events":
-        return _build_events(args.now, args.attempt)
+    handlers = {
+        "metadata": _emit_metadata,
+        "scope-entered": _scope_entered,
+        "scope-advanced": _scope_advanced,
+        "findings-reported": _findings_reported,
+        "run-completed": _run_completed,
+    }
+    handler = handlers.get(args.command)
+    if handler is not None:
+        return handler(args)
     return _render()
 
 

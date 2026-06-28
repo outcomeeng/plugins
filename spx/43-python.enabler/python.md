@@ -4,7 +4,7 @@ PROVIDES the complete Python development workflow — architecture, testing, imp
 SO THAT Python projects using spec-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The python plugin contains 9 skills following the foundational + language-specific pattern: `/python-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/test-python`, `/code-python`, `/audit-python`, `/audit-python-tests`, `/architect-python`, `/audit-python-architecture`. The `audit-python*` skills carry no Python-specific auditor agent; the generic artifact-type auditors (`adr-auditor`, `test-evidence-auditor`, and the `/audit` family) compose them for the Python concerns in scope, per `spx/21-spec-tree.enabler/17-auditing.adr.md`.
+The python plugin contains 9 skills following the foundational + language-specific pattern: `/python-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/test-python`, `/code-python`, `/audit-python`, `/audit-python-tests`, `/architect-python`, `/audit-python-architecture`. The `audit-python*` skills carry no Python-specific auditor agent; the generic artifact-type auditors (`adr-auditor`, `test-evidence-auditor`, and the `/audit` family) compose them for the Python concerns in scope, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
 
 ## Assertions
 

@@ -6,11 +6,10 @@
 
 1. **Shared projection.** `build_events(run)` is replaced by four per-event builders (`scope_entered_event`, `scope_advanced_event`, `finding_reported_event`, `run_completed_event`) plus the new `verification.scope.advanced` event type. `render_surface` renders any prefix (partial in-flight or sealed); `compute_overall` unchanged. Tests rewritten.
 2. **Review.** `journal_emit.py` exposes per-event subcommands (`scope-entered`, `scope-advanced`, `finding-reported`, `run-completed`); `review_result.parse_finding_json` is the per-finding validity gate; the SKILL, `changes-reviewer` agent, `review-prompt.md`, node spec, `21-script-decomposition.adr.md`, tests, and wrapper-protocol eval stream per-finding.
-3. **Audit.** The orchestrator still aggregates the per-language children into the wrapper verdict (the verdict artifact + cross-run-fold key) but streams the journal per partition: `scope-entered`, `determinism-row`, `partition-events` per partition, `run-completed`. `17-auditing.adr.md` + the node spec carry the streaming ALWAYS and the NEVER-batch.
+3. **Audit.** The orchestrator still aggregates the per-language children into the wrapper verdict (the verdict artifact + cross-run-fold key) but streams the journal through `scope-entered`, partition `scope-advanced`, partition `finding-reported`, and terminal `run-completed` events. `17-audit.adr.md` and the node spec carry the streaming ALWAYS and the NEVER-batch.
 
-### Remaining streaming follow-ups (not blocking)
+### Remaining streaming follow-ups
 
-- **True in-flight interleaving for audit.** Phase 4 streams per-partition *after* dispatch (the children are collected in `$CHILDREN_DIR`, then streamed). Genuine in-flight legibility during the dispatch phase would append each partition's events as that partition's `audit-{lang}` subagent returns, moving journal-open + `scope-entered` before the dispatch loop. Deferred because it restructures the audit phase flow; the per-partition appends already remove the single batch dump.
 - **Stream eval coverage.** The wrapper-protocol eval now lists the streaming subcommands; an audit equivalent asserting `scope.advanced` per partition between the floor and ceiling is not yet authored.
 
 ## Target
@@ -31,9 +30,9 @@ Done in the current audit slice:
 
 Verification already run:
 
-- `pytest -q spx/21-spec-tree.enabler/tests/test_audit_journal_emit.mapping.l1.py spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/test_journal_projection.scenario.l1.py spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/test_journal_projection.mapping.l1.py spx/21-spec-tree.enabler/68-auditing.enabler/tests/test_auditing.scenario.l1.py` -> 118 passed.
+- `pytest -q spx/21-spec-tree.enabler/tests/test_audit_journal_emit.mapping.l1.py spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/test_journal_projection.scenario.l1.py spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/test_journal_projection.mapping.l1.py spx/21-spec-tree.enabler/68-audit.enabler/tests/test_auditing.scenario.l1.py` -> 118 passed.
 - Live raw channel smoke: `open -> append -> seal -> read -> render` returned the sealed event prefix.
-- Live audit adapter smoke: wrapper JSON -> `journal_emit.py build-events` -> `spx journal` -> `journal_emit.py render` returned `{"overall": "rejected", ...}` and synthesized the failing gate row correctly.
+- Focused audit adapter tests now stream wrapper metadata and per-partition child verdicts through `scope-entered`, `scope-advanced`, `findings-reported`, `run-completed`, and `render`, preserving the expected rollup and synthesizing failing or unknown child verdicts without representative findings.
 
 ## Next
 
@@ -54,7 +53,7 @@ Verification already run:
 
 A separate change (`spx/14-verification.pdr.md` — a dispatched agentic verifier runs no deterministic verification; the main agent passes validate/test/evaluate on the changeset before dispatch and CI re-runs them over the whole repository) removed the deterministic Phase 1 (`automated-gates`) and Phase 2 (`test-execution`) from the `/audit` orchestrator skill and from `audit-python`, `audit-typescript`, and `audit-rust`. That dropped the `automated-gates` and `test-execution` rows from those skills' `verdict_format`. When this migration rewires the language audit skills' verdict emission from the `verdict.py` object onto journal events, the row set is already reduced — `journal_emit.py` synthesizes a finding only for a failing row, so fewer rows simply means fewer synthesizable rows; the determinism-contract row remains the orchestrator's only wrapper row. Reconcile the language-auditor `verdict_format` rewrite against the post-removal row set, not the original three-row shape.
 
-A spec audit of `spx/21-spec-tree.enabler/68-auditing.enabler/auditing.md` surfaced an evidence-type-mismatch on the resolved/reopened finding-identity assertion: the universal "the projection computes finding identity as `(file, line, rule, message)`, excluding `id` and `severity`" carries `([test](tests/test_auditing.scenario.l1.py))` (scenario evidence) where `spx/21-spec-tree.enabler/17-auditing.adr.md` types the same claim `[property]`. The correct fix is not a marketplace property or compliance test: `compute_verdict_diff` (the resolved/reopened projection) is complex, test-bearing shipped-script logic, and `spx/12-shipped-scripting.adr.md` mandates that such logic — and its tests — move into the SPX CLI rather than accrete a heavier test in a shipped script. Resolve the mismatch as part of relocating `compute_verdict_diff` and its evidence to `spx journal`/the SPX CLI in this migration (the verdict-toolchain node deletion), where the property evidence lives; do not add a marketplace test for it.
+Marketplace scenario evidence now guards the resolved/reopened finding-identity rule by varying both `id` and `severity` while holding `(file, line, rule, message)` fixed. The later relocation still moves `compute_verdict_diff` and the full run-set property evidence into `spx journal` / the SPX CLI with the verdict-toolchain deletion, because `compute_verdict_diff` remains complex, test-bearing shipped-script logic governed by `spx/12-shipped-scripting.adr.md`.
 
 ## Safety Rules
 

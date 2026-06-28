@@ -2,11 +2,10 @@
 
 ## 1. Local census markers diverge from the GitHub CI clean-review message
 
-The local `review-changes` render emits a per-severity census for the no-findings state:
+The local `review-changes` render emits a per-severity count line for the no-findings state:
 
 ```text
-BLOCKING: none
-DEBT: none
+BLOCKING: 0, DEBT: 0
 ```
 
 The GitHub-hosted `spec-tree-review` workflow in `outcomeeng/gh-actions` emits a single composite clean-review line:

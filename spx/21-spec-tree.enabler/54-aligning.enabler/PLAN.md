@@ -15,7 +15,7 @@ changed-file set, report a changed higher-level declaration (product spec, PDR, 
 ancestor spec) that has no aligned lower spec under its constraining scope and no
 node-local `PLAN.md` grounding. Derive the changed-file set from the `scope-changeset`
 skill's `branch_scope(base, repo)` — never hand-roll git base-ref or diff derivation
-inside `/align`, per `spx/21-spec-tree.enabler/17-auditing.adr.md`.
+inside `/align`, per `spx/21-spec-tree.enabler/17-audit.adr.md`.
 
 ## Governing higher-level artifacts
 

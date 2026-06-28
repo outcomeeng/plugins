@@ -51,8 +51,8 @@ Every verification skill conforming to the contract in `verification.md` is an L
 
 **Affected skills:**
 
-- `32-auditing-nodes.enabler` (candidate future skill) — when authored, must adopt this pattern.
-- `spx/21-spec-tree.enabler/68-auditing.enabler/32-auditing-tests.enabler` — when implemented, eval evidence requirements are documented in its own PLAN.
+- `32-audit-nodes.enabler` (candidate future skill) — when authored, must adopt this pattern.
+- `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` — when implemented, eval evidence requirements are documented in its own PLAN.
 
 ## `review` vs `audit` vocabulary confusion in `verification-kinds.md` and `review-changes` prompt
 

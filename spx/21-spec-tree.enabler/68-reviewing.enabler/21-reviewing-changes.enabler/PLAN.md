@@ -25,11 +25,6 @@ The additional plan items below are implementation hardening tasks that are not 
    - Replace baked marketplace review workflow content with the reusable hosted workflow when the hosted workflow exposes the required prompt and render contract.
    - Keep local and hosted clean-review output aligned with the active `ISSUES.md` clean-review item.
 
-4. Add deterministic rule-citation existence validation.
-   - Extend validation beyond structural `Finding.rule` shape.
-   - Read the cited artifact and confirm the referenced rule slug or ordinal exists.
-   - Preserve the prompt-level grounded citation guard as model guidance; use deterministic per-finding validation for rejection.
-
 ## Coordination
 
 Run `/understand`, then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Reconcile this plan with `ISSUES.md` before implementation; `ISSUES.md` owns the two active defect threads.
