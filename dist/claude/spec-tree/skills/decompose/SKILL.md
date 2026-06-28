@@ -93,12 +93,13 @@ Before proposing child nodes, verify that product/root context, target spec, exi
 Use this coverage map:
 
 ```text
-Coverage: Scope Boundary | Delivery Substrate | Evidence Strategy | Architecture | Enabler/Outcome Type | Ordering Evidence | Index Budget | Refactor/Issue Handling
+Coverage: Scope Boundary | Decision Placement | Delivery Substrate | Evidence Strategy | Architecture | Enabler/Outcome Type | Ordering Evidence | Index Budget | Refactor/Issue Handling
 ```
 
 Each area is complete when:
 
 - **Scope Boundary** — included and excluded concerns are named, and the aggregate concern stays coherent.
+- **Decision Placement** — requested ADR/PDR locations are resolved to an owning directory when placement depends on concept ownership, stale node naming, node splitting, parent/child boundaries, or context-loading reach.
 - **Delivery Substrate** — infrastructure, runtime APIs, data sources, packaging, commands, validation surfaces, and safety boundaries needed to deliver the behavior are named or explicitly deferred.
 - **Evidence Strategy** — each concern has a verification type: automated test, review, validation command, workflow behavior, or a documented reason evidence stays deferred.
 - **Architecture** — architectural choices that govern the structure are captured by ADRs or an explicit open issue.
@@ -331,6 +332,12 @@ How to avoid: Run the disposition checkpoint before assigning any index. Treat a
 Claude created only a parent domain node when the request named an aggregate domain plus its first concrete behavior. The parent then carried behavior-specific assertions, so adding the next behavior would require splitting the parent later and moving assertions that were specific from the start.
 
 How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record deferred sibling horizon in `PLAN.md` when the later slices are known.
+
+**Failure 9: Left decision placement to authoring while ownership was unsettled**
+
+Claude asked `/author` to place exactly one PDR even though the concept crossed plausible owners and raised node identity questions. Authoring proposed a path from reach, then the operator had to ask whether `/decompose` had been invoked.
+
+How to avoid: treat ADR/PDR placement as decomposition work when the location depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach. Return the owning directory and scope boundary first; `/author` writes the decision record only after that structure is settled.
 
 </failure_modes>
 

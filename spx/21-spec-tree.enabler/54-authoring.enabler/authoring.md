@@ -12,6 +12,7 @@ CAN create correctly structured artifacts while preserving decomposition structu
 - ALWAYS: preserve the three-part hypothesis when authoring outcome nodes — outcome specs declare output, outcome, and impact ([review])
 - ALWAYS: invoke `/contextualize` on the parent directory before creating any node — sibling enumeration prevents index collisions ([review])
 - ALWAYS: create single nodes or decision records only when the parent, artifact type, and collision-free index are clear from loaded context ([review])
+- ALWAYS: delegate decision-record placement to `/decompose` before proposing a path when the owning directory depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach ([review])
 - ALWAYS: flag content misplacement when scenario, mapping, conformance, or property assertions appear in ADRs/PDRs or implementation details appear in specs ([review])
 - ALWAYS: when a request creates or restructures multiple sibling nodes, record the user's decomposition intent, constraints, and known issues in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decompose` with only the target address (`spx/` for product-root children or a node address for nested children) ([review])
 - ALWAYS: reference nodes, ADRs, and PDRs by full path from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([review])

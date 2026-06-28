@@ -89,6 +89,7 @@ This loads:
 - Use the distribution formula for new items: `i_k = 10 + floor(k * 89 / (N + 1))`
 - Use midpoint insertion between existing indices
 - Refer to ADRs/PDRs by full path from `spx/`; never write a bare decision filename such as `15-build.adr.md`
+- Place a decision record only when loaded context identifies exactly one owning directory. If multiple directories could own the concept, a node name may be stale, or the path depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, record the placement question as intent in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decompose <node-address>` before proposing any ADR/PDR path. Pass only the target address; owning-directory selection belongs to decomposition.
 
 **For enabler/outcome nodes:** Place as a child of the parent where the concern belongs.
 
@@ -325,6 +326,12 @@ How to avoid: before authoring a second decision record at the same directory le
 Claude received a broad request, drafted several child nodes with indices, and then treated `/decompose` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and coordination notes.
 
 How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the target node's `PLAN.md` or `ISSUES.md`, then invoke `/decompose <node-address>`. The decomposition workflow owns child boundaries, node types, dependency edges, and index assignment.
+
+**Failure 10: Chose a decision path while ownership was unsettled**
+
+Claude received a request to capture vocabulary in exactly one PDR and to find which PDR. The concept crossed plausible owners and raised node identity questions, but Claude used the ADR/PDR placement rule to propose a root-level path before invoking `/decompose`.
+
+How to avoid: treat "which ADR/PDR?" as structural when the owning node, node name, split, parent/child boundary, or context-loading reach is unresolved. Record the placement question as intent, invoke `/decompose <node-address>` with only the target address, and let decomposition return the owning directory before authoring writes the decision.
 
 </failure_modes>
 
