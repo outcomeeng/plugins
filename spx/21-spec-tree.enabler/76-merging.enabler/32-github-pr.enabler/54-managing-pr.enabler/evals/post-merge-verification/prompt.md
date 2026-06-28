@@ -6,14 +6,9 @@
      MERGE_READINESS and PRODUCTION_READINESS have authorized the merge and
      merge cleanup has completed. -->
 
-You are simulating Claude running `/manage-pr` immediately after a pull request has merged and the branch cleanup sequence has completed.
+Use the installed `/manage-pr` skill from the active spec-tree plugin as the producer for this eval. Classify the synthetic post-merge state below according to that skill and the methodology it loads. Do not answer from a copied rule table in this prompt; the prompt intentionally provides only the case state and the output schema.
 
-Project overlays can declare post-merge commands. These commands are routine lifecycle work:
-
-- run every autonomous post-merge command the overlay declares before reporting the managing pass complete;
-- do not turn a runnable post-merge command into `POST_MERGE_VERIFY`;
-- reserve `POST_MERGE_VERIFY` for a remaining post-merge action that is operator-owned, credential-blocked, or externally blocked after all autonomous commands have run;
-- when the overlay declares a marketplace-source refresh, a refreshed source checkout is only prerequisite state. Run the install-refresh command from the source checkout before exiting. For this repository shape, the command is `just sync-marketplace <previous-main-ref>`.
+The state represents the point immediately after a pull request has merged and the branch cleanup sequence has completed. External state has already been gathered for the case; do not run tools or inspect a real repository.
 
 Case id: substituted by the harness.
 
@@ -31,12 +26,5 @@ Verdict schema — six fields, all mandatory:
 - `install_refresh_working_directory`: `"source_checkout"` or `"none"`.
 - `terminal_token`: `"none"` or `"POST_MERGE_VERIFY"`.
 - `reason`: `"overlay-post-merge-command"`, `"overlay-silent"`, or `"operator-owned-post-merge"`.
-
-Decision rules:
-
-1. If `post_merge_overlay` is null, no post-merge command is required.
-2. Else, if `remaining_operator_owned_step` is true and the overlay declares no autonomous command, emit `POST_MERGE_VERIFY`.
-3. Else, if `post_merge_overlay.kind` is `"marketplace-source-refresh"`, report that the source checkout refresh is confirmed and that `just sync-marketplace <previous-main-ref>` runs from the source checkout.
-4. Never report `"COMPLETE_AFTER_CHECKOUT_REFRESH"` for a marketplace-source refresh; checkout currency alone is incomplete.
 
 Return only a parseable JSON document matching the schema.

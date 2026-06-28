@@ -82,7 +82,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 
 <!-- runtime:codex -->
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This generated guide is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents, delegation, and parallel agent work. When an audit or review is called for, spawn the matching subagent — `changes-reviewer` for a changeset review, `auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, or `test-evidence-auditor` for the artifact in scope. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns findings to validate and process through the governing review workflow. Do not ask the operator to confirm whether to launch one of these required named subagents, and do not use `{{! tool('ask_user', 'codex') !}}` for that confirmation. Runtime approval prompts are separate: if the tool itself asks for approval, answer that prompt through the runtime approval flow. NEVER run the audit or review skill in the main conversation as a substitute: the isolated subagent context is what keeps the verdict free of author bias, and the main thread tends to continue the work itself rather than spawn the subagent. If the subagent cannot be spawned or does not finish, the gate is blocked — do not proceed as if it passed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This generated guide is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents, delegation, and parallel agent work. When an audit or review is called for, spawn the matching subagent — `changes-reviewer` for a changeset review, `auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, or `eval-evidence-auditor` for the artifact in scope. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns findings to validate and process through the governing review workflow. Do not ask the operator to confirm whether to launch one of these required named subagents, and do not use `{{! tool('ask_user', 'codex') !}}` for that confirmation. Runtime approval prompts are separate: if the tool itself asks for approval, answer that prompt through the runtime approval flow. NEVER run the audit or review skill in the main conversation as a substitute: the isolated subagent context is what keeps the verdict free of author bias, and the main thread tends to continue the work itself rather than spawn the subagent. If the subagent cannot be spawned or does not finish, the gate is blocked — do not proceed as if it passed.
 
 **Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md or CLAUDE.md instruction files, files named by the user, or files referenced by skills or instruction files. Spawn subagents only for the named verifier or reviewer roles authorized above, or when the current user message explicitly asks for subagent delegation. Never spawn agents merely because they are discovered, available, or plausibly useful.
 
@@ -173,6 +173,18 @@ Use this shape for test-evidence audits:
 }
 ```
 
+Use this shape for eval-evidence audits:
+
+```json
+{
+  "tool": "multi_agent_v1.spawn_agent",
+  "arguments": {
+    "agent_type": "eval-evidence-auditor",
+    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full [eval] assertion text or exact spec file path plus assertion headings>\nEval artifacts: <full paths to eval.toml, prompt.md, cases.jsonl, and history.jsonl>\nProducer artifacts: <full paths to the producing skill, agent, classifier, script, or command source>\nTask: Audit whether the eval evidence proves the listed assertions without replacing the real producer with a prompt-only simulation. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, evidence property affected, and required fix."
+  }
+}
+```
+
 Use this shape for spec-node audits:
 
 ```json
@@ -209,21 +221,22 @@ Use this shape for decision audits:
 
 <!-- /runtime:codex -->
 
-| User Says...                               | Skill            | Agent                   |
-| ------------------------------------------ | ---------------- | ----------------------- |
-| "Implement this outcome"                   | `/contextualize` | —                       |
-| "Create an outcome"                        | `/author`        | —                       |
-| "Add an ADR"                               | `/author`        | —                       |
-| "Add a new node" or "This node is too big" | `/decompose`     | —                       |
-| "Move this under that"                     | `/refactor`      | —                       |
-| "Check these specs"                        | `/align`         | —                       |
-| "Write tests for this"                     | `/test`          | —                       |
-| "Start the TDD flow"                       | `/apply`         | `applier`               |
-| "Audit this PDR"                           | `/audit-pdr`     | `pdr-auditor`           |
-| "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
-| "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
-| "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
-| "Diagnose the spx environment"             | `/diagnose`      | —                       |
+| User Says...                               | Skill                  | Agent                   |
+| ------------------------------------------ | ---------------------- | ----------------------- |
+| "Implement this outcome"                   | `/contextualize`       | —                       |
+| "Create an outcome"                        | `/author`              | —                       |
+| "Add an ADR"                               | `/author`              | —                       |
+| "Add a new node" or "This node is too big" | `/decompose`           | —                       |
+| "Move this under that"                     | `/refactor`            | —                       |
+| "Check these specs"                        | `/align`               | —                       |
+| "Write tests for this"                     | `/test`                | —                       |
+| "Start the TDD flow"                       | `/apply`               | `applier`               |
+| "Audit this PDR"                           | `/audit-pdr`           | `pdr-auditor`           |
+| "Audit this ADR"                           | `/audit-adr`           | `adr-auditor`           |
+| "Audit test evidence"                      | `/audit-tests`         | `test-evidence-auditor` |
+| "Audit eval evidence"                      | `/audit-eval-evidence` | `eval-evidence-auditor` |
+| "Audit this spec node"                     | `/audit-specs`         | `spec-auditor`          |
+| "Diagnose the spx environment"             | `/diagnose`            | —                       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 

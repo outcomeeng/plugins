@@ -33,13 +33,14 @@ Every verification skill conforming to the contract in `verification.md` is an L
 1. **Eval directory layout.** One directory per judgment claim under `<verification-skill-enabler>/evals/<rule-slug>/`. Each carries:
    - `eval.toml` — `title`, `cases`, `prompt`, `threshold`, `trials` (per `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md` assertion #14).
    - `cases.jsonl` — one curated case per line. Each line is `{"id": ..., "input": {...}, "expected_verdict": {"must_contain": [...], "must_not_contain": [...]}}`.
-   - `prompt.md` — self-contained instructions. Inline the rubric; do not require the model to invoke the real verification skill chain from inside the eval. The harness substitutes `{case_id}` and `{input_json}` placeholders.
+   - `prompt.md` — model-facing instructions that drive the real producing skill, agent, classifier, script, or committed producer body rather than a copied simulation. The harness substitutes `{case_id}` and `{input_json}` placeholders.
    - `history.jsonl` — append-only run summaries, committed.
    - `runs/` — full transcripts, gitignored via `.gitignore`.
 2. **Threshold.** `0.85` per marketplace precedent. Do not lower the threshold to pass a flaky case; fix the case or the review prompt.
 3. **Wire shape.** Use the real verdict wire shape declared by the verification skill's policy module. The grader does structural subset matching.
-4. **Coupling per case.** Every case carries verdict-level + finding-level expectations per eval-harness assertion #31.
-5. **Concern separation.** One judgment surface per eval.
+4. **Coupling per case.** Every case carries verdict-level + finding-level expectations per eval-harness assertion #31, and the suite remains producer-coupled: mutating the real producer changes at least one case result.
+5. **Eval evidence audit.** Run `eval-evidence-auditor` before relying on the eval. It rejects prompt-only simulations, oracle leakage, misalignment, unfalsifiable suites, and stale or missing run evidence.
+6. **Concern separation.** One judgment surface per eval.
 
 **Harness limitations to design around:**
 
@@ -52,7 +53,7 @@ Every verification skill conforming to the contract in `verification.md` is an L
 **Affected skills:**
 
 - `32-audit-nodes.enabler` (candidate future skill) — when authored, must adopt this pattern.
-- `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` — when implemented, eval evidence requirements are documented in its own PLAN.
+- `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-tests.enabler` — when implemented, eval evidence requirements are audited by `spx/21-spec-tree.enabler/68-audit.enabler/32-audit-eval-evidence.enabler`.
 
 ## `review` vs `audit` vocabulary confusion in `verification-kinds.md` and `review-changes` prompt
 

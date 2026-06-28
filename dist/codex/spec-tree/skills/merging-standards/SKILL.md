@@ -285,7 +285,7 @@ After `<merge_cleanup>` completes, run the post-merge steps declared by the proj
 
 Post-merge verification is routine lifecycle work. Claude runs every autonomous command the overlay declares before reporting the managing pass complete. Do not reduce a runnable post-merge command to the `POST_MERGE_VERIFY` token; that token is reserved for a remaining post-merge action that is operator-owned, credential-blocked, or otherwise impossible after all autonomous commands have run.
 
-When the overlay declares a marketplace-source refresh, checkout currency is only prerequisite state for the refresh. A `git fetch`, `git pull`, `git merge --ff-only`, or `git switch` in the source checkout is incomplete until the overlay's install-refresh command exits. Run the refresh command from the overlay-declared source checkout, not from the feature worktree. For this repository's overlay shape, that means fast-forwarding the marketplace-source `main` checkout, then running `just sync-marketplace <previous-main-ref>` from that checkout before exiting the managing pass.
+When the overlay declares a marketplace-source refresh, checkout currency is only prerequisite state for the refresh. A `git fetch`, `git pull`, `git merge --ff-only`, or `git switch` in the source checkout is incomplete until the overlay's install-refresh command exits. Run the refresh command from the overlay-declared source checkout, not from the feature worktree. The source checkout path and install-refresh command are whatever the overlay declares for that step.
 
 </post_merge_verification>
 
