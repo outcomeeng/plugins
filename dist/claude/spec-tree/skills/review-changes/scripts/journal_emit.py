@@ -240,7 +240,8 @@ def _optional_file_config(
 
 
 def _resolve_repo_root(repo: pathlib.Path) -> pathlib.Path:
-    result = subprocess.run(  # noqa: S603, S607 — fixed git command, repo is caller-controlled
+    # Fixed git command; repo is caller-controlled.
+    result = subprocess.run(  # noqa: S603,S607
         ["git", "rev-parse", "--show-toplevel"],
         cwd=repo,
         capture_output=True,
