@@ -85,7 +85,14 @@ def _parse_languages(value: str | None) -> tuple[str, ...]:
     if not value:
         return ()
     inner = value.strip().removeprefix("[").removesuffix("]")
-    return tuple(item.strip() for item in inner.split(",") if item.strip())
+    return normalize_languages(
+        item.strip() for item in inner.split(",") if item.strip()
+    )
+
+
+def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
+    """Return a canonical enabled-language set for rendering and staleness checks."""
+    return tuple(sorted(set(languages)))
 
 
 def parse_template_version(text: str) -> str | None:
@@ -149,12 +156,12 @@ def detect_languages(extensions: Iterable[str]) -> tuple[str, ...]:
     Pure: the enabled-language set is the languages the product's own test extensions map
     to, computed without agent judgment or filesystem access. The caller globs the extensions.
     """
-    languages = {
+    languages = (
         language
         for extension in extensions
         if (language := language_for_extension(extension)) is not None
-    }
-    return tuple(sorted(languages))
+    )
+    return normalize_languages(languages)
 
 
 def render(
@@ -170,6 +177,7 @@ def render(
     tokens pass through unchanged. The output frontmatter records the version, source, and
     language list so a later update reads the languages back.
     """
+    languages = normalize_languages(languages)
     template_frontmatter, template_body = _split_frontmatter(template_text)
     source = (
         _frontmatter_value(template_frontmatter, TEMPLATE_SOURCE_KEY)
@@ -215,7 +223,7 @@ def guide_status(
     version = parse_template_version(text)
     if version is None or is_stale(version, installed_version):
         return "stale"
-    if parse_languages(text) != languages:
+    if parse_languages(text) != normalize_languages(languages):
         return "stale"
     return "current"
 

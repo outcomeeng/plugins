@@ -60,6 +60,8 @@ BASE_SECTION = "Test Naming"
 NEW_SECTION = "Process Hygiene"
 # A brace-delimited illustration token the render must pass through unchanged.
 ILLUSTRATION_TOKEN = "{product-slug}"
+BUILD_MACRO_CAPABILITY = "ask_user"
+BUILD_MACRO_RUNTIME = "codex"
 
 # Runtime payload: the template carries a per-runtime block for each agent runtime,
 # rendered only into that runtime's guide file. The marker syntax mirrors the module's
@@ -72,6 +74,11 @@ TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
 def runtime_line(runtime: str) -> str:
     """The body the harness emits inside a runtime block — what render keeps or drops."""
     return f"{runtime.upper()} runs the audit as a subagent."
+
+
+def render_build_macro() -> str:
+    """Build an unresolved macro-shaped token owned by the render harness."""
+    return f"\n{{{{! tool('{BUILD_MACRO_CAPABILITY}', '{BUILD_MACRO_RUNTIME}') !}}}}\n"
 
 
 def load_update_spx_module() -> ModuleType:

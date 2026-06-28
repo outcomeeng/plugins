@@ -130,6 +130,18 @@ def test_cli_check_reports_language_drift(
     assert capsys.readouterr().out.strip() == "stale"
 
 
+def test_cli_check_treats_language_order_as_a_set(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    _write_both_guides(module, tmp_path, (LANG_SECONDARY, LANG_PRIMARY), NEW_VERSION)
+    base = ["--template", str(template), "--spx-dir", str(tmp_path), "--check"]
+
+    assert module.main([*base, "--languages", f"{LANG_PRIMARY},{LANG_SECONDARY}"]) == 0
+    assert capsys.readouterr().out.strip() == "current"
+
+
 def test_cli_check_reports_stale_from_detected_language_drift(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

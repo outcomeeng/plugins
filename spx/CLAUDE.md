@@ -1,5 +1,5 @@
 ---
-template_version: "0.21.3"
+template_version: "0.21.4"
 template_source: spec-tree
 languages: [python]
 ---
@@ -63,8 +63,6 @@ Default-branch work is complete only when it reaches the default branch on origi
 - the applicable gates have run or produced concrete failing evidence.
 
 🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint. Create or switch to a local branch preserving the worktree changes, then continue through `/merge` unless the user explicitly limited the task to local-only work.
-
----
 
 ## Quick Reference: Skills and Agents
 
