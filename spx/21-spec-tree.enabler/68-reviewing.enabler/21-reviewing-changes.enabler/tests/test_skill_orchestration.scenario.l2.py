@@ -394,6 +394,23 @@ class TestComputeDiffBaseRefDerivation:
         assert result.returncode == 1
         assert "--bundle-dir exists and is not a directory" in result.stderr
 
+    def test_bundle_dir_rejects_paths_inside_git_worktree(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, base_ref = self._setup_repo(tmp_path)
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+
+        result = run_compute_diff_in_process(
+            repo=repo,
+            env=env,
+            args=["--bundle-dir", str(repo / ".review-input")],
+        )
+
+        assert result.returncode == 1
+        assert "--bundle-dir must be outside the git worktree" in result.stderr
+        assert not (repo / ".review-input").exists()
+
     def test_git_origin_head_works_without_changes_or_env(
         self, tmp_path: pathlib.Path
     ) -> None:

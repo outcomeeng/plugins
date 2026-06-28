@@ -4,10 +4,6 @@ This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugin
 
 `AGENTS.md` is the canonical repo instruction file. `CLAUDE.md` is a symlink to this file so Codex and Claude Code share the same product instructions.
 
-## Reviewing pull requests
-
-Read [`REVIEW.template.md`](REVIEW.template.md) at the repository root before posting any findings on a pull request in this repository. The template is the consumer-override surface for the `/merging-standards` skill — by default it mirrors the skill's two-severity (`BLOCKING` / `DEBT`) × six-category (`consistency` / `security` / `performance` / `evidence` / `standards` / `architecture`) taxonomy and the comment shape every finding must follow. The reviewer judges validity and severity; the author judges disposition — whether each `DEBT` finding is fixed in the PR or tracked out of scope with a recorded reason — per `spx/15-merging.pdr.md`. Severity ranks (`P0`, `P1`, `P2`, `P3`, `critical`, `high`, `medium`, `low`, `minor`, `nit`), a third scope-shaped severity (`FOLLOW-UP`), and the legacy class labels `NEEDS-ANSWER` and `NOTE` are not valid finding headings here — open questions are reframed as findings, and bare commentary or praise is omitted. If a review has no `BLOCKING` or `DEBT` items, say so directly — do not manufacture lower-priority findings to prove that review happened.
-
 ## Two audiences, two design surfaces
 
 This repo is two things at once.
@@ -277,7 +273,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
 - `.spx/` — gitignored operational files (sessions, audit state).
 - `.claude/settings.json`, `.codex/config.toml` — product-scoped runtime settings, committed for collaborators.
-- `AGENTS.md` (this file), `CLAUDE.md` (symlink to `AGENTS.md`), `REVIEW.template.md` — repo-level instruction surfaces.
+- `AGENTS.md` (this file), `CLAUDE.md` (symlink to `AGENTS.md`), `REVIEW.md` — repo-level instruction and review-policy surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/develop/skills/`.
 

@@ -17,8 +17,6 @@ Add `CLAUDE_CODE_OAUTH_TOKEN` to repository secrets (Settings → Secrets and va
 
 `spec-tree-review.yml` reads `REVIEW.md` from the repository root when present and uses it as the finding-classification taxonomy and comment shape. Absent the file, the embedded `BLOCKING` / `DEBT` / `FOLLOW-UP` taxonomy is used.
 
-This repository ships `REVIEW.template.md` as the canonical text — the `.template` suffix keeps it out of the lookup path so downstream consumers can override locally without colliding with this repo's authoring artifact.
-
 ### Customization
 
 Edit the `with:` block in either caller. The inputs that matter most:

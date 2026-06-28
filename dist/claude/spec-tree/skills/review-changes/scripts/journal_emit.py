@@ -84,6 +84,8 @@ DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
+REVIEW_OVERRIDE = pathlib.Path("REVIEW.md")
+MANIFEST_SCHEMA_VERSION = compute_diff.MANIFEST_SCHEMA_VERSION
 
 
 def _project_severity(severity: object) -> object:
@@ -214,6 +216,65 @@ def _review_scope(
     }
 
 
+def _read_review_manifest(path: pathlib.Path) -> dict[str, object]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"review manifest is invalid JSON: {exc.msg}") from exc
+    except OSError as exc:
+        raise ValueError(f"cannot read review manifest {path}: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError("review manifest must be a JSON object")
+    schema_version = raw.get("schema_version")
+    if schema_version != MANIFEST_SCHEMA_VERSION:
+        raise ValueError(
+            "review manifest schema_version must be "
+            f"{MANIFEST_SCHEMA_VERSION}, got {schema_version!r}"
+        )
+    return raw
+
+
+def _require_manifest_str(manifest: dict[str, object], key: str) -> str:
+    value = manifest.get(key)
+    if not isinstance(value, str) or value == "":
+        raise ValueError(f"review manifest {key!r} must be a non-empty string")
+    return value
+
+
+def _manifest_changed_files(manifest: dict[str, object]) -> list[str]:
+    sections = manifest.get("sections")
+    if not isinstance(sections, list):
+        raise ValueError("review manifest 'sections' must be a JSON array")
+    changed_files: list[str] = []
+    seen: set[str] = set()
+    for section in sections:
+        if not isinstance(section, dict):
+            raise ValueError("review manifest section must be a JSON object")
+        files = section.get("files")
+        if not isinstance(files, list):
+            raise ValueError("review manifest section 'files' must be a JSON array")
+        for file_value in files:
+            if not isinstance(file_value, str) or file_value == "":
+                raise ValueError(
+                    "review manifest section 'files' entries must be non-empty strings"
+                )
+            if file_value in seen:
+                continue
+            seen.add(file_value)
+            changed_files.append(file_value)
+    return changed_files
+
+
+def _review_scope_from_manifest(manifest_path: pathlib.Path) -> dict[str, object]:
+    manifest = _read_review_manifest(manifest_path)
+    return {
+        "baseRef": _require_manifest_str(manifest, "base_ref"),
+        "headRef": _require_manifest_str(manifest, "head_ref"),
+        "changedFiles": _manifest_changed_files(manifest),
+        "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
+    }
+
+
 def _digest(value: object, *, length: int | None = None) -> str:
     text = json.dumps(value, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -226,9 +287,38 @@ def _file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
+def _optional_file_config(
+    root: pathlib.Path, relative_path: pathlib.Path
+) -> dict[str, str] | None:
+    path = root / relative_path
+    if not path.is_file():
+        return None
+    return {
+        "path": str(relative_path),
+        "sha256": _file_digest(path),
+    }
+
+
+def _resolve_repo_root(repo: pathlib.Path) -> pathlib.Path:
+    # Fixed git command; repo is caller-controlled.
+    result = subprocess.run(  # noqa: S603,S607
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return pathlib.Path(result.stdout.strip()).resolve()
+
+
+def review_config_digest(
+    skill_dir: pathlib.Path | None = None,
+    *,
+    repo_root: pathlib.Path | None = None,
+) -> str:
     root = skill_dir or _HERE.parent
     prompt_path = root / REVIEW_PROMPT
+    active_repo_root = repo_root or pathlib.Path.cwd()
     return _digest(
         {
             "skill": "review-changes",
@@ -238,20 +328,33 @@ def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
                 "path": str(REVIEW_PROMPT),
                 "sha256": _file_digest(prompt_path),
             },
+            "repositoryReviewPolicy": _optional_file_config(
+                active_repo_root, REVIEW_OVERRIDE
+            ),
         }
     )
 
 
 def metadata_for_worktree(
-    *, started_at: str, completed_at: str, target: str = DEFAULT_TARGET
+    *,
+    started_at: str,
+    completed_at: str,
+    target: str = DEFAULT_TARGET,
+    review_manifest_path: pathlib.Path | None = None,
 ) -> dict[str, object]:
     repo = pathlib.Path.cwd()
-    base_ref = _resolve_base_ref()
-    head_ref = _resolve_head_ref()
+    repo_root = _resolve_repo_root(repo)
+    if review_manifest_path is None:
+        base_ref = _resolve_base_ref()
+        head_ref = _resolve_head_ref()
+        scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
+    else:
+        scope = _review_scope_from_manifest(review_manifest_path)
+        base_ref = str(scope["baseRef"])
+        head_ref = str(scope["headRef"])
     branch_name = _resolve_branch_name()
     target_kind = _resolve_target_kind()
     pull_request_number = _resolve_pull_request_number(target_kind)
-    scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
     metadata = {
         "target": target,
         jp.RUN_STATE_SCOPE_HASH: _digest(scope, length=12),
@@ -261,7 +364,7 @@ def metadata_for_worktree(
         jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
         jp.RUN_STATE_BASE_REF: base_ref,
         jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
-        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
+        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(repo_root=repo_root),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
         jp.RUN_STATE_STARTED_AT: started_at,
@@ -344,6 +447,7 @@ def _emit_metadata(args: argparse.Namespace) -> int:
             started_at=args.started_at,
             completed_at=completed_at,
             target=args.target,
+            review_manifest_path=args.manifest,
         )
     except (
         changeset_scope.BaseRefNotConfiguredError,
@@ -410,6 +514,12 @@ def main(argv: list[str] | None = None) -> int:
     metadata.add_argument("--started-at", required=True)
     metadata.add_argument("--completed-at", default="")
     metadata.add_argument("--target", default=DEFAULT_TARGET)
+    metadata.add_argument(
+        "--manifest",
+        type=pathlib.Path,
+        default=None,
+        help="computed review bundle manifest.json to derive the exact reviewed scope",
+    )
 
     args = parser.parse_args(argv)
     handlers = {

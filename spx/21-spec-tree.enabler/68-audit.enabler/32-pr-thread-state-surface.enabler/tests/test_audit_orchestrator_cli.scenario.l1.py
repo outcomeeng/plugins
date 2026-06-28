@@ -6,7 +6,7 @@ regardless of ``PYTHONHASHSEED``. The set differences and intersections
 underlying the diff have hash-randomized iteration order between
 processes; the production code sorts by content identity to make the
 output stable, and this test proves the property at the CLI boundary
-(stdin → stdout) the way the ``pr-review-orchestrator`` agent invokes it.
+(stdin → stdout) the way CI-side audit callers invoke it.
 
 Single-process tests cannot observe the bug — Python's hash seed is fixed
 within a process — so this evidence lives at the subprocess level.
@@ -173,7 +173,7 @@ def test_verdict_diff_first_run_with_no_prior_argument_is_empty(
     The CLI's first-run branch is exercised directly: omit ``--prior``,
     pass a non-empty current verdict on stdin, and assert resolved and
     reopened are both empty. This pairs with the first-run case the
-    ``pr-review-orchestrator`` agent hits on a fresh PR.
+    CI-side audit callers hit on a fresh PR.
     """
     current = _verdict_dict(
         [

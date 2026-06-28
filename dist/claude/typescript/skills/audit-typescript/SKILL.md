@@ -10,7 +10,7 @@ Invoke the `typescript:typescript-standards` skill before proceeding. If that sk
 
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor`, `audit-orchestrator`, `pr-reviewer`, or `pr-review-orchestrator`) composing this skill for the TypeScript files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor` or `audit-orchestrator`) composing this skill for the TypeScript files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 

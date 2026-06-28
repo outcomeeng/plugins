@@ -104,7 +104,7 @@ The `rule` field cites the actual rule the finding rests on as a path-style cita
 - `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS>:<n>` — a spec assertion under the spec tree.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
 - `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule, resolved against the plugin roots available to the current runtime.
-- `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention rule.
+- `AGENTS.md:<rule-slug>`, `CLAUDE.md:<rule-slug>`, or `REVIEW.md:<rule-slug>` — a root convention or review-policy rule.
 
 Before citing a rule:
 

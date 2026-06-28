@@ -122,6 +122,7 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_CONFIG_DIGEST] == metadata.config_digest
     assert data[jp.RUN_STATE_PARTICIPANTS] == ["review"]
     assert data[jp.RUN_STATE_SCOPE] == {"include": ["README.md"]}
+    assert data[jp.RUN_STATE_STARTED_AT] == metadata.started_at
     # The run-completed event carries the real completion time, not the
     # provisional start-time the start-of-run metadata bakes in.
     assert data[jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
@@ -197,6 +198,37 @@ def _write_skill_config(root: pathlib.Path, *, prompt: str) -> None:
     (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
 
 
+def _write_review_manifest(
+    root: pathlib.Path,
+    *,
+    base_ref: str = "origin/main",
+    head_ref: str = "HEAD",
+    files: list[str] | None = None,
+    diff_sha256: str = "a" * 64,
+) -> pathlib.Path:
+    manifest = {
+        "schema_version": je.MANIFEST_SCHEMA_VERSION,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "diff_path": "diff.md",
+        "diff_sha256": diff_sha256,
+        "diff_bytes": 1,
+        "sections": [
+            {
+                "title": "Committed diff",
+                "files": files or ["README.md"],
+                "start_line": 1,
+                "line_count": 1,
+                "byte_start": 0,
+                "byte_length": 1,
+            }
+        ],
+    }
+    path = root / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
 def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -206,16 +238,79 @@ def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> Non
     assert je.review_config_digest(first) != je.review_config_digest(second)
 
 
+def test_config_digest_changes_with_root_review_policy(
+    tmp_path: pathlib.Path,
+) -> None:
+    skill = tmp_path / "skill"
+    first_repo = tmp_path / "first-repo"
+    second_repo = tmp_path / "second-repo"
+    _write_skill_config(skill, prompt="same review prompt")
+    first_repo.mkdir()
+    second_repo.mkdir()
+    (first_repo / "REVIEW.md").write_text("first review policy", encoding="utf-8")
+    (second_repo / "REVIEW.md").write_text("second review policy", encoding="utf-8")
+
+    assert je.review_config_digest(
+        skill, repo_root=first_repo
+    ) != je.review_config_digest(skill, repo_root=second_repo)
+
+
+def test_metadata_config_digest_uses_git_root_review_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    subdir = repo_root / "nested"
+    subdir.mkdir(parents=True)
+    received_roots: list[pathlib.Path | None] = []
+
+    def digest_with_repo_root(*, repo_root: pathlib.Path | None = None) -> str:
+        received_roots.append(repo_root)
+        return "cfg-abc123"
+
+    monkeypatch.chdir(subdir)
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo_root)
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", digest_with_repo_root)
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
+    assert received_roots == [repo_root]
+
+
 def test_metadata_scope_hash_includes_changed_file_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     changed_files = ["README.md"]
     review_input = "### Committed diff\n\nREADME change"
 
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -251,15 +346,53 @@ def test_metadata_scope_hash_includes_changed_file_set(
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
 
 
+def test_metadata_scope_uses_computed_review_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    manifest_path = _write_review_manifest(
+        tmp_path,
+        base_ref="origin/main",
+        head_ref="HEAD",
+        files=["src/plugins/spec-tree/skills/review-changes/SKILL.md", "README.md"],
+        diff_sha256="b" * 64,
+    )
+
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+        review_manifest_path=manifest_path,
+    )
+
+    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == [
+        "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+        "README.md",
+    ]
+    assert metadata[jp.RUN_STATE_SCOPE]["reviewInputSha256"] == "b" * 64
+    assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == "HEAD:sha"
+
+
 def test_metadata_for_worktree_records_pull_request_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "origin/work/example")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -297,10 +430,11 @@ def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
     monkeypatch.setenv("SPX_VERIFY_BRANCH", "work/example")
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(
         je.changeset_scope, "detect_current_branch", fail_current_branch
     )
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -334,10 +468,11 @@ def test_metadata_scope_hash_includes_full_review_input(
 ) -> None:
     review_inputs = ["### Staged diff\n\nfirst", "### Staged diff\n\nsecond"]
 
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -370,6 +505,64 @@ def test_metadata_scope_hash_includes_full_review_input(
         != second[jp.RUN_STATE_SCOPE]["reviewInputSha256"]
     )
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
+
+
+def test_metadata_cli_emits_env_derived_run_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    result = run_journal_emit_in_process(
+        "metadata",
+        "--started-at",
+        "2026-06-23T00:00:00Z",
+        "--completed-at",
+        "2026-06-23T00:00:05Z",
+        "--manifest",
+        str(
+            _write_review_manifest(
+                tmp_path, base_ref="origin/main", head_ref="feature/head"
+            )
+        ),
+        repo=tmp_path,
+        env={
+            je.ENV_BASE_REF: "origin/main",
+            je.ENV_HEAD_REF: "feature/head",
+            je.ENV_BRANCH: "work/example",
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    metadata = json.loads(result.stdout)
+    assert metadata[jp.RUN_STATE_BRANCH_NAME] == "work/example"
+    assert metadata[jp.RUN_STATE_BRANCH_SLUG] == "work__example"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == "feature/head:sha"
+    assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
+    assert metadata[jp.RUN_STATE_BASE_SHA] == "origin/main:sha"
+    assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
+    assert metadata[jp.RUN_STATE_SCOPE]["baseRef"] == "origin/main"
+    assert metadata[jp.RUN_STATE_SCOPE]["headRef"] == "feature/head"
+    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert metadata[jp.RUN_STATE_STARTED_AT] == "2026-06-23T00:00:00Z"
+    assert metadata[jp.RUN_STATE_COMPLETED_AT] == "2026-06-23T00:00:05Z"
 
 
 def test_metadata_cli_reports_git_failure_without_traceback(
@@ -485,6 +678,7 @@ def test_finding_reported_cli_maps_malformed_finding_to_error_with_no_event() ->
 
 def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
     metadata_json = _metadata_wire_json()
+    metadata = json.loads(metadata_json)
     scope_entered = run_journal_emit_in_process(
         "scope-entered", "--now", NOW, "--metadata", metadata_json
     ).stdout.strip()
@@ -509,6 +703,7 @@ def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
     assert event["type"] == jp.RUN_COMPLETED
+    assert event["data"][jp.RUN_STATE_STARTED_AT] == metadata[jp.RUN_STATE_STARTED_AT]
     assert event["data"][jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
     # A blocking finding in the streamed prefix rolls up to a rejected run.
     assert event["data"][jp.RUN_STATE_STATUS] == jp.JournalRunStatus.REJECTED

@@ -1,7 +1,7 @@
 # Pull-Request Journal State Surface
 
 PROVIDES pull-request audit state through the audit journal backend, with `targetKind=pull-request` and `pullRequestNumber` metadata selecting the PR run set
-SO THAT the CI-side `pr-review-orchestrator` agent and any future CI-side caller of `/spec-tree:audit` can iterate auditably across pushes
+SO THAT CI-side callers of `/spec-tree:audit` can iterate auditably across pushes
 CAN surface what resolved and what reopened without parsing rendered comments, writing `.spx/audits/`, or maintaining a PR-thread database
 
 ## Assertions

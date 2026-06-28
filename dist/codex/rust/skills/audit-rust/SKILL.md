@@ -12,7 +12,7 @@ Invoke the `rust:rust-test-standards` skill before proceeding. If that skill is 
 
 <dispatch_gate>
 
-This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor`, `audit-orchestrator`, `pr-reviewer`, or `pr-review-orchestrator`) composing this skill for the Rust files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
+This audit runs inside a dispatched auditor's verifier context — a generic auditor agent (`auditor` or `audit-orchestrator`) composing this skill for the Rust files in scope — isolated from the author context that produced the work under audit. When this skill loads in the author/main conversation rather than inside a dispatched auditor agent, STOP — the audit must run in that verifier context. An already-dispatched agent that preloaded this skill is in the right context and proceeds.
 
 </dispatch_gate>
 
@@ -98,11 +98,11 @@ Import rules:
 - two or more `super::` hops in production code are a rejection-level concern unless the module is a tightly scoped private leaf
 - production code must not depend on test-only helpers
 
-Use `references/false-positive-handling.md` when a suspicious pattern might still be correct in context.
+Use `${SKILL_DIR}/references/false-positive-handling.md` when a suspicious pattern might still be correct in context.
 
 **1.4 Unsafe and FFI soundness**
 
-When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `extern "C"` / `#[no_mangle]` boundary, run the soundness pass in `references/unsafe-soundness.md`: enumerate every unsafe site, check each block for a `SAFETY:` comment tied to the real invariant and against the pointer, aliasing, lifetime, validity, FFI, and `Send`/`Sync` hazard categories, and check each FFI boundary for ABI-stable types, panic containment, and documented pointer contracts. A single soundness violation is REJECT. A scope with no unsafe sites skips this subsection.
+When the scope contains an `unsafe` block, `unsafe fn`, `unsafe impl`, or `extern "C"` / `#[no_mangle]` boundary, run the soundness pass in `${SKILL_DIR}/references/unsafe-soundness.md`: enumerate every unsafe site, check each block for a `SAFETY:` comment tied to the real invariant and against the pointer, aliasing, lifetime, validity, FFI, and `Send`/`Sync` hazard categories, and check each FFI boundary for ABI-stable types, panic containment, and documented pointer contracts. A single soundness violation is REJECT. A scope with no unsafe sites skips this subsection.
 
 **Phase 2: ADR and PDR compliance**
 
@@ -112,9 +112,9 @@ Verify each relevant architectural or product constraint is reflected in the cod
 
 <reference_guides>
 
-- `references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
-- `references/unsafe-soundness.md` -- soundness pass for `unsafe` blocks and FFI boundaries
-- `references/example-audit.md` -- complete APPROVED and REJECTED examples
+- `${SKILL_DIR}/references/false-positive-handling.md` -- when a surprise is legitimate in Rust context
+- `${SKILL_DIR}/references/unsafe-soundness.md` -- soundness pass for `unsafe` blocks and FFI boundaries
+- `${SKILL_DIR}/references/example-audit.md` -- complete APPROVED and REJECTED examples
 
 </reference_guides>
 
@@ -151,7 +151,7 @@ Each finding carries `file`, `line`, `rule` (the concern name or specific violat
 
 **Failure 2: Missed a boundary dependency hidden behind a coherent module.** Claude approved a module whose imports looked organized, while a concrete external client was still imported directly inside business logic. Why it failed: import coherence is separate from boundary design; `crate::` paths can still point at the wrong dependency direction. How to avoid: during design coherence and ADR/PDR compliance, trace each process, network, clock, storage, and FFI boundary to an injected trait or narrow function seam.
 
-**Failure 3: Skipped unsafe soundness because no tests failed.** Claude treated green tests as evidence that `unsafe` and FFI boundaries were sound. Why it failed: tests rarely cover pointer validity, aliasing, lifetime, unwind, ABI, or `Send`/`Sync` invariants. How to avoid: whenever scope contains `unsafe`, `unsafe fn`, `unsafe impl`, `extern "C"`, or `#[no_mangle]`, run `references/unsafe-soundness.md` and reject any missing or mismatched invariant.
+**Failure 3: Skipped unsafe soundness because no tests failed.** Claude treated green tests as evidence that `unsafe` and FFI boundaries were sound. Why it failed: tests rarely cover pointer validity, aliasing, lifetime, unwind, ABI, or `Send`/`Sync` invariants. How to avoid: whenever scope contains `unsafe`, `unsafe fn`, `unsafe impl`, `extern "C"`, or `#[no_mangle]`, run `${SKILL_DIR}/references/unsafe-soundness.md` and reject any missing or mismatched invariant.
 
 </failure_modes>
 

@@ -38,7 +38,7 @@ If the skill reports a journal append, seal, or read failure, surface the failin
 - Read-only over source code and tests — NEVER write to either. Audit persistence goes through the `/audit` skill's journal calls; NEVER write a separate state file or lock.
 - Invoke nothing in the `/audit` skill's `scripts/` directory by a runtime-constructed path. The skill resolves `${SKILL_DIR}` and runs every CLI subcommand from inside its own prose; NEVER construct a path expression here.
 - Run at most one audit per invocation. Multiplying audit runs inside a single agent invocation produces noisy run-set projections.
-- NEVER post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job.
+- NEVER post to a pull request. Render and relay only; hosted PR comment publication belongs to the repository's CI workflow.
 - Contain zero language-specific tokens. Language detection and per-language behaviour live in the `audit-{lang}*` skills the `/audit` skill dispatches to.
 
 </constraints>
