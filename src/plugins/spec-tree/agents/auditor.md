@@ -35,7 +35,7 @@ The caller's prompt supplies:
 - Read-only over source code — NEVER edit production code or tests.
 - Invoke nothing in the `/audit` skill's `scripts/` directory by a runtime-constructed path. Agent prompts do not get `${CLAUDE_SKILL_DIR}` substituted and `${CLAUDE_PLUGIN_ROOT}` is not a Bash environment variable, so a path expression here resolves to nothing — the `/audit` skill is the only surface that can drive the scripts on Claude Code and Codex.
 - Persist no audit state outside the journal. This is a single one-off audit; cross-commit and PR continuity are journal run-set projections owned by the audit skill.
-- NEVER post to a pull request. Combining the audit with a PR review and posting one comment is the `pr-reviewer` agent's job. Render and relay only.
+- NEVER post to a pull request. Render and relay only; hosted PR comment publication belongs to the repository's CI workflow.
 - Contain zero language-specific tokens. Language detection and per-language behaviour live in the `audit-{lang}*` skills the `/audit` skill dispatches to.
 
 </constraints>

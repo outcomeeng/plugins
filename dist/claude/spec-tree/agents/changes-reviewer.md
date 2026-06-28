@@ -1,7 +1,7 @@
 ---
 name: changes-reviewer
 description: >-
-  ALWAYS invoke when reviewing working changes against a base ref. Accepts an optional input naming the scope to review — a PR reference (`#N`, URL, or `owner/repo#N`), a branch reference, a `from...to` git rev range, or nothing (defaults to the current branch vs `origin/HEAD`). NEVER invoke for posting review comments to a GitHub PR thread — pr-reviewer handles that surface.
+  ALWAYS invoke when reviewing working changes against a base ref. Accepts an optional input naming the scope to review — a PR reference (`#N`, URL, or `owner/repo#N`), a branch reference, a `from...to` git rev range, or nothing (defaults to the current branch vs `origin/HEAD`). NEVER invoke for posting review comments to a GitHub PR thread.
 tools: Bash, Read, Skill
 model: sonnet
 skills:

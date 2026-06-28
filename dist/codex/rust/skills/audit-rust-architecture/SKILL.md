@@ -93,7 +93,7 @@ Each finding's `rule` carries the violation pattern (e.g., `missing-testability`
 
 <example_reference>
 
-Read `references/example-audit.md` for a complete rejected architecture review in Rust terms.
+Read `${SKILL_DIR}/references/example-audit.md` for a complete rejected architecture review in Rust terms.
 
 </example_reference>
 
