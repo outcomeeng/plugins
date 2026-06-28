@@ -43,10 +43,12 @@ NEVER assign the dependency's node addresses, decision indices, or assertion typ
 <target_resolution>
 Resolve the target dependency's checkout directory — the working directory `spx session handoff -C <target-dir>` runs against. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
 
-- **The spec-tree plugin (marketplace):** the registered Directory source. Under Claude Code, resolve it from the marketplace registration:
+- **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
+
   ```bash
   claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("source")=="directory"), ""))'
   ```
+
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
 
 When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path.
