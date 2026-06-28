@@ -57,7 +57,7 @@ Invoke `/interview` and apply its methodology (one question at a time, `request_
 
 Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping — `/decompose spx/` owns structure.
 
-When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, read `/understand`'s product-domain-shapes operational reference for the shared classifier and examples.
+When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, read `${SKILL_DIR}/../understand/references/product-domain-shapes.md` for the shared classifier and examples.
 
 **Brownfield guard — existing code present.** When Step 1 found an implemented codebase, derive top-level intent from the product dimensions above — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout. Pre-analysis of existing code informs vocabulary, constraints, and open decisions; it does not set the partition. Candidate areas named after code components (`config`, `model`, `parser`, `layout`, …) repeat the implementation's filing in the tree and invert the truth hierarchy. `/decompose` enforces the same rule — "decompose by user-facing concern, not implementation layer" — so apply it here and code-shaped intent never reaches it.
 

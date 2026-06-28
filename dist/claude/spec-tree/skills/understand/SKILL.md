@@ -108,8 +108,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 ```text
 <SPEC_TREE_FOUNDATION>
 Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol, verification-kinds
-Operational references available: what-goes-where, excluded-nodes
-Product-shape reference available: product-domain-shapes
+Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge (classifies the changeset, selects the merge transport, delegates to the selected transport; reads spx/local/merging.md as an optional overlay only when present, and its absence applies the default lifecycle)
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
 Routing guide: loaded from spx/CLAUDE.md | absent
