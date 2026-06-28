@@ -69,12 +69,7 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 **Step 4 — File the follow-up.** Run `spx session handoff -C <target-dir>`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
 
 ```bash
-printf '%s\n' \
-  '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","specs":[],"files":[]}' \
-  '# <short title>' \
-  '' \
-  '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' \
-  | spx session handoff -C <target-dir>
+printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx session handoff -C <target-dir>
 ```
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
