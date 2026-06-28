@@ -128,7 +128,7 @@ After the root scaffold exists, invoke `/decompose spx/` to compose top-level ch
 Summarize what was created:
 
 - Product spec path
-- `spx/CLAUDE.md` and `spx/AGENTS.md` paths
+- `spx/AGENTS.md` path and `spx/CLAUDE.md` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
 
@@ -179,7 +179,7 @@ Bootstrapping is complete when:
 - [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `spx/CLAUDE.md` and `spx/AGENTS.md` created from template, scoped to the project's enabled languages
+- [ ] `spx/AGENTS.md` and `spx/CLAUDE.md` created from template, scoped to the project's enabled languages
 - [ ] `spx/PLAN.md` created when top-level intent exists
 - [ ] Top-level structure delegated to `/decompose spx/`
 - [ ] Next steps recommended

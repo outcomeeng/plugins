@@ -128,7 +128,7 @@ After the root scaffold exists, invoke `/decompose spx/` to compose top-level ch
 Summarize what was created:
 
 - Product spec path
-- `spx/CLAUDE.md` and `spx/AGENTS.md` paths
+- `spx/CLAUDE.md` path and `spx/AGENTS.md` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
 
