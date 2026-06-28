@@ -4,7 +4,7 @@ The essential principles in SKILL.md are already loaded. No additional reading n
 
 <process>
 
-## Step 0: Check for resume
+<step number="0" name="check-resume">
 
 Before classifying input, check whether the interview is resuming a prior session.
 
@@ -13,7 +13,7 @@ Before classifying input, check whether the interview is resuming a prior sessio
 
 **If state file found:**
 
-1. Read the state file. Extract: Q&A pairs, coverage map state, timestamp, codebase analysis summary, preview status
+1. Read the state file. Extract: Q&A pairs, coverage map state, timestamp, codebase analysis summary, output status
 2. Re-validate against current codebase:
    - Has the input file changed since the timestamp? (compare mtime or git blob)
    - Have referenced source files changed?
@@ -26,7 +26,9 @@ Before classifying input, check whether the interview is resuming a prior sessio
 
 **If no state file:** proceed to Step 1.
 
-## Step 1: Classify Input
+</step>
+
+<step number="1" name="classify-input">
 
 Determine what the user provided in response to the intake question:
 
@@ -34,18 +36,24 @@ Determine what the user provided in response to the intake question:
 2. **Free text** — treat as a verbal requirement
 3. **Non-spec file** (source code, config, data) — confirm intent via AskUserQuestion: "This looks like [type]. Want me to interview you about [inferred intent]?"
 
-## Step 2: Pre-Analysis
+</step>
 
-Launch an Explore agent to:
+<step number="2" name="pre-analysis">
+
+Complete pre-analysis research before the first question:
 
 1. Analyze the input — what's defined, ambiguous, missing
 2. Scan the codebase for existing patterns, architecture, tech stack
 3. Check dependencies (package.json, pyproject.toml, etc.)
 4. Read product docs (README, CLAUDE.md, existing specs)
 
+Use an Explore agent only when the active repository and runtime instructions explicitly authorize that bounded research subagent for interview pre-analysis. Otherwise perform the same read-only research in the main conversation. Read named files, skill files, skill references, the repository's CLAUDE.md instruction file, and user-provided files in the main conversation.
+
 Share the structured brief with the user before asking the first question. Include your preliminary opinions — they set the tone for a collaborative interview, not a passive one.
 
-## Step 3: Build Initial Coverage Map
+</step>
+
+<step number="3" name="build-initial-coverage-map">
 
 From the input and pre-analysis, identify coverage areas:
 
@@ -56,7 +64,9 @@ From the input and pre-analysis, identify coverage areas:
 
 Display the initial coverage map to the user.
 
-## Step 4: Conduct Interview
+</step>
+
+<step number="4" name="conduct-interview">
 
 Follow the essential principles strictly:
 
@@ -66,7 +76,9 @@ Follow the essential principles strictly:
 4. Refine coverage map as new areas emerge — split, add, mark [done]
 5. Record every pushback and resolution in a running decisions log
 
-## Step 5: Propose Completion
+</step>
+
+<step number="5" name="propose-completion">
 
 When all discovered areas are [done]:
 
@@ -75,16 +87,18 @@ When all discovered areas are [done]:
 3. If further — identify what areas to add or deepen
 4. If ready — proceed to output
 
-## Step 6: Determine Output
+</step>
+
+<step number="6" name="determine-output">
 
 Ask the user via AskUserQuestion:
 
 1. **Output format** — markdown spec, structured notes, or other
 2. **Output location** — where to save the file
 
-Then ask whether to generate an interactive HTML preview or go straight to the document. If preview, follow the Preview Protocol from essential principles.
+</step>
 
-## Step 7: Generate Output
+<step number="7" name="generate-output">
 
 Generate dynamic sections based on what the interview revealed:
 
@@ -94,7 +108,9 @@ Generate dynamic sections based on what the interview revealed:
 - Include **Implementation Order** if technical dependencies were discussed
 - If auto-split was triggered, generate separate files with a master document linking them
 
-## Step 8: Post-Output
+</step>
+
+<step number="8" name="post-output">
 
 Ask via AskUserQuestion what task format the user wants:
 
@@ -105,6 +121,8 @@ Ask via AskUserQuestion what task format the user wants:
 
 Generate the task breakdown from the document's dependency graph and implementation order.
 
+</step>
+
 </process>
 
 <success_criteria>
@@ -113,7 +131,7 @@ The direct interview is complete when:
 - [ ] Pre-analysis brief shared with user before first question
 - [ ] All coverage areas explored and marked [done]
 - [ ] Pushback applied where warranted, decisions logged
-- [ ] Output document generated (with preview revision loop if opted in)
+- [ ] Output document generated
 - [ ] Task breakdown generated (if requested)
 - [ ] Interview state persisted to `.interview-state.json`
 
