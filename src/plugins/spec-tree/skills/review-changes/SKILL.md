@@ -7,7 +7,10 @@ allowed-tools:
   - Bash(printf:*)
   - Bash(python3:*)
   - Bash(rm -rf:*)
-  - Bash(spx journal:*)
+  - Bash(spx journal open:*)
+  - Bash(spx journal append:*)
+  - Bash(spx journal read:*)
+  - Bash(spx journal seal:*)
   - Grep
   - Glob
   - Read
