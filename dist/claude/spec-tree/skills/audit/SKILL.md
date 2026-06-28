@@ -114,9 +114,9 @@ Dispatch to `audit-{lang}-architecture`. Findings populate the child verdict's A
 
 <phase number="4" name="emit">
 
-For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage the children in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The one orchestrator-owned row (`determinism-contract`) is passed to `aggregate_verdicts.py` as a `--row name=STATUS` argument — `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts, UNKNOWN otherwise. The aggregator assembles one wrapper verdict whose `children` array carries the per-language verdicts. The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills) demands a directory.
+For each language partition, the dispatched skills emit JSON verdicts per the canonical schema in `${CLAUDE_SKILL_DIR}/scripts/verdict.py`. Stage each child verdict in a unique scratch directory created by `pass_results.py mkdir` (a `tempfile.mkdtemp`-backed unique path — two concurrent audit runs do not clobber each other) and write each partition's verdict JSON to its own file under that directory. The one orchestrator-owned row (`determinism-contract`) is passed to `aggregate_verdicts.py` as a `--row name=STATUS` argument — `determinism-contract` is PASS when Phase 0 produced a frozen scope plus scope hash without halts, UNKNOWN otherwise. The aggregator assembles one wrapper verdict whose `children` array carries the per-language verdicts. The wrapper verdict never touches disk — only the per-language children files do, because fanout (one orchestrator → N dispatched skills) demands a directory.
 
-The agentic verification run is one append-only `spx journal` run that is its sole source of truth: the audit records the run as channel events and reads its verdict back from the sealed event prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` maps the wrapper verdict onto channel events and renders the verdict from the prefix through the one shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type audit` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
+The agentic verification run is one append-only `spx journal` run that is its sole source of truth. Open the journal before dispatching any partition, append the scope-entered event immediately, then append scope-advanced and finding-reported events as each partition's child verdict returns. Append the terminal run-completed event from the streamed prefix, seal, then render from the sealed prefix. `${CLAUDE_SKILL_DIR}/scripts/journal_emit.py` builds one event at a time through the shared run-journal projection it consumes — the orchestrator never re-implements event construction, the rollup, or the render, and never hand-formats markdown. The journal's verification kind is the opaque `--type audit` segment; the backend is edge-resolved (a local run-journal file on a developer machine, the pull-request backend under CI), so the skill names no storage path.
 
 ```bash
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
@@ -160,11 +160,56 @@ CONFIG_DIGEST=$(printf '%s\n' <audit-config-digest-input-lines> \
 PARTICIPANTS_JSON='["audit"]'
 OUTPUT_PATHS_JSON='[]'
 TARGET_KIND='branch'
-PULL_REQUEST_METADATA_ARGS=()
+PULL_REQUEST_JOURNAL_ARGS=()
+PULL_REQUEST_VERDICT_METADATA_ARGS=()
 if [ -n "${PR_NUMBER:-}" ]; then
   TARGET_KIND='pull-request'
-  PULL_REQUEST_METADATA_ARGS=(--metadata pullRequestNumber="$PR_NUMBER")
+  PULL_REQUEST_JOURNAL_ARGS=(--pull-request-number "$PR_NUMBER")
+  PULL_REQUEST_VERDICT_METADATA_ARGS=(--metadata pullRequestNumber="$PR_NUMBER")
 fi
+
+AUDIT_METADATA=$(python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" metadata \
+  --target <scope-target> \
+  --scope-hash "$SCOPE_HASH" \
+  --branch-name "$BRANCH_NAME" \
+  --branch-slug "$BRANCH_SLUG" \
+  --head-sha "$HEAD_SHA" \
+  --base-ref "$BASE_REF" \
+  --base-sha "$BASE_SHA" \
+  --config-digest "$CONFIG_DIGEST" \
+  --participants-json "$PARTICIPANTS_JSON" \
+  --scope-json "$SCOPE_JSON" \
+  --started-at "$RUN_STARTED_AT" \
+  --completed-at "$RUN_STARTED_AT" \
+  --output-paths-json "$OUTPUT_PATHS_JSON" \
+  --target-kind "$TARGET_KIND" \
+  "${PULL_REQUEST_JOURNAL_ARGS[@]}")
+
+RUN_TOKEN=$(spx journal open --type audit \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["runToken"])')
+python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" scope-entered \
+  --metadata "$AUDIT_METADATA" \
+  --now "$RUN_STARTED_AT" \
+  | while IFS= read -r EVENT; do
+      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
+    done
+
+# Immediately after each partition's three audit-{lang}* phases return and
+# $CHILD_JSON exists, append that partition's progress and finding events.
+CHILD_JSON="$CHILDREN_DIR/<language>.json"
+PARTITION_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" scope-advanced \
+  --unit "<language>" \
+  --now "$PARTITION_COMPLETED_AT" \
+  | while IFS= read -r EVENT; do
+      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
+    done
+python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" findings-reported \
+  --now "$PARTITION_COMPLETED_AT" \
+  < "$CHILD_JSON" \
+  | while IFS= read -r EVENT; do
+      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
+    done
 
 # Assemble the wrapper verdict. This is the run's verdict artifact.
 WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
@@ -184,17 +229,13 @@ WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   --metadata startedAt="$RUN_STARTED_AT" \
   --metadata outputPaths="$OUTPUT_PATHS_JSON" \
   --metadata targetKind="$TARGET_KIND" \
-  "${PULL_REQUEST_METADATA_ARGS[@]}")
+  "${PULL_REQUEST_VERDICT_METADATA_ARGS[@]}")
 
-# Default stateless local emit: record the run on the spx journal and read
-# its verdict back from the sealed event prefix. journal_emit maps the
-# wrapper onto channel events (one per line) and renders the verdict —
-# overall plus human-readable surface — from the prefix.
-RUN_TOKEN=$(spx journal open --type audit \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["runToken"])')
 RUN_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-printf '%s' "$WRAPPER_JSON" \
-  | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" build-events \
+spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
+  | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" run-completed \
+    --metadata "$AUDIT_METADATA" \
+    --completed-at "$RUN_COMPLETED_AT" \
     --now "$RUN_COMPLETED_AT" \
   | while IFS= read -r EVENT; do
       printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
@@ -204,7 +245,7 @@ spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render
 ```
 
-The append loop iterates a finite event list (it is not a polling wait — no `sleep`, no condition retry). The journal is the run's source of truth; the rendered `{overall, surface}` is a projection of the sealed prefix, never authoritative state.
+The append loops consume finite event streams emitted by the adapter — no `sleep`, no condition retry. The journal is the run's source of truth; the rendered `{overall, surface}` is a projection of the sealed prefix, never authoritative state.
 
 </phase>
 
@@ -273,7 +314,7 @@ Overall rollup follows `verdict.roll_up`: APPROVED iff every wrapper row and eve
 - One wrapper verdict emitted, with one child verdict per language partition in the frozen scope.
 - The wrapper has one orchestrator-owned row (`determinism-contract`) and one child per partition; the audit runs no deterministic verification and contributes no validation- or test-gate row.
 - The wrapper's `overall` is APPROVED, REJECTED, or UNKNOWN per `verdict.roll_up` applied to wrapper rows plus children overalls.
-- The wrapper verdict is assembled via `aggregate_verdicts.py`; the default stateless local run is recorded on the `spx journal` and its verdict read back through `journal_emit.py render`, the overall preserved across the journal.
+- The wrapper verdict is assembled via `aggregate_verdicts.py`; the local run opens the `spx journal`, streams scope, finding, and completion events, seals the journal, and reads the verdict back through `journal_emit.py render` with the overall preserved across the journal.
 - Pull-request audit runs stamp `pullRequestNumber` and target kind into wrapper metadata and read prior state through the journal backend, never from rendered PR comments.
 - Resolved/reopened projection uses content identity `(file, line, rule, message)` and treats a first PR run as empty prior state.
 - The orchestrator's prose contains zero language-specific tokens beyond the dispatch template `audit-{lang}*` and the language placeholder `<lang>`.

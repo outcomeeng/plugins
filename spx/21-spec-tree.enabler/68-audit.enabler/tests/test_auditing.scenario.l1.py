@@ -18,47 +18,18 @@ and agent prompts:
 
 from __future__ import annotations
 
-import importlib.util
 import pathlib
 import subprocess
 import sys
-from types import ModuleType
 
 import pytest
+from outcomeeng_testing.harnesses.audit_orchestrator import (
+    AUDIT_ORCHESTRATOR_MODULE_PATH,
+    load_audit_orchestrator_module,
+)
 from outcomeeng_testing.harnesses.verdict_toolchain import load_verdict_module
 
-# parents[4] = repo root (this file lives 4 levels deep: spx/21-spec-tree.enabler/
-# 68-auditing.enabler/tests/<file>).
-# Tree surgery that changes the enabler's depth must update this index.
-SCRIPTS_DIR = (
-    pathlib.Path(__file__).resolve().parents[4]
-    / "src"
-    / "plugins"
-    / "spec-tree"
-    / "skills"
-    / "audit"
-    / "scripts"
-)
-AUDIT_ORCHESTRATOR = SCRIPTS_DIR / "audit_orchestrator.py"
-
 DEFAULT_BASE_REF = "main"
-
-
-def _load_audit_orchestrator() -> ModuleType:
-    """Load src/plugins/spec-tree/skills/audit/scripts/audit_orchestrator.py.
-
-    The module ships inside the spec-tree plugin's scripts/ directory; importlib
-    loads it by absolute path so this test does not depend on package layout.
-    """
-    spec = importlib.util.spec_from_file_location(
-        "audit_orchestrator", AUDIT_ORCHESTRATOR
-    )
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load module from {AUDIT_ORCHESTRATOR}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["audit_orchestrator"] = module
-    spec.loader.exec_module(module)
-    return module
 
 
 def _git(repo: pathlib.Path, *args: str) -> str:
@@ -117,7 +88,7 @@ def repo(tmp_path: pathlib.Path) -> pathlib.Path:
 
 def test_detect_base_ref_strips_origin_head_prefix(repo: pathlib.Path) -> None:
     """When ``refs/remotes/origin/HEAD`` exists, return the bare branch name."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     (repo / ".git" / "refs" / "remotes" / "origin").mkdir(parents=True)
     (repo / ".git" / "refs" / "remotes" / "origin" / "main").write_text(
         _git(repo, "rev-parse", "HEAD")
@@ -133,7 +104,7 @@ def test_detect_base_ref_defaults_to_main_when_origin_absent(
     repo: pathlib.Path,
 ) -> None:
     """Repos without an ``origin`` remote default to ``main``."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
 
     base = module.detect_base_ref(repo)
 
@@ -147,7 +118,7 @@ def test_detect_base_ref_defaults_to_main_when_origin_absent(
 
 def test_detect_current_branch_returns_named_branch(repo: pathlib.Path) -> None:
     """On a named branch, return the bare branch name."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _git(repo, "switch", "-c", "feature/audit-helpers", "--quiet")
 
     branch = module.detect_current_branch(repo)
@@ -157,7 +128,7 @@ def test_detect_current_branch_returns_named_branch(repo: pathlib.Path) -> None:
 
 def test_detect_current_branch_raises_on_detached_head(repo: pathlib.Path) -> None:
     """Detached HEAD raises ``DetachedHeadError`` so state naming refuses HEAD."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     head_sha = _git(repo, "rev-parse", "HEAD").strip()
     _git(repo, "checkout", "--detach", head_sha, "--quiet")
 
@@ -174,7 +145,7 @@ def test_branch_slug_replaces_slashes_with_double_underscore(
     tmp_path: pathlib.Path,
 ) -> None:
     """``feature/foo`` slugs to ``feature__foo`` when no collision exists."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
 
     slug = module.branch_slug("feature/foo", tmp_path)
 
@@ -183,7 +154,7 @@ def test_branch_slug_replaces_slashes_with_double_underscore(
 
 def test_branch_slug_collision_appends_hash_suffix(tmp_path: pathlib.Path) -> None:
     """A branch literally named like another branch's slug gets a distinct slug."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     (tmp_path / "feature__foo.md").write_text(
         "---\nbranch: feature/foo\n---\n\n# state\n",
         encoding="utf-8",
@@ -204,7 +175,7 @@ def test_expand_diff_range_returns_files_changed_between_commits(
     repo: pathlib.Path,
 ) -> None:
     """``HEAD~1..HEAD`` returns files modified by the most recent commit."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"src/a.ts": "first\n", "src/b.py": "first\n"}, "first")
     _commit_files(repo, {"src/a.ts": "second\n"}, "second")
 
@@ -215,7 +186,7 @@ def test_expand_diff_range_returns_files_changed_between_commits(
 
 def test_expand_diff_range_filters_by_single_pattern(repo: pathlib.Path) -> None:
     """A single ``*.ts`` pattern excludes ``.py`` and ``.tsx`` files."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"keep.ts": "x", "skip.py": "x", "skip.tsx": "x"}, "first")
     _commit_files(repo, {"keep.ts": "y", "skip.py": "y", "skip.tsx": "y"}, "second")
 
@@ -226,7 +197,7 @@ def test_expand_diff_range_filters_by_single_pattern(repo: pathlib.Path) -> None
 
 def test_expand_diff_range_combines_multiple_patterns(repo: pathlib.Path) -> None:
     """Multiple patterns are unioned by ``git diff -- <pat1> <pat2>``."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"a.ts": "x", "b.tsx": "x", "c.py": "x"}, "first")
     _commit_files(repo, {"a.ts": "y", "b.tsx": "y", "c.py": "y"}, "second")
 
@@ -241,7 +212,7 @@ def test_expand_diff_range_returns_empty_when_no_files_match(
     repo: pathlib.Path,
 ) -> None:
     """A pattern that matches nothing in the diff yields an empty list."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"only.py": "x"}, "first")
     _commit_files(repo, {"only.py": "y"}, "second")
 
@@ -254,7 +225,7 @@ def test_expand_diff_range_with_no_patterns_returns_all_files(
     repo: pathlib.Path,
 ) -> None:
     """``patterns=None`` runs ``git diff --name-only <range>`` without filter."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"a.ts": "x", "b.py": "x", "c.tsx": "x"}, "first")
     _commit_files(repo, {"a.ts": "y", "b.py": "y", "c.tsx": "y"}, "second")
 
@@ -267,7 +238,7 @@ def test_expand_diff_range_default_head_returns_uncommitted_changes(
     repo: pathlib.Path,
 ) -> None:
     """Range ``HEAD`` (no commits ahead) reports staged + unstaged changes."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     (repo / "edited.ts").write_text("new content\n", encoding="utf-8")
     _git(repo, "add", "edited.ts")
 
@@ -283,7 +254,7 @@ def test_expand_diff_range_default_head_returns_uncommitted_changes(
 
 def test_branch_scope_returns_files_added_by_branch(repo: pathlib.Path) -> None:
     """Files committed after origin/main snapshot are reported."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"old.ts": "x", "old.py": "x"}, "base")
     _snapshot_origin(repo, "main")
     _git(repo, "switch", "-c", "feature/audit-scope", "--quiet")
@@ -296,7 +267,7 @@ def test_branch_scope_returns_files_added_by_branch(repo: pathlib.Path) -> None:
 
 def test_branch_scope_filters_by_patterns(repo: pathlib.Path) -> None:
     """Patterns restrict the result to matching extensions."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "base")
     _snapshot_origin(repo, "main")
     _git(repo, "switch", "-c", "feature/mixed", "--quiet")
@@ -313,7 +284,7 @@ def test_branch_scope_is_empty_when_no_commits_ahead(
     repo: pathlib.Path,
 ) -> None:
     """A branch with zero commits past origin/main yields an empty scope."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "base")
     _snapshot_origin(repo, "main")
     _git(repo, "switch", "-c", "feature/no-work", "--quiet")
@@ -327,7 +298,7 @@ def test_branch_scope_uses_origin_prefix_for_arbitrary_base(
     repo: pathlib.Path,
 ) -> None:
     """Any base ref name is composed as ``origin/<base_ref>``."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "base")
     _snapshot_origin(repo, "develop")
     _git(repo, "switch", "-c", "feature/branched-from-develop", "--quiet")
@@ -342,7 +313,7 @@ def test_branch_scope_excludes_files_committed_on_base_after_branch_off(
     repo: pathlib.Path,
 ) -> None:
     """Files added to base after the branch-off are not part of the scope."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "base")
     _snapshot_origin(repo, "main")
     _git(repo, "switch", "-c", "feature/parallel", "--quiet")
@@ -366,7 +337,7 @@ def test_modified_since_returns_files_added_after_prior_sha(
     repo: pathlib.Path,
 ) -> None:
     """Files added in commits past ``prior_sha`` are reported."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior_sha = _commit_files(repo, {"old.ts": "x"}, "old work")
     _commit_files(repo, {"new.ts": "y", "another.tsx": "y"}, "new work")
 
@@ -377,7 +348,7 @@ def test_modified_since_returns_files_added_after_prior_sha(
 
 def test_modified_since_filters_by_patterns(repo: pathlib.Path) -> None:
     """Patterns restrict the result to matching extensions."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior_sha = _commit_files(repo, {"seed.ts": "x"}, "seed")
     _commit_files(repo, {"keep.ts": "y", "keep.tsx": "y", "skip.py": "y"}, "mixed work")
 
@@ -390,7 +361,7 @@ def test_modified_since_is_empty_when_no_commits_past_sha(
     repo: pathlib.Path,
 ) -> None:
     """A repo at the same SHA as ``prior_sha`` yields an empty result."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior_sha = _commit_files(repo, {"seed.ts": "x"}, "seed")
 
     files = module.modified_since(prior_sha, repo=repo)
@@ -402,7 +373,7 @@ def test_modified_since_includes_files_modified_by_later_commits(
     repo: pathlib.Path,
 ) -> None:
     """A file edited in a commit past ``prior_sha`` appears in the result."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"persistent.ts": "v1"}, "v1")
     prior_sha = _git(repo, "rev-parse", "HEAD").strip()
     _commit_files(repo, {"persistent.ts": "v2"}, "v2")
@@ -420,7 +391,7 @@ def test_modified_since_uses_two_dot_diff_against_head(
     A file present at ``prior_sha`` but absent from HEAD must appear so
     the auditor knows the file no longer exists in the working tree.
     """
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "seed")
     _git(repo, "switch", "-c", "diverge", "--quiet")
     _commit_files(repo, {"diverge_only.ts": "y"}, "diverge commit")
@@ -446,7 +417,7 @@ def test_is_sha_reachable_returns_true_for_known_commit(
     repo: pathlib.Path,
 ) -> None:
     """A SHA from an existing commit on the current branch is reachable."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     sha = _commit_files(repo, {"seed.ts": "x"}, "seed")
 
     assert module.is_sha_reachable(sha, repo=repo) is True
@@ -454,7 +425,7 @@ def test_is_sha_reachable_returns_true_for_known_commit(
 
 def test_is_sha_reachable_accepts_abbreviated_sha(repo: pathlib.Path) -> None:
     """Git accepts unique SHA prefixes; the helper does not require full length."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     sha = _commit_files(repo, {"seed.ts": "x"}, "seed")
     abbreviated = sha[:SHA_ABBREV_LENGTH]
 
@@ -469,7 +440,7 @@ def test_is_sha_reachable_returns_false_for_unknown_sha(
     Models the failure mode where a prior run SHA was force-pushed away
     or never fetched into the local clone.
     """
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "seed")
 
     assert module.is_sha_reachable(NONEXISTENT_SHA, repo=repo) is False
@@ -479,7 +450,7 @@ def test_is_sha_reachable_returns_false_for_malformed_input(
     repo: pathlib.Path,
 ) -> None:
     """A non-SHA string (e.g., a typo'd value) is treated as unreachable."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "seed")
 
     assert module.is_sha_reachable("not-a-sha", repo=repo) is False
@@ -489,7 +460,7 @@ def test_is_sha_reachable_returns_false_for_tree_object(
     repo: pathlib.Path,
 ) -> None:
     """A SHA that resolves to a non-commit object (a tree) is unreachable."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"seed.ts": "x"}, "seed")
     tree_sha = _git(repo, "rev-parse", "HEAD^{tree}").strip()
 
@@ -503,7 +474,7 @@ def test_is_sha_reachable_returns_false_for_tree_object(
 
 def test_uncommitted_scope_includes_untracked_files(repo: pathlib.Path) -> None:
     """A new file that has not been ``git add``-ed is still in scope."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     (repo / "fresh.ts").write_text("brand new", encoding="utf-8")
 
     files = module.uncommitted_scope(patterns=["*.ts"], repo=repo)
@@ -515,7 +486,7 @@ def test_uncommitted_scope_includes_modified_staged_and_untracked(
     repo: pathlib.Path,
 ) -> None:
     """All three working-tree categories appear in the same scope."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     _commit_files(repo, {"committed.ts": "v1\n"}, "seed")
     (repo / "committed.ts").write_text("v2\n", encoding="utf-8")
     (repo / "staged.ts").write_text("staged content\n", encoding="utf-8")
@@ -529,7 +500,7 @@ def test_uncommitted_scope_includes_modified_staged_and_untracked(
 
 def test_uncommitted_scope_respects_gitignore(repo: pathlib.Path) -> None:
     """Files matched by ``.gitignore`` are excluded from the scope."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     (repo / ".gitignore").write_text("ignored.ts\n", encoding="utf-8")
     _git(repo, "add", ".gitignore")
     _git(repo, "commit", "-m", "ignore", "--quiet")
@@ -545,7 +516,7 @@ def test_uncommitted_scope_is_empty_when_working_tree_clean(
     repo: pathlib.Path,
 ) -> None:
     """A clean working tree (no diff, no untracked files) yields ``[]``."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
 
     files = module.uncommitted_scope(repo=repo)
 
@@ -562,7 +533,7 @@ def _run_cli(
 ) -> tuple[int, str, str]:
     """Invoke the script's CLI as a subprocess and return (rc, stdout, stderr)."""
     result = subprocess.run(  # noqa: S603 — fixed argv, no shell
-        [sys.executable, str(AUDIT_ORCHESTRATOR), *args],
+        [sys.executable, str(AUDIT_ORCHESTRATOR_MODULE_PATH), *args],
         input=stdin,
         capture_output=True,
         text=True,
@@ -710,7 +681,7 @@ def test_cli_sha_reachable_exit_codes(repo: pathlib.Path) -> None:
 
 def test_helpers_under_audit_are_exposed_by_module() -> None:
     """The full helper symbol set must be importable from audit_orchestrator."""
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
 
     for name in [
         "compute_scope_hash",
@@ -779,7 +750,7 @@ def _verdict(open_findings: list[dict[str, object]]) -> dict[str, object]:
 
 
 def test_verdict_diff_first_run_returns_empty_arrays() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     current = _verdict([VERDICT_FINDING_A_DICT, VERDICT_FINDING_B_DICT])
     enriched = module.compute_verdict_diff(prior=None, current=current)
     assert enriched["resolved"] == []
@@ -787,7 +758,7 @@ def test_verdict_diff_first_run_returns_empty_arrays() -> None:
 
 
 def test_verdict_diff_resolves_findings_no_longer_open() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior = _verdict([VERDICT_FINDING_A_DICT, VERDICT_FINDING_B_DICT])
     current = _verdict([VERDICT_FINDING_A_DICT])
     enriched = module.compute_verdict_diff(prior=prior, current=current)
@@ -796,7 +767,7 @@ def test_verdict_diff_resolves_findings_no_longer_open() -> None:
 
 
 def test_verdict_diff_carries_resolved_across_runs() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior = {
         **_verdict([VERDICT_FINDING_A_DICT]),
         "resolved": [VERDICT_FINDING_B_DICT],
@@ -807,7 +778,7 @@ def test_verdict_diff_carries_resolved_across_runs() -> None:
 
 
 def test_verdict_diff_reopens_finding_in_prior_resolved() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior = {
         **_verdict([VERDICT_FINDING_A_DICT]),
         "resolved": [VERDICT_FINDING_B_DICT],
@@ -819,7 +790,7 @@ def test_verdict_diff_reopens_finding_in_prior_resolved() -> None:
 
 
 def test_verdict_diff_walks_into_child_verdicts() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior_with_child = {
         "schema_version": 1,
         "skill": "audit",
@@ -845,10 +816,21 @@ def test_verdict_diff_walks_into_child_verdicts() -> None:
 
 
 def test_verdict_diff_severity_change_is_same_finding() -> None:
-    module = _load_audit_orchestrator()
+    module = load_audit_orchestrator_module()
     prior_warning = {**VERDICT_FINDING_A_DICT, "severity": "WARNING"}
     prior = _verdict([prior_warning])
     current = _verdict([VERDICT_FINDING_A_DICT])  # same identity, REJECT severity
+    enriched = module.compute_verdict_diff(prior=prior, current=current)
+    assert enriched["resolved"] == []
+    assert enriched["reopened"] == []
+
+
+def test_verdict_diff_id_change_is_same_finding() -> None:
+    module = load_audit_orchestrator_module()
+    prior_with_generated_id = {**VERDICT_FINDING_A_DICT, "id": "generated-previous"}
+    current_with_new_id = {**VERDICT_FINDING_A_DICT, "id": "generated-current"}
+    prior = _verdict([prior_with_generated_id])
+    current = _verdict([current_with_new_id])
     enriched = module.compute_verdict_diff(prior=prior, current=current)
     assert enriched["resolved"] == []
     assert enriched["reopened"] == []
