@@ -39,18 +39,20 @@ from typing import Final
 # The lowest published @outcomeeng/spx version whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
 # newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.6.3 exposes worktree occupancy statuses as `running` and
-# `free`, which the diagnose and pickup skills and the agent-environment tests
-# consume. spx 0.6.1 introduced `spx session show --json`, the producer-owned
-# session-frontmatter parser that /pickup claim verification consumes. spx 0.6.0
-# introduced the `spx journal` channel (open/append/seal/read/render over a
-# type-agnostic append-only run journal), the run-journal contract the agentic
-# verification skills bind for their durable run state (0.5.6 introduced `spx
-# hook run session-start`, the host-lifecycle hook runner the spec-tree plugin's
-# SessionStart hook delegates to for session identity, project-dir exports, and
-# worktree occupancy; 0.5.4 introduced the explicit work-branch git_ref the
-# /handoff and /pickup skills depend on).
-REQUIRED_SPX_VERSION: Final = "0.6.3"
+# above it. spx 0.6.7 introduced `spx -C <path> session handoff`, which the
+# /issue skill uses for cross-repository follow-up capture. spx 0.6.3 exposes
+# worktree occupancy statuses as `running` and `free`, which the diagnose and
+# pickup skills and the agent-environment tests consume. spx 0.6.1 introduced
+# `spx session show --json`, the producer-owned session-frontmatter parser that
+# /pickup claim verification consumes. spx 0.6.0 introduced the `spx journal`
+# channel (open/append/seal/read/render over a type-agnostic append-only run
+# journal), the run-journal contract the agentic verification skills bind for
+# their durable run state (0.5.6 introduced `spx hook run session-start`, the
+# host-lifecycle hook runner the spec-tree plugin's SessionStart hook delegates
+# to for session identity, project-dir exports, and worktree occupancy; 0.5.4
+# introduced the explicit work-branch git_ref the /handoff and /pickup skills
+# depend on).
+REQUIRED_SPX_VERSION: Final = "0.6.7"
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
