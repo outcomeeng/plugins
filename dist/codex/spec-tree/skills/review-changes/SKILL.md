@@ -23,9 +23,9 @@ Two CLI scripts plus the policy module under `${SKILL_DIR}/scripts/` and the pro
 
 | Entry point                                | Effect                                                                                                                                                                                                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/compute_diff.py`                  | Resolve `base_ref` (env -> git origin/HEAD) and `head_ref` (env -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout or to a caller-owned scratch bundle (`diff.md`, `manifest.json`)                |
-| `scripts/journal_emit.py`                  | `metadata` derives run identity; `scope-entered` / `scope-advanced` / `finding-reported` / `run-completed` each print one streaming journal event (the per-finding parse is the validity gate); `render` renders the human surface from a sealed prefix |
-| `scripts/review_result.py`                 | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `parse_finding_json` / `to_json_dict` / `from_json_dict`                                                                                                                    |
+| `${SKILL_DIR}/scripts/compute_diff.py`     | Resolve `base_ref` (env -> git origin/HEAD) and `head_ref` (env -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout or to a caller-owned scratch bundle (`diff.md`, `manifest.json`)                |
+| `${SKILL_DIR}/scripts/journal_emit.py`     | `metadata` derives run identity; `scope-entered` / `scope-advanced` / `finding-reported` / `run-completed` each print one streaming journal event (the per-finding parse is the validity gate); `render` renders the human surface from a sealed prefix |
+| `${SKILL_DIR}/scripts/review_result.py`    | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `parse_finding_json` / `to_json_dict` / `from_json_dict`                                                                                                                    |
 | `${SKILL_DIR}/references/review-prompt.md` | Swappable judgment-style review prompt — read via `Read` into context                                                                                                                                                                                   |
 | `REVIEW.md` at repository root             | Repository-local review override — read via `Read` when present and applied before the judgment prompt                                                                                                                                                  |
 
@@ -48,7 +48,7 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
    On non-zero exit, read the stderr message — the script names every source it tried (env and git symbolic-ref) so the operator can populate one.
    Read `manifest.json` from the reported `manifest_path`, then read `diff.md` from the reported `diff_path`. Use the manifest's section spans and file lists to revisit only the relevant diff section while reviewing. The scratch directory is owned by this invocation and is removed after the run is sealed and rendered.
 
-2. **Load repository-local review instructions and the judgment-style prompt** into context. If `REVIEW.md` exists at the repository root, read it first and apply it as the repository-local taxonomy and comment-shape override. Read only the active root override; do not search for review template or example files. Then read the swappable prompt:
+2. **Load repository-local review instructions and the judgment-style prompt** into context. If `REVIEW.md` exists at the repository root, read it first and apply it as the repository-local review override for taxonomy guidance and repository-specific review rules. It does not override the `Finding` JSON schema, required keys, severity and concern enums, or the journal-rendered output shape. Read only the active root override; do not search for review template or example files. Then read the swappable prompt:
 
    ```text
    Read REVIEW.md  (only when present at repository root)
@@ -68,7 +68,7 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
      | spx journal append --type review --run "$RUN_TOKEN" >/dev/null
    ```
 
-4. **Apply the prompt and stream the run while reviewing.** Work through the changed files listed in the bundle manifest. As each changed file is examined, append a scope-advanced event naming it; the instant a finding is raised, emit that one finding as a JSON object conforming to the `Finding` schema in `scripts/review_result.py` and append its finding-reported event. Do not gather findings into one document and append them at the end.
+4. **Apply the prompt and stream the run while reviewing.** Work through the changed files listed in the bundle manifest. As each changed file is examined, append a scope-advanced event naming it; the instant a finding is raised, emit that one finding as a JSON object conforming to the `Finding` schema in `${SKILL_DIR}/scripts/review_result.py` and append its finding-reported event. Do not gather findings into one document and append them at the end.
 
    ```bash
    # As you examine each changed file:

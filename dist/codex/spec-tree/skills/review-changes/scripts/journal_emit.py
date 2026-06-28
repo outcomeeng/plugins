@@ -239,6 +239,17 @@ def _optional_file_config(
     }
 
 
+def _resolve_repo_root(repo: pathlib.Path) -> pathlib.Path:
+    result = subprocess.run(  # noqa: S603, S607 — fixed git command, repo is caller-controlled
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return pathlib.Path(result.stdout.strip()).resolve()
+
+
 def review_config_digest(
     skill_dir: pathlib.Path | None = None,
     *,
@@ -267,6 +278,7 @@ def metadata_for_worktree(
     *, started_at: str, completed_at: str, target: str = DEFAULT_TARGET
 ) -> dict[str, object]:
     repo = pathlib.Path.cwd()
+    repo_root = _resolve_repo_root(repo)
     base_ref = _resolve_base_ref()
     head_ref = _resolve_head_ref()
     branch_name = _resolve_branch_name()
@@ -282,7 +294,7 @@ def metadata_for_worktree(
         jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
         jp.RUN_STATE_BASE_REF: base_ref,
         jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
-        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(),
+        jp.RUN_STATE_CONFIG_DIGEST: review_config_digest(repo_root=repo_root),
         jp.RUN_STATE_PARTICIPANTS: list(PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
         jp.RUN_STATE_STARTED_AT: started_at,

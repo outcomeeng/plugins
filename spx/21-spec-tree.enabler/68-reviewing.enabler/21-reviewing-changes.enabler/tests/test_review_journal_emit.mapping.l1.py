@@ -224,16 +224,62 @@ def test_config_digest_changes_with_root_review_policy(
     ) != je.review_config_digest(skill, repo_root=second_repo)
 
 
+def test_metadata_config_digest_uses_git_root_review_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    subdir = repo_root / "nested"
+    subdir.mkdir(parents=True)
+    received_roots: list[pathlib.Path | None] = []
+
+    def digest_with_repo_root(*, repo_root: pathlib.Path | None = None) -> str:
+        received_roots.append(repo_root)
+        return "cfg-abc123"
+
+    monkeypatch.chdir(subdir)
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo_root)
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", digest_with_repo_root)
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+    )
+
+    assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
+    assert received_roots == [repo_root]
+
+
 def test_metadata_scope_hash_includes_changed_file_set(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     changed_files = ["README.md"]
     review_input = "### Committed diff\n\nREADME change"
 
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -274,10 +320,11 @@ def test_metadata_for_worktree_records_pull_request_target(
 ) -> None:
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "origin/work/example")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -315,10 +362,11 @@ def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
     monkeypatch.setenv("SPX_VERIFY_BRANCH", "work/example")
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(
         je.changeset_scope, "detect_current_branch", fail_current_branch
     )
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -352,10 +400,11 @@ def test_metadata_scope_hash_includes_full_review_input(
 ) -> None:
     review_inputs = ["### Staged diff\n\nfirst", "### Staged diff\n\nsecond"]
 
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
     monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
     monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
@@ -394,7 +443,8 @@ def test_metadata_cli_emits_env_derived_run_identity(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
 ) -> None:
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
     monkeypatch.setattr(
         je.changeset_scope, "branch_slug", lambda branch: "work__example"
     )
