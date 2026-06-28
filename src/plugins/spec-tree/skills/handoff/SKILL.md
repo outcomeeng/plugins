@@ -142,7 +142,7 @@ Execute all four workflows in sequence. Each workflow has its own success criter
 A successful closure or handoff:
 
 - [ ] All anchored nodes identified with status and TDD position (workflow 01)
-- [ ] All seven perspectives worked through (workflow 02)
+- [ ] All six perspectives worked through (workflow 02)
 - [ ] Existing coordination notes such as PLAN.md and ISSUES.md checked for staleness and reconciled before closure — updated, removed, or pursued now when Claude can still act (workflows 02–04)
 - [ ] Existing `todo` and `doing` sessions searched by node path and topic before any continuation session is proposed or created (workflow 02)
 - [ ] `<RESOLVED_CLAIMED_SESSIONS>` marker emitted into the conversation by workflow 02

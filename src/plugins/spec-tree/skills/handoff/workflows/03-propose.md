@@ -2,7 +2,7 @@
 A persistence proposal containing the approval-required closure decisions and canonical session disposition.
 </objective>
 
-Use the seven reflection perspectives from workflow 02 as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
+Use the six reflection perspectives from workflow 02 as the proposal input. Imperfections fixed inline during workflow 02 are reported as completed work, not as proposals.
 
 <session_disposition_header>
 Before any proposal, print a plain-text header naming the canonical continuation plan plus every session that will be archived:
