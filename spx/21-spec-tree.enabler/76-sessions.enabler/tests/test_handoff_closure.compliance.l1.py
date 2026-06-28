@@ -62,7 +62,8 @@ def test_handoff_searches_existing_sessions_before_new_continuation() -> None:
     execute = _read("workflows/04-execute.md")
 
     assert "Search before adding any continuation" in skill
-    assert "spx session list --json" in reflect
+    assert "spx session list --status todo --json" in reflect
+    assert "spx session list --status doing --json" in reflect
     assert (
         '<EXISTING_SESSION_RECONCILIATION status="none|same-owner-continuation|existing-owner|ambiguous">'
         in reflect
