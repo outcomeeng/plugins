@@ -3,7 +3,7 @@ name: handoff
 description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
 arguments: [session_mode, prune_mode]
-allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
 ---
 
 <context>
@@ -15,9 +15,6 @@ allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(spx worktree:*), Bas
 
 **Current Branch:**
 !`git branch --show-current || echo "Not in a git repo"`
-
-**Current Sessions:**
-!`spx session list --status doing || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
 
 **Spec Tree:**
 !`ls spx/*.product.md 2>/dev/null || echo "No spec tree found"`
@@ -53,7 +50,7 @@ Create a session file only when continuation by Claude is impossible now: the us
 
 **Coordination notes block closure while Claude can act.** A persisted `PLAN.md` or unresolved `ISSUES.md` entry on an anchored node means the session is not over unless continuation is impossible now. Reconcile notes in the same session: remove stale entries, fix safe local defects, update imprecise entries, or continue into the work they describe. When a clearly wrong note outside the original scope is observed, record it in the imperfection ledger and fix it if the correction is safe and local; if ownership, scope, or cost changes, ask the operator at the next checkpoint. Do not convert it into a new session file.
 
-**Search before adding any continuation.** Before proposing or creating a continuation session, inspect existing `todo` and `doing` sessions with `spx session list --json`. Compare their `specs`, `files`, `goal`, and `next_step` against the nodes and topic terms from this closure. If an existing session already owns the same continuation, reconcile against it: rewrite a mid-session artifact only when this conversation created it, archive only sessions this conversation owns, and leave unrelated or ambiguous sessions untouched. Creating a new `todo` entry is valid only after this search shows no existing owner and continuation by Claude is impossible now.
+**Search before adding any continuation.** Before proposing or creating a continuation session, inspect existing `todo` and `doing` sessions with status-filtered reads: `spx session list --status todo --json` and `spx session list --status doing --json`. Compare their `specs`, `files`, `goal`, and `next_step` against the nodes and topic terms from this closure. If an existing session already owns the same continuation, reconcile against it: rewrite a mid-session artifact only when this conversation created it, archive only sessions this conversation owns, and leave unrelated or ambiguous sessions untouched. Creating a new `todo` entry is valid only after this search shows no existing owner and continuation by Claude is impossible now.
 
 Closing without creating a session file is appropriate when no continuation reader is needed from this closure. That is true when workflow 02's `<CONTINUATION_SIGNAL>` is `absent`: the anchored nodes carry no actionable `PLAN.md`, no unresolved `ISSUES.md` entry, no `spx/EXCLUDE` entry, no declared-but-unsatisfied assertion, and no external blocker. It is also true when `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` confirms another session already owns the only remaining continuation and this closure has no local blocker. A persisted coordination note that represents no future work is removed during closure, because a note no one will act on is deleted, not kept.
 
@@ -63,7 +60,7 @@ Closing without creating a session file is appropriate when no continuation read
 
 When the invocation of **`spx session handoff` refuses to create a session file,** e.g. on a linked worktree that is not cleanly detached at `origin/<default>` because the persist-then-detach precondition is unmet (see `workflows/04-execute.md` `<release_work_branch>`), address the problem by properly executing `workflows/04-execute.md` rather than rationalizing that no session file is needed.
 
-The refusal is not satisfied by **relocating** — running the handoff from a different worktree that is already clean while the work worktree keeps its branch. That records `git_ref` at unrelated state and leaves the work branch occupied, so `/pickup` cannot claim it: the handoff then points at the wrong place AND strands the work. The "keep the work worktree on its branch so it's ready to continue" instinct is the trap — that worktree is exactly the one the next agent cannot use. Release the worktree that holds the work — commit, push the work branch, detach it to `origin/<default>` — and run the handoff there, so the recorded anchor and the freed branch both point at the work.
+The refusal is not satisfied by **relocating** — running the handoff from a different worktree that is already clean while the work worktree keeps its branch. That records `git_ref` at unrelated state and leaves the work branch occupied, so `/pickup` cannot claim it: the handoff then points at the wrong place AND strands the work. The "keep the work worktree on its branch so it's ready to continue" instinct is the trap — that worktree is exactly the one the next agent cannot use. Step the worktree that holds the work off the branch — commit, push the work branch, detach it to `origin/<default>` — and run the handoff there, so the recorded anchor and the freed branch both point at the work.
 
 **Foreign-pool guardrail.** The worktree that holds the work is always one in Claude's own pool. Never relocate the work into, or run the handoff against, a `.spx/` pool Claude does not participate in — another product's checkout. A foreign pool's worktree is off-limits regardless of how free its git state looks; treat it as occupied, because the claim protocol coordinates only agents that share one pool. Relocating a continuation into a separate live product's pool is the exact boundary this guardrail exists to stop.
 
@@ -156,6 +153,6 @@ A successful closure or handoff:
 - [ ] Every session in the resolved claimed-session set archived after the canonical continuation is written, rewritten, or intentionally omitted (workflow 04)
 - [ ] Any session file created is a thin coordination envelope — bulk of value persisted durably
 - [ ] End state has zero, one, or several completely independent session files incorporating everything within the resolved claimed-session set
-- [ ] Closure order followed: reflect → propose → persist → commit → canonical continuation decided → archive the claimed sessions
+- [ ] Closure proof is present: workflow 02 markers exist, workflow 03 disposition names the canonical continuation and archive list, and workflow 04 confirmation names the committed work and archived sessions
 
 </success_criteria>

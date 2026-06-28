@@ -93,7 +93,8 @@ A handoff replaces incorporated context. The existence of any session is not, by
 Before proposing or creating any continuation session, inspect the existing session queue:
 
 ```bash
-spx session list --json
+spx session list --status todo --json
+spx session list --status doing --json
 ```
 
 Compare every `todo` and `doing` session against this closure's anchored nodes and topic terms:
