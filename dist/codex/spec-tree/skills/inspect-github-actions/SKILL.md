@@ -156,6 +156,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 
 - A status request reports repository, branch, run id, workflow name, status, conclusion, and commit SHA before any narrative.
 - A failure triage request runs `gh run view --log-failed` first and identifies failing job, failing step, and at least one error excerpt before any other log retrieval.
+- When failed-step logs, a PR check summary, or linked tool output names issue URLs or current-PR defects, each issue link is reported with the run id, workflow name, branch, and commit SHA before the triage summary.
 - Auth-failure handling matches the TTY/non-TTY split: prompt-and-switch on TTY, manual remediation on non-TTY.
 - Conclusion field carries the literal value returned by `gh run view --json conclusion`, never a derivation.
 - In-progress PR-check waiting uses exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30`; run-only in-progress status is reported without a watcher or runtime timer.
