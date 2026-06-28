@@ -27,7 +27,7 @@ Read before composing — read these directly each run. A present `<SPEC_TREE_FO
 - `${SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
 - `${SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
 - `${SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
-- The product-domain-shapes operational reference owned by `/understand` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
+- `/understand` product-domain-shapes operational reference — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
 - `${SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
 - `${SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input

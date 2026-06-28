@@ -6,7 +6,7 @@ constraints, and open questions, but it does not define the spec-tree structure.
 
 This reference gives `/bootstrap` and `/decompose` the shared classifier and
 examples for separating aggregate product domains, first concrete behaviors,
-one coherent concerns, and code-shaped candidate areas.
+cases that contain one coherent concern, and code-shaped candidate areas.
 
 </overview>
 
