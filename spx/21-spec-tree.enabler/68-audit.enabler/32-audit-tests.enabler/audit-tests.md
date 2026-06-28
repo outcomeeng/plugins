@@ -1,4 +1,4 @@
-# Test Auditing
+# Audit Tests
 
 PROVIDES an audit methodology verifying tests provide genuine evidence for spec assertions
 SO THAT all spec-tree projects
@@ -46,7 +46,7 @@ Mocking severs coupling. A test that imports a module then replaces it with a mo
 
 ## Coverage Verification
 
-The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-auditing.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
+The auditor establishes coverage by reading, never by running coverage tooling. A dispatched agentic audit runs no deterministic verification — the main agent brings the project's tests and coverage gate to passing on the changeset before dispatch, and CI re-runs them over the whole repository, per `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`. Re-running the project's coverage command inside the audit re-pays a cost already paid and is the duplication that rule prohibits.
 
 The auditor traces, by reading, whether the test drives execution into the assertion-relevant code path:
 
@@ -124,5 +124,5 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([review])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([review])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([review])
-- NEVER: run the project's coverage command, test command, or any other deterministic verification inside the audit — re-running what the main agent passed before dispatch is the duplication prohibited by `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-auditing.adr.md`; trace the exercised path by reading instead ([review])
+- NEVER: run the project's coverage command, test command, or any other deterministic verification inside the audit — re-running what the main agent passed before dispatch is the duplication prohibited by `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md`; trace the exercised path by reading instead ([review])
 - NEVER: accept static-literal fixture files as a valid origin — fixtures that export hardcoded literals recreate laundered indirect coupling under a fixture name ([review])
