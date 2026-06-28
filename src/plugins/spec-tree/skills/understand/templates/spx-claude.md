@@ -17,6 +17,8 @@ This guide explains WHEN to invoke spec-tree skills for this product. It is a **
 
 Loads the Spec Tree methodology. Required once per session and again after every individual compaction event.
 
+A live `<SPEC_TREE_FOUNDATION>` marker in the current conversation is the proof that `/understand` is loaded. A compacted summary, a session file, a statement that `/understand` ran, or reading the skill file does not satisfy the requirement. Questions about spec-tree workflows, session continuity, or whether a skill was invoked are spec-tree work and require `/understand` first when the marker is absent.
+
 ### Before working on a specific node -> `/contextualize`
 
 **BLOCKING REQUIREMENT**
