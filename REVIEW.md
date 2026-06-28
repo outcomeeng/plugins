@@ -35,7 +35,7 @@ Evidence: <what the changed code or document does, and why that is a defect>
 Required: <the bounded fix required in this changeset>
 ```
 
-Every `Reference` must cite rule text or a source contract the reviewer located in the repository or in a loaded governing skill. Do not cite memory, prior sessions, user/global instructions outside the repository, or training data.
+- ALWAYS: every `Reference` cites rule text or a source contract the reviewer located in the repository or in a loaded governing skill. Do not cite memory, prior sessions, user/global instructions outside the repository, or training data.
 
 ## Disposition
 

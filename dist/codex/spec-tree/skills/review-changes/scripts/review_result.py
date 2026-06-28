@@ -16,8 +16,7 @@ review-changes skill produces. Declares:
   validates a whole document. Both surface malformed input as exceptions
   before any journal append.
 
-Stdlib-only. Mirrors the verdict-toolchain precedent in
-``plugins/spec-tree/skills/audit/scripts/verdict.py``.
+Stdlib-only. Mirrors the marketplace's verdict-toolchain precedent.
 
 Tested with:
 
@@ -159,8 +158,9 @@ _PLUGIN_SKILL_RE = re.compile(
     r"SKILL\.md:(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
 _ROOT_RULE_RE = re.compile(
-    r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
+    r"(?P<path>(?:AGENTS|CLAUDE|REVIEW)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
+_FINDING_ID_RE = re.compile(r"F-\d{3}", re.ASCII)
 _SECTION_TITLES = {
     "SCENARIO": "Scenarios",
     "MAPPING": "Mappings",
@@ -209,7 +209,7 @@ def parse_json(text: str) -> ReviewResult:
 def parse_finding_json(text: str) -> Finding:
     """Parse and validate one finding JSON object into a :class:`Finding`.
 
-    The streaming review appends a ``finding.reported`` event the instant it
+    The streaming review appends a ``finding-reported`` event the instant it
     raises each finding, so it emits one finding JSON document at a time.
     This is the per-finding validity gate ``journal_emit.py finding-reported``
     invokes before the event is appended — the same enum, required-key, and
@@ -288,8 +288,10 @@ def _parse_finding(data: Any) -> Finding:
     line = _require_int(data, "line")
     rule = _require_str(data, "rule")
     _validate_rule_citation(rule)
+    finding_id = _require_str(data, "id")
+    _validate_finding_id(finding_id)
     return Finding(
-        id=_require_str(data, "id"),
+        id=finding_id,
         concern=concern,
         severity=severity,
         file=_require_str(data, "file"),
@@ -298,6 +300,13 @@ def _parse_finding(data: Any) -> Finding:
         message=_require_str(data, "message"),
         action=_require_str(data, "action"),
     )
+
+
+def _validate_finding_id(finding_id: str) -> None:
+    if not _FINDING_ID_RE.fullmatch(finding_id):
+        raise ReviewResultValidationError(
+            f"finding 'id' must match F-NNN; got {finding_id!r}"
+        )
 
 
 def _validate_rule_citation(rule: str) -> None:
@@ -324,7 +333,8 @@ def _validate_rule_citation(rule: str) -> None:
         "finding 'rule' must be a verifiable citation such as "
         "'spx/<path>.md:ALWAYS:1', "
         "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
-        "'AGENTS.md:<rule-slug>', or 'CLAUDE.md:<rule-slug>'; "
+        "'AGENTS.md:<rule-slug>', 'CLAUDE.md:<rule-slug>', "
+        "or 'REVIEW.md:<rule-slug>'; "
         f"got {rule!r}"
     )
 
@@ -390,7 +400,13 @@ def _validate_slug(path: pathlib.Path, slug: str, rule: str) -> None:
 def _declared_rule_slugs(text: str) -> set[str]:
     slugs: set[str] = set()
     lines = text.splitlines()
+    in_fence = False
     for index, line in enumerate(lines):
+        if _is_markdown_fence(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         heading = _markdown_heading_text(line)
         if heading and _heading_section_has_rule_marker(lines, index):
             slugs.add(_slugify(heading))
@@ -417,7 +433,13 @@ def _pseudo_xml_section_has_rule_marker(
 
 def _heading_section_has_rule_marker(lines: list[str], heading_index: int) -> bool:
     body: list[str] = []
+    in_fence = False
     for line in lines[heading_index + 1 :]:
+        if _is_markdown_fence(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         if _markdown_heading_text(line):
             break
         body.append(line)
@@ -448,6 +470,10 @@ def _markdown_heading_text(line: str) -> str | None:
     if len(stripped) == prefix_length or stripped[prefix_length] != " ":
         return None
     return stripped[prefix_length:].strip().strip("#").strip()
+
+
+def _is_markdown_fence(line: str) -> bool:
+    return line.lstrip().startswith("```")
 
 
 def _pseudo_xml_tag(line: str) -> str | None:
@@ -509,9 +535,9 @@ def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:
         raise ReviewResultValidationError(
             f"finding 'rule' must cite a repository-relative file; got {rule!r}"
         )
+    root = _repo_root()
     try:
-        resolved = repo_path.resolve(strict=True)
-        root = pathlib.Path.cwd().resolve(strict=True)
+        resolved = (root / repo_path).resolve(strict=True)
         resolved.relative_to(root)
         return _read_existing_file(resolved, rule)
     except ValueError as exc:
@@ -526,6 +552,14 @@ def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:
         raise ReviewResultValidationError(
             f"finding 'rule' cannot read cited file {repo_path}: {exc}"
         ) from exc
+
+
+def _repo_root() -> pathlib.Path:
+    cwd = pathlib.Path.cwd().resolve()
+    for candidate in (cwd, *cwd.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return cwd
 
 
 def _read_existing_file(path: pathlib.Path, rule: str) -> str:

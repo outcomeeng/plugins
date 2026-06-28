@@ -18,12 +18,12 @@ Resolve the input scope into `(from_ref, to_ref, branch_name)`, export the refs,
 
 Parse the optional input into `(from_ref, to_ref, branch_name)`:
 
-| Input form            | Recognized by                                                                                           | `from_ref` (base)                            | `to_ref` (head)               | `branch_name`         |
-| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------- | --------------------- |
-| **Empty / none**      | input omitted                                                                                           | derived by the skill (`origin/HEAD`)         | derived by the skill (`HEAD`) | derived by the skill  |
-| **PR reference**      | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n>` | `origin/<headRefName>`        | `<headRefName>`       |
-| **Branch reference**  | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | derived by the skill (`origin/HEAD`)         | the supplied token            | the supplied token    |
-| **`from...to` range** | contains `...` (three dots) as a delimiter                                                              | the token before `...`                       | the token after `...`         | the token after `...` |
+| Input form            | Recognized by                                                                                           | `from_ref` (base)                            | `to_ref` (head)                             | `branch_name`         |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------- | --------------------- |
+| **Empty / none**      | input omitted                                                                                           | derived by the skill (`origin/HEAD`)         | derived by the skill (`HEAD`)               | derived by the skill  |
+| **PR reference**      | starts with `#`, matches `<owner>/<repo>#<n>`, or is a `https://github.com/<owner>/<repo>/pull/<n>` URL | `origin/<baseRefName>` from `gh pr view <n>` | `FETCH_HEAD` after fetching `pull/<n>/head` | `<headRefName>`       |
+| **Branch reference**  | a single token that resolves via `git rev-parse --verify <token>` and is not a range                    | derived by the skill (`origin/HEAD`)         | the supplied token                          | the supplied token    |
+| **`from...to` range** | contains `...` (three dots) as a delimiter                                                              | the token before `...`                       | the token after `...`                       | the token after `...` |
 
 Disambiguation: a token containing `...` is always a range; a bare `#<digits>` is always a PR reference. For a branch name that collides with a PR number, use `<owner>/<repo>#<n>` to force PR handling.
 
@@ -31,7 +31,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <workflow>
 
-1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
+1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch. For ranges, split on the first `...`. For branch tokens, verify with `git rev-parse --verify <token>`; if verification fails, report the failure and stop.
 
 2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
 

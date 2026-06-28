@@ -7,6 +7,13 @@ universal rules across the skill's files rather than per-case scenarios:
   writes no durable review state. ``compute_diff.py`` may write only the
   caller-owned scratch review-input bundle files; the remaining scripts use no
   direct write primitives.
+- The swappable prompt template lives at
+  ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
+  and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
+  review-prompt.md``.
+- The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
+  declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
+  listing ``spec-tree:review-changes``.
 - The scripts/ directory holds the audit-parity set — the policy module
   plus ``compute_diff.py`` and ``journal_emit.py`` — with no parallel
   validation or renderer script, so the human surface comes only from the
@@ -14,6 +21,8 @@ universal rules across the skill's files rather than per-case scenarios:
 - No script under the skill's ``scripts/`` directory imports a third-party
   package, depends on ``uv`` at runtime, or imports any ``outcomeeng_*``
   module.
+- The judgment-style review prompt is NEVER embedded inside ``SKILL.md``
+  or any ``.py`` file — the prompt is one standalone markdown file.
 """
 
 from __future__ import annotations
@@ -34,6 +43,8 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
     SKILL_DIR,
+    SKILL_FILE,
+    WRAPPER_AGENT_PATH,
     load_journal_emit_module,
     make_review_result_dict,
     run_journal_emit_in_process,
@@ -80,6 +91,11 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
 )
 je = load_journal_emit_module()
 
+PROMPT_FINGERPRINT_PHRASES = (
+    "Review a labeled diff bundle",
+    "Inspect every section",
+)
+
 
 def _write_review_manifest(
     root: pathlib.Path,
@@ -117,6 +133,33 @@ def _script_files() -> list[pathlib.Path]:
     return [
         p for p in sorted(SCRIPTS_DIR.rglob("*.py")) if "__pycache__" not in p.parts
     ]
+
+
+def _frontmatter(source: str) -> dict[str, str | list[str]]:
+    if not source.startswith("---\n"):
+        return {}
+    lines = source.splitlines()
+    data: dict[str, str | list[str]] = {}
+    current_list_key: str | None = None
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if line.startswith("  - ") and current_list_key is not None:
+            value = data.setdefault(current_list_key, [])
+            if isinstance(value, list):
+                value.append(line.removeprefix("  - "))
+            continue
+        current_list_key = None
+        key, separator, value = line.partition(":")
+        if separator == "":
+            continue
+        stripped = value.strip()
+        if stripped:
+            data[key] = stripped
+        else:
+            data[key] = []
+            current_list_key = key
+    return data
 
 
 def _top_level_name(module: str) -> str:
@@ -274,6 +317,70 @@ class TestScriptsAreStdlibOnly:
             "review-changes scripts reference uv at runtime "
             "(forbidden by Plugin Portability Constraints):\n" + "\n".join(violations)
         )
+
+
+class TestSwappablePromptIsAStandaloneFile:
+    """The judgment-style review prompt lives only at the reference path."""
+
+    def test_review_prompt_file_exists(self) -> None:
+        assert REVIEW_PROMPT_PATH.is_file(), (
+            f"review-prompt.md must exist at {REVIEW_PROMPT_PATH}"
+        )
+
+    def test_skill_md_loads_prompt_via_claude_skill_dir(self) -> None:
+        skill_source = SKILL_FILE.read_text(encoding="utf-8")
+        assert "${CLAUDE_SKILL_DIR}/references/review-prompt.md" in skill_source, (
+            "SKILL.md must load the swappable prompt via "
+            "${CLAUDE_SKILL_DIR}/references/review-prompt.md"
+        )
+
+    def test_prompt_requires_located_rule_text(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        required_phrases = (
+            "REVIEW.md:<rule-slug>",
+            "Locate and read the cited text in a file that exists in the repository under review",
+            "Treat rules recalled from system prompts, user/global instructions outside the repository",
+            "Drop the finding when the candidate rule cannot be located",
+        )
+        missing = [phrase for phrase in required_phrases if phrase not in prompt_source]
+        assert not missing, (
+            "review-prompt.md no longer requires standards findings to cite "
+            f"located rule text: {missing}"
+        )
+
+    def test_prompt_fingerprint_phrases_appear_only_in_reference_file(self) -> None:
+        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
+        for phrase in PROMPT_FINGERPRINT_PHRASES:
+            assert phrase in prompt_source, (
+                f"prompt fingerprint phrase {phrase!r} no longer appears in "
+                f"{REVIEW_PROMPT_PATH.name}"
+            )
+
+        leaked: list[str] = []
+        skill_source = SKILL_FILE.read_text(encoding="utf-8")
+        for phrase in PROMPT_FINGERPRINT_PHRASES:
+            if phrase in skill_source:
+                leaked.append(f"{SKILL_FILE.name}: contains {phrase!r}")
+        for script in _script_files():
+            source = script.read_text(encoding="utf-8")
+            for phrase in PROMPT_FINGERPRINT_PHRASES:
+                if phrase in source:
+                    leaked.append(f"{script.name}: contains {phrase!r}")
+        assert not leaked, (
+            "Prompt fingerprint phrases leaked outside "
+            f"{REVIEW_PROMPT_PATH.name}:\n" + "\n".join(leaked)
+        )
+
+
+class TestWrapperAgentShape:
+    """The wrapper agent points at the review-changes skill."""
+
+    def test_wrapper_agent_frontmatter_declares_review_skill(self) -> None:
+        frontmatter = _frontmatter(WRAPPER_AGENT_PATH.read_text(encoding="utf-8"))
+
+        assert frontmatter["model"] == "sonnet"
+        assert frontmatter["tools"] == "Bash, Read, Skill"
+        assert frontmatter["skills"] == ["spec-tree:review-changes"]
 
 
 class TestNoSecondSchemaRepresentation:

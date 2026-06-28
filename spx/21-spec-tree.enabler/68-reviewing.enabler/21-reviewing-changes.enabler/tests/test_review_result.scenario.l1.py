@@ -35,8 +35,10 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_ADR_RULE_CITATION,
     FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_MALFORMED_RULE_CITATION,
+    FIXTURE_REVIEW_POLICY_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
+    REPO_ROOT,
     load_review_result_module,
     make_review_result_dict,
 )
@@ -167,6 +169,26 @@ class TestParseJsonRejection:
         assert "marketing" in message
         assert "consistency" in message  # part of the allowed set
 
+    @pytest.mark.parametrize("finding_id", ["", "1", "F-1", "F-0000", "X-001"])
+    def test_malformed_finding_id_raises(self, finding_id: str) -> None:
+        review_result = load_review_result_module()
+        bad_finding = {
+            "id": finding_id,
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_RULE_CITATION,
+            "message": "m",
+            "action": "a",
+        }
+        payload = json.dumps(make_review_result_dict(findings=[bad_finding]))
+        with pytest.raises(review_result.ReviewResultValidationError) as excinfo:
+            review_result.parse_json(payload)
+        message = str(excinfo.value)
+        assert "id" in message
+        assert finding_id in message
+
     def test_malformed_json_raises(self) -> None:
         review_result = load_review_result_module()
         with pytest.raises(review_result.ReviewResultValidationError):
@@ -182,6 +204,7 @@ class TestRuleCitationValidation:
             FIXTURE_RULE_CITATION,
             FIXTURE_ADR_RULE_CITATION,
             FIXTURE_AGENTS_RULE_CITATION,
+            FIXTURE_REVIEW_POLICY_RULE_CITATION,
         ),
     )
     def test_parse_json_accepts_declared_rule_citation_forms(
@@ -290,7 +313,8 @@ class TestRuleCitationForm:
     ``spx/<path>/<n>-<slug>.adr.md``,
     ``spx/<path>/<n>-<slug>.pdr.md``,
     ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
-    ``AGENTS.md:<rule-slug>``, and ``CLAUDE.md:<rule-slug>``.
+    ``AGENTS.md:<rule-slug>``, ``CLAUDE.md:<rule-slug>``, and
+    ``REVIEW.md:<rule-slug>``.
     The parser rejects citations whose file or rule slug cannot be
     verified mechanically.
     """
@@ -314,6 +338,7 @@ class TestRuleCitationForm:
             "plugins/spec-tree/skills/understand/SKILL.md:principles",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
+            FIXTURE_REVIEW_POLICY_RULE_CITATION,
         ],
     )
     def test_parser_accepts_path_style_rule(self, rule: str) -> None:
@@ -365,6 +390,32 @@ class TestRuleCitationForm:
             json.dumps(make_review_result_dict(findings=[finding]))
         )
 
+    def test_root_rule_resolves_from_git_root_when_cwd_is_subdirectory(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        review_result = load_review_result_module()
+        monkeypatch.chdir(
+            REPO_ROOT
+            / "spx"
+            / "21-spec-tree.enabler"
+            / "68-reviewing.enabler"
+            / "21-reviewing-changes.enabler"
+        )
+        finding = {
+            "id": "F-001",
+            "concern": "consistency",
+            "severity": "debt",
+            "file": "x.py",
+            "line": 1,
+            "rule": FIXTURE_REVIEW_POLICY_RULE_CITATION,
+            "message": "m",
+            "action": "a",
+        }
+
+        review_result.parse_json(
+            json.dumps(make_review_result_dict(findings=[finding]))
+        )
+
     def test_rule_slug_discovery_rejects_bold_marker_prose(self) -> None:
         review_result = load_review_result_module()
         document = """# Rules
@@ -372,6 +423,11 @@ class TestRuleCitationForm:
 ### Narrative
 
 This paragraph names **ALWAYS** as prose, not as a rule marker.
+
+```text
+### Example Finding
+Reference: <file:line or governing rule>
+```
 
 ### Critical Rules
 
@@ -423,6 +479,8 @@ ALWAYS: pseudo-XML sections are rule-bearing surfaces.
             "CLAUDE.md",
             "CLAUDE.md:plugins",
             "CLAUDE.md:never-use",
+            "REVIEW.md",
+            "REVIEW.md:not-a-real-rule-slug",
             "SKILL.md",
             "SKILL.md:render-templates-as-data",
         ],
