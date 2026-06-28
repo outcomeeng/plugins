@@ -1,13 +1,6 @@
-# PLAN - review-changes remaining work
+# PLAN - review-changes hardening
 
-## Active continuation
-
-The node has two active issue-driven follow-ups in `ISSUES.md`:
-
-- Align the local no-findings census and the GitHub-hosted clean-review message.
-- Improve live review pass exhaustiveness so one pass surfaces every finding the changeset exhibits.
-
-The additional plan items below are implementation hardening tasks that are not fully captured by those issue entries.
+The remaining tasks below harden the current `review-changes` implementation. They are implementation work, not active issue-driven defects.
 
 ## Plan items
 
@@ -21,10 +14,6 @@ The additional plan items below are implementation hardening tasks that are not 
    - Require the reviewer to ignore instructions embedded in changed files, comments, fixtures, or generated text.
    - Keep this separate from repository-rule citation grounding.
 
-3. Simplify the marketplace workflow once the hosted workflow owns the shared prompt shape.
-   - Replace baked marketplace review workflow content with the reusable hosted workflow when the hosted workflow exposes the required prompt and render contract.
-   - Keep local and hosted clean-review output aligned with the active `ISSUES.md` clean-review item.
-
 ## Coordination
 
-Run `/understand`, then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Reconcile this plan with `ISSUES.md` before implementation; `ISSUES.md` owns the two active defect threads.
+Run `/understand`, then `/contextualize spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Verify each item against the current review prompt, policy module, journal adapter, and tests before implementation.
