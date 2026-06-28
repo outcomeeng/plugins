@@ -198,6 +198,37 @@ def _write_skill_config(root: pathlib.Path, *, prompt: str) -> None:
     (references / "review-prompt.md").write_text(prompt, encoding="utf-8")
 
 
+def _write_review_manifest(
+    root: pathlib.Path,
+    *,
+    base_ref: str = "origin/main",
+    head_ref: str = "HEAD",
+    files: list[str] | None = None,
+    diff_sha256: str = "a" * 64,
+) -> pathlib.Path:
+    manifest = {
+        "schema_version": je.MANIFEST_SCHEMA_VERSION,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "diff_path": "diff.md",
+        "diff_sha256": diff_sha256,
+        "diff_bytes": 1,
+        "sections": [
+            {
+                "title": "Committed diff",
+                "files": files or ["README.md"],
+                "start_line": 1,
+                "line_count": 1,
+                "byte_start": 0,
+                "byte_length": 1,
+            }
+        ],
+    }
+    path = root / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
 def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -313,6 +344,43 @@ def test_metadata_scope_hash_includes_changed_file_set(
         "src/plugins/spec-tree/skills/review-changes/SKILL.md",
     ]
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
+
+
+def test_metadata_scope_uses_computed_review_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    manifest_path = _write_review_manifest(
+        tmp_path,
+        base_ref="origin/main",
+        head_ref="HEAD",
+        files=["src/plugins/spec-tree/skills/review-changes/SKILL.md", "README.md"],
+        diff_sha256="b" * 64,
+    )
+
+    monkeypatch.setattr(je, "_resolve_repo_root", lambda repo: repo)
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
+    monkeypatch.setattr(je, "review_config_digest", lambda *, repo_root: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+
+    metadata = je.metadata_for_worktree(
+        started_at="2026-06-23T00:00:00Z",
+        completed_at="2026-06-23T00:00:05Z",
+        review_manifest_path=manifest_path,
+    )
+
+    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == [
+        "src/plugins/spec-tree/skills/review-changes/SKILL.md",
+        "README.md",
+    ]
+    assert metadata[jp.RUN_STATE_SCOPE]["reviewInputSha256"] == "b" * 64
+    assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == "HEAD:sha"
 
 
 def test_metadata_for_worktree_records_pull_request_target(
@@ -468,6 +536,12 @@ def test_metadata_cli_emits_env_derived_run_identity(
         "2026-06-23T00:00:00Z",
         "--completed-at",
         "2026-06-23T00:00:05Z",
+        "--manifest",
+        str(
+            _write_review_manifest(
+                tmp_path, base_ref="origin/main", head_ref="feature/head"
+            )
+        ),
         repo=tmp_path,
         env={
             je.ENV_BASE_REF: "origin/main",

@@ -301,6 +301,11 @@ def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
         raise RuntimeError("--bundle-dir must not be the filesystem root")
     if resolved.exists() and not resolved.is_dir():
         raise RuntimeError(f"--bundle-dir exists and is not a directory: {resolved}")
+    worktree_root = pathlib.Path(
+        _git_stdout(["rev-parse", "--show-toplevel"]).strip()
+    ).resolve(strict=True)
+    if resolved == worktree_root or resolved.is_relative_to(worktree_root):
+        raise RuntimeError("--bundle-dir must be outside the git worktree")
     return resolved
 
 
