@@ -100,10 +100,7 @@ COMMENT_DELIMITER_END: Final = "#!}"
 # ---------------------------------------------------------------------------
 
 # Frontmatter fields that appear in dist/claude/ and are stripped from dist/codex/.
-CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = (
-    "disable-model-invocation",
-    "argument-hint",
-)
+CLAUDE_ONLY_FRONTMATTER_FIELDS: Final = ("disable-model-invocation",)
 
 # The literal token Claude Code expands during skill execution. Source files
 # contain this token verbatim; the build preserves it in dist/claude/ outputs

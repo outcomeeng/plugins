@@ -53,11 +53,32 @@ def test_standard_fields_accepted(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Scenario: Claude Code-specific field is accepted
+# Scenario: portable marketplace capability field is accepted
 # ---------------------------------------------------------------------------
 
 
-def test_claude_code_field_accepted(tmp_path: Path) -> None:
+def test_portable_capability_field_accepted(tmp_path: Path) -> None:
+    _write_skill(
+        tmp_path,
+        """\
+        ---
+        name: my-skill
+        description: Does things
+        argument-hint: "[path]"
+        ---
+        Body.
+        """,
+    )
+    errors = validate_file(tmp_path / "SKILL.md")
+    assert errors == []
+
+
+# ---------------------------------------------------------------------------
+# Scenario: Claude Code-only field is accepted
+# ---------------------------------------------------------------------------
+
+
+def test_claude_code_only_field_accepted(tmp_path: Path) -> None:
     _write_skill(
         tmp_path,
         """\

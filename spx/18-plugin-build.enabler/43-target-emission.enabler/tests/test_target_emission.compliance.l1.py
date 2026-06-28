@@ -44,6 +44,7 @@ SHARED_SCOPE = "shared-scope"
 SHARED_TOPIC = "shared-topic"
 SHARED_REFERENCE_FILENAME = "guide.md"
 STRIPPED_CODEX_FIELD = CLAUDE_ONLY_FRONTMATTER_FIELDS[0]
+PORTABLE_FRONTMATTER_FIELD = "argument-hint"
 SKILL_RELATIVE_PATH = "references/guide.md"
 CLAUDE_SKILL_REFERENCE = f"{CLAUDE_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
 CODEX_SKILL_REFERENCE = f"{CODEX_SKILL_DIR_TOKEN}/{SKILL_RELATIVE_PATH}"
@@ -65,7 +66,7 @@ FRONTMATTER_WITH_ALL_CLAUDE_FIELDS = (
     "name: sample\n"
     "allowed-tools: Read\n"
     "disable-model-invocation: true\n"
-    "argument-hint: [path]\n"
+    f"{PORTABLE_FRONTMATTER_FIELD}: [path]\n"
     "description: Keep me.\n"
     "---\n"
     "\n"
@@ -181,6 +182,8 @@ def test_codex_skill_frontmatter_strips_claude_only_fields(tmp_path: Path) -> No
         assert f"{field}:" not in codex_body
     assert "allowed-tools: Read" in claude_body
     assert "allowed-tools: Read" in codex_body
+    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in claude_body
+    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in codex_body
     assert "description: Keep me." in codex_body
 
 
@@ -203,6 +206,7 @@ def test_codex_command_frontmatter_strips_claude_only_fields(tmp_path: Path) -> 
     for field in CLAUDE_ONLY_FRONTMATTER_FIELDS:
         assert f"{field}:" not in codex_body
     assert "allowed-tools: Read" in codex_body
+    assert f"{PORTABLE_FRONTMATTER_FIELD}: [path]" in codex_body
     assert "description: Keep me." in codex_body
 
 

@@ -36,9 +36,11 @@ from outcomeeng.distribution.bump import (
     ChangedPath,
     ChangeProbe,
     ContentProbe,
+    DIST_CODEX_PLUGINS_DIR,
     ManifestReader,
     ManifestRecord,
     ManifestWriter,
+    SOURCE_PLUGINS_DIR,
     ToolProbe,
 )
 
@@ -130,10 +132,12 @@ class RecordingManifestWriter:
 
 
 CHANGE_DETECT_PLUGIN = "demo"
-_PLUGIN_ROOT = f"src/plugins/{CHANGE_DETECT_PLUGIN}"
+_PLUGIN_ROOT = f"{SOURCE_PLUGINS_DIR}/{CHANGE_DETECT_PLUGIN}"
+_CODEX_PLUGIN_ROOT = f"{DIST_CODEX_PLUGINS_DIR}/{CHANGE_DETECT_PLUGIN}"
 TRACKED_MODIFIED_PATH = f"{_PLUGIN_ROOT}/skills/existing/SKILL.md"
 MANIFEST_PATH = f"{_PLUGIN_ROOT}/.claude-plugin/plugin.json"
 UNTRACKED_ADDED_PATH = f"{_PLUGIN_ROOT}/skills/new-skill/SKILL.md"
+UNTRACKED_CODEX_ADDED_PATH = f"{_CODEX_PLUGIN_ROOT}/skills/new-skill/SKILL.md"
 
 
 @dataclass(frozen=True)
@@ -152,6 +156,7 @@ class UntrackedSkillRepo:
     plugin: str
     tracked_modified_path: str
     untracked_added_path: str
+    untracked_codex_added_path: str
 
 
 def _run_git(repo: pathlib.Path, *args: str) -> None:
@@ -186,9 +191,10 @@ def build_repo_with_untracked_new_skill(repo: pathlib.Path) -> UntrackedSkillRep
 
     Sequence: initialise the repo; commit a plugin manifest and one existing
     skill as the base; modify the existing skill (tracked, unstaged); add a new
-    skill file without staging it (untracked). A ``git diff`` against the base
-    sees only the modification; the untracked new skill is recoverable only
-    through ``git ls-files --others``.
+    skill file without staging it (untracked), plus a generated Codex skill
+    file under the same plugin. A ``git diff`` against the base sees only the
+    modification; the untracked new skills are recoverable only through
+    ``git ls-files --others``.
     """
     repo.mkdir(parents=True, exist_ok=True)
     _run_git(repo, "init", "-q", "-b", "main")
@@ -203,6 +209,7 @@ def build_repo_with_untracked_new_skill(repo: pathlib.Path) -> UntrackedSkillRep
         "---\nname: existing\n---\n\nv2\n", encoding="utf-8"
     )
     _write(repo, UNTRACKED_ADDED_PATH, "---\nname: new-skill\n---\n\nnew\n")
+    _write(repo, UNTRACKED_CODEX_ADDED_PATH, "---\nname: new-skill\n---\n\nnew\n")
 
     return UntrackedSkillRepo(
         repo=repo,
@@ -210,6 +217,7 @@ def build_repo_with_untracked_new_skill(repo: pathlib.Path) -> UntrackedSkillRep
         plugin=CHANGE_DETECT_PLUGIN,
         tracked_modified_path=TRACKED_MODIFIED_PATH,
         untracked_added_path=UNTRACKED_ADDED_PATH,
+        untracked_codex_added_path=UNTRACKED_CODEX_ADDED_PATH,
     )
 
 

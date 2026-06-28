@@ -1,9 +1,9 @@
 """Validate SKILL.md frontmatter fields.
 
 Delegates to the vendored ``quick_validate.py`` from ``anthropics/skills``
-(Apache 2.0) for Agent Skills open-standard validation.  Claude Code-specific
-fields that the open standard does not recognize are accepted via a curated
-allowlist maintained here.
+(Apache 2.0) for Agent Skills open-standard validation. Marketplace extension
+fields that the vendored open-standard floor does not recognize are accepted
+through curated allowlists maintained here.
 
 Usage::
 
@@ -27,12 +27,17 @@ from outcomeeng.vendor.anthropics_skills.quick_validate import (
 # Type for the vendored validator: (skill_dir) -> (valid, message)
 type SkillValidator = Callable[[Path], tuple[bool, str]]
 
-# Claude Code-specific fields accepted by the CLI but absent from the Agent
-# Skills open standard.  Maintain this set as new CC fields appear in the
-# marketplace's own skills.
-CLAUDE_CODE_FIELDS: frozenset[str] = frozenset(
+PORTABLE_CAPABILITY_FIELDS: frozenset[str] = frozenset(
     {
         "argument-hint",
+    }
+)
+
+# Claude Code-specific fields accepted by the CLI but absent from the Agent
+# Skills open standard.  Maintain this set as new Claude Code-only fields
+# appear in the marketplace's own skills.
+CLAUDE_CODE_ONLY_FIELDS: frozenset[str] = frozenset(
+    {
         "arguments",
         "disable-model-invocation",
         "user-invocable",
@@ -47,6 +52,7 @@ CLAUDE_CODE_FIELDS: frozenset[str] = frozenset(
         "paths",
     }
 )
+MARKETPLACE_EXTENSION_FIELDS = PORTABLE_CAPABILITY_FIELDS | CLAUDE_CODE_ONLY_FIELDS
 
 
 def validate_file(
@@ -61,14 +67,14 @@ def validate_file(
     if valid:
         return []
 
-    # If the vendored script reports unexpected keys, check whether they
-    # are all Claude Code-specific.  If so, the file is acceptable.
+    # If the vendored script reports unexpected keys, check whether they are
+    # marketplace extension fields. If so, the file is acceptable.
     if message.startswith("Unexpected key(s) in SKILL.md frontmatter:"):
         # Parse the unexpected keys from the message.
         # Format: "Unexpected key(s) in SKILL.md frontmatter: a, b. Allowed ..."
         keys_part = message.split(":")[1].split(".")[0].strip()
         unexpected = {k.strip() for k in keys_part.split(",")}
-        truly_unknown = unexpected - CLAUDE_CODE_FIELDS
+        truly_unknown = unexpected - MARKETPLACE_EXTENSION_FIELDS
         if not truly_unknown:
             return []
         return [
