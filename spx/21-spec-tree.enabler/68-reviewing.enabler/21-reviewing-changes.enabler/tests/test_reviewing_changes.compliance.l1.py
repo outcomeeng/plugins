@@ -81,6 +81,35 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
 je = load_journal_emit_module()
 
 
+def _write_review_manifest(
+    root: pathlib.Path,
+    *,
+    base_ref: str = "HEAD",
+    head_ref: str = "HEAD",
+) -> pathlib.Path:
+    manifest = {
+        "schema_version": je.MANIFEST_SCHEMA_VERSION,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "diff_path": "diff.md",
+        "diff_sha256": "a" * 64,
+        "diff_bytes": 1,
+        "sections": [
+            {
+                "title": "Committed diff",
+                "files": ["README.md"],
+                "start_line": 1,
+                "line_count": 1,
+                "byte_start": 0,
+                "byte_length": 1,
+            }
+        ],
+    }
+    path = root / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    return path
+
+
 def _script_files() -> list[pathlib.Path]:
     """Return every ``.py`` file under the review-changes ``scripts/`` dir."""
     if not SCRIPTS_DIR.is_dir():
@@ -327,14 +356,19 @@ class TestNoParallelReviewResultRenderer:
             "renderer — the surface comes from the shared journal projection"
         )
 
-    def test_render_command_projects_from_journal_events(self) -> None:
+    def test_render_command_projects_from_journal_events(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        manifest_path = _write_review_manifest(tmp_path)
         metadata = run_journal_emit_in_process(
             "metadata",
             "--started-at",
             "2026-01-01T00:00:00Z",
+            "--manifest",
+            str(manifest_path),
             repo=REPO_ROOT,
             env={
-                je.ENV_BASE_REF: "origin/main",
+                je.ENV_BASE_REF: "HEAD",
                 je.ENV_HEAD_REF: "HEAD",
                 je.ENV_BRANCH: "work/example",
             },
