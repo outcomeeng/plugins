@@ -372,7 +372,7 @@ class TestComputeDiffBaseRefDerivation:
             ]
             assert (
                 section["start_line"]
-                == diff_text[: section["byte_start"]].count("\n") + 1
+                == diff_bytes[: section["byte_start"]].decode("utf-8").count("\n") + 1
             )
             assert section["line_count"] == len(section_lines)
             assert manifest_line_slice == section_lines
