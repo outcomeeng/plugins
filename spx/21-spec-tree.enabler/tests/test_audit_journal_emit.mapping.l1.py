@@ -118,41 +118,47 @@ def _wrapper(rows: tuple[Any, ...], children: tuple[Any, ...]) -> Any:
 
 
 def _metadata(wrapper: Any) -> Any:
-    return je.metadata_from_values(
+    return je.metadata_from_values(_metadata_values(wrapper))
+
+
+def _metadata_values(
+    wrapper: Any,
+    *,
+    target_kind: object | None = None,
+    head_sha: str | None = None,
+    base_sha: str | None = None,
+    pull_request_number: int | None = None,
+) -> Any:
+    return je.MetadataValues(
         target=wrapper.target,
         scope_hash=wrapper.metadata[jp.RUN_STATE_SCOPE_HASH],
         branch_name=wrapper.metadata[jp.RUN_STATE_BRANCH_NAME],
         branch_slug=wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG],
-        head_sha=wrapper.metadata[jp.RUN_STATE_HEAD_SHA],
+        head_sha=head_sha
+        if head_sha is not None
+        else wrapper.metadata[jp.RUN_STATE_HEAD_SHA],
         base_ref=wrapper.metadata[jp.RUN_STATE_BASE_REF],
-        base_sha=wrapper.metadata[jp.RUN_STATE_BASE_SHA],
+        base_sha=base_sha
+        if base_sha is not None
+        else wrapper.metadata[jp.RUN_STATE_BASE_SHA],
         config_digest=wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST],
         participants=("audit",),
         scope={"include": ["src/example.py"]},
         started_at=wrapper.metadata[jp.RUN_STATE_STARTED_AT],
         completed_at=wrapper.metadata[jp.RUN_STATE_COMPLETED_AT],
         output_paths=("audit-results.json",),
-        target_kind=jp.JournalTargetKind.BRANCH,
+        target_kind=target_kind or jp.JournalTargetKind.BRANCH,
+        pull_request_number=pull_request_number,
     )
 
 
 def _pull_request_metadata(wrapper: Any) -> Any:
     return je.metadata_from_values(
-        target=wrapper.target,
-        scope_hash=wrapper.metadata[jp.RUN_STATE_SCOPE_HASH],
-        branch_name=wrapper.metadata[jp.RUN_STATE_BRANCH_NAME],
-        branch_slug=wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG],
-        head_sha=wrapper.metadata[jp.RUN_STATE_HEAD_SHA],
-        base_ref=wrapper.metadata[jp.RUN_STATE_BASE_REF],
-        base_sha=wrapper.metadata[jp.RUN_STATE_BASE_SHA],
-        config_digest=wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST],
-        participants=("audit",),
-        scope={"include": ["src/example.py"]},
-        started_at=wrapper.metadata[jp.RUN_STATE_STARTED_AT],
-        completed_at=wrapper.metadata[jp.RUN_STATE_COMPLETED_AT],
-        output_paths=("audit-results.json",),
-        target_kind=jp.JournalTargetKind.PULL_REQUEST,
-        pull_request_number=123,
+        _metadata_values(
+            wrapper,
+            target_kind=jp.JournalTargetKind.PULL_REQUEST,
+            pull_request_number=123,
+        )
     )
 
 
@@ -177,7 +183,7 @@ def _streamed_events(wrapper: Any) -> list[dict[str, object]]:
 
 
 def _run_journal_emit_cli(*args: str, stdin: str = "") -> str:
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell
+    result = subprocess.run(  # noqa: S603
         [sys.executable, str(JOURNAL_EMIT_MODULE_PATH), *args],
         input=stdin,
         capture_output=True,
@@ -313,44 +319,14 @@ def test_adapter_rejects_missing_head_identity() -> None:
     wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
 
     with pytest.raises(ValueError, match="headSha"):
-        je.metadata_from_values(
-            target=wrapper.target,
-            scope_hash=wrapper.metadata[jp.RUN_STATE_SCOPE_HASH],
-            branch_name=wrapper.metadata[jp.RUN_STATE_BRANCH_NAME],
-            branch_slug=wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG],
-            head_sha="",
-            base_ref=wrapper.metadata[jp.RUN_STATE_BASE_REF],
-            base_sha=wrapper.metadata[jp.RUN_STATE_BASE_SHA],
-            config_digest=wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST],
-            participants=("audit",),
-            scope={"include": ["src/example.py"]},
-            started_at=wrapper.metadata[jp.RUN_STATE_STARTED_AT],
-            completed_at=wrapper.metadata[jp.RUN_STATE_COMPLETED_AT],
-            output_paths=("audit-results.json",),
-            target_kind=jp.JournalTargetKind.BRANCH,
-        )
+        je.metadata_from_values(_metadata_values(wrapper, head_sha=""))
 
 
 def test_adapter_rejects_missing_base_identity() -> None:
     wrapper = _wrapper(rows=(_row("gates", vmod.Status.PASS),), children=())
 
     with pytest.raises(ValueError, match="baseSha"):
-        je.metadata_from_values(
-            target=wrapper.target,
-            scope_hash=wrapper.metadata[jp.RUN_STATE_SCOPE_HASH],
-            branch_name=wrapper.metadata[jp.RUN_STATE_BRANCH_NAME],
-            branch_slug=wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG],
-            head_sha=wrapper.metadata[jp.RUN_STATE_HEAD_SHA],
-            base_ref=wrapper.metadata[jp.RUN_STATE_BASE_REF],
-            base_sha="",
-            config_digest=wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST],
-            participants=("audit",),
-            scope={"include": ["src/example.py"]},
-            started_at=wrapper.metadata[jp.RUN_STATE_STARTED_AT],
-            completed_at=wrapper.metadata[jp.RUN_STATE_COMPLETED_AT],
-            output_paths=("audit-results.json",),
-            target_kind=jp.JournalTargetKind.BRANCH,
-        )
+        je.metadata_from_values(_metadata_values(wrapper, base_sha=""))
 
 
 def test_adapter_rejects_non_positive_pull_request_number() -> None:
@@ -359,21 +335,11 @@ def test_adapter_rejects_non_positive_pull_request_number() -> None:
 
     with pytest.raises(ValueError, match="positive integer"):
         je.metadata_from_values(
-            target=wrapper.target,
-            scope_hash=wrapper.metadata[jp.RUN_STATE_SCOPE_HASH],
-            branch_name=wrapper.metadata[jp.RUN_STATE_BRANCH_NAME],
-            branch_slug=wrapper.metadata[jp.RUN_STATE_BRANCH_SLUG],
-            head_sha=wrapper.metadata[jp.RUN_STATE_HEAD_SHA],
-            base_ref=wrapper.metadata[jp.RUN_STATE_BASE_REF],
-            base_sha=wrapper.metadata[jp.RUN_STATE_BASE_SHA],
-            config_digest=wrapper.metadata[jp.RUN_STATE_CONFIG_DIGEST],
-            participants=("audit",),
-            scope={"include": ["src/example.py"]},
-            started_at=wrapper.metadata[jp.RUN_STATE_STARTED_AT],
-            completed_at=wrapper.metadata[jp.RUN_STATE_COMPLETED_AT],
-            output_paths=("audit-results.json",),
-            target_kind=jp.JournalTargetKind.PULL_REQUEST,
-            pull_request_number=0,
+            _metadata_values(
+                wrapper,
+                target_kind=jp.JournalTargetKind.PULL_REQUEST,
+                pull_request_number=0,
+            )
         )
 
 

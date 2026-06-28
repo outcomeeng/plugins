@@ -108,6 +108,27 @@ class _ProjectedFinding:
     message: str
 
 
+@dataclass(frozen=True)
+class MetadataValues:
+    """Raw run metadata values before shared projection validation."""
+
+    target: str
+    scope_hash: str
+    branch_name: str
+    branch_slug: str
+    head_sha: str
+    base_ref: str
+    base_sha: str
+    config_digest: str
+    participants: tuple[str, ...]
+    scope: dict[str, Any]
+    started_at: str
+    completed_at: str
+    output_paths: tuple[str, ...]
+    target_kind: object
+    pull_request_number: int | None = None
+
+
 def _map_finding(finding: verdict_schema.Finding) -> _ProjectedFinding:
     # The verdict and journal severities share member names (REJECT/WARNING/
     # INFO), so the journal severity is the projection member of the same name
@@ -160,43 +181,26 @@ def _project_child(child: verdict_schema.Verdict) -> list[_ProjectedFinding]:
     return findings
 
 
-def metadata_from_values(
-    *,
-    target: str,
-    scope_hash: str,
-    branch_name: str,
-    branch_slug: str,
-    head_sha: str,
-    base_ref: str,
-    base_sha: str,
-    config_digest: str,
-    participants: tuple[str, ...],
-    scope: dict[str, Any],
-    started_at: str,
-    completed_at: str,
-    output_paths: tuple[str, ...],
-    target_kind: object,
-    pull_request_number: int | None = None,
-) -> object:
+def metadata_from_values(values: MetadataValues) -> object:
     """Build validated run metadata for streaming audit events."""
     payload: dict[str, object] = {
-        "target": target,
-        jp.RUN_STATE_SCOPE_HASH: scope_hash,
-        jp.RUN_STATE_BRANCH_NAME: branch_name,
-        jp.RUN_STATE_BRANCH_SLUG: branch_slug,
-        jp.RUN_STATE_TARGET_KIND: str(jp.JournalTargetKind(target_kind)),
-        jp.RUN_STATE_HEAD_SHA: head_sha,
-        jp.RUN_STATE_BASE_REF: base_ref,
-        jp.RUN_STATE_BASE_SHA: base_sha,
-        jp.RUN_STATE_CONFIG_DIGEST: config_digest,
-        jp.RUN_STATE_PARTICIPANTS: list(participants),
-        jp.RUN_STATE_SCOPE: scope,
-        jp.RUN_STATE_STARTED_AT: started_at,
-        jp.RUN_STATE_COMPLETED_AT: completed_at,
-        jp.RUN_STATE_OUTPUT_PATHS: list(output_paths),
+        "target": values.target,
+        jp.RUN_STATE_SCOPE_HASH: values.scope_hash,
+        jp.RUN_STATE_BRANCH_NAME: values.branch_name,
+        jp.RUN_STATE_BRANCH_SLUG: values.branch_slug,
+        jp.RUN_STATE_TARGET_KIND: str(jp.JournalTargetKind(values.target_kind)),
+        jp.RUN_STATE_HEAD_SHA: values.head_sha,
+        jp.RUN_STATE_BASE_REF: values.base_ref,
+        jp.RUN_STATE_BASE_SHA: values.base_sha,
+        jp.RUN_STATE_CONFIG_DIGEST: values.config_digest,
+        jp.RUN_STATE_PARTICIPANTS: list(values.participants),
+        jp.RUN_STATE_SCOPE: values.scope,
+        jp.RUN_STATE_STARTED_AT: values.started_at,
+        jp.RUN_STATE_COMPLETED_AT: values.completed_at,
+        jp.RUN_STATE_OUTPUT_PATHS: list(values.output_paths),
     }
-    if pull_request_number is not None:
-        payload[jp.RUN_STATE_PULL_REQUEST_NUMBER] = pull_request_number
+    if values.pull_request_number is not None:
+        payload[jp.RUN_STATE_PULL_REQUEST_NUMBER] = values.pull_request_number
     return jp.run_metadata_from_json(json.dumps(payload))
 
 
@@ -291,21 +295,23 @@ def _emit_metadata(args: argparse.Namespace) -> int:
         scope = _json_object(args.scope_json, name="scope")
         output_paths = _json_string_tuple(args.output_paths_json, name="output paths")
         metadata = metadata_from_values(
-            target=args.target,
-            scope_hash=args.scope_hash,
-            branch_name=args.branch_name,
-            branch_slug=args.branch_slug,
-            head_sha=args.head_sha,
-            base_ref=args.base_ref,
-            base_sha=args.base_sha,
-            config_digest=args.config_digest,
-            participants=participants,
-            scope=scope,
-            started_at=args.started_at,
-            completed_at=args.completed_at,
-            output_paths=output_paths,
-            target_kind=args.target_kind,
-            pull_request_number=args.pull_request_number,
+            MetadataValues(
+                target=args.target,
+                scope_hash=args.scope_hash,
+                branch_name=args.branch_name,
+                branch_slug=args.branch_slug,
+                head_sha=args.head_sha,
+                base_ref=args.base_ref,
+                base_sha=args.base_sha,
+                config_digest=args.config_digest,
+                participants=participants,
+                scope=scope,
+                started_at=args.started_at,
+                completed_at=args.completed_at,
+                output_paths=output_paths,
+                target_kind=args.target_kind,
+                pull_request_number=args.pull_request_number,
+            )
         )
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         sys.stderr.write(f"{exc}\n")
