@@ -35,8 +35,9 @@ A `<SPEC_TREE_CONTEXT target="...">` marker carrying a structured context manife
 
 **Step GATE: Check foundation**
 
-Check conversation for `<SPEC_TREE_FOUNDATION>` marker.
-If absent → STOP. Invoke `/understand` first, then resume from Step 0.
+Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker.
+A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading the `/understand` SKILL.md file alone does not count.
+If absent → STOP. Invoke `/understand` first, then resume from Step 0. Do not inspect git, session state, product files, or spec-tree content before the live marker is present.
 
 </step>
 

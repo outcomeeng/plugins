@@ -1,6 +1,12 @@
 ---
 name: understand
-description: ALWAYS invoke this skill at the beginning of each session and after compaction. NEVER read, create, or modify any file in this repository other than CLAUDE.md without loading this skill and all its references first.
+description: >-
+  ALWAYS invoke this skill at the beginning of each session, after every
+  compaction, and before answering spec-tree workflow or session-continuity
+  questions when the live SPEC_TREE_FOUNDATION marker is absent. NEVER
+  read, create, or modify any file in this repository other than
+  CLAUDE.md without loading this skill and all its references
+  first.
 allowed-tools: Read, Glob, Grep, Bash(python3:*)
 ---
 
@@ -29,7 +35,10 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 
 <workflow>
 
-1. Check the conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `references/` or `templates/` file this invocation needs.
+1. Check the live conversation for the `<SPEC_TREE_FOUNDATION>` marker. If present, the foundation is already loaded — skip ahead and read directly whichever `references/` or `templates/` file this invocation needs.
+   A marker mentioned only in a compaction summary, session file, handoff note, prior run description, or statement that `/understand` ran does not count. Reading this SKILL.md alone does not count.
+   After every compaction, treat the marker as absent until this workflow emits it again.
+   Questions about `/understand`, `/contextualize`, `/apply`, `/handoff`, `/merge`, `/pickup`, session continuity, or whether a skill was invoked are spec-tree work and require this workflow before answering when the live marker is absent.
 2. Read the following references in full and point out any contradictions to the operator immediately:
    - `references/durable-map.md`
    - `references/node-types.md`
