@@ -27,6 +27,7 @@ Read before composing — read these directly each run. A present `<SPEC_TREE_FO
 - `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` — enabler/outcome structure and nesting rules
 - `${CLAUDE_SKILL_DIR}/../understand/references/ordering-rules.md` — the context-loading meaning of an index; index assignment (Steps 7–8) is the inverse of the reading rule it states, so read it before assigning any index
 - `${CLAUDE_SKILL_DIR}/../understand/references/what-goes-where.md` — artifact content taxonomy and test-infrastructure governance and placement rules (`<test_infrastructure>`)
+- `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/enabler-name.md`
 - `${CLAUDE_SKILL_DIR}/../understand/templates/nodes/outcome-name.md`
 - `/interview` — questioning methodology when the clarity gate finds incomplete or ambiguous composition input
@@ -74,7 +75,7 @@ For a node target, decompose when at least one trigger applies:
 | Separate validation  | Parts could be validated independently                 |
 | Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
 
-Classify the target with `/product-domain-shapes` before deciding whether to split it:
+Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
 - **One coherent concern**: keep the target whole when one hypothesis or enables statement covers all assertions, assertions are tightly coupled, or proposed children would carry only 1-2 trivial assertions.
 - **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions and the concrete behavior owns an independently validated contract.
@@ -126,7 +127,7 @@ Use these seam-finding heuristics:
 - Different data domains, runtime surfaces, commands, or validation mechanisms can indicate separate concerns.
 - Setup, packaging, state, credentials, safety, or workflow substrate can indicate enabler concerns.
 - Behavior slices can be valid vertical slices when each slice has its own testable contract and later slices extend or depend on earlier contracts.
-- Apply `/product-domain-shapes` when the input mixes an aggregate domain with its first concrete behavior.
+- Apply the product-domain-shapes reference when the input mixes an aggregate domain with its first concrete behavior.
 - Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
 - Assertions that span multiple children stay in the parent as cross-cutting assertions.
 

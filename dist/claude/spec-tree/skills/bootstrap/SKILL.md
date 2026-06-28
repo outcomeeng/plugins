@@ -1,7 +1,7 @@
 ---
 name: bootstrap
 description: ALWAYS invoke this skill when setting up a new spec tree or when /author detects an empty spx/ directory. NEVER create a spec tree from scratch without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(python3:*)
+allowed-tools: Read, Glob, Grep, Write, Skill
 ---
 
 <objective>
@@ -57,7 +57,7 @@ Invoke `/interview` and apply its methodology (one question at a time, `AskUserQ
 
 Record top-level answers as intent only. Do not assign node types, child names, or indices in bootstrapping — `/decompose spx/` owns structure.
 
-When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, load `/product-domain-shapes` for the shared classifier and examples.
+When candidate top-level areas mix aggregate domains, concrete behaviors, surfaces, actors, and code-shaped names, read `${CLAUDE_SKILL_DIR}/../understand/references/product-domain-shapes.md` for the shared classifier and examples.
 
 **Brownfield guard — existing code present.** When Step 1 found an implemented codebase, derive top-level intent from the product dimensions above — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout. Pre-analysis of existing code informs vocabulary, constraints, and open decisions; it does not set the partition. Candidate areas named after code components (`config`, `model`, `parser`, `layout`, …) repeat the implementation's filing in the tree and invert the truth hierarchy. `/decompose` enforces the same rule — "decompose by user-facing concern, not implementation layer" — so apply it here and code-shaped intent never reaches it.
 
@@ -104,11 +104,7 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Render the spx-level guides — `spx/CLAUDE.md` for Claude Code and `spx/AGENTS.md` for Codex — from the template via the update-spx helper, passing the project's enabled languages so the guides record their `languages` config (and a later `/update-spx` re-renders from it, scoped to those languages):
-
-   ```bash
-   python3 "${CLAUDE_SKILL_DIR}/../update-spx/scripts/update_spx.py" --template "${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md" --spx-dir <spx-dir> --languages <comma-separated-languages> --write
-   ```
+3. Invoke `/update-spx` for `spx/` so its generator writes both spx-level guides — `spx/CLAUDE.md` for this runtime and `spx/AGENTS.md` for the other runtime — from the installed template. `/update-spx` owns guide rendering, enabled-language detection, and any explicit language override.
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
    - Candidate product areas from the interview
@@ -132,7 +128,7 @@ After the root scaffold exists, invoke `/decompose spx/` to compose top-level ch
 Summarize what was created:
 
 - Product spec path
-- `spx/CLAUDE.md` path
+- `spx/CLAUDE.md` path and `spx/AGENTS.md` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
 
@@ -183,7 +179,7 @@ Bootstrapping is complete when:
 - [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `spx/CLAUDE.md` created from template, scoped to the project's enabled languages
+- [ ] `spx/CLAUDE.md` and `spx/AGENTS.md` created from template, scoped to the project's enabled languages
 - [ ] `spx/PLAN.md` created when top-level intent exists
 - [ ] Top-level structure delegated to `/decompose spx/`
 - [ ] Next steps recommended

@@ -1,27 +1,17 @@
----
-name: product-domain-shapes
-user-invocable: false
-description: >-
-  Product-domain shape classifier and examples loaded by bootstrap and
-  decomposition skills when product dimensions, aggregate domains, concrete
-  behavior slices, brownfield code, or code-shaped candidate areas must be
-  separated.
-allowed-tools: Read
----
+<overview>
 
-<objective>
-Shared product-shape vocabulary for deriving spec-tree structure from consumers,
-jobs, surfaces, actors, constraints, success signals, and top-level intent rather
-than implementation filing.
-</objective>
+Product shape comes from consumers, jobs, surfaces, actors, constraints,
+success signals, and top-level intent. Code organization can inform vocabulary,
+constraints, and open questions, but it does not define the spec-tree structure.
 
-<reference_note>
-This is a reference skill. /bootstrap and /decompose load this classifier when
-candidate product areas mix aggregate domains, concrete behaviors, surfaces,
-actors, and code-shaped names. Do not invoke directly.
-</reference_note>
+This reference gives `/bootstrap` and `/decompose` the shared classifier and
+examples for separating aggregate product domains, first concrete behaviors,
+cases that contain one coherent concern, and code-shaped candidate areas.
+
+</overview>
 
 <product_dimensions>
+
 Derive product shape from these dimensions:
 
 - **Consumers** — the personas or systems that consume the product.
@@ -38,11 +28,10 @@ Derive product shape from these dimensions:
 - **Top-level intent** — the major product areas that are known now, deferred, or
   unresolved.
 
-Code organization informs vocabulary, constraints, and open questions. Product
-shape comes from the dimensions above.
 </product_dimensions>
 
 <shape_classifier>
+
 Classify the input before proposing children:
 
 | Classification          | Signal                                                                                                                                       | Structure call                                                                |
@@ -62,9 +51,11 @@ assertions on the child. Record known later siblings or reserved horizon in
 When the input is one coherent concern, keep it whole. Splitting creates noise
 when each proposed child would carry only trivial assertions or every child needs
 the others to be meaningful.
+
 </shape_classifier>
 
 <examples>
+
 | Input                                                                                                                                               | Product dimensions                                                                                                                                                  | Structure call                                                                                                                  |
 | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Add a coding-agent domain with a `resume` subcommand that finds the exact git directory or worktree and lists recent Codex and Claude Code sessions | Consumer: developer. Surface: CLI. Actors: developer and coding-agent runtimes. Aggregate: coding-agent session coordination. Concrete behavior: resume discovery   | Create a `coding-agents` parent and a `resume` child from the first slice                                                       |
@@ -74,6 +65,7 @@ the others to be meaningful.
 | Export query results as CSV, with no other export formats named or implied                                                                          | Consumer: report reader. Surface: file output. Concrete behavior: CSV export                                                                                        | Keep one `csv-export` node unless an export-format family or shared export policy is already part of scope                      |
 | Add host cancellation policy to a booking marketplace                                                                                               | Consumers: hosts and guests. Surface: web UI or API. Actors: host, guest, marketplace operator. Aggregate: marketplace policy. Concrete behavior: host cancellation | Place `host-cancellation-policy` under the marketplace policy area so cross-actor guarantees stay above behavior-specific rules |
 | Top-level areas suggested as `parser`, `model`, and `layout` after reading a codebase                                                               | Product dimensions are missing; the names mirror code filing                                                                                                        | Re-derive from consumers, jobs, surfaces, and actors before composing children                                                  |
+
 </examples>
 
 <success_criteria>

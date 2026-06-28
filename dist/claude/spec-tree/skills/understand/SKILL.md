@@ -40,6 +40,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 3. List each operational reference and `spx/local/` overlay with its path, last-modified time, and line count — evidence each was located this session, not assumed. These load on demand in other skills:
    - `references/what-goes-where.md` — ADR/PDR/spec/test content taxonomy and test-infrastructure governance and placement rules (used by `/align`, `/decompose`)
    - `references/excluded-nodes.md` — `spx/EXCLUDE` convention, quality gate integration (used by `/author`, `/test`)
+   - `references/product-domain-shapes.md` — product-domain, first-concrete-behavior, actor, surface, and code-shaped-name classifier and examples (used by `/bootstrap`, `/decompose`)
    - PLAN.md / ISSUES.md inside node directories — node-local coordination notes for pending plans and known issues, git-tracked to carry coordination across sessions, verified and reconciled against the durable layers before use, never spec truth (used by `/contextualize`, `/handoff`)
    - `spx/local/*.md` — product-specific overlays for `/code-*`, `/architect-*`, `/test-*`, and lifecycle skills (enumerated by `/contextualize`)
 
@@ -57,6 +58,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
            print(n, "lines", datetime.datetime.fromtimestamp(p.stat().st_mtime).isoformat(), p)' \
      "${CLAUDE_SKILL_DIR}/references/what-goes-where.md" \
      "${CLAUDE_SKILL_DIR}/references/excluded-nodes.md" \
+     "${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md" \
      spx/local
    ```
 4. Check for local lifecycle routing:
@@ -106,7 +108,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
 ```text
 <SPEC_TREE_FOUNDATION>
 Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-protocol, verification-kinds
-Operational references available: what-goes-where, excluded-nodes
+Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge (classifies the changeset, selects the merge transport, delegates to the selected transport; reads spx/local/merging.md as an optional overlay only when present, and its absence applies the default lifecycle)
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
 Routing guide: loaded from spx/CLAUDE.md | absent
