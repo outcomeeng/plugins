@@ -148,6 +148,7 @@ def run_compute_diff_in_process(
     *,
     repo: pathlib.Path,
     env: dict[str, str],
+    args: list[str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run ``compute_diff.main`` in-process with CLI-shaped outputs.
 
@@ -161,7 +162,8 @@ def run_compute_diff_in_process(
     stdout = io.StringIO()
     stderr = io.StringIO()
     old_cwd = pathlib.Path.cwd()
-    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT)]
+    script_args = args or []
+    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT), *script_args]
     try:
         os.chdir(repo)
         with (
@@ -169,7 +171,7 @@ def run_compute_diff_in_process(
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
-            returncode = _module_main(module)([])
+            returncode = _module_main(module)(script_args)
     finally:
         os.chdir(old_cwd)
     return subprocess.CompletedProcess(

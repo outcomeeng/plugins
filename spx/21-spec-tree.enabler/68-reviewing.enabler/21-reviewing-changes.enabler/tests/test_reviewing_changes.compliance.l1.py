@@ -4,9 +4,9 @@ Covers the Compliance clauses in ``../reviewing-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
 - Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
-  performs no direct storage writes — no script calls ``open()`` for writing,
-  ``Path.write_*``, ``os.remove``, ``os.unlink``, ``shutil.rmtree``, or any
-  other direct filesystem-write primitive.
+  writes no durable review state. ``compute_diff.py`` may write only the
+  caller-owned scratch review-input bundle files; the remaining scripts use no
+  direct write primitives.
 - The swappable prompt template lives at
   ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
   and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
@@ -16,9 +16,9 @@ universal rules across the skill's files rather than per-case scenarios:
   listing ``spec-tree:review-changes`` — tolerated absent during the
   slice authoring phase, asserted shape when present.
 - The scripts/ directory holds the audit-parity set — the policy module
-  plus ``compute_diff.py`` and ``journal_emit.py`` — with no arbiter and
-  no parallel renderer, so the human surface comes only from the sealed
-  journal prefix.
+  plus ``compute_diff.py`` and ``journal_emit.py`` — with no parallel
+  validation or renderer script, so the human surface comes only from the
+  sealed journal prefix.
 - No script under the skill's ``scripts/`` directory imports a third-party
   package, depends on ``uv`` at runtime, or imports any ``outcomeeng_*``
   module.
@@ -56,7 +56,12 @@ FORBIDDEN_ATTR_CALLS = {
     ("os", "unlink"),
     ("shutil", "rmtree"),
 }
-FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink"}
+FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink", "mkdir"}
+COMPUTE_DIFF_ALLOWED_WRITE_CALLS = {
+    ("bundle_dir", "mkdir"),
+    ("diff_path", "write_text"),
+    ("manifest_path", "write_text"),
+}
 
 # Names of modules that ship under the review-changes scripts/ directory
 # (sibling-imported via bare names) — these are not "third-party" or
@@ -114,7 +119,7 @@ def _imported_modules(source: str) -> list[str]:
 
 
 class TestScriptsDoNotWriteStorageDirectly:
-    """Review scripts do not write storage directly."""
+    """Review scripts write no durable review state directly."""
 
     @pytest.mark.parametrize(
         "script_path",
@@ -137,9 +142,12 @@ class TestScriptsDoNotWriteStorageDirectly:
             if isinstance(func, ast.Name) and func.id in FORBIDDEN_NAME_CALLS:
                 violations.append(f"call to {func.id}() at line {node.lineno}")
             elif isinstance(func, ast.Attribute):
+                value = func.value
+                if script_path == COMPUTE_DIFF_SCRIPT and isinstance(value, ast.Name):
+                    if (value.id, func.attr) in COMPUTE_DIFF_ALLOWED_WRITE_CALLS:
+                        continue
                 if func.attr in FORBIDDEN_METHOD_NAMES:
                     violations.append(f".{func.attr}() at line {node.lineno}")
-                value = func.value
                 if (
                     isinstance(value, ast.Name)
                     and (value.id, func.attr) in FORBIDDEN_ATTR_CALLS
@@ -147,7 +155,8 @@ class TestScriptsDoNotWriteStorageDirectly:
                     violations.append(f"{value.id}.{func.attr}() at line {node.lineno}")
         assert not violations, (
             f"{script_path.name} uses forbidden direct-write filesystem "
-            f"primitives: {'; '.join(violations)}"
+            f"primitives outside the caller-owned review-input bundle exception: "
+            f"{'; '.join(violations)}"
         )
 
 
@@ -332,8 +341,8 @@ class TestComputeDiffHasNoThreadAddressing:
 
 
 # The audit-parity script set: the policy module plus the two CLI scripts.
-# No arbiter (`validate_review_result.py`) and no parallel renderer
-# (`render_review.py`) — validity is the `journal_emit finding-reported`
+# No parallel validation script (`validate_review_result.py`) and no parallel
+# renderer (`render_review.py`) — validity is the `journal_emit finding-reported`
 # per-finding parse, and the human surface is rendered only from the sealed
 # journal prefix.
 EXPECTED_SCRIPT_NAMES = frozenset(
@@ -363,9 +372,9 @@ class TestNoParallelReviewResultRenderer:
             "JSON — the surface is rendered only from the sealed journal prefix"
         )
         assert "validate_review_result.py" not in present, (
-            "validate_review_result.py is the removed arbiter — validity is the "
-            "journal_emit finding-reported per-finding parse, matching the audit "
-            "kind"
+            "validate_review_result.py is the removed parallel validation script "
+            "— validity is the journal_emit finding-reported per-finding parse, "
+            "matching the audit kind"
         )
 
     def test_no_render_templates_directory(self) -> None:
