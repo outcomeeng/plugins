@@ -312,6 +312,8 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments \
 
 Compare timestamps against the most recent push. Entries after that push are re-reviews of the latest state — read them in full.
 
+Tool-reported issue comments and links are review inputs, not status decoration. When a PR-level comment, check summary, or review-thread comment from a tool links or names new-code defects — for example a code-quality service reporting issue links for the current pull request — open the linked details when the excerpt is insufficient, classify each named defect through `<review_classification>`, and include it in the current-head finding ledger. A passing quality-gate badge, green check, or clean CI review does not cancel a separate tool-reported issue for the same head; fix every valid in-scope defect before merge.
+
 </review_inspection>
 
 <review_classification>

@@ -96,7 +96,9 @@ For a failure triage request, retrieve only the failed-step logs first:
 gh run view "$RUN_ID" --log-failed
 ```
 
-From that output, surface the failing job, the failing step, and at least one error excerpt before any other log retrieval. Request full logs (`gh run view "$RUN_ID" --log`) only if `--log-failed` is empty or the user explicitly asks.
+From that output, report the failing job, the failing step, and at least one error excerpt before any other log retrieval. Request full logs (`gh run view "$RUN_ID" --log`) only if `--log-failed` is empty or the user explicitly asks.
+
+If the failed-step logs, PR check summary, or linked tool output names issue URLs or current-PR defects, report each issue link with the run id, workflow name, branch, and commit SHA before summarizing. A tool issue link is diagnostic evidence for the current run; do not treat it as decorative output or hide it behind a passing quality-gate summary.
 
 When listing jobs to find a specific failure point:
 
@@ -144,7 +146,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 
 **Failure 2: `export -f` portability.** `export -f` is bash-only and fails in zsh with `invalid option(s)`. When sourcing helper functions, do not export them — sourcing alone makes them available in the calling shell.
 
-**Failure 3: gh unauthenticated inside CI runners.** Default GitHub Actions runners do not authenticate `gh` automatically. When the skill runs inside a CI job, surface "gh is not authenticated" and the standard remediation: pipe `${{ secrets.GITHUB_TOKEN }}` into `gh auth login --with-token`. Do not attempt account switching in CI — switching requires a TTY which CI does not have.
+**Failure 3: gh unauthenticated inside CI runners.** Default GitHub Actions runners do not authenticate `gh` automatically. When the skill runs inside a CI job, report "gh is not authenticated" and the standard remediation: pipe `${{ secrets.GITHUB_TOKEN }}` into `gh auth login --with-token`. Do not attempt account switching in CI — switching requires a TTY which CI does not have.
 
 **Failure 4: status report led with narrative.** Reporting "the workflow failed" before naming the run id, branch, and commit SHA leaves the user unable to verify which run. Lead with the identifying tuple in the order listed in `<step name="report_status">`.
 
@@ -153,7 +155,7 @@ Do NOT invoke `gh run watch`. Do NOT wrap a status check in an `until` or `while
 <success_criteria>
 
 - A status request reports repository, branch, run id, workflow name, status, conclusion, and commit SHA before any narrative.
-- A failure triage request runs `gh run view --log-failed` first and surfaces failing job, failing step, and at least one error excerpt before any other log retrieval.
+- A failure triage request runs `gh run view --log-failed` first and identifies failing job, failing step, and at least one error excerpt before any other log retrieval.
 - Auth-failure handling matches the TTY/non-TTY split: prompt-and-switch on TTY, manual remediation on non-TTY.
 - Conclusion field carries the literal value returned by `gh run view --json conclusion`, never a derivation.
 - In-progress PR-check waiting uses exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30`; run-only in-progress status is reported without a watcher or runtime timer.
