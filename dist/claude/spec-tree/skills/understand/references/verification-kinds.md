@@ -48,6 +48,14 @@ The assertion tag `[review]` is the legacy spelling of the `[audit]` tag and res
 
 </assertion_tags>
 
+<vocabulary_boundaries>
+
+This reference is the declared source for verification-kind vocabulary. When a word can be read as both verification vocabulary and another methodology grammar, such as a skill-name form, resolve the verification vocabulary here first and inspect file history before classifying the word as a naming defect.
+
+Generated runtime output and implementation names are lower-layer evidence; they never override this vocabulary source.
+
+</vocabulary_boundaries>
+
 <compliance>
 
 - ALWAYS: an activity declares its type and purpose.
