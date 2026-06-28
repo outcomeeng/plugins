@@ -37,7 +37,7 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 The Claude marketplace is registered as a **Directory source** at the authoritative default-branch worktree — the checkout named like the remote (for example `~/Code/outcomeeng/plugins/plugins`), which stays on branch `main`. That worktree's `dist/` is what every Claude session and `claude plugin marketplace update` reads, so the marketplace serves current content only when **that worktree's `main` is current**.
 
-After a merge lands on `origin/main`, fast-forward the **marketplace-source worktree's** `main`, then refresh installs:
+After a merge lands on `origin/main`, fast-forward the **marketplace-source worktree's** `main`, then refresh installs. A checkout update alone is incomplete: `git pull`, `git switch`, `git fetch`, or `git merge --ff-only` in the source checkout is only the prerequisite for `just sync-marketplace <previous-main-ref>`.
 
 ```bash
 src=$(claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and e.get("source")=="directory"), ""))')

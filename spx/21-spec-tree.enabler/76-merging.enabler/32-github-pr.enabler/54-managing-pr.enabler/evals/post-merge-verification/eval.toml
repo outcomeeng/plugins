@@ -1,0 +1,18 @@
+title = "post-merge-verification"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/spec-tree"
+owned_paths = [
+  "spx/local/merging.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md",
+  "spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/evals/post-merge-verification/**",
+  "src/plugins/spec-tree/skills/manage-pr/**",
+  "src/plugins/spec-tree/skills/merging-standards/**",
+  "dist/claude/spec-tree/skills/manage-pr/**",
+  "dist/claude/spec-tree/skills/merging-standards/**",
+  "dist/codex/spec-tree/skills/manage-pr/**",
+  "dist/codex/spec-tree/skills/merging-standards/**",
+]
+smoke_cases = ["marketplace-sync-runs-after-source-refresh"]
+threshold = 0.85
+trials = 1

@@ -1,8 +1,8 @@
 ---
 name: manage-pr
 description: >-
-  Open-PR management protocol for review and check inspection, follow-up pushes, merge gates, and post-merge cleanup. Loaded by /manage-github-pr.
-allowed-tools: Read, Glob, Grep, Bash, Edit, Write, Skill
+  ALWAYS invoke this skill when managing an open GitHub pull request, inspecting PR checks or reviews, pushing PR follow-ups, driving PR merge gates, or running post-merge cleanup. NEVER manage an open PR by hand without this skill.
+allowed-tools: Read, Glob, Grep, Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch:*), Bash(git push:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git log:*), Bash(git diff:*), Bash(git ls-remote:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr review:*), Bash(gh pr merge:*), Bash(gh api:*), Bash(gh run view:*), Bash(just sync-marketplace:*), Edit, Write, Skill
 ---
 
 <objective>
@@ -73,12 +73,12 @@ When `MERGE_READINESS` appears to hold, evaluate `PRODUCTION_READINESS`. If `PRO
 
   Run the mutation-point guard inspection per /merging-standards `<authority_gates>`, continue only after it returns `MERGE_READY:<head-sha>`, then execute the merge and branch deletion using the single-source rebase-merge-then-worktree-safe-deletion sequence in /merging-standards `<merge_cleanup>` — do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
 
-  Emit `POST_MERGE_VERIFY` if the project requires post-merge verification.
+  Immediately run /merging-standards `<post_merge_verification>`. A project-declared post-merge command is routine lifecycle work, not a terminal token: run every autonomous post-merge step the overlay declares, including marketplace-source refresh commands, before exiting the managing pass. Emit `POST_MERGE_VERIFY` only when the overlay names a post-merge action that cannot be performed autonomously after every runnable post-merge step has already run.
 - **Production-relevant and not yet approved** -> emit `AWAIT_APPROVAL:<reason>` and wait for the operator's explicit approval. Claude has already done the full `MERGE_READINESS` work; only execution waits.
 
 If `MERGE_READINESS` does not hold, emit exactly one token from /merging-standards `<action_tokens>`. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `AWAIT_APPROVAL` or `MERGE_BLOCKED:<reason>`, stop at the operator boundary or concrete blocker the token names. A base-sync conflict is handled earlier in Step 4 as a structured stop report, not an action token.
 
-**Exit when:** the PR is merged, closed, or the gate emits a terminal token (`POST_MERGE_VERIFY`). Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
+**Exit when:** the PR is closed; the PR is merged and `<post_merge_verification>` has completed every autonomous post-merge step; or the gate emits a terminal token (`POST_MERGE_VERIFY`) because a remaining post-merge action is operator-owned or externally blocked. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary.
 
 </the_managing_flow>
 
@@ -132,6 +132,9 @@ gh api graphql --silent \
 # and the local + remote branch deletion). Run it only after the mutation-point guard returns
 # MERGE_READY:<head-sha> per /merging-standards <authority_gates>; cleanup stays in the assigned
 # worktree per /merging-standards <assigned_cwd_worktree_discipline>. Not transcribed here.
+
+# Post-merge verification: see /merging-standards <post_merge_verification>.
+# Run every autonomous post-merge step the overlay declares before exiting the managing pass.
 ```
 
 </commands_reference>
@@ -145,6 +148,8 @@ gh api graphql --silent \
 **Wait-token-only without the foreground wait.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn, leaving the operator to re-check the PR manually while current-head checks were still running. Step 8 runs `gh pr checks <pr-number> --watch --fail-fast --interval 30` when the PR is blocked by check completion, then restarts full inspection from Step 1 before acting.
 
 **Used GitHub mergeability as authority.** Claude merged while current-head PR review/check automation was still running because GitHub reported the PR as mergeable and accepted `gh pr merge`. Host mergeability is not the repository policy gate; it ignores the stricter requirement that current-head review output exists and all required checks are terminal-green. Run the mutation-point guard immediately before merge; if any current-head review/check predicate is absent or non-terminal, emit the wait token and refresh tracking.
+
+**Stopped after checkout refresh and skipped marketplace sync.** Claude refreshed the marketplace-source checkout after a merge, then treated the checkout update as the post-merge step and skipped the overlay's required `just sync-marketplace <previous-main-ref>` run. The source checkout being current is only prerequisite state for the overlay command. After `<merge_cleanup>`, run `<post_merge_verification>` through every autonomous command the overlay declares; for a marketplace-source refresh, fast-forward the source checkout, then run `just sync-marketplace <previous-main-ref>` from that source checkout before exiting.
 
 </failure_modes>
 
@@ -164,7 +169,7 @@ The managing flow satisfies its contract when, at minimum:
 - A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `WAIT_FOR_REVIEW` — the exception is scoped to the self-modifying-PR case only.
 - The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
 - `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
-- Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state.
+- Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except a base-sync conflict, which stops with `/sync-base`'s structured conflict report and active rebase state. Post-merge verification that the overlay can run autonomously is an autonomous action, so it runs before any terminal report.
 - No `<self_reference>` violation per /merging-standards.
 
 </success_criteria>
