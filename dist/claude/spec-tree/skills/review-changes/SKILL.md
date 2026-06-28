@@ -16,14 +16,14 @@ A review run recorded as a sealed `spx journal --type review` event prefix, with
 
 Two CLI scripts plus the policy module under `${CLAUDE_SKILL_DIR}/scripts/` and the prompt reference:
 
-| Entry point                   | Effect                                                                                                                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/compute_diff.py`     | Resolve `base_ref` (env -> git origin/HEAD) and `head_ref` (env -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout                                                                                 |
-| `scripts/journal_emit.py`     | `metadata` derives run identity; `scope-entered` / `scope-advanced` / `finding-reported` / `run-completed` each print one streaming journal event (the per-finding parse is the validity gate); `render` renders the human surface from a sealed prefix |
-| `scripts/review_result.py`    | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `parse_finding_json` / `to_json_dict` / `from_json_dict`                                                                                                                    |
-| `references/review-prompt.md` | Swappable judgment-style review prompt — read via `Read` into context                                                                                                                                                                                   |
+| Entry point                                       | Effect                                                                                                                                                                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/compute_diff.py`                         | Resolve `base_ref` (env -> git origin/HEAD) and `head_ref` (env -> default `HEAD`), write committed merge-base, staged, unstaged, and untracked diff sections to stdout or to a caller-owned scratch bundle (`diff.md`, `manifest.json`)                |
+| `scripts/journal_emit.py`                         | `metadata` derives run identity; `scope-entered` / `scope-advanced` / `finding-reported` / `run-completed` each print one streaming journal event (the per-finding parse is the validity gate); `render` renders the human surface from a sealed prefix |
+| `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `parse_finding_json` / `to_json_dict` / `from_json_dict`                                                                                                                    |
+| `${CLAUDE_SKILL_DIR}/references/review-prompt.md` | Swappable judgment-style review prompt — read via `Read` into context                                                                                                                                                                                   |
 
-Durable review state is the sealed `spx journal --type review` event prefix, and the human-readable surface is rendered only from that sealed prefix — the journal is the review's sole source of truth. The skill never writes review-result or rendered markdown files as authoritative artifacts, and no script renders a parallel surface. The run **streams** its events live — it never builds one batch of events from a finished review, so a reader resuming from a cursor watches the review advance in flight. There is no separate arbiter CLI: `journal_emit.py finding-reported` parses each finding through `review_result.parse_finding_json` and fails before that finding's append, and the journal channel's append and seal are the durable validity signal — matching the audit kind.
+Durable review state is the sealed `spx journal --type review` event prefix, and the human-readable surface is rendered only from that sealed prefix — the journal is the review's sole source of truth. The skill never writes review-result or rendered markdown files as authoritative artifacts, and no script renders a parallel surface. The run **streams** its events live — it never builds one batch of events from a finished review, so a reader resuming from a cursor watches the review advance in flight. `journal_emit.py finding-reported` parses each finding through `review_result.parse_finding_json` and fails before that finding's append, and the journal channel's append and seal are the durable validity signal — matching the audit kind. The diff bundle is caller-owned scratch review input for random access; it is not durable review state.
 
 </api_surface>
 
@@ -31,13 +31,16 @@ Durable review state is the sealed `spx journal --type review` event prefix, and
 
 Claude drives the chain top-to-bottom and **streams the run live** — appending each event the moment the run reaches it, never gathering a finished review and dumping its events at the end. `journal_emit.py finding-reported` parses each finding Claude emits through `review_result.parse_finding_json` and fails before that finding's append, so the per-finding parse is the validity gate. Claude invokes the chain with no required input; callers that need a non-default scope export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` before invoking the skill.
 
-1. **Compute the diff** against the resolved base ref:
+1. **Compute the diff** against the resolved base ref into a caller-owned scratch bundle:
 
    ```bash
-   python3 "${CLAUDE_SKILL_DIR}/scripts/compute_diff.py"
+   REVIEW_INPUT_DIR=$(mktemp -d)
+   REVIEW_INPUT_SUMMARY=$(python3 "${CLAUDE_SKILL_DIR}/scripts/compute_diff.py" \
+     --bundle-dir "$REVIEW_INPUT_DIR")
    ```
 
    On non-zero exit, read the stderr message — the script names every source it tried (env and git symbolic-ref) so the operator can populate one.
+   Read `manifest.json` from the reported `manifest_path`, then read `diff.md` from the reported `diff_path`. Use the manifest's section spans and file lists to revisit only the relevant diff section while reviewing. The scratch directory is owned by this invocation and is removed after the run is sealed and rendered.
 
 2. **Load the judgment-style prompt** into context:
 
@@ -58,7 +61,7 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
      | spx journal append --type review --run "$RUN_TOKEN" >/dev/null
    ```
 
-4. **Apply the prompt and stream the run while reviewing.** Work through the changed files. As each changed file is examined, append a scope-advanced event naming it; the instant a finding is raised, emit that one finding as a JSON object conforming to the `Finding` schema in `scripts/review_result.py` and append its finding-reported event. Do not gather findings into one document and append them at the end.
+4. **Apply the prompt and stream the run while reviewing.** Work through the changed files listed in the bundle manifest. As each changed file is examined, append a scope-advanced event naming it; the instant a finding is raised, emit that one finding as a JSON object conforming to the `Finding` schema in `scripts/review_result.py` and append its finding-reported event. Do not gather findings into one document and append them at the end.
 
    ```bash
    # As you examine each changed file:
@@ -95,6 +98,7 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
    printf '%s\n' "$RUN_TOKEN"
    printf '%s\n' "$REVIEW_RENDERED" \
      | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data["countLine"]); print(data["surface"] if int(data["blocking"]) or int(data["debt"]) else "", end="")'
+   rm -rf "$REVIEW_INPUT_DIR"
    ```
 
    Each append is one event the run has reached; this is streaming, not a polling wait.
@@ -105,7 +109,7 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
 
 <validity_at_parse>
 
-Validity comes from the per-finding `journal_emit.py finding-reported` parse, not a separate arbiter CLI. When `finding-reported` parses a finding through `review_result.parse_finding_json` — required keys, enum membership, the path-style `rule` citation form — a non-zero exit is a re-emit signal, not a status to gloss over. Claude never:
+Validity comes from the per-finding `journal_emit.py finding-reported` parse. When `finding-reported` parses a finding through `review_result.parse_finding_json` — required keys, enum membership, the path-style `rule` citation form — a non-zero exit is a re-emit signal, not a status to gloss over. Claude never:
 
 - Hand-checks the required-key set or the enum membership in agent prose.
 - Appends a finding-reported event for a finding that did not parse.
@@ -118,7 +122,7 @@ Emit findings only — no summary, acknowledgement, decision, or verdict — and
 <constraints>
 
 - Stdlib-only Python under `${CLAUDE_SKILL_DIR}/scripts/`. No third-party packages, no `outcomeeng_*` imports, no dependency on `uv` at runtime.
-- Durable review state is written only through `spx journal --type review`. Only `compute_diff.py` shells out for `git diff` / `git ls-files`; `journal_emit.py metadata` shells out only through the shared changeset-scope helper to resolve branch and commit identity.
+- Durable review state is written only through `spx journal --type review`. `compute_diff.py --bundle-dir` may write only caller-owned scratch review-input files. Only `compute_diff.py` shells out for `git diff` / `git ls-files`; `journal_emit.py metadata` shells out only through the shared changeset-scope helper to resolve branch and commit identity.
 - The judgment-style review prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`. It is never embedded inside this SKILL.md or any `.py` file under `scripts/`.
 - Frozen dataclasses (`Finding`, `ReviewResult`) cross the parse boundary as values. Any attempt to mutate one between steps raises `FrozenInstanceError`.
 - Never hand-format the journal event types, run-state field names, or rendered journal surface in skill prose — `journal_emit.py` and the shared projection own those shapes.
@@ -135,6 +139,8 @@ Emit findings only — no summary, acknowledgement, decision, or verdict — and
 
 **Rendered artifact treated as state.** Claude writes `review-result.json` or rendered markdown to a local path and treats that file as the durable review record. Durable review state is the sealed `spx journal --type review` prefix. Keep rendered markdown as conversation output only; use `spx journal read --type review --run "$RUN_TOKEN" --from 0` for persisted state.
 
+**Scratch bundle retained as state.** Claude leaves the diff bundle behind or treats `manifest.json` as a review record. The bundle is caller-owned scratch input for one invocation. Remove it after the journal is sealed and rendered; read durable facts from the journal.
+
 </failure_modes>
 
 <success_criteria>
@@ -142,8 +148,8 @@ Emit findings only — no summary, acknowledgement, decision, or verdict — and
 - [ ] The run streams its events live — scope-entered, a scope-advanced per examined file, a finding-reported the instant each finding is raised, run-completed — never one batch built from a finished review.
 - [ ] `journal_emit.py finding-reported` parses each finding and exits 0 before that finding's append; a parse failure is repaired and re-emitted, never appended.
 - [ ] `spx journal read --type review --run "$RUN_TOKEN" --from 0` returns a sealed prefix whose terminal event includes `headSha`, `baseRef`, `baseSha`, `branchSlug`, `configDigest`, `scope`, and `status`.
-- [ ] No script under `scripts/` imports a third-party package or calls a direct storage-write primitive.
-- [ ] The swappable review prompt remains a standalone file at `references/review-prompt.md`; rotating the prompt does not require touching code.
+- [ ] No script under `scripts/` imports a third-party package or writes durable review state outside the journal; `compute_diff.py --bundle-dir` writes only caller-owned scratch `diff.md` and `manifest.json`.
+- [ ] The swappable review prompt remains a standalone file at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt does not require touching code.
 - [ ] After journal seal, the chain reads the sealed prefix, renders through `journal_emit.py render`, and surfaces the run token, the `BLOCKING`/`DEBT` count line, and (when any finding is present) the rendered surface to the caller.
 
 </success_criteria>

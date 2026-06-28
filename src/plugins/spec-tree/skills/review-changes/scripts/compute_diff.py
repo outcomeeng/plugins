@@ -17,6 +17,8 @@ Tested with:
 - Staged, unstaged, and untracked worktree changes -> emits all four sections.
 - ``origin/HEAD`` derivation without env -> emits the diff.
 - ``SPX_VERIFY_HEAD_REF`` overrides the default ``HEAD`` head ref.
+- ``--bundle-dir`` -> writes ``diff.md`` and ``manifest.json`` to caller-owned
+  scratch storage and reports the bundle paths.
 - Missing base-ref sources -> exits non-zero and names env and git sources.
 
 Stdlib-only.
@@ -25,20 +27,43 @@ Stdlib-only.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
+import json
 import os
 import pathlib
 import subprocess
 import sys
+from dataclasses import dataclass
 from types import ModuleType
 
 ENV_BASE_REF = "SPX_VERIFY_BASE_REF"
 ENV_HEAD_REF = "SPX_VERIFY_HEAD_REF"
 DEFAULT_HEAD_REF = "HEAD"
+MANIFEST_SCHEMA_VERSION = 1
+BUNDLE_DIFF_FILENAME = "diff.md"
+BUNDLE_MANIFEST_FILENAME = "manifest.json"
 DIFF_SECTION_COMMITTED = "Committed diff"
 DIFF_SECTION_STAGED = "Staged diff"
 DIFF_SECTION_UNSTAGED = "Unstaged diff"
 DIFF_SECTION_UNTRACKED = "Untracked files"
+
+
+@dataclass(frozen=True)
+class DiffSection:
+    title: str
+    text: str
+    files: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SectionManifest:
+    title: str
+    files: tuple[str, ...]
+    start_line: int
+    line_count: int
+    byte_start: int
+    byte_length: int
 
 
 def _load_changeset_scope() -> ModuleType:
@@ -144,14 +169,25 @@ def _diff_section(title: str, diff: str) -> str:
     return f"### {title}\n\n{diff}"
 
 
-def _untracked_diff() -> str:
-    paths = [
+def _diff_name_only(args: list[str]) -> tuple[str, ...]:
+    return tuple(
+        line
+        for line in _git_stdout(["diff", "--name-only", *args]).splitlines()
+        if line
+    )
+
+
+def _untracked_paths() -> tuple[str, ...]:
+    return tuple(
         line
         for line in _git_stdout(
             ["ls-files", "--others", "--exclude-standard", "-z"]
         ).split("\0")
         if line
-    ]
+    )
+
+
+def _untracked_diff(paths: tuple[str, ...]) -> str:
     sections: list[str] = []
     for path in paths:
         completed = subprocess.run(  # noqa: S603 — paths come from git ls-files
@@ -166,25 +202,159 @@ def _untracked_diff() -> str:
     return "\n".join(sections)
 
 
+def diff_sections(base_ref: str, head_ref: str) -> tuple[DiffSection, ...]:
+    """Return non-empty review-input sections with changed file names."""
+    untracked_paths = _untracked_paths()
+    candidates = (
+        DiffSection(
+            DIFF_SECTION_COMMITTED,
+            _diff_section(
+                DIFF_SECTION_COMMITTED,
+                _git_diff([f"{base_ref}...{head_ref}"]),
+            ),
+            _diff_name_only([f"{base_ref}...{head_ref}"]),
+        ),
+        DiffSection(
+            DIFF_SECTION_STAGED,
+            _diff_section(DIFF_SECTION_STAGED, _git_diff(["--cached"])),
+            _diff_name_only(["--cached"]),
+        ),
+        DiffSection(
+            DIFF_SECTION_UNSTAGED,
+            _diff_section(DIFF_SECTION_UNSTAGED, _git_diff([])),
+            _diff_name_only([]),
+        ),
+        DiffSection(
+            DIFF_SECTION_UNTRACKED,
+            _diff_section(DIFF_SECTION_UNTRACKED, _untracked_diff(untracked_paths)),
+            untracked_paths,
+        ),
+    )
+    return tuple(section for section in candidates if section.text)
+
+
 def combined_diff(base_ref: str, head_ref: str) -> str:
     """Return committed, staged, unstaged, and untracked diffs as one review input."""
-    sections = (
-        _diff_section(
-            DIFF_SECTION_COMMITTED,
-            _git_diff([f"{base_ref}...{head_ref}"]),
-        ),
-        _diff_section(DIFF_SECTION_STAGED, _git_diff(["--cached"])),
-        _diff_section(DIFF_SECTION_UNSTAGED, _git_diff([])),
-        _diff_section(DIFF_SECTION_UNTRACKED, _untracked_diff()),
+    return "\n".join(section.text for section in diff_sections(base_ref, head_ref))
+
+
+def _section_manifests(
+    sections: tuple[DiffSection, ...],
+) -> tuple[SectionManifest, ...]:
+    manifests: list[SectionManifest] = []
+    byte_cursor = 0
+    line_cursor = 1
+    for index, section in enumerate(sections):
+        if index:
+            byte_cursor += len("\n".encode("utf-8"))
+            line_cursor += 1
+        section_bytes = section.text.encode("utf-8")
+        line_count = len(section.text.splitlines())
+        manifests.append(
+            SectionManifest(
+                title=section.title,
+                files=section.files,
+                start_line=line_cursor,
+                line_count=line_count,
+                byte_start=byte_cursor,
+                byte_length=len(section_bytes),
+            )
+        )
+        byte_cursor += len(section_bytes)
+        line_cursor += section.text.count("\n")
+    return tuple(manifests)
+
+
+def _manifest_dict(
+    *,
+    base_ref: str,
+    head_ref: str,
+    diff_text: str,
+    sections: tuple[DiffSection, ...],
+) -> dict[str, object]:
+    diff_bytes = diff_text.encode("utf-8")
+    return {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "base_ref": base_ref,
+        "head_ref": head_ref,
+        "diff_path": BUNDLE_DIFF_FILENAME,
+        "diff_sha256": hashlib.sha256(diff_bytes).hexdigest(),
+        "diff_bytes": len(diff_bytes),
+        "sections": [
+            {
+                "title": section.title,
+                "files": list(section.files),
+                "start_line": section.start_line,
+                "line_count": section.line_count,
+                "byte_start": section.byte_start,
+                "byte_length": section.byte_length,
+            }
+            for section in _section_manifests(sections)
+        ],
+    }
+
+
+def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
+    """Return a normalized caller-owned bundle directory path."""
+    resolved = bundle_dir.expanduser().resolve(strict=False)
+    if resolved == resolved.parent:
+        raise RuntimeError("--bundle-dir must not be the filesystem root")
+    if resolved.exists() and not resolved.is_dir():
+        raise RuntimeError(f"--bundle-dir exists and is not a directory: {resolved}")
+    return resolved
+
+
+def _bundle_file_path(bundle_dir: pathlib.Path, filename: str) -> pathlib.Path:
+    """Return a bundle file path guaranteed to stay inside ``bundle_dir``."""
+    path = (bundle_dir / filename).resolve(strict=False)
+    if not path.is_relative_to(bundle_dir):
+        raise RuntimeError(f"bundle file escapes --bundle-dir: {filename}")
+    return path
+
+
+def write_bundle(
+    *, base_ref: str, head_ref: str, bundle_dir: pathlib.Path
+) -> dict[str, object]:
+    """Write a caller-owned scratch diff bundle and return a small summary."""
+    safe_bundle_dir = _resolve_bundle_dir(bundle_dir)
+    sections = diff_sections(base_ref, head_ref)
+    diff_text = "\n".join(section.text for section in sections)
+    manifest = _manifest_dict(
+        base_ref=base_ref,
+        head_ref=head_ref,
+        diff_text=diff_text,
+        sections=sections,
     )
-    return "\n".join(section for section in sections if section)
+    safe_bundle_dir.mkdir(parents=True, exist_ok=True)
+    diff_path = _bundle_file_path(safe_bundle_dir, BUNDLE_DIFF_FILENAME)
+    manifest_path = _bundle_file_path(safe_bundle_dir, BUNDLE_MANIFEST_FILENAME)
+    diff_path.write_text(diff_text, encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "diff_path": str(diff_path),
+        "manifest_path": str(manifest_path),
+        "diff_bytes": manifest["diff_bytes"],
+        "section_count": len(sections),
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Compute git diff against the resolved base ref."
     )
-    parser.parse_args(argv)
+    parser.add_argument(
+        "--bundle-dir",
+        type=pathlib.Path,
+        default=None,
+        help=(
+            "write diff.md and manifest.json into this caller-owned scratch "
+            "directory instead of writing the full diff to stdout"
+        ),
+    )
+    args = parser.parse_args(argv)
 
     try:
         base_ref = _resolve_base_ref()
@@ -195,6 +365,12 @@ def main(argv: list[str] | None = None) -> int:
     head_ref = _resolve_head_ref()
 
     try:
+        if args.bundle_dir is not None:
+            summary = write_bundle(
+                base_ref=base_ref, head_ref=head_ref, bundle_dir=args.bundle_dir
+            )
+            sys.stdout.write(json.dumps(summary, sort_keys=True) + "\n")
+            return 0
         diff = combined_diff(base_ref, head_ref)
     except RuntimeError as exc:
         sys.stderr.write(str(exc))

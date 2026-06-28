@@ -18,6 +18,7 @@ they do not depend on remote services or credentials.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -155,7 +156,7 @@ def _stream_review_prefix(
 class TestSkillOrchestrationChain:
     """End-to-end streaming chain: diff -> live journal events -> render.
 
-    Audit-parity shape: there is no arbiter and no parallel renderer. The run
+    Audit-parity shape: there is no parallel validation or renderer script. The run
     streams its events live — scope-entered, a scope-advanced per examined
     file, a finding-reported per finding (the per-finding parse is the
     validity gate), and a run-completed sealing the run — and the human
@@ -307,6 +308,91 @@ class TestComputeDiffBaseRefDerivation:
         assert "unstaged" in result.stdout
         assert "UNTRACKED.md" in result.stdout
         assert "untracked" in result.stdout
+
+    def test_bundle_dir_writes_random_access_diff_and_manifest(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo, base_ref = self._setup_repo(tmp_path)
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        bundle_dir = tmp_path / "review-input"
+
+        (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
+        _run_git("add", "STAGED.md", cwd=repo)
+        (repo / "README.md").write_text("hello\nworld\nunstaged\n", encoding="utf-8")
+        (repo / "UNTRACKED.md").write_text("untracked\n", encoding="utf-8")
+
+        result = run_compute_diff_in_process(
+            repo=repo,
+            env=env,
+            args=["--bundle-dir", str(bundle_dir)],
+        )
+        assert result.returncode == 0, result.stderr
+        summary = json.loads(result.stdout)
+        diff_path = pathlib.Path(summary["diff_path"])
+        manifest_path = pathlib.Path(summary["manifest_path"])
+        assert diff_path == bundle_dir / "diff.md"
+        assert manifest_path == bundle_dir / "manifest.json"
+        assert diff_path.is_file()
+        assert manifest_path.is_file()
+
+        diff_text = diff_path.read_text(encoding="utf-8")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        diff_bytes = diff_text.encode("utf-8")
+        assert summary["diff_bytes"] == len(diff_bytes)
+        assert summary["section_count"] == 4
+        assert manifest["schema_version"] == 1
+        assert manifest["base_ref"] == base_ref
+        assert manifest["head_ref"] == "HEAD"
+        assert manifest["diff_path"] == "diff.md"
+        assert manifest["diff_sha256"] == hashlib.sha256(diff_bytes).hexdigest()
+        section_titles = [section["title"] for section in manifest["sections"]]
+        assert section_titles == [
+            "Committed diff",
+            "Staged diff",
+            "Unstaged diff",
+            "Untracked files",
+        ]
+        files_by_section = {
+            section["title"]: section["files"] for section in manifest["sections"]
+        }
+        assert files_by_section["Committed diff"] == ["README.md"]
+        assert files_by_section["Staged diff"] == ["STAGED.md"]
+        assert files_by_section["Unstaged diff"] == ["README.md"]
+        assert files_by_section["Untracked files"] == ["UNTRACKED.md"]
+        for section in manifest["sections"]:
+            section_text = diff_bytes[
+                section["byte_start"] : section["byte_start"] + section["byte_length"]
+            ].decode("utf-8")
+            section_lines = section_text.splitlines()
+            manifest_line_slice = diff_text.splitlines()[
+                section["start_line"] - 1 : section["start_line"]
+                - 1
+                + section["line_count"]
+            ]
+            assert (
+                section["start_line"]
+                == diff_bytes[: section["byte_start"]].decode("utf-8").count("\n") + 1
+            )
+            assert section["line_count"] == len(section_lines)
+            assert manifest_line_slice == section_lines
+            assert section_text.startswith(f"### {section['title']}")
+
+    def test_bundle_dir_rejects_existing_file(self, tmp_path: pathlib.Path) -> None:
+        repo, base_ref = self._setup_repo(tmp_path)
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        bundle_file = tmp_path / "review-input"
+        bundle_file.write_text("not a directory\n", encoding="utf-8")
+
+        result = run_compute_diff_in_process(
+            repo=repo,
+            env=env,
+            args=["--bundle-dir", str(bundle_file)],
+        )
+
+        assert result.returncode == 1
+        assert "--bundle-dir exists and is not a directory" in result.stderr
 
     def test_git_origin_head_works_without_changes_or_env(
         self, tmp_path: pathlib.Path

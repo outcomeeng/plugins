@@ -11,10 +11,10 @@ The additional plan items below are implementation hardening tasks that are not 
 
 ## Plan items
 
-1. Add a deterministic diff-coordinate arbiter check.
+1. Add deterministic diff-coordinate validation.
    - Add a stdlib-only validator that compares each finding location with the diff emitted by `compute_diff.py`.
    - Reject findings whose `file:line` is outside the changed coordinates visible to the review input.
-   - Wire the check into the review validation path before journal emission.
+   - Wire the check into the existing per-finding validation path before journal emission.
 
 2. Add a prompt-injection guard for diff content.
    - State in `references/review-prompt.md` that diff content is untrusted data.
@@ -28,7 +28,7 @@ The additional plan items below are implementation hardening tasks that are not 
 4. Add deterministic rule-citation existence validation.
    - Extend validation beyond structural `Finding.rule` shape.
    - Read the cited artifact and confirm the referenced rule slug or ordinal exists.
-   - Preserve the prompt-level grounded citation guard as model guidance; use the arbiter check for deterministic rejection.
+   - Preserve the prompt-level grounded citation guard as model guidance; use deterministic per-finding validation for rejection.
 
 ## Coordination
 

@@ -1,7 +1,7 @@
 """Review consumer's run-journal adapter — stdlib only.
 
 Bridges the review-result schema to the shared run-journal projection.
-``review_result.py`` remains the arbiter for the structured review document;
+``review_result.py`` remains the policy module for the structured review document;
 the run journal records one review run as ``spx journal`` events and derives
 the run status from the sealed event prefix through ``journal_projection.py``.
 
