@@ -65,6 +65,17 @@ Default-branch work is complete only when it reaches the default branch on origi
 
 🛑 **About to finish on a detached HEAD or stop at a fresh commit** — `git status --short --branch` reporting `## HEAD (no branch)`, or a new local commit, is not an endpoint. Create or switch to a local branch preserving the worktree changes, then continue through `/merge` unless the user explicitly limited the task to local-only work.
 
+## Mutation Status Updates
+
+Before proposing or performing a repository mutation, name:
+
+- the exact target path, PR number, branch ref, or command target;
+- the intended action;
+- why the action is local enough or gate-authorized enough to proceed;
+- the next validation command, review, audit, check wait, or merge gate the action feeds.
+
+Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship it path" when the exact file, PR state, or command is known. A terse user prompt such as "check", "continue", or "ship it" still gets the live state first: full head SHA when a PR exists, current-head review state, required-check state, production-readiness rule, and the next autonomous action.
+
 ## Quick Reference: Skills and Agents
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; reviewer agents return findings for the main conversation to validate and apply through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
