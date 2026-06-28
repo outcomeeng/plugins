@@ -3,7 +3,7 @@ name: align
 description: >-
   ALWAYS invoke this skill when reviewing, auditing, or checking spec file conformance.
   NEVER check spec conformance without this skill.
-allowed-tools: Read, Glob, Grep
+allowed-tools: Read, Glob, Grep, Skill
 ---
 
 <objective>
@@ -12,22 +12,14 @@ A factual report of Spec Tree files' non-conformances to templates, atemporal vo
 
 </objective>
 
-<quick_start>
-
-1. Verify `<SPEC_TREE_FOUNDATION>` marker is present — if not, invoke `/understand` first
-2. Read all references and templates from the understanding skill's directory
-3. Glob `spx/**/*.md` (or user-specified scope)
-4. Classify each file, check against three dimensions, report findings
-
-</quick_start>
-
 <principles>
 
 1. **FACTS ONLY** — Report what violates which rule. Never suggest how to fix it. Never rate severity. Never say "should", "consider", or "recommend."
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's references and templates. This skill owns zero rules. Read them at check time.
-3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, `.prd.md`/`.product.md` are recognized decision/product files. Anything else is "unrecognized."
+3. **STRICT CLASSIFICATION** — Only `.enabler` and `.outcome` are recognized node types. Only `.adr.md`, `.pdr.md`, and `.product.md` are recognized decision/product files. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<SPEC_TREE_FOUNDATION>` marker must be present. If absent, stop and instruct the user to invoke `/understand` first.
+6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, invoke `/scope-changeset` and use `branch_scope(base, repo)` from its `changeset_scope.py` API. Do not hand-roll base-ref or git-diff derivation in this skill.
 
 </principles>
 
@@ -57,7 +49,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 | --------------------------------------- | -------------- | ------------------------- |
 | `*.adr.md`                              | ADR            | `decision-name.adr.md`    |
 | `*.pdr.md`                              | PDR            | `decision-name.pdr.md`    |
-| `*.prd.md` or `*.product.md`            | Product        | `product-name.product.md` |
+| `*.product.md`                          | Product        | `product-name.product.md` |
 | Spec file inside `*.enabler/` directory | Enabler        | `enabler-name.md`         |
 | Spec file inside `*.outcome/` directory | Outcome        | `outcome-name.md`         |
 | Any other `.md` file                    | Unrecognized   | None                      |
@@ -145,20 +137,34 @@ Read the `<common_misplacements>` table from `what-goes-where.md`. For each row,
 
 </placement_conformance>
 
+<downstream_alignment_conformance>
+
+Read the `<decision_to_spec_alignment>` section from `durable-map.md`. For changeset checks, use `/scope-changeset` to derive the changed-file set through `branch_scope(base, repo)`.
+
+For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
+
+- the first affected lower spec or specs that receive the new truth, nor
+- a `PLAN.md` in the first affected node grounding the remaining downstream implementation.
+
+Report only the factual gap: the changed higher-level declaration, the constraining scope, and the absent lower-spec or `PLAN.md` grounding. Do not choose the downstream structure in `/align`; structural ownership questions route to `/decompose`.
+
+</downstream_alignment_conformance>
+
 </conformance_dimensions>
 
 <workflow>
 
 1. **Gate**: Check conversation for `<SPEC_TREE_FOUNDATION>` marker. If absent, stop: "Invoke `/understand` first."
 2. **Load rules**: Read all references and templates listed in `<required_references>` from the understanding skill's directory.
-3. **Scope**: Use user-specified path, or default to `spx/` in the product root.
+3. **Scope**: Use user-specified path, or default to `spx/` in the product root. When the user asks to check a branch changeset, invoke `/scope-changeset` and derive the changed-file set from its `branch_scope(base, repo)` API.
 4. **Discover**: Glob `{scope}/**/*.md` to find all markdown files. Exclude `CLAUDE.md` and `AGENTS.md` files and files inside `tests/` directories.
 5. **Classify**: Map each file to its artifact type per `<file_classification>`.
 6. **Check each file**:
    - If classified: run structural, language, and placement checks
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
-7. **Report**: Emit findings grouped by file path per `<report_format>`.
-8. **Summary**: End with counts.
+7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or first-affected-node `PLAN.md` grounding.
+8. **Report**: Emit findings grouped by file path per `<report_format>`.
+9. **Summary**: End with counts.
 
 </workflow>
 
@@ -178,6 +184,9 @@ Language:
 
 Placement:
 - {finding} (ref: what-goes-where)
+
+Downstream alignment:
+- {finding} (ref: durable-map decision_to_spec_alignment)
 
 ---
 
@@ -201,6 +210,7 @@ Placement:
 - [ ] Structural checks run against correct template per file type
 - [ ] Language checks applied to all files (including unrecognized)
 - [ ] Placement checks applied to all classified files
+- [ ] Changeset checks report higher-level declaration changes that lack lower-spec alignment and `PLAN.md` grounding
 - [ ] Report contains only factual findings — no suggestions, no severity, no "should"
 - [ ] Summary counts emitted
 

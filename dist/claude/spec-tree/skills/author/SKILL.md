@@ -137,7 +137,7 @@ Before drafting, gather what's needed for the artifact type:
 
 **Outcome (gate — answer the forcing question before proceeding):**
 
-- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`: try to write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
+- Apply the forcing question from `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`: write it as an enabler first. Why can't this be PROVIDES X SO THAT Y CAN Z? What is uncertain about which output achieves the goal?
 - Only if the forcing question confirms genuine uncertainty, gather hypothesis content:
   - Output: what the software does (testable)
   - Outcome: measurable change in user behavior
@@ -186,7 +186,7 @@ Before writing files, check:
 - [ ] Correct artifact type for the content
 - [ ] Placed in the right directory at the right index
 - [ ] Nesting rules respected: outcomes CANNOT be children of enablers (see `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md` `<nesting_rules>` section)
-- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it should be an enabler (see `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`)
+- [ ] For outcomes: verify the forcing question from step 4 was answered — are the assertions a bet (majority could be swapped for different ones achieving the same goal)? If not, it is an enabler (see `${CLAUDE_SKILL_DIR}/../understand/references/node-types.md`)
 - [ ] Slug matches directory name convention (`{NN}-{slug}.{enabler|outcome}/` for nodes)
 - [ ] Spec file named `{slug}.md` (no type suffix, no numeric prefix)
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
@@ -234,13 +234,23 @@ Write the file directly.
 spx/{product-name}.product.md
 ```
 
-Write the file. If `spx/CLAUDE.md` doesn't exist, note that one should be created as a product guide.
+Write the file. If `spx/CLAUDE.md` doesn't exist, note that product guide creation remains required.
+
+</step>
+
+<step name="align">
+
+**Step 8: Align downstream declarations**
+
+When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, invoke `/align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream tests or implementation remain after the lower specs are aligned, record the next implementation step in the first affected node's `PLAN.md`.
+
+If `/align` reports that a higher-level declaration has no aligned lower spec and no first-affected-node `PLAN.md`, fix the alignment before delivery. Do not leave new higher-level truth floating above the tree.
 
 </step>
 
 <step name="deliver">
 
-**Step 8: Summarize and recommend next steps**
+**Step 9: Summarize and recommend next steps**
 
 Report what was created:
 
@@ -272,7 +282,7 @@ How to avoid: After drafting, apply the read-aloud test from `durable-map.md` to
 
 **Failure 2: Assertions placed in ADRs**
 
-Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR should state the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
+Claude wrote an ADR that included: "Given a user uploads a file larger than 10MB, the system rejects it with a 413 error." This is a scenario assertion — it belongs in a spec, not in an ADR. The ADR states the rule under `## Verification` → `### Audit`: "ALWAYS: uploaded files exceeding 10MB are rejected at the gateway ([audit])"
 
 How to avoid: ADRs govern with MUST/NEVER rules under `## Verification`, verified by audit, eval, or test per subsection. Given/When/Then text is a spec assertion, not a decision record.
 
@@ -319,7 +329,7 @@ How to avoid: before placing a rule under `### Audit`, answer the falsification 
 
 Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five enablers/outcomes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/55-example.enabler/15-build.adr.md." The four ADRs collapsed into one `spx/55-example.enabler/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
 
-How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure should reflect the scope that exists, not the scope that might exist.
+How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The spec tree's structure reflects the scope that exists, not the scope that might exist.
 
 **Failure 9: Authoring pre-decided decomposition structure**
 
@@ -351,7 +361,7 @@ How to avoid: treat "which ADR/PDR?" as structural when the owning node, node na
 
 **Listing children in the parent spec.** A parent spec describes the node's aggregate behavior — what the whole concern does from the outside. It does NOT enumerate or reference its children. Children describe their own concerns in their own specs. A parent spec that reads "X provides A, B, and C (these are the child nodes)" is a table of contents, not a declaration. Rewrite as a single coherent statement of what the node does; let `/contextualize` walk the tree to surface children.
 
-**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Indices should stay packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
+**Multiplying decision records before the tree justifies it.** Authoring a separate ADR for every architectural micro-choice (packaging, edition, panic handling, logging) in a pre-commit tree produces six decision records for a product with five nodes. Closely-related choices belong in one ADR with named subsections; product-level guarantees belong in the product spec's compliance section, not as independent PDRs. Keep indices packed (under 55 in small trees) until real node growth demands spreading. The tree reflects scope that exists, not scope that might.
 
 **Placing testable MUST/NEVER rules under `### Audit`.** An `[audit]` tag silences CI enforcement — any rule under `### Audit` will not fail a build when violated. If a concrete automated test can falsify the rule, it belongs under `### Testing` with the assertion type `/test` selects, and the test must be written. "Performs an atomic write", "is idempotent across runs", "preserves unrelated entries" all have finite-time falsification tests; they never go under `### Audit`. Reserve `### Audit` for semantic constraints no automated check can falsify.
 
