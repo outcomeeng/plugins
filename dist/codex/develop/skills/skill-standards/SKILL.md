@@ -136,6 +136,10 @@ The `name` field is the user invocation path (`/skill-name`). Match user speech 
 
 **Naming form:** invoked workflow skills use imperative verbs. Reference skills use noun phrases ending in the domain they standardize, such as `skill-standards` or `typescript-test-standards`.
 
+**Vocabulary precedence:** Skill-name grammar does not override declared methodology vocabulary. When a term can belong both to a skill-name form and to another taxonomy, read the source that declares that taxonomy and inspect file history before calling the term a naming defect.
+
+Treat generated runtime output and implementation names as lower-layer evidence, never as the authority for vocabulary classification.
+
 **Material-change rule:** Any material change to a skill implies renaming all skills in the entire plugin to match the latest develop rules.
 
 ```yaml
