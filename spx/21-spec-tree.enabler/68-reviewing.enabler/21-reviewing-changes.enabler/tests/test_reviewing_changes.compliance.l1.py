@@ -58,7 +58,7 @@ FORBIDDEN_ATTR_CALLS = {
 }
 FORBIDDEN_METHOD_NAMES = {"write_text", "write_bytes", "unlink", "mkdir"}
 COMPUTE_DIFF_ALLOWED_WRITE_CALLS = {
-    ("bundle_dir", "mkdir"),
+    ("safe_bundle_dir", "mkdir"),
     ("diff_path", "write_text"),
     ("manifest_path", "write_text"),
 }
@@ -118,6 +118,37 @@ def _imported_modules(source: str) -> list[str]:
     return modules
 
 
+def _attribute_write_violation(
+    *, script_path: pathlib.Path, func: ast.Attribute
+) -> str | None:
+    value = func.value
+    if script_path == COMPUTE_DIFF_SCRIPT and isinstance(value, ast.Name):
+        if (value.id, func.attr) in COMPUTE_DIFF_ALLOWED_WRITE_CALLS:
+            return None
+    if func.attr in FORBIDDEN_METHOD_NAMES:
+        return f".{func.attr}() at line {func.lineno}"
+    if isinstance(value, ast.Name) and (value.id, func.attr) in FORBIDDEN_ATTR_CALLS:
+        return f"{value.id}.{func.attr}() at line {func.lineno}"
+    return None
+
+
+def _direct_write_violations(script_path: pathlib.Path) -> list[str]:
+    source = script_path.read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id in FORBIDDEN_NAME_CALLS:
+            violations.append(f"call to {func.id}() at line {node.lineno}")
+        elif isinstance(func, ast.Attribute):
+            violation = _attribute_write_violation(script_path=script_path, func=func)
+            if violation is not None:
+                violations.append(violation)
+    return violations
+
+
 class TestScriptsDoNotWriteStorageDirectly:
     """Review scripts write no durable review state directly."""
 
@@ -132,27 +163,7 @@ class TestScriptsDoNotWriteStorageDirectly:
     def test_script_uses_no_direct_write_primitives(
         self, script_path: pathlib.Path
     ) -> None:
-        source = script_path.read_text(encoding="utf-8")
-        tree = ast.parse(source)
-        violations: list[str] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
-                continue
-            func = node.func
-            if isinstance(func, ast.Name) and func.id in FORBIDDEN_NAME_CALLS:
-                violations.append(f"call to {func.id}() at line {node.lineno}")
-            elif isinstance(func, ast.Attribute):
-                value = func.value
-                if script_path == COMPUTE_DIFF_SCRIPT and isinstance(value, ast.Name):
-                    if (value.id, func.attr) in COMPUTE_DIFF_ALLOWED_WRITE_CALLS:
-                        continue
-                if func.attr in FORBIDDEN_METHOD_NAMES:
-                    violations.append(f".{func.attr}() at line {node.lineno}")
-                if (
-                    isinstance(value, ast.Name)
-                    and (value.id, func.attr) in FORBIDDEN_ATTR_CALLS
-                ):
-                    violations.append(f"{value.id}.{func.attr}() at line {node.lineno}")
+        violations = _direct_write_violations(script_path)
         assert not violations, (
             f"{script_path.name} uses forbidden direct-write filesystem "
             f"primitives outside the caller-owned review-input bundle exception: "

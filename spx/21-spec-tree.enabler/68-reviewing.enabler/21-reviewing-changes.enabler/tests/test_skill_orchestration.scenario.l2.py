@@ -378,6 +378,22 @@ class TestComputeDiffBaseRefDerivation:
             assert manifest_line_slice == section_lines
             assert section_text.startswith(f"### {section['title']}")
 
+    def test_bundle_dir_rejects_existing_file(self, tmp_path: pathlib.Path) -> None:
+        repo, base_ref = self._setup_repo(tmp_path)
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        bundle_file = tmp_path / "review-input"
+        bundle_file.write_text("not a directory\n", encoding="utf-8")
+
+        result = run_compute_diff_in_process(
+            repo=repo,
+            env=env,
+            args=["--bundle-dir", str(bundle_file)],
+        )
+
+        assert result.returncode == 1
+        assert "--bundle-dir exists and is not a directory" in result.stderr
+
     def test_git_origin_head_works_without_changes_or_env(
         self, tmp_path: pathlib.Path
     ) -> None:

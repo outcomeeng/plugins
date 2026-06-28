@@ -294,10 +294,29 @@ def _manifest_dict(
     }
 
 
+def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
+    """Return a normalized caller-owned bundle directory path."""
+    resolved = bundle_dir.expanduser().resolve(strict=False)
+    if resolved == resolved.parent:
+        raise RuntimeError("--bundle-dir must not be the filesystem root")
+    if resolved.exists() and not resolved.is_dir():
+        raise RuntimeError(f"--bundle-dir exists and is not a directory: {resolved}")
+    return resolved
+
+
+def _bundle_file_path(bundle_dir: pathlib.Path, filename: str) -> pathlib.Path:
+    """Return a bundle file path guaranteed to stay inside ``bundle_dir``."""
+    path = (bundle_dir / filename).resolve(strict=False)
+    if not path.is_relative_to(bundle_dir):
+        raise RuntimeError(f"bundle file escapes --bundle-dir: {filename}")
+    return path
+
+
 def write_bundle(
     *, base_ref: str, head_ref: str, bundle_dir: pathlib.Path
 ) -> dict[str, object]:
     """Write a caller-owned scratch diff bundle and return a small summary."""
+    safe_bundle_dir = _resolve_bundle_dir(bundle_dir)
     sections = diff_sections(base_ref, head_ref)
     diff_text = "\n".join(section.text for section in sections)
     manifest = _manifest_dict(
@@ -306,9 +325,9 @@ def write_bundle(
         diff_text=diff_text,
         sections=sections,
     )
-    bundle_dir.mkdir(parents=True, exist_ok=True)
-    diff_path = bundle_dir / BUNDLE_DIFF_FILENAME
-    manifest_path = bundle_dir / BUNDLE_MANIFEST_FILENAME
+    safe_bundle_dir.mkdir(parents=True, exist_ok=True)
+    diff_path = _bundle_file_path(safe_bundle_dir, BUNDLE_DIFF_FILENAME)
+    manifest_path = _bundle_file_path(safe_bundle_dir, BUNDLE_MANIFEST_FILENAME)
     diff_path.write_text(diff_text, encoding="utf-8")
     manifest_path.write_text(
         json.dumps(manifest, sort_keys=True, indent=2) + "\n",
