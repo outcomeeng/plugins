@@ -1,7 +1,7 @@
 ---
 name: bootstrap
 description: ALWAYS invoke this skill when setting up a new spec tree or when /author detects an empty spx/ directory. NEVER create a spec tree from scratch without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Skill, Bash(python3:*)
+allowed-tools: Read, Glob, Grep, Write, Skill
 ---
 
 <objective>
