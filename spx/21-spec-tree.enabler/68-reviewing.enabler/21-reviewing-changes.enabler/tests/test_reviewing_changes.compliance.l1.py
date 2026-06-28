@@ -34,6 +34,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
     SKILL_DIR,
+    load_journal_emit_module,
     make_review_result_dict,
     run_journal_emit_in_process,
 )
@@ -77,6 +78,7 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
         "journal_emit",
     }
 )
+je = load_journal_emit_module()
 
 
 def _script_files() -> list[pathlib.Path]:
@@ -331,6 +333,11 @@ class TestNoParallelReviewResultRenderer:
             "--started-at",
             "2026-01-01T00:00:00Z",
             repo=REPO_ROOT,
+            env={
+                je.ENV_BASE_REF: "origin/main",
+                je.ENV_HEAD_REF: "HEAD",
+                je.ENV_BRANCH: "work/example",
+            },
         )
         assert metadata.returncode == 0, metadata.stderr
 
