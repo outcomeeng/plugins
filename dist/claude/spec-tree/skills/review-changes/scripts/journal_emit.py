@@ -84,6 +84,7 @@ DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
+REVIEW_OVERRIDE = pathlib.Path("REVIEW.md")
 
 
 def _project_severity(severity: object) -> object:
@@ -226,9 +227,26 @@ def _file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
+def _optional_file_config(
+    root: pathlib.Path, relative_path: pathlib.Path
+) -> dict[str, str] | None:
+    path = root / relative_path
+    if not path.is_file():
+        return None
+    return {
+        "path": str(relative_path),
+        "sha256": _file_digest(path),
+    }
+
+
+def review_config_digest(
+    skill_dir: pathlib.Path | None = None,
+    *,
+    repo_root: pathlib.Path | None = None,
+) -> str:
     root = skill_dir or _HERE.parent
     prompt_path = root / REVIEW_PROMPT
+    active_repo_root = repo_root or pathlib.Path.cwd()
     return _digest(
         {
             "skill": "review-changes",
@@ -238,6 +256,9 @@ def review_config_digest(skill_dir: pathlib.Path | None = None) -> str:
                 "path": str(REVIEW_PROMPT),
                 "sha256": _file_digest(prompt_path),
             },
+            "repositoryReviewPolicy": _optional_file_config(
+                active_repo_root, REVIEW_OVERRIDE
+            ),
         }
     )
 

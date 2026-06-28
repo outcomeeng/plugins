@@ -122,6 +122,7 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     assert data[jp.RUN_STATE_CONFIG_DIGEST] == metadata.config_digest
     assert data[jp.RUN_STATE_PARTICIPANTS] == ["review"]
     assert data[jp.RUN_STATE_SCOPE] == {"include": ["README.md"]}
+    assert data[jp.RUN_STATE_STARTED_AT] == metadata.started_at
     # The run-completed event carries the real completion time, not the
     # provisional start-time the start-of-run metadata bakes in.
     assert data[jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
@@ -204,6 +205,23 @@ def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> Non
     _write_skill_config(second, prompt="review prompt two")
 
     assert je.review_config_digest(first) != je.review_config_digest(second)
+
+
+def test_config_digest_changes_with_root_review_policy(
+    tmp_path: pathlib.Path,
+) -> None:
+    skill = tmp_path / "skill"
+    first_repo = tmp_path / "first-repo"
+    second_repo = tmp_path / "second-repo"
+    _write_skill_config(skill, prompt="same review prompt")
+    first_repo.mkdir()
+    second_repo.mkdir()
+    (first_repo / "REVIEW.md").write_text("first review policy", encoding="utf-8")
+    (second_repo / "REVIEW.md").write_text("second review policy", encoding="utf-8")
+
+    assert je.review_config_digest(
+        skill, repo_root=first_repo
+    ) != je.review_config_digest(skill, repo_root=second_repo)
 
 
 def test_metadata_scope_hash_includes_changed_file_set(
@@ -372,6 +390,57 @@ def test_metadata_scope_hash_includes_full_review_input(
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
 
 
+def test_metadata_cli_emits_env_derived_run_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+) -> None:
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: ["README.md"],
+    )
+    monkeypatch.setattr(
+        je.compute_diff,
+        "combined_diff",
+        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
+    )
+
+    result = run_journal_emit_in_process(
+        "metadata",
+        "--started-at",
+        "2026-06-23T00:00:00Z",
+        "--completed-at",
+        "2026-06-23T00:00:05Z",
+        repo=tmp_path,
+        env={
+            je.ENV_BASE_REF: "origin/main",
+            je.ENV_HEAD_REF: "feature/head",
+            je.ENV_BRANCH: "work/example",
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    metadata = json.loads(result.stdout)
+    assert metadata[jp.RUN_STATE_BRANCH_NAME] == "work/example"
+    assert metadata[jp.RUN_STATE_BRANCH_SLUG] == "work__example"
+    assert metadata[jp.RUN_STATE_HEAD_SHA] == "feature/head:sha"
+    assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
+    assert metadata[jp.RUN_STATE_BASE_SHA] == "origin/main:sha"
+    assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
+    assert metadata[jp.RUN_STATE_SCOPE]["baseRef"] == "origin/main"
+    assert metadata[jp.RUN_STATE_SCOPE]["headRef"] == "feature/head"
+    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert metadata[jp.RUN_STATE_STARTED_AT] == "2026-06-23T00:00:00Z"
+    assert metadata[jp.RUN_STATE_COMPLETED_AT] == "2026-06-23T00:00:05Z"
+
+
 def test_metadata_cli_reports_git_failure_without_traceback(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -485,6 +554,7 @@ def test_finding_reported_cli_maps_malformed_finding_to_error_with_no_event() ->
 
 def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
     metadata_json = _metadata_wire_json()
+    metadata = json.loads(metadata_json)
     scope_entered = run_journal_emit_in_process(
         "scope-entered", "--now", NOW, "--metadata", metadata_json
     ).stdout.strip()
@@ -509,6 +579,7 @@ def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
     assert event["type"] == jp.RUN_COMPLETED
+    assert event["data"][jp.RUN_STATE_STARTED_AT] == metadata[jp.RUN_STATE_STARTED_AT]
     assert event["data"][jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
     # A blocking finding in the streamed prefix rolls up to a rejected run.
     assert event["data"][jp.RUN_STATE_STATUS] == jp.JournalRunStatus.REJECTED

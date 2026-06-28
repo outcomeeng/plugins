@@ -2,7 +2,12 @@
 name: review-changes
 description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading persisted review artifacts directly.
 allowed-tools:
-  - Bash
+  - Bash(date:*)
+  - Bash(mktemp:*)
+  - Bash(printf:*)
+  - Bash(python3:*)
+  - Bash(rm -rf:*)
+  - Bash(spx journal:*)
   - Grep
   - Glob
   - Read
@@ -22,6 +27,7 @@ Two CLI scripts plus the policy module under `${CLAUDE_SKILL_DIR}/scripts/` and 
 | `scripts/journal_emit.py`                         | `metadata` derives run identity; `scope-entered` / `scope-advanced` / `finding-reported` / `run-completed` each print one streaming journal event (the per-finding parse is the validity gate); `render` renders the human surface from a sealed prefix |
 | `scripts/review_result.py`                        | Policy module — `SCHEMA_VERSION`, frozen dataclasses, enums, `parse_json` / `parse_finding_json` / `to_json_dict` / `from_json_dict`                                                                                                                    |
 | `${CLAUDE_SKILL_DIR}/references/review-prompt.md` | Swappable judgment-style review prompt — read via `Read` into context                                                                                                                                                                                   |
+| `REVIEW.md` at repository root                    | Repository-local review override — read via `Read` when present and applied before the judgment prompt                                                                                                                                                  |
 
 Durable review state is the sealed `spx journal --type review` event prefix, and the human-readable surface is rendered only from that sealed prefix — the journal is the review's sole source of truth. The skill never writes review-result or rendered markdown files as authoritative artifacts, and no script renders a parallel surface. The run **streams** its events live — it never builds one batch of events from a finished review, so a reader resuming from a cursor watches the review advance in flight. `journal_emit.py finding-reported` parses each finding through `review_result.parse_finding_json` and fails before that finding's append, and the journal channel's append and seal are the durable validity signal — matching the audit kind. The diff bundle is caller-owned scratch review input for random access; it is not durable review state.
 
@@ -42,9 +48,10 @@ Claude drives the chain top-to-bottom and **streams the run live** — appending
    On non-zero exit, read the stderr message — the script names every source it tried (env and git symbolic-ref) so the operator can populate one.
    Read `manifest.json` from the reported `manifest_path`, then read `diff.md` from the reported `diff_path`. Use the manifest's section spans and file lists to revisit only the relevant diff section while reviewing. The scratch directory is owned by this invocation and is removed after the run is sealed and rendered.
 
-2. **Load the judgment-style prompt** into context:
+2. **Load repository-local review instructions and the judgment-style prompt** into context. If `REVIEW.md` exists at the repository root, read it first and apply it as the repository-local taxonomy and comment-shape override. Read only the active root override; do not search for review template or example files. Then read the swappable prompt:
 
    ```text
+   Read REVIEW.md  (only when present at repository root)
    Read ${CLAUDE_SKILL_DIR}/references/review-prompt.md
    ```
 
