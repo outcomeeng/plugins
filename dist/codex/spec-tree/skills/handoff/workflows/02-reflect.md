@@ -54,11 +54,9 @@ For each insight, propose the persistence target (workflow 03 confirms; workflow
 <perspective_next_context>
 Identify exactly where the next Claude context picks up:
 
-- **Critical skills** — always include `/understand` and `/contextualize {node}` for each anchored node, plus language-specific skills used
-- **Missed skills** — any skill that should have been invoked but was not, and what problems skipping it caused
-- **Next skill invocation** — the specific skill the receiving Claude context invokes first, and why
+- **First action** — the concrete command, inspection, or workflow step the receiving Claude context starts from after `/pickup` completes
 - **Node path** — full path to the resumption node (e.g., `spx/55-example.enabler/21-bar.outcome`)
-- **TDD flow position** — which step (1-8) per the `/apply` skill
+- **TDD flow position** — when applicable, which step (1-8) per the `/apply` skill
 
 </perspective_next_context>
 

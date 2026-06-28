@@ -3,7 +3,7 @@ name: handoff
 description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
 arguments: [session_mode, prune_mode]
-allowed-tools: Read, Edit, Write, Bash(spx session:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), AskUserQuestion, Glob, Grep, Skill
 ---
 
 <context>
@@ -31,9 +31,9 @@ A closed spec-tree session with session-owned work committed and pushed, encount
 
 <session_file_purpose>
 
-A session file initializes Claude in the next session. Claude starts from a blank slate — none of what was achieved, learnt, or tried in this session will be known to Claude in the next session. The session file is an initialization prompt: it lists the skills to invoke, points at the relevant spec tree nodes, and suggests the first action. This way, the user does not have to point Claude at information the repository holds. Claude will derive all details from the spec tree, not from the session file.
+A session file initializes Claude in the next session. Claude starts from a blank slate — none of what was achieved, learnt, or tried in this session will be known to Claude in the next session. The session file is an initialization prompt: it points at the relevant spec tree nodes and suggests the first action. This way, the user does not have to point Claude at information the repository holds. Claude will derive all details and skill choices from the spec tree, not from the session file.
 
-- **Initialization session file** — every fact the next session needs lives in the repository. The file carries pointers (skills, nodes, action) plus the coordination that cannot be reconstructed from the spec tree and git history.
+- **Initialization session file** — every fact the next session needs lives in the repository. The file carries node and first-action pointers plus the coordination that cannot be reconstructed from the spec tree and git history.
 - **Initialization session file with external state** — the same pointers and suggested actions plus the optional `<state_at_handoff>` section recording observable external state Claude cannot re-derive from the repository (live PR/run/image identifiers, deployed inventories, failed workflows to be re-started). Through this skill, Claude guides the next Claude's pickup from that external state in clear and unambiguous prose.
 
 <what_not_to_add>
@@ -89,7 +89,7 @@ Persist to the HIGHEST applicable tier.
 | 1    | Methodology (skills, CLAUDE.md)         | Durable                    | Reusable patterns, gotchas, clarifications etc.                                                                                                                                                       |
 | 2    | Spec tree (`spx/`)                      | Durable                    | New or updated durable spec tree files such as decisions, specs and tests                                                                                                                             |
 | 3    | Coordination notes (PLAN.md, ISSUES.md) | Until resolved or disposed | Remaining steps, known gaps and defects — committed for cross-session coordination. CAUTION: coordination notes are prone to go stale; always reconcile before use, discoverable via `/contextualize` |
-| 4    | Session file                            | Ephemeral                  | Coordination only: node list, skill checklist, external-infrastructure state, cross-cutting context                                                                                                   |
+| 4    | Session file                            | Ephemeral                  | Coordination only: node list, first action, external-infrastructure state, cross-cutting context                                                                                                      |
 
 A Tier-3 coordination note holds remaining steps, known gaps and defects that Claude thought to be relevant and correct at one point in time. When in conflict with spec tree's durable product truth, they must be reconciled before use.
 

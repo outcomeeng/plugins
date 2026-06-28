@@ -5,7 +5,7 @@ A completed closure execution state: approved persistence written, session-owned
 Work not committed here is not persisted.
 
 <required_reading>
-Before writing a Path B or Path C session file, read `references/session-format.md` for the required template.
+Before writing a Path B or Path C session file, read `references/session-format.md` for the canonical template.
 
 </required_reading>
 
@@ -117,7 +117,8 @@ Every closure ends with **zero, one, or several** session files — one canonica
 **Content of the canonical continuation (B and C):**
 
 - Header — for Path C, a JSON header object of caller fields (`priority`, `goal`, `next_step`, `git_ref` naming the pushed work branch, optional `specs`, optional `files`); for Path B, the YAML frontmatter with those fields plus the preserved prefilled context fields (`created_at`, `agent_session_id`, `git_ref`)
-- `<nodes>` and `<skills>` — from workflow 01 (anchored nodes) and `<perspective_next_context>` in `02-reflect.md`
+- `<nodes>` — from workflow 01 (anchored nodes)
+- `next_step` header — from `<perspective_next_context>` in `02-reflect.md`
 - `<persisted>` — files committed above, insights written, coordination notes created
 - `<state_at_handoff>` (optional) — observable external-infrastructure state from `<perspective_external_state>`; omit when the repository carries every fact the next session needs
 - `<constraints>` (optional) — session-specific normative rules; omit when there are none
