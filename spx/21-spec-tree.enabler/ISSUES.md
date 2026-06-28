@@ -20,12 +20,6 @@ Plugin uses `PROVIDES ... SO THAT ... CAN ...` and `WE BELIEVE THAT ... WILL ...
 
 `outcomeeng/methodology/reference/spec-tree-reference.md` lines 86-108 describe a lock-file model (`spx-lock.yaml`, blob hashes, "Needs work / Stale / Valid" states) that the plugin replaced with the EXCLUDE + derived-state model. The upstream needs to be rewritten to match.
 
-## 14. PDR Rust row lacks the hyphen→underscore explanation
-
-`spx/15-test-infrastructure.pdr.md` shows both `<product>-testing` (Cargo package name) and `<product>_testing` (Rust import path) in the per-language table. Cargo normalizes hyphens to underscores in import paths, but readers unfamiliar with this convention may read the two forms as a contradiction. A single inline sentence — *Cargo normalizes hyphens to underscores in the import path: package `product-testing` → `use product_testing::...`* — closes the gap.
-
-Surfaced by `claude-review` on PR 14 round 3 (2026-05-13).
-
 ## 15. `commit-changes` example uses uppercase `L1` instead of canonical `l1`
 
 `plugins/spec-tree/skills/commit-changes/SKILL.md` example commit body says "L1 testing" while every other spec assertion, filename, and convention reference uses lowercase `l1`. The current level tokens were retained at the user's direction during PR 14, but the example body should eventually be brought into line so it does not teach the uppercase form to readers who skim examples without reading the surrounding skill.
