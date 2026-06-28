@@ -1,15 +1,14 @@
 ---
 name: interview
 description: >-
-  ALWAYS invoke BEFORE asking the user anything while creating or modifying any
-  artifact (spec, ADR, PDR, test, code, doc). Triggers: AskUserQuestion,
-  seeking draft approval, stuck on scope or design. NEVER ask without this
-  skill.
+  ALWAYS invoke before requirements interviews, draft approval, or unresolved
+  scope/design questions while creating or modifying an artifact (spec, ADR,
+  PDR, test, code, doc). NEVER invoke solely because a workflow uses AskUserQuestion for an operational choice.
 argument-hint: <file-path-or-requirement>
 ---
 
 <objective>
-A decision-ready requirements packet for the calling workflow: resolved choices, remaining open decisions, coverage state, and previewable artifact constraints.
+A decision-ready requirements packet for the calling workflow: resolved choices, remaining open decisions, coverage state, and artifact constraints.
 
 </objective>
 
@@ -24,7 +23,7 @@ Before asking ANY questions:
 3. Analyze the input — what's defined, ambiguous, missing
 4. Form preliminary opinions (e.g., "this approach seems fragile", "auth model is underspecified")
 
-Use an Explore agent for codebase research. Summarize findings as a structured brief and share it with the user before the first question.
+Perform this research in the main conversation unless the active repository and runtime instructions explicitly authorize a bounded research subagent for interview pre-analysis. When that authorization exists, use only the authorized subagent shape for bounded read-only research. Read named files, skill files, skill references, the repository's CLAUDE.md instruction file, and user-provided files in the main conversation. Summarize findings as a structured brief and share it with the user before the first question.
 
 **Structure caveat — existing code informs content, not structure.** Pre-analysis reveals what the code *is* and how it is *filed* — packages, modules, directories, files. That is the implementation: the lowest layer. It informs vocabulary, constraints, and open decisions. It must never become the structure of the artifact about to be created. Do not let the code's module or file layout dictate spec-tree node boundaries or document sections. Separate "how the code is organized" from "what the product does for its consumers" — only the latter drives structure.
 
@@ -46,7 +45,7 @@ When a question is warranted, its options obey:
 **Questioning Protocol**
 
 - **One question at a time** — never batch. Go deep before moving on.
-- **Always use AskUserQuestion** — structured choices (2-4 options per question), never open-ended
+- **Inside an active interview, use AskUserQuestion** — structured choices (2-4 options per question), never open-ended. A workflow's use of AskUserQuestion for an operational choice does not by itself make the prompt an interview.
 - **No obvious questions** — never ask what can be inferred from input or codebase analysis
 - **Options must require judgment** — no "yes/no", no obviously-correct choices
 - **Describe trade-offs** — each option's description explains consequences, not just what it is
@@ -92,32 +91,13 @@ Coverage-based completion — never end by question count or elapsed time:
 
 **Auto-split detection**: if coverage grows beyond ~8 major areas, propose splitting into separate documents with a dependency order.
 
-**Preview Protocol**
-
-After the interview completes, offer an interactive HTML preview for visual review:
-
-1. Read `${CLAUDE_SKILL_DIR}/references/preview-template.md` for the complete HTML template
-2. Map each coverage area to a styled section card
-3. Every block-level content element gets `class="commentable"` with a unique `data-id="{sectionIndex}-{elementIndex}"`
-4. Render any decisions log as a collapsible table (collapsed by default)
-5. Write to `<output-dir>/.preview-<name>.html` and open in browser
-
-Tell the user:
-
-- **Click any paragraph, bullet, or table row** to add an inline comment
-- **Click "Revise"** when done — comments auto-copied to clipboard
-- **Paste feedback** back into Claude Code for revision
-- **Click "Approved"** when satisfied — generates the final document
-
-Revision loop: parse feedback, clarify ambiguous comments with AskUserQuestion, regenerate, repeat until approved.
-
 **State Persistence Protocol**
 
 Write interview state to `.<name>.interview-state.json`:
 
 - All Q&A pairs and coverage map state
 - Timestamp and codebase analysis summary
-- Preview status (generated? feedback rounds?)
+- Output status and any generated document path
 
 Resume: if state file exists, re-validate against current codebase state, flag stale answers, continue from where the interview left off.
 
@@ -154,15 +134,6 @@ If no input: ask "What would you like to interview about?"
 | Input maps to a spec-tree skill             | Suggest that skill instead                               |
 
 </routing>
-
-<reference_index>
-All in `${CLAUDE_SKILL_DIR}/references/`:
-
-| File                | Purpose                                                                       |
-| ------------------- | ----------------------------------------------------------------------------- |
-| preview-template.md | Complete HTML/CSS/JS template for interactive previews with inline commenting |
-
-</reference_index>
 
 <workflows_index>
 All in `${CLAUDE_SKILL_DIR}/workflows/`:
@@ -203,7 +174,7 @@ How to avoid: Every section of the generated spec must trace to a specific cover
 
 Claude invokes `/interview`, reads the intake question, and immediately starts asking the user things. No codebase scan, no doc reading, no analysis brief. Every question the user answers could have been inferred from the codebase. User gets annoyed that Claude didn't do its homework.
 
-How to avoid: Pre-Analysis Protocol is non-negotiable. Launch the Explore agent before the first question. Share the brief. The user should never have to supply something that exists in the codebase or docs.
+How to avoid: Pre-Analysis Protocol is non-negotiable. Complete the codebase, docs, and input research before the first question. Use an Explore agent only when the active repository and runtime instructions explicitly authorize that bounded research subagent; otherwise perform the same read-only research in the main conversation. Share the brief. The user should never have to supply something that exists in the codebase or docs.
 
 **Failure 6: Asking a question the evidence already settled**
 
@@ -217,19 +188,24 @@ Claude offered "use the existing validation harness" against "hand-roll a bespok
 
 How to avoid: every option is a materially distinct end-state a reasonable operator might actually choose. If only one option survives scrutiny, there is no question — decide and proceed. When a question is real, state the recommended option first and label it recommended; do not manufacture a counterweight to look balanced.
 
+**Failure 8: Treating every structured workflow prompt as an interview**
+
+Claude saw a workflow use AskUserQuestion for an operational choice and invoked `/interview`, turning a local workflow decision into requirements gathering.
+
+Why it failed: `/interview` governs requirements, scope, design, and draft-approval questions for artifacts. Structured tool choice alone is not a routing trigger.
+
+How to avoid: Invoke `/interview` only when the unresolved decision concerns artifact requirements, scope, design, or draft approval. For mechanical workflow choices, follow the governing workflow and use AskUserQuestion directly when that workflow requires it.
+
 </failure_modes>
 
 <success_criteria>
-A well-conducted interview:
+A decision-ready requirements packet is sound when:
 
-- Pre-analysis completed before first question
-- Each question was reasoned to a recommendation first and asked only because the decision was genuinely the operator's and unsettled by code, specs, decisions, or defaults
-- Every question used AskUserQuestion with 2-4 non-obvious options that are materially distinct end-states — no strawman, no false 50/50 — with the recommended option stated first
-- Coverage map displayed and updated before each question
-- Pushback applied when contradictions or risks detected
-- Decisions log captures every pushback and its resolution
-- All coverage areas marked [done] before proposing completion
-- Preview offered and revision loop completed (if opted in)
-- Output document captures all findings with traceability to interview Q&A
+- Every resolved choice names the evidence that settled it or the operator answer that decided it.
+- Every remaining open decision names the missing evidence or operator judgment still required.
+- The coverage map marks each area `[done]`, `[current]`, or `[pending]`, with no generated artifact section relying on a pending area as if it were resolved.
+- The decisions log records each pushback, disagreement, trade-off, and final disposition.
+- Every generated artifact section traces to a coverage area and, where applicable, to a specific Q&A entry or pre-analysis finding.
+- Artifact constraints name the output format, output location, and any task-breakdown format selected for follow-on work.
 
 </success_criteria>
