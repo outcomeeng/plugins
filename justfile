@@ -37,7 +37,7 @@ build-guides:
 fmt-python *args:
     uv run ruff format {{args}}
 
-# Regenerate spx/CLAUDE.md + spx/AGENTS.md from the template and fail on drift (CI gate)
+# Regenerate spx/CLAUDE.md + spx/AGENTS.md from rendered runtime templates and fail on drift (CI gate)
 guide-check:
     uv run python -m outcomeeng.distribution.guide_diff
 
