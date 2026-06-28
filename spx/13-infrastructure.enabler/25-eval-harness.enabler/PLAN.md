@@ -21,8 +21,8 @@ Remaining before this plan is resolved:
    the org secret `OUTCOMEENG_EVAL_STORE` is visible to `outcomeeng/plugins`
    and bypasses branch protection once `main` is protected.
 
-Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin,
-cross-suite parallelism, and the `just eval-run` recipe naming.
+Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin and
+cross-suite parallelism.
 
 ## Prompt-caching implementation (decided; gated on CLI regression #34629)
 

@@ -2,10 +2,6 @@
 
 Open items carried forward from the eval-harness refactor. None block the harness as shipped; each is a follow-up decision or enhancement.
 
-## Just recipe naming
-
-Confirm `just eval-run` vs. `just eval` aligns with the existing Justfile pattern when the eval recipes are added.
-
 ## Optional per-eval model pin
 
 `claude --print` uses the session's default model. An optional `model` field in `eval.toml` would let an eval pin against a specific model for reproducibility. Defer until a real need arises.
