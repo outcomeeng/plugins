@@ -20,5 +20,8 @@ CAN operate with complete, verified context before any work begins
 - ALWAYS: list target spec test links and co-located test files without reading test file bodies — test-body inspection belongs to `/test`, `/audit-tests`, and `/apply` ([audit])
 - ALWAYS: emit node, ADR, PDR, test, and coordination-note references as full paths from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([audit])
 - ALWAYS: emit lifecycle continuation state in the context manifest — local lifecycle overlays read, default-branch completion boundary, the governed next workflow, a progress verdict rule, and a continuation action when a changeset is destined for the default branch — so context loading carries the merge obligation into the workflow that follows ([audit])
+- ALWAYS: treat the `SPEC_TREE_FOUNDATION` marker as absent after every compaction event until `/understand` re-emits it in the resuming conversation ([audit])
+- ALWAYS: require a live `SPEC_TREE_FOUNDATION` marker before answering questions about spec-tree workflows, session continuity, or whether a specific skill was invoked ([audit])
 - NEVER: proceed with partial context — abort if any required document is missing ([audit])
+- NEVER: accept a `SPEC_TREE_FOUNDATION` mention in a compaction summary, session file, handoff note, prior-run description, or statement that `/understand` ran as evidence that the marker is live ([audit])
 - NEVER: infer implementation state from test imports during context loading — implementation state is unknown unless another workflow establishes it ([audit])
