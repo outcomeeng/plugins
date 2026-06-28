@@ -41,7 +41,7 @@ NEVER assign the dependency's node addresses, decision indices, or assertion typ
 </captured_fields>
 
 <target_resolution>
-Resolve the target dependency's checkout directory — the working directory `spx session handoff -C <target-dir>` runs against. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
+Resolve the target dependency's checkout directory — the working directory `spx -C <target-dir> session handoff` runs against. When `$ARGUMENTS` names a checkout directory or a dependency, take it as the target; otherwise resolve it:
 
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
   {!% if target == 'codex' %!}
@@ -72,10 +72,10 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 
 **Step 3 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 4 — File the follow-up.** Run `spx session handoff -C <target-dir>`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
+**Step 4 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
 
 ```bash
-printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx session handoff -C <target-dir>
+printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx -C <target-dir> session handoff
 ```
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
@@ -86,7 +86,7 @@ printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<im
 
 <constraints>
 
-- NEVER edit, commit to, or push the target dependency's tracked source — the only effect on the target is the session document `spx session handoff -C` writes into its `.spx/sessions/todo/`.
+- NEVER edit, commit to, or push the target dependency's tracked source — the only effect on the target is the session document `spx -C <target-dir> session handoff` writes into its `.spx/sessions/todo/`.
 - NEVER alter the invoking repository's git state or session queue — `-C <target-dir>` targets the dependency directly.
 - NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency's agents classify.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
@@ -98,7 +98,7 @@ printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<im
 - [ ] Target dependency checkout directory resolved deterministically or confirmed with the user
 - [ ] Observation captured as observation-only — no dependency node addresses, decision indices, or assertion types
 - [ ] Header carries an output-shaped `goal` and an imperative `next_step`; `specs` and `files` empty
-- [ ] `spx session handoff -C <target-dir>` filed the follow-up into the target repository's queue
+- [ ] `spx -C <target-dir> session handoff` filed the follow-up into the target repository's queue
 - [ ] The invoking repository's git state and session queue are unchanged
 - [ ] The created `<HANDOFF_ID>` and `<SESSION_FILE>` reported, naming the target repository
 

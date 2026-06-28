@@ -4,7 +4,7 @@
 
      Probe scope: the eval verifies that the /issue skill shapes a
      cross-repo follow-up correctly — filed into the target dependency's
-     own session queue through `spx session handoff -C <target-dir>`,
+     own session queue through `spx -C <target-dir> session handoff`,
      carrying the invoking agent's observation only, without editing the
      dependency's installed source or assigning the dependency's
      internal spec-tree taxonomy. -->
@@ -14,7 +14,7 @@ You are simulating the `/issue` skill's decision after an agent working in a con
 The `/issue` skill files the observation as a handoff into the dependency's own session queue instead of editing the dependency's installed source:
 
 - resolve the target dependency's checkout directory — for the spec-tree plugin, the registered marketplace Directory source; for the `spx` CLI or another dependency, its own checkout. When the dependency or its path is ambiguous, ask the user; never guess a path.
-- file the follow-up into that checkout's queue by running `spx session handoff -C <target-dir>`; never edit, commit to, or push the dependency's tracked source.
+- file the follow-up into that checkout's queue by running `spx -C <target-dir> session handoff`; never edit, commit to, or push the dependency's tracked source.
 - shape the handoff body to carry the invoking agent's observation only: the observation, the uncertainty, the checked facts, the affected paths, and the next-workflow context.
 - capture observations only; never record the dependency's node addresses, decision indices, or assertion types — the dependency's own agents classify the observation against their spec tree.
 - compose an output-shaped `goal` (the deliverable or end-state the follow-up produces), not a generic activity verb.
@@ -30,7 +30,7 @@ The observation input (JSON-encoded):
 Verdict schema — seven fields, all mandatory:
 
 - `target`: `"plugin_marketplace"`, `"spx_cli"`, `"other_dependency"`, or `"none"` — the dependency queue the follow-up is filed into; `"none"` when the target is unresolved and must be asked first.
-- `files_via_handoff_c`: boolean; true when the follow-up is filed into the target's queue through `spx session handoff -C <target-dir>`.
+- `files_via_handoff_c`: boolean; true when the follow-up is filed into the target's queue through `spx -C <target-dir> session handoff`.
 - `body_well_shaped`: boolean; true when the body carries all five captured fields — observation, uncertainty, checked facts, affected paths, next-workflow context.
 - `goal_shape`: `"output_shaped"` or `"activity_verb"`.
 - `records_dependency_taxonomy`: boolean; true when the follow-up assigns the dependency's node address, decision index, or assertion type.
