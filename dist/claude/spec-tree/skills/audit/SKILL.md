@@ -122,18 +122,13 @@ The agentic verification run is one append-only `spx journal` run that is its so
 CHILDREN_DIR=$(python3 "${CLAUDE_SKILL_DIR}/scripts/pass_results.py" mkdir)
 RUN_TOKEN=''
 AUDIT_JOURNAL_CLOSED=0
+AUDIT_RUN_COMPLETED_APPENDED=0
 finalize_audit_journal() {
   if [ -z "${RUN_TOKEN:-}" ] || [ "$AUDIT_JOURNAL_CLOSED" -eq 1 ]; then
     return
   fi
-  AUDIT_JOURNAL_HAS_COMPLETED=$(
-    spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
-      | python3 -c 'import json, sys
-events = json.load(sys.stdin)
-print(1 if any(event.get("type") == "com.outcomeeng.spx.journal.run.completed" for event in events) else 0)'
-  )
   RUN_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  if [ "$AUDIT_JOURNAL_HAS_COMPLETED" -eq 0 ]; then
+  if [ "$AUDIT_RUN_COMPLETED_APPENDED" -eq 0 ]; then
     spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
       | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" run-completed \
         --metadata "$AUDIT_METADATA" \
@@ -142,14 +137,15 @@ print(1 if any(event.get("type") == "com.outcomeeng.spx.journal.run.completed" f
       | while IFS= read -r EVENT; do
           printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
         done
+    AUDIT_RUN_COMPLETED_APPENDED=1
   fi
   spx journal seal --type audit --run "$RUN_TOKEN" >/dev/null
   AUDIT_JOURNAL_CLOSED=1
 }
 # Caller owns cleanup unconditionally: the trap fires whether the run
 # succeeds, an earlier dispatched skill halted, or the shell is interrupted.
-# Once RUN_TOKEN is set, the same trap checks the prefix, appends run-completed
-# only when no terminal event exists, and seals before removing scratch state.
+# Once RUN_TOKEN is set, the same finalizer appends run-completed at most once
+# and seals before removing scratch state.
 # A plain `rm -rf` at the end of the block would leak $CHILDREN_DIR on every
 # non-happy exit path; a completion-only seal would leave failed runs open.
 # Caller-owned cleanup of a unique-per-invocation scratch dir plus terminal
@@ -260,17 +256,7 @@ WRAPPER_JSON=$(python3 "${CLAUDE_SKILL_DIR}/scripts/aggregate_verdicts.py" \
   "${PULL_REQUEST_VERDICT_METADATA_ARGS[@]}")
 printf '%s\n' "$WRAPPER_JSON"
 
-RUN_COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
-  | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" run-completed \
-    --metadata "$AUDIT_METADATA" \
-    --completed-at "$RUN_COMPLETED_AT" \
-    --now "$RUN_COMPLETED_AT" \
-  | while IFS= read -r EVENT; do
-      printf '%s' "$EVENT" | spx journal append --type audit --run "$RUN_TOKEN" >/dev/null
-    done
-spx journal seal --type audit --run "$RUN_TOKEN" >/dev/null
-AUDIT_JOURNAL_CLOSED=1
+finalize_audit_journal
 spx journal read --type audit --run "$RUN_TOKEN" --from 0 \
   | python3 "${CLAUDE_SKILL_DIR}/scripts/journal_emit.py" render
 ```

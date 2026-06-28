@@ -15,7 +15,7 @@ The orchestrator embeds no language-specific knowledge beyond the `audit-{lang}*
 ### Testing
 
 - ALWAYS: the consumer-side adapter maps audit run metadata and each streamed child verdict onto journal events whose terminal completion event carries the core journal run-state identity — branch name, branch slug, head SHA, base ref, base SHA, config digest, participants, path-filter scope, timestamps, and output paths — and whose rolled-up overall equals the verdict toolchain's rollup over the corresponding wrapper; a failing or rejecting row or child yields a rejecting run, an unknown row or child absent any rejection yields an unknown run with a core terminal status of `failed`, and an all-passing wrapper yields an approved run, so streaming the verdict through the journal never changes its verdict outcome and still produces terminal evidence the `spx journal` fold can key by head/base identity ([test](tests/test_audit_journal_emit.mapping.l1.py))
-- ALWAYS: the consumer-side resolved-and-reopened projection keys finding identity on the tuple `(file, line, rule, message)`, excluding any assigned id and severity so a regenerated or re-severitied finding matches its prior counterpart by content ([property])
+- ALWAYS: the consumer-side resolved-and-reopened projection keys finding identity on the tuple `(file, line, rule, message)`, excluding any assigned id and severity so a regenerated or re-severitied finding matches its prior counterpart by content ([scenario](68-audit.enabler/tests/test_auditing.scenario.l1.py))
 - ALWAYS: a regression — the same finding content returning after a resolved-then-reopened cycle across the run set — is reported as reopened rather than as a new finding ([compliance])
 
 ### Audit
