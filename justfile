@@ -12,6 +12,46 @@ test *args:
 test-v *args:
     python3 -m outcomeeng.validation test -- -v {{args}}
 
+# Run one [eval] suite using plugin_dir from eval.toml unless PLUGIN_DIR is set
+eval eval_toml:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --timeout-seconds "${TIMEOUT_SECONDS:-120}")
+    printf 'Running:'
+    printf ' %q' "${command[@]}"
+    printf '\n'
+    "${command[@]}"
+
+# Run one [eval] case by id using plugin_dir from eval.toml unless PLUGIN_DIR is set
+eval-case eval_toml case_id:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    command=(uv run outcomeeng-evals run "{{eval_toml}}" --plugin-dir "$plugin_dir" --workers "${WORKERS:-1}" --max-budget-usd "${MAX_BUDGET_USD:-0.50}" --timeout-seconds "${TIMEOUT_SECONDS:-120}" --case-id "{{case_id}}")
+    printf 'Running:'
+    printf ' %q' "${command[@]}"
+    printf '\n'
+    "${command[@]}"
+
+# Run every eval.toml under a node's evals/ directory serially
+eval-node node_path:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ ! -d "{{node_path}}/evals" ]; then
+        echo "No evals directory found under {{node_path}}" >&2
+        exit 1
+    fi
+    found=0
+    while IFS= read -r eval_toml; do
+        found=1
+        just eval "$eval_toml"
+    done < <(find "{{node_path}}/evals" -mindepth 2 -maxdepth 2 -name eval.toml -type f | sort)
+    if [ "$found" -eq 0 ]; then
+        echo "No eval.toml files found under {{node_path}}/evals" >&2
+        exit 1
+    fi
+
 # Run deterministic validation only
 validation:
     python3 -m outcomeeng.validation validation
