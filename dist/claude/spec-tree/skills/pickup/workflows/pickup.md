@@ -12,22 +12,11 @@ Invoke `/understand` now:
 Skill tool -> { "skill": "spec-tree:understand" }
 ```
 
-If `<SPEC_TREE_FOUNDATION>` is already present, the skill may skip its body. Do not process the session's `<skills>`, `<nodes>`, `<persisted>`, or `<coordination>` sections until this foundation step has completed.
+If `<SPEC_TREE_FOUNDATION>` is already present, the skill may skip its body. Do not process the session's `<nodes>`, `<persisted>`, or `<coordination>` sections until this foundation step has completed.
 
-**Step 3: Present skills checklist**
+**Step 3: Present the session's first action**
 
-This step comes BEFORE loading node context. The skills checklist tells Claude what to invoke and what to avoid.
-
-Read the `<skills>` section from the session file and present it prominently:
-
-**Critical — invoke before starting work**
-These skills are REQUIRED. The previous Claude context identified them as essential. List each skill with its reasoning.
-
-**Missed — do not repeat these mistakes**
-The previous Claude context skipped these skills and it caused problems. List each missed skill with what went wrong.
-
-**Next action — where to resume**
-Show the recommended skill and TDD flow position.
+This step comes BEFORE loading node context. Present the `next_step` frontmatter value as the handoff's recommended first action. Treat it as context, not as a substitute for the required `/contextualize` step below; the resuming context still chooses skills from loaded methodology and current repository state.
 
 **Step 4: Check out the work branch**
 
@@ -102,11 +91,10 @@ The ONLY valid next action after presenting the session is to invoke `/contextua
 If the session references a single node, invoke `/contextualize` on it immediately. If it references multiple nodes, do NOT ask on multiplicity alone — select the contextualization target by trying these rules in priority order and taking the first that resolves exactly one node, falling through to the next rule when a rule matches zero nodes or more than one:
 
 1. The node named in the `next_step` field immediately after a `/contextualize` reference.
-2. The node named on the `<skills>` "## Next action" line — the `spx/{node-path}` in its `/contextualize {node-path}` entry, or in its "TDD flow position: step N … on `spx/{node-path}`" line.
-3. The first `<nodes>` entry whose "Coordination notes" list a `PLAN.md` or `ISSUES.md` path.
-4. The first node listed in `<nodes>`.
+2. The first `<nodes>` entry whose "Coordination notes" list a `PLAN.md` or `ISSUES.md` path.
+3. The first node listed in `<nodes>`.
 
-Rule 4 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic. Ask the user which node to start with only when `<nodes>` is empty or unreadable. After loading the first target, contextualize additional nodes only when the next action touches them.
+Rule 3 always resolves a single node, so node multiplicity never triggers a user question — selection is deterministic. Ask the user which node to start with only when `<nodes>` is empty or unreadable. After loading the first target, contextualize additional nodes only when the next action touches them.
 
 Invoke on the selected node:
 
@@ -170,7 +158,7 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 <success_criteria>
 
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
+- [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading
 - [ ] When the session `git_ref` names a feature branch, that branch is fetched and checked out before node context is loaded (Step 4)
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created (Step 4)
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind (Step 4b)
@@ -178,12 +166,12 @@ This applies after the post-context checkpoint in Step 8 completes, or after the
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 4 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
+- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` with the full claimed-session set
 - [ ] Claimed session remains in `doing` after the checkpoint — pickup workflow never archives or releases
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Claude knows which skills to invoke and which to avoid
+- [ ] Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
 
 </success_criteria>

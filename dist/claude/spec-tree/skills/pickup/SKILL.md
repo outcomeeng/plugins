@@ -21,7 +21,7 @@ Three rules govern a conversation's claimed-session set:
 
 1. **The claimed-session set grows only by user confirmation.** A session joins the set when the user instructs Claude via `/pickup`, or when the user confirms a suggested pickup. Nothing else adds to it.
 
-2. **Closure has exactly one acceptable end state.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with either zero or one handoff that incorporates everything from the claimed sessions. No supplemental, sidecar, or parallel handoff is ever valid at closure.
+2. **Closure has acceptable end states only through `/handoff`.** Every claimed session becomes Claude's sole responsibility. Reflect, persist remaining validated relevant context, and end with zero, one, or several session files — one canonical continuation per independent continuation thread in the resolved claimed-session set. Supplemental or sidecar handoffs for the same thread are never valid at closure.
 
 3. **Quick-exit shortcut.** If, within a few turns of pickup, Claude realizes the pickup was wrong, the user has two options — only the user can choose:
    - Invoke `/handoff --no-session` to archive the wrongly-claimed session immediately. The session leaves the claimed-session set but is archived, not returned to the todo queue.
@@ -190,13 +190,13 @@ How to avoid: After `/contextualize`, present the loaded state and stop. Use `As
 
 Claude picked up more than one session in the same conversation. The later handoff workflow archived only the most recent pickup, leaving earlier in-conversation pickups stranded in `doing/`. The next Claude context then had to read multiple handoff files to reconstruct the continuation.
 
-How to avoid: Emit (or extend) `<CLAIMED_SESSIONS ids="...">` on every pickup so the latest marker names the full claimed-session set. Handoff workflow 04 reads the set and archives every id. Closure ends with zero or one handoff incorporating everything — never a sidecar.
+How to avoid: Emit (or extend) `<CLAIMED_SESSIONS ids="...">` on every pickup so the latest marker names the full claimed-session set. Handoff workflow 04 reads the set and archives every id. Closure writes one canonical continuation per independent thread — never a sidecar for the same thread.
 
 **Failure 3: Claude treated the existence of a new handoff session as permission to close a claimed session**
 
 Claude picked up session A, then ran `spx session handoff` mid-work to create session B, then proposed archiving A because B existed. The queue state was treated as the permission source, not the completion of the reflection workflow.
 
-How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure ends with zero or one handoff; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
+How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
 
 </failure_modes>
 
@@ -209,18 +209,18 @@ A successful pickup:
 - [ ] Claimed session remains in `doing` after pickup — pickup never archives, releases, or moves any session
 - [ ] No new handoff session is treated as permission to archive, release, or replace a claimed session
 - [ ] `/understand` invoked immediately after claim markers and before session details are processed
-- [ ] Skills checklist presented BEFORE any work starts beyond foundation loading
+- [ ] Session `next_step` presented BEFORE any work starts beyond foundation loading
 - [ ] Checkout brought current via `/sync-base` before any session detail is presented, for every `git_ref` kind
 - [ ] In a bare-repository worktree pool, the assigned worktree's running claim is verified read-only before the work branch is switched into it, with a missing claim surfaced via `/diagnose` — `spx worktree claim` is not run during pickup, and no other pool worktree is entered or created
 - [ ] Recorded claims reconciled by running `verify_session_claims.py`, with per-claim `Confirmed` / `Discrepancy` / `Unverifiable` verdicts presented in place of the recorded snapshot before the checkpoint
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
-- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 4 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
+- [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
 - [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
 - [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Claude knows which skills to invoke and which to avoid
+- [ ] Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
 
 </success_criteria>

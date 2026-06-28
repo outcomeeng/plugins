@@ -44,8 +44,9 @@ files:
 </metadata>
 
 <nodes>
-Spec-tree nodes worked on. The receiving Claude context should invoke
-`/contextualize` on each before starting work.
+Spec-tree nodes worked on. `/pickup` selects the first `/contextualize` target
+from `next_step` and these entries, then loads additional nodes only when the next
+action touches them.
 
 - `spx/{path-to-node}`
   - Status: [tests passing | partially implemented | spec only | architected | etc.]
@@ -54,21 +55,6 @@ Spec-tree nodes worked on. The receiving Claude context should invoke
   - Coordination notes: [PLAN.md written | ISSUES.md written | none]
 
 </nodes>
-
-<skills>
-
-## Critical — invoke before starting work
-- `/understand` — load spec tree methodology
-- `/contextualize {node-path}` — load target context for each node above
-
-## Missed — caused problems when skipped
-- [skill name] — [what went wrong and why it matters]
-
-## Next action
-- [skill to invoke] — [what to do and why]
-- TDD flow position: step [N] ([step name]) on `spx/{node-path}`
-
-</skills>
 
 <persisted>
 What was captured durably during session closure.
@@ -144,7 +130,6 @@ history.
 - **`specs`**: Optional auto-injection list for spec or decision files pickup should read. Use repository-relative paths.
 - **`files`**: Optional auto-injection list for source, test, or workflow files pickup should read. Use repository-relative paths.
 - **`<nodes>`**: One entry per anchored node. Omit `Remaining` if a PLAN.md was written — the next Claude context will read that.
-- **`<skills> ## Missed`**: Only include if skipping that skill caused a real problem. Omit the section entirely if nothing was missed.
 - **`<state_at_handoff>`**: OPTIONAL. Only observable external-infrastructure state the next session cannot re-derive from the repository — live PR/run/image/job ids and their status, deployed inventories, in-flight workflows. Omit the section entirely when the repository already carries everything the next session needs. Guide the next pickup from the state in prose; do not encode fixed if-then branches.
 - **`<constraints>`**: OPTIONAL. Session-specific normative rules (NEVER X) that hold for this continuation. Omit when there are none. A rule that always holds belongs in methodology or CLAUDE.md, not a per-session file.
 - **`<coordination>`**: Thin. Cross-cutting context that is neither observable external state (`<state_at_handoff>`) nor a normative rule (`<constraints>`): why the handoff exists, dependencies between nodes, environment notes, open questions. Only what cannot be reconstructed from the spec tree or git history. If in doubt, leave it out.
