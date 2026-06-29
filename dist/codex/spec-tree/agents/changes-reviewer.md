@@ -35,7 +35,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 2. **Export the refs and branch identity for non-empty inputs.** Export `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`. For PR inputs, also export `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. For empty input, export nothing — the skill auto-resolves both refs and records a branch-target run.
 
-3. **Invoke `spec-tree:review-changes`.** The skill computes the diff, runs the review prompt, and streams the run live on `spx journal --type review` — scope-entered, a scope-advanced per examined file, a finding-reported the instant each finding is raised (the per-finding parse through `journal_emit.py finding-reported` is the validity gate), and run-completed — then renders the human-readable surface from the sealed prefix.
+3. **Invoke `spec-tree:review-changes`.** The skill owns diff computation, review execution, journaling, and run sealing. Report only the observable output returned by the skill.
 
 </workflow>
 
@@ -43,6 +43,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 - MUST stay read-only over the repository — NEVER edit code or tests, NEVER push, NEVER invoke `gh pr comment` or any remote write.
 - NEVER `git switch` or `git checkout` — the skill diffs against refs without changing working state.
+- NEVER run validation, tests, evals, coverage, lint, typecheck, or any other deterministic verification command — deterministic verification has already passed before review starts.
 
 </constraints>
 
@@ -50,9 +51,7 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 The skill reports:
 
-- the `spx journal --type review` run token
-- the `BLOCKING: <n>, DEBT: <n>` count line
-- the rendered review surface when findings are present
+The raw `spx journal --type review` run token.
 
 The sealed review journal prefix is the durable run state.
 
@@ -61,7 +60,7 @@ The sealed review journal prefix is the durable run state.
 <success_criteria>
 
 - The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were exported; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were exported; for empty input, none of those vars were set.
-- The skill ran to completion, streaming its events live, and `journal_emit.py finding-reported` parsed each emitted finding without error.
-- The review journal run was sealed and read back before reporting the result.
+- The skill returned only the raw run token for the requested scope.
+- No internal skill pipeline behavior was asserted unless it appeared in the skill output.
 
 </success_criteria>

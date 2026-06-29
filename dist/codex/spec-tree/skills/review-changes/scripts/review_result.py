@@ -11,8 +11,8 @@ review-changes skill produces. Declares:
 - ``ReviewResultValidationError`` — raised on every schema violation.
 - ``parse_json``, ``parse_finding_json``, ``to_json_dict``,
   ``from_json_dict`` — the parser entry points. ``parse_finding_json``
-  validates one streamed finding (the per-finding validity gate the
-  ``journal_emit.py finding-reported`` caller invokes); ``parse_json``
+  validates one streamed finding (legacy compatibility path for
+  ``journal_emit.py finding-reported``); ``parse_json``
   validates a whole document. Both surface malformed input as exceptions
   before any journal append.
 
@@ -57,14 +57,13 @@ class Severity(StrEnum):
 
 
 class Concern(StrEnum):
-    """The six categories a finding may classify under, grouped by
+    """The five categories a finding may classify under, grouped by
     three axes:
 
     - What the code does vs. what it is supposed to do: ``consistency``,
       ``security``, ``performance``.
     - How we know it does what it is supposed to do: ``evidence``.
-    - How it does what it is supposed to do: ``standards``,
-      ``architecture``.
+    - How it is structured: ``architecture``.
 
     The set is closed: any finding whose ``concern`` is outside this
     enumeration is rejected by the parser with the unknown value and the
@@ -75,15 +74,13 @@ class Concern(StrEnum):
     SECURITY = "security"
     PERFORMANCE = "performance"
     EVIDENCE = "evidence"
-    STANDARDS = "standards"
     ARCHITECTURE = "architecture"
 
 
 class ReviewResultValidationError(ValueError):
     """Raised when a review-result document does not conform to the schema.
 
-    Raised by the parser ``journal_emit.py finding-reported`` invokes per
-    streamed finding; agents consume the error message verbatim to correlate
+    Raised by the legacy ``journal_emit.py finding-reported`` path; agents consume the error message verbatim to correlate
     the failure with the finding they just emitted and re-emit before that
     finding's journal append.
     """
@@ -149,7 +146,7 @@ _REQUIRED_FINDING_KEYS = (
 # the cited assertion/rule slug where the citation carries one.
 _SPEC_ASSERTION_RE = re.compile(
     r"(?P<path>spx/[^\s:]+\.md):"
-    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|COMPLIANCE):"
+    r"(?P<kind>ALWAYS|NEVER|MUST|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT):"
     r"(?P<index>[1-9][0-9]*)"
 )
 _DECISION_RE = re.compile(r"(?P<path>spx/[^\s:]+\.(?:adr|pdr)\.md)")
@@ -166,7 +163,7 @@ _SECTION_TITLES = {
     "MAPPING": "Mappings",
     "CONFORMANCE": "Conformance",
     "PROPERTY": "Properties",
-    "COMPLIANCE": "Compliance",
+    "AUDIT": "Audit",
 }
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
 _RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
@@ -211,8 +208,7 @@ def parse_finding_json(text: str) -> Finding:
 
     The streaming review appends a ``finding-reported`` event the instant it
     raises each finding, so it emits one finding JSON document at a time.
-    This is the per-finding validity gate ``journal_emit.py finding-reported``
-    invokes before the event is appended — the same enum, required-key, and
+    This remains available for the legacy ``journal_emit.py finding-reported`` path before the event is appended — the same enum, required-key, and
     ``rule``-citation checks ``parse_json`` applies to a whole document,
     scoped to one finding. Every violation raises
     :class:`ReviewResultValidationError`, so a malformed finding is surfaced

@@ -12,11 +12,11 @@ Scenarios
 Mappings
 - ``Severity`` enum members map to the wire values ``blocking``,
   ``debt``.
-- ``Concern`` enum members map to exactly the six wire values
+- ``Concern`` enum members map to exactly the five wire values
   ``consistency``, ``security``, ``performance``, ``evidence``,
-  ``standards``, ``architecture``.
+  ``architecture``.
 
-Compliance (subset)
+Audit (subset)
 - The policy module declares ``SCHEMA_VERSION``, frozen ``Finding`` and
   ``ReviewResult`` dataclasses, the ``Severity`` / ``Concern`` enums.
 - The schema carries no ``decision``/verdict field — the reviewer emits
@@ -86,10 +86,10 @@ class TestSeverityMapping:
 
 
 class TestConcernMapping:
-    """``Concern`` members map to exactly the six wire values
+    """``Concern`` members map to exactly the five wire values
     declared in the spec."""
 
-    def test_concern_members_map_to_six_wire_values(self) -> None:
+    def test_concern_members_map_to_five_wire_values(self) -> None:
         review_result = load_review_result_module()
         wire_values = {member.value for member in review_result.Concern}
         assert wire_values == {
@@ -97,7 +97,6 @@ class TestConcernMapping:
             "security",
             "performance",
             "evidence",
-            "standards",
             "architecture",
         }
 
@@ -329,8 +328,8 @@ class TestRuleCitationForm:
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:MAPPING:2",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:PROPERTY:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:1",
-            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:COMPLIANCE:2",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:1",
+            "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md:AUDIT:2",
             "spx/21-spec-tree.enabler/spec-tree.md:CONFORMANCE:1",
             "spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md",
             "spx/15-merging.pdr.md",

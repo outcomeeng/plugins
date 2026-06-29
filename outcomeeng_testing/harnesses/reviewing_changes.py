@@ -12,8 +12,10 @@ Provides the shared scaffolding consumed by every test file under
 - ``SKILL_DIR`` and ``SKILL_FILE``. The compliance tests inspect skill
   prose for the absence of an embedded prompt and presence of a
   ``${CLAUDE_SKILL_DIR}/references/review-prompt.md`` load expression.
-- ``JOURNAL_EMIT_SCRIPT`` and ``load_journal_emit_module``. Tests assert the
-  review-result-to-journal adapter consumes the shared projection.
+- ``REVIEW_RUN_SCRIPT``. Tests assert the skill's public command surface is
+  the single runner.
+- ``JOURNAL_EMIT_SCRIPT`` and ``load_journal_emit_module``. Legacy tests assert
+  the review-result-to-journal adapter consumes the shared projection.
 - ``WRAPPER_AGENT_PATH``. Compliance tests check the wrapper agent's
   frontmatter shape when the agent file exists; missing files are
   tolerated (the agent is authored in a separate step).
@@ -25,9 +27,9 @@ Provides the shared scaffolding consumed by every test file under
   ready to be mutated by callers to construct invalid documents for
   rejection-path tests.
 
-The harness lives in ``outcomeeng_testing/harnesses/`` per
-``spx/15-test-infrastructure.pdr.md`` — shared test scaffolding is
-production code with its home outside ``tests/`` and outside ``spx/``.
+The harness lives in ``outcomeeng_testing/harnesses/`` because shared test
+scaffolding is production code with its home outside ``tests/`` and
+outside ``spx/``.
 """
 
 from __future__ import annotations
@@ -56,6 +58,7 @@ REVIEW_PROMPT_PATH = REFERENCES_DIR / "review-prompt.md"
 REVIEW_RESULT_MODULE_PATH = SCRIPTS_DIR / "review_result.py"
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
+REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
 
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
@@ -223,6 +226,7 @@ def run_script(
     stdin: str | None = None,
     check: bool = False,
     env: dict[str, str] | None = None,
+    cwd: pathlib.Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Invoke a script as a subprocess and return the result.
 
@@ -237,6 +241,7 @@ def run_script(
         text=True,
         check=check,
         env=env,
+        cwd=cwd,
     )
 
 
@@ -247,7 +252,7 @@ def make_review_result_dict(
 ) -> dict[str, Any]:
     """Return a synthetic review-result dict with every required field.
 
-    Default shape: one ``debt``-severity finding under the ``standards``
+    Default shape: one ``debt``-severity finding under the ``architecture``
     concern. A review carries findings only — no summary, acknowledgement,
     decision, or verdict field — so the dict has exactly ``schema_version``
     and ``findings``. The debt finding carries an ``action`` populated with
@@ -267,7 +272,7 @@ def make_review_result_dict(
         findings = [
             {
                 "id": "F-001",
-                "concern": review_result.Concern.STANDARDS,
+                "concern": review_result.Concern.ARCHITECTURE,
                 "severity": review_result.Severity.DEBT,
                 "file": "example.py",
                 "line": 10,
@@ -288,14 +293,14 @@ def make_finding_dict(**overrides: Any) -> dict[str, Any]:
     The streaming review emits findings one at a time, so the per-finding
     validity gate (``review_result.parse_finding_json`` /
     ``journal_emit.py finding-reported``) parses a single finding document.
-    The default is a ``debt``/``standards`` finding with a valid rule
+    The default is a ``debt``/``architecture`` finding with a valid rule
     citation; callers pass ``**overrides`` to vary a field or construct a
     rejection-path document.
     """
     review_result = load_review_result_module()
     finding = {
         "id": "F-001",
-        "concern": review_result.Concern.STANDARDS,
+        "concern": review_result.Concern.ARCHITECTURE,
         "severity": review_result.Severity.DEBT,
         "file": "example.py",
         "line": 10,

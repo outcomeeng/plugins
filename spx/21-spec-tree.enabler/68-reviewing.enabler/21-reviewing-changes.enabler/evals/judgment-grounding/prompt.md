@@ -22,7 +22,7 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
   "findings": [
     {
       "id": "F-001",
-      "concern": "consistency" | "security" | "performance" | "evidence" | "standards" | "architecture",
+      "concern": "consistency" | "security" | "performance" | "evidence" | "architecture",
       "severity": "blocking" | "debt",
       "file": "<path from the diff>",
       "line": <integer>,

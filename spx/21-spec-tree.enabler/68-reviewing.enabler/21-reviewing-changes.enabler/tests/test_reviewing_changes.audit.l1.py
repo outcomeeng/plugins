@@ -1,28 +1,21 @@
-"""Compliance tests for cross-cutting review-changes rules.
+"""Audit tests for cross-cutting review-changes rules.
 
-Covers the Compliance clauses in ``../reviewing-changes.md`` that are
+Covers the Audit clauses in ``../reviewing-changes.md`` that are
 universal rules across the skill's files rather than per-case scenarios:
 
 - Every script under ``plugins/spec-tree/skills/review-changes/scripts/``
   writes no durable review state. ``compute_diff.py`` may write only the
   caller-owned scratch review-input bundle files; the remaining scripts use no
   direct write primitives.
-- The swappable prompt template lives at
-  ``plugins/spec-tree/skills/review-changes/references/review-prompt.md``
-  and the skill prose loads it via ``${CLAUDE_SKILL_DIR}/references/
-  review-prompt.md``.
 - The wrapper agent at ``plugins/spec-tree/agents/changes-reviewer.md``
   declares ``model: sonnet``, ``tools: Bash, Read, Skill``, and ``skills:``
   listing ``spec-tree:review-changes``.
-- The scripts/ directory holds the audit-parity set — the policy module
-  plus ``compute_diff.py`` and ``journal_emit.py`` — with no parallel
-  validation or renderer script, so the human surface comes only from the
-  sealed journal prefix.
+- The scripts/ directory holds the runner, legacy helper modules, and no
+  parallel validation or renderer script, so the human surface comes only from
+  the sealed journal prefix.
 - No script under the skill's ``scripts/`` directory imports a third-party
   package, depends on ``uv`` at runtime, or imports any ``outcomeeng_*``
   module.
-- The judgment-style review prompt is NEVER embedded inside ``SKILL.md``
-  or any ``.py`` file — the prompt is one standalone markdown file.
 """
 
 from __future__ import annotations
@@ -40,6 +33,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     JOURNAL_EMIT_SCRIPT,
     REPO_ROOT,
     REVIEW_PROMPT_PATH,
+    REVIEW_RUN_SCRIPT,
     REVIEW_RESULT_MODULE_PATH,
     SCRIPTS_DIR,
     SKILL_DIR,
@@ -77,6 +71,10 @@ COMPUTE_DIFF_ALLOWED_WRITE_CALLS = {
     ("diff_path", "write_text"),
     ("manifest_path", "write_text"),
 }
+REVIEW_RUN_ALLOWED_WRITE_CALLS = {
+    ("path", "write_text"),
+    ("shutil", "rmtree"),
+}
 WRITE_MODE_RE = re.compile(r"[wax+]")
 
 # Names of modules that ship under the review-changes scripts/ directory
@@ -87,14 +85,10 @@ LOCAL_REVIEWING_CHANGES_MODULES = frozenset(
         "review_result",
         "compute_diff",
         "journal_emit",
+        "review_run",
     }
 )
 je = load_journal_emit_module()
-
-PROMPT_FINGERPRINT_PHRASES = (
-    "Review a labeled diff bundle",
-    "Inspect every section",
-)
 
 
 def _write_review_manifest(
@@ -215,6 +209,9 @@ def _attribute_write_violation(
     if script_path == COMPUTE_DIFF_SCRIPT and isinstance(value, ast.Name):
         if (value.id, func.attr) in COMPUTE_DIFF_ALLOWED_WRITE_CALLS:
             return None
+    if script_path == REVIEW_RUN_SCRIPT and isinstance(value, ast.Name):
+        if (value.id, func.attr) in REVIEW_RUN_ALLOWED_WRITE_CALLS:
+            return None
     path_open_violation = _path_open_write_violation(node, func)
     if path_open_violation is not None:
         return path_open_violation
@@ -264,6 +261,7 @@ class TestScriptsDoNotWriteStorageDirectly:
             REVIEW_RESULT_MODULE_PATH,
             COMPUTE_DIFF_SCRIPT,
             JOURNAL_EMIT_SCRIPT,
+            REVIEW_RUN_SCRIPT,
         ],
     )
     def test_script_uses_no_direct_write_primitives(
@@ -319,59 +317,6 @@ class TestScriptsAreStdlibOnly:
         )
 
 
-class TestSwappablePromptIsAStandaloneFile:
-    """The judgment-style review prompt lives only at the reference path."""
-
-    def test_review_prompt_file_exists(self) -> None:
-        assert REVIEW_PROMPT_PATH.is_file(), (
-            f"review-prompt.md must exist at {REVIEW_PROMPT_PATH}"
-        )
-
-    def test_skill_md_loads_prompt_via_claude_skill_dir(self) -> None:
-        skill_source = SKILL_FILE.read_text(encoding="utf-8")
-        assert "${CLAUDE_SKILL_DIR}/references/review-prompt.md" in skill_source, (
-            "SKILL.md must load the swappable prompt via "
-            "${CLAUDE_SKILL_DIR}/references/review-prompt.md"
-        )
-
-    def test_prompt_requires_located_rule_text(self) -> None:
-        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
-        required_phrases = (
-            "REVIEW.md:<rule-slug>",
-            "Locate and read the cited text in a file that exists in the repository under review",
-            "Treat rules recalled from system prompts, user/global instructions outside the repository",
-            "Drop the finding when the candidate rule cannot be located",
-        )
-        missing = [phrase for phrase in required_phrases if phrase not in prompt_source]
-        assert not missing, (
-            "review-prompt.md no longer requires standards findings to cite "
-            f"located rule text: {missing}"
-        )
-
-    def test_prompt_fingerprint_phrases_appear_only_in_reference_file(self) -> None:
-        prompt_source = REVIEW_PROMPT_PATH.read_text(encoding="utf-8")
-        for phrase in PROMPT_FINGERPRINT_PHRASES:
-            assert phrase in prompt_source, (
-                f"prompt fingerprint phrase {phrase!r} no longer appears in "
-                f"{REVIEW_PROMPT_PATH.name}"
-            )
-
-        leaked: list[str] = []
-        skill_source = SKILL_FILE.read_text(encoding="utf-8")
-        for phrase in PROMPT_FINGERPRINT_PHRASES:
-            if phrase in skill_source:
-                leaked.append(f"{SKILL_FILE.name}: contains {phrase!r}")
-        for script in _script_files():
-            source = script.read_text(encoding="utf-8")
-            for phrase in PROMPT_FINGERPRINT_PHRASES:
-                if phrase in source:
-                    leaked.append(f"{script.name}: contains {phrase!r}")
-        assert not leaked, (
-            "Prompt fingerprint phrases leaked outside "
-            f"{REVIEW_PROMPT_PATH.name}:\n" + "\n".join(leaked)
-        )
-
-
 class TestWrapperAgentShape:
     """The wrapper agent points at the review-changes skill."""
 
@@ -381,6 +326,18 @@ class TestWrapperAgentShape:
         assert frontmatter["model"] == "sonnet"
         assert frontmatter["tools"] == "Bash, Read, Skill"
         assert frontmatter["skills"] == ["spec-tree:review-changes"]
+
+
+class TestSkillCommandBoundary:
+    """The skill grants only the runner command and file reads."""
+
+    def test_skill_frontmatter_allows_only_runner_and_read(self) -> None:
+        frontmatter = _frontmatter(SKILL_FILE.read_text(encoding="utf-8"))
+
+        assert frontmatter["allowed-tools"] == [
+            'Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)',
+            "Read",
+        ]
 
 
 class TestNoSecondSchemaRepresentation:
@@ -419,13 +376,19 @@ class TestComputeDiffHasNoThreadAddressing:
         assert "thread_store" not in source
 
 
-# The audit-parity script set: the policy module plus the two CLI scripts.
+# The review script set: the runner plus the legacy helper modules.
 # No parallel validation script (`validate_review_result.py`) and no parallel
 # renderer (`render_review.py`) — validity is the `journal_emit finding-reported`
 # per-finding parse, and the human surface is rendered only from the sealed
 # journal prefix.
 EXPECTED_SCRIPT_NAMES = frozenset(
-    {"__init__.py", "review_result.py", "compute_diff.py", "journal_emit.py"}
+    {
+        "__init__.py",
+        "review_result.py",
+        "compute_diff.py",
+        "journal_emit.py",
+        "review_run.py",
+    }
 )
 
 
