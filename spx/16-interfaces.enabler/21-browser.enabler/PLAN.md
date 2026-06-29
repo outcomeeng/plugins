@@ -15,7 +15,8 @@ what the operator wants, and the path from prototype to shipped plugin.
 - Prototype: `prototypes/interview-live/` on branch `feat/browser-interface`
   (commits `7e442b27` MCP transport, `be27cd29` chat channel, `667060dc`
   scroll fix; original spike `10c9a062`, PR #112).
-- Design reference: `levenate-vision.html` and `levenate-tree.html` in the
+- Design reference: `levenate-vision.html`, `levenate-tree.html`, and
+  `levenate-prototype/Spec Tree Explorer.html` in the
   `outcomeeng/levenate` repo — **reference only; Levenate is a separate product**
   that reuses the SPX CLI and this browser interaction. The design system is
   shared by **copy** (vendored tokens), never a runtime dependency.
@@ -42,6 +43,19 @@ what the operator wants, and the path from prototype to shipped plugin.
 - **The vendored design system fits the domain.** Levenate's OKLCH tokens
   include status colors that map 1:1 onto node states (`declared / specified /
   failing / passing`) and category colors for `adr / pdr / outcome`.
+- **The Levenate drawer model fits this surface better than a permanent tree
+  column.** `levenate-prototype/Spec Tree Explorer.html` keeps the working
+  surface primary and treats the tree as a right-side drawer with a persistent
+  edge handle. The browser prototype should follow that composition: chat,
+  questions, and node detail stay in the main workspace, while the tree opens
+  and closes as a drawer without losing live selection or edits.
+- **Token generation should become an asset pipeline, not inline CSS.**
+  Levenate's token source (`levenate-prototype/tokens/tokens.ts`, mirrored in
+  `web/src/design/tokens.ts`) declares OKLCH primitives, semantic roles, light
+  and dark themes, radius, and motion once, then emits CSS custom properties.
+  The shipped interface can copy that architecture by committing a source token
+  file plus generated static `tokens.css`; the plugin consumes the generated
+  CSS and never fetches packages or runs a Node build in a consumer repository.
 - **Editing and chat both flow back to the agent.** Rename, add, remove,
   drag-drop reorder, and a free-text chat channel all arrive via
   `wait_for_interaction`. The operator filed a layout bug *through the surface's
@@ -102,13 +116,20 @@ Richer product-building surfaces are Levenate's concern, not this node's.
    the interface proves itself (it now has), extract its complexity into the SPX
    CLI, tested there and consumed as a trusted component; the plugin keeps only
    thin launch + HTML-emitting glue under its `scripts/`.
-6. **Productize into an `interfaces` plugin.** No such plugin exists yet. Ship
+6. **Design tokens → generated static assets.** Add a product-owned token source
+   for the browser interface, generate `tokens.css` from it, and require browser
+   styles to reference token variables rather than raw OKLCH, color, font, size,
+   radius, shadow, or motion literals. The generator belongs to this repository's
+   build/dev workflow; the shipped plugin carries the generated CSS as static
+   asset data, preserving the portability constraints in
+   `13-rendering.adr.md` and `13-plugin-and-runtime-conventions.adr.md`.
+7. **Productize into an `interfaces` plugin.** No such plugin exists yet. Ship
    the MCP launch glue and renderer as stdlib-only Python under the plugin's
    `scripts/`, register the server in the plugin's `mcpServers`, and **vendor the
    fonts as static `woff2`** — the prototype loads Google Fonts from a CDN, which
    the portability constraints forbid (`13-rendering.adr.md`,
    `13-plugin-and-runtime-conventions.adr.md`).
-7. **Evidence.** Graduate the prototype's `state.py` tests into the node's
+8. **Evidence.** Graduate the prototype's `state.py` tests into the node's
    `[test]` lane, decide the evidence home for `browser.md`'s rendering/affordance
    assertions, and remove the `spx/EXCLUDE` entry when implementation lands.
 
