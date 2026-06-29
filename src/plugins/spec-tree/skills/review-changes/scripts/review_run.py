@@ -371,8 +371,13 @@ def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
     return counts
 
 
-def _cleanup_state(state: dict[str, Any]) -> None:
-    scratch_dir = pathlib.Path(str(state.get("scratchDir", "")))
+def _cleanup_state(state_path: pathlib.Path) -> None:
+    scratch_dir = state_path.resolve().parent
+    temp_root = pathlib.Path(tempfile.gettempdir()).resolve()
+    try:
+        scratch_dir.relative_to(temp_root)
+    except ValueError:
+        return
     if scratch_dir.name.startswith("review-changes-") and scratch_dir.is_dir():
         shutil.rmtree(scratch_dir)
 
@@ -499,7 +504,7 @@ def _finish(args: argparse.Namespace) -> int:
         if failed is not None:
             return failed
         sys.stdout.write(f"{run_token}\n")
-        _cleanup_state(state)
+        _cleanup_state(args.state)
         return 0
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
