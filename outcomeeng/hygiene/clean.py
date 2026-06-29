@@ -84,6 +84,7 @@ def build_clean_pathspecs(
     """Return top-level pathspecs safe for git clean."""
     repo_root_absolute = Path(os.path.abspath(repo_root))
     active_python_prefix_absolute = Path(os.path.abspath(active_python_prefix))
+    active_python_prefix_real = Path(os.path.realpath(active_python_prefix))
     preserved_names = {GIT_IGNORE_FILE, GIT_METADATA_DIR}
 
     try:
@@ -95,6 +96,10 @@ def build_clean_pathspecs(
 
     if relative_active_prefix is not None and relative_active_prefix.parts:
         preserved_names.add(relative_active_prefix.parts[0])
+
+    for entry in repo_root.iterdir():
+        if Path(os.path.realpath(entry)) == active_python_prefix_real:
+            preserved_names.add(entry.name)
 
     return tuple(
         entry.name
