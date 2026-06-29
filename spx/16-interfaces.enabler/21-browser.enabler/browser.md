@@ -8,9 +8,10 @@ CAN read, comment on, and restructure the tree directly in a browser
 
 ### Scenarios
 
-- Given a spec-tree JSON projection from the SPX CLI, when the browser surface renders, then it shows the tree with each node's state, category, index, and depth alongside a node-detail view of the opener, assertions grouped by type, and evidence links ([test](tests/test_browser.scenario.l1.py))
-- Given rendered content, when a user acts on it, then the surface supports drag-drop reordering, click-to-comment, and expand/collapse ([test](tests/test_browser.scenario.l1.py))
-- Given node or interview text inserted into the HTML, when the surface renders it, then the text is escaped so raw markup never reaches the document ([test](tests/test_browser.scenario.l1.py))
+- Given a spec-tree JSON projection from the SPX CLI, when the prototype browser surface renders, then it shows the tree with each node's state, category, index, and depth ([test](tests/test_browser.scenario.l1.py))
+- Given rendered content, when a user acts on it, then the prototype surface supports rename, add/remove, drag-drop reordering, and browser chat interactions over the live surface ([test](tests/test_browser.scenario.l1.py))
+- Given node, question, or chat text inserted into the HTML, when the surface renders it, then the text is escaped so raw markup never reaches the document ([test](tests/test_browser.scenario.l1.py))
+- Given the current SPX projection lacks node-detail fields, when planning the next browser slice, then the browser node tracks opener text, assertion groups, evidence links, and commentable text selection as remaining projection and interaction gaps ([test](tests/test_browser.scenario.l1.py))
 
 ### Compliance
 
