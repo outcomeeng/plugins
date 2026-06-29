@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol
@@ -81,13 +82,13 @@ def build_clean_pathspecs(
     active_python_prefix: Path,
 ) -> tuple[str, ...]:
     """Return top-level pathspecs safe for git clean."""
-    repo_root_resolved = repo_root.resolve()
-    active_python_prefix_resolved = active_python_prefix.resolve()
+    repo_root_absolute = Path(os.path.abspath(repo_root))
+    active_python_prefix_absolute = Path(os.path.abspath(active_python_prefix))
     preserved_names = {GIT_IGNORE_FILE, GIT_METADATA_DIR}
 
     try:
-        relative_active_prefix = active_python_prefix_resolved.relative_to(
-            repo_root_resolved,
+        relative_active_prefix = active_python_prefix_absolute.relative_to(
+            repo_root_absolute,
         )
     except ValueError:
         relative_active_prefix = None

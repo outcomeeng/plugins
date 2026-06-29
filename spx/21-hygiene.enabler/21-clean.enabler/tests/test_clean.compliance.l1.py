@@ -78,6 +78,28 @@ def test_inside_repo_active_environment_is_omitted_from_pathspecs(
     assert GIT_IGNORE_FILE not in argv
 
 
+def test_inside_repo_symlinked_active_environment_is_omitted_from_pathspecs(
+    tmp_path: Path,
+) -> None:
+    repo_root = tmp_path / "repo"
+    external_python_prefix = tmp_path / "external-venv"
+    repo_root.mkdir()
+    external_python_prefix.mkdir()
+    (repo_root / IGNORED_CACHE_DIR).mkdir()
+    (repo_root / IGNORED_PYTHON_ENV_DIR).symlink_to(
+        external_python_prefix,
+        target_is_directory=True,
+    )
+
+    argv = build_clean_argv(
+        repo_root=repo_root,
+        active_python_prefix=repo_root / IGNORED_PYTHON_ENV_DIR,
+    )
+
+    assert IGNORED_CACHE_DIR in argv
+    assert IGNORED_PYTHON_ENV_DIR not in argv
+
+
 def test_outside_repo_active_environment_does_not_remove_pathspecs(
     tmp_path: Path,
 ) -> None:
