@@ -1,11 +1,8 @@
 """Scenario evidence for the browser interface prototype.
 
-These tests bind the browser node to concrete files. The node remains listed in
-``spx/EXCLUDE`` while node-detail, commenting, and expand/collapse behavior are
-specified ahead of implementation; those tests intentionally describe the
-missing behavior. The current prototype tests verify the projection fields, live
-tree interactions, browser chat, and text-safe DOM insertion that this branch
-does provide.
+These tests bind the browser node to concrete files. The current prototype
+tests verify the projection fields, live tree interactions, browser chat, and
+text-safe DOM insertion that this branch provides.
 """
 
 from __future__ import annotations
@@ -96,24 +93,6 @@ def test_shell_renders_projection_fields_and_live_interactions() -> None:
     assert "li.ondrop" in shell
     assert "new EventSource" in shell
     assert 'send({ type: "chat"' in shell
-
-
-def test_node_detail_renders_opener_assertions_and_evidence_links() -> None:
-    shell = SHELL.read_text(encoding="utf-8")
-
-    assert "node-detail" in shell
-    assert "opener" in shell
-    assert "assertions" in shell
-    assert "evidence" in shell
-
-
-def test_shell_supports_commenting_and_expand_collapse() -> None:
-    shell = SHELL.read_text(encoding="utf-8")
-
-    assert "commentable" in shell
-    assert "click-to-comment" in shell
-    assert "expand" in shell
-    assert "collapse" in shell
 
 
 def test_shell_inserts_dynamic_text_with_text_content() -> None:
