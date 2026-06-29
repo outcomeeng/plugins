@@ -16,8 +16,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+import subprocess
 
 from outcomeeng.hygiene.clean import Runner
+
+IGNORED_CACHE_DIR = ".cache"
+IGNORED_PYTHON_ENV_DIR = ".venv"
 
 
 @dataclass
@@ -32,7 +37,47 @@ class RecordingRunner:
         return self.exit_code
 
 
-__all__ = ["RecordingRunner"]
+@dataclass(frozen=True)
+class CleanRepo:
+    """Temporary git repository arranged for clean-command evidence."""
+
+    root: Path
+    active_python_prefix: Path
+    ignored_cache: Path
+
+
+def create_clean_repo(tmp_path: Path, *, include_cache: bool = True) -> CleanRepo:
+    """Create a git repository with ignored active-env and cache directories."""
+    repo_root = tmp_path / "repo"
+    active_python_prefix = repo_root / IGNORED_PYTHON_ENV_DIR
+    ignored_cache = repo_root / IGNORED_CACHE_DIR
+    active_python_prefix.mkdir(parents=True)
+    if include_cache:
+        ignored_cache.mkdir()
+    (repo_root / ".gitignore").write_text(
+        f"{IGNORED_PYTHON_ENV_DIR}/\n{IGNORED_CACHE_DIR}/\n",
+        encoding="utf-8",
+    )
+    subprocess.run(
+        ("git", "init"),
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    return CleanRepo(
+        root=repo_root,
+        active_python_prefix=active_python_prefix,
+        ignored_cache=ignored_cache,
+    )
+
+
+__all__ = [
+    "CleanRepo",
+    "IGNORED_CACHE_DIR",
+    "IGNORED_PYTHON_ENV_DIR",
+    "RecordingRunner",
+    "create_clean_repo",
+]
 
 
 _: type[Runner] = RecordingRunner
