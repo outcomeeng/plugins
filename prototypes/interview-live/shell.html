@@ -781,10 +781,10 @@
               <button id="chat-send">Send</button>
             </div>
           </section>
-          <aside class="detail-pane" id="detail"></aside>
+          <aside class="detail-pane" id="detail" aria-label="Selected spec node"></aside>
         </div>
       </main>
-      <aside class="right-dock">
+      <aside class="right-dock" aria-label="Spec tree drawer">
         <button class="tree-handle open" id="tree-toggle" aria-expanded="true" aria-controls="tree-drawer">
           <span class="th-label">Tree</span>
           <span class="th-chev">›</span>
@@ -1193,7 +1193,7 @@
       const section = document.createElement("div");
       section.className = "detail-section";
       section.textContent = "Projection fields";
-      body.insertBefore(section, grid);
+      grid.before(section);
 
       detail.appendChild(head);
       detail.appendChild(body);
