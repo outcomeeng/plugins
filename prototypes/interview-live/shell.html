@@ -947,7 +947,9 @@
 
     function treeTotal() {
       let total = 0;
-      walkNodes(state.tree, () => { total += 1; });
+      walkNodes(state.tree, () => {
+        total += 1;
+      });
       return total;
     }
 
