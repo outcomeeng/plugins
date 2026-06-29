@@ -22,6 +22,7 @@
       --accent: oklch(0.550 0.130 250);
       --accent-deep: oklch(0.450 0.130 250);
       --accent-wash: oklch(0.955 0.025 250);
+      --accent-line: oklch(0.790 0.060 250);
       --on-accent: oklch(0.995 0.001 255);
       --st-passing: oklch(0.600 0.120 155);
       --st-passing-ink: oklch(0.470 0.130 152);
@@ -31,8 +32,13 @@
       --st-specified-ink: oklch(0.490 0.110 248);
       --st-declared: oklch(0.655 0.020 255);
       --st-declared-ink: oklch(0.500 0.018 258);
+      --st-unknown: oklch(0.820 0.010 255);
       --cat-outcome: oklch(0.560 0.110 80);
       --cat-outcome-w: oklch(0.950 0.045 85);
+      --cat-adr: oklch(0.520 0.130 300);
+      --cat-adr-w: oklch(0.950 0.040 300);
+      --cat-pdr: oklch(0.500 0.090 195);
+      --cat-pdr-w: oklch(0.950 0.035 195);
       --shadow-sm: 0 1px 2px oklch(0.5 0.02 255/0.08);
       --font-sans: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
       --font-display: "Newsreader", Georgia, serif;
@@ -55,6 +61,7 @@
       --accent: oklch(0.680 0.150 250);
       --accent-deep: oklch(0.700 0.100 250);
       --accent-wash: oklch(0.300 0.060 250);
+      --accent-line: oklch(0.460 0.085 250);
       --on-accent: oklch(0.115 0.008 255);
       --st-passing: oklch(0.720 0.150 155);
       --st-passing-ink: oklch(0.720 0.150 155);
@@ -64,8 +71,13 @@
       --st-specified-ink: oklch(0.700 0.130 245);
       --st-declared: oklch(0.640 0.020 255);
       --st-declared-ink: oklch(0.640 0.020 255);
+      --st-unknown: oklch(0.420 0.010 255);
       --cat-outcome: oklch(0.560 0.110 80);
       --cat-outcome-w: oklch(0.300 0.055 80);
+      --cat-adr: oklch(0.720 0.120 300);
+      --cat-adr-w: oklch(0.300 0.060 300);
+      --cat-pdr: oklch(0.700 0.100 195);
+      --cat-pdr-w: oklch(0.300 0.050 195);
       --shadow-sm: 0 1px 2px oklch(0 0 0/0.4);
     }
     * {
@@ -147,6 +159,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius-sm);
       padding: 0.25rem 0.7rem;
+      box-shadow: var(--shadow-sm);
     }
     .layout {
       display: grid;
@@ -255,6 +268,7 @@
     }
     .q.current {
       border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
     }
     .q.settled {
       opacity: 0.65;
@@ -305,44 +319,6 @@
       border-radius: 999px;
       flex: none;
     }
-    .idx {
-      color: var(--ink-3);
-      font-size: var(--text-sm);
-      font-variant-numeric: tabular-nums;
-      flex: none;
-      min-width: 1.4rem;
-      text-align: right;
-    }
-    .nm {
-      color: var(--ink);
-      flex: 1;
-      padding: 0.1rem 0.25rem;
-      border-radius: 4px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .nm:focus {
-      outline: 1px solid var(--accent);
-      background: var(--surface);
-      white-space: normal;
-    }
-    .chip {
-      font-size: var(--text-xs);
-      padding: 0.05rem 0.45rem;
-      border-radius: 999px;
-      flex: none;
-      border: 1px solid transparent;
-    }
-    .chip.enabler {
-      background: var(--sunken);
-      color: var(--ink-2);
-      border-color: var(--line);
-    }
-    .chip.outcome {
-      background: var(--cat-outcome-w);
-      color: var(--cat-outcome);
-    }
     .row .act {
       background: none;
       border: none;
@@ -379,6 +355,77 @@
     ul.tree-list.root-drop {
       outline: 1px dashed var(--accent);
       outline-offset: -4px;
+    }
+    .kind {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    .kind.enabler {
+      color: var(--ink-2);
+      background: var(--sunken);
+      border-color: var(--line);
+    }
+    .kind.outcome {
+      color: var(--cat-outcome);
+      background: var(--cat-outcome-w);
+    }
+    .kind.adr {
+      color: var(--cat-adr);
+      background: var(--cat-adr-w);
+    }
+    .kind.pdr {
+      color: var(--cat-pdr);
+      background: var(--cat-pdr-w);
+    }
+    .state-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+      background: var(--st-unknown);
+      border: 1px solid oklch(0.5 0.02 255 / 0.25);
+    }
+    .state-dot.declared {
+      background: var(--st-declared);
+    }
+    .state-dot.specified {
+      background: var(--st-specified);
+    }
+    .state-dot.passing {
+      background: var(--st-passing);
+    }
+    .state-dot.failing {
+      background: var(--st-failing);
+    }
+    .idx {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--ink-3);
+      flex: 0 0 auto;
+    }
+    .title {
+      flex: 1;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .title:focus {
+      outline: 1px solid var(--accent);
+      background: var(--surface);
+    }
+    .row button {
+      background: none;
+      border: none;
+      color: var(--ink-3);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 5px;
+    }
+    .row button:hover {
+      color: var(--accent-deep);
     }
     .toolbar {
       padding: 0.7rem 1rem;
@@ -563,37 +610,40 @@
       row.className = "row";
       row.style.paddingLeft = (1 + depth * 1.15) + "rem";
 
+      // Derived state (declared/specified/passing/failing) from the SPX
+      // projection; nodes created in-session carry none and render neutral.
       const dot = document.createElement("span");
-      dot.className = "dot";
-      const st = STATES.includes(node.state) ? node.state : "declared";
-      dot.style.background = "var(--st-" + st + ")";
-      dot.title = st;
+      const st = STATES.includes(node.state) ? node.state : "";
+      dot.className = "state-dot" + (st ? " " + st : "");
+      dot.title = st || "no state";
       row.appendChild(dot);
 
-      const idx = document.createElement("span");
-      idx.className = "idx";
-      idx.textContent = node.order != null ? node.order : "";
-      row.appendChild(idx);
+      const kind = document.createElement("span");
+      kind.className = "kind " + node.kind;
+      kind.textContent = node.kind;
+      row.appendChild(kind);
 
-      const nm = document.createElement("span");
-      nm.className = "nm";
-      nm.contentEditable = "true";
-      nm.textContent = node.title;
-      nm.onblur = () => {
-        if (nm.textContent !== node.title) renameNode(node.id, nm.textContent);
+      if (node.order != null) {
+        const idx = document.createElement("span");
+        idx.className = "idx";
+        idx.textContent = node.order;
+        row.appendChild(idx);
+      }
+
+      const title = document.createElement("span");
+      title.className = "title";
+      title.contentEditable = "true";
+      title.textContent = node.title;
+      title.onblur = () => {
+        if (title.textContent !== node.title) renameNode(node.id, title.textContent);
       };
-      nm.onkeydown = (e) => {
+      title.onkeydown = (e) => {
         if (e.key === "Enter") {
           e.preventDefault();
-          nm.blur();
+          title.blur();
         }
       };
-      row.appendChild(nm);
-
-      const chip = document.createElement("span");
-      chip.className = "chip " + node.kind;
-      chip.textContent = node.kind;
-      row.appendChild(chip);
+      row.appendChild(title);
 
       const addBtn = document.createElement("button");
       addBtn.className = "act";
@@ -652,8 +702,7 @@
 
     function countStates(nodes, acc) {
       (nodes || []).forEach((n) => {
-        const st = STATES.includes(n.state) ? n.state : "declared";
-        acc[st] = (acc[st] || 0) + 1;
+        if (STATES.includes(n.state)) acc[n.state] = (acc[n.state] || 0) + 1;
         countStates(n.children, acc);
       });
       return acc;

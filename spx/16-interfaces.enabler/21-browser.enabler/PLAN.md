@@ -34,7 +34,8 @@ what the operator wants, and the path from prototype to shipped plugin.
 - **Render from the SPX projection.** `spx spec status --format json` →
   a thin adapter → the surface. The interface never re-derives the tree
   (`13-rendering.adr.md`). The projection carries `{id, kind, order, slug,
-  state, children}` per node plus a `decisions` array.
+  state, children}` per node plus a `decisions` array; the prototype tree pane
+  renders state, category, and index from that adapter.
 - **The state core is solid.** `state.py` (monotonic `rev`, append-only journal,
   single-writer conflict reconciliation, tree integrity) carries 28 passing
   tests and absorbed the real 16-node tree, live edits, and chat without change.
@@ -88,7 +89,10 @@ Richer product-building surfaces are Levenate's concern, not this node's.
 3. **The detail pane.** `levenate-tree.html`'s right side (breadcrumb, opener,
    assertions grouped by lane with `[test]`/`[eval]`/`[audit]` chips) needs node
    detail beyond the structural projection — a per-node detail projection or a
-   node-detail fetch over the same transport.
+   node-detail fetch over the same transport. The current SPX projection exposes
+   structure, derived state, category, and index, but not openers, assertions, or
+   evidence links; enrich the CLI projection rather than adding a heavy plugin
+   parser.
 4. **Notes and text-selection.** Add the `commentable` pattern (inline notes on
    any node/assertion) and text selection. Consider the per-node `context/`
    folder Levenate proposes (research/notes, distinct from spec, decisions, and

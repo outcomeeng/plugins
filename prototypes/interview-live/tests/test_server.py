@@ -51,7 +51,8 @@ class ServerTestBase(unittest.TestCase):
             with urllib.request.urlopen(self.base + path, timeout=timeout) as r:
                 return r.status, json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
-            return e.code, json.loads(e.read().decode())
+            with e:
+                return e.code, json.loads(e.read().decode())
 
     def post(self, path: str, body: dict) -> tuple[int, dict]:
         req = urllib.request.Request(
@@ -64,7 +65,8 @@ class ServerTestBase(unittest.TestCase):
             with urllib.request.urlopen(req, timeout=5) as r:
                 return r.status, json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
-            return e.code, json.loads(e.read().decode())
+            with e:
+                return e.code, json.loads(e.read().decode())
 
 
 class AuthAndState(ServerTestBase):
