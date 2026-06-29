@@ -21,7 +21,6 @@ Each finding uses exactly one concern:
 | **security**     | The change exposes data, weakens authorization, broadens unsafe tool access, or enables an unsafe external action.                    |
 | **performance**  | The change adds avoidable runtime, resource, or process cost that affects users, CI, or agent execution.                              |
 | **evidence**     | The change lacks required tests, evals, audits, validation, or proof that the declared behavior holds.                                |
-| **standards**    | The change violates repository, skill, prompt, language, formatting, portability, or process standards.                               |
 | **architecture** | The change puts behavior in the wrong layer, duplicates ownership, weakens boundaries, or creates an API shape that will not compose. |
 
 ## Finding shape
