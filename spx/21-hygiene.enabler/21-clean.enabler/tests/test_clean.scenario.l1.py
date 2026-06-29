@@ -64,10 +64,15 @@ def test_git_dry_run_preserves_active_environment(tmp_path: Path) -> None:
     assert f"Would remove {IGNORED_PYTHON_ENV_DIR}/" not in result.stdout
 
 
-def test_clean_propagates_runner_exit_code() -> None:
+def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:
+    repo = create_clean_repo(tmp_path)
     runner = RecordingRunner(exit_code=3)
 
-    exit_code = clean(runner=runner)
+    exit_code = clean(
+        runner=runner,
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
 
     assert exit_code == 3
 
