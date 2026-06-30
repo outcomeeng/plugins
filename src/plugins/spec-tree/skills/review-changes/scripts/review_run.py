@@ -388,8 +388,8 @@ def _start(args: argparse.Namespace) -> int:
     scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
     try:
         summary = compute_diff.write_bundle(
-            base_ref=compute_diff._resolve_base_ref(),
-            head_ref=compute_diff._resolve_head_ref(),
+            base_ref=compute_diff.resolve_base_ref(),
+            head_ref=compute_diff.resolve_head_ref(),
             bundle_dir=scratch_dir,
         )
         manifest_path = pathlib.Path(str(summary["manifest_path"]))

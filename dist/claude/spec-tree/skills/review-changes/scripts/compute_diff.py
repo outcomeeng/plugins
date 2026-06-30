@@ -94,10 +94,10 @@ def _load_changeset_scope() -> ModuleType:
     return module
 
 
-def _resolve_head_ref() -> str:
+def resolve_head_ref() -> str:
     """Resolve head_ref via env -> literal ``HEAD``.
 
-    Symmetric with ``_resolve_base_ref`` but with a literal default so
+    Symmetric with ``resolve_base_ref`` but with a literal default so
     the common "diff against current HEAD" case requires no
     configuration.
     """
@@ -107,7 +107,7 @@ def _resolve_head_ref() -> str:
     return DEFAULT_HEAD_REF
 
 
-def _resolve_base_ref() -> str:
+def resolve_base_ref() -> str:
     """Resolve base_ref via env -> git, aborting when no source yields one.
 
     The error message names every source so the operator knows which to
@@ -362,12 +362,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        base_ref = _resolve_base_ref()
+        base_ref = resolve_base_ref()
     except RuntimeError as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
 
-    head_ref = _resolve_head_ref()
+    head_ref = resolve_head_ref()
 
     try:
         if args.bundle_dir is not None:
