@@ -43,8 +43,6 @@ jobs:
           SPX_VERIFY_BASE_REF: ${{ github.event.pull_request.base.sha || 'origin/main' }}
           SPX_VERIFY_HEAD_REF: ${{ github.event.pull_request.head.sha || github.sha }}
           REVIEW_CHANGES_BRANCH_NAME: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          SPX_VERIFY_TARGET_KIND: pull-request
-          SPX_VERIFY_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
         run: |
           set -euo pipefail
           journal_branch="$(
@@ -78,6 +76,11 @@ jobs:
           run_token="$(sed -n '/[^[:space:]]/p' review-run-token.txt | tail -n 1)"
           if [ -z "${run_token}" ]; then
             echo "::error::review-changes did not return a run token"
+            exit 1
+          fi
+          if ! printf '%s\n' "${run_token}" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{3}-[0-9a-f]+$'; then
+            echo "::error::review-changes returned an invalid run token"
+            cat review-run-token.txt
             exit 1
           fi
 
