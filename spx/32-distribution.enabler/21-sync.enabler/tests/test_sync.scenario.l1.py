@@ -168,9 +168,9 @@ def test_sync_declares_codex_local_refresh_step() -> None:
 
 
 def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
-    """A Codex CLI read during install validation can rewrite the cache from stale
-    runtime state; the final refresh reconciles that post-validation drift before
-    installed-skill checks run.
+    """Codex CLI reads during install validation and installed-skill checks can
+    rewrite the cache from stale runtime state; the final refresh reconciles that
+    drift after both read phases.
     """
     step_names = tuple(step.name for step in STEPS)
 
@@ -178,8 +178,8 @@ def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
     assert step_names.index(INSTALL_VALIDATE_STEP) < step_names.index(
         CODEX_FINAL_REFRESH_STEP
     )
-    assert step_names.index(CODEX_FINAL_REFRESH_STEP) < step_names.index(
-        INSTALLED_CHECK_STEP
+    assert step_names.index(INSTALLED_CHECK_STEP) < step_names.index(
+        CODEX_FINAL_REFRESH_STEP
     )
     assert (
         "--strict-current-cache"
