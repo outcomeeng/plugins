@@ -19,7 +19,9 @@ directory would resolve a version to stale content. The preservation set is
 derived from the versions present in the cache and the published git history,
 not from a hardcoded list. A single bypassed recipe invocation has no permanent
 effect -- the next invocation reconstructs the symlink set from the same
-authoritative source.
+authoritative source. Callers that run this after their final install validation
+enable strict current-cache mode so an incomplete final current entry makes the
+process fail instead of relying on a later validator.
 
 Usage::
 
@@ -167,6 +169,7 @@ class CacheRefreshResult:
     linked_versions: tuple[Path, ...]
     pruned_links: tuple[Path, ...]
     pruned_plugins: tuple[str, ...]
+    missing_current_cache_entries: tuple[str, ...]
     refresh_returncode: int
 
 
@@ -288,6 +291,7 @@ def refresh_installed_plugins(
     dry_run: bool = False,
     history: PluginHistory | None = None,
     installed: InstalledPlugins | None = None,
+    strict_current_cache: bool = False,
 ) -> CacheRefreshResult:
     """Refresh installed local Codex plugins and reconcile the cache against history.
 
@@ -361,16 +365,21 @@ def refresh_installed_plugins(
 
     linked_versions: list[Path] = []
     pruned_links: list[Path] = []
+    missing_current_cache_entries: list[str] = []
 
     for plugin in sorted(wanted):
-        plugin_dir = marketplace_dir / plugin
-        if not plugin_dir.is_dir():
-            # Working-tree plugin absent from the Codex cache: nothing to reconcile.
-            continue
-        in_window = resolved_history.published_versions(plugin)
         current_version = installed_versions.get(
             plugin
         ) or resolved_history.current_version(plugin)
+        plugin_dir = marketplace_dir / plugin
+        if not plugin_dir.is_dir():
+            # Working-tree plugin absent from the Codex cache: nothing to reconcile.
+            if strict_current_cache:
+                missing_current_cache_entries.append(
+                    _format_missing_current(plugin, current_version)
+                )
+            continue
+        in_window = resolved_history.published_versions(plugin)
         current_real = _current_real_version_dir(plugin_dir, current_version)
         if current_real is None:
             # The refresh completed without materializing the current
@@ -379,6 +388,10 @@ def refresh_installed_plugins(
             # every non-target real directory for the plugin rather than let any
             # version resolve to non-current content. validate_install reports the
             # absent or incomplete current version.
+            if strict_current_cache:
+                missing_current_cache_entries.append(
+                    _format_missing_current(plugin, current_version)
+                )
             pruned_links.extend(_prune_all_symlinks(plugin_dir, dry_run=dry_run))
             pruned_links.extend(
                 _prune_non_target_real_dirs(
@@ -413,8 +426,14 @@ def refresh_installed_plugins(
         linked_versions=tuple(linked_versions),
         pruned_links=tuple(pruned_links),
         pruned_plugins=tuple(pruned_plugins),
+        missing_current_cache_entries=tuple(missing_current_cache_entries),
         refresh_returncode=refresh_returncode,
     )
+
+
+def _format_missing_current(plugin: str, current_version: str | None) -> str:
+    version = current_version if current_version is not None else "<unknown>"
+    return f"{plugin}@{version}"
 
 
 def _prune_orphan_plugins(
@@ -597,6 +616,14 @@ def main(
         action="store_true",
         help="Report planned changes without refreshing plugins or mutating cache",
     )
+    parser.add_argument(
+        "--strict-current-cache",
+        action="store_true",
+        help=(
+            "Fail when a refreshed plugin's Codex-reported current version is "
+            "not present as a complete real cache directory after reconciliation"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -620,6 +647,7 @@ def main(
             dry_run=args.dry_run,
             history=history,
             installed=CodexCliInstalled(),
+            strict_current_cache=args.strict_current_cache,
         )
     except InstalledSetError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -631,6 +659,14 @@ def main(
             file=sys.stderr,
         )
         return result.refresh_returncode
+    if args.strict_current_cache and result.missing_current_cache_entries:
+        for entry in result.missing_current_cache_entries:
+            print(
+                "error: Codex local refresh did not materialize complete current "
+                f"cache entry {entry}",
+                file=sys.stderr,
+            )
+        return 1
 
     print(
         "Codex local refresh: "

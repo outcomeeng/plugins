@@ -35,6 +35,10 @@ from outcomeeng_testing.harnesses.sync import (
 
 ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
 STEP_ARGVS: tuple[tuple[str, ...], ...] = tuple(step.argv for step in STEPS)
+CODEX_LOCAL_REFRESH_STEP = "codex_local_refresh"
+CODEX_FINAL_REFRESH_STEP = "codex_local_refresh_final"
+INSTALL_VALIDATE_STEP = "install_validate"
+INSTALLED_CHECK_STEP = "installed_check"
 
 
 def test_default_branch_worktree_is_selected_from_porcelain_listing() -> None:
@@ -159,8 +163,28 @@ def test_distribution_changes_invoke_all_steps_in_declared_order() -> None:
 def test_sync_declares_codex_local_refresh_step() -> None:
     step_names = tuple(step.name for step in STEPS)
 
-    assert "codex_local_refresh" in step_names
+    assert CODEX_LOCAL_REFRESH_STEP in step_names
     assert "codex_cache_preserve" not in step_names
+
+
+def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
+    """Codex CLI reads during install validation and installed-skill checks can
+    rewrite the cache from stale runtime state; the final refresh reconciles that
+    drift after both read phases.
+    """
+    step_names = tuple(step.name for step in STEPS)
+
+    assert CODEX_FINAL_REFRESH_STEP in step_names
+    assert step_names.index(INSTALL_VALIDATE_STEP) < step_names.index(
+        CODEX_FINAL_REFRESH_STEP
+    )
+    assert step_names.index(INSTALLED_CHECK_STEP) < step_names.index(
+        CODEX_FINAL_REFRESH_STEP
+    )
+    assert (
+        "--strict-current-cache"
+        in STEPS[step_names.index(CODEX_FINAL_REFRESH_STEP)].argv
+    )
 
 
 def test_absent_base_ref_runs_all_steps_without_consulting_change_probe() -> None:
