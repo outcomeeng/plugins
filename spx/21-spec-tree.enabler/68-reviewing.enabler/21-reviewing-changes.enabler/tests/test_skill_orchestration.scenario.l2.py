@@ -33,9 +33,11 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RUN_SCRIPT,
     make_finding_dict,
     make_review_result_dict,
+    review_run_journal_env_keys,
     run_compute_diff_in_process,
     run_journal_emit_in_process,
     run_script,
+    write_fake_spx,
 )
 
 
@@ -98,58 +100,9 @@ def _make_env(cwd: pathlib.Path) -> dict[str, str]:
 
 NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
-
-
-def _write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
-    script = bin_dir / "spx"
-    script.write_text(
-        """#!/usr/bin/env python3
-import json
-import os
-import pathlib
-import sys
-
-path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
-if path.is_file():
-    state = json.loads(path.read_text(encoding="utf-8"))
-else:
-    state = {"commands": [], "events": [], "sealed": False}
-
-args = sys.argv[1:]
-if len(args) < 2 or args[0] != "journal":
-    sys.stderr.write("expected spx journal command\\n")
-    raise SystemExit(2)
-
-command = args[1]
-state["commands"].append(command)
-if command == "open":
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"runToken": "run-001"}))
-elif command == "append":
-    if state["sealed"]:
-        sys.stderr.write("run is sealed\\n")
-        raise SystemExit(3)
-    state["events"].append(json.load(sys.stdin))
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"ok": True}))
-elif command == "read":
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
-elif command == "seal":
-    state["sealed"] = True
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"ok": True}))
-elif command == "render":
-    path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
-else:
-    sys.stderr.write(f"unknown command {command}\\n")
-    raise SystemExit(2)
-""",
-        encoding="utf-8",
-    )
-    script.chmod(0o755)
-    return script
+ENV_BACKEND, ENV_BRANCH, ENV_TARGET_KIND, ENV_PULL_REQUEST_NUMBER = (
+    review_run_journal_env_keys()
+)
 
 
 def _stream_review_prefix(
@@ -302,8 +255,33 @@ class TestSkillOrchestrationChain:
 class TestReviewRunnerBoundary:
     """The public runner seals a journal run and returns only the run token."""
 
-    def test_runner_streams_to_spx_journal_and_returns_run_token(
-        self, tmp_path: pathlib.Path
+    @pytest.mark.parametrize(
+        "journal_selector",
+        [
+            pytest.param({}, id="default-current-branch"),
+            pytest.param(
+                {ENV_BRANCH: "feature/x"},
+                id="explicit-branch-or-range-head",
+            ),
+            pytest.param(
+                {
+                    ENV_BACKEND: "local",
+                    ENV_BRANCH: "feature/x",
+                },
+                id="backend-override",
+            ),
+            pytest.param(
+                {
+                    ENV_BRANCH: "feature/x",
+                    ENV_TARGET_KIND: "pull-request",
+                    ENV_PULL_REQUEST_NUMBER: "384",
+                },
+                id="pull-request",
+            ),
+        ],
+    )
+    def test_runner_preserves_journal_namespace_across_subcommands(
+        self, tmp_path: pathlib.Path, journal_selector: dict[str, str]
     ) -> None:
         repo = tmp_path / "repo"
         repo.mkdir()
@@ -311,12 +289,18 @@ class TestReviewRunnerBoundary:
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         journal_path = tmp_path / "journal.json"
-        _write_fake_spx(bin_dir, journal_path)
+        write_fake_spx(bin_dir, journal_path)
 
         env = _make_env(cwd=repo)
         env["SPX_VERIFY_BASE_REF"] = base_ref
         env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
         env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
+        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+        env.update(journal_selector)
+
+        later_env = env.copy()
+        for key in journal_selector:
+            later_env.pop(key, None)
 
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
@@ -328,7 +312,7 @@ class TestReviewRunnerBoundary:
             "--state",
             start_payload["statePath"],
             "README.md",
-            env=env,
+            env=later_env,
             cwd=repo,
         )
         assert scoped.returncode == 0, scoped.stderr
@@ -340,7 +324,7 @@ class TestReviewRunnerBoundary:
             "--state",
             start_payload["statePath"],
             stdin=json.dumps(finding),
-            env=env,
+            env=later_env,
             cwd=repo,
         )
         assert appended.returncode == 0, appended.stderr
@@ -350,7 +334,7 @@ class TestReviewRunnerBoundary:
             "finish",
             "--state",
             start_payload["statePath"],
-            env=env,
+            env=later_env,
             cwd=repo,
         )
         assert finished.returncode == 0, finished.stderr
@@ -377,6 +361,15 @@ class TestReviewRunnerBoundary:
             "com.outcomeeng.spx.journal.run.completed",
         ]
         assert journal["events"][2]["data"]["id"] == finding["id"]
+        expected_namespace = {
+            ENV_BACKEND: journal_selector.get(ENV_BACKEND, ""),
+            ENV_BRANCH: journal_selector.get(ENV_BRANCH, "feature/x"),
+            ENV_TARGET_KIND: journal_selector.get(ENV_TARGET_KIND, "branch"),
+            ENV_PULL_REQUEST_NUMBER: journal_selector.get(ENV_PULL_REQUEST_NUMBER, ""),
+        }
+        assert journal["namespace"] == {
+            key: expected_namespace[key] for key in review_run_journal_env_keys()
+        }
         terminal_event = journal["events"][-1]
         assert terminal_event["data"]["status"] == "approved"
         assert terminal_event["data"]["review"] == {
