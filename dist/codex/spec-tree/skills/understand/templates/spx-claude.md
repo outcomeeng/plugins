@@ -260,6 +260,7 @@ Use this shape for decision audits:
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
 | "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
 | "Diagnose the spx environment"             | `/diagnose`      | —                       |
+| "File a follow-up in a dependency queue"   | `/issue`         | —                       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 

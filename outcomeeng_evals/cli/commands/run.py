@@ -219,7 +219,7 @@ def _history_row(
 def _git_sha() -> str:
     try:
         completed = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             check=False,

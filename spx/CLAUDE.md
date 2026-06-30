@@ -1,5 +1,5 @@
 ---
-template_version: "0.21.4"
+template_version: "0.21.5"
 template_source: spec-tree
 languages: [python]
 ---
@@ -79,7 +79,7 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; reviewer agents return findings for the main conversation to validate and apply through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
+Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
 | User Says...                               | Skill            | Agent                   |
 | ------------------------------------------ | ---------------- | ----------------------- |
@@ -96,6 +96,7 @@ Skills run in the main conversation. Agents preload the skill and run autonomous
 | "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
 | "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
 | "Diagnose the spx environment"             | `/diagnose`      | —                       |
+| "File a follow-up in a dependency queue"   | `/issue`         | —                       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 
