@@ -84,7 +84,6 @@ DEFAULT_HEAD_REF = "HEAD"
 DEFAULT_TARGET = "working-diff"
 PARTICIPANTS = ("review",)
 REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
-REVIEW_OVERRIDE = pathlib.Path("REVIEW.md")
 MANIFEST_SCHEMA_VERSION = compute_diff.MANIFEST_SCHEMA_VERSION
 
 
@@ -288,18 +287,6 @@ def _file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _optional_file_config(
-    root: pathlib.Path, relative_path: pathlib.Path
-) -> dict[str, str] | None:
-    path = root / relative_path
-    if not path.is_file():
-        return None
-    return {
-        "path": str(relative_path),
-        "sha256": _file_digest(path),
-    }
-
-
 def _resolve_repo_root(repo: pathlib.Path) -> pathlib.Path:
     # Fixed git command; repo is caller-controlled.
     result = subprocess.run(  # noqa: S603,S607
@@ -319,7 +306,7 @@ def review_config_digest(
 ) -> str:
     root = skill_dir or _HERE.parent
     prompt_path = root / REVIEW_PROMPT
-    active_repo_root = repo_root or pathlib.Path.cwd()
+    del repo_root
     return _digest(
         {
             "skill": "review-changes",
@@ -329,9 +316,6 @@ def review_config_digest(
                 "path": str(REVIEW_PROMPT),
                 "sha256": _file_digest(prompt_path),
             },
-            "repositoryReviewPolicy": _optional_file_config(
-                active_repo_root, REVIEW_OVERRIDE
-            ),
         }
     )
 

@@ -26,7 +26,6 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _SKILL_DIR = _HERE.parent
 _SKILLS_DIR = _SKILL_DIR.parent
 _REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
-_REVIEW_OVERRIDE = pathlib.Path("REVIEW.md")
 _STATE_FILENAME = "state.json"
 _REVIEW_TYPE = "review"
 _DEFAULT_TARGET = "working-diff"
@@ -87,27 +86,7 @@ def _file_digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _optional_file_config(
-    root: pathlib.Path, relative_path: pathlib.Path
-) -> dict[str, str] | None:
-    path = root / relative_path
-    if not path.is_file():
-        return None
-    return {"path": str(relative_path), "sha256": _file_digest(path)}
-
-
-def _repo_root(repo: pathlib.Path) -> pathlib.Path:
-    result = subprocess.run(  # noqa: S603,S607
-        ["git", "rev-parse", "--show-toplevel"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return pathlib.Path(result.stdout.strip()).resolve()
-
-
-def _review_config_digest(repo_root: pathlib.Path) -> str:
+def _review_config_digest() -> str:
     prompt_path = _SKILL_DIR / _REVIEW_PROMPT
     return _digest(
         {
@@ -118,9 +97,6 @@ def _review_config_digest(repo_root: pathlib.Path) -> str:
                 "path": str(_REVIEW_PROMPT),
                 "sha256": _file_digest(prompt_path),
             },
-            "repositoryReviewPolicy": _optional_file_config(
-                repo_root, _REVIEW_OVERRIDE
-            ),
         }
     )
 
@@ -229,7 +205,6 @@ def _metadata_from_manifest(
     *, manifest_path: pathlib.Path, started_at: str, target: str
 ) -> dict[str, Any]:
     repo = pathlib.Path.cwd()
-    root = _repo_root(repo)
     manifest = _read_json_file(manifest_path, name="review manifest")
     base_ref = _require_manifest_str(manifest, "base_ref")
     head_ref = _require_manifest_str(manifest, "head_ref")
@@ -252,7 +227,7 @@ def _metadata_from_manifest(
         jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
         jp.RUN_STATE_BASE_REF: base_ref,
         jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
-        jp.RUN_STATE_CONFIG_DIGEST: _review_config_digest(root),
+        jp.RUN_STATE_CONFIG_DIGEST: _review_config_digest(),
         jp.RUN_STATE_PARTICIPANTS: list(_PARTICIPANTS),
         jp.RUN_STATE_SCOPE: scope,
         jp.RUN_STATE_STARTED_AT: started_at,

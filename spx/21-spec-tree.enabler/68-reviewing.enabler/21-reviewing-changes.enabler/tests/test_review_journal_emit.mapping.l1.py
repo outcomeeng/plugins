@@ -239,7 +239,7 @@ def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> Non
     assert je.review_config_digest(first) != je.review_config_digest(second)
 
 
-def test_config_digest_changes_with_root_review_policy(
+def test_config_digest_ignores_root_review_policy(
     tmp_path: pathlib.Path,
 ) -> None:
     skill = tmp_path / "skill"
@@ -253,7 +253,7 @@ def test_config_digest_changes_with_root_review_policy(
 
     assert je.review_config_digest(
         skill, repo_root=first_repo
-    ) != je.review_config_digest(skill, repo_root=second_repo)
+    ) == je.review_config_digest(skill, repo_root=second_repo)
 
 
 def test_metadata_config_digest_uses_git_root_review_policy(
