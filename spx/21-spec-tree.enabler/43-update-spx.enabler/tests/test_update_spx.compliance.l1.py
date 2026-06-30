@@ -7,7 +7,7 @@ Rules in ``update-spx.md`` with deterministic test evidence:
 - NEVER: an update keeps an unmodeled hand-prose edit inside the managed section — a
   tampered section re-renders to the same output as a clean render from the same languages.
 - ALWAYS: generation writes managed sections into both root guide files.
-- ALWAYS: product guides render from runtime-specific templates under ``dist/``.
+- ALWAYS: product guides render from harness-specific templates under ``dist/``.
 - NEVER: guide generation writes output from a template with unresolved build macros.
 """
 
@@ -24,8 +24,8 @@ from outcomeeng_testing.harnesses.update_spx import (
     GUIDE_CLAUDE,
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
-    RUNTIME_CLAUDE,
-    RUNTIME_CODEX,
+    HARNESS_CLAUDE,
+    HARNESS_CODEX,
     ROOT_GUIDE_SHARED_BODY,
     SESSION_ARCHIVE_RESULT_INSTRUCTION,
     SESSION_MANAGEMENT_HEADING,
@@ -118,7 +118,7 @@ def _run_refresh_pr_step(repo_root: pathlib.Path, gh_log: pathlib.Path) -> str:
 def test_render_passes_brace_token_through_unchanged() -> None:
     module = load_update_spx_module()
     rendered = module.render(
-        build_template(VERSION), (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE
+        build_template(VERSION), (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE
     )
     assert ILLUSTRATION_TOKEN in rendered
 
@@ -126,15 +126,15 @@ def test_render_passes_brace_token_through_unchanged() -> None:
 def test_re_render_ignores_unmodeled_managed_section_edits() -> None:
     module = load_update_spx_module()
     template = build_template(VERSION)
-    section = module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
+    section = module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
 
     tampered = section + f"\n\n## Hand Section\n\n{JUNK_EDIT}\n"
     updated = module.render(
-        template, module.parse_languages(tampered), VERSION, RUNTIME_CLAUDE
+        template, module.parse_languages(tampered), VERSION, HARNESS_CLAUDE
     )
 
     assert JUNK_EDIT not in updated
-    assert updated == module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
+    assert updated == module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
 
 
 def test_generation_writes_both_root_guide_files(tmp_path: pathlib.Path) -> None:
@@ -156,10 +156,10 @@ def test_generation_writes_both_root_guide_files(tmp_path: pathlib.Path) -> None
 
     written = {
         name
-        for name in module.RUNTIME_GUIDE_FILENAMES.values()
+        for name in module.AGENT_HARNESS_GUIDE_FILENAMES.values()
         if (tmp_path / name).is_file()
     }
-    assert written == set(module.RUNTIME_GUIDE_FILENAMES.values())
+    assert written == set(module.AGENT_HARNESS_GUIDE_FILENAMES.values())
 
 
 def test_root_content_outside_managed_section_is_preserved(
@@ -192,39 +192,40 @@ def test_root_content_outside_managed_section_is_preserved(
         assert content.count(module.MANAGED_SECTION_END) == 1
 
 
-def test_guide_templates_are_loaded_from_runtime_specific_dist_outputs(
+def test_guide_templates_are_loaded_from_harness_specific_dist_outputs(
     tmp_path: pathlib.Path,
 ) -> None:
     module = load_update_spx_module()
     expected: dict[str, str] = {}
-    for runtime in module.RUNTIME_GUIDE_FILENAMES:
-        path = guide_diff.dist_template_path(runtime)
+    for harness in module.AGENT_HARNESS_GUIDE_FILENAMES:
+        path = guide_diff.dist_template_path(harness)
         assert (
             path
             == guide_diff.REPO_ROOT
             / DIST_DIR_NAME
-            / runtime
+            / harness
             / guide_diff.DIST_TEMPLATE_RELATIVE_PATH
         )
-        template = build_template(f"{VERSION}.{runtime}")
-        expected[runtime] = template
-        dist_path = guide_diff.dist_template_path(runtime, repo_root=tmp_path)
+        template = build_template(f"{VERSION}.{harness}")
+        expected[harness] = template
+        dist_path = guide_diff.dist_template_path(harness, repo_root=tmp_path)
         dist_path.parent.mkdir(parents=True, exist_ok=True)
         dist_path.write_text(template, encoding="utf-8")
 
-    assert guide_diff.load_runtime_templates(module, repo_root=tmp_path) == expected
+    assert guide_diff.load_harness_templates(module, repo_root=tmp_path) == expected
 
 
 def test_guide_render_rejects_unresolved_build_macro() -> None:
     module = load_update_spx_module()
-    runtime_templates = {
-        runtime: build_template(VERSION) for runtime in module.RUNTIME_GUIDE_FILENAMES
+    harness_templates = {
+        harness: build_template(VERSION)
+        for harness in module.AGENT_HARNESS_GUIDE_FILENAMES
     }
-    runtime_templates[RUNTIME_CODEX] += render_build_macro()
+    harness_templates[HARNESS_CODEX] += render_build_macro()
 
     with pytest.raises(guide_diff.UnresolvedGuideTemplateError):
-        guide_diff.render_guides_from_runtime_templates(
-            module, runtime_templates, (LANG_PRIMARY,)
+        guide_diff.render_guides_from_harness_templates(
+            module, harness_templates, (LANG_PRIMARY,)
         )
 
 
@@ -402,7 +403,7 @@ def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
 
     # Drift both managed sections by hand, then regenerate. Product-owned root content
     # outside the managed markers remains; drift inside the managed section is removed.
-    guides = [tmp_path / name for name in module.RUNTIME_GUIDE_FILENAMES.values()]
+    guides = [tmp_path / name for name in module.AGENT_HARNESS_GUIDE_FILENAMES.values()]
     for guide in guides:
         guide.write_text(
             guide.read_text().replace(
@@ -419,11 +420,11 @@ def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
 def test_no_rendered_guide_teaches_result_session_frontmatter() -> None:
     module = load_update_spx_module()
     template = read_canonical_spx_template()
-    # Render the canonical template for each runtime and assert the rendered
+    # Render the canonical template for each agent harness and assert the rendered
     # Session Management section carries no result-frontmatter instruction —
     # exercising the generator's output, not just the authored template text.
-    for runtime in (RUNTIME_CLAUDE, RUNTIME_CODEX):
-        rendered = module.render(template, (LANG_PRIMARY,), VERSION, runtime)
+    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
+        rendered = module.render(template, (LANG_PRIMARY,), VERSION, harness)
         section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
         assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
         assert SESSION_RESULT_FRONTMATTER_FIELD not in section

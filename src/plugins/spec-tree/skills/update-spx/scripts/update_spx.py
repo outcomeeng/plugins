@@ -1,18 +1,18 @@
 """Deterministic generator for a product's root Spec Tree guide sections.
 
-One repository is worked by both Claude Code and Codex at once, and each runtime retains
-its root instruction file across compaction: ``CLAUDE.md`` for Claude Code and
-``AGENTS.md`` for Codex. The Spec Tree guide is therefore a managed section in those root
-files, not generated files under ``spx/``. Both sections render from one canonical template:
-the body is shared, and the spans that differ by agent runtime are authored once as
-``<!-- runtime:NAME -->`` blocks rendered only into that runtime's section, mirroring the
-``<!-- lang:NAME -->`` language blocks. The only per-product variation inside the managed
-section is the enabled-language list.
+One repository is worked by both Claude Code and Codex at once, and each agent harness
+retains its root instruction file across compaction: ``CLAUDE.md`` for Claude Code and
+``AGENTS.md`` for Codex. The Spec Tree guide is therefore a managed section in those
+root files, not generated files under ``spx/``. Both sections render from one
+canonical template: the body is shared, and the spans that differ by agent harness
+are authored once as ``<!-- harness:NAME -->`` blocks rendered only into that
+harness's section, mirroring the ``<!-- lang:NAME -->`` language blocks. The only
+per-product variation inside the managed section is the enabled-language list.
 
 Generation is deterministic and needs no agent judgment: the enabled-language list is read
 from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version and
 language-set comparison, and the render is a pure string transformation. The parse,
-version-compare, language-filter, runtime-filter, and render functions take document strings
+version-compare, language-filter, harness-filter, and render functions take document strings
 and return document strings — no filesystem, environment, or subprocess access. The CLI edge
 reads the template, globs the test extensions, replaces symlinked root guides with regular
 files, removes obsolete ``spx/`` guide files, and writes both root files.
@@ -38,8 +38,8 @@ MANAGED_TEMPLATE_VERSION_PREFIX = "<!-- spec-tree-template-version:"
 MANAGED_TEMPLATE_SOURCE_PREFIX = "<!-- spec-tree-template-source:"
 MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 
-# Each agent runtime reads its own guide filename from the product root.
-RUNTIME_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+# Each agent harness reads its own guide filename from the product root.
+AGENT_HARNESS_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
 OBSOLETE_SPX_GUIDE_FILENAMES = ("CLAUDE.md", "AGENTS.md")
 OBSOLETE_SPX_DIR_NAME = "spx"
 
@@ -56,8 +56,8 @@ _LANG_BLOCK = re.compile(
     r"[ \t]*<!-- lang:(?P<lang>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /lang:(?P=lang) -->\n?",
     re.DOTALL,
 )
-_RUNTIME_BLOCK = re.compile(
-    r"[ \t]*<!-- runtime:(?P<runtime>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /runtime:(?P=runtime) -->\n?",
+_HARNESS_BLOCK = re.compile(
+    r"[ \t]*<!-- harness:(?P<harness>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /harness:(?P=harness) -->\n?",
     re.DOTALL,
 )
 _BLANK_RUN = re.compile(r"\n{3,}")
@@ -167,15 +167,15 @@ def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     return _LANG_BLOCK.sub(replace, body)
 
 
-def _filter_runtime(body: str, runtime: str) -> str:
-    """Keep each ``runtime:NAME`` block whose NAME is the target runtime; drop the rest."""
+def _filter_harness(body: str, harness: str) -> str:
+    """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
 
     def replace(match: re.Match[str]) -> str:
-        if match.group("runtime") == runtime:
+        if match.group("harness") == harness:
             return match.group("body") + "\n"
         return ""
 
-    return _RUNTIME_BLOCK.sub(replace, body)
+    return _HARNESS_BLOCK.sub(replace, body)
 
 
 def language_for_extension(extension: str) -> str | None:
@@ -201,12 +201,12 @@ def render(
     template_text: str,
     languages: tuple[str, ...],
     installed_version: str,
-    runtime: str,
+    harness: str,
 ) -> str:
-    """Render one runtime's managed section from the template and enabled languages.
+    """Render one agent harness's managed section from the template and enabled languages.
 
-    Language-conditional blocks render only for enabled languages and runtime-conditional
-    blocks only for ``runtime``; nothing else is substituted, so brace-delimited illustration
+    Language-conditional blocks render only for enabled languages and harness-conditional
+    blocks only for ``harness``; nothing else is substituted, so brace-delimited illustration
     tokens pass through unchanged. Metadata comments record the version, source, and language
     list so a later update reads the languages back from any position in a root guide file.
     """
@@ -218,7 +218,7 @@ def render(
     )
 
     body = _filter_languages(template_body, languages)
-    body = _filter_runtime(body, runtime)
+    body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
 
     metadata = "\n".join(
@@ -341,25 +341,25 @@ def _replace_path_with_text(path: pathlib.Path, text: str) -> None:
 
 
 def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
-    """Return root guide seed text for each runtime, copying a sole existing guide."""
+    """Return root guide seed text for each agent harness, copying a sole existing guide."""
     values = {
-        runtime: _read_text_if_present(_repo_child(repo_root, filename), repo_root)
-        for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
+        harness: _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+        for harness, filename in AGENT_HARNESS_GUIDE_FILENAMES.items()
     }
     fallback = next((text for text in values.values() if text is not None), "")
     return {
-        runtime: text if text is not None else fallback
-        for runtime, text in values.items()
+        harness: text if text is not None else fallback
+        for harness, text in values.items()
     }
 
 
 def write_root_guides(
-    repo_root: pathlib.Path, sections_by_runtime: Mapping[str, str]
+    repo_root: pathlib.Path, sections_by_harness: Mapping[str, str]
 ) -> None:
     """Insert managed sections into root guides, replacing symlinks with files."""
     seeds = _root_seed_documents(repo_root)
-    for runtime, filename in RUNTIME_GUIDE_FILENAMES.items():
-        output = upsert_managed_section(seeds[runtime], sections_by_runtime[runtime])
+    for harness, filename in AGENT_HARNESS_GUIDE_FILENAMES.items():
+        output = upsert_managed_section(seeds[harness], sections_by_harness[harness])
         _replace_path_with_text(_repo_child(repo_root, filename), output)
 
 
@@ -437,7 +437,7 @@ def main(argv: list[str] | None = None) -> int:
                     languages,
                     repo_root,
                 )
-                for filename in RUNTIME_GUIDE_FILENAMES.values()
+                for filename in AGENT_HARNESS_GUIDE_FILENAMES.values()
             }
         except CliInputError as exc:
             print(f"error: {exc}", file=sys.stderr)
@@ -454,8 +454,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     rendered = {
-        runtime: render(template_text, languages, installed, runtime)
-        for runtime in RUNTIME_GUIDE_FILENAMES
+        harness: render(template_text, languages, installed, harness)
+        for harness in AGENT_HARNESS_GUIDE_FILENAMES
     }
 
     if args.write and repo_root is not None:
@@ -466,8 +466,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {exc}", file=sys.stderr)
             return 2
     else:
-        for runtime, content in rendered.items():
-            sys.stdout.write(f"=== {RUNTIME_GUIDE_FILENAMES[runtime]} ===\n{content}")
+        for harness, content in rendered.items():
+            sys.stdout.write(
+                f"=== {AGENT_HARNESS_GUIDE_FILENAMES[harness]} ===\n{content}"
+            )
     return 0
 
 

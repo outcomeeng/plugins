@@ -7,7 +7,7 @@ This repository publishes two plugin surfaces from the same source tree:
 - `.claude-plugin` packages for Claude Code plugins, commands, and agents
 - `.codex-plugin` packages for Codex skill bundles
 
-`AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry runtime-specific managed Spec Tree sections.
+`AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Spec Tree sections.
 
 > `/bootstrap` interviews you about your product, then scaffolds a spec tree — the durable map that drives all implementation.
 

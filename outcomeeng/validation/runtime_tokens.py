@@ -100,7 +100,7 @@ _RAW_RUNTIME_TOKEN: Final[re.Pattern[str]] = compile_forbidden_pattern(_FORBIDDE
 # either a not-yet-converted plugin or shared fragment, or an authored file of the
 # guide-generation node, whose subject is the two guide files named CLAUDE.md and
 # AGENTS.md. That node names both literals as data, not as a reference a reader
-# resolves to its own runtime: the generator's RUNTIME_GUIDE_FILENAMES must hold
+# resolves to its own harness: the generator's AGENT_HARNESS_GUIDE_FILENAMES must hold
 # the literals when it runs from src (its tests) and dist alike, so it cannot
 # consume a build token, and its skill and agent describe generating both named
 # files. The canonical guide template the generator renders is the same case: it is

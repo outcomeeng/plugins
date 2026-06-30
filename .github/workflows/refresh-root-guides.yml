@@ -86,4 +86,4 @@ jobs:
             --base main \
             --head "$branch" \
             --title "Refresh root guide sections" \
-            --body "Regenerates root CLAUDE.md and AGENTS.md managed Spec Tree sections from the committed runtime templates."
+            --body "Regenerates root CLAUDE.md and AGENTS.md managed Spec Tree sections from the committed harness templates."

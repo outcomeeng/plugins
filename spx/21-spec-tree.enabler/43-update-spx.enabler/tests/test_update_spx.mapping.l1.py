@@ -13,7 +13,7 @@ import itertools
 import pytest
 
 from outcomeeng_testing.harnesses.update_spx import (
-    RUNTIME_CLAUDE,
+    HARNESS_CLAUDE,
     TEMPLATE_LANGUAGES,
     build_template,
     load_update_spx_module,
@@ -32,7 +32,7 @@ def _all_language_subsets() -> list[tuple[str, ...]]:
 @pytest.mark.parametrize("enabled", _all_language_subsets())
 def test_language_block_present_iff_enabled(enabled: tuple[str, ...]) -> None:
     module = load_update_spx_module()
-    rendered = module.render(build_template(VERSION), enabled, VERSION, RUNTIME_CLAUDE)
+    rendered = module.render(build_template(VERSION), enabled, VERSION, HARNESS_CLAUDE)
     for language in TEMPLATE_LANGUAGES:
         heading = f"### {language.capitalize()}"
         assert (heading in rendered) is (language in enabled)

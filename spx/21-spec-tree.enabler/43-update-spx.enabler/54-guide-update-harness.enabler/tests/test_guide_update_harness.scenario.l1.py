@@ -13,7 +13,7 @@ from outcomeeng_testing.harnesses.update_spx import (
 )
 
 
-def test_symlinked_runtime_guides_materialize_as_regular_files(
+def test_symlinked_harness_guides_materialize_as_regular_files(
     tmp_path: pathlib.Path,
 ) -> None:
     topology = root_guide_topology_symlinked()

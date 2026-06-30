@@ -143,7 +143,7 @@ class RuntimeTokenKind:
 # renders the current target's name from that kind's sub-registry. A capability
 # with no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
 # per-runtime conditional so the token is never evaluated for the missing runtime.
-# The `tool` kind is seeded from the Agent Runtime Guidance table in AGENTS.md; the
+# The `tool` kind is seeded from the Agent Harness Guidance table in AGENTS.md; the
 # `file` kind holds per-runtime filenames — the root agent guide a consumer reads
 # is `CLAUDE.md` under Claude Code and `AGENTS.md` under Codex. `field` and `term`
 # carry the rendering mechanism ahead of their first authored consumers. Enforcement

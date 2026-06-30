@@ -2,10 +2,10 @@
 
 The ``just build-guides`` recipe and the ``just guide-check`` gate run this module
 to enforce the render-model ADR's gate: regenerate the managed Spec Tree sections in
-root ``CLAUDE.md`` and ``AGENTS.md`` from the rendered runtime templates committed
+root ``CLAUDE.md`` and ``AGENTS.md`` from the rendered harness templates committed
 under ``dist/``, remove retired ``spx/`` guide files, then fail when any guide path
 drifts from its committed content. It is the guide analogue of ``dist-diff``: authored
-templates first become runtime-specific plugin output, then the root guide sections
+templates first become harness-specific plugin output, then the root guide sections
 render from that output.
 
 A guide absent from the index — a first run, or a worktree where the guides were
@@ -49,13 +49,13 @@ class GuideRenderError(RuntimeError):
 
 
 class UnresolvedGuideTemplateError(GuideRenderError):
-    """Raised when a rendered runtime template still contains build macros."""
+    """Raised when a rendered harness template still contains build macros."""
 
 
 class GuideModule(Protocol):
     """Subset of the shipped update-spx generator reused by the product gate."""
 
-    RUNTIME_GUIDE_FILENAMES: dict[str, str]
+    AGENT_HARNESS_GUIDE_FILENAMES: dict[str, str]
     OBSOLETE_SPX_GUIDE_FILENAMES: tuple[str, ...]
 
     def parse_template_version(self, text: str) -> str | None: ...
@@ -67,11 +67,11 @@ class GuideModule(Protocol):
         template_text: str,
         languages: tuple[str, ...],
         installed_version: str,
-        runtime: str,
+        harness: str,
     ) -> str: ...
 
     def write_root_guides(
-        self, repo_root: Path, sections_by_runtime: Mapping[str, str]
+        self, repo_root: Path, sections_by_harness: Mapping[str, str]
     ) -> None: ...
 
     def remove_obsolete_spx_guides(self, repo_root: Path) -> None: ...
@@ -104,7 +104,7 @@ def guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
 def root_guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
     """Return generated root guide paths."""
     guide_module = module or load_update_spx_module()
-    return tuple(guide_module.RUNTIME_GUIDE_FILENAMES.values())
+    return tuple(guide_module.AGENT_HARNESS_GUIDE_FILENAMES.values())
 
 
 def obsolete_spx_guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
@@ -113,20 +113,20 @@ def obsolete_spx_guide_paths(module: GuideModule | None = None) -> tuple[str, ..
     return tuple(f"spx/{name}" for name in guide_module.OBSOLETE_SPX_GUIDE_FILENAMES)
 
 
-def dist_template_path(runtime: str, *, repo_root: Path = REPO_ROOT) -> Path:
-    """Return the rendered runtime template path for one guide runtime."""
-    return repo_root / DIST_DIR_NAME / runtime / DIST_TEMPLATE_RELATIVE_PATH
+def dist_template_path(harness: str, *, repo_root: Path = REPO_ROOT) -> Path:
+    """Return the rendered harness template path for one guide harness."""
+    return repo_root / DIST_DIR_NAME / harness / DIST_TEMPLATE_RELATIVE_PATH
 
 
-def load_runtime_templates(
+def load_harness_templates(
     module: GuideModule | None = None, *, repo_root: Path = REPO_ROOT
 ) -> dict[str, str]:
-    """Read rendered runtime templates from ``dist/`` for every guide runtime."""
+    """Read rendered harness templates from ``dist/`` for every guide harness."""
     guide_module = module or load_update_spx_module()
     templates: dict[str, str] = {}
-    for runtime in guide_module.RUNTIME_GUIDE_FILENAMES:
-        path = dist_template_path(runtime, repo_root=repo_root)
-        templates[runtime] = path.read_text(encoding="utf-8")
+    for harness in guide_module.AGENT_HARNESS_GUIDE_FILENAMES:
+        path = dist_template_path(harness, repo_root=repo_root)
+        templates[harness] = path.read_text(encoding="utf-8")
     return templates
 
 
@@ -140,53 +140,53 @@ def assert_no_unresolved_build_macros(text: str, *, path: Path | str) -> None:
             )
 
 
-def render_guides_from_runtime_templates(
+def render_guides_from_harness_templates(
     module: GuideModule,
-    runtime_templates: Mapping[str, str],
+    harness_templates: Mapping[str, str],
     languages: tuple[str, ...],
     *,
     template_paths: Mapping[str, Path | str] | None = None,
 ) -> dict[str, str]:
-    """Render every product guide from its runtime-specific dist template."""
+    """Render every product guide from its harness-specific dist template."""
     versions: dict[str, str] = {}
-    for runtime, template_text in runtime_templates.items():
+    for harness, template_text in harness_templates.items():
         path = (
-            template_paths[runtime]
-            if template_paths is not None and runtime in template_paths
-            else runtime
+            template_paths[harness]
+            if template_paths is not None and harness in template_paths
+            else harness
         )
         assert_no_unresolved_build_macros(template_text, path=path)
         version = module.parse_template_version(template_text)
         if version is None:
             raise GuideRenderError(f"{path} has no template_version")
-        versions[runtime] = version
+        versions[harness] = version
 
     if len(set(versions.values())) != 1:
         details = ", ".join(
-            f"{runtime}={version}" for runtime, version in sorted(versions.items())
+            f"{harness}={version}" for harness, version in sorted(versions.items())
         )
         raise GuideRenderError(
-            f"runtime guide templates disagree on version: {details}"
+            f"harness guide templates disagree on version: {details}"
         )
 
     return {
-        runtime: module.render(
-            runtime_templates[runtime], languages, versions[runtime], runtime
+        harness: module.render(
+            harness_templates[harness], languages, versions[harness], harness
         )
-        for runtime in module.RUNTIME_GUIDE_FILENAMES
+        for harness in module.AGENT_HARNESS_GUIDE_FILENAMES
     }
 
 
 def regenerate_guides() -> None:
-    """Render both root guide files in place from committed runtime dist templates."""
+    """Render both root guide files in place from committed harness dist templates."""
     module = load_update_spx_module()
     spx_dir = REPO_ROOT / "spx"
-    templates = load_runtime_templates(module)
+    templates = load_harness_templates(module)
     paths = {
-        runtime: dist_template_path(runtime)
-        for runtime in module.RUNTIME_GUIDE_FILENAMES
+        harness: dist_template_path(harness)
+        for harness in module.AGENT_HARNESS_GUIDE_FILENAMES
     }
-    rendered = render_guides_from_runtime_templates(
+    rendered = render_guides_from_harness_templates(
         module,
         templates,
         module.detect_languages_from_tree(spx_dir),

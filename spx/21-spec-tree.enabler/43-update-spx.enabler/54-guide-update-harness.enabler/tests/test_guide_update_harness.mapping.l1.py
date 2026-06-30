@@ -54,7 +54,7 @@ from outcomeeng_testing.harnesses.update_spx import (
         ),
     ],
 )
-def test_root_guide_topology_maps_to_runtime_seed_bodies(
+def test_root_guide_topology_maps_to_harness_seed_bodies(
     tmp_path: pathlib.Path,
     topology: RootGuideTopology,
     expected: dict[str, str],

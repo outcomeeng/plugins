@@ -69,7 +69,7 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
-# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections from rendered runtime templates
+# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections from rendered harness templates
 build-guides:
     uv run python -m outcomeeng.distribution.guide_diff --write
 

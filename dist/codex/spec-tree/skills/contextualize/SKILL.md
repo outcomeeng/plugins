@@ -122,7 +122,7 @@ For each directory along the path from product root to the target node:
 # The spec file is {slug}.md (no type suffix, no numeric prefix)
 Read: spx/{path-to-dir}/{slug}.md
 
-# Read runtime guide in this directory if present
+# Read harness guide in this directory if present
 Read: spx/{path-to-dir}/AGENTS.md  (if exists)
 ```
 

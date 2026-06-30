@@ -12,13 +12,13 @@ from outcomeeng_testing.harnesses.update_spx import (
     LANG_PRIMARY,
     LANG_SECONDARY,
     NEW_SECTION,
-    RUNTIME_CLAUDE,
-    RUNTIME_CODEX,
+    HARNESS_CLAUDE,
+    HARNESS_CODEX,
     ROOT_GUIDE_SHARED_BODY,
     build_template,
     load_update_spx_module,
     root_guide_topology_symlinked,
-    runtime_line,
+    harness_line,
     write_spx_tree_with_tests,
     write_template,
 )
@@ -35,8 +35,8 @@ def _write_both_guides(
 ) -> None:
     """Render and write root CLAUDE.md and AGENTS.md with managed sections."""
     template = build_template(version)
-    for runtime, filename in module.RUNTIME_GUIDE_FILENAMES.items():
-        section = module.render(template, languages, version, runtime)
+    for harness, filename in module.AGENT_HARNESS_GUIDE_FILENAMES.items():
+        section = module.render(template, languages, version, harness)
         (repo_root / filename).write_text(
             module.upsert_managed_section("", section),
             encoding="utf-8",
@@ -46,33 +46,33 @@ def _write_both_guides(
 def test_scaffold_renders_only_enabled_language() -> None:
     module = load_update_spx_module()
     rendered = module.render(
-        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CLAUDE
+        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE
     )
     assert f"### {LANG_PRIMARY.capitalize()}" in rendered
     assert f"### {LANG_SECONDARY.capitalize()}" not in rendered
 
 
-def test_runtime_block_renders_only_for_its_runtime() -> None:
+def test_harness_block_renders_only_for_its_harness() -> None:
     module = load_update_spx_module()
     template = build_template(NEW_VERSION)
-    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CLAUDE)
-    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CODEX)
+    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE)
+    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CODEX)
 
-    assert RUNTIME_CLAUDE.upper() in claude
-    assert RUNTIME_CODEX.upper() not in claude
-    assert RUNTIME_CODEX.upper() in codex
-    assert RUNTIME_CLAUDE.upper() not in codex
+    assert HARNESS_CLAUDE.upper() in claude
+    assert HARNESS_CODEX.upper() not in claude
+    assert HARNESS_CODEX.upper() in codex
+    assert HARNESS_CLAUDE.upper() not in codex
 
 
-def test_both_sections_share_body_and_differ_only_in_runtime_spans() -> None:
+def test_both_sections_share_body_and_differ_only_in_harness_spans() -> None:
     module = load_update_spx_module()
     template = build_template(NEW_VERSION)
-    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CLAUDE)
-    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CODEX)
+    claude = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE)
+    codex = module.render(template, (LANG_PRIMARY,), NEW_VERSION, HARNESS_CODEX)
 
-    runtime_lines = {runtime_line(RUNTIME_CLAUDE), runtime_line(RUNTIME_CODEX)}
-    claude_shared = [line for line in claude.splitlines() if line not in runtime_lines]
-    codex_shared = [line for line in codex.splitlines() if line not in runtime_lines]
+    harness_lines = {harness_line(HARNESS_CLAUDE), harness_line(HARNESS_CODEX)}
+    claude_shared = [line for line in claude.splitlines() if line not in harness_lines]
+    codex_shared = [line for line in codex.splitlines() if line not in harness_lines]
     assert claude_shared == codex_shared
     assert claude != codex
 
@@ -82,15 +82,15 @@ def test_update_propagates_new_section_and_preserves_languages() -> None:
     guide = module.upsert_managed_section(
         ROOT_GUIDE_SHARED_BODY,
         module.render(
-            build_template(OLD_VERSION), (LANG_PRIMARY,), OLD_VERSION, RUNTIME_CLAUDE
+            build_template(OLD_VERSION), (LANG_PRIMARY,), OLD_VERSION, HARNESS_CLAUDE
         ),
     )
 
     new_template = build_template(NEW_VERSION, extra_section=True)
     languages = module.parse_languages(guide)
 
-    for runtime in (RUNTIME_CLAUDE, RUNTIME_CODEX):
-        updated = module.render(new_template, languages, NEW_VERSION, runtime)
+    for harness in (HARNESS_CLAUDE, HARNESS_CODEX):
+        updated = module.render(new_template, languages, NEW_VERSION, harness)
         assert f"## {NEW_SECTION}" in updated
         assert f"### {LANG_PRIMARY.capitalize()}" in updated
         assert f"### {LANG_SECONDARY.capitalize()}" not in updated
@@ -169,9 +169,9 @@ def test_cli_check_reports_absent_when_one_guide_is_missing(
 ) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, NEW_VERSION)
-    claude_name = module.RUNTIME_GUIDE_FILENAMES[RUNTIME_CLAUDE]
+    claude_name = module.AGENT_HARNESS_GUIDE_FILENAMES[HARNESS_CLAUDE]
     section = module.render(
-        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, RUNTIME_CLAUDE
+        build_template(NEW_VERSION), (LANG_PRIMARY,), NEW_VERSION, HARNESS_CLAUDE
     )
     (tmp_path / claude_name).write_text(
         module.upsert_managed_section(ROOT_GUIDE_SHARED_BODY, section),
@@ -281,7 +281,7 @@ def test_cli_write_creates_both_root_guide_files(tmp_path: pathlib.Path) -> None
         ]
     )
     assert exit_code == 0
-    for filename in module.RUNTIME_GUIDE_FILENAMES.values():
+    for filename in module.AGENT_HARNESS_GUIDE_FILENAMES.values():
         guide = tmp_path / filename
         assert guide.is_file()
         content = guide.read_text(encoding="utf-8")
@@ -312,7 +312,7 @@ def test_cli_write_preserves_root_content_outside_managed_section(
         == 0
     )
 
-    for filename in module.RUNTIME_GUIDE_FILENAMES.values():
+    for filename in module.AGENT_HARNESS_GUIDE_FILENAMES.values():
         content = (tmp_path / filename).read_text(encoding="utf-8")
         assert ROOT_GUIDE_SHARED_BODY.rstrip("\n") in content
         assert content.count(module.MANAGED_SECTION_START) == 1
