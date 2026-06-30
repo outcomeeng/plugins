@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — when an agent in a consumer or product repository notices the spec-tree plugin, the spx CLI, or another spec-tree dependency needs a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(codex plugin marketplace list:*), Bash(python3 -c:*), Bash(printf:*), Bash(echo:*), request_user_input
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(codex plugin marketplace list:*), Bash(python3 -c:*), request_user_input
 ---
 
 <context>
@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:*
 !`pwd`
 
 **spx CLI:**
-!`spx --version || echo 'Ask user to install spx CLI: "npm install --global @outcomeeng/spx"'`
+!`spx --version`
 
 </context>
 
