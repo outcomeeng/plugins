@@ -2,7 +2,7 @@
 name: adr-auditor
 description: >-
   ALWAYS invoke when auditing ADR evidence quality after writing an ADR or before implementing from it.
-tools: Read, Glob, Grep, Skill
+tools: Bash, Read, Skill
 model: sonnet
 skills:
   - spec-tree:audit-adr
