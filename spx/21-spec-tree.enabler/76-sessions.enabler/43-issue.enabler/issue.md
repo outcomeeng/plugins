@@ -6,6 +6,10 @@ CAN record a needed follow-up where the dependency's own agents pick it up, inst
 
 ## Assertions
 
+### Mappings
+
+- Marketplace registration JSON maps to either the target dependency checkout path or a non-zero diagnostic when the named local marketplace cannot be resolved ([test](tests/test_resolve_marketplace.mapping.l1.py))
+
 ### Compliance
 
 - ALWAYS: `/issue` files the follow-up into the target dependency repository's session queue by running `spx -C <target-dir> session handoff`, so the dependency's own session workflow owns the recorded follow-up ([audit])

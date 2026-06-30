@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 -c:*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py":*), AskUserQuestion
 ---
 
 <context>
@@ -46,7 +46,7 @@ Resolve the target dependency's checkout directory — the working directory `sp
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
 
   ```bash
-  claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and str(e.get("source", "")).lower()=="directory"), ""))'
+  claude plugin marketplace list --json | python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_marketplace.py" --runtime claude --name outcomeeng
   ```
 
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
@@ -54,6 +54,20 @@ Resolve the target dependency's checkout directory — the working directory `sp
 When the target is ambiguous or the path does not resolve, ask the user which dependency the follow-up concerns and for its checkout directory through the structured-question tool. NEVER guess a path.
 
 </target_resolution>
+
+<script_testing>
+
+`scripts/resolve_marketplace.py` is covered by `spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/tests/test_resolve_marketplace.mapping.l1.py`.
+
+Tested inputs:
+
+- Claude marketplace JSON with a Directory source returns the registered path.
+- Codex marketplace JSON with a local `marketplaceSource` returns the registered path.
+- Malformed marketplace JSON returns a clear invalid-JSON error.
+- A missing local marketplace returns a clear target-resolution error.
+- No temporary files are created.
+
+</script_testing>
 
 <git_ref_resolution>
 Resolve the target dependency's stable pickup anchor before filing the handoff. Use the target repository's current branch only when it exists on origin:
@@ -83,10 +97,15 @@ If the target checkout is detached or its current branch does not exist on origi
 
 **Step 4 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line. Literal apostrophes inside a single-quoted `printf` line use `'"'"'`:
+**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, passing the JSON header line then the body on stdin:
 
 ```bash
-printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx -C <target-dir> session handoff
+spx -C <target-dir> session handoff <<'EOF'
+{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}
+# <short title>
+
+<observation body — affected paths, checked facts, uncertainty, next-workflow context>
+EOF
 ```
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
