@@ -46,7 +46,7 @@ Resolve the target dependency's checkout directory — the working directory `sp
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
   {!% if target == 'codex' %!}
   ```bash
-  codex plugin marketplace list --json | python3 -c 'import json,sys; data=json.load(sys.stdin); entries=data if isinstance(data,list) else data.get("marketplaces", []); print(next((e.get("marketplaceSource", {}).get("source") or e.get("root", "") for e in entries if e.get("name")=="outcomeeng" and e.get("marketplaceSource", {}).get("sourceType")=="local"), ""))'
+  codex plugin marketplace list --json | python3 -c 'import json,sys; data=json.load(sys.stdin); entries=data if isinstance(data,list) else data.get("marketplaces", []); print(next((ms.get("source") or e.get("path") or e.get("root", "") for e in entries for ms in [e.get("marketplaceSource", {}) if isinstance(e.get("marketplaceSource", {}), dict) else {}] if e.get("name")=="outcomeeng" and (ms.get("sourceType")=="local" or e.get("sourceType")=="local")), ""))'
   ```
   {!% else %!}
   ```bash
