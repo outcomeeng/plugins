@@ -21,3 +21,13 @@ Required handling:
 - Rewrite the test evidence through `/test` and run the required test-evidence audit before accepting it.
 - Align the evidence chain with `spx/15-test-infrastructure.pdr.md`, `spx/15-test-language.adr.md`, and the Python test standards.
 - Keep `tests/` limited to typed assertion files; move harness, generator, fixture, and source-owned vocabulary responsibilities to their governed homes.
+
+## 3. Review finding validation belongs in SPX
+
+The stop-gap runner appends review findings through the shared run journal without review-specific validation for required finding fields, severity and concern values, or citation shape. `spx journal append` validates the journal event boundary, but it does not yet enforce the review finding contract.
+
+Required handling:
+
+- Add review-specific finding validation to the SPX verification or journal boundary that owns review runs.
+- Validate the finding shape before a review run can be sealed or projected.
+- Keep the skill runner as a thin command surface; do not restore per-finding schema or citation validation to the skill path as a durable fix.
