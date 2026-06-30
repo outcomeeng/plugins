@@ -37,9 +37,9 @@ def test_session_start_delivers_identity_and_worktree_claim(tmp_path: Path) -> N
     content = env_file.read_text(encoding="utf-8")
     # Identity reaches the env file every later Bash tool call sources.
     assert f"export CLAUDE_SESSION_ID={SESSION_ID}" in content
-    # The worktree-occupancy claim is recorded: the env flag plus the claim file
+    # The worktree-occupancy claim is recorded: the env path plus the claim file
     # the spx hook runner writes under the project's .spx tree.
-    assert "export CLAUDE_WORKTREE_CLAIMED=1" in content
+    assert "export SPX_WORKTREE_CLAIM_PATH=" in content
     claims = list((tmp_path / ".spx" / "worktrees").glob("*.claim"))
     assert claims, "the hook must record a worktree-occupancy claim"
 

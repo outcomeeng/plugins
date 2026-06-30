@@ -47,14 +47,15 @@ jobs:
           SPX_VERIFY_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
         run: |
           set -euo pipefail
-          claude \
+          printf '%s\n' \
+            'Use the spec-tree:review-changes skill for the exported SPX_VERIFY_BASE_REF..SPX_VERIFY_HEAD_REF scope. Return only the raw run token printed by the skill. Do not render, summarize, post comments, run tests, or run validation.' \
+            | claude \
             --print \
             --output-format text \
             --no-session-persistence \
             --permission-mode dontAsk \
             --plugin-dir dist/claude/spec-tree \
             --allowed-tools "Bash(python3 \"\${CLAUDE_SKILL_DIR}/scripts/review_run.py\":*),Read" \
-            'Use the spec-tree:review-changes skill for the exported SPX_VERIFY_BASE_REF..SPX_VERIFY_HEAD_REF scope. Return only the raw run token printed by the skill. Do not render, summarize, post comments, run tests, or run validation.' \
             > review-run-token.txt
 
           run_token="$(sed -n '/[^[:space:]]/p' review-run-token.txt | tail -n 1)"
