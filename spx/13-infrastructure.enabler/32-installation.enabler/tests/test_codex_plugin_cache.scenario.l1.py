@@ -802,6 +802,31 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
     assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
 
 
+def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
+    """Strict mode records the same missing-current entry when no cache directory
+    exists for the plugin at all.
+    """
+    repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
+    cache_root = tmp_path / "cache"
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={PLUGIN_NAME: frozenset([CURRENT_VERSION])},
+        current_by_plugin={PLUGIN_NAME: CURRENT_VERSION},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        repo_root=repo_root,
+        cache_root=cache_root,
+        history=history,
+        installed=StaticInstalled({PLUGIN_NAME: CURRENT_VERSION}),
+        runner=_quiet_runner,
+        strict_current_cache=True,
+    )
+
+    assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
+
+
 def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     tmp_path: Path,
 ) -> None:
