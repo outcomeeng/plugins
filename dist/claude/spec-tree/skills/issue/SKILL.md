@@ -3,7 +3,7 @@ name: issue
 description: >-
   ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — when an agent in a consumer or product repository notices the spec-tree plugin, the spx CLI, or another spec-tree dependency needs a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
-allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx session handoff:*), Bash(spx -C:* session handoff*), Bash(claude plugin marketplace list:*), Bash(python3:*), Bash(printf:*), Bash(echo:*), AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx session handoff:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 -c:*), Bash(printf:*), Bash(echo:*), AskUserQuestion
 ---
 
 <context>
@@ -55,28 +55,43 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 
 </target_resolution>
 
+<git_ref_resolution>
+Resolve the target dependency's stable pickup anchor before filing the handoff. Use the target repository's current branch only when it exists on origin:
+
+```bash
+git -C <target-dir> branch --show-current
+git -C <target-dir> rev-parse --verify refs/remotes/origin/<branch>
+```
+
+If the target checkout is detached or its current branch does not exist on origin, ask the user for the pushed target branch that should own the follow-up. NEVER file a Path C handoff with an empty or guessed `git_ref`; `/pickup` uses `git_ref` as the branch it fetches and checks out in the dependency repository.
+
+</git_ref_resolution>
+
 <workflow>
 
 **Step 1 — Resolve the target.** When `$ARGUMENTS` names a dependency or a checkout directory, take it as the target. Otherwise determine which dependency the observation concerns and resolve its checkout directory per `<target_resolution>`.
 
-**Step 2 — Compose the header.** Build the JSON header:
+**Step 2 — Resolve `git_ref`.** Resolve the target repository's stable pickup branch per `<git_ref_resolution>`.
+
+**Step 3 — Compose the header.** Build the JSON header:
 
 - `goal` — output-shaped: name the deliverable or end-state the follow-up produces, not a generic activity verb.
 - `next_step` — imperative: the first action the dependency's agent takes on pickup.
 - `priority` — `high`, `medium`, or `low`.
+- `git_ref` — the target dependency branch that exists on origin and that `/pickup` checks out.
 - `specs`, `files` — empty arrays; the invoking agent assigns none of the dependency's structure.
 
-**Step 3 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
+**Step 4 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 4 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
+**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
 
 ```bash
-printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx -C <target-dir> session handoff
+printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx -C <target-dir> session handoff
 ```
 
 `-C <target-dir>` runs the handoff against the dependency repository, so the recorded `git_ref` and the queued session belong to the target — the invoking repository's git state and session queue stay untouched.
 
-**Step 5 — Report.** Surface the `<HANDOFF_ID>` and `<SESSION_FILE>` the command emits, naming the target repository the follow-up was filed into.
+**Step 6 — Report.** Surface the `<HANDOFF_ID>` and `<SESSION_FILE>` the command emits, naming the target repository the follow-up was filed into.
 
 </workflow>
 
@@ -86,14 +101,28 @@ printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<im
 - NEVER alter the invoking repository's git state or session queue — `-C <target-dir>` targets the dependency directly.
 - NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency's agents classify.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
+- NEVER guess `git_ref` — use a target branch that exists on origin or ask.
 
 </constraints>
+
+<failure_modes>
+
+**Failure 1: Claude filed a target-dependency handoff without a stable branch anchor.**
+
+What happened: Claude wrote a Path C handoff header with `priority`, `goal`, `next_step`, `specs`, and `files`, but omitted `git_ref`.
+
+Why it failed: The target repository's `/pickup` workflow uses `git_ref` as the origin branch it fetches and checks out. Without it, a dependency follow-up can anchor to the wrong checkout state or fail to resume.
+
+How to avoid: Resolve the target dependency branch first, verify `refs/remotes/origin/<branch>` exists, and include that branch in the header's `git_ref`. Ask the user for a pushed target branch when the checkout is detached or the branch is not on origin.
+
+</failure_modes>
 
 <success_criteria>
 
 - [ ] Target dependency checkout directory resolved deterministically or confirmed with the user
+- [ ] Target dependency `git_ref` resolved to a branch that exists on origin or confirmed with the user
 - [ ] Observation captured as observation-only — no dependency node addresses, decision indices, or assertion types
-- [ ] Header carries an output-shaped `goal` and an imperative `next_step`; `specs` and `files` empty
+- [ ] Header carries an output-shaped `goal`, an imperative `next_step`, and the target dependency `git_ref`; `specs` and `files` empty
 - [ ] `spx -C <target-dir> session handoff` filed the follow-up into the target repository's queue
 - [ ] The invoking repository's git state and session queue are unchanged
 - [ ] The created `<HANDOFF_ID>` and `<SESSION_FILE>` reported, naming the target repository
