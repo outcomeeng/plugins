@@ -425,6 +425,34 @@ def test_codex_cache_verifies_local_source_when_resolved_version_lags(
     assert WORKING_TREE_VERSION in warning
 
 
+def test_codex_cache_requires_lagging_resolved_version_symlink(
+    tmp_path: Path,
+) -> None:
+    """When Codex still reports the stale pre-refresh version, validate_install
+    requires that stale path to remain available as a compatibility symlink."""
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.1.0"
+    _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, WORKING_TREE_VERSION)
+
+    def published_version(plugin: str) -> str | None:
+        return WORKING_TREE_VERSION if plugin == PLUGIN_NAME else None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=published_version,
+        codex_resolved_versions={PLUGIN_NAME: stale_version},
+    )
+
+    assert len(result.errors) == 1
+    assert "MISSING COMPATIBILITY" in result.errors[0]
+    assert stale_version in result.errors[0]
+
+
 def test_codex_cache_multiple_real_version_dirs_is_an_error(
     tmp_path: Path,
 ) -> None:

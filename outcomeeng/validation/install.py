@@ -335,6 +335,32 @@ def check_version_present(
     return True
 
 
+def check_compatibility_symlink_present(
+    cache_root: Path,
+    marketplace: str,
+    plugin: str,
+    version: str,
+    target_version: str,
+    errors: list[str],
+) -> None:
+    """Assert a stale Codex-resolved path remains as a compatibility symlink."""
+    plugin_dir = cache_root / marketplace / plugin
+    path = plugin_dir / version
+    target = plugin_dir / target_version
+    if not path.exists():
+        errors.append(f"MISSING COMPATIBILITY  {path}")
+        return
+    if not path.is_symlink():
+        errors.append(
+            f"NOT SYMLINK  {path}  (expected compatibility symlink to {target})"
+        )
+        return
+    if path.resolve() != target.resolve():
+        errors.append(
+            f"WRONG TARGET  {path}  (expected compatibility symlink to {target})"
+        )
+
+
 def check_single_real_codex_version(
     cache_root: Path,
     marketplace: str,
@@ -511,6 +537,14 @@ def validate(
                         f"{plugin}  Codex resolved {target_version} lags local "
                         f"marketplace source {version}; verifying local "
                         "marketplace version in cache"
+                    )
+                    check_compatibility_symlink_present(
+                        codex,
+                        marketplace,
+                        plugin,
+                        target_version,
+                        version,
+                        errors,
                     )
                     target_version = version
                 else:
