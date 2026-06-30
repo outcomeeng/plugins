@@ -46,7 +46,7 @@ Resolve the target dependency's checkout directory — the working directory `sp
 - **The spec-tree plugin (marketplace):** the registered Directory source. Resolve it from the marketplace registration:
 
   ```bash
-  claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and e.get("source")=="directory"), ""))'
+  claude plugin marketplace list --json | python3 -c 'import json,sys; print(next((e["path"] for e in json.load(sys.stdin) if e.get("name")=="outcomeeng" and str(e.get("source", "")).lower()=="directory"), ""))'
   ```
 
 - **The `spx` CLI, or another spec-tree dependency:** the dependency's own checkout. Accept the path from the user or the invoking repository's configuration.
