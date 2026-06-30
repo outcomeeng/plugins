@@ -98,11 +98,19 @@ def load_update_spx_module() -> GuideModule:
 def guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
     """Derive guide paths from the generator's own enumeration."""
     guide_module = module or load_update_spx_module()
-    root_paths = tuple(guide_module.RUNTIME_GUIDE_FILENAMES.values())
-    obsolete_paths = tuple(
-        f"spx/{name}" for name in guide_module.OBSOLETE_SPX_GUIDE_FILENAMES
-    )
-    return (*root_paths, *obsolete_paths)
+    return (*root_guide_paths(guide_module), *obsolete_spx_guide_paths(guide_module))
+
+
+def root_guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
+    """Return generated root guide paths."""
+    guide_module = module or load_update_spx_module()
+    return tuple(guide_module.RUNTIME_GUIDE_FILENAMES.values())
+
+
+def obsolete_spx_guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
+    """Return retired spx guide paths that may still be tracked."""
+    guide_module = module or load_update_spx_module()
+    return tuple(f"spx/{name}" for name in guide_module.OBSOLETE_SPX_GUIDE_FILENAMES)
 
 
 def dist_template_path(runtime: str, *, repo_root: Path = REPO_ROOT) -> Path:
@@ -202,13 +210,21 @@ def drifting_guides(
 
     ``--intent-to-add`` makes an absent-from-index guide register as drift; a plain
     ``git diff`` reports only tracked changes and would pass silently on a first run.
+    Missing root guides are drift directly; missing obsolete spx guides are skipped
+    because only tracked deletion drift matters for retired paths.
     """
-    paths = guide_paths(module)
+    guide_module = module or load_update_spx_module()
+    root_paths = root_guide_paths(guide_module)
+    paths = (*root_paths, *obsolete_spx_guide_paths(guide_module))
+    missing_root_paths = [
+        path for path in root_paths if not (repo_root / path).exists()
+    ]
     existing_paths = intent_to_add_paths(paths, repo_root=repo_root)
     if existing_paths:
         _run(["git", "add", "--intent-to-add", *existing_paths], cwd=repo_root)
     result = _run(["git", "diff", "--name-only", "--", *paths], cwd=repo_root)
-    return [line for line in result.stdout.splitlines() if line.strip()]
+    drift = [line for line in result.stdout.splitlines() if line.strip()]
+    return sorted({*missing_root_paths, *drift})
 
 
 def render_report(drift: Sequence[str]) -> str:

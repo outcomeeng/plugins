@@ -264,6 +264,22 @@ def test_guide_drift_probe_marks_untracked_root_guides_intent_to_add(
     ]
 
 
+def test_guide_drift_probe_reports_missing_root_guides(
+    tmp_path: pathlib.Path,
+) -> None:
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.name", "Test User")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
+    _git(tmp_path, "add", ".gitignore")
+    _git(tmp_path, "commit", "-m", "seed repository")
+
+    assert guide_diff.drifting_guides(repo_root=tmp_path) == [
+        GUIDE_AGENTS,
+        GUIDE_CLAUDE,
+    ]
+
+
 def test_guide_drift_probe_skips_missing_obsolete_spx_guides(
     tmp_path: pathlib.Path,
 ) -> None:
