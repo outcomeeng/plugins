@@ -1,6 +1,6 @@
 # Audit
 
-PROVIDES generic audit orchestration that dispatches to language-specific `audit-{lang}*` skills via template substitution, plus one-off agent wrappers that render and combine its verdict
+PROVIDES generic audit orchestration that dispatches to language-specific `audit-{lang}*` skills via template substitution, plus artifact-type evidence auditors and one-off agent wrappers that render and combine their verdicts
 SO THAT every caller running an audit on TypeScript, Python, Rust, or any future language plugin — locally or in CI
 CAN run a per-language audit that streams partition progress and findings onto the audit journal, preserves the structured wrapper verdict, and renders the sealed prefix without each language plugin maintaining its own orchestrator
 
@@ -21,6 +21,7 @@ CAN run a per-language audit that streams partition progress and findings onto t
 
 - ALWAYS: emit exactly one wrapper verdict per orchestrator run — children of the wrapper carry per-partition (per-language) verdicts; the wrapper's overall is derived via `aggregate_verdicts.py` per the canonical rollup rule in `verdict.py` ([review])
 - ALWAYS: dispatch to every concern's skill in the protocol-prescribed phase order before emitting a verdict — partial dispatch produces misleading verdicts ([review])
+- ALWAYS: provide artifact-type auditors for test evidence and eval evidence so deterministic evidence artifacts are judged for evidentiary quality by isolated verifier contexts before the main agent relies on them ([review])
 - NEVER: `/audit` runs the project's validation or test commands or any other deterministic verification — it dispatches only the agentic concern audits (implementation, test evidence, ADR/PDR architecture); the main agent passes deterministic verification on the changeset before dispatch and CI re-runs it over the whole repository, per `spx/14-verification.pdr.md` and `spx/21-spec-tree.enabler/17-audit.adr.md` ([review])
 - ALWAYS: emit every audit verdict by opening `spx journal --type audit` before partition dispatch, appending scope-entered, partition scope-advanced, partition finding-reported, and terminal run-completed events through `journal_emit.py`, and rendering the sealed prefix through `journal_emit.py render` — orchestrator and dispatched skills produce structured verdict data and channel events, never hand-formatted markdown ([review])
 - ALWAYS: enumerate the audit scope and compute the scope hash through `audit_orchestrator.py`'s git/scope helpers — `/audit` never embeds git plumbing or scope hashing inline in skill prose ([review])

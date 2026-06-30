@@ -81,22 +81,23 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 
 Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
-| User Says...                               | Skill            | Agent                   |
-| ------------------------------------------ | ---------------- | ----------------------- |
-| "Implement this outcome"                   | `/contextualize` | —                       |
-| "Create an outcome"                        | `/author`        | —                       |
-| "Add an ADR"                               | `/author`        | —                       |
-| "Add a new node" or "This node is too big" | `/decompose`     | —                       |
-| "Move this under that"                     | `/refactor`      | —                       |
-| "Check these specs"                        | `/align`         | —                       |
-| "Write tests for this"                     | `/test`          | —                       |
-| "Start the TDD flow"                       | `/apply`         | `applier`               |
-| "Audit this PDR"                           | `/audit-pdr`     | `pdr-auditor`           |
-| "Audit this ADR"                           | `/audit-adr`     | `adr-auditor`           |
-| "Audit test evidence"                      | `/audit-tests`   | `test-evidence-auditor` |
-| "Audit this spec node"                     | `/audit-specs`   | `spec-auditor`          |
-| "Diagnose the spx environment"             | `/diagnose`      | —                       |
-| "File a follow-up in a dependency queue"   | `/issue`         | —                       |
+| User Says...                               | Skill                  | Agent                   |
+| ------------------------------------------ | ---------------------- | ----------------------- |
+| "Implement this outcome"                   | `/contextualize`       | —                       |
+| "Create an outcome"                        | `/author`              | —                       |
+| "Add an ADR"                               | `/author`              | —                       |
+| "Add a new node" or "This node is too big" | `/decompose`           | —                       |
+| "Move this under that"                     | `/refactor`            | —                       |
+| "Check these specs"                        | `/align`               | —                       |
+| "Write tests for this"                     | `/test`                | —                       |
+| "Start the TDD flow"                       | `/apply`               | `applier`               |
+| "Audit this PDR"                           | `/audit-pdr`           | `pdr-auditor`           |
+| "Audit this ADR"                           | `/audit-adr`           | `adr-auditor`           |
+| "Audit test evidence"                      | `/audit-tests`         | `test-evidence-auditor` |
+| "Audit eval evidence"                      | `/audit-eval-evidence` | `eval-evidence-auditor` |
+| "Audit this spec node"                     | `/audit-specs`         | `spec-auditor`          |
+| "Diagnose the spx environment"             | `/diagnose`            | —                       |
+| "File a follow-up in a dependency queue"   | `/issue`               | —                       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}*` skills that the generic artifact-type auditors **compose** for the language in scope — there is no per-language auditor agent. Dispatch the generic auditor; it invokes the matching language skill automatically:
 
