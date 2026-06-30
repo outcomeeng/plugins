@@ -42,11 +42,28 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           SPX_VERIFY_BASE_REF: ${{ github.event.pull_request.base.sha || 'origin/main' }}
           SPX_VERIFY_HEAD_REF: ${{ github.event.pull_request.head.sha || github.sha }}
-          SPX_VERIFY_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          SPX_VERIFY_BRANCH_NAME: ${{ github.event.pull_request.head.ref || github.ref_name }}
           SPX_VERIFY_TARGET_KIND: pull-request
           SPX_VERIFY_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || '' }}
         run: |
           set -euo pipefail
+          journal_branch="$(
+            python3 - <<'PY'
+          import importlib.util
+          import pathlib
+          import os
+
+          path = pathlib.Path("dist/claude/spec-tree/skills/scope-changeset/scripts/changeset_scope.py")
+          spec = importlib.util.spec_from_file_location("changeset_scope", path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("could not load changeset_scope")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          print(module.branch_slug(os.environ["SPX_VERIFY_BRANCH_NAME"]))
+          PY
+          )"
+          export SPX_VERIFY_BRANCH="${journal_branch}"
+
           printf '%s\n' \
             'Use the spec-tree:review-changes skill for the exported SPX_VERIFY_BASE_REF..SPX_VERIFY_HEAD_REF scope. Return only the raw run token printed by the skill. Do not render, summarize, post comments, run tests, or run validation.' \
             | claude \
@@ -64,21 +81,6 @@ jobs:
             exit 1
           fi
 
-          journal_branch="$(
-            python3 - <<'PY'
-          import importlib.util
-          import pathlib
-          import os
-
-          path = pathlib.Path("dist/claude/spec-tree/skills/scope-changeset/scripts/changeset_scope.py")
-          spec = importlib.util.spec_from_file_location("changeset_scope", path)
-          if spec is None or spec.loader is None:
-              raise SystemExit("could not load changeset_scope")
-          module = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(module)
-          print(module.branch_slug(os.environ["SPX_VERIFY_BRANCH"]))
-          PY
-          )"
           SPX_VERIFY_BRANCH="${journal_branch}" spx journal render --type review --run "${run_token}" > review-preview.txt
           {
             echo "## review-changes preview"

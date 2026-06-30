@@ -103,6 +103,7 @@ NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
 ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
 ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
+ENV_BRANCH_NAME = review_run_journal_env_key("ENV_BRANCH_NAME")
 ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
 ENV_PULL_REQUEST_NUMBER = review_run_journal_env_key("ENV_PULL_REQUEST_NUMBER")
 
@@ -280,6 +281,15 @@ class TestReviewRunnerBoundary:
                 },
                 id="pull-request",
             ),
+            pytest.param(
+                {
+                    ENV_BRANCH: "feature__x",
+                    ENV_BRANCH_NAME: "feature/x",
+                    ENV_TARGET_KIND: "pull-request",
+                    ENV_PULL_REQUEST_NUMBER: "384",
+                },
+                id="pull-request-safe-selector",
+            ),
         ],
     )
     def test_runner_preserves_journal_namespace_across_subcommands(
@@ -374,6 +384,13 @@ class TestReviewRunnerBoundary:
         assert journal["namespace"] == expected_namespace
         terminal_event = journal["events"][-1]
         assert terminal_event["data"]["status"] == "approved"
+        expected_branch_name = journal_selector.get(
+            ENV_BRANCH_NAME, journal_selector.get(ENV_BRANCH, "feature/x")
+        )
+        assert terminal_event["data"]["branchName"] == expected_branch_name
+        assert terminal_event["data"]["branchSlug"] == journal_selector.get(
+            ENV_BRANCH, expected_branch_name
+        ).replace("/", "__")
         assert terminal_event["data"]["review"] == {
             "blocking": 0,
             "debt": 1,

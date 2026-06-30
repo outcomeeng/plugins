@@ -32,6 +32,7 @@ _DEFAULT_TARGET = "working-diff"
 _PARTICIPANTS = ("review",)
 
 ENV_BRANCH = "SPX_VERIFY_BRANCH"
+ENV_BRANCH_NAME = "SPX_VERIFY_BRANCH_NAME"
 ENV_BACKEND = "SPX_VERIFY_BACKEND"
 ENV_TARGET_KIND = "SPX_VERIFY_TARGET_KIND"
 ENV_PULL_REQUEST_NUMBER = "SPX_VERIFY_PULL_REQUEST_NUMBER"
@@ -214,8 +215,10 @@ def _metadata_from_manifest(
         "changedFiles": _manifest_changed_files(manifest),
         "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
     }
-    branch_name = os.environ.get(ENV_BRANCH, "").strip() or str(
-        changeset_scope.detect_current_branch(repo)
+    branch_name = (
+        os.environ.get(ENV_BRANCH_NAME, "").strip()
+        or os.environ.get(ENV_BRANCH, "").strip()
+        or str(changeset_scope.detect_current_branch(repo))
     )
     target_kind = _target_kind()
     metadata: dict[str, Any] = {
