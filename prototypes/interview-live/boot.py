@@ -23,6 +23,7 @@ import json
 import sys
 from pathlib import Path
 
+from projection import is_spx_projection, spx_projection_to_tree
 from server import LiveServer
 from state import Store, initial_state
 
@@ -36,6 +37,10 @@ def _load_seed(path: str | None) -> Store:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "rev" in data and "questions" in data:
         return Store(data)
+    # An `spx spec status --format json` projection seeds the real spec tree,
+    # carrying derived node state through the adapter.
+    if is_spx_projection(data):
+        return Store(initial_state(tree=spx_projection_to_tree(data)))
     # A bare {tree, planned} seed is wrapped into a fresh state document.
     return Store(initial_state(tree=data.get("tree"), planned=data.get("planned")))
 

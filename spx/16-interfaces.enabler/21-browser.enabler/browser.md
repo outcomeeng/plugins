@@ -1,16 +1,10 @@
 # Browser
 
-PROVIDES an interactive browser surface that renders a spec-tree projection and live interview state into HTML
+PROVIDES a local, MCP-backed browser authoring surface that renders a spec-tree projection and live interview state into HTML
 SO THAT humans and agents
-CAN read, comment on, and restructure the tree directly in a browser
+CAN read, comment on, and restructure the tree directly in a browser while staying in a live conversation loop
 
 ## Assertions
-
-### Scenarios
-
-- Given a spec-tree JSON projection from the SPX CLI, when the browser surface renders, then it shows the tree with each node's state, category, index, and depth alongside a node-detail view of the opener, assertions grouped by type, and evidence links ([test](tests/test_browser.scenario.l1.py))
-- Given rendered content, when a user acts on it, then the surface supports drag-drop reordering, click-to-comment, and expand/collapse ([test](tests/test_browser.scenario.l1.py))
-- Given node or interview text inserted into the HTML, when the surface renders it, then the text is escaped so raw markup never reaches the document ([test](tests/test_browser.scenario.l1.py))
 
 ### Compliance
 

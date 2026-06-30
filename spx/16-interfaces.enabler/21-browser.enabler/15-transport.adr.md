@@ -8,6 +8,15 @@ The browser interface exchanges agent-side updates and user interactions over a 
 
 The decision binds the launch layer only. The transport-free state core — the monotonic revision counter, the append-only journal, the interaction lifecycle, and spec-tree integrity — and the browser shell are transport-agnostic, so the same core serves any launch model. Isolating transport in a replaceable launch layer is what lets the core be proven independently of the launch model.
 
+## Alternatives rejected
+
+| Alternative                                  | Reason                                                                                                                                                                                          |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clipboard or paste-back loops                | The agent receives browser responses directly through MCP. Asking the user to copy data between applications breaks the live conversation loop.                                                 |
+| Agent-spawned HTTP server plus CLI long-poll | The plugin runtime forbids agent-spawned long-lived subprocesses and polling waits. MCP gives the runtime ownership of the server process and gives the agent a blocking interaction call.      |
+| Hosted browser surface                       | The interface is a local authoring surface for private repositories. Hosted infrastructure adds public-network, credential, and dependency concerns the product does not need for this surface. |
+| Dependency-heavy launch package              | Consumer repositories receive static assets and stdlib Python plugin scripts. Runtime package fetches or `npx`-style launchers violate plugin portability.                                      |
+
 ## Invariants
 
 - The state core is transport-free: identical state transitions result regardless of which launch layer drives them.
