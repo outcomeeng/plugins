@@ -51,5 +51,5 @@ CAN project the sealed journal into the surface they own without duplicating rev
 - NEVER: any script under `plugins/spec-tree/skills/review-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md` ([test](tests/test_reviewing_changes.audit.l1.py))
 - NEVER: the wrapper agent writes review artifacts outside `spx journal`; durable review state is the sealed review journal prefix ([eval](evals/wrapper-protocol/eval.toml))
 - NEVER: the review prompt is embedded inside `SKILL.md` or any script — the prompt is one standalone markdown file at the declared reference path so swapping the prompt does not require touching code ([audit])
-- NEVER: repository-root `REVIEW.md` or `REVIEW.example.md` exists in this product checkout — local and CI review use the hidden prompt shipped by the `review-changes` skill ([audit])
+- NEVER: repository-root `REVIEW.md` or `REVIEW.example.md` exists in this product checkout — local review and the CI `review-changes` preview use the hidden prompt shipped by the `review-changes` skill ([audit])
 - NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token ([test](tests/test_skill_orchestration.scenario.l2.py))

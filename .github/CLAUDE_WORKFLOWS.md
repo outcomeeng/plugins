@@ -1,9 +1,10 @@
 # Claude Code GitHub Workflows
 
-This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are copy-and-pin templates from `outcomeeng/gh-actions/examples/caller-workflows/` with the `@main` ref replaced by a pinned commit SHA:
+This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration and a local preview workflow for the shipped `review-changes` skill.
 
 1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable with `use_project_plugins: true` so the methodology skills declared in `.claude/settings.json` (`/contextualizing`, `/authoring`, `/decomposing`, etc.) are installed for every mention.
-2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the generic `claude-code-review.yml` reusable with the `REVIEW.md`-aware prompt and the `Bash(sed:*),Bash(grep:*),Bash(head:*)` allowlist extension the prompt's diff-chunking patterns rely on.
+2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the generic `claude-code-review.yml` reusable while the hosted review integration is still upstream-owned.
+3. **`review-changes-preview.yml`** — Automatic PR preview on `opened` / `synchronize` / `reopened`. Installs Claude Code and `spx`, loads `dist/claude/spec-tree`, invokes the shipped `review-changes` skill against the PR base/head range, and writes the sealed journal projection to the job summary.
 
 A separate `distribute-skills.yml` workflow handles plugin distribution and is unrelated to the Claude callers.
 
@@ -12,10 +13,6 @@ A separate `distribute-skills.yml` workflow handles plugin distribution and is u
 ### Secrets
 
 Add `CLAUDE_CODE_OAUTH_TOKEN` to repository secrets (Settings → Secrets and variables → Actions → Secrets).
-
-### `REVIEW.md` taxonomy
-
-`spec-tree-review.yml` reads `REVIEW.md` from the repository root when present and uses it as the finding-classification taxonomy and comment shape. Absent the file, the embedded `BLOCKING` / `DEBT` / `FOLLOW-UP` taxonomy is used.
 
 ### Customization
 
@@ -34,9 +31,9 @@ jobs:
       # use_project_plugins: true                         # install plugins from .claude/settings.json
 ```
 
-`spec-tree-review.yml` deliberately does not expose `custom_prompt` — the prompt is baked in. Call `outcomeeng/gh-actions/.github/workflows/claude-code-review.yml` directly when full prompt control is needed.
-
 `spec-tree.yml` (the @-mention caller) accepts `trigger_phrase` (default `@spec-tree`), `concurrency_cancel`, `claude_args`, and `use_project_plugins` (defaults to `true`). See the inline comments in each workflow file for the full set and their trade-offs.
+
+`review-changes-preview.yml` does not read repository-root review prompt files. The preview prompt lives inside `dist/claude/spec-tree/skills/review-changes/references/review-prompt.md`, generated from the authored skill source.
 
 ### Pinning
 

@@ -2,11 +2,7 @@
 #
 # Required setup:
 # 1. Add CLAUDE_CODE_OAUTH_TOKEN to repository secrets.
-# 2. (Optional) Provide a `REVIEW.md` at the repository root. The
-#    spec-tree-review prompt reads it as the finding-classification
-#    taxonomy and comment shape; absent the file, the embedded
-#    BLOCKING/DEBT/FOLLOW-UP taxonomy is used.
-# 3. (Optional) Tune behavior via repo variables in Settings → Secrets and
+# 2. (Optional) Tune behavior via repo variables in Settings → Secrets and
 #    variables → Actions → Variables. See the `with:` block below — every
 #    entry reads a `vars.SPEC_TREE_REVIEW_*` value and falls back to the
 #    reusable's default when the variable is unset. No edits to this file
@@ -121,8 +117,9 @@ jobs:
       # Caller is responsible for AWS/GCP auth in the calling workflow.
       # See README "Review workflow inputs" for the full contract.
 
-    # `spec-tree-review.yml` bakes in a REVIEW.md-aware review prompt;
-    # `custom_prompt` is deliberately NOT exposed as an input.
+    # This hosted review remains on the upstream reusable prompt. The local
+    # `review-changes-preview.yml` workflow invokes the shipped review-changes
+    # skill and is the canonical preview for the bundled review prompt.
     #
     # The baseline allowlist combines `Bash(gh issue|pr ...)` patterns for
     # PR context and comment posting with `Bash(sed:*),Bash(grep:*),
