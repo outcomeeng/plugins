@@ -244,9 +244,13 @@ def test_config_digest_ignores_root_review_policy(
 ) -> None:
     skill = tmp_path / "skill"
     _write_skill_config(skill, prompt="same review prompt")
-    (tmp_path / "REVIEW.md").write_text("ignored review policy", encoding="utf-8")
+    review_policy = tmp_path / "REVIEW.md"
+    review_policy.write_text("ignored review policy", encoding="utf-8")
+    first_digest = je.review_config_digest(skill)
 
-    assert je.review_config_digest(skill) == je.review_config_digest(skill)
+    review_policy.write_text("changed ignored review policy", encoding="utf-8")
+
+    assert first_digest == je.review_config_digest(skill)
 
 
 def test_metadata_config_digest_ignores_root_review_policy(
