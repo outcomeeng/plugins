@@ -20,6 +20,8 @@ from pathlib import Path
 from outcomeeng_testing.harnesses.hooks import (
     KILL_SWITCH_DISABLED,
     KILL_SWITCH_ENV,
+    WORKTREE_CLAIMED_ENV,
+    WORKTREE_CLAIM_PATH_ENV,
     read_env_exports,
     run_session_start,
     worktree_claim_path_from_env,
@@ -36,9 +38,13 @@ def test_session_start_delivers_identity_and_worktree_claim(tmp_path: Path) -> N
         project_dir=tmp_path,
     )
     assert result.returncode == 0
-    env = read_env_exports(env_file, ["CLAUDE_SESSION_ID"])
+    env = read_env_exports(
+        env_file,
+        ["CLAUDE_SESSION_ID", WORKTREE_CLAIMED_ENV, WORKTREE_CLAIM_PATH_ENV],
+    )
     # Identity reaches the env file every later Bash tool call sources.
     assert env["CLAUDE_SESSION_ID"] == SESSION_ID
+    assert env[WORKTREE_CLAIMED_ENV] == "1" or env[WORKTREE_CLAIM_PATH_ENV] != "<unset>"
     # The worktree-occupancy claim is recorded: the hook exports an indicator and
     # the spx hook runner writes the claim file under the project's .spx tree.
     claim_path = worktree_claim_path_from_env(env_file, tmp_path)
