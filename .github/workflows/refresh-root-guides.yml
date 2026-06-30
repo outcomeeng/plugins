@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           just build-skills
           just build-guides
+          just guide-check
 
       - name: Open guide refresh pull request
         env:

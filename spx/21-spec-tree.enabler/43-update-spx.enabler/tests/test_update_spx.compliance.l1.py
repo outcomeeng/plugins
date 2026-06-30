@@ -320,6 +320,7 @@ def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
     assert "pull-requests: write" in workflow
     assert "just build-skills" in workflow
     assert "just build-guides" in workflow
+    assert "just guide-check" in workflow
 
 
 def test_root_guide_refresh_pr_step_exits_cleanly_without_drift(
