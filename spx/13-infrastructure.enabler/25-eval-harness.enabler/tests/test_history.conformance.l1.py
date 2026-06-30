@@ -8,10 +8,13 @@ transcripts and is gitignored.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
+import pytest
+
 from outcomeeng_evals.case import Case
-from outcomeeng_evals.cli.commands.run import _history_row
+from outcomeeng_evals.cli.commands.run import _git_sha, _history_row
 from outcomeeng_evals.grader import GradeResult
 from outcomeeng_evals.history import HISTORY_ROW_FIELDS, HistoryRow, append_history_row
 from outcomeeng_evals.runner import RunMetadata
@@ -20,7 +23,7 @@ from outcomeeng_evals.testing.factories import make_bimodal_cache_suite_result
 
 
 SCHEMA_VERSION = "1"
-GIT_SHA = "9999af8"
+GIT_SHA = "9999af81234567890abcdef1234567890abcdef1"
 TIMESTAMP = "2026-05-11T15:48:00Z"
 TRANSCRIPT_REL = "runs/2026-05-11T15-48-00Z.json"
 FAILING_TIMESTAMP = "2026-05-12T09:00:00Z"
@@ -73,6 +76,17 @@ def _read_history(path: Path) -> list[dict[str, object]]:
         for line in path.read_text(encoding="utf-8").splitlines()
         if line
     ]
+
+
+def _git(repo: Path, *args: str) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return completed.stdout.strip()
 
 
 def test_creates_history_file_when_missing(tmp_path: Path) -> None:
@@ -146,6 +160,22 @@ def test_history_row_aggregates_token_counts_across_trials() -> None:
     assert row["total_output_tokens"] == 12
     assert row["total_cache_read_input_tokens"] == 49600
     assert row["total_cache_creation_input_tokens"] == 34000
+
+
+def test_git_sha_uses_full_head_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    _git(tmp_path, "config", "user.name", "Test User")
+    (tmp_path / "tracked.txt").write_text("content\n", encoding="utf-8")
+    _git(tmp_path, "add", "tracked.txt")
+    _git(tmp_path, "commit", "-m", "initial")
+    expected = _git(tmp_path, "rev-parse", "HEAD")
+
+    monkeypatch.chdir(tmp_path)
+
+    assert _git_sha() == expected
 
 
 def test_history_row_token_aggregates_are_none_without_metadata() -> None:
