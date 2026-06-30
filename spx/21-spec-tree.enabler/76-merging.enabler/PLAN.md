@@ -1,5 +1,158 @@
 # Plan: Merging Enabler
 
+## Delivery lifecycle and readiness-gate rewrite
+
+This plan records the coordinated top-down rewrite for the merge lifecycle. It is coordination only; product truth enters through the PDR, then the first affected specs, then tests, evals, shipped skills, and repo-local overlay.
+
+### Concept
+
+The lifecycle becomes an ordered delivery sequence:
+
+```text
+VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE
+```
+
+The readiness gates become:
+
+- `VERIFICATION_READINESS`: the selected transport's verification predicates hold for the changeset. The predicates are drawn from the verification taxonomy in `spx/14-verification.pdr.md`: `validate`, `test`, `evaluate`, `review`, and `audit`. Generic shipped skills must leave the concrete local command set and verifier set to the consumer project or transport.
+- `MERGE_READINESS`: the selected transport's current-head integration predicates hold: required checks are terminal-green, required integration review state is clean, and branch or pull-request state is acceptable.
+- `DEPLOYMENT_READINESS`: any environment mutation after merge is authorized by the project or transport predicates that govern that environment. When no deploy phase is declared, the phase is a no-op.
+- `RELEASE_READINESS`: any consumer-visible publication or refresh after deployment is authorized by the project or transport predicates that govern release. When no release phase is declared, the phase is a no-op.
+
+`PRODUCTION_READINESS` exits the model because `production` is not a portable project boundary. Deployment and release are different delivery actions: a project can deploy without releasing, release without an environment deployment, or do both under different predicates.
+
+`REVIEW_READINESS` exits the model because review is one verification type, while the verification phase can include deterministic verification (`validate`, `test`, `evaluate`) and agentic verification (`review`, `audit`). Review remains a verification type and a possible predicate inside `VERIFICATION_READINESS`; it no longer names the whole first gate.
+
+`CLOSE` is the lifecycle reporting, handoff, continuation, or archive decision after every declared phase has either completed or stopped at its explicit gate. It does not replace the Spec Tree rule that specs themselves are never closed.
+
+### Invariants to Preserve
+
+- One word, `gate`, names each authorization point; every condition a gate reads is a predicate.
+- Transports bind predicates and actions for the ordered phases; they do not reorder the lifecycle.
+- Absence of `PREVIEW`, `DEPLOY`, or `RELEASE` declarations means a no-op phase, never a blocker.
+- Generic shipped plugin content stays portable: no marketplace commands, Vercel-specific assumptions, repo-local paths, or single-consumer verification policy.
+- This repository's marketplace refresh is a repo-local `RELEASE` declaration in `spx/local/merging.md`, not shared methodology.
+- `spx/21-spec-tree.enabler/76-merging.enabler/15-merging.pdr.md` does not exist; the governing decision is the product-level `spx/15-merging.pdr.md`. Keep it there unless a later decomposition has a concrete reason to split it.
+
+### First Observable Slice
+
+Observable path: a default-branch-bound changeset runs through `/merge` or the selected transport and reaches the ordered lifecycle, with declared phases executed in order and absent phases skipped.
+
+- Invocation: `/merge` on a committed or dirty changeset, or `/manage-github-pr` when the GitHub-PR transport is already selected for an open PR.
+- Input shape: changeset, base ref, selected transport, and optional overlay declarations for `PREVIEW`, `DEPLOY`, and `RELEASE`.
+- Behavior: establish `VERIFICATION_READINESS`, run any declared `PREVIEW`, merge under `MERGE_READINESS`, run any declared `DEPLOY` under `DEPLOYMENT_READINESS`, run any declared `RELEASE` under `RELEASE_READINESS`, then close or continue.
+- State change: the changeset reaches the default branch on origin, and any declared deploy or release action runs after the merge in phase order.
+- Inspection surface: skill status prose, action tokens, PR/check state for PR transports, deterministic tests, eval cases, and this repository's marketplace-source worktree state for the repo-local release.
+- Failure behavior: a missing predicate stops at the named readiness gate with an observable action token or report; a declared release cannot be skipped after merge.
+- Verification: spec validation, status check, changed-node tests, lifecycle eval cases, and skill audit after `SKILL.md` edits.
+
+### PR Sequence
+
+1. **Decision PR: lifecycle vocabulary and first lower-spec alignment**
+   - Edit `spx/15-merging.pdr.md` to declare the phase sequence and four readiness gates.
+   - Replace `REVIEW_READINESS` with `VERIFICATION_READINESS`.
+   - Replace `PRODUCTION_READINESS` with `DEPLOYMENT_READINESS` and `RELEASE_READINESS`.
+   - Preserve `MERGE_READINESS`, the finding-disposition policy, transport neutrality, assigned-worktree discipline, no time-based settle, and pre-mutation confirmation as an overlay touch-point rather than a gate.
+   - Align first affected specs in the same changeset:
+     - `spx/21-spec-tree.enabler/76-merging.enabler/merging.md`
+     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/github-pr.md`
+     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
+     - `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
+     - `spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/direct-push.md`
+   - Record any lower-layer implementation left outside the PR in this `PLAN.md`, tied to the exact affected node.
+   - Verification: `spx validation markdown`, `spx spec status --format json`, and the focused tests or evals whose assertions change.
+
+2. **Shared methodology PR: shipped lifecycle vocabulary**
+   - Update `src/plugins/spec-tree/skills/merging-standards/SKILL.md` with the phase order, four gate names, predicate rules, and no-op defaults for undeclared `PREVIEW`, `DEPLOY`, and `RELEASE`.
+   - Keep consumer verification content open: the shipped standard explains where predicates bind, while the consumer project or transport declares concrete commands, reviewers, checks, previews, deployments, and releases.
+   - Update any shared references or generated text that still teaches the three-gate model.
+   - Regenerate shipped plugin trees through `just build-skills`.
+   - Verification: `just check-skills`, `just docs-check`, focused merging tests, and skill audit.
+
+3. **Transport PR: GitHub-PR and direct-push execution**
+   - Update `/merge`, `/open-pr`, `/manage-github-pr`, and `/manage-pr` flow prose to drive:
+     `VERIFICATION_READINESS -> PREVIEW -> MERGE_READINESS -> MERGE -> DEPLOYMENT_READINESS -> DEPLOY -> RELEASE_READINESS -> RELEASE -> CLOSE`.
+   - Replace `POST_MERGE_VERIFY` with phase progression. A merged PR with a declared release continues to `RELEASE`; it does not exit at merge.
+   - Keep `/open-pr` focused on publishing once `VERIFICATION_READINESS` holds; keep `/manage-pr` focused on current-head integration plus later declared phases.
+   - Update direct-push to use the same phase sequence, with its transport-specific predicates bound locally.
+   - Replace the current production-readiness implementation and tests together:
+     - `outcomeeng/merging_policy.py` production-readiness helpers;
+     - `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py` functions `test_production_readiness_permissive_or_approved_inputs_map_to_merge` and `test_production_relevant_unapproved_change_maps_to_await_approval`.
+   - Keep the existing production-readiness tests until this transport PR because removing them in the decision PR reduces coverage for the still-installed `merging-standards` and `outcomeeng/merging_policy.py` behavior before the replacement implementation exists.
+   - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
+
+4. **Repo-local release PR: marketplace refresh as `RELEASE`**
+   - Update `spx/local/merging.md`:
+     - rename production-relevance content to deployment and release readiness content;
+     - declare this repo's `RELEASE` action;
+     - resolve the marketplace-source worktree;
+     - capture `previous-main-ref` in that worktree before fast-forward;
+     - fetch and fast-forward the marketplace-source `main` to `origin/main`;
+     - run `(cd "$src" && just sync-marketplace <previous-main-ref>)`.
+   - Update root guidance that currently frames marketplace sync as conditional post-merge behavior:
+     - `AGENTS.md`
+     - the shared `CLAUDE.md` symlink target, through the same edit surface
+   - Remove wording that lets an agent pre-classify whether `just sync-marketplace` is needed; the declared release action runs, and the command owns distribution-change detection.
+   - Verification: spec-only validation for Markdown, plus any docs checks required by guide changes.
+
+5. **Eval and regression PR: lifecycle order evidence**
+   - Add or update eval coverage for:
+     - declared `PREVIEW` runs before merge-relevant advancement;
+     - absent `PREVIEW` is a no-op;
+     - declared `DEPLOY` requires `DEPLOYMENT_READINESS`;
+     - absent `DEPLOY` is a no-op;
+     - declared `RELEASE` runs after `MERGE` and after any declared `DEPLOY`;
+     - absent `RELEASE` is a no-op;
+     - a flow that stops after `MERGE` fails when `RELEASE` is declared;
+     - this repo's release runs `just sync-marketplace <previous-main-ref>` after the marketplace-source checkout fast-forwards to `origin/main`.
+   - Add deterministic mapping coverage for the two newly declared target assertions:
+     - `test_declared_deploy_without_authorization_awaits_deployment_authorization`;
+     - `test_absent_deploy_declaration_skips_deploy`;
+     - `test_declared_release_without_authorization_awaits_release_authorization`;
+     - `test_absent_release_declaration_skips_release`.
+   - Add lifecycle eval cases for the same observable outcomes when the subject is skill orchestration rather than the pure mapping helper:
+     - `declared-deploy-awaits-authorization`;
+     - `absent-deploy-skips-phase`;
+     - `declared-release-awaits-authorization`;
+     - `absent-release-skips-phase`.
+   - Rename eval prompts and cases from `review-readiness` and production-readiness vocabulary only where their subject changes; keep review-specific evals when the subject is the `review` verification type.
+   - Verification: `just eval-case` or `just eval-node` for changed eval suites, plus focused tests that enforce skill/spec coupling.
+
+6. **Cleanup PR: stale vocabulary and docs sweep**
+   - Sweep authored and generated surfaces for stale lifecycle terms:
+     - `REVIEW_READINESS` where the subject is the first readiness gate;
+     - `PRODUCTION_READINESS`;
+     - `post-merge verification`;
+     - `post-merge steps` where the phase is really deploy or release.
+   - Keep occurrences where the old term appears only in historical migration notes or intentionally quoted old behavior; those occurrences need an explicit reason.
+   - Verification: targeted grep review, `just check-skills`, `just docs-check`, and spec-only validation.
+
+### Surfaces Known to Change
+
+- `spx/15-merging.pdr.md`
+- `spx/21-spec-tree.enabler/76-merging.enabler/merging.md`
+- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/github-pr.md`
+- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/32-opening-pr.enabler/opening-pr.md`
+- `spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`
+- `spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/direct-push.md`
+- `src/plugins/spec-tree/skills/merging-standards/SKILL.md`
+- `src/plugins/spec-tree/skills/merge/SKILL.md`
+- `src/plugins/spec-tree/skills/open-pr/SKILL.md`
+- `src/plugins/spec-tree/skills/manage-github-pr/SKILL.md`
+- `src/plugins/spec-tree/skills/manage-pr/SKILL.md`
+- `spx/local/merging.md`
+- `AGENTS.md`
+- lifecycle eval prompts, cases, histories, and tests under `spx/21-spec-tree.enabler/76-merging.enabler/`
+
+### Naming Guardrails
+
+- Use `VERIFICATION_READINESS` for the first gate.
+- Use `review` only for the verification type or for reviewer/finding mechanics.
+- Use `DEPLOYMENT_READINESS` only for environment mutation authorization.
+- Use `RELEASE_READINESS` only for publication or refresh authorization.
+- Use `RELEASE` for this repo's marketplace sync action.
+- Use full `spx/...` paths for decisions and nodes in PR descriptions and follow-up notes.
+
 ## Direct-push transport: remaining work
 
 The `/merge` dispatcher and the direct-push variant-1 execution path (direct to `origin/main`) are built. The remaining direct-push work — variant 2 (direct to a local trunk checkout) and the `[audit]`→`[eval]` upgrade once a consumer needs the execution evidence — is tracked in `32-direct-push.enabler/PLAN.md`.
