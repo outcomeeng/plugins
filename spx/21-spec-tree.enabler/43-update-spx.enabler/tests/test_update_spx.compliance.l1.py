@@ -239,7 +239,32 @@ def test_justfile_exposes_guide_writer_and_gate() -> None:
     assert "outcomeeng.distribution.guide_diff\n" in justfile
 
 
-def test_guide_drift_probe_marks_only_existing_paths_intent_to_add(
+def test_lefthook_guide_refresh_uses_repo_root_argument() -> None:
+    lefthook = guide_diff.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
+
+    assert "--repo-root ." in lefthook
+    assert "--spx-dir" not in lefthook
+
+
+def test_guide_drift_probe_marks_untracked_root_guides_intent_to_add(
+    tmp_path: pathlib.Path,
+) -> None:
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.name", "Test User")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    (tmp_path / ".gitignore").write_text("\n", encoding="utf-8")
+    _git(tmp_path, "add", ".gitignore")
+    _git(tmp_path, "commit", "-m", "seed repository")
+    (tmp_path / GUIDE_CLAUDE).write_text("generated claude\n", encoding="utf-8")
+    (tmp_path / GUIDE_AGENTS).write_text("generated agents\n", encoding="utf-8")
+
+    assert guide_diff.drifting_guides(repo_root=tmp_path) == [
+        GUIDE_AGENTS,
+        GUIDE_CLAUDE,
+    ]
+
+
+def test_guide_drift_probe_skips_missing_obsolete_spx_guides(
     tmp_path: pathlib.Path,
 ) -> None:
     spx_dir = tmp_path / "spx"

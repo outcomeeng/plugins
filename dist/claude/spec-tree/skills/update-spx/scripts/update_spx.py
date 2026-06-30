@@ -41,6 +41,12 @@ MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 # Each agent runtime reads its own guide filename from the product root.
 RUNTIME_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
 OBSOLETE_SPX_GUIDE_FILENAMES = ("CLAUDE.md", "AGENTS.md")
+OBSOLETE_SPX_DIR_NAME = "spx"
+
+
+class CliInputError(ValueError):
+    """Raised when CLI path input would make guide generation unsafe."""
+
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
 # product's own test files, the in-use ground truth, rather than from agent judgment.
@@ -240,7 +246,10 @@ def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
 
 
 def guide_status(
-    guide_path: pathlib.Path, installed_version: str, languages: tuple[str, ...]
+    guide_path: pathlib.Path,
+    installed_version: str,
+    languages: tuple[str, ...],
+    containment_root: pathlib.Path | None = None,
 ) -> str:
     """CLI-edge helper: return ``absent``, ``stale``, or ``current`` for one guide file.
 
@@ -248,6 +257,8 @@ def guide_status(
     """
     if not guide_path.is_file():
         return "absent"
+    if containment_root is not None:
+        _validate_read_target(guide_path, containment_root)
     text = guide_path.read_text(encoding="utf-8")
     version = parse_template_version(text)
     if version is None or is_stale(version, installed_version):
@@ -269,9 +280,55 @@ def upsert_managed_section(document: str, section: str) -> str:
     return f"{base}\n\n{section}"
 
 
-def _read_text_if_present(path: pathlib.Path) -> str | None:
+def _validated_repo_root(raw_repo_root: str | None) -> pathlib.Path | None:
+    """Return a resolved repository root, rejecting missing or non-directory input."""
+    if raw_repo_root is None:
+        return None
+    try:
+        repo_root = pathlib.Path(raw_repo_root).expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise CliInputError(f"--repo-root does not exist: {raw_repo_root}") from exc
+    if not repo_root.is_dir():
+        raise CliInputError(f"--repo-root is not a directory: {raw_repo_root}")
+    return repo_root
+
+
+def _repo_child(repo_root: pathlib.Path, relative_path: str) -> pathlib.Path:
+    """Return a repo child path after validating its parent stays inside root."""
+    if pathlib.PurePath(relative_path).is_absolute():
+        raise CliInputError(f"repository-relative path is absolute: {relative_path}")
+    path = repo_root / relative_path
+    try:
+        path.parent.resolve(strict=True).relative_to(repo_root)
+    except (OSError, ValueError) as exc:
+        raise CliInputError(f"path escapes --repo-root: {relative_path}") from exc
+    return path
+
+
+def _validate_read_target(path: pathlib.Path, repo_root: pathlib.Path) -> None:
+    """Reject symlink reads that resolve outside the repository root."""
+    if not path.is_symlink():
+        return
+    try:
+        path.resolve(strict=True).relative_to(repo_root)
+    except (OSError, ValueError) as exc:
+        raise CliInputError(f"symlink target escapes --repo-root: {path}") from exc
+
+
+def _spx_dir(repo_root: pathlib.Path) -> pathlib.Path:
+    """Return the repository's spx directory after rejecting unsafe shapes."""
+    spx_dir = _repo_child(repo_root, OBSOLETE_SPX_DIR_NAME)
+    if spx_dir.is_symlink():
+        raise CliInputError(f"spx directory is a symlink: {spx_dir}")
+    if spx_dir.exists() and not spx_dir.is_dir():
+        raise CliInputError(f"spx path is not a directory: {spx_dir}")
+    return spx_dir
+
+
+def _read_text_if_present(path: pathlib.Path, repo_root: pathlib.Path) -> str | None:
     """Read ``path`` when it exists or is a symlink; otherwise return None."""
     if path.exists() or path.is_symlink():
+        _validate_read_target(path, repo_root)
         return path.read_text(encoding="utf-8")
     return None
 
@@ -286,7 +343,7 @@ def _replace_path_with_text(path: pathlib.Path, text: str) -> None:
 def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
     """Return root guide seed text for each runtime, copying a sole existing guide."""
     values = {
-        runtime: _read_text_if_present(repo_root / filename)
+        runtime: _read_text_if_present(_repo_child(repo_root, filename), repo_root)
         for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
     }
     fallback = next((text for text in values.values() if text is not None), "")
@@ -303,12 +360,14 @@ def write_root_guides(
     seeds = _root_seed_documents(repo_root)
     for runtime, filename in RUNTIME_GUIDE_FILENAMES.items():
         output = upsert_managed_section(seeds[runtime], sections_by_runtime[runtime])
-        _replace_path_with_text(repo_root / filename, output)
+        _replace_path_with_text(_repo_child(repo_root, filename), output)
 
 
 def remove_obsolete_spx_guides(repo_root: pathlib.Path) -> None:
     """Remove retired ``spx/`` guide files when present."""
-    spx_dir = repo_root / "spx"
+    spx_dir = _spx_dir(repo_root)
+    if not spx_dir.exists():
+        return
     for filename in OBSOLETE_SPX_GUIDE_FILENAMES:
         path = spx_dir / filename
         if path.exists() or path.is_symlink():
@@ -349,12 +408,20 @@ def main(argv: list[str] | None = None) -> int:
         print("error: template has no template_version", file=sys.stderr)
         return 2
 
-    repo_root = pathlib.Path(args.repo_root) if args.repo_root else None
+    try:
+        repo_root = _validated_repo_root(args.repo_root)
+    except CliInputError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
     elif repo_root is not None:
-        languages = detect_languages_from_tree(repo_root / "spx")
+        try:
+            languages = detect_languages_from_tree(_spx_dir(repo_root))
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     else:
         languages = ()
 
@@ -362,10 +429,19 @@ def main(argv: list[str] | None = None) -> int:
         if repo_root is None:
             print("error: --check requires --repo-root", file=sys.stderr)
             return 2
-        statuses = {
-            guide_status(repo_root / filename, installed, languages)
-            for filename in RUNTIME_GUIDE_FILENAMES.values()
-        }
+        try:
+            statuses = {
+                guide_status(
+                    _repo_child(repo_root, filename),
+                    installed,
+                    languages,
+                    repo_root,
+                )
+                for filename in RUNTIME_GUIDE_FILENAMES.values()
+            }
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
         # Absent dominates stale dominates current: report the worst across both files.
         for verdict in ("absent", "stale", "current"):
             if verdict in statuses:
@@ -383,8 +459,12 @@ def main(argv: list[str] | None = None) -> int:
     }
 
     if args.write and repo_root is not None:
-        write_root_guides(repo_root, rendered)
-        remove_obsolete_spx_guides(repo_root)
+        try:
+            write_root_guides(repo_root, rendered)
+            remove_obsolete_spx_guides(repo_root)
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     else:
         for runtime, content in rendered.items():
             sys.stdout.write(f"=== {RUNTIME_GUIDE_FILENAMES[runtime]} ===\n{content}")

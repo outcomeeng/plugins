@@ -196,6 +196,76 @@ def test_cli_write_without_repo_root_exits_2(tmp_path: pathlib.Path) -> None:
     assert module.main(["--template", str(template), "--write"]) == 2
 
 
+def test_cli_rejects_non_directory_repo_root(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    repo_root = tmp_path / "not-a-directory"
+    repo_root.write_text("not a directory\n", encoding="utf-8")
+
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--repo-root",
+            str(repo_root),
+            "--check",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "--repo-root is not a directory" in capsys.readouterr().err
+
+
+def test_cli_rejects_root_guide_symlink_escaping_repo_root(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-guide.md"
+    outside.write_text(ROOT_GUIDE_SHARED_BODY, encoding="utf-8")
+    (tmp_path / GUIDE_CLAUDE).symlink_to(outside)
+
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--repo-root",
+            str(tmp_path),
+            "--languages",
+            LANG_PRIMARY,
+            "--write",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "symlink target escapes --repo-root" in capsys.readouterr().err
+
+
+def test_cli_rejects_spx_symlink_during_language_detection(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-spx"
+    outside.mkdir()
+    (tmp_path / "spx").symlink_to(outside)
+
+    exit_code = module.main(
+        [
+            "--template",
+            str(template),
+            "--repo-root",
+            str(tmp_path),
+            "--write",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "spx directory is a symlink" in capsys.readouterr().err
+
+
 def test_cli_write_creates_both_root_guide_files(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, NEW_VERSION)
