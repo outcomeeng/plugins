@@ -386,6 +386,43 @@ def _completed_event(
     return event
 
 
+def _scope_coverage_error(
+    *, metadata: dict[str, Any], prefix: list[dict[str, object]]
+) -> str | None:
+    scope = metadata.get(jp.RUN_STATE_SCOPE)
+    if not isinstance(scope, dict):
+        return "review run metadata missing scope"
+    changed_files = scope.get("changedFiles")
+    if not isinstance(changed_files, list) or not all(
+        isinstance(item, str) and item for item in changed_files
+    ):
+        return "review run metadata scope.changedFiles must be non-empty strings"
+
+    expected = set(changed_files)
+    advanced: set[str] = set()
+    for event in prefix:
+        if event.get("type") != jp.SCOPE_ADVANCED:
+            continue
+        data = event.get("data")
+        if isinstance(data, dict):
+            unit = data.get("unit")
+            if isinstance(unit, str) and unit:
+                advanced.add(unit)
+
+    missing = sorted(expected - advanced)
+    unexpected = sorted(advanced - expected)
+    if missing or unexpected:
+        parts: list[str] = []
+        if missing:
+            parts.append(f"missing scope-advanced events for: {', '.join(missing)}")
+        if unexpected:
+            parts.append(
+                f"scope-advanced events outside changed files: {', '.join(unexpected)}"
+            )
+        return "; ".join(parts)
+    return None
+
+
 def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
     counts = {"blocking": 0, "debt": 0}
     for event in events:
@@ -534,6 +571,12 @@ def _finish(args: argparse.Namespace) -> int:
             sys.stderr.write("spx journal read output must be a JSON event array\n")
             return 1
         prefix = [event for event in prefix_value if isinstance(event, dict)]
+        coverage_error = _scope_coverage_error(
+            metadata=state["metadata"], prefix=prefix
+        )
+        if coverage_error is not None:
+            sys.stderr.write(f"{coverage_error}\n")
+            return 1
         completed_at = _utc_now()
         event = _completed_event(
             metadata=state["metadata"],
