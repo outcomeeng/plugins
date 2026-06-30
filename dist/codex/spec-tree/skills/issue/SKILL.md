@@ -57,7 +57,7 @@ When the target is ambiguous or the path does not resolve, ask the user which de
 
 <script_testing>
 
-`scripts/resolve_marketplace.py` is covered by `spx/21-spec-tree.enabler/76-sessions.enabler/43-issue.enabler/tests/test_resolve_marketplace.mapping.l1.py`.
+`scripts/resolve_marketplace.py` is covered by this plugin's mapping-level marketplace-resolution test suite.
 
 Tested inputs:
 
