@@ -15,7 +15,7 @@ Restricting the read-set to structural derivation keeps it a pure function of tr
 - Every decision record at a level is in the read-set, ordered by index, never filtered by title.
 - A lower-index sibling carries its spec into the read-set; same-index and higher-index siblings are listed, not read.
 - Coordination notes (`PLAN.md`, `ISSUES.md`) present at any level on the path are in the read order, after that level's decision records.
-- Guides — the product-root `spx/CLAUDE.md` and any on-path subdirectory `CLAUDE.md`, in path order from the root — are enumerated as a distinct set outside the ordered read order.
+- Guides — the active root runtime guide file (`CLAUDE.md` for Claude Code, `AGENTS.md` for Codex), plus any on-path subdirectory guide file with that runtime's guide filename, in path order from the root — are enumerated as a distinct set outside the ordered read order. The root guide's managed Spec Tree Guide section carries the product-root methodology guide; obsolete `spx/CLAUDE.md` and `spx/AGENTS.md` are not guide inputs.
 - Local overlays are enumerated as a distinct set, not interleaved into the ordered read order.
 
 ## Verification

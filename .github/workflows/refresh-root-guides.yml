@@ -61,7 +61,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "$branch"
-          git add -A AGENTS.md CLAUDE.md spx/AGENTS.md spx/CLAUDE.md dist/claude dist/codex
+          for path in AGENTS.md CLAUDE.md dist/claude dist/codex spx/AGENTS.md spx/CLAUDE.md; do
+            if [ -e "$path" ] || git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
+              git add -A "$path"
+            fi
+          done
           git commit -m "Refresh root guide sections"
           git push --force-with-lease origin "$branch"
 

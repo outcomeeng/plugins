@@ -60,7 +60,7 @@ Output contract (ordered, top-down — the read order `/contextualize` follows):
     "same_index": ["spx/{...}"],
     "higher_index": ["spx/{...}"]
   },
-  "guides": ["spx/CLAUDE.md", "spx/{ancestor}/CLAUDE.md"],
+  "guides": ["CLAUDE.md", "spx/{ancestor}/CLAUDE.md"],
   "local_overlays": ["spx/local/{...}.md"],
   "bootstrap": false
 }
@@ -79,9 +79,10 @@ Contract specifics:
   siblings go to `siblings_listed_not_read`, never into `read_order`.
 - **Coordination notes** (`PLAN.md`/`ISSUES.md`) present at any level on the path
   are emitted with `role: coordination-note`.
-- **Guides and overlays sit outside `read_order`**: the product guide
-  (`spx/CLAUDE.md` plus any subdirectory guide on the path) is emitted in `guides`
-  and the local overlays in `local_overlays`. Guides are read outside the
+- **Guides and overlays sit outside `read_order`**: the active runtime's product
+  guide (`CLAUDE.md` for Claude Code or `AGENTS.md` for Codex, plus any
+  same-runtime subdirectory guide on the path) is emitted in `guides` and the
+  local overlays in `local_overlays`. Guides are read outside the
   `read_order` loop; among `local_overlays`, only the lifecycle overlay
   (`spx/local/merging.md`) is read, and the rest are listed for the skills that
   consume them. The skill rewrite preserves the current product-guide and
