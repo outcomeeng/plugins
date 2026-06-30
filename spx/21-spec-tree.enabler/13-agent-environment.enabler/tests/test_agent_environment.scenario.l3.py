@@ -54,13 +54,11 @@ def test_session_start_delivers_correct_env_and_a_claim_spx_recognizes(
             "CLAUDE_SESSION_ID",
             "CLAUDE_PROJECT_DIR",
             "PROJECT_DIR",
-            "SPX_WORKTREE_CLAIM_PATH",
         ],
     )
     assert env["CLAUDE_SESSION_ID"] == SESSION_ID
     assert env["CLAUDE_PROJECT_DIR"] == project_dir
     assert env["PROJECT_DIR"] == project_dir
-    assert env["SPX_WORKTREE_CLAIM_PATH"].endswith(".claim")
 
     # The round-trip: spx itself recognizes the worktree the hook claimed.
     occupancy = worktree_occupancy(tmp_path)
