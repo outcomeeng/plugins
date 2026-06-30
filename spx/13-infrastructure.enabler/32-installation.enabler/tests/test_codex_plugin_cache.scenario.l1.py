@@ -28,6 +28,10 @@ from outcomeeng.distribution.marketplace_sources import (
     DEFAULT_MARKETPLACE,
     DIST_CODEX_PLUGINS_DIR,
 )
+from outcomeeng_testing.harnesses.codex_cache import (
+    MaterializingAddRunner,
+    write_plugin_root,
+)
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"
@@ -114,38 +118,6 @@ class RaisingInstalled:
         )
 
 
-@dataclass
-class MaterializingAddRunner:
-    """Runner stub that materializes cache roots for local Codex plugin adds.
-
-    Stage 5 exception 2 (interaction-protocol DI): the production path invokes
-    `codex plugin add <plugin>@<marketplace>` and observes Codex's filesystem
-    side effect. The l1 test records the command sequence and materializes the
-    same side effect deterministically.
-    """
-
-    cache_root: Path
-    versions: dict[str, str]
-    calls: list[tuple[str, ...]] = field(default_factory=list)
-
-    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
-        command_tuple = tuple(command)
-        self.calls.append(command_tuple)
-        add_prefix = preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND
-        if command_tuple[: len(add_prefix)] == add_prefix:
-            plugin_ref = command_tuple[len(add_prefix)]
-            plugin, separator, marketplace = plugin_ref.partition("@")
-            if separator != "@" or marketplace != DEFAULT_MARKETPLACE:
-                return subprocess.CompletedProcess(command, 64)
-            _write_skill(
-                self.cache_root,
-                plugin,
-                self.versions[plugin],
-                f"{plugin} materialized content",
-            )
-        return subprocess.CompletedProcess(command, 0)
-
-
 def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
     return (
         cache_root
@@ -156,17 +128,6 @@ def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
         / "contextualize"
         / "SKILL.md"
     )
-
-
-def _write_skill(cache_root: Path, plugin: str, version: str, text: str) -> None:
-    skill_file = _skill_file(cache_root, plugin, version)
-    skill_file.parent.mkdir(parents=True, exist_ok=True)
-    skill_file.write_text(text)
-    manifest = (
-        cache_root / DEFAULT_MARKETPLACE / plugin / version / CODEX_PLUGIN_MANIFEST
-    )
-    manifest.parent.mkdir(parents=True, exist_ok=True)
-    manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
 
 def _write_partial_hook_root(cache_root: Path, plugin: str, version: str) -> None:
@@ -252,7 +213,7 @@ def test_local_refresh_requeries_installed_versions_before_reconciliation(
     repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
     _write_dist_codex_manifest(repo_root, PLUGIN_NAME, NEW_CURRENT_VERSION)
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     prior_dir = plugin_dir / CURRENT_VERSION
     current_dir = plugin_dir / NEW_CURRENT_VERSION
@@ -308,7 +269,7 @@ def test_chain_recovery_restores_in_window_published_version_as_symlink(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
     older_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
     current_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
     history = StaticHistory(
@@ -351,7 +312,7 @@ def test_stale_worktree_target_and_partial_root_replaced_by_codex_target(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
+    write_plugin_root(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
     _write_partial_hook_root(cache_root, PLUGIN_NAME, CURRENT_VERSION)
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     installed_dir = plugin_dir / NEW_CURRENT_VERSION
@@ -407,8 +368,8 @@ def test_extra_real_version_directory_replaced_by_direct_symlink(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "stale real content")
-    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "stale real content")
+    write_plugin_root(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "codex content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     stale_real_path = plugin_dir / CURRENT_VERSION
     installed_dir = plugin_dir / NEW_CURRENT_VERSION
@@ -453,7 +414,7 @@ def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
     live session advertising that version is never stranded by age.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_link = plugin_dir / OLDER_VERSION
     current_dir = plugin_dir / CURRENT_VERSION
@@ -502,8 +463,8 @@ def test_out_of_window_real_directory_retargeted_to_installed_version(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "session-held content")
-    _write_skill(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "installed content")
+    write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "session-held content")
+    write_plugin_root(cache_root, PLUGIN_NAME, NEW_CURRENT_VERSION, "installed content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_dir = plugin_dir / OLDER_VERSION
     installed_dir = plugin_dir / NEW_CURRENT_VERSION
@@ -558,7 +519,7 @@ def test_preserved_symlink_mtime_refreshed_each_reconciliation(
     reconciliation rather than time since the version was published.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_link = plugin_dir / OLDER_VERSION
     current_dir = plugin_dir / CURRENT_VERSION
@@ -600,7 +561,7 @@ def test_regular_file_in_cache_dir_is_tolerated(tmp_path: Path) -> None:
     file and never aborts on it.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     stray_file = plugin_dir / ".DS_Store"
     stray_file.write_text("os metadata")
@@ -640,7 +601,7 @@ def test_orphan_plugin_cache_directory_is_pruned(tmp_path: Path) -> None:
     its entire cache directory removed during preservation.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, ORPHAN_PLUGIN_NAME, OLDER_VERSION, "orphan content")
+    write_plugin_root(cache_root, ORPHAN_PLUGIN_NAME, OLDER_VERSION, "orphan content")
     orphan_dir = cache_root / DEFAULT_MARKETPLACE / ORPHAN_PLUGIN_NAME
     history = StaticHistory(
         plugins=frozenset(),
@@ -673,7 +634,7 @@ def test_uncached_working_tree_plugin_does_not_emit_warning(
     cache_root = tmp_path / "cache"
     _write_manifest(repo_root, PLUGIN_NAME, CURRENT_VERSION)
     _write_manifest(repo_root, UNINSTALLED_PLUGIN_NAME, CURRENT_VERSION)
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "current content")
 
     exit_code = preserve_codex_plugin_cache.main(
         [
@@ -735,7 +696,7 @@ def test_refresh_without_current_real_dir_creates_no_current_symlink(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
+    write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_dir = plugin_dir / OLDER_VERSION
     current_path = plugin_dir / CURRENT_VERSION
@@ -780,7 +741,7 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
+    write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={
@@ -838,7 +799,7 @@ def test_stale_current_version_symlink_is_removed_when_no_real_dir(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
+    write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_dir = plugin_dir / OLDER_VERSION
     current_link = plugin_dir / CURRENT_VERSION
@@ -889,7 +850,7 @@ def test_all_compatibility_symlinks_removed_when_current_real_dir_absent(
     # CURRENT_VERSION is the prior current with a real directory; OLDER_VERSION is an
     # in-window compatibility symlink pointing at it; NEW_CURRENT_VERSION is the new
     # current with no real directory after the upgrade.
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     prior_real_dir = plugin_dir / CURRENT_VERSION
     older_link = plugin_dir / OLDER_VERSION
@@ -939,7 +900,7 @@ def test_multiple_compatibility_symlinks_all_removed_when_current_real_dir_absen
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, NEW_CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "prior content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     prior_real_dir = plugin_dir / CURRENT_VERSION
     older_link = plugin_dir / OLDER_VERSION
@@ -991,7 +952,7 @@ def test_plugin_with_undeterminable_current_version_prunes_symlinks_and_exits(
     directory.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, OLDER_VERSION, "older content")
+    write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "older content")
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
     older_dir = plugin_dir / OLDER_VERSION
     stale_link = plugin_dir / CURRENT_VERSION
@@ -1032,7 +993,7 @@ def test_unmanaged_plugin_with_stale_real_dir_is_pruned(tmp_path: Path) -> None:
     """
     repo_root = tmp_path / "repo"
     cache_root = tmp_path / "cache"
-    _write_skill(
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
@@ -1073,7 +1034,7 @@ def test_installed_set_query_failure_aborts_without_pruning(tmp_path: Path) -> N
     deletion.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
@@ -1107,7 +1068,7 @@ def test_dry_run_skips_installed_set_query_and_retains_cache(tmp_path: Path) -> 
     therefore needs no Codex CLI present and mutates nothing.
     """
     cache_root = tmp_path / "cache"
-    _write_skill(
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
@@ -1154,7 +1115,7 @@ def test_plugin_add_failure_returns_before_cache_prune(tmp_path: Path) -> None:
         NOT_INSTALLED_PLUGIN,
         NOT_INSTALLED_CURRENT_VERSION,
     )
-    _write_skill(
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
     plugin_dir = cache_root / DEFAULT_MARKETPLACE / NOT_INSTALLED_PLUGIN
@@ -1198,8 +1159,8 @@ def test_partial_plugin_add_failure_reconciles_successful_refresh(
     cache_root = tmp_path / "cache"
     _write_dist_codex_manifest(repo_root, "alpha", "0.2.0")
     _write_dist_codex_manifest(repo_root, "zeta", "0.2.0")
-    _write_skill(cache_root, "alpha", "0.1.0", "prior alpha content")
-    _write_skill(cache_root, "zeta", "0.1.0", "prior zeta content")
+    write_plugin_root(cache_root, "alpha", "0.1.0", "prior alpha content")
+    write_plugin_root(cache_root, "zeta", "0.1.0", "prior zeta content")
     alpha_dir = cache_root / DEFAULT_MARKETPLACE / "alpha"
     alpha_prior_dir = alpha_dir / "0.1.0"
     alpha_current_dir = alpha_dir / "0.2.0"
@@ -1220,7 +1181,7 @@ def test_partial_plugin_add_failure_reconciles_successful_refresh(
         plugin_ref = command[len(preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND)]
         plugin, _, _ = plugin_ref.partition("@")
         if plugin == "alpha":
-            _write_skill(cache_root, "alpha", "0.2.0", "current alpha content")
+            write_plugin_root(cache_root, "alpha", "0.2.0", "current alpha content")
             return subprocess.CompletedProcess(command, 0)
         return subprocess.CompletedProcess(command, 1)
 
@@ -1293,8 +1254,8 @@ def test_managed_plugin_preserved_while_unmanaged_sibling_pruned(
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "installed content")
-    _write_skill(
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "installed content")
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "stale content"
     )
     installed_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
@@ -1351,8 +1312,8 @@ def test_empty_installed_set_refreshes_every_managed_plugin(tmp_path: Path) -> N
         NOT_INSTALLED_PLUGIN,
         NOT_INSTALLED_CURRENT_VERSION,
     )
-    _write_skill(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
-    _write_skill(
+    write_plugin_root(cache_root, PLUGIN_NAME, CURRENT_VERSION, "content a")
+    write_plugin_root(
         cache_root, NOT_INSTALLED_PLUGIN, NOT_INSTALLED_STALE_VERSION, "content b"
     )
     dir_a = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME

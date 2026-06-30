@@ -2,10 +2,12 @@
 
 The maintainer refresh path requires Codex to use the same local marketplace
 source as Claude Code, reinstalls each installed plugin from that local source,
-then reconciles the cache for each refreshed plugin. The symlink target is the
-complete real cache directory named with the version Codex reports as installed
-for that plugin. Every version already present in the cache other than the
-installed one becomes a symlink pointing at it -- a present version is never
+then reconciles the cache for each refreshed plugin. For successfully refreshed
+plugins, the symlink target is the complete real cache directory named with the
+version declared by the local generated Codex manifest; for plugins outside the
+refreshed set, it remains the version Codex reports as installed. Every version
+already present in the cache other than the target becomes a symlink pointing at
+it -- a present version is never
 removed for falling outside the publication window, so a session started on it
 keeps resolving its advertised skill cache path. Versions published within the
 configured window (default ten days) but absent from the cache are recreated as
@@ -317,15 +319,18 @@ def refresh_installed_plugins(
     working_tree_plugins = resolved_history.working_tree_plugins()
     refresh_returncode = 0
     prune_orphan_plugins = True
+    reported_versions_to_preserve: dict[str, set[str]] = {}
 
     if installed is not None and not dry_run:
         # Query the installed set before the first prune so the recipe is
         # all-or-nothing: a failed or unrecognized query raises here and no cache
         # directory has been touched, so a degraded signal never drives a deletion.
         installed_versions = installed.installed_plugin_versions(marketplace)
-        addable_plugins = {
-            plugin.name for plugin in available_codex_plugins(resolved_repo_root)
+        addable_versions = {
+            plugin.name: plugin.version
+            for plugin in available_codex_plugins(resolved_repo_root)
         }
+        addable_plugins = set(addable_versions)
         wanted = working_tree_plugins & addable_plugins
         refreshed_plugins: set[str] = set()
         for plugin in sorted(wanted):
@@ -338,10 +343,24 @@ def refresh_installed_plugins(
                 break
             refreshed_plugins.add(plugin)
         if refreshed_plugins:
-            # Codex reports the post-add version as the installed target. Re-query
-            # after successful local refreshes so reconciliation targets the newly
-            # materialized real cache root instead of the pre-refresh snapshot.
+            # Re-query so plugins outside the refreshed set still use Codex's
+            # resolved target. Successfully refreshed plugins converge to the
+            # generated local manifest version because `codex plugin add`
+            # materializes that source even when `codex plugin list` lags.
             installed_versions = installed.installed_plugin_versions(marketplace)
+            for plugin in refreshed_plugins:
+                desired_version = addable_versions.get(plugin)
+                reported_version = installed_versions.get(plugin)
+                if (
+                    desired_version is not None
+                    and reported_version is not None
+                    and reported_version != desired_version
+                ):
+                    reported_versions_to_preserve.setdefault(plugin, set()).add(
+                        reported_version
+                    )
+                if desired_version is not None:
+                    installed_versions[plugin] = desired_version
             if refresh_returncode != 0:
                 wanted &= frozenset(refreshed_plugins)
         else:
@@ -415,7 +434,11 @@ def refresh_installed_plugins(
             for entry in plugin_dir.iterdir()
             if entry.is_symlink() or entry.is_dir()
         }
-        ensure_versions = (present_versions | in_window) - {current_real.name}
+        ensure_versions = (
+            present_versions
+            | in_window
+            | reported_versions_to_preserve.get(plugin, set())
+        ) - {current_real.name}
         linked_versions.extend(
             _ensure_compatibility_symlinks(
                 plugin_dir, current_real, ensure_versions, dry_run=dry_run

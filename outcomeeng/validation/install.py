@@ -335,6 +335,32 @@ def check_version_present(
     return True
 
 
+def check_compatibility_symlink_present(
+    cache_root: Path,
+    marketplace: str,
+    plugin: str,
+    version: str,
+    target_version: str,
+    errors: list[str],
+) -> None:
+    """Assert a stale Codex-resolved path remains as a compatibility symlink."""
+    plugin_dir = cache_root / marketplace / plugin
+    path = plugin_dir / version
+    target = plugin_dir / target_version
+    if not path.exists():
+        errors.append(f"MISSING COMPATIBILITY  {path}")
+        return
+    if not path.is_symlink():
+        errors.append(
+            f"NOT SYMLINK  {path}  (expected compatibility symlink to {target})"
+        )
+        return
+    if path.resolve() != target.resolve():
+        errors.append(
+            f"WRONG TARGET  {path}  (expected compatibility symlink to {target})"
+        )
+
+
 def check_single_real_codex_version(
     cache_root: Path,
     marketplace: str,
@@ -497,20 +523,36 @@ def validate(
                 claude, marketplace, plugin, max_age_days, resolved_now, errors
             )
 
-        # Codex: validates the version Codex reports as installed when available.
-        # If that live signal is unavailable and cache content exists, it falls
-        # back to the configured local marketplace source version for feature-
-        # worktree lag tolerance.
+        # Codex: validates the local marketplace manifest version when Codex's
+        # resolved installed-set signal lags that same source after refresh. If
+        # the working tree is ahead of the marketplace source, keep validating
+        # the version Codex resolves so feature branches do not false-fail.
         codex_plugin_dir = codex / marketplace / plugin
         target_version = resolved_versions.get(plugin)
         published = published_for(plugin)
         if target_version is not None:
             if target_version != version:
-                warnings.append(
-                    f"{plugin}  working-tree {version} differs from Codex "
-                    f"resolved {target_version}; verifying Codex resolved "
-                    "version in cache"
-                )
+                if published == version:
+                    warnings.append(
+                        f"{plugin}  Codex resolved {target_version} lags local "
+                        f"marketplace source {version}; verifying local "
+                        "marketplace version in cache"
+                    )
+                    check_compatibility_symlink_present(
+                        codex,
+                        marketplace,
+                        plugin,
+                        target_version,
+                        version,
+                        errors,
+                    )
+                    target_version = version
+                else:
+                    warnings.append(
+                        f"{plugin}  working-tree {version} differs from Codex "
+                        f"resolved {target_version}; verifying Codex resolved "
+                        "version in cache"
+                    )
         elif codex_plugin_dir.exists():
             if published is not None and is_strictly_ahead(version, published):
                 target_version = published
