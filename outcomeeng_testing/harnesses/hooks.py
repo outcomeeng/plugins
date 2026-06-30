@@ -165,6 +165,7 @@ def read_env_exports(env_file: Path, names: Sequence[str]) -> dict[str, str]:
             msg = f"env var name must be a shell identifier, got {name!r}"
             raise ValueError(msg)
     script = (
+        "\n".join(f"unset {name}" for name in names) + "\n"
         ". "
         + shlex.quote(str(env_file))
         + "\n"
