@@ -4,7 +4,7 @@ prompt = "prompt.md"
 plugin_dir = "dist/claude/spec-tree"
 owned_paths = [
   "spx/15-merging.pdr.md",
-  "spx/AGENTS.md",
+  "AGENTS.md",
   "spx/local/merging.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/merging.md",
   "spx/21-spec-tree.enabler/76-merging.enabler/32-direct-push.enabler/**",
