@@ -319,6 +319,7 @@ def refresh_installed_plugins(
     working_tree_plugins = resolved_history.working_tree_plugins()
     refresh_returncode = 0
     prune_orphan_plugins = True
+    reported_versions_to_preserve: dict[str, set[str]] = {}
 
     if installed is not None and not dry_run:
         # Query the installed set before the first prune so the recipe is
@@ -349,6 +350,15 @@ def refresh_installed_plugins(
             installed_versions = installed.installed_plugin_versions(marketplace)
             for plugin in refreshed_plugins:
                 desired_version = addable_versions.get(plugin)
+                reported_version = installed_versions.get(plugin)
+                if (
+                    desired_version is not None
+                    and reported_version is not None
+                    and reported_version != desired_version
+                ):
+                    reported_versions_to_preserve.setdefault(plugin, set()).add(
+                        reported_version
+                    )
                 if desired_version is not None:
                     installed_versions[plugin] = desired_version
             if refresh_returncode != 0:
@@ -424,7 +434,11 @@ def refresh_installed_plugins(
             for entry in plugin_dir.iterdir()
             if entry.is_symlink() or entry.is_dir()
         }
-        ensure_versions = (present_versions | in_window) - {current_real.name}
+        ensure_versions = (
+            present_versions
+            | in_window
+            | reported_versions_to_preserve.get(plugin, set())
+        ) - {current_real.name}
         linked_versions.extend(
             _ensure_compatibility_symlinks(
                 plugin_dir, current_real, ensure_versions, dry_run=dry_run

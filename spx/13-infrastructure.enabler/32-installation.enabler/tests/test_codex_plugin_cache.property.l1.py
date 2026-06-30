@@ -117,3 +117,52 @@ def test_successful_refresh_reconciles_to_generated_codex_manifest_version(
             if path.is_dir() and not path.is_symlink()
         )
         assert real_versions == [refresh.desired_version]
+
+
+@settings(max_examples=40)
+@given(refresh=stale_after_successful_refreshes())
+def test_successful_refresh_preserves_absent_stale_codex_reported_version(
+    refresh: StaleAfterSuccessfulRefresh,
+) -> None:
+    with codex_cache_workspace() as workspace:
+        write_dist_codex_manifest(
+            workspace.repo_root,
+            refresh.plugin,
+            refresh.desired_version,
+        )
+        history = StaticHistory(
+            plugins=frozenset([refresh.plugin]),
+            versions_by_plugin={refresh.plugin: frozenset([refresh.desired_version])},
+            current_by_plugin={refresh.plugin: refresh.desired_version},
+        )
+        installed = StaleAfterAddInstalled(
+            plugin=refresh.plugin,
+            version=refresh.stale_version,
+        )
+        runner = MaterializingAddRunner.from_dist_manifests(
+            cache_root=workspace.cache_root,
+            repo_root=workspace.repo_root,
+        )
+
+        result = preserve_codex_plugin_cache.refresh_installed_plugins(
+            DEFAULT_MARKETPLACE,
+            repo_root=workspace.repo_root,
+            cache_root=workspace.cache_root,
+            history=history,
+            installed=installed,
+            runner=runner,
+        )
+
+        plugin_dir = workspace.cache_root / DEFAULT_MARKETPLACE / refresh.plugin
+        stale_dir = plugin_dir / refresh.stale_version
+        desired_dir = plugin_dir / refresh.desired_version
+        assert result.refresh_returncode == 0
+        assert desired_dir.is_dir() and not desired_dir.is_symlink(), (
+            f"expected {desired_dir} to remain the real current directory"
+        )
+        assert stale_dir.is_symlink(), (
+            f"expected absent stale report {stale_dir} to be recreated"
+        )
+        assert stale_dir.resolve() == desired_dir.resolve(), (
+            f"expected {stale_dir} to point at {desired_dir}"
+        )

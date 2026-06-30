@@ -27,7 +27,13 @@ class CodexCacheWorkspace:
 
 @dataclass
 class MaterializingAddRunner:
-    """Runner stub that materializes cache roots for local Codex plugin adds."""
+    """Runner stub that materializes cache roots for local Codex plugin adds.
+
+    Stage 5 exception 2 (interaction-protocol DI): the production path invokes
+    `codex plugin add <plugin>@<marketplace>` and observes Codex's filesystem
+    side effect. The L1 test records the command sequence and materializes the
+    same side effect deterministically.
+    """
 
     cache_root: Path
     versions: dict[str, str]
