@@ -104,7 +104,7 @@ Wait for user confirmation before creating files.
    - Scope (capabilities grouped by the consumer and surface they serve)
    - Product-level compliance rules, if any emerged from interview
 
-3. Invoke `/update-spx` for `spx/` so its generator writes both spx-level guides — `{{! file('spx_guide') !}}` for this runtime and `{!% if target == 'claude' %!}`{{! file('spx_guide', 'codex') !}}`{!% else %!}`{{! file('spx_guide', 'claude') !}}`{!% endif %!}` for the other runtime — from the installed template. `/update-spx` owns guide rendering, enabled-language detection, and any explicit language override.
+3. Invoke `/update-spx` for the repository root so its generator writes both root guide managed sections — `{{! file('root_guide') !}}` for this runtime and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` for the other runtime — from the installed template. `/update-spx` owns guide rendering, enabled-language detection, and any explicit language override.
 
 4. If top-level composition intent exists, write `spx/PLAN.md` with:
    - Candidate product areas from the interview
@@ -128,7 +128,7 @@ After the root scaffold exists, invoke `/decompose spx/` to compose top-level ch
 Summarize what was created:
 
 - Product spec path
-- `{{! file('spx_guide') !}}` path and `{!% if target == 'claude' %!}`{{! file('spx_guide', 'codex') !}}`{!% else %!}`{{! file('spx_guide', 'claude') !}}`{!% endif %!}` path
+- `{{! file('root_guide') !}}` path and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
 
@@ -179,7 +179,7 @@ Bootstrapping is complete when:
 - [ ] Brownfield: top-level intent derived from product dimensions, not the code's module or file layout
 - [ ] Root scaffold plan presented and confirmed
 - [ ] `spx/{product-name}.product.md` created with hypothesis and scope
-- [ ] `{{! file('spx_guide') !}}` and `{!% if target == 'claude' %!}`{{! file('spx_guide', 'codex') !}}`{!% else %!}`{{! file('spx_guide', 'claude') !}}`{!% endif %!}` created from template, scoped to the project's enabled languages
+- [ ] `{{! file('root_guide') !}}` and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` carry managed sections created from template, scoped to the project's enabled languages
 - [ ] `spx/PLAN.md` created when top-level intent exists
 - [ ] Top-level structure delegated to `/decompose spx/`
 - [ ] Next steps recommended

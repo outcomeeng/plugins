@@ -111,7 +111,7 @@ The `<SPEC_TREE_FOUNDATION>` marker present in the conversation, carrying the lo
      "${CLAUDE_SKILL_DIR}/templates/nodes/outcome-name.md" \
      "${CLAUDE_SKILL_DIR}/examples"
    ```
-7. Read the product's spx-level routing guide once, if present — `Read: spx/CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
+7. Read the product's root routing guide once, if present — `Read: CLAUDE.md`. This is the WHEN-to-invoke-which-skill router for this runtime; the build renders the runtime's own filename. It is routing, not node/spec context, so it loads here once per session (and again after every compaction), not on every `/contextualize`. A freshly bootstrapped tree has no guide yet — skip silently when it does not exist.
 8. Emit the `<SPEC_TREE_FOUNDATION>` marker:
 
 ```text
@@ -120,7 +120,7 @@ Loaded: durable-map, node-types, assertion-types, ordering-rules, imperfection-p
 Operational references available: what-goes-where, excluded-nodes, product-domain-shapes
 Local lifecycle route: changes route through /merge (classifies the changeset, selects the merge transport, delegates to the selected transport; reads spx/local/merging.md as an optional overlay only when present, and its absence applies the default lifecycle)
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; verified local changes and clean branches with commits ahead of base remain unfinished until they reach the default branch on origin, unless the user explicitly limited the task to proposal, analysis, review, branch-only, or local-only work or stopped at an explicit lifecycle gate with no independent local action remaining
-Routing guide: loaded from spx/CLAUDE.md | absent
+Routing guide: loaded from CLAUDE.md | absent
 Templates available: product, adr, pdr, enabler, outcome
 Examples available in: examples/
 </SPEC_TREE_FOUNDATION>

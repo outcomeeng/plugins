@@ -3,7 +3,7 @@ template_version: "0.21.5"
 template_source: spec-tree
 ---
 
-# spx/ Directory Guide (Spec Tree)
+# Spec Tree Guide
 
 This guide explains WHEN to invoke spec-tree skills for this product. It is a **router** — the skills contain the HOW.
 

@@ -1,12 +1,12 @@
-"""Compliance evidence for the two-file guide generator.
+"""Compliance evidence for the root managed-section guide generator.
 
 Rules in ``update-spx.md`` with deterministic test evidence:
 
 - NEVER: the render substitutes a product-specific string — a brace-delimited illustration
-  token in the template passes through to the output unchanged.
-- NEVER: an update keeps an unmodeled hand-prose edit — a tampered guide re-renders to the
-  same output as a clean render from the same languages.
-- ALWAYS: generation writes both guide files, never one without the other.
+  token in the template passes through to the managed section unchanged.
+- NEVER: an update keeps an unmodeled hand-prose edit inside the managed section — a
+  tampered section re-renders to the same output as a clean render from the same languages.
+- ALWAYS: generation writes managed sections into both root guide files.
 - ALWAYS: product guides render from runtime-specific templates under ``dist/``.
 - NEVER: guide generation writes output from a template with unresolved build macros.
 """
@@ -14,16 +14,20 @@ Rules in ``update-spx.md`` with deterministic test evidence:
 from __future__ import annotations
 
 import pathlib
+import subprocess
 
 import pytest
 
 from outcomeeng.distribution import guide_diff
 from outcomeeng.distribution.contracts import DIST_DIR_NAME
 from outcomeeng_testing.harnesses.update_spx import (
+    GUIDE_AGENTS,
+    GUIDE_CLAUDE,
     ILLUSTRATION_TOKEN,
     LANG_PRIMARY,
     RUNTIME_CLAUDE,
     RUNTIME_CODEX,
+    ROOT_GUIDE_SHARED_BODY,
     SESSION_ARCHIVE_RESULT_INSTRUCTION,
     SESSION_MANAGEMENT_HEADING,
     SESSION_RESULT_FRONTMATTER_FIELD,
@@ -39,6 +43,16 @@ VERSION = "0.18.0"
 JUNK_EDIT = "HAND-EDITED JUNK THAT MUST NOT SURVIVE A RE-RENDER"
 
 
+def _git(repo_root: pathlib.Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=repo_root,
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+
 def test_render_passes_brace_token_through_unchanged() -> None:
     module = load_update_spx_module()
     rendered = module.render(
@@ -47,12 +61,12 @@ def test_render_passes_brace_token_through_unchanged() -> None:
     assert ILLUSTRATION_TOKEN in rendered
 
 
-def test_re_render_ignores_unmodeled_body_edits() -> None:
+def test_re_render_ignores_unmodeled_managed_section_edits() -> None:
     module = load_update_spx_module()
     template = build_template(VERSION)
-    guide = module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
+    section = module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
 
-    tampered = guide + f"\n\n## Hand Section\n\n{JUNK_EDIT}\n"
+    tampered = section + f"\n\n## Hand Section\n\n{JUNK_EDIT}\n"
     updated = module.render(
         template, module.parse_languages(tampered), VERSION, RUNTIME_CLAUDE
     )
@@ -61,7 +75,7 @@ def test_re_render_ignores_unmodeled_body_edits() -> None:
     assert updated == module.render(template, (LANG_PRIMARY,), VERSION, RUNTIME_CLAUDE)
 
 
-def test_generation_writes_both_guide_files(tmp_path: pathlib.Path) -> None:
+def test_generation_writes_both_root_guide_files(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, VERSION)
 
@@ -69,7 +83,7 @@ def test_generation_writes_both_guide_files(tmp_path: pathlib.Path) -> None:
         [
             "--template",
             str(template),
-            "--spx-dir",
+            "--repo-root",
             str(tmp_path),
             "--languages",
             LANG_PRIMARY,
@@ -78,13 +92,42 @@ def test_generation_writes_both_guide_files(tmp_path: pathlib.Path) -> None:
     )
     assert exit_code == 0
 
-    # Every runtime's guide file is written — never one without the other.
     written = {
         name
         for name in module.RUNTIME_GUIDE_FILENAMES.values()
         if (tmp_path / name).is_file()
     }
     assert written == set(module.RUNTIME_GUIDE_FILENAMES.values())
+
+
+def test_root_content_outside_managed_section_is_preserved(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, VERSION)
+    for filename in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        (tmp_path / filename).write_text(ROOT_GUIDE_SHARED_BODY, encoding="utf-8")
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--languages",
+                LANG_PRIMARY,
+                "--write",
+            ]
+        )
+        == 0
+    )
+
+    for filename in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        content = (tmp_path / filename).read_text(encoding="utf-8")
+        assert ROOT_GUIDE_SHARED_BODY.rstrip("\n") in content
+        assert content.count(module.MANAGED_SECTION_START) == 1
+        assert content.count(module.MANAGED_SECTION_END) == 1
 
 
 def test_guide_templates_are_loaded_from_runtime_specific_dist_outputs(
@@ -134,24 +177,82 @@ def test_justfile_exposes_guide_writer_and_gate() -> None:
     assert "outcomeeng.distribution.guide_diff\n" in justfile
 
 
+def test_guide_drift_probe_marks_only_existing_paths_intent_to_add(
+    tmp_path: pathlib.Path,
+) -> None:
+    spx_dir = tmp_path / "spx"
+    spx_dir.mkdir()
+    for path in (
+        tmp_path / GUIDE_CLAUDE,
+        tmp_path / GUIDE_AGENTS,
+        spx_dir / GUIDE_CLAUDE,
+        spx_dir / GUIDE_AGENTS,
+    ):
+        path.write_text(f"{path.name}\n", encoding="utf-8")
+
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.name", "Test User")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "seed guides")
+
+    (spx_dir / GUIDE_CLAUDE).unlink()
+    (spx_dir / GUIDE_AGENTS).unlink()
+
+    assert guide_diff.drifting_guides(repo_root=tmp_path) == [
+        f"spx/{GUIDE_AGENTS}",
+        f"spx/{GUIDE_CLAUDE}",
+    ]
+
+
+def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
+    workflow = guide_diff.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-root-guides.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "schedule:" in workflow
+    assert "contents: write" in workflow
+    assert "pull-requests: write" in workflow
+    assert "just build-skills" in workflow
+    assert "just build-guides" in workflow
+    clean_gate = workflow.index('if [ -z "$(git status --porcelain)" ]; then')
+    clean_exit = workflow.index("exit 0", clean_gate)
+    mutation_start = workflow.index('branch="automation/refresh-root-guides"')
+    existing_pr_gate = workflow.index('if [ -n "$existing_pr" ]; then')
+    existing_pr_exit = workflow.index("exit 0", existing_pr_gate)
+    pr_create = workflow.index("gh pr create")
+
+    assert clean_gate < clean_exit < mutation_start
+    assert mutation_start < workflow.index("git commit")
+    assert workflow.index("git push --force-with-lease") < existing_pr_gate
+    assert existing_pr_gate < existing_pr_exit < pr_create
+
+
 def test_write_regenerates_a_drifted_guide(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, VERSION)
     args = [
         "--template",
         str(template),
-        "--spx-dir",
+        "--repo-root",
         str(tmp_path),
         "--languages",
         LANG_PRIMARY,
     ]
     assert module.main([*args, "--write"]) == 0
 
-    # Drift both guides by hand, then regenerate — the gate's basis is that --write
-    # overwrites the drift, so a regenerate-and-diff catches a tampered guide.
+    # Drift both managed sections by hand, then regenerate. Product-owned root content
+    # outside the managed markers remains; drift inside the managed section is removed.
     guides = [tmp_path / name for name in module.RUNTIME_GUIDE_FILENAMES.values()]
     for guide in guides:
-        guide.write_text(guide.read_text() + "\n\nHAND DRIFT\n", encoding="utf-8")
+        guide.write_text(
+            guide.read_text().replace(
+                module.MANAGED_SECTION_END,
+                f"\nHAND DRIFT\n{module.MANAGED_SECTION_END}",
+            ),
+            encoding="utf-8",
+        )
     assert module.main([*args, "--write"]) == 0
     for guide in guides:
         assert "HAND DRIFT" not in guide.read_text(encoding="utf-8")
@@ -168,3 +269,30 @@ def test_no_rendered_guide_teaches_result_session_frontmatter() -> None:
         section = extract_markdown_section(rendered, SESSION_MANAGEMENT_HEADING)
         assert SESSION_ARCHIVE_RESULT_INSTRUCTION not in section
         assert SESSION_RESULT_FRONTMATTER_FIELD not in section
+
+
+def test_write_removes_obsolete_spx_guides(tmp_path: pathlib.Path) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, VERSION)
+    spx_dir = tmp_path / "spx"
+    spx_dir.mkdir()
+    for filename in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        (spx_dir / filename).write_text("obsolete\n", encoding="utf-8")
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--languages",
+                LANG_PRIMARY,
+                "--write",
+            ]
+        )
+        == 0
+    )
+
+    assert not (spx_dir / GUIDE_CLAUDE).exists()
+    assert not (spx_dir / GUIDE_AGENTS).exists()

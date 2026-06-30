@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+from dataclasses import dataclass
 import sys
 from types import ModuleType
+from typing import Final
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-spx skill directory name; a rename there must update this
 # path or load_update_spx_module raises RuntimeError at import time.
 UPDATE_SPX_MODULE_PATH = (
@@ -47,6 +49,12 @@ CANONICAL_SPX_TEMPLATE_PATH = (
     / "spx-claude.md"
 )
 
+GUIDE_CLAUDE: Final = "CLAUDE.md"
+GUIDE_AGENTS: Final = "AGENTS.md"
+ROOT_GUIDE_CLAUDE_BODY: Final = "# Claude Root\n\nClaude repository instructions.\n"
+ROOT_GUIDE_AGENTS_BODY: Final = "# Agents Root\n\nCodex repository instructions.\n"
+ROOT_GUIDE_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
+
 # Source-template content probes for the rendered-output session-result check.
 SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
@@ -69,6 +77,84 @@ BUILD_MACRO_RUNTIME = "codex"
 RUNTIME_CLAUDE = "claude"
 RUNTIME_CODEX = "codex"
 TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
+
+
+@dataclass(frozen=True)
+class RootGuideTopology:
+    """Root-guide files and symlinks a consumer repository may already contain."""
+
+    files: dict[str, str]
+    symlinks: dict[str, str]
+
+
+def root_guide_topology_only_claude() -> RootGuideTopology:
+    """Return a root topology with only the Claude runtime guide present."""
+    return RootGuideTopology(files={GUIDE_CLAUDE: ROOT_GUIDE_CLAUDE_BODY}, symlinks={})
+
+
+def root_guide_topology_only_agents() -> RootGuideTopology:
+    """Return a root topology with only the Codex runtime guide present."""
+    return RootGuideTopology(files={GUIDE_AGENTS: ROOT_GUIDE_AGENTS_BODY}, symlinks={})
+
+
+def root_guide_topology_separate() -> RootGuideTopology:
+    """Return a root topology with two independent runtime guide files."""
+    return RootGuideTopology(
+        files={
+            GUIDE_CLAUDE: ROOT_GUIDE_CLAUDE_BODY,
+            GUIDE_AGENTS: ROOT_GUIDE_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_guide_topology_symlinked() -> RootGuideTopology:
+    """Return a root topology matching a shared guide with a runtime symlink."""
+    return RootGuideTopology(
+        files={GUIDE_AGENTS: ROOT_GUIDE_SHARED_BODY},
+        symlinks={GUIDE_CLAUDE: GUIDE_AGENTS},
+    )
+
+
+def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
+    """Write ``body`` as a regular file, replacing a symlink or file at ``path``."""
+    if path.exists() or path.is_symlink():
+        path.unlink()
+    path.write_text(body, encoding="utf-8")
+
+
+def _seed_body(root: pathlib.Path, guide_name: str, fallback: str | None) -> str | None:
+    """Read a guide's body, following symlinks, or return ``fallback`` when absent."""
+    path = root / guide_name
+    if path.exists() or path.is_symlink():
+        return path.read_text(encoding="utf-8")
+    return fallback
+
+
+def materialize_root_guide_topology(
+    root: pathlib.Path, topology: RootGuideTopology
+) -> dict[str, str]:
+    """Create ``topology`` under ``root`` and normalize runtime guides to files."""
+    root.mkdir(parents=True, exist_ok=True)
+    for name, body in topology.files.items():
+        _replace_path_with_text(root / name, body)
+    for name, target in topology.symlinks.items():
+        link_path = root / name
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        link_path.symlink_to(target)
+
+    claude_seed = _seed_body(root, GUIDE_CLAUDE, None)
+    agents_seed = _seed_body(root, GUIDE_AGENTS, claude_seed)
+    if claude_seed is None:
+        claude_seed = agents_seed
+    if claude_seed is None or agents_seed is None:
+        claude_seed = agents_seed = ""
+
+    seeds = {GUIDE_CLAUDE: claude_seed, GUIDE_AGENTS: agents_seed}
+    for name, body in seeds.items():
+        _replace_path_with_text(root / name, body)
+    return seeds
 
 
 def runtime_line(runtime: str) -> str:
@@ -137,7 +223,7 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
     )
     parts = [
         "",
-        "# spx/ Directory Guide",
+        "# Spec Tree Guide",
         "",
         f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
         "",

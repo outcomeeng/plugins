@@ -85,7 +85,7 @@ Re-evaluation by architect-python required before proceeding.
 Before creating ADRs, read:
 
 - **The node spec** — functional requirements, test strategy, outcomes, and architectural constraints from parent ADRs/PDRs.
-- **Product context** — `spx/CLAUDE.md` for navigation, node status, and sparse-integer index dependencies. For testing methodology, invoke `/test` (foundational), `/python-test-standards` (standards), and `/test-python` (patterns).
+- **Product context** — `CLAUDE.md` for navigation, node status, and sparse-integer index dependencies. For testing methodology, invoke `/test` (foundational), `/python-test-standards` (standards), and `/test-python` (patterns).
 - **Existing decisions** — product-level `spx/{NN}-{slug}.adr.md` / `.pdr.md` and decisions interleaved within enabler/outcome nodes, so new ADRs stay consistent.
 
 </inputs>
@@ -105,7 +105,7 @@ ADR numbering uses the sparse integer index [10, 99]; a lower index is a depende
 <adr_creation_protocol>
 Execute these phases in order.
 
-**Phase 0 — Read context.** Read the node spec completely; read `spx/CLAUDE.md`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); consult `/test` for level definitions and principles; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
+**Phase 0 — Read context.** Read the node spec completely; read `CLAUDE.md`; read `/python-architecture-standards` for canonical ADR conventions and section structure (`<adr_sections>`); consult `/test` for level definitions and principles; read existing ADRs for consistency. The canonical ADR section structure is owned by the `/understand` foundation's decision template and enforced at audit time by the `adr-auditor` (Phase 5) — author to the `/python-architecture-standards` `<adr_sections>` shape rather than reaching across plugins for the template file.
 
 **Phase 1 — Identify decisions needed.** For each requirement, ask what architectural choices it implies, what patterns to mandate, what constraints to impose, and what trade-offs are made. List the decisions before writing any ADR.
 

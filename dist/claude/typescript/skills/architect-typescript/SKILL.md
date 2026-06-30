@@ -61,7 +61,7 @@ Before creating ADRs, understand:
 
 Read these files to understand product structure and workflow:
 
-- `spx/CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
+- `CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
 For TypeScript test standards and methodology, invoke `/typescript-test-standards` and `/test-typescript`
 
@@ -96,7 +96,7 @@ See `/author` skill for complete ordering rules.
 
 **Within-scope dependency order**: adr-21 must be decided before adr-37 (lower sparse integer index = dependency).
 
-**Cross-scope dependencies**: Must be documented explicitly in ADR "Context" section using markdown links.
+**Cross-scope dependencies**: Must be documented explicitly in the ADR decision statement or Rationale using markdown links.
 
 </adr_scope>
 
@@ -107,7 +107,7 @@ Execute these phases IN ORDER.
 
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
-   - `spx/CLAUDE.md` - Product structure, navigation, work item management
+   - `CLAUDE.md` - Product structure, navigation, work item management
 3. Read `/typescript-architecture-standards` for canonical ADR conventions
 4. Invoke `/typescript-test-standards` for canonical test standards
 5. Invoke `/test-typescript` for TypeScript testing methodology and patterns

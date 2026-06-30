@@ -1,19 +1,21 @@
-"""Deterministic generator for a product's two spx-level guide files.
+"""Deterministic generator for a product's root Spec Tree guide sections.
 
-One repository is worked by both Claude Code and Codex at once, and each reads its own
-filename from the same ``spx/`` directory, so the guide is two generated files —
-``CLAUDE.md`` for Claude Code and ``AGENTS.md`` for Codex. Both render from one canonical
-template: the body is shared, and the spans that differ by agent runtime are authored once
-as ``<!-- runtime:NAME -->`` blocks rendered only into that runtime's file, mirroring the
-``<!-- lang:NAME -->`` language blocks. The only per-product variation is the
-enabled-language list (see the node's Guide Render Model ADR).
+One repository is worked by both Claude Code and Codex at once, and each runtime retains
+its root instruction file across compaction: ``CLAUDE.md`` for Claude Code and
+``AGENTS.md`` for Codex. The Spec Tree guide is therefore a managed section in those root
+files, not generated files under ``spx/``. Both sections render from one canonical template:
+the body is shared, and the spans that differ by agent runtime are authored once as
+``<!-- runtime:NAME -->`` blocks rendered only into that runtime's section, mirroring the
+``<!-- lang:NAME -->`` language blocks. The only per-product variation inside the managed
+section is the enabled-language list.
 
 Generation is deterministic and needs no agent judgment: the enabled-language list is read
 from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version and
 language-set comparison, and the render is a pure string transformation. The parse,
 version-compare, language-filter, runtime-filter, and render functions take document strings
 and return document strings — no filesystem, environment, or subprocess access. The CLI edge
-reads the template, globs the test extensions, and writes both files.
+reads the template, globs the test extensions, replaces symlinked root guides with regular
+files, removes obsolete ``spx/`` guide files, and writes both root files.
 """
 
 from __future__ import annotations
@@ -23,15 +25,22 @@ import pathlib
 import re
 import sys
 from collections.abc import Iterable
+from collections.abc import Mapping
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+MANAGED_SECTION_START = "<!-- BEGIN MANAGED SPEC TREE GUIDE -->"
+MANAGED_SECTION_END = "<!-- END MANAGED SPEC TREE GUIDE -->"
+MANAGED_TEMPLATE_VERSION_PREFIX = "<!-- spec-tree-template-version:"
+MANAGED_TEMPLATE_SOURCE_PREFIX = "<!-- spec-tree-template-source:"
+MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 
-# Each agent runtime reads its own guide filename from the product's spx/ directory.
+# Each agent runtime reads its own guide filename from the product root.
 RUNTIME_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+OBSOLETE_SPX_GUIDE_FILENAMES = ("CLAUDE.md", "AGENTS.md")
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
 # product's own test files, the in-use ground truth, rather than from agent judgment.
@@ -46,6 +55,10 @@ _RUNTIME_BLOCK = re.compile(
     re.DOTALL,
 )
 _BLANK_RUN = re.compile(r"\n{3,}")
+_MANAGED_SECTION = re.compile(
+    rf"{re.escape(MANAGED_SECTION_START)}\n.*?\n{re.escape(MANAGED_SECTION_END)}\n?",
+    re.DOTALL,
+)
 
 
 def _split_frontmatter(text: str) -> tuple[list[str], str]:
@@ -80,6 +93,15 @@ def _frontmatter_block(frontmatter: list[str]) -> str:
     return "\n".join([FRONTMATTER_DELIMITER, *frontmatter, FRONTMATTER_DELIMITER])
 
 
+def _managed_metadata_value(text: str, prefix: str) -> str | None:
+    """Return a metadata comment value from a managed section."""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(prefix) and stripped.endswith("-->"):
+            return stripped[len(prefix) : -len("-->")].strip()
+    return None
+
+
 def _parse_languages(value: str | None) -> tuple[str, ...]:
     """Parse a ``languages`` value (``[a, b]`` or ``a, b``) into a tuple."""
     if not value:
@@ -98,13 +120,18 @@ def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
 def parse_template_version(text: str) -> str | None:
     """Return the ``template_version`` value from a document's frontmatter, or None."""
     frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY)
+    return _frontmatter_value(
+        frontmatter, TEMPLATE_VERSION_KEY
+    ) or _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
 
 
 def parse_languages(text: str) -> tuple[str, ...]:
     """Read the recorded enabled-language list from a guide's frontmatter."""
     frontmatter, _ = _split_frontmatter(text)
-    return _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
+    return _parse_languages(
+        _frontmatter_value(frontmatter, LANGUAGES_KEY)
+        or _managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX)
+    )
 
 
 def _version_tuple(version: str) -> tuple[int, ...]:
@@ -170,12 +197,12 @@ def render(
     installed_version: str,
     runtime: str,
 ) -> str:
-    """Render one runtime's guide from the template and the enabled-language list.
+    """Render one runtime's managed section from the template and enabled languages.
 
     Language-conditional blocks render only for enabled languages and runtime-conditional
     blocks only for ``runtime``; nothing else is substituted, so brace-delimited illustration
-    tokens pass through unchanged. The output frontmatter records the version, source, and
-    language list so a later update reads the languages back.
+    tokens pass through unchanged. Metadata comments record the version, source, and language
+    list so a later update reads the languages back from any position in a root guide file.
     """
     languages = normalize_languages(languages)
     template_frontmatter, template_body = _split_frontmatter(template_text)
@@ -188,14 +215,16 @@ def render(
     body = _filter_runtime(body, runtime)
     body = _BLANK_RUN.sub("\n\n", body)
 
-    out_frontmatter = [
-        f'{TEMPLATE_VERSION_KEY}: "{installed_version}"',
-        f"{TEMPLATE_SOURCE_KEY}: {source}",
-        f"{LANGUAGES_KEY}: [{', '.join(languages)}]",
-    ]
-    # `_split_frontmatter` uses `str.splitlines()`, which drops the template's trailing
-    # newline; normalize so the output always ends with exactly one.
-    rendered = f"{_frontmatter_block(out_frontmatter)}\n{body}"
+    metadata = "\n".join(
+        [
+            MANAGED_SECTION_START,
+            f"{MANAGED_TEMPLATE_VERSION_PREFIX} {installed_version} -->",
+            f"{MANAGED_TEMPLATE_SOURCE_PREFIX} {source} -->",
+            f"{MANAGED_LANGUAGES_PREFIX} {', '.join(languages)} -->",
+            "",
+        ]
+    )
+    rendered = f"{metadata}{body.rstrip()}\n\n{MANAGED_SECTION_END}"
     return rendered.rstrip("\n") + "\n"
 
 
@@ -228,17 +257,75 @@ def guide_status(
     return "current"
 
 
+def upsert_managed_section(document: str, section: str) -> str:
+    """Return ``document`` with exactly one managed Spec Tree guide section."""
+    section = section.rstrip("\n") + "\n"
+    if _MANAGED_SECTION.search(document):
+        updated = _MANAGED_SECTION.sub(section, document, count=1)
+        return updated.rstrip("\n") + "\n"
+    base = document.rstrip("\n")
+    if not base:
+        return section
+    return f"{base}\n\n{section}"
+
+
+def _read_text_if_present(path: pathlib.Path) -> str | None:
+    """Read ``path`` when it exists or is a symlink; otherwise return None."""
+    if path.exists() or path.is_symlink():
+        return path.read_text(encoding="utf-8")
+    return None
+
+
+def _replace_path_with_text(path: pathlib.Path, text: str) -> None:
+    """Write ``text`` as a regular file, replacing any file or symlink."""
+    if path.exists() or path.is_symlink():
+        path.unlink()
+    path.write_text(text, encoding="utf-8")
+
+
+def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
+    """Return root guide seed text for each runtime, copying a sole existing guide."""
+    values = {
+        runtime: _read_text_if_present(repo_root / filename)
+        for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
+    }
+    fallback = next((text for text in values.values() if text is not None), "")
+    return {
+        runtime: text if text is not None else fallback
+        for runtime, text in values.items()
+    }
+
+
+def write_root_guides(
+    repo_root: pathlib.Path, sections_by_runtime: Mapping[str, str]
+) -> None:
+    """Insert managed sections into root guides, replacing symlinks with files."""
+    seeds = _root_seed_documents(repo_root)
+    for runtime, filename in RUNTIME_GUIDE_FILENAMES.items():
+        output = upsert_managed_section(seeds[runtime], sections_by_runtime[runtime])
+        _replace_path_with_text(repo_root / filename, output)
+
+
+def remove_obsolete_spx_guides(repo_root: pathlib.Path) -> None:
+    """Remove retired ``spx/`` guide files when present."""
+    spx_dir = repo_root / "spx"
+    for filename in OBSOLETE_SPX_GUIDE_FILENAMES:
+        path = spx_dir / filename
+        if path.exists() or path.is_symlink():
+            path.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Thin CLI edge: read the template, detect languages, render and write both guide files."""
+    """Thin CLI edge: read the template, detect languages, render and write both guides."""
     parser = argparse.ArgumentParser(
-        description="Generate a product's spx/CLAUDE.md and spx/AGENTS.md from the template."
+        description="Generate managed Spec Tree sections in root CLAUDE.md and AGENTS.md."
     )
     parser.add_argument(
         "--template", required=True, help="Path to the canonical template."
     )
     parser.add_argument(
-        "--spx-dir",
-        help="Path to the product's spx/ directory holding both guide files.",
+        "--repo-root",
+        help="Path to the product repository root holding root guide files.",
     )
     parser.add_argument(
         "--check",
@@ -248,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Write both guide files under --spx-dir instead of stdout.",
+        help="Write both root guide files under --repo-root instead of stdout.",
     )
     parser.add_argument(
         "--languages",
@@ -262,21 +349,21 @@ def main(argv: list[str] | None = None) -> int:
         print("error: template has no template_version", file=sys.stderr)
         return 2
 
-    spx_dir = pathlib.Path(args.spx_dir) if args.spx_dir else None
+    repo_root = pathlib.Path(args.repo_root) if args.repo_root else None
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
-    elif spx_dir is not None:
-        languages = detect_languages_from_tree(spx_dir)
+    elif repo_root is not None:
+        languages = detect_languages_from_tree(repo_root / "spx")
     else:
         languages = ()
 
     if args.check:
-        if spx_dir is None:
-            print("error: --check requires --spx-dir", file=sys.stderr)
+        if repo_root is None:
+            print("error: --check requires --repo-root", file=sys.stderr)
             return 2
         statuses = {
-            guide_status(spx_dir / filename, installed, languages)
+            guide_status(repo_root / filename, installed, languages)
             for filename in RUNTIME_GUIDE_FILENAMES.values()
         }
         # Absent dominates stale dominates current: report the worst across both files.
@@ -286,21 +373,21 @@ def main(argv: list[str] | None = None) -> int:
                 break
         return 0
 
-    if args.write and spx_dir is None:
-        print("error: --write requires --spx-dir", file=sys.stderr)
+    if args.write and repo_root is None:
+        print("error: --write requires --repo-root", file=sys.stderr)
         return 2
 
     rendered = {
-        filename: render(template_text, languages, installed, runtime)
-        for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
+        runtime: render(template_text, languages, installed, runtime)
+        for runtime in RUNTIME_GUIDE_FILENAMES
     }
 
-    if args.write and spx_dir is not None:
-        for filename, content in rendered.items():
-            (spx_dir / filename).write_text(content, encoding="utf-8")
+    if args.write and repo_root is not None:
+        write_root_guides(repo_root, rendered)
+        remove_obsolete_spx_guides(repo_root)
     else:
-        for filename, content in rendered.items():
-            sys.stdout.write(f"=== {filename} ===\n{content}")
+        for runtime, content in rendered.items():
+            sys.stdout.write(f"=== {RUNTIME_GUIDE_FILENAMES[runtime]} ===\n{content}")
     return 0
 
 

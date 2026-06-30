@@ -19,10 +19,14 @@ import os
 from pathlib import Path
 
 from outcomeeng_testing.harnesses.hooks import (
+    WORKTREE_CLAIMED_ENV,
+    WORKTREE_CLAIM_PATH_ENV,
     WORKTREE_CONTROLLING_PID_ENV,
+    has_worktree_claim_export,
     init_session_worktree,
     read_env_exports,
     run_session_start,
+    worktree_claim_path_from_env,
     worktree_occupancy,
 )
 
@@ -54,11 +58,17 @@ def test_session_start_delivers_correct_env_and_a_claim_spx_recognizes(
             "CLAUDE_SESSION_ID",
             "CLAUDE_PROJECT_DIR",
             "PROJECT_DIR",
+            WORKTREE_CLAIMED_ENV,
+            WORKTREE_CLAIM_PATH_ENV,
         ],
     )
     assert env["CLAUDE_SESSION_ID"] == SESSION_ID
     assert env["CLAUDE_PROJECT_DIR"] == project_dir
     assert env["PROJECT_DIR"] == project_dir
+    assert has_worktree_claim_export(env)
+    claim_path = worktree_claim_path_from_env(env_file, tmp_path)
+    assert claim_path.parent == tmp_path.resolve() / ".spx" / "worktrees"
+    assert claim_path.exists()
 
     # The round-trip: spx itself recognizes the worktree the hook claimed.
     occupancy = worktree_occupancy(tmp_path)

@@ -1,11 +1,12 @@
-"""Actionable spx-guide writer and drift reporter for the validation gate.
+"""Actionable Spec Tree root-guide writer and drift reporter for the validation gate.
 
 The ``just build-guides`` recipe and the ``just guide-check`` gate run this module
-to enforce the render-model ADR's gate: regenerate ``spx/CLAUDE.md`` and
-``spx/AGENTS.md`` from the rendered runtime templates committed under ``dist/``,
-then fail when either guide drifts from its committed content. It is the guide
-analogue of ``dist-diff``: authored templates first become runtime-specific plugin
-output, then the product guide files render from that output.
+to enforce the render-model ADR's gate: regenerate the managed Spec Tree sections in
+root ``CLAUDE.md`` and ``AGENTS.md`` from the rendered runtime templates committed
+under ``dist/``, remove retired ``spx/`` guide files, then fail when any guide path
+drifts from its committed content. It is the guide analogue of ``dist-diff``: authored
+templates first become runtime-specific plugin output, then the root guide sections
+render from that output.
 
 A guide absent from the index — a first run, or a worktree where the guides were
 never committed — registers as drift via ``--intent-to-add``, because a plain
@@ -32,8 +33,10 @@ _GENERATOR: Final = (
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
     "spec-tree/skills/understand/templates/spx-claude.md"
 )
-HEADER: Final = "spx/ guide files differ from a fresh render."
-REMEDIATION: Final = "Run `just build-guides` and commit the regenerated spx/CLAUDE.md and spx/AGENTS.md."
+HEADER: Final = "root guide sections differ from a fresh render."
+REMEDIATION: Final = (
+    "Run `just build-guides` and commit the regenerated root CLAUDE.md and AGENTS.md."
+)
 UNRESOLVED_BUILD_TEMPLATE_TOKENS: Final = ("{{!", "!}}", "{!%", "%!}", "{!#", "#!}")
 BUILD_GUIDES_RECIPE: Final = "build-guides"
 GUIDE_CHECK_RECIPE: Final = "guide-check"
@@ -53,6 +56,7 @@ class GuideModule(Protocol):
     """Subset of the shipped update-spx generator reused by the product gate."""
 
     RUNTIME_GUIDE_FILENAMES: dict[str, str]
+    OBSOLETE_SPX_GUIDE_FILENAMES: tuple[str, ...]
 
     def parse_template_version(self, text: str) -> str | None: ...
 
@@ -66,10 +70,18 @@ class GuideModule(Protocol):
         runtime: str,
     ) -> str: ...
 
+    def write_root_guides(
+        self, repo_root: Path, sections_by_runtime: Mapping[str, str]
+    ) -> None: ...
 
-def _run(args: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    def remove_obsolete_spx_guides(self, repo_root: Path) -> None: ...
+
+
+def _run(
+    args: Sequence[str], *, cwd: Path = REPO_ROOT
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        list(args), cwd=REPO_ROOT, capture_output=True, text=True, check=True
+        list(args), cwd=cwd, capture_output=True, text=True, check=True
     )
 
 
@@ -84,11 +96,13 @@ def load_update_spx_module() -> GuideModule:
 
 
 def guide_paths(module: GuideModule | None = None) -> tuple[str, ...]:
-    """Derive the spx-relative guide paths from the generator's own enumeration."""
+    """Derive guide paths from the generator's own enumeration."""
     guide_module = module or load_update_spx_module()
-    return tuple(
-        f"spx/{name}" for name in guide_module.RUNTIME_GUIDE_FILENAMES.values()
+    root_paths = tuple(guide_module.RUNTIME_GUIDE_FILENAMES.values())
+    obsolete_paths = tuple(
+        f"spx/{name}" for name in guide_module.OBSOLETE_SPX_GUIDE_FILENAMES
     )
+    return (*root_paths, *obsolete_paths)
 
 
 def dist_template_path(runtime: str, *, repo_root: Path = REPO_ROOT) -> Path:
@@ -148,7 +162,7 @@ def render_guides_from_runtime_templates(
         )
 
     return {
-        module.RUNTIME_GUIDE_FILENAMES[runtime]: module.render(
+        runtime: module.render(
             runtime_templates[runtime], languages, versions[runtime], runtime
         )
         for runtime in module.RUNTIME_GUIDE_FILENAMES
@@ -156,7 +170,7 @@ def render_guides_from_runtime_templates(
 
 
 def regenerate_guides() -> None:
-    """Render both guide files in place from the committed runtime dist templates."""
+    """Render both root guide files in place from committed runtime dist templates."""
     module = load_update_spx_module()
     spx_dir = REPO_ROOT / "spx"
     templates = load_runtime_templates(module)
@@ -170,19 +184,30 @@ def regenerate_guides() -> None:
         module.detect_languages_from_tree(spx_dir),
         template_paths=paths,
     )
-    for filename, content in rendered.items():
-        (spx_dir / filename).write_text(content, encoding="utf-8")
+    module.write_root_guides(REPO_ROOT, rendered)
+    module.remove_obsolete_spx_guides(REPO_ROOT)
 
 
-def drifting_guides() -> list[str]:
+def intent_to_add_paths(
+    paths: Sequence[str], *, repo_root: Path = REPO_ROOT
+) -> tuple[str, ...]:
+    """Return generated guide paths that exist and can be marked intent-to-add."""
+    return tuple(path for path in paths if (repo_root / path).exists())
+
+
+def drifting_guides(
+    *, repo_root: Path = REPO_ROOT, module: GuideModule | None = None
+) -> list[str]:
     """Return the guide paths that drift from their committed content.
 
     ``--intent-to-add`` makes an absent-from-index guide register as drift; a plain
     ``git diff`` reports only tracked changes and would pass silently on a first run.
     """
-    paths = guide_paths()
-    _run(["git", "add", "--intent-to-add", *paths])
-    result = _run(["git", "diff", "--name-only", "--", *paths])
+    paths = guide_paths(module)
+    existing_paths = intent_to_add_paths(paths, repo_root=repo_root)
+    if existing_paths:
+        _run(["git", "add", "--intent-to-add", *existing_paths], cwd=repo_root)
+    result = _run(["git", "diff", "--name-only", "--", *paths], cwd=repo_root)
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
@@ -193,7 +218,7 @@ def render_report(drift: Sequence[str]) -> str:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Regenerate spx guide files from rendered dist templates."
+        description="Regenerate root guide sections from rendered dist templates."
     )
     parser.add_argument(
         "--write",
@@ -213,7 +238,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         # Surface the failed command's own diagnostic; captured output is otherwise
         # swallowed by the default traceback, leaving the reporter unactionable.
         sys.stderr.write(exc.stderr or "")
-        print(f"{HEADER}\n  the spx-guide gate failed; see the error above.")
+        print(f"{HEADER}\n  the root-guide gate failed; see the error above.")
         return 1
     if not drift:
         return 0

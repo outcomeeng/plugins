@@ -43,7 +43,6 @@ PORTABLE_SAMPLES = [
     "spx/55-example.enabler/12-parser.outcome",  # illustrative root sentinel
     "spx/55-example.outcome/43-integration.outcome",  # illustrative root sentinel with outcome type
     "spx/EXCLUDE",  # methodology-universal file
-    "spx/CLAUDE.md",  # methodology-universal file
     "spx/local/python.md",  # methodology-universal directory
     "spx/sessions/todo/",  # methodology-universal directory
     "spx/1foo",  # 'spx/' + digit without the 'NN-' node prefix is not a node reference

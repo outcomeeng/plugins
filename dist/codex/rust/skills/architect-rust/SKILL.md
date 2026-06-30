@@ -65,7 +65,7 @@ Before creating ADRs, understand:
 
 Read these files to understand product structure and workflow:
 
-- `spx/AGENTS.md` - Product navigation, work item status, BSP dependencies
+- `AGENTS.md` - Product navigation, work item status, BSP dependencies
 
 For Rust test standards and methodology, read `/rust-test-standards`, then invoke `/test-rust`.
 
@@ -100,7 +100,7 @@ See `/author` skill for complete ordering rules.
 
 **Within-scope dependency order**: adr-21 must be decided before adr-37 (lower BSP = dependency).
 
-**Cross-scope dependencies**: Must be documented explicitly in ADR "Context" section using markdown links.
+**Cross-scope dependencies**: Must be documented explicitly in the ADR decision statement or Rationale using markdown links.
 
 </adr_scope>
 
@@ -111,7 +111,7 @@ Execute these phases IN ORDER.
 
 1. Read the node spec completely (requirements, assertions)
 2. Read product context:
-   - `spx/AGENTS.md` - Product structure, navigation, work item management
+   - `AGENTS.md` - Product structure, navigation, work item management
 3. Read `/rust-standards`, then `/rust-architecture-standards`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists
