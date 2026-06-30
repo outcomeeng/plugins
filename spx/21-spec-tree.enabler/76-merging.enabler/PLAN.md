@@ -75,6 +75,10 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
    - Replace `POST_MERGE_VERIFY` with phase progression. A merged PR with a declared release continues to `RELEASE`; it does not exit at merge.
    - Keep `/open-pr` focused on publishing once `VERIFICATION_READINESS` holds; keep `/manage-pr` focused on current-head integration plus later declared phases.
    - Update direct-push to use the same phase sequence, with its transport-specific predicates bound locally.
+   - Replace the current production-readiness implementation and tests together:
+     - `outcomeeng/merging_policy.py` production-readiness helpers;
+     - `spx/21-spec-tree.enabler/76-merging.enabler/tests/test_merge_gate_policy.mapping.l1.py` functions `test_production_readiness_permissive_or_approved_inputs_map_to_merge` and `test_production_relevant_unapproved_change_maps_to_await_approval`.
+   - Keep the existing production-readiness tests until this transport PR because removing them in the decision PR reduces coverage for the still-installed `merging-standards` and `outcomeeng/merging_policy.py` behavior before the replacement implementation exists.
    - Verification: focused tests for gate mapping and transport behavior, lifecycle eval cases, `just check-skills`, `just docs-check`, and skill audit.
 
 4. **Repo-local release PR: marketplace refresh as `RELEASE`**
@@ -101,6 +105,16 @@ Observable path: a default-branch-bound changeset runs through `/merge` or the s
      - absent `RELEASE` is a no-op;
      - a flow that stops after `MERGE` fails when `RELEASE` is declared;
      - this repo's release runs `just sync-marketplace <previous-main-ref>` after the marketplace-source checkout fast-forwards to `origin/main`.
+   - Add deterministic mapping coverage for the two newly declared target assertions:
+     - `test_declared_deploy_without_authorization_awaits_deployment_authorization`;
+     - `test_absent_deploy_declaration_skips_deploy`;
+     - `test_declared_release_without_authorization_awaits_release_authorization`;
+     - `test_absent_release_declaration_skips_release`.
+   - Add lifecycle eval cases for the same observable outcomes when the subject is skill orchestration rather than the pure mapping helper:
+     - `declared-deploy-awaits-authorization`;
+     - `absent-deploy-skips-phase`;
+     - `declared-release-awaits-authorization`;
+     - `absent-release-skips-phase`.
    - Rename eval prompts and cases from `review-readiness` and production-readiness vocabulary only where their subject changes; keep review-specific evals when the subject is the `review` verification type.
    - Verification: `just eval-case` or `just eval-node` for changed eval suites, plus focused tests that enforce skill/spec coupling.
 
