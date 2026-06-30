@@ -32,7 +32,7 @@ def _frontmatter(text: str) -> dict[str, str]:
     return fields
 
 
-def test_audit_eval_evidence_skill_frontmatter_is_read_only() -> None:
+def test_audit_eval_evidence_skill_frontmatter_grants_context_loading() -> None:
     text = SKILL.read_text(encoding="utf-8")
     fields = _frontmatter(text)
 
@@ -42,6 +42,7 @@ def test_audit_eval_evidence_skill_frontmatter_is_read_only() -> None:
         "Grep",
         "Glob",
         "Bash",
+        "Skill",
     }
     assert REFERENCE.exists()
 
