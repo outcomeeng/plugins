@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.hooks import (
     init_session_worktree,
     read_env_exports,
     run_session_start,
+    worktree_claim_path_from_env,
     worktree_occupancy,
 )
 
@@ -54,13 +55,12 @@ def test_session_start_delivers_correct_env_and_a_claim_spx_recognizes(
             "CLAUDE_SESSION_ID",
             "CLAUDE_PROJECT_DIR",
             "PROJECT_DIR",
-            "SPX_WORKTREE_CLAIM_PATH",
         ],
     )
     assert env["CLAUDE_SESSION_ID"] == SESSION_ID
     assert env["CLAUDE_PROJECT_DIR"] == project_dir
     assert env["PROJECT_DIR"] == project_dir
-    claim_path = Path(env["SPX_WORKTREE_CLAIM_PATH"])
+    claim_path = worktree_claim_path_from_env(env_file, tmp_path)
     assert claim_path.parent == tmp_path.resolve() / ".spx" / "worktrees"
     assert claim_path.exists()
 

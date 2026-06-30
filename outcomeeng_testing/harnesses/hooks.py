@@ -45,6 +45,9 @@ KILL_SWITCH_DISABLED = "1"
 # process; spx worktree status reads it back and checks liveness, so a claim is
 # `running` only while this process is alive. A test sets it to its own PID.
 WORKTREE_CONTROLLING_PID_ENV = "SPX_WORKTREE_CONTROLLING_PID"
+WORKTREE_CLAIMED_ENV = "CLAUDE_WORKTREE_CLAIMED"
+WORKTREE_CLAIM_PATH_ENV = "SPX_WORKTREE_CLAIM_PATH"
+_UNSET_ENV_VALUE = "<unset>"
 
 # Env vars dropped from the child so the hook command sees only what the call
 # provides — its own session identity, project dir, and env file, not the runner's.
@@ -177,6 +180,20 @@ def read_env_exports(env_file: Path, names: Sequence[str]) -> dict[str, str]:
     return dict(zip(names, result.stdout.splitlines(), strict=True))
 
 
+def worktree_claim_path_from_env(env_file: Path, project_dir: Path) -> Path:
+    """Return the worktree claim path exported or indicated by the hook runner."""
+    env = read_env_exports(env_file, [WORKTREE_CLAIMED_ENV, WORKTREE_CLAIM_PATH_ENV])
+    claim_path = env[WORKTREE_CLAIM_PATH_ENV]
+    if claim_path != _UNSET_ENV_VALUE:
+        return Path(claim_path)
+    if env[WORKTREE_CLAIMED_ENV] == "1":
+        claims = sorted((project_dir.resolve() / ".spx" / "worktrees").glob("*.claim"))
+        if claims:
+            return claims[0].resolve()
+    msg = "SessionStart hook did not export or indicate a worktree claim"
+    raise AssertionError(msg)
+
+
 def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
     """Return spx's own occupancy verdict for the project's worktree claims.
 
@@ -209,5 +226,6 @@ __all__ = [
     "run_session_start",
     "session_start_command",
     "session_start_events",
+    "worktree_claim_path_from_env",
     "worktree_occupancy",
 ]

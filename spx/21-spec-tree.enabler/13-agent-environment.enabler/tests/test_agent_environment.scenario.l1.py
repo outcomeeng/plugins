@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.hooks import (
     KILL_SWITCH_ENV,
     read_env_exports,
     run_session_start,
+    worktree_claim_path_from_env,
 )
 
 SESSION_ID = "11111111-2222-3333-4444-555555555555"
@@ -35,12 +36,12 @@ def test_session_start_delivers_identity_and_worktree_claim(tmp_path: Path) -> N
         project_dir=tmp_path,
     )
     assert result.returncode == 0
-    env = read_env_exports(env_file, ["CLAUDE_SESSION_ID", "SPX_WORKTREE_CLAIM_PATH"])
+    env = read_env_exports(env_file, ["CLAUDE_SESSION_ID"])
     # Identity reaches the env file every later Bash tool call sources.
     assert env["CLAUDE_SESSION_ID"] == SESSION_ID
-    # The worktree-occupancy claim is recorded: the env path points to the claim
-    # file the spx hook runner writes under the project's .spx tree.
-    claim_path = Path(env["SPX_WORKTREE_CLAIM_PATH"])
+    # The worktree-occupancy claim is recorded: the hook exports an indicator and
+    # the spx hook runner writes the claim file under the project's .spx tree.
+    claim_path = worktree_claim_path_from_env(env_file, tmp_path)
     assert claim_path.parent == tmp_path.resolve() / ".spx" / "worktrees"
     assert claim_path.exists()
 
