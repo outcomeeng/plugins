@@ -33,6 +33,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RUN_SCRIPT,
     make_finding_dict,
     make_review_result_dict,
+    review_run_journal_env_key,
     review_run_journal_env_keys,
     run_compute_diff_in_process,
     run_journal_emit_in_process,
@@ -100,9 +101,10 @@ def _make_env(cwd: pathlib.Path) -> dict[str, str]:
 
 NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
-ENV_BACKEND, ENV_BRANCH, ENV_TARGET_KIND, ENV_PULL_REQUEST_NUMBER = (
-    review_run_journal_env_keys()
-)
+ENV_BACKEND = review_run_journal_env_key("ENV_BACKEND")
+ENV_BRANCH = review_run_journal_env_key("ENV_BRANCH")
+ENV_TARGET_KIND = review_run_journal_env_key("ENV_TARGET_KIND")
+ENV_PULL_REQUEST_NUMBER = review_run_journal_env_key("ENV_PULL_REQUEST_NUMBER")
 
 
 def _stream_review_prefix(
@@ -299,8 +301,8 @@ class TestReviewRunnerBoundary:
         env.update(journal_selector)
 
         later_env = env.copy()
-        for key in journal_selector:
-            later_env.pop(key, None)
+        for key in review_run_journal_env_keys():
+            later_env[key] = "contaminating-later-env"
 
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
@@ -367,9 +369,7 @@ class TestReviewRunnerBoundary:
             ENV_TARGET_KIND: journal_selector.get(ENV_TARGET_KIND, "branch"),
             ENV_PULL_REQUEST_NUMBER: journal_selector.get(ENV_PULL_REQUEST_NUMBER, ""),
         }
-        assert journal["namespace"] == {
-            key: expected_namespace[key] for key in review_run_journal_env_keys()
-        }
+        assert journal["namespace"] == expected_namespace
         terminal_event = journal["events"][-1]
         assert terminal_event["data"]["status"] == "approved"
         assert terminal_event["data"]["review"] == {

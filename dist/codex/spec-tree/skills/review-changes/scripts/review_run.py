@@ -269,7 +269,9 @@ def _run_journal(
     *args: str, stdin: str | None = None, journal_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    if journal_env:
+    if journal_env is not None:
+        for key in JOURNAL_ENV_KEYS:
+            env.pop(key, None)
         env.update(journal_env)
     return subprocess.run(  # noqa: S603,S607
         ["spx", "journal", *args],

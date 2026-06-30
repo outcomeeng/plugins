@@ -166,6 +166,16 @@ def review_run_journal_env_keys() -> tuple[str, ...]:
     return tuple(cast("tuple[str, ...]", module.JOURNAL_ENV_KEYS))
 
 
+def review_run_journal_env_key(name: str) -> str:
+    """Return one named journal-selector environment key from ``review_run``."""
+
+    module = load_review_run_module()
+    value = getattr(module, name)
+    if not isinstance(value, str):
+        raise RuntimeError(f"review_run.{name} must be a string")
+    return value
+
+
 def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
     return cast("Callable[[list[str] | None], int]", module.main)
 
