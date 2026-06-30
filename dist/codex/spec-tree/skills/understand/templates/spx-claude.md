@@ -78,15 +78,18 @@ Avoid shorthand such as "config patch", "direct patch", "fix the PR", or "ship i
 
 ## Quick Reference: Skills and Agents
 
-Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; reviewer agents return findings for the main conversation to validate and apply through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
+Skills run in the main conversation. Agents preload the skill and run autonomously as subagents in a separate context. Audit agents return structured verdicts; changeset reviewer agents return the raw review journal token for the main conversation to inspect and process through the governing review workflow. **ALWAYS run an audit through its agent** — the separate context keeps the verdict free of the main conversation's bias — and dispatch agents in parallel when auditing multiple targets.
 
 <!-- runtime:codex -->
 
-**Run auditor and reviewer work in a subagent, never the main thread.** This generated guide is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents, delegation, and parallel agent work. When an audit or review is called for, spawn the matching subagent — `changes-reviewer` for a changeset review, `auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, or `test-evidence-auditor` for the artifact in scope. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns findings to validate and process through the governing review workflow. Do not ask the operator to confirm whether to launch one of these required named subagents, and do not use `request_user_input` for that confirmation. Runtime approval prompts are separate: if the tool itself asks for approval, answer that prompt through the runtime approval flow. NEVER run the audit or review skill in the main conversation as a substitute: the isolated subagent context is what keeps the verdict free of author bias, and the main thread tends to continue the work itself rather than spawn the subagent. If the subagent cannot be spawned or does not finish, the gate is blocked — do not proceed as if it passed.
+**Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md instruction files, files named by the user, or files referenced by skills or instruction files.
 
-**Read named files yourself.** Always read explicitly named files in the main conversation. Never use subagents to read, summarize, inspect, or interpret skills or skill references, AGENTS.md or CLAUDE.md instruction files, files named by the user, or files referenced by skills or instruction files. Spawn subagents only for the named verifier or reviewer roles authorized above, or when the current user message explicitly asks for subagent delegation. Never spawn agents merely because they are discovered, available, or plausibly useful.
+- ALWAYS spawn subagents exactly for the named verifier or reviewer roles authorized below, or when the operator explicitly asks for subagent delegation.
+- NEVER spawn agents merely because they are discovered, available, or plausibly useful.
 
-**Use the Codex multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this runtime, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `multi_agent_v1.wait_agent`. Close every spawned agent with `multi_agent_v1.close_agent` after its final result is no longer needed; completed agents remain open until closed.
+**Run auditor and reviewer work in a subagent, never the main thread.** This is a standing user instruction to use `multi_agent_v1.spawn_agent` for the named verifier and reviewer roles it lists. Treat those cases as the user explicitly asking for subagents spawned in parallel. When an audit or review is called for, spawn the matching subagent — `changes-reviewer` for a changeset review, `auditor`, `adr-auditor`, `pdr-auditor`, `spec-auditor`, or `test-evidence-auditor` for the artifact in scope. Act only on the result the subagent returns: audit agents return verdicts, while `changes-reviewer` returns the raw review journal token to inspect and process through the governing review workflow. Do not ask the operator to confirm whether to launch one of these required named subagents. Runtime approval prompts are separate: if the tool itself asks for approval, answer that prompt through the runtime approval flow. Codex must NEVER run any verification skill (audit or review) itself to avoid biasing the results. If the subagent cannot be spawned or does not finish, the gate is blocked. Continue the deterministic verification (test and validate) and then provide the operator with a precise description of what was tried and how it failed.
+
+**Use the multi-agent tool schema exactly.** The initial task goes in `message`; use `items` only when the task must pass structured mentions. Omit `fork_context`, `model`, `reasoning_effort`, and `service_tier` for the typed verifier and reviewer agents. Full-history forks are incompatible with changing `agent_type` in this runtime, and the named verifier/reviewer roles already carry their own model settings. Store every returned agent id verbatim. After spawning, continue only non-overlapping work while the subagent runs, then collect the result with `multi_agent_v1.wait_agent`. Close every spawned agent with `multi_agent_v1.close_agent` immediately after its final result is collected; completed agents remain open until closed and can interfere with future spawns.
 
 Spawn a typed verifier or reviewer:
 
@@ -95,19 +98,19 @@ Spawn a typed verifier or reviewer:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "<exact-agent-type>",
-    "message": "<scope-specific prompt or raw review scope>"
+    "message": "<scope>"
   }
 }
 ```
 
-Wait once for one or more spawned agents. Use a minutes-long timeout for audit gates:
+Wait once for one or more spawned agents. Use a 10-minute timeout for subagents acting on individual files (e.g. `auditor`, `spec-auditor`). Use a 30-minute timeout for subagents acting on an entire changeset (`changes-reviewer`):
 
 ```json
 {
   "tool": "multi_agent_v1.wait_agent",
   "arguments": {
     "targets": ["<agent-id-from-spawn-agent>"],
-    "timeout_ms": 600000
+    "timeout_ms": 1800000
   }
 }
 ```
@@ -123,9 +126,42 @@ Close a completed or no-longer-needed agent:
 }
 ```
 
-If `wait_agent` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the runtime delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `request_user_input` as a substitute for result collection.
+If `wait_agent` is not exposed, discover the multi-agent waiting tool with `tool_search`, then call the discovered wait tool. Accept a subagent notification only when the runtime delivers it while the main conversation is working or waiting; do not choose notifications as the planned result-collection mechanism. Do not use web search, time lookup, shell polling, or `request_user_input` or any other tools as a substitute for result collection.
 
-**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the current working diff, `origin/<base>...HEAD` for a specific range, a branch name, or a PR reference. Do not pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer what to emphasize. Prepare the worktree first: isolate the intended changes, sync to the base when the governing workflow requires it, and make the diff scope clean enough for the reviewer to infer the target from the raw token.
+**Result collection for verifier and reviewer agents.** The `multi_agent_v1.wait_agent` tool is the planned result-collection mechanism. Read the JSON returned by the tool, keyed by the spawned agent id under `status`. A timeout returns an empty `status` object and is not a result. A final status for the target id is the agent result; when that final status carries the agent's final message, that final message is the verifier or reviewer output. Do not infer success from a subagent notification, a pending handle, or an open agent id.
+
+Successful `changes-reviewer` result shape:
+
+```json
+{
+  "status": {
+    "<agent-id-from-spawn-agent>": {
+      "status": "completed",
+      "message": "<raw-spx-review-journal-token>"
+    }
+  },
+  "timed_out": false
+}
+```
+
+Blocked or incomplete result shape:
+
+```json
+{
+  "status": {},
+  "timed_out": true
+}
+```
+
+**Codex `changes-reviewer` output contract.** For `agent_type: "changes-reviewer"`, a successful final message is the raw `spx journal --type review` run token. Treat that token as the only review result. Inspect the review by reading or rendering the sealed journal prefix for that token. Do not ask the reviewer to summarize findings, do not accept a prose summary as the gate result, and do not run `spec-tree:review-changes` in the main thread to replace a missing token.
+
+**Codex blocked-result rule.** If `wait_agent` returns an error, `not_found`, timeout with no final status, usage-limit failure, model-capacity failure, or any final message that is not a raw review journal token, the review gate is blocked. Record the exact agent id, tool result, and blocking reason. Do not commit, merge, or mark the gate passed until a later `changes-reviewer` run returns a valid raw journal token, or the operator explicitly approves a process exception.
+
+**Use raw scope only for `changes-reviewer`.** The review agent owns `spec-tree:review-changes`, severity taxonomy, scope expansion, and finding shape. Pass only the raw scope token in `message`: `HEAD` for the current working diff, `origin/<base>...HEAD` for a specific range, a branch name, or a PR reference.
+
+- ALWAYS prepare the worktree first: isolate the intended changes, sync to the base using the `spec-tree:sync-base` skill when the governing workflow requires it, and make the diff scope clean enough for the reviewer to infer the target from the raw token.
+- NEVER invoke the `spec-tree:review-changes` skill.
+- NEVER pass a prose prompt, restate review instructions, add severity filters, or tell the reviewer to focus only on new changes, or what to emphasize.
 
 ```json
 {
