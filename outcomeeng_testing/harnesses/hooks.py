@@ -45,6 +45,8 @@ KILL_SWITCH_DISABLED = "1"
 # process; spx worktree status reads it back and checks liveness, so a claim is
 # `running` only while this process is alive. A test sets it to its own PID.
 WORKTREE_CONTROLLING_PID_ENV = "SPX_WORKTREE_CONTROLLING_PID"
+# The hook integration asserts that spx exports a worktree claim; the exact
+# export spelling follows the pinned spx floor installed by each gate.
 WORKTREE_CLAIMED_ENV = "CLAUDE_WORKTREE_CLAIMED"
 WORKTREE_CLAIM_PATH_ENV = "SPX_WORKTREE_CLAIM_PATH"
 UNSET_ENV_VALUE = "<unset>"
