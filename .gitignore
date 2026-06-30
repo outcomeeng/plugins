@@ -4,6 +4,9 @@
 .codex/*
 !.codex/config.toml
 
+# Local MCP server registration (machine-specific absolute paths)
+.mcp.json
+
 # Agent memories staged for consolidation into skills (local only)
 methodology/memories/
 

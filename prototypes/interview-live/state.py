@@ -111,6 +111,7 @@ def initial_state(
             "settled": [],
         },
         "tree": tree or [],
+        "chat": [],
         "updatedAt": None,
     }
 
@@ -308,6 +309,16 @@ def _h_tree_move(state: dict, event: dict) -> str | None:
     return None
 
 
+def _h_chat(state: dict, event: dict) -> str | None:
+    text = event.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise EventError("chat requires non-empty 'text'")
+    # role distinguishes the browser user from the agent; both append to one log.
+    role = "assistant" if event.get("role") == "assistant" else "user"
+    state.setdefault("chat", []).append({"role": role, "text": text, "ts": _now()})
+    return None
+
+
 _HANDLERS = {
     "answer": _h_answer,
     "set_questions": _h_set_questions,
@@ -316,4 +327,5 @@ _HANDLERS = {
     "tree_add": _h_tree_add,
     "tree_remove": _h_tree_remove,
     "tree_move": _h_tree_move,
+    "chat": _h_chat,
 }

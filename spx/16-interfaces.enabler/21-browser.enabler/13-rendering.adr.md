@@ -10,6 +10,15 @@ The design system is vendored — its tokens and component vocabulary copied int
 
 Interactive affordances are first-class because the interface is a manipulation surface, not a read-only report: a reviewer restructures the tree and comments in place, and those interactions flow back over the transport decided in `spx/16-interfaces.enabler/21-browser.enabler/15-transport.adr.md`.
 
+## Alternatives rejected
+
+| Alternative                                           | Reason                                                                                                                                                                         |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime dependency on another product's design system | The browser interface ships into consumer repositories as part of this product. Runtime dependency on a separate product breaks portability and ownership.                     |
+| Inline visual styling without a token source          | Raw color, spacing, radius, shadow, and motion literals make the renderer harder to audit and prevent a single product-owned visual vocabulary.                                |
+| A permanent tree column as the primary composition    | The browser surface is an authoring conversation surface. A drawer keeps chat, questions, and node detail primary while still making tree inspection persistent and reachable. |
+| Browser-side tree parsing                             | The SPX CLI projection owns tree structure, derived state, and category vocabulary. Browser-side parsing duplicates product methodology in the renderer.                       |
+
 ## Invariants
 
 - Rendering is a pure function of the projection and the interaction state: the same projection and state always produce the same HTML.

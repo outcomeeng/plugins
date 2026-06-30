@@ -1,97 +1,109 @@
-# Live interview — transport spike
+# Browser interface prototype
 
-A standalone prototype of a real-time, bidirectional interview loop for the
-`spec-tree` `interview` skill, modelled on impeccable's `live` mode but
-reimplemented in **Python 3.11 stdlib only** (the portability floor shipped
-skill scripts must meet — no Node, no third-party packages).
+A standalone Python 3 stdlib prototype of the browser surface governed by
+`spx/16-interfaces.enabler/21-browser.enabler`. It renders the SPX projection,
+streams agent updates into the browser, and sends browser interactions back to
+the agent through the MCP transport.
 
-This is a spike, deliberately **outside** `src/plugins/`: nothing here ships,
-nothing touches `dist/` or `just check`. It exists to de-risk the transport and
-the conflict model before any spec node is authored, and to carry the tests
-that the eventual `interview` outcome node will turn into `[test]` evidence.
+The prototype lives outside `src/plugins/`. Product truth lives in the browser
+node spec and ADRs; this README is only the operator guide for running and
+inspecting the prototype.
 
 ## What it demonstrates
 
-- The agent receives each user interaction in **real time** via long-poll.
-- The browser receives each agent-side change in real time via **SSE**.
-- A single monotonic `rev` reconciles concurrent edits from both sides.
-- The subject is a **spec tree**: nodes can be renamed, added, removed, and
-  drag-dropped in the browser, alongside answering interview questions.
-- A clean process lifecycle: `/shutdown` stops the server and exits the host.
+- Claude Code owns the surface process through `mcp_server.py`, matching the MCP
+  transport in `spx/16-interfaces.enabler/21-browser.enabler/15-transport.adr.md`.
+- The agent receives browser actions through the blocking `wait_for_interaction`
+  MCP tool and replies through `say` or `present`.
+- The browser receives agent-side changes over server-sent events and posts user
+  edits to the same localhost server.
+- The left pane keeps chat and interview questions independently scrollable from
+  the spec-tree pane.
+- The tree renders SPX projection fields for state, category, and index. Node
+  detail waits on a richer SPX CLI projection that carries opener text,
+  assertions, and evidence links.
+- The state core uses a monotonic `rev`, an append-only journal, and stale
+  structural-operation rejection for a single user plus one agent.
 
 ## Files
 
-| File             | Role                                                                                   |
-| ---------------- | -------------------------------------------------------------------------------------- |
-| `state.py`       | Pure, transport-free state + conflict core. The `rev`/journal spine. Unit-testable.    |
-| `server.py`      | `ThreadingHTTPServer` hosting `/state`, `/event`, `/reply`, `/poll`, `/events` (SSE).  |
-| `shell.html`     | Vanilla-JS browser UI: questions + editable tree; POSTs interactions, consumes SSE.    |
-| `boot.py`        | **Swappable** launch layer (script model). Starts the server, publishes its URL/token. |
-| `poll_client.py` | **Swappable** agent transport. One-shot long-poll / `--reply` / `--shutdown`.          |
-| `tests/`         | `unittest` suite: pure-core unit tests + real-HTTP integration tests.                  |
+| File                           | Role                                                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state.py`                     | Transport-free state core: revisions, journal, tree edits, chat, and conflict handling.                                                     |
+| `server.py`                    | `ThreadingHTTPServer` for `/state`, `/event`, `/reply`, `/poll`, `/events`, and `/shutdown`.                                                |
+| `mcp_server.py`                | MCP stdio transport that owns `LiveServer` and exposes `get_surface_url`, `wait_for_interaction`, `say`, `present`, and `shutdown_surface`. |
+| `shell.html`                   | Vanilla HTML/CSS/JS browser UI with the vendored visual system, chat channel, editable tree, and SSE updates.                               |
+| `projection.py`                | Pure adapter from `spx spec status --format json` to the prototype tree shape.                                                              |
+| `spx_seed.py`                  | CLI helper that emits a `{tree, planned}` seed from the SPX projection.                                                                     |
+| `boot.py` and `poll_client.py` | Development fallback for local inspection without an MCP runtime.                                                                           |
+| `tests/`                       | `unittest` coverage for the state core, HTTP server, and projection adapter.                                                                |
 
-## Run the tests
+## Prototype tests
 
 ```bash
 cd prototypes/interview-live
 python3 -m unittest discover -s tests -v
 ```
 
-The integration tests boot a real server on an ephemeral port in a thread and
-stop it; no process outlives a test.
+The integration tests bind an ephemeral localhost port and stop the server before
+the test exits.
 
-## Drive it by hand
+## Seed the real spec tree
 
 ```bash
 cd prototypes/interview-live
-python3 boot.py --port 0          # prints {openUrl, token, ...}; blocks (run backgrounded)
-# open the printed openUrl in a browser
-
-# agent posts the current question:
-python3 poll_client.py --reply '{"type":"set_questions","questions":{"planned":[],"current":{"id":"q1","text":"Which consumers?","options":["A","B"],"choice":null},"settled":[]}}'
-
-# agent waits for the next interaction (returns when the user clicks/edits):
-python3 poll_client.py --since 0
-
-python3 poll_client.py --shutdown
+spx spec status --format json | python3 spx_seed.py > real-tree-seed.json
 ```
 
-An optional `--seed seed.json` accepts either a full state document or a bare
-`{"tree": [...], "planned": [...]}` to start from `spx spec status --format json`.
+`boot.py` and `mcp_server.py` also accept `--seed` with a full state document, a
+bare `{tree, planned}` seed, or the SPX projection shape adapted by
+`projection.py`.
 
-## The agent loop (script model)
+## Run through MCP
 
-```text
-boot.py                          -> server up, openUrl printed
-loop:
-  poll_client.py --since <rev>   -> blocks; returns the next interaction as JSON
-  agent interprets the event, may push back via --reply (set_questions/set_tree)
-  re-poll with the new rev
+Register the MCP server in project `.mcp.json` or in the future plugin
+`mcpServers` entry:
+
+```json
+{
+  "mcpServers": {
+    "spec-tree-surface": {
+      "command": "python3",
+      "args": [
+        "/abs/path/prototypes/interview-live/mcp_server.py",
+        "--seed",
+        "/abs/path/prototypes/interview-live/real-tree-seed.json"
+      ]
+    }
+  }
+}
 ```
 
-In Claude Code the poll runs as a background task and the harness reports its
-completion; the poll request is short-lived (≤270s slices) and self-exiting, so
-it is never a keep-alive. The server is the one long-lived process and is owned
-by an explicit boot/shutdown lifecycle.
+Then use the MCP tools:
 
-## Swappable launch layer (the MCP fold-in)
+- `get_surface_url` returns the localhost URL to open in the browser.
+- `present` pushes questions and/or a tree to the surface.
+- `say` sends an agent chat message to the browser.
+- `wait_for_interaction` blocks until the user clicks, edits, reorders, answers,
+  or sends chat.
+- `shutdown_surface` stops the localhost server.
 
-`boot.py` and `poll_client.py` are the only transport-specific pieces. An
-MCP-model variant replaces both: Claude Code owns the server process via the
-plugin's `mcpServers` config (no agent-spawned background process), and a
-blocking `wait_for_interaction` MCP tool returns the same event JSON the poll
-client prints today. `state.py`, `server.py`'s HTTP+SSE core, and `shell.html`
-are unchanged across both models — which is why the launch decision can be
-deferred until the core is proven.
+## Development fallback
 
-## Folding into the `interview` spec node
+The script path works for local inspection without an MCP runtime:
 
-The tests in `tests/` are written as the seed for `[test]`-lane evidence. When
-this graduates from a spike to a node:
+```bash
+cd prototypes/interview-live
+python3 boot.py --port 0 --seed real-tree-seed.json
+```
 
-- `state.py` becomes the portable core under the skill's `scripts/`.
-- the question lifecycle and tree-integrity assertions move into the node's spec.
-- per CLAUDE.md, shipped script tests live in `outcomeeng_testing/`, not in a
-  `tests/` dir inside the skill (which would ship to consumers).
-- the domain-agnostic loop stays in `interview`; spec-tree node semantics
-  (enabler/outcome rules, sparse ordering) come from the calling spec-tree skill.
+Open the printed `openUrl`, then use `poll_client.py --reply`,
+`poll_client.py --since <rev>`, and `poll_client.py --shutdown` from another
+terminal.
+
+## Productization boundary
+
+`mcp_server.py` and `shell.html` prove the MCP launch and browser interaction
+shape. The complex, test-bearing state core belongs in the SPX CLI before this
+becomes shipped plugin behavior. The shipped plugin keeps thin MCP launch glue
+and static renderer assets, with fonts vendored as local `woff2` files.
