@@ -323,9 +323,11 @@ def refresh_installed_plugins(
         # all-or-nothing: a failed or unrecognized query raises here and no cache
         # directory has been touched, so a degraded signal never drives a deletion.
         installed_versions = installed.installed_plugin_versions(marketplace)
-        addable_plugins = {
-            plugin.name for plugin in available_codex_plugins(resolved_repo_root)
+        addable_versions = {
+            plugin.name: plugin.version
+            for plugin in available_codex_plugins(resolved_repo_root)
         }
+        addable_plugins = set(addable_versions)
         wanted = working_tree_plugins & addable_plugins
         refreshed_plugins: set[str] = set()
         for plugin in sorted(wanted):
@@ -338,10 +340,15 @@ def refresh_installed_plugins(
                 break
             refreshed_plugins.add(plugin)
         if refreshed_plugins:
-            # Codex reports the post-add version as the installed target. Re-query
-            # after successful local refreshes so reconciliation targets the newly
-            # materialized real cache root instead of the pre-refresh snapshot.
+            # Re-query so plugins outside the refreshed set still use Codex's
+            # resolved target. Successfully refreshed plugins converge to the
+            # generated local manifest version because `codex plugin add`
+            # materializes that source even when `codex plugin list` lags.
             installed_versions = installed.installed_plugin_versions(marketplace)
+            for plugin in refreshed_plugins:
+                desired_version = addable_versions.get(plugin)
+                if desired_version is not None:
+                    installed_versions[plugin] = desired_version
             if refresh_returncode != 0:
                 wanted &= frozenset(refreshed_plugins)
         else:

@@ -47,6 +47,10 @@ CAN refresh installed plugins without breaking active sessions, local tool state
 - Given the Codex cache contains a version directory or compatibility path that lacks the runtime manifest for that plugin root, when validate_install runs, then the incomplete cache entry is reported as an error that names the plugin path ([test](tests/test_validate_install.scenario.l1.py))
 - Given the working-tree manifest version differs from the Codex-resolved version, when validate_install runs, then the Codex cache check verifies the Codex-resolved version and reports the divergence as a warning rather than requiring the working-tree version to be materialized in the Codex cache ([test](tests/test_validate_install.scenario.l1.py))
 
+### Properties
+
+- For every generated Codex plugin exposed by the canonical local source, after `codex plugin add <plugin>@outcomeeng` exits zero during local refresh, cache reconciliation targets the version declared by `dist/codex/<plugin>/.codex-plugin/plugin.json`: that version remains the complete real current directory, and any stale post-refresh Codex-reported version is a compatibility symlink to it ([test](tests/test_codex_plugin_cache.property.l1.py))
+
 ### Compliance
 
 - ALWAYS: marketplace sync and direct-publish wrappers reconcile Claude Code and Codex `outcomeeng` marketplace registrations before deciding whether plugin distribution files changed ([review])
