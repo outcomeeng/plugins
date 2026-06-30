@@ -172,9 +172,9 @@ def _journal_env_from_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     if backend:
         journal_env[ENV_BACKEND] = backend
 
-    branch_name = metadata.get(jp.RUN_STATE_BRANCH_NAME)
-    if isinstance(branch_name, str) and branch_name:
-        journal_env[ENV_BRANCH] = branch_name
+    branch_slug = metadata.get(jp.RUN_STATE_BRANCH_SLUG)
+    if isinstance(branch_slug, str) and branch_slug:
+        journal_env[ENV_BRANCH] = branch_slug
 
     target_kind = metadata.get(jp.RUN_STATE_TARGET_KIND)
     if isinstance(target_kind, str) and target_kind:

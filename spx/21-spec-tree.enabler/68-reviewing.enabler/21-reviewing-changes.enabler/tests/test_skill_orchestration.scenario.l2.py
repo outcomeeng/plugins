@@ -365,7 +365,9 @@ class TestReviewRunnerBoundary:
         assert journal["events"][2]["data"]["id"] == finding["id"]
         expected_namespace = {
             ENV_BACKEND: journal_selector.get(ENV_BACKEND, ""),
-            ENV_BRANCH: journal_selector.get(ENV_BRANCH, "feature/x"),
+            ENV_BRANCH: journal_selector.get(ENV_BRANCH, "feature/x").replace(
+                "/", "__"
+            ),
             ENV_TARGET_KIND: journal_selector.get(ENV_TARGET_KIND, "branch"),
             ENV_PULL_REQUEST_NUMBER: journal_selector.get(ENV_PULL_REQUEST_NUMBER, ""),
         }
