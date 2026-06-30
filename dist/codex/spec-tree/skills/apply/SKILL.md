@@ -81,19 +81,19 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 
 Step 0 and Steps 1–2 are language-independent. Steps 3–8 use the detected language. Steps 9 and 10 are language-independent; Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue, Step 9 runs only when the change reaches beyond the target node, and Step 10 runs unless the work is explicitly scoped to a proposal, analysis, review, or local-only change.
 
-| Step | Purpose                  | TypeScript                                                      | Python                               |
-| ---- | ------------------------ | --------------------------------------------------------------- | ------------------------------------ |
-| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                                 | same                                 |
-| 1    | Load methodology         | `Skill("spec-tree:understand")`                                 | same                                 |
-| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")`         | same                                 |
-| 3    | Architect                | `Skill("architect-typescript")`                                 | `Skill("architect-python")`          |
-| 4    | Architecture audit       | `Skill("audit-typescript-architecture")`                        | `Skill("audit-python-architecture")` |
-| 5    | Write tests              | `Skill("test-typescript")`                                      | `Skill("test-python")`               |
-| 6    | Test audit               | `Skill("audit-typescript-tests")`                               | `Skill("audit-python-tests")`        |
-| 7    | Implement                | `Skill("code-typescript")`                                      | `Skill("code-python")`               |
-| 8    | Code audit               | `Skill("audit-typescript")`                                     | `Skill("audit-python")`              |
-| 9    | Whole-changeset review † | `changes-reviewer` agent or `Skill("spec-tree:review-changes")` | same                                 |
-| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                                      | same                                 |
+| Step | Purpose                  | TypeScript                                              | Python                               |
+| ---- | ------------------------ | ------------------------------------------------------- | ------------------------------------ |
+| 0 §  | Plan the slice           | `Skill("spec-tree:plan-slice")`                         | same                                 |
+| 1    | Load methodology         | `Skill("spec-tree:understand")`                         | same                                 |
+| 2    | Load context             | `Skill("spec-tree:contextualize", args: "{node-path}")` | same                                 |
+| 3    | Architect                | `Skill("architect-typescript")`                         | `Skill("architect-python")`          |
+| 4    | Architecture audit       | `Skill("audit-typescript-architecture")`                | `Skill("audit-python-architecture")` |
+| 5    | Write tests              | `Skill("test-typescript")`                              | `Skill("test-python")`               |
+| 6    | Test audit               | `Skill("audit-typescript-tests")`                       | `Skill("audit-python-tests")`        |
+| 7    | Implement                | `Skill("code-typescript")`                              | `Skill("code-python")`               |
+| 8    | Code audit               | `Skill("audit-typescript")`                             | `Skill("audit-python")`              |
+| 9    | Whole-changeset review † | `changes-reviewer` agent                                | same                                 |
+| 10   | Merge ‡                  | `Skill("spec-tree:merge")`                              | same                                 |
 
 § Step 0 runs only when the work is described as a plan or proposal rather than a specific node or queue; it selects the observable slice whose node set becomes the work queue (see `<invocation_modes>`).
 † Step 9 runs only when the change touches files or specs beyond the target node (see the step for the condition).
@@ -191,7 +191,7 @@ Before invoking the audit, apply `<stabilized_diff_rule>`.
 
 Skip this step only when the entire diff is confined to the target node's own directory — its spec, its `tests/`, and the implementation files that node governs. The moment the work touches anything else — a refactor, a move, a consolidation, a cross-cutting rename, a shared enabler, a sibling spec, or any file outside the target node — this step is REQUIRED before the flow may be declared complete.
 
-Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent, or `/review-changes` when `changes-reviewer` is not installed. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
+Run a whole-diff review over the full changeset (not only the target node) via the `changes-reviewer` agent. The per-node gates in Steps 4, 6, and 8 inspect the target node; they do not see cross-node effects — a stale reference a rename left in a sibling, dead code a move orphaned, a spec a consolidation made false. The whole-diff review catches those, and catching them here costs one early review instead of many rounds later at merge time.
 
 Apply `<stabilized_diff_rule>` before invoking the review. Fix every valid finding it surfaces, including every in-scope same-class instance found by the same-class sweep, then re-run. **Unaddressed valid finding -> fix the defect class -> re-run this step.** Loop until the review converges.
 

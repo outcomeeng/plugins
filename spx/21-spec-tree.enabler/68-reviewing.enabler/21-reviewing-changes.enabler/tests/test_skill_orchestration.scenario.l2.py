@@ -30,9 +30,12 @@ from outcomeeng_testing.harnesses.changeset_scope import build_stale_local_base_
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
+    REVIEW_RUN_SCRIPT,
+    make_finding_dict,
     make_review_result_dict,
     run_compute_diff_in_process,
     run_journal_emit_in_process,
+    run_script,
 )
 
 
@@ -95,6 +98,58 @@ def _make_env(cwd: pathlib.Path) -> dict[str, str]:
 
 NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
+
+
+def _write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
+    script = bin_dir / "spx"
+    script.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import pathlib
+import sys
+
+path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
+if path.is_file():
+    state = json.loads(path.read_text(encoding="utf-8"))
+else:
+    state = {"commands": [], "events": [], "sealed": False}
+
+args = sys.argv[1:]
+if len(args) < 2 or args[0] != "journal":
+    sys.stderr.write("expected spx journal command\\n")
+    raise SystemExit(2)
+
+command = args[1]
+state["commands"].append(command)
+if command == "open":
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"runToken": "run-001"}))
+elif command == "append":
+    if state["sealed"]:
+        sys.stderr.write("run is sealed\\n")
+        raise SystemExit(3)
+    state["events"].append(json.load(sys.stdin))
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"ok": True}))
+elif command == "read":
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps(state["events"]))
+elif command == "seal":
+    state["sealed"] = True
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"ok": True}))
+elif command == "render":
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps(state["events"]))
+else:
+    sys.stderr.write(f"unknown command {command}\\n")
+    raise SystemExit(2)
+""",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    return script
 
 
 def _stream_review_prefix(
@@ -188,7 +243,7 @@ class TestSkillOrchestrationChain:
         # 4. Stream the run: scope-entered, a scope-advanced for the examined
         #    file, one finding-reported per finding (each through the parse
         #    gate), and the terminal run-completed. The default fixture carries
-        #    one debt-severity finding under the standards concern.
+        #    one debt-severity finding under the architecture concern.
         findings = make_review_result_dict()["findings"]
         sealed_prefix = _stream_review_prefix(
             env, metadata_result.stdout, findings, units=["README.md"]
@@ -207,7 +262,7 @@ class TestSkillOrchestrationChain:
         assert "- examined README.md" in surface
         # The finding event carries the full review finding: severity maps to
         # the audit-shared `warning`, and the concern and action ride along.
-        assert "- [warning standards] example.py:10" in surface
+        assert "- [warning architecture] example.py:10" in surface
         assert "Required: Rename the symbol to convey its role." in surface
         # No verdict the reviewer decides; the rollup footer is a computed
         # status, not a `decision` field.
@@ -238,6 +293,97 @@ class TestSkillOrchestrationChain:
         assert surface["countLine"] == "BLOCKING: 0, DEBT: 0"
         assert surface["blocking"] == "0"
         assert surface["debt"] == "0"
+
+
+@pytest.mark.skipif(
+    not REVIEW_RUN_SCRIPT.exists(),
+    reason="review_run.py is not yet present.",
+)
+class TestReviewRunnerBoundary:
+    """The public runner seals a journal run and returns only the run token."""
+
+    def test_runner_streams_to_spx_journal_and_returns_run_token(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_branch(repo)
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        journal_path = tmp_path / "journal.json"
+        _write_fake_spx(bin_dir, journal_path)
+
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
+
+        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        assert started.returncode == 0, started.stderr
+        start_payload = json.loads(started.stdout)
+
+        scoped = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-scope",
+            "--state",
+            start_payload["statePath"],
+            "README.md",
+            env=env,
+            cwd=repo,
+        )
+        assert scoped.returncode == 0, scoped.stderr
+
+        finding = make_finding_dict(file="README.md", line=2)
+        appended = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-finding",
+            "--state",
+            start_payload["statePath"],
+            stdin=json.dumps(finding),
+            env=env,
+            cwd=repo,
+        )
+        assert appended.returncode == 0, appended.stderr
+
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload["statePath"],
+            env=env,
+            cwd=repo,
+        )
+        assert finished.returncode == 0, finished.stderr
+
+        assert finished.stdout == "run-001\n"
+        assert pathlib.Path(start_payload["statePath"]).exists() is False
+
+        journal = json.loads(journal_path.read_text(encoding="utf-8"))
+        assert journal["sealed"] is True
+        assert journal["commands"] == [
+            "open",
+            "append",
+            "append",
+            "append",
+            "read",
+            "append",
+            "seal",
+        ]
+        event_types = [event["type"] for event in journal["events"]]
+        assert event_types == [
+            "verification.scope.entered",
+            "verification.scope.advanced",
+            "verification.finding.reported",
+            "com.outcomeeng.spx.journal.run.completed",
+        ]
+        assert journal["events"][2]["data"]["id"] == finding["id"]
+        terminal_event = journal["events"][-1]
+        assert terminal_event["data"]["status"] == "approved"
+        assert terminal_event["data"]["review"] == {
+            "blocking": 0,
+            "debt": 1,
+            "overall": "approved",
+        }
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
