@@ -174,11 +174,16 @@ def test_sync_runs_final_codex_refresh_after_install_validation() -> None:
     """
     step_names = tuple(step.name for step in STEPS)
 
+    assert CODEX_FINAL_REFRESH_STEP in step_names
     assert step_names.index(INSTALL_VALIDATE_STEP) < step_names.index(
         CODEX_FINAL_REFRESH_STEP
     )
     assert step_names.index(CODEX_FINAL_REFRESH_STEP) < step_names.index(
         INSTALLED_CHECK_STEP
+    )
+    assert (
+        "--strict-current-cache"
+        in STEPS[step_names.index(CODEX_FINAL_REFRESH_STEP)].argv
     )
 
 

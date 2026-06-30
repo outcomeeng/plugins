@@ -89,6 +89,7 @@ STEPS: tuple[SyncStep, ...] = (
             "-m",
             "outcomeeng.distribution.codex_cache",
             "outcomeeng",
+            "--strict-current-cache",
         ),
     ),
     SyncStep(
