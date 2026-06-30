@@ -70,7 +70,7 @@ jobs:
             --no-session-persistence \
             --permission-mode dontAsk \
             --plugin-dir dist/claude/spec-tree \
-            --allowed-tools "Skill,Read,Bash(python3 *scripts/review_run.py*)" \
+            --allowed-tools "Skill,Read,Bash(python3 *)" \
             > review-run-token.txt
 
           run_token="$(sed -n '/[^[:space:]]/p' review-run-token.txt | tail -n 1)"
