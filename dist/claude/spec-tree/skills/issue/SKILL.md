@@ -83,7 +83,7 @@ If the target checkout is detached or its current branch does not exist on origi
 
 <workflow>
 
-**Step 1 — Resolve the target.** When `$ARGUMENTS` names a dependency or a checkout directory, take it as the target. Otherwise determine which dependency the observation concerns and resolve its checkout directory per `<target_resolution>`.
+**Step 1 — Resolve the target.** When `$ARGUMENTS` names an existing checkout directory, take it as the target only after confirming it is the dependency checkout to receive the handoff. When `$ARGUMENTS` names a dependency token such as `spx`, `spec-tree`, or a CLI/plugin name, resolve the dependency's checkout directory per `<target_resolution>` instead of treating the token as a path. Otherwise determine which dependency the observation concerns and resolve its checkout directory per `<target_resolution>`.
 
 **Step 2 — Resolve `git_ref`.** Resolve the target repository's stable pickup branch per `<git_ref_resolution>`.
 

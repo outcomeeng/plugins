@@ -168,6 +168,7 @@ def test_git_sha_uses_full_head_identity(
     _git(tmp_path, "init")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "config", "user.name", "Test User")
+    _git(tmp_path, "config", "commit.gpgsign", "false")
     (tmp_path / "tracked.txt").write_text("content\n", encoding="utf-8")
     _git(tmp_path, "add", "tracked.txt")
     _git(tmp_path, "commit", "-m", "initial")
