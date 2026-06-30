@@ -83,7 +83,7 @@ If the target checkout is detached or its current branch does not exist on origi
 
 **Step 4 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
-**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line:
+**Step 5 — File the follow-up.** Run `spx -C <target-dir> session handoff`, piping the JSON header line then the body to stdin. An interactive Claude Code or Codex session may use a quoted heredoc; a programmatic runner uses one physical `printf` line. Literal apostrophes inside a single-quoted `printf` line use `'"'"'`:
 
 ```bash
 printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<imperative first action>","git_ref":"<target-branch-on-origin>","specs":[],"files":[]}' '# <short title>' '' '<observation body — affected paths, checked facts, uncertainty, next-workflow context>' | spx -C <target-dir> session handoff
