@@ -33,8 +33,15 @@ _DEFAULT_TARGET = "working-diff"
 _PARTICIPANTS = ("review",)
 
 ENV_BRANCH = "SPX_VERIFY_BRANCH"
+ENV_BACKEND = "SPX_VERIFY_BACKEND"
 ENV_TARGET_KIND = "SPX_VERIFY_TARGET_KIND"
 ENV_PULL_REQUEST_NUMBER = "SPX_VERIFY_PULL_REQUEST_NUMBER"
+JOURNAL_ENV_KEYS = (
+    ENV_BACKEND,
+    ENV_BRANCH,
+    ENV_TARGET_KIND,
+    ENV_PULL_REQUEST_NUMBER,
+)
 
 
 def _load_module(name: str, path: pathlib.Path) -> ModuleType:
@@ -183,6 +190,41 @@ def _pull_request_number(target_kind: object) -> int | None:
     return None
 
 
+def _journal_env_from_metadata(metadata: dict[str, Any]) -> dict[str, str]:
+    journal_env: dict[str, str] = {}
+    backend = os.environ.get(ENV_BACKEND, "").strip()
+    if backend:
+        journal_env[ENV_BACKEND] = backend
+
+    branch_name = metadata.get(jp.RUN_STATE_BRANCH_NAME)
+    if isinstance(branch_name, str) and branch_name:
+        journal_env[ENV_BRANCH] = branch_name
+
+    target_kind = metadata.get(jp.RUN_STATE_TARGET_KIND)
+    if isinstance(target_kind, str) and target_kind:
+        journal_env[ENV_TARGET_KIND] = target_kind
+
+    pull_request_number = metadata.get(jp.RUN_STATE_PULL_REQUEST_NUMBER)
+    if isinstance(pull_request_number, int):
+        journal_env[ENV_PULL_REQUEST_NUMBER] = str(pull_request_number)
+
+    return journal_env
+
+
+def _journal_env_from_state(state: dict[str, Any]) -> dict[str, str]:
+    value = state.get("journalEnv")
+    if not isinstance(value, dict):
+        raise ValueError("review runner state missing journalEnv object")
+    journal_env: dict[str, str] = {}
+    for key, env_value in value.items():
+        if not isinstance(key, str) or not isinstance(env_value, str):
+            raise ValueError(
+                "review runner state journalEnv must map strings to strings"
+            )
+        journal_env[key] = env_value
+    return journal_env
+
+
 def _metadata_from_manifest(
     *, manifest_path: pathlib.Path, started_at: str, target: str
 ) -> dict[str, Any]:
@@ -224,13 +266,19 @@ def _metadata_from_manifest(
 
 
 def _run_journal(
-    *args: str, stdin: str | None = None
+    *args: str, stdin: str | None = None, journal_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    if journal_env is not None:
+        for key in JOURNAL_ENV_KEYS:
+            env.pop(key, None)
+        env.update(journal_env)
     return subprocess.run(  # noqa: S603,S607
         ["spx", "journal", *args],
         input=stdin,
         capture_output=True,
         text=True,
+        env=env,
         check=False,
     )
 
@@ -244,9 +292,9 @@ def _propagate_failure(result: subprocess.CompletedProcess[str]) -> int | None:
 
 
 def _journal_json(
-    *args: str, stdin: str | None = None
+    *args: str, stdin: str | None = None, journal_env: dict[str, str] | None = None
 ) -> tuple[int, object | None, str]:
-    result = _run_journal(*args, stdin=stdin)
+    result = _run_journal(*args, stdin=stdin, journal_env=journal_env)
     failed = _propagate_failure(result)
     if failed is not None:
         return failed, None, result.stdout
@@ -257,7 +305,9 @@ def _journal_json(
         return 1, None, result.stdout
 
 
-def _append_event(run_token: str, event: dict[str, object]) -> int:
+def _append_event(
+    run_token: str, event: dict[str, object], *, journal_env: dict[str, str]
+) -> int:
     result = _run_journal(
         "append",
         "--type",
@@ -265,6 +315,7 @@ def _append_event(run_token: str, event: dict[str, object]) -> int:
         "--run",
         run_token,
         stdin=json.dumps(event),
+        journal_env=journal_env,
     )
     failed = _propagate_failure(result)
     if failed is not None:
@@ -398,7 +449,10 @@ def _start(args: argparse.Namespace) -> int:
             started_at=started_at,
             target=args.target,
         )
-        code, opened, _raw = _journal_json("open", "--type", _REVIEW_TYPE)
+        journal_env = _journal_env_from_metadata(metadata)
+        code, opened, _raw = _journal_json(
+            "open", "--type", _REVIEW_TYPE, journal_env=journal_env
+        )
         if code != 0:
             shutil.rmtree(scratch_dir)
             return code
@@ -411,7 +465,7 @@ def _start(args: argparse.Namespace) -> int:
             jp.run_from_metadata(jp.run_metadata_from_json(json.dumps(metadata))),
             now=started_at,
         )
-        code = _append_event(run_token, event)
+        code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
             shutil.rmtree(scratch_dir)
             return code
@@ -422,6 +476,7 @@ def _start(args: argparse.Namespace) -> int:
             "diffPath": str(summary["diff_path"]),
             "manifestPath": str(manifest_path),
             "metadata": metadata,
+            "journalEnv": journal_env,
         }
         state_path = _write_state(state)
         manifest = _read_json_file(manifest_path, name="review manifest")
@@ -451,11 +506,12 @@ def _start(args: argparse.Namespace) -> int:
 def _append_scope(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state)
         event = jp.scope_advanced_event(args.unit, now=_utc_now())
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
-    code = _append_event(str(state["runToken"]), event)
+    code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
     if code != 0:
         return code
     json.dump({"appended": "scope", "unit": args.unit}, sys.stdout, sort_keys=True)
@@ -466,11 +522,12 @@ def _append_scope(args: argparse.Namespace) -> int:
 def _append_finding(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state)
         event = _finding_event_from_stdin(now=_utc_now(), attempt=1)
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
-    code = _append_event(str(state["runToken"]), event)
+    code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
     if code != 0:
         return code
     json.dump({"appended": "finding"}, sys.stdout, sort_keys=True)
@@ -481,9 +538,17 @@ def _append_finding(args: argparse.Namespace) -> int:
 def _finish(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state)
         run_token = str(state["runToken"])
         code, prefix_value, _raw = _journal_json(
-            "read", "--type", _REVIEW_TYPE, "--run", run_token, "--from", "0"
+            "read",
+            "--type",
+            _REVIEW_TYPE,
+            "--run",
+            run_token,
+            "--from",
+            "0",
+            journal_env=journal_env,
         )
         if code != 0:
             return code
@@ -497,10 +562,12 @@ def _finish(args: argparse.Namespace) -> int:
             prefix=prefix,
             completed_at=completed_at,
         )
-        code = _append_event(run_token, event)
+        code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
             return code
-        sealed = _run_journal("seal", "--type", _REVIEW_TYPE, "--run", run_token)
+        sealed = _run_journal(
+            "seal", "--type", _REVIEW_TYPE, "--run", run_token, journal_env=journal_env
+        )
         failed = _propagate_failure(sealed)
         if failed is not None:
             return failed

@@ -144,6 +144,38 @@ def load_journal_emit_module() -> ModuleType:
     return module
 
 
+def load_review_run_module() -> ModuleType:
+    """Load the review runner module via importlib."""
+
+    cached = sys.modules.get("review_run")
+    if cached is not None:
+        return cached
+    spec = importlib.util.spec_from_file_location("review_run", REVIEW_RUN_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load review_run from {REVIEW_RUN_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["review_run"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def review_run_journal_env_keys() -> tuple[str, ...]:
+    """Return the journal-selector environment keys owned by ``review_run``."""
+
+    module = load_review_run_module()
+    return tuple(cast("tuple[str, ...]", module.JOURNAL_ENV_KEYS))
+
+
+def review_run_journal_env_key(name: str) -> str:
+    """Return one named journal-selector environment key from ``review_run``."""
+
+    module = load_review_run_module()
+    value = getattr(module, name)
+    if not isinstance(value, str):
+        raise RuntimeError(f"review_run.{name} must be a string")
+    return value
+
+
 def _module_main(module: ModuleType) -> Callable[[list[str] | None], int]:
     return cast("Callable[[list[str] | None], int]", module.main)
 
@@ -243,6 +275,95 @@ def run_script(
         env=env,
         cwd=cwd,
     )
+
+
+def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
+    """Write a fake ``spx`` executable that enforces journal namespace continuity.
+
+    The fake records the selector environment present at ``journal open`` and
+    rejects later ``append``, ``read``, or ``seal`` calls whose ``--run`` token
+    or selector differs. This makes the runner boundary test exercise the same
+    class of failure as the real journal backend without reaching into the
+    backend's filesystem layout.
+    """
+
+    script = bin_dir / "spx"
+    script.write_text(
+        """#!/usr/bin/env python3
+import json
+import os
+import pathlib
+import sys
+
+
+def namespace():
+    keys = json.loads(os.environ["SPX_FAKE_NAMESPACE_KEYS"])
+    return {key: os.environ.get(key, "") for key in keys}
+
+
+def option_value(args, name):
+    try:
+        index = args.index(name)
+    except ValueError:
+        return ""
+    try:
+        return args[index + 1]
+    except IndexError:
+        return ""
+
+
+path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
+if path.is_file():
+    state = json.loads(path.read_text(encoding="utf-8"))
+else:
+    state = {"commands": [], "events": [], "sealed": False}
+
+args = sys.argv[1:]
+if len(args) < 2 or args[0] != "journal":
+    sys.stderr.write("expected spx journal command\\n")
+    raise SystemExit(2)
+
+command = args[1]
+current_namespace = namespace()
+state["commands"].append(command)
+if command == "open":
+    state["namespace"] = current_namespace
+    state["runToken"] = "run-001"
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"runToken": "run-001"}))
+elif option_value(args, "--run") != state.get("runToken"):
+    path.write_text(json.dumps(state), encoding="utf-8")
+    sys.stderr.write("journal run not found; open the run before operating on it\\n")
+    raise SystemExit(4)
+elif current_namespace != state.get("namespace"):
+    path.write_text(json.dumps(state), encoding="utf-8")
+    sys.stderr.write("journal run not found; open the run before operating on it\\n")
+    raise SystemExit(4)
+elif command == "append":
+    if state["sealed"]:
+        sys.stderr.write("run is sealed\\n")
+        raise SystemExit(3)
+    state["events"].append(json.load(sys.stdin))
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"ok": True}))
+elif command == "read":
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps(state["events"]))
+elif command == "seal":
+    state["sealed"] = True
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps({"ok": True}))
+elif command == "render":
+    path.write_text(json.dumps(state), encoding="utf-8")
+    print(json.dumps(state["events"]))
+else:
+    sys.stderr.write(f"unknown command {command}\\n")
+    raise SystemExit(2)
+""",
+        encoding="utf-8",
+    )
+    script.chmod(0o755)
+    return script
 
 
 def make_review_result_dict(
