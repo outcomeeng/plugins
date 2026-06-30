@@ -64,7 +64,22 @@ jobs:
             exit 1
           fi
 
-          spx journal render --type review --run "${run_token}" > review-preview.txt
+          journal_branch="$(
+            python3 - <<'PY'
+          import importlib.util
+          import pathlib
+          import os
+
+          path = pathlib.Path("dist/claude/spec-tree/skills/scope-changeset/scripts/changeset_scope.py")
+          spec = importlib.util.spec_from_file_location("changeset_scope", path)
+          if spec is None or spec.loader is None:
+              raise SystemExit("could not load changeset_scope")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          print(module.branch_slug(os.environ["SPX_VERIFY_BRANCH"]))
+          PY
+          )"
+          SPX_VERIFY_BRANCH="${journal_branch}" spx journal render --type review --run "${run_token}" > review-preview.txt
           {
             echo "## review-changes preview"
             echo
