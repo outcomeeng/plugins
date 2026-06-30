@@ -81,6 +81,17 @@ STEPS: tuple[SyncStep, ...] = (
         argv=("uv", "run", "python", "-m", "outcomeeng.validation.install"),
     ),
     SyncStep(
+        name="codex_local_refresh_final",
+        argv=(
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "outcomeeng.distribution.codex_cache",
+            "outcomeeng",
+        ),
+    ),
+    SyncStep(
         name="installed_check",
         argv=("just", "check-installed"),
     ),
