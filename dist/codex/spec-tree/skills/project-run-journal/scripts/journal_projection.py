@@ -101,12 +101,11 @@ class JournalRunStatus(StrEnum):
 class Finding:
     """One finding in a verification run's results.
 
-    ``line`` is ``None`` for a whole-file finding. ``concern`` and ``action``
-    are optional review-kind fields: the review kind populates them so the
-    finding event carries the full review finding (category and required
-    change) for downstream surfaces and the cross-run fold; the audit kind
-    leaves them ``None`` and the projection omits them, so audit events and
-    surfaces are unchanged.
+    ``line`` is ``None`` for a whole-file finding. ``identifier``, ``concern``,
+    and ``action`` are optional review-kind fields: the review kind populates
+    them so the finding event carries the full review finding for downstream
+    surfaces and the cross-run fold; the audit kind leaves them ``None`` and
+    the projection omits them, so audit events and surfaces are unchanged.
     """
 
     file: str
@@ -114,6 +113,7 @@ class Finding:
     rule: str
     severity: Severity
     message: str
+    identifier: str | None = None
     concern: str | None = None
     action: str | None = None
 
@@ -348,6 +348,8 @@ def finding_reported_event(finding: Finding, *, now: str, attempt: int = 1) -> d
         "severity": str(finding.severity),
         "message": finding.message,
     }
+    if finding.identifier is not None:
+        data["id"] = finding.identifier
     if finding.concern is not None:
         data["concern"] = finding.concern
     if finding.action is not None:

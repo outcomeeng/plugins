@@ -108,6 +108,7 @@ def _project_finding(finding: review_schema.Finding) -> object:
         rule=finding.rule,
         severity=_project_severity(finding.severity),
         message=finding.message,
+        identifier=finding.id,
         concern=str(finding.concern),
         action=finding.action,
     )

@@ -473,6 +473,7 @@ class TestNoParallelReviewResultRenderer:
         )
         assert rendered.returncode == 0, rendered.stderr
         payload = json.loads(rendered.stdout)
+        assert event_prefix[0]["data"]["id"] == finding["id"]
         assert payload["countLine"] == "BLOCKING: 0, DEBT: 1"
         assert payload["overall"] == "approved"
         assert finding["message"] in payload["surface"]

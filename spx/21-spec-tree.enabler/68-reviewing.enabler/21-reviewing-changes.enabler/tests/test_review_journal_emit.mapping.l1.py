@@ -101,6 +101,7 @@ def test_adapter_maps_review_severity_to_projection(
     )
 
     assert event["type"] == jp.FINDING_REPORTED
+    assert event["data"]["id"] == "F-001"
     assert event["data"]["severity"] == expected_severity
     assert jp.compute_overall([event]) == expected_overall
 

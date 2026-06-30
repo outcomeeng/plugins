@@ -376,6 +376,7 @@ class TestReviewRunnerBoundary:
             "verification.finding.reported",
             "com.outcomeeng.spx.journal.run.completed",
         ]
+        assert journal["events"][2]["data"]["id"] == finding["id"]
         terminal_event = journal["events"][-1]
         assert terminal_event["data"]["status"] == "approved"
         assert terminal_event["data"]["review"] == {

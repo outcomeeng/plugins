@@ -332,6 +332,7 @@ def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
         rule=str(raw.get("rule", "")),
         severity=_finding_severity(raw.get("severity", "")),
         message=str(raw.get("message", "")),
+        identifier=_optional_str(raw.get("id")),
         concern=_optional_str(raw.get("concern")),
         action=_optional_str(raw.get("action")),
     )
