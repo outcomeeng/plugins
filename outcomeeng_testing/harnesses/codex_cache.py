@@ -4,15 +4,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
+import subprocess
 from tempfile import TemporaryDirectory
 
+from outcomeeng.distribution.codex_cache import CODEX_PLUGIN_ADD_COMMAND
 from outcomeeng.distribution.marketplace_sources import (
     CODEX_PLUGIN_MANIFEST,
     DEFAULT_MARKETPLACE,
     DIST_CODEX_PLUGINS_DIR,
+    available_codex_plugins,
 )
 
 
@@ -20,6 +23,43 @@ from outcomeeng.distribution.marketplace_sources import (
 class CodexCacheWorkspace:
     repo_root: Path
     cache_root: Path
+
+
+@dataclass
+class MaterializingAddRunner:
+    """Runner stub that materializes cache roots for local Codex plugin adds."""
+
+    cache_root: Path
+    versions: dict[str, str]
+    calls: list[tuple[str, ...]] = field(default_factory=list)
+
+    @classmethod
+    def from_dist_manifests(
+        cls, *, cache_root: Path, repo_root: Path
+    ) -> "MaterializingAddRunner":
+        return cls(
+            cache_root=cache_root,
+            versions={
+                plugin.name: plugin.version
+                for plugin in available_codex_plugins(repo_root)
+            },
+        )
+
+    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
+        command_tuple = tuple(command)
+        self.calls.append(command_tuple)
+        if command_tuple[: len(CODEX_PLUGIN_ADD_COMMAND)] == CODEX_PLUGIN_ADD_COMMAND:
+            plugin_ref = command_tuple[len(CODEX_PLUGIN_ADD_COMMAND)]
+            plugin, separator, marketplace = plugin_ref.partition("@")
+            if separator != "@" or marketplace != DEFAULT_MARKETPLACE:
+                return subprocess.CompletedProcess(command, 64)
+            write_plugin_root(
+                self.cache_root,
+                plugin,
+                self.versions[plugin],
+                f"{plugin} materialized content",
+            )
+        return subprocess.CompletedProcess(command, 0)
 
 
 @contextmanager
@@ -60,6 +100,7 @@ def write_dist_codex_manifest(
 
 __all__ = [
     "CodexCacheWorkspace",
+    "MaterializingAddRunner",
     "codex_cache_workspace",
     "write_dist_codex_manifest",
     "write_plugin_root",

@@ -3,21 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
-import subprocess
 
 from hypothesis import given, settings
 
 from outcomeeng.distribution import codex_cache as preserve_codex_plugin_cache
-from outcomeeng.distribution.marketplace_sources import (
-    DEFAULT_MARKETPLACE,
-    available_codex_plugins,
-)
+from outcomeeng.distribution.marketplace_sources import DEFAULT_MARKETPLACE
 from outcomeeng_testing.generators.codex_cache import (
     StaleAfterSuccessfulRefresh,
     stale_after_successful_refreshes,
 )
 from outcomeeng_testing.harnesses.codex_cache import (
+    MaterializingAddRunner,
     codex_cache_workspace,
     write_dist_codex_manifest,
     write_plugin_root,
@@ -49,34 +45,6 @@ class StaleAfterAddInstalled:
     def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
         self.calls.append(marketplace)
         return {self.plugin: self.version}
-
-
-@dataclass
-class MaterializingAddRunner:
-    cache_root: Path
-    repo_root: Path
-    calls: list[tuple[str, ...]] = field(default_factory=list)
-
-    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
-        command_tuple = tuple(command)
-        self.calls.append(command_tuple)
-        add_prefix = preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND
-        if command_tuple[: len(add_prefix)] == add_prefix:
-            plugin_ref = command_tuple[len(add_prefix)]
-            plugin, separator, marketplace = plugin_ref.partition("@")
-            if separator != "@" or marketplace != DEFAULT_MARKETPLACE:
-                return subprocess.CompletedProcess(command, 64)
-            versions = {
-                dist_plugin.name: dist_plugin.version
-                for dist_plugin in available_codex_plugins(self.repo_root)
-            }
-            write_plugin_root(
-                self.cache_root,
-                plugin,
-                versions[plugin],
-                f"{plugin} materialized content",
-            )
-        return subprocess.CompletedProcess(command, 0)
 
 
 @settings(max_examples=40)
@@ -112,7 +80,7 @@ def test_successful_refresh_reconciles_to_generated_codex_manifest_version(
             plugin=refresh.plugin,
             version=refresh.stale_version,
         )
-        runner = MaterializingAddRunner(
+        runner = MaterializingAddRunner.from_dist_manifests(
             cache_root=workspace.cache_root,
             repo_root=workspace.repo_root,
         )

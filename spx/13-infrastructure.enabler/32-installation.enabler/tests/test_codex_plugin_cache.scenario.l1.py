@@ -28,6 +28,7 @@ from outcomeeng.distribution.marketplace_sources import (
     DEFAULT_MARKETPLACE,
     DIST_CODEX_PLUGINS_DIR,
 )
+from outcomeeng_testing.harnesses.codex_cache import MaterializingAddRunner
 
 PLUGIN_NAME = "spec-tree"
 ORPHAN_PLUGIN_NAME = "removed-plugin"
@@ -112,38 +113,6 @@ class RaisingInstalled:
         raise preserve_codex_plugin_cache.InstalledSetError(
             "installed-set query failed"
         )
-
-
-@dataclass
-class MaterializingAddRunner:
-    """Runner stub that materializes cache roots for local Codex plugin adds.
-
-    Stage 5 exception 2 (interaction-protocol DI): the production path invokes
-    `codex plugin add <plugin>@<marketplace>` and observes Codex's filesystem
-    side effect. The l1 test records the command sequence and materializes the
-    same side effect deterministically.
-    """
-
-    cache_root: Path
-    versions: dict[str, str]
-    calls: list[tuple[str, ...]] = field(default_factory=list)
-
-    def __call__(self, command: list[str]) -> subprocess.CompletedProcess[str]:
-        command_tuple = tuple(command)
-        self.calls.append(command_tuple)
-        add_prefix = preserve_codex_plugin_cache.CODEX_PLUGIN_ADD_COMMAND
-        if command_tuple[: len(add_prefix)] == add_prefix:
-            plugin_ref = command_tuple[len(add_prefix)]
-            plugin, separator, marketplace = plugin_ref.partition("@")
-            if separator != "@" or marketplace != DEFAULT_MARKETPLACE:
-                return subprocess.CompletedProcess(command, 64)
-            _write_skill(
-                self.cache_root,
-                plugin,
-                self.versions[plugin],
-                f"{plugin} materialized content",
-            )
-        return subprocess.CompletedProcess(command, 0)
 
 
 def _skill_file(cache_root: Path, plugin: str, version: str) -> Path:
