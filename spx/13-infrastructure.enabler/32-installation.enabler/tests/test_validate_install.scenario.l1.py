@@ -42,6 +42,14 @@ def _seed_cache(cache_root: Path, plugin: str, version: str) -> None:
     manifest.write_text(json.dumps({"name": plugin, "version": version}))
 
 
+def _seed_cache_link(
+    cache_root: Path, plugin: str, link_version: str, target_version: str
+) -> None:
+    plugin_dir = cache_root / MARKETPLACE_NAME / plugin
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+    (plugin_dir / link_version).symlink_to(target_version)
+
+
 def _seed_incomplete_cache(cache_root: Path, plugin: str, version: str) -> None:
     plugin_dir = cache_root / MARKETPLACE_NAME / plugin / version
     plugin_dir.mkdir(parents=True)
@@ -379,6 +387,42 @@ def test_codex_cache_verifies_resolved_version_when_working_tree_is_older(
     assert PLUGIN_NAME in warning
     assert older_version in warning
     assert PUBLISHED_VERSION in warning
+
+
+def test_codex_cache_verifies_local_source_when_resolved_version_lags(
+    tmp_path: Path,
+) -> None:
+    """When Codex reports the stale pre-refresh version but the local marketplace
+    source publishes the working-tree version, validate_install verifies the real
+    local-source cache directory and accepts the stale version as a compatibility
+    symlink."""
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.1.0"
+    _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, WORKING_TREE_VERSION)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, stale_version, WORKING_TREE_VERSION)
+
+    def published_version(plugin: str) -> str | None:
+        return WORKING_TREE_VERSION if plugin == PLUGIN_NAME else None
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_marketplace_version=published_version,
+        codex_resolved_versions={PLUGIN_NAME: stale_version},
+    )
+
+    assert result.errors == [], f"unexpected errors: {result.errors}"
+    assert len(result.warnings) == 1, (
+        f"expected one warning, got {len(result.warnings)}: {result.warnings}"
+    )
+    warning = result.warnings[0]
+    assert PLUGIN_NAME in warning
+    assert stale_version in warning
+    assert WORKING_TREE_VERSION in warning
 
 
 def test_codex_cache_multiple_real_version_dirs_is_an_error(

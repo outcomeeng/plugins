@@ -2,10 +2,12 @@
 
 The maintainer refresh path requires Codex to use the same local marketplace
 source as Claude Code, reinstalls each installed plugin from that local source,
-then reconciles the cache for each refreshed plugin. The symlink target is the
-complete real cache directory named with the version Codex reports as installed
-for that plugin. Every version already present in the cache other than the
-installed one becomes a symlink pointing at it -- a present version is never
+then reconciles the cache for each refreshed plugin. For successfully refreshed
+plugins, the symlink target is the complete real cache directory named with the
+version declared by the local generated Codex manifest; for plugins outside the
+refreshed set, it remains the version Codex reports as installed. Every version
+already present in the cache other than the target becomes a symlink pointing at
+it -- a present version is never
 removed for falling outside the publication window, so a session started on it
 keeps resolving its advertised skill cache path. Versions published within the
 configured window (default ten days) but absent from the cache are recreated as
