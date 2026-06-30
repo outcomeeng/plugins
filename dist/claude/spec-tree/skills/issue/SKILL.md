@@ -1,7 +1,7 @@
 ---
 name: issue
 description: >-
-  ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — when an agent in a consumer or product repository notices the spec-tree plugin, the spx CLI, or another spec-tree dependency needs a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
+  ALWAYS invoke this skill when filing a follow-up into a spec-tree dependency's own session queue — for observations about the spec-tree plugin, the spx CLI, or another spec-tree dependency needing a change. NEVER edit a spec-tree dependency's installed source directly to record a needed fix; capture it as a handoff in that dependency's queue with this skill.
 argument-hint: "[target-dir-or-dependency]"
 allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:* session handoff*), Bash(git -C:* branch --show-current), Bash(git -C:* rev-parse --verify refs/remotes/origin/*), Bash(claude plugin marketplace list:*), Bash(python3 -c:*), AskUserQuestion
 ---
@@ -16,17 +16,17 @@ allowed-tools: Read, Grep, Glob, Bash(pwd), Bash(spx --version:*), Bash(spx -C:*
 </context>
 
 <objective>
-A follow-up recorded as a handoff session in a spec-tree dependency repository's own session queue — capturing the invoking agent's observation and shaped so the dependency's agents resume from it.
+A follow-up recorded as a handoff session in a spec-tree dependency repository's own session queue — capturing Claude's observation and shaped so the dependency workflow resumes from it.
 
 </objective>
 
 <when_to_invoke>
-Editing a spec-tree dependency's installed source directly to record a needed change rewrites shared infrastructure for every agent that uses it, with no review. The `/issue` skill files the observation as a handoff into the dependency's own session queue instead, where the dependency's agents triage and act on it through their own workflows.
+Editing a spec-tree dependency's installed source directly to record a needed change rewrites shared infrastructure for every consumer session that uses it, with no review. The `/issue` skill files the observation as a handoff into the dependency's own session queue instead, where the dependency workflow triages and acts on it.
 
 </when_to_invoke>
 
 <captured_fields>
-Capture the invoking agent's OBSERVATION only — never the dependency's internal taxonomy. The agent reports what it saw; the dependency's own agents classify it against their spec tree.
+Capture Claude's OBSERVATION only — never the dependency's internal taxonomy. Claude reports what it saw; the dependency workflow classifies it against its spec tree.
 
 Gather from the invoking context, asking the user only for genuine gaps:
 
@@ -34,9 +34,9 @@ Gather from the invoking context, asking the user only for genuine gaps:
 - **Uncertainty** — what remains unknown or unconfirmed.
 - **Checked facts** — what was already verified (commands run, files read, versions observed) and their results.
 - **Affected paths** — the paths or surfaces the observation touches, as observed (a file, a command, a skill name) — NOT a node address, decision index, or assertion type in the dependency's spec tree.
-- **Next-workflow context** — what the dependency's next agent needs to begin: how to reproduce, where to look, what "done" looks like.
+- **Next-workflow context** — what the dependency's next pickup needs to begin: how to reproduce, where to look, what "done" looks like.
 
-NEVER assign the dependency's node addresses, decision indices, or assertion types — the invoking agent supplies observations, not the dependency's spec-tree structure. Leave the handoff header `specs` and `files` empty; carry observed paths in the body prose.
+NEVER assign the dependency's node addresses, decision indices, or assertion types — Claude supplies observations, not the dependency's spec-tree structure. Leave the handoff header `specs` and `files` empty; carry observed paths in the body prose.
 
 </captured_fields>
 
@@ -76,10 +76,10 @@ If the target checkout is detached or its current branch does not exist on origi
 **Step 3 — Compose the header.** Build the JSON header:
 
 - `goal` — output-shaped: name the deliverable or end-state the follow-up produces, not a generic activity verb.
-- `next_step` — imperative: the first action the dependency's agent takes on pickup.
+- `next_step` — imperative: the first action on dependency pickup.
 - `priority` — `high`, `medium`, or `low`.
 - `git_ref` — the target dependency branch that exists on origin and that `/pickup` checks out.
-- `specs`, `files` — empty arrays; the invoking agent assigns none of the dependency's structure.
+- `specs`, `files` — empty arrays; Claude assigns none of the dependency's structure.
 
 **Step 4 — Compose the body.** Write the observation as markdown from `<captured_fields>`: observation, uncertainty, checked facts, affected paths, next-workflow context. State observations as facts; do not prescribe the dependency's fix in its own taxonomy.
 
@@ -99,7 +99,7 @@ printf '%s\n' '{"priority":"high","goal":"<output-shaped goal>","next_step":"<im
 
 - NEVER edit, commit to, or push the target dependency's tracked source — the only effect on the target is the session document `spx -C <target-dir> session handoff` writes into its `.spx/sessions/todo/`.
 - NEVER alter the invoking repository's git state or session queue — `-C <target-dir>` targets the dependency directly.
-- NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency's agents classify.
+- NEVER record the dependency's internal taxonomy (node address, decision index, assertion type) — capture observations; the dependency workflow classifies.
 - NEVER guess the target checkout directory — resolve it deterministically or ask.
 - NEVER guess `git_ref` — use a target branch that exists on origin or ask.
 
