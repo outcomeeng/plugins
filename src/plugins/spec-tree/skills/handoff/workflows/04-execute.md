@@ -76,7 +76,7 @@ Every closure ends with **zero, one, or several** session files — one canonica
 
 **Worktree precondition:** any path that invokes `spx session handoff` (Path C) requires an allowed git state. From a linked worktree, reach it first — see `<release_work_branch>` below — before running the command.
 
-**Path A — `--no-session` (zero handoffs)**: valid only when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`, or when `status="existing-owner"` confirms another session already owns the only remaining continuation and no local blocker remains. When the signal is `present` and no existing owner exists, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` / `{{! tool('ask_user', 'codex') !}}`): name the unresolved stop condition and ask whether to create the continuation or confirm there is no continuation. NEVER silently honor `--no-session` against a `present` signal without an existing owner; automation must not skip a session file required by a real stop condition. When the signal is `absent`, `status="existing-owner"` owns the only remaining continuation with no local blocker, or the user explicitly re-confirms omission, skip to `<archive_claimed_sessions>`: all claimed sessions are archived, no handoff file is created. After archiving, confirm through `<confirm>` with the same operator-useful closeout fields as every other path, including **Remaining Branches** for merge lifecycle closeout. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
+**Path A — zero handoffs**: valid when the `<CONTINUATION_SIGNAL>` emitted by workflow 02 is `absent`, or when `status="existing-owner"` confirms another session already owns the only remaining continuation and no local blocker remains. Plain merge lifecycle invocations use this path when the signal is `absent`; `--no-session` is not required because no continuation reader exists. When the signal is `present` and no existing owner exists, `--no-session` contradicts the state — STOP and surface the contradiction through the runtime's structured-question tool (`{{! tool('ask_user', 'claude') !}}` / `{{! tool('ask_user', 'codex') !}}`): name the unresolved stop condition and ask whether to create the continuation or confirm there is no continuation. NEVER silently honor `--no-session` against a `present` signal without an existing owner; automation must not skip a session file required by a real stop condition. When this path is valid, or the user explicitly re-confirms omission after a contradiction prompt, skip to `<archive_claimed_sessions>`: all claimed sessions are archived, no handoff file is created. After archiving, confirm through `<confirm>` with the same operator-useful closeout fields as every other path, including **Remaining Branches** for merge lifecycle closeout. Do NOT describe this as "released to todo" — it is an archive-and-close, not a return-to-queue.
 
 **Path B — rewrite in place (one handoff, artifact exists)**: a mid-session artifact is still in TODO.
 
@@ -214,7 +214,7 @@ Use domain-specific closeout content. In a plugin marketplace repository, a usef
 
 Put session mechanics only after the product summary:
 
-- Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (--no-session)"
+- Canonical continuation: "new handoff <id>" | "rewrote <artifact-id> in place" | "no handoff (no continuation reader needed)"
 - Session-owned work was committed before closure
 - Every session id archived from the resolved claimed-session set (and any artifact NOT rewritten in place)
 - Checkout state: the releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is unoccupied
@@ -231,7 +231,7 @@ Put session mechanics only after the product summary:
 - Committed vs uncommitted state recorded for each anchored node.
 - Existing `todo` and `doing` sessions searched by node path and topic before any Path C handoff, with `<EXISTING_SESSION_RECONCILIATION>` present.
 - Exactly zero or one canonical continuation per independent continuation thread created, rewritten, or intentionally omitted by THIS closure exists in TODO — never two for the same thread. Unrelated TODO sessions owned by other contexts are out of scope and untouched.
-- Continuation path executed via Path A (--no-session), Path B (rewrite in place), or Path C (new handoff).
+- Continuation path executed via Path A (zero handoffs), Path B (rewrite in place), or Path C (new handoff).
 - `<incorporated_sessions>` section present in the canonical continuation when a Path B or Path C handoff is written and the claimed-session set is non-empty.
 - Every claimed session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.

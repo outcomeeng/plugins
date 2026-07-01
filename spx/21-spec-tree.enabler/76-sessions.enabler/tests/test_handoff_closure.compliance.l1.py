@@ -108,6 +108,34 @@ def test_transport_closeout_invokes_handoff_plain() -> None:
     assert "without receiving `--no-session`" in skill
 
 
+def test_plain_handoff_omits_session_when_no_continuation() -> None:
+    skill = _read("SKILL.md")
+    execute = _read("workflows/04-execute.md")
+    sessions_spec = SESSIONS_SPEC.read_text()
+
+    assert (
+        "when `/handoff` runs plain and no unresolved continuation remains"
+        in sessions_spec
+    )
+    assert (
+        "merge lifecycle automation does not need `--no-session` to reach zero-handoff closeout"
+        in sessions_spec
+    )
+    assert (
+        "When the continuation signal is `absent`, omit the session file even for a plain merge lifecycle invocation"
+        in skill
+    )
+    assert (
+        "Plain merge lifecycle invocations use this path when the signal is `absent`; `--no-session` is not required"
+        in execute
+    )
+    assert (
+        "Workflow 04 persists all work and coordination notes and, unless `--no-session`, writes the session file"
+        not in skill
+    )
+    assert "**Path A — `--no-session` (zero handoffs)**" not in execute
+
+
 def test_handoff_allows_branch_state_closeout_observations() -> None:
     skill = _read("SKILL.md")
 

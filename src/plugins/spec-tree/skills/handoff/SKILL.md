@@ -56,7 +56,7 @@ Create a session file only when continuation by Claude is impossible now: the us
 
 Closing without creating a session file is appropriate when no continuation reader is needed from this closure. That is true when workflow 02's `<CONTINUATION_SIGNAL>` is `absent`: the anchored nodes carry no actionable `PLAN.md`, no unresolved `ISSUES.md` entry, no `spx/EXCLUDE` entry, no declared-but-unsatisfied assertion, and no external blocker. It is also true when `<EXISTING_SESSION_RECONCILIATION status="existing-owner">` confirms another session already owns the only remaining continuation and this closure has no local blocker. A persisted coordination note that represents no future work is removed during closure, because a note no one will act on is deleted, not kept.
 
-`--no-session` never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present` and no existing owner exists. When `--no-session` meets that state, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf when a real stop condition requires a continuation reader. In any other situation, a session file is written only after the existing-session search completes.
+`--no-session` never authorizes skipping the session file when the `<CONTINUATION_SIGNAL>` is `present` and no existing owner exists. When `--no-session` meets that state, surface the contradiction (workflow 04 Path A) — automation never skips the session file on the user's behalf when a real stop condition requires a continuation reader. When the continuation signal is `absent`, omit the session file even for a plain merge lifecycle invocation; no continuation reader exists. In any other situation, a session file is written only after the existing-session search completes.
 
 <no_excuses>
 
@@ -118,7 +118,7 @@ Check `$session_mode` and `$prune_mode` for these flags before starting the work
 </arguments>
 
 <workflows>
-Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes and, unless `--no-session`, writes the session file.
+Execute all four workflows in sequence. Each workflow has its own success criteria — do not proceed to the next until the current one is complete. Workflow 04 persists all work and coordination notes, then writes a session file only when a continuation reader is needed.
 
 1. `workflows/01-anchor-to-nodes.md` — identify every node worked on this session
 2. `workflows/02-reflect.md` — review imperfections, claimed sessions, and starting point
@@ -151,7 +151,7 @@ A successful closure or handoff:
 - [ ] `<CONTINUATION_SIGNAL>` marker emitted by workflow 02, and `--no-session` honored only when it is `absent` or `status="existing-owner"` confirms another session owns the only remaining continuation and no local blocker remains
 - [ ] Combined persistence proposal presented to user and approved items written (workflows 03–04)
 - [ ] Session-owned spec, test, code, and coordination-note changes committed before closure (workflow 04)
-- [ ] Continuation need explicitly decided: session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted under `--no-session` (workflow 04)
+- [ ] Continuation need explicitly decided: session file created via `spx session handoff`, rewritten in place from a mid-session artifact, or omitted because no continuation reader is needed (workflow 04)
 - [ ] Every session in the resolved claimed-session set archived after the canonical continuation is written, rewritten, or intentionally omitted (workflow 04)
 - [ ] Any session file created is a thin coordination envelope — bulk of value persisted durably
 - [ ] End state has zero, one, or several completely independent session files incorporating everything within the resolved claimed-session set
