@@ -584,6 +584,42 @@ def test_codex_cache_rejects_compatibility_symlink_to_older_real_dir(
     )
 
 
+def test_codex_cache_rejects_indirect_compatibility_symlink(
+    tmp_path: Path,
+) -> None:
+    """When a compatibility symlink points at another compatibility symlink,
+    validation reports the indirect path, its direct target, and the expected
+    real target directory.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.0.1"
+    intermediate_version = "0.0.2"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, intermediate_version, PUBLISHED_VERSION)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, stale_version, intermediate_version)
+    plugin_dir = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME
+    target_path = plugin_dir / PUBLISHED_VERSION
+    stale_path = plugin_dir / stale_version
+    intermediate_path = plugin_dir / intermediate_version
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 1
+    error = result.errors[0]
+    assert str(stale_path) in error
+    assert str(intermediate_path) in error
+    assert str(target_path) in error
+    assert "symlink points to" in error
+
+
 def test_codex_cache_rejects_target_symlink_to_older_real_dir(
     tmp_path: Path,
 ) -> None:
