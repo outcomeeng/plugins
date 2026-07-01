@@ -240,11 +240,15 @@ def test_justfile_exposes_guide_writer_and_gate() -> None:
     assert "outcomeeng.distribution.guide_diff\n" in justfile
 
 
-def test_lefthook_guide_refresh_uses_repo_root_argument() -> None:
+def test_lefthook_guide_refresh_uses_rendered_dist_templates() -> None:
     lefthook = guide_diff.REPO_ROOT.joinpath("lefthook.yml").read_text(encoding="utf-8")
 
-    assert "--repo-root ." in lefthook
-    assert "--spx-dir" not in lefthook
+    assert "run: just build-guides" in lefthook
+    assert (
+        "--template src/plugins/spec-tree/skills/understand/templates/spx-claude.md"
+        not in lefthook
+    )
+    assert "--repo-root ." not in lefthook
 
 
 def test_guide_drift_probe_marks_untracked_root_guides_intent_to_add(

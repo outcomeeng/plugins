@@ -74,9 +74,10 @@ Before creating anything, show the user what will be created:
 ```text
 Proposed root scaffold:
 
+AGENTS.md
+CLAUDE.md
 spx/
 ├── {product-name}.product.md
-├── AGENTS.md
 └── PLAN.md        # optional top-level composition intent for /decompose spx/
 ```
 

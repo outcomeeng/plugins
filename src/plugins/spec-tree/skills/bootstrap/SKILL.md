@@ -74,9 +74,10 @@ Before creating anything, show the user what will be created:
 ```text
 Proposed root scaffold:
 
+{{! file('root_guide') !}}
+{!% if target == 'claude' %!}{{! file('root_guide', 'codex') !}}{!% else %!}{{! file('root_guide', 'claude') !}}{!% endif %!}
 spx/
 ├── {product-name}.product.md
-├── {{! file('root_guide') !}}
 └── PLAN.md        # optional top-level composition intent for /decompose spx/
 ```
 
