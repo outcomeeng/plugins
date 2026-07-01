@@ -68,6 +68,34 @@ class MaterializingAddRunner:
         return subprocess.CompletedProcess(command, 0)
 
 
+@dataclass(frozen=True)
+class StaticHistory:
+    """Interaction-protocol stub for plugin history in synthetic repositories."""
+
+    plugins: frozenset[str]
+    versions_by_plugin: dict[str, frozenset[str]]
+    current_by_plugin: dict[str, str]
+
+    def working_tree_plugins(self) -> frozenset[str]:
+        return self.plugins
+
+    def published_versions(self, plugin: str) -> frozenset[str]:
+        return self.versions_by_plugin.get(plugin, frozenset())
+
+    def current_version(self, plugin: str) -> str | None:
+        return self.current_by_plugin.get(plugin)
+
+
+@dataclass(frozen=True)
+class StaticInstalled:
+    """Interaction-protocol stub for the Codex installed-version provider."""
+
+    versions: dict[str, str]
+
+    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
+        return self.versions
+
+
 @contextmanager
 def codex_cache_workspace() -> Iterator[CodexCacheWorkspace]:
     """Create an isolated repository/cache pair for one generated example."""
@@ -107,6 +135,8 @@ def write_dist_codex_manifest(
 __all__ = [
     "CodexCacheWorkspace",
     "MaterializingAddRunner",
+    "StaticHistory",
+    "StaticInstalled",
     "codex_cache_workspace",
     "write_dist_codex_manifest",
     "write_plugin_root",

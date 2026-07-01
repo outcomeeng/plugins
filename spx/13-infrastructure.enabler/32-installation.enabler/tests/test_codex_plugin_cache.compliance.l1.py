@@ -2,43 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from outcomeeng.distribution import codex_cache
 from outcomeeng.distribution.marketplace_sources import DEFAULT_MARKETPLACE
 from outcomeeng_testing.harnesses.codex_cache import (
     MaterializingAddRunner,
+    StaticHistory,
+    StaticInstalled,
     write_dist_codex_manifest,
 )
-
-
-@dataclass(frozen=True)
-class StaticHistory:
-    """Interaction-protocol stub for plugin history in a synthetic repository."""
-
-    plugins: frozenset[str]
-    versions_by_plugin: dict[str, frozenset[str]]
-    current_by_plugin: dict[str, str]
-
-    def working_tree_plugins(self) -> frozenset[str]:
-        return self.plugins
-
-    def published_versions(self, plugin: str) -> frozenset[str]:
-        return self.versions_by_plugin.get(plugin, frozenset())
-
-    def current_version(self, plugin: str) -> str | None:
-        return self.current_by_plugin.get(plugin)
-
-
-@dataclass(frozen=True)
-class StaticInstalled:
-    """Interaction-protocol stub for the Codex installed-version provider."""
-
-    versions: dict[str, str]
-
-    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
-        return self.versions
 
 
 def test_local_refresh_never_invokes_marketplace_upgrade(tmp_path: Path) -> None:

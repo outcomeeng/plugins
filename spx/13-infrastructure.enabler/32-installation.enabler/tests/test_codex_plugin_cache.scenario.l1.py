@@ -5,7 +5,7 @@ Each scenario corresponds to one assertion in
 
 The direct preservation scenarios take a ``PluginHistory`` provider that names the
 working-tree plugin set and per-plugin published versions in the window. They
-inject a ``StaticHistory`` implementation (Stage 5 exception 2 -- interaction
+inject the harness ``StaticHistory`` provider (Stage 5 exception 2 -- interaction
 protocol DI) in place of the production git-history walker mandated by
 ``21-codex-cache-preservation.adr.md``. CLI-surface scenarios that verify
 ``main()`` output call ``main()`` directly with the production ``GitPluginHistory``
@@ -30,6 +30,8 @@ from outcomeeng.distribution.marketplace_sources import (
 )
 from outcomeeng_testing.harnesses.codex_cache import (
     MaterializingAddRunner,
+    StaticHistory,
+    StaticInstalled,
     write_plugin_root,
 )
 
@@ -46,46 +48,6 @@ NEW_CURRENT_VERSION = "0.26.7"
 NOT_INSTALLED_PLUGIN = "python"
 NOT_INSTALLED_STALE_VERSION = "0.18.6"
 NOT_INSTALLED_CURRENT_VERSION = "0.18.8"
-
-
-@dataclass(frozen=True)
-class StaticHistory:
-    """Explicit interaction-protocol stub for the plugin-history provider.
-
-    Maps to Stage 5 exception 2 in ``/test``: tests cannot drive a real git
-    walker against a synthetic working tree at l1, so the dependency is injected
-    as a typed Protocol with deterministic return values for the working-tree
-    plugin set, each plugin's published-in-window versions, and each plugin's
-    current working-tree manifest version.
-    """
-
-    plugins: frozenset[str]
-    versions_by_plugin: dict[str, frozenset[str]]
-    current_by_plugin: dict[str, str]
-
-    def working_tree_plugins(self) -> frozenset[str]:
-        return self.plugins
-
-    def published_versions(self, plugin: str) -> frozenset[str]:
-        return self.versions_by_plugin.get(plugin, frozenset())
-
-    def current_version(self, plugin: str) -> str | None:
-        return self.current_by_plugin.get(plugin)
-
-
-@dataclass(frozen=True)
-class StaticInstalled:
-    """Interaction-protocol stub for the Codex installed-version provider.
-
-    Stage 5 exception 2 (interaction-protocol DI): the real provider queries the
-    `codex` binary, which is absent at l1, so the installed set is injected as a
-    typed Protocol returning deterministic plugin-name to version data.
-    """
-
-    versions: dict[str, str]
-
-    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
-        return self.versions
 
 
 @dataclass
