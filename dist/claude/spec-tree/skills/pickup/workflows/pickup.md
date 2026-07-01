@@ -14,6 +14,21 @@ Skill tool -> { "skill": "spec-tree:understand" }
 
 If `<SPEC_TREE_FOUNDATION>` is already present, the skill may skip its body. Do not process the session's `<nodes>`, `<persisted>`, or `<coordination>` sections until this foundation step has completed.
 
+**Step 2b: Hold the pickup proposal contract**
+
+Before asking the operator to continue, build a no-surprises proposal. The operator is approving a course of work, not choosing from raw session metadata. Claude must collect enough evidence through the workflow to state:
+
+- Expected outcome — what product or workflow state will be true if continuation succeeds.
+- Current classification — `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`.
+- Changed surface — specs, skills, references, scripts, generated output, source files, workflow files, branch, PR, or session surfaces likely affected.
+- Planned skill path — methodology, authoring, testing, audit, review, commit, merge, or lifecycle skills expected before completion.
+- Evidence infrastructure — known test files, harnesses, generators, fixtures, evals, audit agents, review agents, generated artifacts, and validation commands the work is expected to touch or depend on.
+- Verification plan — deterministic commands and agentic gates expected before reporting completion.
+- Inspection surface — where the operator can inspect the result: PR, commit, local file paths, generated `dist/` paths, session id, run token, or command output summary.
+- Remaining-work expectation — whether completion leaves no continuation, creates or updates a coordination note, parks on an external blocker, or defers to an existing session owner.
+
+The proposal does not need to enumerate every eventual file. It must name the known surfaces and evidence categories clearly enough that approval does not hide foreseeable work. After the operator approves continuation, avoid surprises: if a new required skill, evidence surface, external dependency, ownership conflict, or verification class appears that was not represented in the proposal, stop at the next safe checkpoint and present the delta before continuing.
+
 **Step 3: Present the session's first action**
 
 This step comes BEFORE loading node context. Present the `next_step` frontmatter value as the handoff's recommended first action. Treat it as context, not as a substitute for the required `/contextualize` step below; the resuming context still chooses skills from loaded methodology and current repository state.
@@ -102,22 +117,65 @@ Invoke on the selected node:
 Skill tool → { "skill": "spec-tree:contextualize", "args": "spx/{node-path}" }
 ```
 
-After context is loaded, STOP and present a post-context checkpoint:
+After context is loaded, review session evidence before asking the operator anything. The operator must never decide from the session id, raw `next_step`, or unreviewed coordination notes.
 
-- Target node and its current state
-- Recommended next action from the handoff
-- Persisted artifacts or coordination items that could change the next move
+Review these inputs:
 
-`/contextualize` reads the note content for any found `PLAN.md` or `ISSUES.md`. Treat those notes as stale-prone inputs and verify them against the loaded specs, decisions, assertions, tests, implementation, and current user intent before they steer work.
+- Target node and current state from `/contextualize`.
+- Recommended next action from the handoff.
+- Claim-verification verdicts from Step 5.
+- Persisted artifacts from Step 6.
+- Coordination section from Step 7.
+- Note content loaded by `/contextualize` for any found `PLAN.md` or `ISSUES.md`; treat notes as stale-prone inputs and verify them against the loaded specs, decisions, assertions, tests, implementation, and current user intent before they steer work.
+- Existing `doing` sessions from `spx session list --status doing --json`, comparing their `specs`, `files`, `goal`, and `next_step` with this session's target node and topic terms.
+- Branch/worktree ownership from `git branch` and `git worktree list` when the session names a feature branch, branch-like `git_ref`, or a live-branch conflict.
+- PR ownership from `gh pr list` or `gh pr view` when the session names a PR, branch, or merged/open PR state.
+
+Classify the session:
+
+- `actionable_here` — the loaded context and evidence support continuing in this conversation.
+- `owned_elsewhere` — another active `doing` session, branch, worktree, open PR, merged PR, or committed live branch owns the same objective.
+- `stale_or_superseded` — the session's recorded objective or paths no longer match current product truth, with no active owner to continue.
+- `blocked_on_external_dependency` — continuation depends on state Claude cannot change now, such as a published CLI release, remote workflow result, or operator-held decision.
+- `needs_operator_direction` — the evidence leaves a real product or ownership fork that the repository cannot decide.
+
+When classification is `owned_elsewhere`, report the collision in plain English, name the owning session id, branch, worktree, PR, or commit when known, and STOP. Do not ask whether to archive, release, hand off, or continue. Leave the claimed session in `doing` and make no further session mutation.
+
+For every other classification, present a post-context checkpoint with a no-surprises proposal:
+
+```text
+Pickup reviewed session `[claimed-session-id]`.
+
+Goal: [session goal]
+Loaded context: spx/{node-path}
+Classification: [classification]
+
+Evidence:
+- Claim verification: [Confirmed / Discrepancy / Unverifiable summary]
+- Persisted artifacts: [summary]
+- Coordination notes: [paths and current reading]
+- Ownership check: [no overlap | owner details]
+
+Work proposal:
+- Expected outcome: [plain-English end state]
+- Changed surface: [likely specs / skills / references / scripts / generated output / source / workflow / branch / PR / session surfaces]
+- Skill path: [planned skills and lifecycle gates]
+- Evidence infrastructure: [tests / harnesses / generators / fixtures / evals / audit agents / review agents / generated artifacts / validation commands]
+- Verification: [deterministic commands and agentic gates expected]
+- Inspection: [where the operator can inspect the result]
+- Remaining work expectation: [none | coordination note | external blocker | existing owner]
+
+Recommended next action: [specific action]
+```
 
 If `$ARGUMENTS` includes `--auto-continue`, acknowledge the override and resume with the recommended next action.
 
 Otherwise, use `AskUserQuestion` with exactly one question and 2-4 options. The options must come from the loaded context:
 
-- Include the recommended next action as the first option
-- Include "Review persisted artifacts first" only when persisted artifacts or coordination notes exist
-- Include "Re-check coordination claims first" only when coordination reports failing tests, bugs, or errors
-- Include "Take a different approach" only when the loaded context reveals a real alternative
+- Include the recommended next action as the first option, with the proposal's rationale.
+- Include "Pause pickup flow" as an option so the operator can direct another workflow.
+- Include another option only when the evidence review reveals a real alternative the repository cannot decide.
+- Do not include "Review persisted artifacts first" or "Re-check coordination claims first" as options. Claude already performed that review before asking.
 
 Wait for the user's selection before continuing. The checkpoint completes only after the `AskUserQuestion` response is received.
 

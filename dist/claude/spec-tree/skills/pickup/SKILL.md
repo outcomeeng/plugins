@@ -2,7 +2,7 @@
 name: pickup
 description: ALWAYS invoke this skill when resuming prior spec-tree work, loading a handoff session, claiming queued session work, or continuing from another saved context. NEVER continue spec-tree handoff work directly without this skill.
 argument-hint: "[--list] [--auto-continue]"
-allowed-tools: Read, Bash(spx session todo:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
+allowed-tools: Read, Bash(spx session todo:*), Bash(spx session list:*), Bash(spx session pickup:*), Bash(spx session show:*), Bash(spx session release:*), Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git status:*), Bash(git branch:*), Bash(git worktree list:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(python3:*verify_session_claims.py*), AskUserQuestion, Glob, Skill
 ---
 
 <objective>
@@ -13,6 +13,8 @@ A claimed handoff session — loaded, reconciled against current repository stat
 
 - Pickup opens session responsibility and NEVER releases, archives, deletes, or closes a session — a claimed session remains Claude's responsibility until a later `/handoff` accounts for it explicitly.
 - NEVER propose fixing bugs, writing code, or any implementation work before `/contextualize` has been invoked on the target node.
+- Before asking the operator to continue, review the loaded session evidence and present a no-surprises proposal: expected outcome, changed surface, skill path, evidence infrastructure, verification plan, inspection surface, and remaining-work expectation.
+- If session evidence shows another active context already owns the objective, report the owning session, branch, or PR and stop without archiving, releasing, handing off, or otherwise mutating the claimed session.
 
 </constraints>
 
@@ -198,6 +200,18 @@ Claude picked up session A, then ran `spx session handoff` mid-work to create se
 
 How to avoid: The existence of any session — whether self-created or left by another context — never grants permission to archive a claimed session. Permission flows from the three claimed-session rules: the set grows only by user confirmation; closure writes one canonical continuation per independent thread; a quick-release shortcut exists only within a few turns of pickup. Pickup never archives.
 
+**Failure 4: Claude asked the operator to choose without reviewing session evidence**
+
+Claude loaded context, then asked the operator whether to continue, review artifacts, or take a different approach before classifying the session from claim verdicts, persisted artifacts, coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification. The operator had to choose from raw session metadata rather than an evaluated proposal.
+
+How to avoid: Review the session evidence after `/contextualize`, classify the session, and present a no-surprises proposal before asking. The operator approves a represented course of work; if a new skill, evidence surface, external dependency, ownership conflict, or verification class appears later that the proposal did not represent, stop at the next safe checkpoint and present the delta.
+
+**Failure 5: Claude tried to close a session whose work was owned elsewhere**
+
+Claude picked up a duplicate session, saw evidence that another active `doing` session, branch, or PR already owned the objective, then drifted toward archive, release, or handoff because the workflow only modeled "wrongly claimed" as the current context's own session to close.
+
+How to avoid: Classify the session as `owned_elsewhere`, report the owning session, branch, or PR, and stop without archiving, releasing, handing off, or moving any session.
+
 </failure_modes>
 
 <success_criteria>
@@ -216,11 +230,16 @@ A successful pickup:
 - [ ] PLAN.md / ISSUES.md paths checked before context loading, with note content read by `/contextualize`
 - [ ] Persisted artifacts acknowledged
 - [ ] `/contextualize` invoked on target node — NOT offered as an option, just done
+- [ ] Session evidence reviewed after `/contextualize`: claim verdicts, persisted artifacts, loaded coordination notes, overlapping `doing` sessions, branch state, PR state, and expected verification
+- [ ] Session classified as `actionable_here`, `owned_elsewhere`, `stale_or_superseded`, `blocked_on_external_dependency`, or `needs_operator_direction`
+- [ ] When classification is `owned_elsewhere`, the owning session, branch, worktree, PR, or commit is reported and pickup stops without archiving, releasing, handing off, or otherwise mutating the claimed session
+- [ ] When classification is not `owned_elsewhere`, a no-surprises proposal is presented before any operator decision: expected outcome, changed surface, skill path, evidence infrastructure, verification plan, inspection surface, and remaining-work expectation
+- [ ] Any later unrepresented skill, evidence surface, external dependency, ownership conflict, or verification class stops at a safe checkpoint before continuation
 - [ ] When the session references multiple nodes, the `/contextualize` target is selected deterministically by the priority order (rule 3 always resolves), so node multiplicity never triggers a user question — the user is asked which node only when `<nodes>` is empty or unreadable
-- [ ] Canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
-- [ ] Post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
+- [ ] When classification is not `owned_elsewhere`, canonical post-context marker emitted as `<PICKUP_CHECKPOINT id="..." claimed="...">` carrying the full claimed-session set from the most recent `<CLAIMED_SESSIONS>`
+- [ ] When classification is not `owned_elsewhere`, post-context decision captured via `AskUserQuestion` response, or explicit `--auto-continue` override acknowledged
 - [ ] No `/apply`, ADR, test, code, or file-editing work starts before the checkpoint or override
 - [ ] Failures listed in coordination are verified against current state before triaging
-- [ ] Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
+- [ ] When classification is not `owned_elsewhere`, Claude has the session `next_step`, current claim verdicts, loaded node context, and coordination-note paths needed to choose the next skill from current methodology
 
 </success_criteria>
