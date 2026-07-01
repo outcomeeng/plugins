@@ -32,7 +32,7 @@ The `/audit-tests` skill in the spec-tree plugin classifies test coupling into d
 | Direct             | Test imports the module under test                                                                                                                      | Proceed to falsifiability                                                               |
 | Indirect           | Test imports a harness that wraps the module                                                                                                            | Proceed — verify harness coupling                                                       |
 | Transitive         | Test imports something that depends on the module                                                                                                       | Review — may be legitimate cross-module evidence at L2                                  |
-| Laundered indirect | Test imports a test-support module that exists only to expose hardcoded values back to the test                                                         | REJECT — laundering                                                                     |
+| Laundered indirect | Test imports a test-infrastructure module that exists only to expose hardcoded values back to the test                                                  | REJECT — laundering                                                                     |
 | False              | Test imports the module but never exercises the assertion-relevant path                                                                                 | REJECT                                                                                  |
 | Partial            | Test exercises some paths but not the ones the assertion claims                                                                                         | REJECT                                                                                  |
 | None               | Test imports only its test framework                                                                                                                    | REJECT — tautology                                                                      |
@@ -75,6 +75,12 @@ Every other literal must come from one of three sources:
 
 Static-literal fixture files are not a valid source. A fixture that exports a hardcoded string or number recreates the laundered indirect coupling pattern under a fixture name.
 
+## Test File Declaration Rule
+
+Executed test files are typed assertion files only. They do not own test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior. Any variable or constant declaration in a test file is evidence that the test is owning a value the evidence chain should source elsewhere. The audit records the declaration before applying the literal rule, then names the proper owner: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable.
+
+Renaming a declaration to evade a case-based validation rule does not change ownership. A runner setting such as a property-test run count is test configuration and belongs in a harness. A boundary value or expected output belongs in a generator, source contract, or justified fixture/eval case. The test file keeps the assertion flow; infrastructure owns reusable choices.
+
 ## Positive Pattern
 
 The legitimate pattern: production defines a typed constant (object, dict, frozen dataclass, or platform-canonical equivalent), uses it internally at least once, and exports it. The test imports the same symbol. One definition, one point of change.
@@ -99,8 +105,9 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - Given a test file with a bare numeric literal outside the allowlist `{-1, 0, 1, 2}`, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file with a bare string literal outside `""` and descriptive callsites, when audited, then the verdict is REJECT with finding category "unsourced literal" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that sources every non-allowlist literal from a library origin, a production-owned constant object, or a generator, when audited, then the literal rule passes ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a test file that declares a variable or constant for test data, expected output, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior, when audited, then the verdict is REJECT with finding category "test-owned declaration" ([review])
 - Given a test file importing literals from a static-literal fixture file, when audited, then the verdict is REJECT with finding category "fixture laundering" ([test](tests/test_test_auditing.scenario.l1.py))
-- Given a test file importing literals from a test-support module that exists only to re-export hardcoded values, when audited, then the verdict is REJECT with finding category "laundered indirect" ([test](tests/test_test_auditing.scenario.l1.py))
+- Given a test file importing literals from a test-infrastructure module that exists only to re-export hardcoded values, when audited, then the verdict is REJECT with finding category "laundered indirect" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that reads an authored prose or documentation body (a skill body, a spec, a prompt) and asserts on its content, when audited by `/audit-tests`, then the verdict is REJECT with finding category "prose-coupling" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given production defines and exports a typed constant used internally and the test imports the same symbol, when audited, then the literal rule passes and the verdict reports the positive pattern as the remediation reference ([test](tests/test_test_auditing.scenario.l1.py))
 
@@ -121,6 +128,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the main agent and CI own coverage measurement, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])
+- ALWAYS: detect every variable and constant declaration in executed test files before approving evidence, and reject declarations that own test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior ([review])
 - ALWAYS: report the positive pattern as the remediation when bare literals are rejected — name a library origin, a production-owned constant, or a generator that the test should import from ([review])
 - NEVER: use grep patterns for mechanical detection (mocking patterns, skip patterns, type annotations) — these are static analysis concerns delegated to tooling ([review])
 - NEVER: approve a test with zero codebase coupling regardless of code quality — a well-typed, well-structured tautology is still a tautology ([review])
