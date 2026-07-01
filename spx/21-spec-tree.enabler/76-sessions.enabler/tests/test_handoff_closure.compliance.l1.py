@@ -141,6 +141,7 @@ def test_handoff_allows_branch_state_closeout_observations() -> None:
 
     required_tools = (
         "Bash(spx session release:*)",
+        "Bash(git fetch:*)",
         "Bash(git rev-parse:*)",
         "Bash(git worktree list:*)",
         "Bash(git show-ref:*)",
