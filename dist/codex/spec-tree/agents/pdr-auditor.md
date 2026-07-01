@@ -2,7 +2,7 @@
 name: pdr-auditor
 description: >-
   ALWAYS invoke when auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR.
-tools: Read, Glob, Grep
+tools: Bash, Read, Skill
 model: sonnet
 skills:
   - spec-tree:audit-pdr

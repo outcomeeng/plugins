@@ -92,7 +92,7 @@ This test passes if every file in the codebase is deleted.
 **Prose-coupling** — Test reads an authored prose or documentation body — a skill body, a spec body, a prompt, any text the product authors and maintains — and asserts substrings of its content. The test couples to the document's text, never to executable behavior: it passes whatever the document literally contains, and no code runs.
 
 ```python
-SKILL = repo_root / "src" / "plugins" / "x" / "skills" / "y" / "SKILL.md"
+SKILL = repo_root / "authored_skill.md"
 
 
 def test_skill_declares_the_policy() -> None:
@@ -210,45 +210,26 @@ Read the spec assertion and the test's expect/assert statements side by side.
 
 **Step-by-step:**
 
-1. **Find the coverage command.** Read the product's CLAUDE.md, package.json, pyproject.toml, or Justfile.
+1. **Identify assertion-relevant source files.** From the spec assertion and test imports, determine which source files the test should exercise.
 
-2. **Identify assertion-relevant source files.** From the spec assertion and test imports, determine which source files the test should cover.
+2. **Read the production path.** Identify the functions, branches, methods, or command paths whose behavior the assertion claims.
 
-3. **Run baseline** — coverage excluding the test file under audit:
+3. **Read the test path.** Follow the test's imports and calls into the production path.
 
-   ```bash
-   # TypeScript (vitest)
-   pnpm vitest run --coverage --exclude='path/to/test-under-audit.test.ts'
+4. **Judge reachability.** Decide whether the test drives execution into the assertion-relevant path. Name the specific path reached or missed.
 
-   # Python (pytest)
-   just run test --cov=src --cov-report=term -- --ignore=path/to/test_under_audit.py
-   ```
-
-4. **Run with test** — coverage including the test file:
-
-   ```bash
-   # TypeScript (vitest)
-   pnpm vitest run --coverage 'path/to/test-under-audit.test.ts'
-
-   # Python (pytest)
-   just run test --cov=src --cov-report=term path/to/test_under_audit.py
-   ```
-
-5. **Compare deltas** for each assertion-relevant source file.
-
-6. **Report actual numbers:**
+5. **Report the trace, not a measured percentage:**
 
    ```text
-   Baseline: src/config-parser.ts — 43.2%
-   With test: src/config-parser.ts — 67.8%
-   Delta: +24.6% — new coverage ✓
+   Assertion-relevant path: src/config-parser.ts::parse_config nested-section branch
+   Test path: tests/test_config.py::test_nested_sections -> parse_config(input)
+   Coverage judgment: reaches assertion-relevant path
    ```
 
 **Edge cases:**
 
-- **No coverage tooling**: Note as finding. Do not REJECT solely for this — the other three properties still apply.
-- **New module with 0% baseline**: Any coverage from the test is positive delta.
-- **Saturated coverage**: Baseline shows 100% line + branch coverage on assertion-relevant files. Zero delta is expected — there are no uncovered paths to hit. Coverage measures execution breadth, not assertion strength. A test that exercises fully-covered code with a stronger strategy (e.g., Hypothesis/fast-check over example-based) or broader input domain adds evidentiary value through its assertions, not through additional execution. The other three properties carry the evidence. Annotate as `saturated` in the verdict table.
-- **Shared coverage**: Multiple tests may cover same paths. If baseline is < 100%, a test with zero delta should still be hitting uncovered branches. If baseline is 100%, see saturated coverage above.
+- **No coverage tooling**: irrelevant to this audit. Do not record a finding for missing tooling.
+- **Trivially total path**: when the assertion-relevant behavior is one total path and the test reaches it, annotate as `saturated`; the other three properties carry assertion strength.
+- **Shared execution path**: multiple tests may reach the same path. Judge whether this test reaches the path; do not compare deltas.
 
 </coverage_protocol>
