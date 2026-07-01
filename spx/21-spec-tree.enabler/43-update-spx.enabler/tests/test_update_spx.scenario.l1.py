@@ -173,6 +173,38 @@ def test_cli_check_ignores_unmanaged_metadata_comments(
     assert capsys.readouterr().out.strip() == "stale"
 
 
+def test_cli_check_treats_markerless_legacy_guide_as_stale(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    legacy_guide = (
+        f"{module.FRONTMATTER_DELIMITER}\n"
+        f'{module.TEMPLATE_VERSION_KEY}: "{NEW_VERSION}"\n'
+        f"{module.LANGUAGES_KEY}: [{LANG_PRIMARY}]\n"
+        f"{module.FRONTMATTER_DELIMITER}\n"
+        "\n# Legacy Spec Tree Guide\n"
+    )
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        (tmp_path / guide_name).write_text(legacy_guide, encoding="utf-8")
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--check",
+                "--languages",
+                LANG_PRIMARY,
+            ]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "stale"
+
+
 def test_cli_check_uses_managed_metadata_not_root_prose_comments(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

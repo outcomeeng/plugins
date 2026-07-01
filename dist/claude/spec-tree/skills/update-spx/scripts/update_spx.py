@@ -303,6 +303,8 @@ def guide_status(
     if containment_root is not None:
         _validate_read_target(guide_path, containment_root)
     text = guide_path.read_text(encoding="utf-8")
+    if _managed_section_text(text) is None:
+        return "stale"
     version = parse_template_version(text)
     if version is None or is_stale(version, installed_version):
         return "stale"

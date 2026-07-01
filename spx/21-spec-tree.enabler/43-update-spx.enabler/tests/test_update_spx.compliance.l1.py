@@ -321,8 +321,8 @@ def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
     regenerate_commands = _workflow_run_block("Regenerate guide sections").splitlines()
     build_skills = regenerate_commands.index("just build-skills")
     build_guides = regenerate_commands.index("just build-guides")
-    guide_check = regenerate_commands.index("just guide-check")
-    assert build_skills < build_guides < guide_check
+    assert build_skills < build_guides
+    assert "just guide-check" not in regenerate_commands
 
 
 def test_root_guide_refresh_pr_step_exits_cleanly_without_drift(
