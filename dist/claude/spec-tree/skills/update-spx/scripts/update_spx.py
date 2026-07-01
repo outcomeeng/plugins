@@ -146,6 +146,11 @@ def parse_template_version(text: str) -> str | None:
     ) or _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
 
 
+def parse_guide_version(text: str) -> str | None:
+    """Return a guide's managed-section ``template_version`` value, or None."""
+    return _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
+
+
 def parse_languages(text: str) -> tuple[str, ...]:
     """Read the recorded enabled-language list from a guide's frontmatter."""
     frontmatter, _ = _split_frontmatter(text)
@@ -153,6 +158,11 @@ def parse_languages(text: str) -> tuple[str, ...]:
         _frontmatter_value(frontmatter, LANGUAGES_KEY)
         or _managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX)
     )
+
+
+def parse_guide_languages(text: str) -> tuple[str, ...]:
+    """Return a guide's managed-section language list."""
+    return _parse_languages(_managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX))
 
 
 def _version_tuple(version: str) -> tuple[int, ...]:
@@ -305,10 +315,10 @@ def guide_status(
     text = guide_path.read_text(encoding="utf-8")
     if _managed_section_text(text) is None:
         return "stale"
-    version = parse_template_version(text)
+    version = parse_guide_version(text)
     if version is None or is_stale(version, installed_version):
         return "stale"
-    if parse_languages(text) != normalize_languages(languages):
+    if parse_guide_languages(text) != normalize_languages(languages):
         return "stale"
     return "current"
 

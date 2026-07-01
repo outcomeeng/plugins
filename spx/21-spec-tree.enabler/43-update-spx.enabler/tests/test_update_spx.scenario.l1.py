@@ -240,6 +240,42 @@ def test_cli_check_uses_managed_metadata_not_root_prose_comments(
     assert capsys.readouterr().out.strip() == "current"
 
 
+def test_cli_check_uses_managed_metadata_not_root_frontmatter(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    misleading_frontmatter = (
+        f"{module.FRONTMATTER_DELIMITER}\n"
+        f'{module.TEMPLATE_VERSION_KEY}: "{OLD_VERSION}"\n'
+        f"{module.LANGUAGES_KEY}: [{LANG_SECONDARY}]\n"
+        f"{module.FRONTMATTER_DELIMITER}\n\n"
+    )
+    _write_both_guides(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        guide_path = tmp_path / guide_name
+        guide_path.write_text(
+            f"{misleading_frontmatter}{guide_path.read_text(encoding='utf-8')}",
+            encoding="utf-8",
+        )
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--check",
+                "--languages",
+                LANG_PRIMARY,
+            ]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "current"
+
+
 def test_cli_check_reports_stale_from_detected_language_drift(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
