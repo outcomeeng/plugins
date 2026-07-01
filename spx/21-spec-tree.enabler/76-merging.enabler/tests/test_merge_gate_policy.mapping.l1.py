@@ -19,6 +19,7 @@ from outcomeeng.merging_policy import (
     FIELD_OVERALL,
     FIELD_PRESENT,
     FIELD_ROWS,
+    FIELD_SKIPPED_BY_DESIGN,
     FIELD_STATE,
     FIELD_STATUS,
     FIELD_VERDICT,
@@ -31,13 +32,19 @@ from outcomeeng.merging_policy import (
     AuditorRowStatus,
     CheckRunConclusion,
     CheckRunStatus,
+    DeliveryAction,
+    DeliveryReadiness,
     MergeAction,
     ProductionReadiness,
     RequiredCheckClassification,
     RequiredCheckKind,
+    ReviewCheckAction,
     classify_required_check,
     decide_auditor_verdict,
+    decide_deploy_action,
     decide_production_readiness,
+    decide_release_action,
+    decide_review_check,
 )
 
 
@@ -102,6 +109,94 @@ def test_absent_required_check_maps_to_absent() -> None:
 
     assert decision.terminal_green is False
     assert decision.classification is RequiredCheckClassification.ABSENT
+
+
+def test_successful_review_check_maps_to_surface_inspection() -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
+            FIELD_CONCLUSION: CheckRunConclusion.SUCCESS,
+        }
+    )
+
+    assert decision.required_action is ReviewCheckAction.INSPECT_REVIEW_SURFACES
+
+
+def test_absent_review_check_maps_to_wait_for_review() -> None:
+    decision = decide_review_check(
+        {FIELD_KIND: RequiredCheckKind.CHECK_RUN, FIELD_PRESENT: False}
+    )
+
+    assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
+
+
+@pytest.mark.parametrize("status", sorted(CHECK_RUN_NON_TERMINAL_STATUSES))
+def test_non_terminal_review_check_maps_to_wait_for_review(
+    status: CheckRunStatus,
+) -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: status,
+            FIELD_CONCLUSION: None,
+        }
+    )
+
+    assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
+
+
+@pytest.mark.parametrize(
+    "conclusion",
+    sorted(CHECK_RUN_TERMINAL_NOT_SUCCESS_CONCLUSIONS - {CheckRunConclusion.SKIPPED}),
+)
+def test_failed_review_check_maps_to_merge_blocked(
+    conclusion: CheckRunConclusion,
+) -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
+            FIELD_CONCLUSION: conclusion,
+        }
+    )
+
+    assert (
+        decision.required_action is ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED
+    )
+
+
+def test_non_design_skipped_review_check_maps_to_merge_blocked() -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
+            FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
+            FIELD_SKIPPED_BY_DESIGN: False,
+        }
+    )
+
+    assert (
+        decision.required_action is ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_SKIPPED
+    )
+
+
+def test_self_modifying_skipped_review_check_maps_to_mention_review() -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_PRESENT: True,
+            FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
+            FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
+            FIELD_SKIPPED_BY_DESIGN: True,
+        }
+    )
+
+    assert decision.required_action is ReviewCheckAction.MENTION_REVIEW_NEEDED
 
 
 @pytest.mark.parametrize("state", sorted(STATUS_CONTEXT_SUCCESS_STATES))
@@ -184,6 +279,72 @@ def test_production_relevant_unapproved_change_maps_to_await_approval() -> None:
 
     assert decision.production_readiness is ProductionReadiness.WITHHOLD
     assert decision.merge_action is MergeAction.AWAIT_APPROVAL
+
+
+def test_absent_deploy_declaration_maps_to_skip_without_blocking_later_phases() -> None:
+    decision = decide_deploy_action(
+        declared=False,
+        authorization_predicate_satisfied=False,
+    )
+
+    assert decision.readiness is DeliveryReadiness.HOLD
+    assert decision.delivery_action is DeliveryAction.SKIP
+    assert decision.blocks_later_phases is False
+
+
+def test_unauthorized_deploy_declaration_maps_to_await_authorization() -> None:
+    decision = decide_deploy_action(
+        declared=True,
+        authorization_predicate_satisfied=False,
+    )
+
+    assert decision.readiness is DeliveryReadiness.WITHHOLD
+    assert decision.delivery_action is DeliveryAction.AWAIT_DEPLOYMENT_AUTHORIZATION
+    assert decision.blocks_later_phases is True
+
+
+def test_authorized_deploy_declaration_maps_to_deploy() -> None:
+    decision = decide_deploy_action(
+        declared=True,
+        authorization_predicate_satisfied=True,
+    )
+
+    assert decision.readiness is DeliveryReadiness.HOLD
+    assert decision.delivery_action is DeliveryAction.DEPLOY
+    assert decision.blocks_later_phases is False
+
+
+def test_absent_release_declaration_maps_to_skip_without_blocking_close() -> None:
+    decision = decide_release_action(
+        declared=False,
+        authorization_predicate_satisfied=False,
+    )
+
+    assert decision.readiness is DeliveryReadiness.HOLD
+    assert decision.delivery_action is DeliveryAction.SKIP
+    assert decision.blocks_later_phases is False
+
+
+def test_unauthorized_release_declaration_maps_to_await_authorization() -> None:
+    decision = decide_release_action(
+        declared=True,
+        authorization_predicate_satisfied=False,
+    )
+
+    assert decision.readiness is DeliveryReadiness.WITHHOLD
+    assert decision.delivery_action is DeliveryAction.AWAIT_RELEASE_AUTHORIZATION
+    assert decision.blocks_later_phases is True
+
+
+def test_authorized_release_declaration_maps_to_release() -> None:
+    decision = decide_release_action(
+        declared=True,
+        authorization_predicate_satisfied=True,
+    )
+
+    assert decision.readiness is DeliveryReadiness.HOLD
+    assert decision.delivery_action is DeliveryAction.RELEASE
+    assert decision.blocks_later_phases is False
 
 
 @pytest.mark.parametrize("overall", sorted(AUDITOR_BLOCKING_OVERALLS))

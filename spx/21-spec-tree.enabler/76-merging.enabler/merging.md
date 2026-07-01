@@ -8,16 +8,17 @@ CAN drive a changeset from verified local readiness through merge, declared depl
 
 ### Mappings
 
-- A declared deploy action with an unsatisfied authorization predicate maps to `DEPLOYMENT_READINESS = WITHHOLD` and `delivery_action = AWAIT_DEPLOYMENT_AUTHORIZATION`; an absent deploy declaration maps to `DEPLOY = SKIP` and never blocks release or close
-- A declared release action with an unsatisfied authorization predicate maps to `RELEASE_READINESS = WITHHOLD` and `delivery_action = AWAIT_RELEASE_AUTHORIZATION`; an absent release declaration maps to `RELEASE = SKIP` and never blocks close
+- A declared deploy action with an unsatisfied authorization predicate maps to `DEPLOYMENT_READINESS = WITHHOLD` and `delivery_action = AWAIT_DEPLOYMENT_AUTHORIZATION`; an absent deploy declaration maps to `DEPLOY = SKIP` and never blocks release or close ([test](tests/test_merge_gate_policy.mapping.l1.py))
+- A declared release action with an unsatisfied authorization predicate maps to `RELEASE_READINESS = WITHHOLD` and `delivery_action = AWAIT_RELEASE_AUTHORIZATION`; an absent release declaration maps to `RELEASE = SKIP` and never blocks close ([test](tests/test_merge_gate_policy.mapping.l1.py))
 - A required check's `statusCheckRollup` status and conclusion map to terminal-green only when terminal (`status == COMPLETED`, or `state ∈ {SUCCESS, ERROR, FAILURE}`) and successful (`conclusion == SUCCESS` or `state == SUCCESS`); a `SKIPPED`, `NEUTRAL`, `FAILURE`, `ACTION_REQUIRED`, `CANCELLED`, `TIMED_OUT`, still-running, or absent required check maps to a blocking classification and withholds `MERGE_READINESS` ([test](tests/test_merge_gate_policy.mapping.l1.py))
+- A review-kind check's status and conclusion map to `WAIT_FOR_REVIEW` when absent or non-terminal, `INSPECT_REVIEW_SURFACES` when successful, `MENTION_REVIEW_NEEDED` when skipped because the PR modifies the reviewer's own workflow file, `MERGE_BLOCKED:review-check-skipped` when skipped for any other cause, and `MERGE_BLOCKED:review-check-failed` when terminal but failed, cancelled, timed out, action-required, or neutral ([test](tests/test_merge_gate_policy.mapping.l1.py))
 - An auditor verdict surfaced while the merging flow drives review feedback maps to in-slice unresolved work when the overall verdict is `REJECTED` or `UNKNOWN`, a row status is `FAIL` or `UNKNOWN`, or a finding verdict is `REJECT`; out-of-PR verdicts map to `TRACK_OUT_OF_PR`, and non-blocking in-PR verdicts map to `NO_REPAIR` ([test](tests/test_merge_gate_policy.mapping.l1.py))
 
 ### Conformance
 
 - The `/merge` dispatcher conforms to portable-skill packaging — a `SKILL.md` under `plugins/spec-tree/skills/merge/`, user-invocable, shipped as a skill rather than a command, so it activates on both runtimes, per `spx/13-plugin-and-runtime-conventions.adr.md` ([test](tests/test_merge.conformance.l1.py))
 - The `/merge` dispatcher classifies the changeset through the canonical `changeset_scope` primitives (`detect_base_ref` for the base ref, `branch_scope` for the committed diff) via a co-located `scripts/classify_changeset.py`, never re-deriving the base ref or diff range inline in the skill body, per `spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md` ([test](tests/test_classify_changeset.scenario.l1.py))
-- The shipped `merging-standards` skill text preserves the production-readiness, terminal-green, and auditor-verdict policy clauses that the deterministic merge-policy helper maps, so the mapping evidence stays coupled to the installed flow ([test](tests/test_merge_gate_policy.conformance.l1.py))
+- ALWAYS: the shipped `merging-standards` skill text preserves the production-readiness, terminal-green, and auditor-verdict policy clauses that the deterministic merge-policy helper maps, so the mapping evidence stays coupled to the installed flow ([audit])
 
 ### Compliance
 

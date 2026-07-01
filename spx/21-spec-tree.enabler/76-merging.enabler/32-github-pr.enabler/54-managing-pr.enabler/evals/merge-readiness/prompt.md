@@ -10,25 +10,31 @@ Classify whether the PR may run a merge command at the mutation point.
 
 Rules, in order:
 
-1. If `ci_review.present` is `false`, return:
-   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-absent"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
-2. Else if `reviewing_kind_check.state_category` is `"non_terminal"`, `"missing"`, or `"skipped_non_exception"`, return:
+1. If `reviewing_kind_check.state_category` is `"non_terminal"` or `"missing"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-nonterminal"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
-   If `reviewing_kind_check` is omitted, treat it as `"terminal_green"` when `ci_review.present` is `true`.
-3. Else if any review finding has `validity: "valid"` and `severity: "blocking"`, return:
+   If `reviewing_kind_check` is omitted, continue to the `ci_review.present` rule.
+2. Else if `reviewing_kind_check.state_category` is `"skipped_self_modifying_workflow"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-skipped-self-modifying-workflow"`, `guard_verdict: "MENTION_REVIEW_NEEDED:<trigger_phrase>"`, `merge_command_allowed: false`.
+3. Else if `reviewing_kind_check.state_category` is `"skipped_non_exception"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-skipped"`, `guard_verdict: "MERGE_BLOCKED:review-check-skipped"`, `merge_command_allowed: false`.
+4. Else if `reviewing_kind_check.state_category` is `"terminal_failure"`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-failed"`, `guard_verdict: "MERGE_BLOCKED:review-check-failed"`, `merge_command_allowed: false`.
+5. Else if `ci_review.present` is `false`, return:
+   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-absent"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
+6. Else if any review finding has `validity: "valid"` and `severity: "blocking"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`.
-4. Else if any review finding has `validity: "valid"`, `severity: "debt"`, and no `disposition: "tracked_out_of_scope"`, return:
+7. Else if any review finding has `validity: "valid"`, `severity: "debt"`, and no `disposition: "tracked_out_of_scope"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-valid-finding"`, `guard_verdict: "FIX_FINDING:<id>"`, `merge_command_allowed: false`.
-5. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is omitted or `"non_terminal"`, return:
+8. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is omitted or `"non_terminal"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-not-terminal-green"`, `guard_verdict: "WAIT_FOR_CHECKS"`, `merge_command_allowed: false`.
-6. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is `"terminal_failure"` or `"absent"`, return:
+9. Else if any `other_required_checks` entry has `terminal_green: false` and `state_category` is `"terminal_failure"` or `"absent"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "check-failed-or-absent"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
-7. Else if `branch_hygiene_pr_state` is `"failed"`, return:
-   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
-8. Else if `head_consistency` is `"failed"`, return:
-   `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
-9. Else return:
-   `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head_sha>"`, `merge_command_allowed: true`.
+10. Else if `branch_hygiene_pr_state` is `"failed"`, return:
+    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "branch-hygiene"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
+11. Else if `head_consistency` is `"failed"`, return:
+    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "head-mismatch"`, `guard_verdict: "MERGE_BLOCKED:<reason>"`, `merge_command_allowed: false`.
+12. Else return:
+    `merge_readiness: "HOLD"`, `blocking_predicate: "none"`, `guard_verdict: "MERGE_READY:<head_sha>"`, `merge_command_allowed: true`.
 
 Ignore `host_mergeability`. `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and `gh_pr_merge_would_accept: true` never authorize the merge command.
 
@@ -41,6 +47,6 @@ Case input:
 Verdict fields:
 
 - `merge_readiness`: `"HOLD"` or `"WITHHOLD"`.
-- `blocking_predicate`: one of `"review-absent"`, `"review-nonterminal"`, `"review-valid-finding"`, `"check-not-terminal-green"`, `"check-failed-or-absent"`, `"branch-hygiene"`, `"head-mismatch"`, or `"none"`.
-- `guard_verdict`: `"MERGE_READY:<head_sha>"`, `"WAIT_FOR_REVIEW"`, `"WAIT_FOR_CHECKS"`, `"FIX_FINDING:<id>"`, or `"MERGE_BLOCKED:<reason>"`.
+- `blocking_predicate`: one of `"review-absent"`, `"review-nonterminal"`, `"review-skipped-self-modifying-workflow"`, `"review-check-skipped"`, `"review-check-failed"`, `"review-valid-finding"`, `"check-not-terminal-green"`, `"check-failed-or-absent"`, `"branch-hygiene"`, `"head-mismatch"`, or `"none"`.
+- `guard_verdict`: `"MERGE_READY:<head_sha>"`, `"WAIT_FOR_REVIEW"`, `"WAIT_FOR_CHECKS"`, `"MENTION_REVIEW_NEEDED:<trigger_phrase>"`, `"FIX_FINDING:<id>"`, or `"MERGE_BLOCKED:<reason>"`.
 - `merge_command_allowed`: `true` or `false`.

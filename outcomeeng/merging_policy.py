@@ -15,6 +15,7 @@ FIELD_KIND = "kind"
 FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
 FIELD_ROWS = "rows"
+FIELD_SKIPPED_BY_DESIGN = "skipped_by_design"
 FIELD_STATE = "state"
 FIELD_STATUS = "status"
 FIELD_VERDICT = "verdict"
@@ -80,12 +81,39 @@ class MergeAction(StrEnum):
     MERGE = "MERGE"
 
 
+class DeliveryReadiness(StrEnum):
+    """Delivery-phase readiness gate result."""
+
+    HOLD = "HOLD"
+    WITHHOLD = "WITHHOLD"
+
+
+class DeliveryAction(StrEnum):
+    """Action selected for a delivery lifecycle phase."""
+
+    AWAIT_DEPLOYMENT_AUTHORIZATION = "AWAIT_DEPLOYMENT_AUTHORIZATION"
+    AWAIT_RELEASE_AUTHORIZATION = "AWAIT_RELEASE_AUTHORIZATION"
+    DEPLOY = "DEPLOY"
+    RELEASE = "RELEASE"
+    SKIP = "SKIP"
+
+
 class AuditorRequiredAction(StrEnum):
     """Required handling for an auditor verdict surfaced during merge work."""
 
     FIX_BEFORE_MERGE = "FIX_BEFORE_MERGE"
     NO_REPAIR = "NO_REPAIR"
     TRACK_OUT_OF_PR = "TRACK_OUT_OF_PR"
+
+
+class ReviewCheckAction(StrEnum):
+    """Required handling for the current-head review-kind check."""
+
+    INSPECT_REVIEW_SURFACES = "INSPECT_REVIEW_SURFACES"
+    MENTION_REVIEW_NEEDED = "MENTION_REVIEW_NEEDED"
+    MERGE_BLOCKED_REVIEW_CHECK_FAILED = "MERGE_BLOCKED:review-check-failed"
+    MERGE_BLOCKED_REVIEW_CHECK_SKIPPED = "MERGE_BLOCKED:review-check-skipped"
+    WAIT_FOR_REVIEW = "WAIT_FOR_REVIEW"
 
 
 class AuditorOverall(StrEnum):
@@ -134,6 +162,22 @@ class AuditorVerdictDecision:
 
     required_action: AuditorRequiredAction
     merge_blocked: bool
+
+
+@dataclass(frozen=True)
+class DeliveryDecision:
+    """Decision for one post-merge delivery phase."""
+
+    readiness: DeliveryReadiness
+    delivery_action: DeliveryAction
+    blocks_later_phases: bool
+
+
+@dataclass(frozen=True)
+class ReviewCheckDecision:
+    """Decision for the current-head review-kind check."""
+
+    required_action: ReviewCheckAction
 
 
 CHECK_RUN_NON_TERMINAL_STATUSES = frozenset(
@@ -201,6 +245,56 @@ def decide_production_readiness(
     )
 
 
+def decide_deploy_action(
+    *,
+    declared: bool,
+    authorization_predicate_satisfied: bool,
+) -> DeliveryDecision:
+    """Decide whether the DEPLOY phase runs, waits, or no-ops."""
+    if not declared:
+        return DeliveryDecision(
+            readiness=DeliveryReadiness.HOLD,
+            delivery_action=DeliveryAction.SKIP,
+            blocks_later_phases=False,
+        )
+    if authorization_predicate_satisfied:
+        return DeliveryDecision(
+            readiness=DeliveryReadiness.HOLD,
+            delivery_action=DeliveryAction.DEPLOY,
+            blocks_later_phases=False,
+        )
+    return DeliveryDecision(
+        readiness=DeliveryReadiness.WITHHOLD,
+        delivery_action=DeliveryAction.AWAIT_DEPLOYMENT_AUTHORIZATION,
+        blocks_later_phases=True,
+    )
+
+
+def decide_release_action(
+    *,
+    declared: bool,
+    authorization_predicate_satisfied: bool,
+) -> DeliveryDecision:
+    """Decide whether the RELEASE phase runs, waits, or no-ops."""
+    if not declared:
+        return DeliveryDecision(
+            readiness=DeliveryReadiness.HOLD,
+            delivery_action=DeliveryAction.SKIP,
+            blocks_later_phases=False,
+        )
+    if authorization_predicate_satisfied:
+        return DeliveryDecision(
+            readiness=DeliveryReadiness.HOLD,
+            delivery_action=DeliveryAction.RELEASE,
+            blocks_later_phases=False,
+        )
+    return DeliveryDecision(
+        readiness=DeliveryReadiness.WITHHOLD,
+        delivery_action=DeliveryAction.AWAIT_RELEASE_AUTHORIZATION,
+        blocks_later_phases=True,
+    )
+
+
 def decide_auditor_verdict(verdict: Mapping[str, Any]) -> AuditorVerdictDecision:
     """Decide how a merge flow handles a surfaced auditor verdict."""
     if verdict.get(FIELD_IN_PR_DIFF) is False:
@@ -216,6 +310,31 @@ def decide_auditor_verdict(verdict: Mapping[str, Any]) -> AuditorVerdictDecision
     return AuditorVerdictDecision(
         required_action=AuditorRequiredAction.NO_REPAIR,
         merge_blocked=False,
+    )
+
+
+def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
+    """Decide how merge readiness handles the current-head review-kind check."""
+    required_check = classify_required_check(check)
+    if required_check.classification in {
+        RequiredCheckClassification.ABSENT,
+        RequiredCheckClassification.NOT_TERMINAL,
+    }:
+        return ReviewCheckDecision(required_action=ReviewCheckAction.WAIT_FOR_REVIEW)
+    if required_check.classification is RequiredCheckClassification.TERMINAL_GREEN:
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
+        )
+    if check.get(FIELD_CONCLUSION) == CheckRunConclusion.SKIPPED:
+        if check.get(FIELD_SKIPPED_BY_DESIGN) is True:
+            return ReviewCheckDecision(
+                required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
+            )
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_SKIPPED,
+        )
+    return ReviewCheckDecision(
+        required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
     )
 
 
