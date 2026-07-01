@@ -442,6 +442,7 @@ def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
     assert older_link.resolve() == current_dir, (
         f"expected {older_link} to resolve to {current_dir}, got {older_link.resolve()}"
     )
+    assert os.readlink(older_link) == CURRENT_VERSION
     assert current_dir.is_dir() and not current_dir.is_symlink(), (
         f"expected {current_dir} to remain a real directory"
     )
@@ -451,6 +452,49 @@ def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
     assert older_link not in result.pruned_links, (
         f"expected {older_link} NOT pruned; got pruned_links={result.pruned_links}"
     )
+
+
+def test_indirect_compatibility_symlink_is_retargeted_to_direct_target(
+    tmp_path: Path,
+) -> None:
+    """When one compatibility symlink points at another version path that is also
+    retargeted in the same pass, preservation rewrites both links to the real
+    installed version instead of leaving an indirect chain.
+    """
+    cache_root = tmp_path / "cache"
+    older_version = "0.9.0"
+    prior_version = "0.10.0"
+    installed_version = "0.11.0"
+    write_plugin_root(cache_root, PLUGIN_NAME, prior_version, "prior content")
+    write_plugin_root(cache_root, PLUGIN_NAME, installed_version, "installed content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_link = plugin_dir / older_version
+    prior_link = plugin_dir / prior_version
+    installed_dir = plugin_dir / installed_version
+    older_link.symlink_to(prior_version, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([older_version, prior_version, installed_version]),
+        },
+        current_by_plugin={PLUGIN_NAME: installed_version},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert prior_link.is_symlink()
+    assert older_link.is_symlink()
+    assert os.readlink(prior_link) == installed_version
+    assert os.readlink(older_link) == installed_version
+    assert older_link.resolve() == installed_dir
+    assert prior_link.resolve() == installed_dir
+    assert older_link in result.linked_versions
+    assert prior_link in result.linked_versions
 
 
 def test_out_of_window_real_directory_retargeted_to_installed_version(

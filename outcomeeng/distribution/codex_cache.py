@@ -642,7 +642,7 @@ def _ensure_compatibility_symlinks(
         if version == current_real.name:
             continue
         target_path = plugin_dir / version
-        if _is_symlink_to(target_path, current_real):
+        if _is_direct_symlink_to(target_path, current_real):
             # Already correct. Refresh the symlink's own modification time so a
             # stale-symlink check measures time since this reconciliation rather
             # than time since the version was published -- without the refresh an
@@ -663,15 +663,6 @@ def _ensure_compatibility_symlinks(
             target_path.symlink_to(current_real.name, target_is_directory=True)
         linked.append(target_path)
     return linked
-
-
-def _is_symlink_to(path: Path, target: Path) -> bool:
-    if not path.is_symlink():
-        return False
-    try:
-        return path.resolve() == target.resolve()
-    except OSError:
-        return False
 
 
 def _resolve_refresh_repo_root(
