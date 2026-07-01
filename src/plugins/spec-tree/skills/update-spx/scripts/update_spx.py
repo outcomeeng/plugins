@@ -200,25 +200,37 @@ def _filter_conditional_blocks(body: str, marker: str, allowed: set[str]) -> str
             index += 1
             continue
 
-        block_start = index
-        index += 1
-        block: list[str] = []
-        while index < len(lines):
-            closing_name = _conditional_marker(lines[index], marker, closing=True)
-            if closing_name == name:
-                index += 1
-                if name in allowed:
-                    output.extend(block)
-                    if not block or not block[-1].endswith("\n"):
-                        output.append("\n")
-                break
-            block.append(lines[index])
-            index += 1
-        else:
-            output.extend(lines[block_start:])
+        next_index, block, closed = _conditional_block(lines, index, marker, name)
+        if not closed:
+            output.extend(block)
             break
+        if name in allowed:
+            output.extend(_with_trailing_newline(block))
+        index = next_index
 
     return "".join(output)
+
+
+def _conditional_block(
+    lines: list[str], start: int, marker: str, name: str
+) -> tuple[int, list[str], bool]:
+    """Return the next index, block body, and whether the block closed."""
+    block: list[str] = []
+    index = start + 1
+    while index < len(lines):
+        closing_name = _conditional_marker(lines[index], marker, closing=True)
+        if closing_name == name:
+            return index + 1, block, True
+        block.append(lines[index])
+        index += 1
+    return len(lines), lines[start:], False
+
+
+def _with_trailing_newline(block: list[str]) -> list[str]:
+    """Return a copy of ``block`` that ends with a newline."""
+    if block and block[-1].endswith("\n"):
+        return block
+    return [*block, "\n"]
 
 
 def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
@@ -337,6 +349,25 @@ def upsert_managed_section(document: str, section: str) -> str:
     return f"{base}\n\n{section}"
 
 
+def _is_markerless_generated_guide(document: str) -> bool:
+    """Report whether ``document`` is the retired generated full-file guide shape."""
+    if _managed_section_text(document) is not None:
+        return False
+    frontmatter, body = _split_frontmatter(document)
+    return (
+        _frontmatter_value(frontmatter, TEMPLATE_SOURCE_KEY) == DEFAULT_TEMPLATE_SOURCE
+        and _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY) is not None
+        and body.lstrip().startswith("# Spec Tree Guide")
+    )
+
+
+def _product_owned_root_document(document: str) -> str:
+    """Return product-owned root guide prose, excluding retired generated guide bodies."""
+    if _is_markerless_generated_guide(document):
+        return ""
+    return document
+
+
 def _validated_repo_root(raw_repo_root: str | None) -> pathlib.Path | None:
     """Return a resolved repository root, rejecting missing or non-directory input."""
     if raw_repo_root is None:
@@ -416,7 +447,10 @@ def write_root_guides(
     """Insert managed sections into root guides, replacing symlinks with files."""
     seeds = _root_seed_documents(repo_root)
     for harness, filename in AGENT_HARNESS_GUIDE_FILENAMES.items():
-        output = upsert_managed_section(seeds[harness], sections_by_harness[harness])
+        output = upsert_managed_section(
+            _product_owned_root_document(seeds[harness]),
+            sections_by_harness[harness],
+        )
         _replace_path_with_text(_repo_child(repo_root, filename), output)
 
 

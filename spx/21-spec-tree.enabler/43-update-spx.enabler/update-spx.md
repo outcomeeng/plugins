@@ -14,6 +14,7 @@ CAN retain Spec Tree routing guidance across compaction while preserving the pro
 - Given the CLI edge, `--check` reports `absent`, `stale`, or `current` for a missing, version-behind, or version-current guide, reports `stale` when the detected language set differs from the recorded set, and `--write` creates both guide files ([test](tests/test_update_spx.scenario.l1.py))
 - Given a guide whose `template_version` is not parseable as dotted integers, when staleness is checked, then it is treated as stale rather than raising, so a re-render normalizes it to the installed version ([test](tests/test_update_spx.scenario.l1.py))
 - Given root `CLAUDE.md` is a symlink to `AGENTS.md`, when `--write` updates the managed Spec Tree section, then `CLAUDE.md` becomes a regular file copy and both root guides preserve the shared root body outside their harness-specific managed sections ([test](tests/test_update_spx.scenario.l1.py))
+- Given a root guide contains a markerless generated Spec Tree guide from the retired full-file surface, when `--write` updates the managed Spec Tree section, then the generated legacy body is replaced rather than preserved ahead of the managed section ([test](tests/test_update_spx.scenario.l1.py))
 
 ### Mappings
 

@@ -205,6 +205,44 @@ def test_cli_check_treats_markerless_legacy_guide_as_stale(
     assert capsys.readouterr().out.strip() == "stale"
 
 
+def test_cli_write_replaces_markerless_generated_guide_body(
+    tmp_path: pathlib.Path,
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    legacy_guide = (
+        f"{module.FRONTMATTER_DELIMITER}\n"
+        f'{module.TEMPLATE_VERSION_KEY}: "{OLD_VERSION}"\n'
+        f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
+        f"{module.LANGUAGES_KEY}: [{LANG_PRIMARY}]\n"
+        f"{module.FRONTMATTER_DELIMITER}\n\n"
+        "# Spec Tree Guide\n\n"
+        "Legacy generated guidance.\n"
+    )
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        (tmp_path / guide_name).write_text(legacy_guide, encoding="utf-8")
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--write",
+                "--languages",
+                LANG_PRIMARY,
+            ]
+        )
+        == 0
+    )
+
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        guide = (tmp_path / guide_name).read_text(encoding="utf-8")
+        assert guide.startswith(module.MANAGED_SECTION_START)
+        assert "Legacy generated guidance." not in guide
+
+
 def test_cli_check_uses_managed_metadata_not_root_prose_comments(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
