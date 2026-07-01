@@ -230,6 +230,12 @@ def _resolve_definition(
     if not template_path.is_file():
         msg = f"{eval_toml_path}: prompt template file not found: {template_path}"
         raise ProducerPromptError(msg)
+    if _paths_alias(template_path, prompt_path):
+        msg = (
+            f"{eval_toml_path}: {PROMPT_SOURCE_TABLE}.{TEMPLATE_FIELD} "
+            f"must not alias {PROMPT_FIELD}"
+        )
+        raise ProducerPromptError(msg)
 
     return ProducerPromptDefinition(
         eval_toml_path=eval_toml_path,
@@ -247,6 +253,13 @@ def _load_toml(eval_toml_path: Path) -> dict[str, Any]:
         raise FileNotFoundError(msg)
     with eval_toml_path.open("rb") as fh:
         return tomllib.load(fh)
+
+
+def _paths_alias(left: Path, right: Path) -> bool:
+    try:
+        return left.samefile(right)
+    except FileNotFoundError:
+        return left.resolve(strict=False) == right.resolve(strict=False)
 
 
 def _required_str(

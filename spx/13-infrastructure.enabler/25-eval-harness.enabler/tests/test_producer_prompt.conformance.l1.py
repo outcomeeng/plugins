@@ -145,6 +145,23 @@ def test_materialization_rejects_prompt_path_outside_eval_dir(tmp_path: Path) ->
         materialize_prompt(eval_toml, repo_root=repo_root)
 
 
+def test_materialization_rejects_prompt_template_alias(
+    tmp_path: Path,
+) -> None:
+    repo_root, eval_toml = _write_eval_fixture(
+        tmp_path,
+        prompt_template_path=PROMPT_FILENAME,
+    )
+    original_prompt = (eval_toml.parent / PROMPT_FILENAME).read_text(encoding="utf-8")
+
+    with pytest.raises(ProducerPromptError, match=TEMPLATE_FIELD):
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+    assert (eval_toml.parent / PROMPT_FILENAME).read_text(
+        encoding="utf-8"
+    ) == original_prompt
+
+
 def test_materialization_rejects_absolute_producer_path(tmp_path: Path) -> None:
     absolute_path = tmp_path / "repo" / PRODUCER_RELATIVE_PATH
     repo_root, eval_toml = _write_eval_fixture(
@@ -350,6 +367,7 @@ def _write_eval_fixture(
     include_non_step_named_tag: bool = False,
     prompt_source_kind: str = PRODUCER_SECTION_KIND,
     prompt_path: str = PROMPT_FILENAME,
+    prompt_template_path: str = PROMPT_TEMPLATE_FILENAME,
     producer_relative_path: str = PRODUCER_RELATIVE_PATH,
     omitted_prompt_source_fields: tuple[str, ...] = (),
 ) -> tuple[Path, Path]:
@@ -383,7 +401,7 @@ def _write_eval_fixture(
         producer_sections.append(_producer_section(SECTION_NAME, selected_rule))
     producer_path.write_text("\n".join(producer_sections), encoding="utf-8")
 
-    (eval_dir / PROMPT_TEMPLATE_FILENAME).write_text(
+    (eval_dir / prompt_template_path).write_text(
         "\n".join(
             [
                 "Producer: {producer_path}",
@@ -399,7 +417,7 @@ def _write_eval_fixture(
         f'{KIND_FIELD} = "{prompt_source_kind}"',
         f'{PRODUCER_FIELD} = "{producer_relative_path}"',
         f'{SECTION_FIELD} = "{section_name}"',
-        f'{TEMPLATE_FIELD} = "{PROMPT_TEMPLATE_FILENAME}"',
+        f'{TEMPLATE_FIELD} = "{prompt_template_path}"',
     ]
     omitted = set(omitted_prompt_source_fields)
     (eval_dir / EVAL_TOML_FILENAME).write_text(
