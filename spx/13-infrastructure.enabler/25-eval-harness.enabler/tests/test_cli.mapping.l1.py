@@ -10,14 +10,20 @@ import json
 from pathlib import Path
 from typing import Final
 
+import click
 import pytest
 from click.testing import CliRunner
 
 from outcomeeng_evals.cli import main
-from outcomeeng_evals.cli.commands import run as run_module
-from outcomeeng_evals.cli.commands.run import MAX_WORKERS, MIN_WORKERS, _FORMAT_SUFFIX
+from outcomeeng_evals.cli.commands.run import (
+    MAX_WORKERS,
+    MIN_WORKERS,
+    _FORMAT_SUFFIX,
+    _runner_factory_from_context,
+    build_claude_runner,
+)
 from outcomeeng_evals.definition import CiPolicy
-from outcomeeng_evals.testing.fakes import RecordingRunner, StubModelRunner
+from outcomeeng_evals.testing.cli import build_run_cli_harness
 
 
 EXIT_SUCCESS = 0
@@ -35,7 +41,14 @@ def test_main_group_exposes_documented_subcommands() -> None:
     result = runner.invoke(main, ["--help"])
 
     assert result.exit_code == EXIT_SUCCESS
-    for subcommand in ("run", "history", "view", "discover", "plan"):
+    for subcommand in (
+        "run",
+        "history",
+        "view",
+        "discover",
+        "plan",
+        "materialize-prompts",
+    ):
         assert subcommand in result.output
 
 
@@ -102,6 +115,13 @@ def test_run_subcommand_rejects_workers_below_minimum(tmp_path: Path) -> None:
     assert "workers" in result.output.lower()
 
 
+def test_run_command_uses_default_runner_factory_without_injected_context() -> None:
+    with click.Context(main):
+        runner_factory = _runner_factory_from_context()
+
+    assert runner_factory is build_claude_runner
+
+
 def test_discover_subcommand_lists_eval_toml_files(tmp_path: Path) -> None:
     runner = CliRunner()
     nested_eval = tmp_path / "subtree" / "evals" / "rule-one" / "eval.toml"
@@ -163,182 +183,131 @@ def test_view_subcommand_requires_run_path_or_latest_flag() -> None:
 
 def test_run_command_appends_format_suffix_to_every_prompt(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    eval_dir = tmp_path / "evals" / "rule"
-    eval_dir.mkdir(parents=True)
-    (eval_dir / "eval.toml").write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
-        encoding="utf-8",
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl=(
+            '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
+        ),
     )
-    (eval_dir / "cases.jsonl").write_text(
-        '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n',
-        encoding="utf-8",
-    )
-    (eval_dir / "prompt.md").write_text(
-        "Case {case_id}: {input_json}",
-        encoding="utf-8",
-    )
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
 
-    recorder = RecordingRunner(inner=StubModelRunner(response='{"ok": true}'))
-    monkeypatch.setattr(run_module, "build_claude_runner", lambda **_: recorder)
-
-    cli_runner = CliRunner()
-    cli_runner.invoke(
+    harness.runner.invoke(
         main,
-        ["run", str(eval_dir / "eval.toml"), "--plugin-dir", str(plugin_dir)],
+        [
+            "run",
+            str(harness.eval_toml),
+            "--plugin-dir",
+            str(harness.plugin_dir),
+        ],
+        obj=harness.runner_context,
     )
 
-    assert len(recorder.transcripts) == 1
-    captured_prompt, _ = recorder.transcripts[0]
+    assert len(harness.recorder.transcripts) == 1
+    captured_prompt, _ = harness.recorder.transcripts[0]
     assert captured_prompt.endswith(_FORMAT_SUFFIX)
     assert "Case alpha" in captured_prompt
 
 
 def test_run_command_filters_cases_by_case_id(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    eval_dir = tmp_path / "evals" / "rule"
-    eval_dir.mkdir(parents=True)
-    (eval_dir / "eval.toml").write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
-        encoding="utf-8",
-    )
-    (eval_dir / "cases.jsonl").write_text(
-        "\n".join(
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl="\n".join(
             (
                 '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}',
                 '{"id":"beta","input":{"x":2},"expected_verdict":{"must_contain":[{"ok":true}]}}',
             )
         ),
-        encoding="utf-8",
     )
-    (eval_dir / "prompt.md").write_text(
-        "Case {case_id}: {input_json}",
-        encoding="utf-8",
-    )
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
 
-    recorder = RecordingRunner(inner=StubModelRunner(response='{"ok": true}'))
-    monkeypatch.setattr(run_module, "build_claude_runner", lambda **_: recorder)
-
-    cli_runner = CliRunner()
-    result = cli_runner.invoke(
+    result = harness.runner.invoke(
         main,
         [
             "run",
-            str(eval_dir / "eval.toml"),
+            str(harness.eval_toml),
             "--plugin-dir",
-            str(plugin_dir),
+            str(harness.plugin_dir),
             "--case-id",
             "beta",
         ],
+        obj=harness.runner_context,
     )
 
     assert result.exit_code == EXIT_SUCCESS
-    assert len(recorder.transcripts) == 1
-    captured_prompt, _ = recorder.transcripts[0]
+    assert len(harness.recorder.transcripts) == 1
+    captured_prompt, _ = harness.recorder.transcripts[0]
     assert "Case beta" in captured_prompt
     assert "Case alpha" not in captured_prompt
 
 
 def test_run_command_rejects_unknown_case_id(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    eval_dir = tmp_path / "evals" / "rule"
-    eval_dir.mkdir(parents=True)
-    (eval_dir / "eval.toml").write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
-        encoding="utf-8",
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl=(
+            '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n'
+        ),
     )
-    (eval_dir / "cases.jsonl").write_text(
-        '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}\n',
-        encoding="utf-8",
-    )
-    (eval_dir / "prompt.md").write_text(
-        "Case {case_id}: {input_json}",
-        encoding="utf-8",
-    )
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
 
-    recorder = RecordingRunner(inner=StubModelRunner(response='{"ok": true}'))
-    monkeypatch.setattr(run_module, "build_claude_runner", lambda **_: recorder)
-
-    cli_runner = CliRunner()
-    result = cli_runner.invoke(
+    result = harness.runner.invoke(
         main,
         [
             "run",
-            str(eval_dir / "eval.toml"),
+            str(harness.eval_toml),
             "--plugin-dir",
-            str(plugin_dir),
+            str(harness.plugin_dir),
             "--case-id",
             "missing",
         ],
+        obj=harness.runner_context,
     )
 
     assert result.exit_code == EXIT_GENERAL_ERROR
     assert "missing" in result.output
-    assert recorder.transcripts == []
+    assert harness.recorder.transcripts == []
 
 
 def test_run_command_filters_repeated_case_ids_in_case_file_order(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    eval_dir = tmp_path / "evals" / "rule"
-    eval_dir.mkdir(parents=True)
-    (eval_dir / "eval.toml").write_text(
-        'title = "rule"\ncases = "cases.jsonl"\nprompt = "prompt.md"\n',
-        encoding="utf-8",
-    )
-    (eval_dir / "cases.jsonl").write_text(
-        "\n".join(
+    harness = build_run_cli_harness(
+        tmp_path,
+        cases_jsonl="\n".join(
             (
                 '{"id":"alpha","input":{"x":1},"expected_verdict":{"must_contain":[{"ok":true}]}}',
                 '{"id":"beta","input":{"x":2},"expected_verdict":{"must_contain":[{"ok":true}]}}',
                 '{"id":"gamma","input":{"x":3},"expected_verdict":{"must_contain":[{"ok":true}]}}',
             )
         ),
-        encoding="utf-8",
     )
-    (eval_dir / "prompt.md").write_text(
-        "Case {case_id}: {input_json}",
-        encoding="utf-8",
-    )
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
 
-    recorder = RecordingRunner(inner=StubModelRunner(response='{"ok": true}'))
-    monkeypatch.setattr(run_module, "build_claude_runner", lambda **_: recorder)
-
-    cli_runner = CliRunner()
-    result = cli_runner.invoke(
+    result = harness.runner.invoke(
         main,
         [
             "run",
-            str(eval_dir / "eval.toml"),
+            str(harness.eval_toml),
             "--plugin-dir",
-            str(plugin_dir),
+            str(harness.plugin_dir),
             "--case-id",
             "gamma",
             "--case-id",
             "alpha",
         ],
+        obj=harness.runner_context,
     )
 
     assert result.exit_code == EXIT_SUCCESS
     captured_case_ids = [
         prompt.split("Case ", 1)[1].split(":", 1)[0]
-        for prompt, _metadata in recorder.transcripts
+        for prompt, _metadata in harness.recorder.transcripts
     ]
     assert captured_case_ids == ["alpha", "gamma"]
+    assert all(
+        prompt.endswith(_FORMAT_SUFFIX)
+        for prompt, _metadata in harness.recorder.transcripts
+    )
 
 
 def test_plan_subcommand_selects_smoke_cases_for_owned_path_change(
