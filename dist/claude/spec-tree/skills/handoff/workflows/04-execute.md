@@ -236,6 +236,8 @@ Put session mechanics only after the product summary:
 - Every claimed session archived — none left in `todo/` or `doing/`.
 - Every mid-session artifact this conversation created is reconciled: at most one rewritten in place, all others archived.
 - Confirmation output names the continuation path and the archived ids.
+- Default-branch merge closeout includes the branch-state closeout record fields from `/merging-standards` `<branch_state_closeout>` or an explicitly preserved record from the merge transport.
+- Merge lifecycle final output includes `Remaining Branches` grouped under **Deleted locally**, **Deleted remotely**, **Retained, with reason**, and **Needs operator decision, with exact evidence**.
 - The releasing context has stepped off the handed-off branch — a main checkout switched back to the base branch, a linked worktree left detached at the `origin/<default-branch>` tip — and the branch is not re-checked-out.
 
 </success_criteria>

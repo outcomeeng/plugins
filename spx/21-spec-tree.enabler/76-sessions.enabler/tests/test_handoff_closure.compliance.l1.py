@@ -107,8 +107,9 @@ def test_handoff_allows_branch_state_closeout_observations() -> None:
     skill = _read("SKILL.md")
 
     required_tools = (
+        "Bash(spx session release:*)",
         "Bash(git rev-parse:*)",
-        "Bash(git worktree:*)",
+        "Bash(git worktree list:*)",
         "Bash(git show-ref:*)",
         "Bash(git ls-remote:*)",
         "Bash(git merge-base:*)",
@@ -176,6 +177,8 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         assert "**Deleted remotely**" in execute
         assert "**Retained, with reason**" in execute
         assert "**Needs operator decision, with exact evidence**" in execute
+        assert "Default-branch merge closeout includes the branch-state closeout record fields" in execute
+        assert "Merge lifecycle final output includes `Remaining Branches`" in execute
         assert "git cherry -v --abbrev=40" in execute
         assert "Never delete a branch checked out in another live worktree" in execute
         assert "merge receipt" in execute
