@@ -229,6 +229,28 @@ def test_non_step_tags_do_not_match_section_name(tmp_path: Path) -> None:
         materialize_prompt(eval_toml, repo_root=repo_root)
 
 
+def test_selected_section_rejects_literal_step_closing_delimiter(
+    tmp_path: Path,
+) -> None:
+    repo_root, eval_toml = _write_eval_fixture(
+        tmp_path,
+        selected_rule="Literal </step> delimiter in prose.",
+    )
+
+    with pytest.raises(ProducerPromptError, match="step closing delimiter"):
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+
+def test_selected_section_rejects_nested_step_delimiter(tmp_path: Path) -> None:
+    repo_root, eval_toml = _write_eval_fixture(
+        tmp_path,
+        selected_rule=_producer_section("nested_step", "Nested body."),
+    )
+
+    with pytest.raises(ProducerPromptError, match="nested step delimiters"):
+        materialize_prompt(eval_toml, repo_root=repo_root)
+
+
 def test_duplicate_producer_section_is_rejected(tmp_path: Path) -> None:
     repo_root, eval_toml = _write_eval_fixture(tmp_path, duplicate_section=True)
 

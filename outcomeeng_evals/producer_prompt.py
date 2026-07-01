@@ -25,11 +25,7 @@ _PRODUCER_SECTION_PLACEHOLDER: Final = "{producer_section}"
 _SECTION_NAME_PATTERN: Final = (
     r"""(?:^|\s)name\s*=\s*(?P<quote>["']){name}(?P=quote)(?:\s|$)"""
 )
-_SECTION_TAG_PATTERN: Final = (
-    r"<step\b(?P<attrs>[^>]*)>"
-    r"(?P<body>.*?)"
-    r"</step>"
-)
+_STEP_DELIMITER_PATTERN: Final = r"<step\b(?P<attrs>[^>]*)>|</step>"
 
 
 class ProducerPromptError(ValueError):
@@ -160,11 +156,31 @@ def extract_named_producer_section(
     name_re = re.compile(
         _SECTION_NAME_PATTERN.format(name=re.escape(section_name)),
     )
-    matches = [
-        match.group(0)
-        for match in re.finditer(_SECTION_TAG_PATTERN, producer_text, re.DOTALL)
-        if name_re.search(match.group("attrs"))
-    ]
+    matches: list[str] = []
+    open_match: re.Match[str] | None = None
+    open_attrs = ""
+    for delimiter in re.finditer(_STEP_DELIMITER_PATTERN, producer_text, re.DOTALL):
+        attrs = delimiter.group("attrs")
+        if attrs is not None:
+            if open_match is not None:
+                msg = f"{producer_path}: nested step delimiters are not supported"
+                raise ProducerPromptError(msg)
+            open_match = delimiter
+            open_attrs = attrs
+            continue
+
+        if open_match is None:
+            msg = f"{producer_path}: unmatched step closing delimiter"
+            raise ProducerPromptError(msg)
+        section_text = producer_text[open_match.start() : delimiter.end()]
+        if name_re.search(open_attrs):
+            matches.append(section_text)
+        open_match = None
+        open_attrs = ""
+
+    if open_match is not None:
+        msg = f"{producer_path}: unclosed step delimiter"
+        raise ProducerPromptError(msg)
     if len(matches) != 1:
         count = "no" if not matches else str(len(matches))
         msg = (
