@@ -731,7 +731,7 @@ def test_refresh_without_current_real_dir_creates_no_current_symlink(
         f"expected removed real directory {older_dir} in "
         f"result.pruned_links={result.pruned_links}"
     )
-    assert result.missing_current_cache_entries == ()
+    assert result.current_cache_topology_errors == ()
 
 
 def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None:
@@ -742,6 +742,8 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
+    target_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
+    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={
@@ -760,7 +762,15 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
         strict_current_cache=True,
     )
 
-    assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
+    assert len(result.current_cache_topology_errors) == 2
+    assert any(
+        str(target_path) in error and "missing target real directory" in error
+        for error in result.current_cache_topology_errors
+    )
+    assert any(
+        str(older_path) in error and "non-target version is a real directory" in error
+        for error in result.current_cache_topology_errors
+    )
 
 
 def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
@@ -769,6 +779,7 @@ def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
+    target_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={PLUGIN_NAME: frozenset([CURRENT_VERSION])},
@@ -785,7 +796,9 @@ def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
         strict_current_cache=True,
     )
 
-    assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
+    assert len(result.current_cache_topology_errors) == 1
+    assert str(target_path) in result.current_cache_topology_errors[0]
+    assert "missing target real directory" in result.current_cache_topology_errors[0]
 
 
 def test_stale_current_version_symlink_is_removed_when_no_real_dir(

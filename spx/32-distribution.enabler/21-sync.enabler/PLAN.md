@@ -2,14 +2,14 @@
 
 ## Watcher-Safe Marketplace Sync
 
-Build this after the installation node exposes the Codex cache topology health predicate described in `spx/13-infrastructure.enabler/32-installation.enabler/PLAN.md`.
+Build this from the Codex cache topology truth declared by `spx/13-infrastructure.enabler/32-installation.enabler/installation.md` and governed by `spx/13-infrastructure.enabler/32-installation.enabler/21-codex-cache-preservation.adr.md`. Use the shared health predicate exposed by `outcomeeng.distribution.codex_cache.codex_cache_topology_errors` as the implementation contract for the sync probe.
 
 Observable path:
 
 - Invocation: a folder watcher invokes `just sync-marketplace <base-ref>` from the marketplace-source worktree after Codex cache churn.
 - Input state: no plugin distribution paths changed since `<base-ref>`, runtime marketplace sources already point at the canonical local source, and Codex cache topology is either valid or invalid.
 - Behavior:
-  - If distribution paths changed or source reconciliation repaired runtime configuration, sync keeps the full PR #390 sequence.
+  - If distribution paths changed or source reconciliation repaired runtime configuration, sync keeps the full refresh sequence including final strict Codex local refresh.
   - If neither changed and topology is valid, sync exits 0 after source reconciliation and health inspection without running marketplace refresh mutations.
   - If neither changed and topology is invalid, sync runs the full refresh sequence.
   - Concurrent watcher invocations are single-flight: one sync owns the repair, later invocations observe the active run, record pending state, and exit 0 without launching a second refresh.
@@ -25,5 +25,5 @@ Failure behavior:
 Acceptance evidence:
 
 - Add sync tests for healthy topology skip, invalid topology refresh, active single-flight exit, and stale-lock replacement.
-- Keep PR #390's final strict refresh in the full sequence.
+- Keep the final strict Codex local refresh in the full sequence.
 - Run `just test spx/32-distribution.enabler/21-sync.enabler/tests/test_sync.scenario.l1.py`.

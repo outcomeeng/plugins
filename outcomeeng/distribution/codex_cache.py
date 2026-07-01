@@ -171,7 +171,7 @@ class CacheRefreshResult:
     linked_versions: tuple[Path, ...]
     pruned_links: tuple[Path, ...]
     pruned_plugins: tuple[str, ...]
-    missing_current_cache_entries: tuple[str, ...]
+    current_cache_topology_errors: tuple[str, ...]
     refresh_returncode: int
 
 
@@ -384,7 +384,7 @@ def refresh_installed_plugins(
 
     linked_versions: list[Path] = []
     pruned_links: list[Path] = []
-    missing_current_cache_entries: list[str] = []
+    current_cache_topology_errors: list[str] = []
 
     for plugin in sorted(wanted):
         current_version = installed_versions.get(
@@ -394,8 +394,10 @@ def refresh_installed_plugins(
         if not plugin_dir.is_dir():
             # Working-tree plugin absent from the Codex cache: nothing to reconcile.
             if strict_current_cache:
-                missing_current_cache_entries.append(
-                    _format_missing_current(plugin, current_version)
+                current_cache_topology_errors.extend(
+                    codex_cache_topology_errors(
+                        marketplace_dir, plugin, current_version
+                    )
                 )
             continue
         in_window = resolved_history.published_versions(plugin)
@@ -405,11 +407,14 @@ def refresh_installed_plugins(
             # version as a complete real directory. No compatibility symlink can
             # point at current content, so remove every compatibility symlink and
             # every non-target real directory for the plugin rather than let any
-            # version resolve to non-current content. validate_install reports the
-            # absent or incomplete current version.
+            # version resolve to non-current content. Strict mode reports the
+            # observed bad topology before cleanup so the diagnostic still names
+            # every offending cache entry.
             if strict_current_cache:
-                missing_current_cache_entries.append(
-                    _format_missing_current(plugin, current_version)
+                current_cache_topology_errors.extend(
+                    codex_cache_topology_errors(
+                        marketplace_dir, plugin, current_version
+                    )
                 )
             pruned_links.extend(_prune_all_symlinks(plugin_dir, dry_run=dry_run))
             pruned_links.extend(
@@ -444,19 +449,110 @@ def refresh_installed_plugins(
                 plugin_dir, current_real, ensure_versions, dry_run=dry_run
             )
         )
+        if strict_current_cache:
+            current_cache_topology_errors.extend(
+                codex_cache_topology_errors(marketplace_dir, plugin, current_version)
+            )
 
     return CacheRefreshResult(
         linked_versions=tuple(linked_versions),
         pruned_links=tuple(pruned_links),
         pruned_plugins=tuple(pruned_plugins),
-        missing_current_cache_entries=tuple(missing_current_cache_entries),
+        current_cache_topology_errors=tuple(current_cache_topology_errors),
         refresh_returncode=refresh_returncode,
     )
 
 
-def _format_missing_current(plugin: str, current_version: str | None) -> str:
-    version = current_version if current_version is not None else "<unknown>"
-    return f"{plugin}@{version}"
+def codex_cache_topology_errors(
+    marketplace_dir: Path,
+    plugin: str,
+    target_version: str | None,
+) -> tuple[str, ...]:
+    """Return errors for the Codex cache topology of one installed plugin.
+
+    The healthy shape has exactly one complete real version root: the target.
+    Every other version path is a direct symlink to that target. Regular files in
+    the plugin cache directory are ignored because they are not version entries.
+    """
+    version = target_version if target_version is not None else "<unknown>"
+    plugin_dir = marketplace_dir / plugin
+    target = plugin_dir / version
+    errors: list[str] = []
+
+    if target_version is None:
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@<unknown>  {plugin_dir}  "
+            "cannot determine target version"
+        )
+        return tuple(errors)
+    if not plugin_dir.is_dir():
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {target}  "
+            "missing target real directory"
+        )
+        return tuple(errors)
+    if not target.exists():
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {target}  "
+            "missing target real directory"
+        )
+    elif target.is_symlink():
+        actual = _resolved_symlink_target_text(target)
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {target}  "
+            f"target is a symlink to {actual}, expected complete real directory"
+        )
+    elif not target.is_dir():
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {target}  "
+            "target is not a directory"
+        )
+    elif not _is_complete_plugin_root(target):
+        errors.append(
+            f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {target}  "
+            f"target missing {_CODEX_PLUGIN_MANIFEST}"
+        )
+
+    for entry in sorted(plugin_dir.iterdir()):
+        if entry.name == target_version:
+            continue
+        if not entry.is_dir() and not entry.is_symlink():
+            continue
+        if not entry.is_symlink():
+            errors.append(
+                f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {entry}  "
+                "non-target version is a real directory"
+            )
+            continue
+        if not _is_direct_symlink_to(entry, target):
+            actual = _resolved_symlink_target_text(entry)
+            errors.append(
+                f"CODEX CACHE TOPOLOGY  {plugin}@{target_version}  {entry}  "
+                f"symlink points to {actual}, expected direct target {target}"
+            )
+    return tuple(errors)
+
+
+def _is_direct_symlink_to(path: Path, target: Path) -> bool:
+    if not path.is_symlink():
+        return False
+    try:
+        link_target = Path(os.readlink(path))
+    except OSError:
+        return False
+    candidate = link_target if link_target.is_absolute() else path.parent / link_target
+    return os.path.abspath(candidate) == os.path.abspath(target)
+
+
+def _resolved_symlink_target_text(path: Path) -> str:
+    try:
+        link_target = Path(os.readlink(path))
+    except OSError as exc:
+        return f"<unreadable: {exc}>"
+    actual_path = (
+        link_target if link_target.is_absolute() else path.parent / link_target
+    )
+    return os.path.abspath(actual_path)
 
 
 def _prune_orphan_plugins(
@@ -682,13 +778,9 @@ def main(
             file=sys.stderr,
         )
         return result.refresh_returncode
-    if args.strict_current_cache and result.missing_current_cache_entries:
-        for entry in result.missing_current_cache_entries:
-            print(
-                "error: Codex local refresh did not materialize complete current "
-                f"cache entry {entry}",
-                file=sys.stderr,
-            )
+    if args.strict_current_cache and result.current_cache_topology_errors:
+        for error in result.current_cache_topology_errors:
+            print(f"error: {error}", file=sys.stderr)
         return 1
 
     print(
@@ -711,6 +803,7 @@ __all__ = [
     "InstalledPlugins",
     "InstalledSetError",
     "PluginHistory",
+    "codex_cache_topology_errors",
     "default_cache_root",
     "main",
     "parse_installed_plugin_versions",
