@@ -52,14 +52,6 @@ class CliInputError(ValueError):
 # product's own test files, the in-use ground truth, rather than from agent judgment.
 LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust"}
 
-_LANG_BLOCK = re.compile(
-    r"[ \t]*<!-- lang:(?P<lang>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /lang:(?P=lang) -->\n?",
-    re.DOTALL,
-)
-_HARNESS_BLOCK = re.compile(
-    r"[ \t]*<!-- harness:(?P<harness>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /harness:(?P=harness) -->\n?",
-    re.DOTALL,
-)
 _BLANK_RUN = re.compile(r"\n{3,}")
 _MANAGED_SECTION = re.compile(
     rf"{re.escape(MANAGED_SECTION_START)}\n.*?\n{re.escape(MANAGED_SECTION_END)}\n?",
@@ -156,26 +148,54 @@ def is_stale(product_version: str, template_version: str) -> bool:
         return True
 
 
+def _conditional_marker(line: str, marker: str, *, closing: bool) -> str | None:
+    prefix = f"<!-- {'/' if closing else ''}{marker}:"
+    stripped = line.strip()
+    if not stripped.startswith(prefix) or not stripped.endswith("-->"):
+        return None
+    return stripped[len(prefix) : -len("-->")].strip()
+
+
+def _filter_conditional_blocks(body: str, marker: str, allowed: set[str]) -> str:
+    lines = body.splitlines(keepends=True)
+    output: list[str] = []
+    index = 0
+    while index < len(lines):
+        name = _conditional_marker(lines[index], marker, closing=False)
+        if name is None:
+            output.append(lines[index])
+            index += 1
+            continue
+
+        block_start = index
+        index += 1
+        block: list[str] = []
+        while index < len(lines):
+            closing_name = _conditional_marker(lines[index], marker, closing=True)
+            if closing_name == name:
+                index += 1
+                if name in allowed:
+                    output.extend(block)
+                    if not block or not block[-1].endswith("\n"):
+                        output.append("\n")
+                break
+            block.append(lines[index])
+            index += 1
+        else:
+            output.extend(lines[block_start:])
+            break
+
+    return "".join(output)
+
+
 def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     """Keep each ``lang:NAME`` block whose NAME is enabled; drop the rest, markers and all."""
-
-    def replace(match: re.Match[str]) -> str:
-        if match.group("lang") in languages:
-            return match.group("body") + "\n"
-        return ""
-
-    return _LANG_BLOCK.sub(replace, body)
+    return _filter_conditional_blocks(body, "lang", set(languages))
 
 
 def _filter_harness(body: str, harness: str) -> str:
     """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
-
-    def replace(match: re.Match[str]) -> str:
-        if match.group("harness") == harness:
-            return match.group("body") + "\n"
-        return ""
-
-    return _HARNESS_BLOCK.sub(replace, body)
+    return _filter_conditional_blocks(body, "harness", {harness})
 
 
 def language_for_extension(extension: str) -> str | None:
