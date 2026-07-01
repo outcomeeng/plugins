@@ -422,7 +422,7 @@ Reject or rewrite these patterns:
 - Deep relative imports into stable shared test infrastructure
 - Importing fixture files into executed tests instead of reading or copying inert files
 - Manual argument parsing in script tests when the repo has a canonical parser
-- `it.skip`, `it.skipIf`, and `test.skip` on credentialed evidence -- use `requireCredentials()` that throws instead
+- `it.skip`, `it.skipIf`, and `test.skip` on credentialed evidence -- use a credential harness wrapper such as `withLhciCredentials()` that throws instead
 
 The cross-file literal-reuse check (check IDs `L3`/`L4`: literal in a test also present in `src/`, or duplicated across test files) is not an ESLint rule — it runs as `spx validation literal` because cross-file analysis doesn't fit ESLint's per-file execution model.
 
