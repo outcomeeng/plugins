@@ -177,7 +177,10 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         assert "**Deleted remotely**" in execute
         assert "**Retained, with reason**" in execute
         assert "**Needs operator decision, with exact evidence**" in execute
-        assert "Default-branch merge closeout includes the branch-state closeout record fields" in execute
+        assert (
+            "Default-branch merge closeout includes the branch-state closeout record fields"
+            in execute
+        )
         assert "Merge lifecycle final output includes `Remaining Branches`" in execute
         assert "git cherry -v --abbrev=40" in execute
         assert "Never delete a branch checked out in another live worktree" in execute
