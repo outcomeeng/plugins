@@ -330,6 +330,8 @@ proptest! {
 }
 ```
 
+Property tests MUST run through a harness or wrapper that owns `proptest` / `quickcheck` configuration, seed policy, case count, failure persistence, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare runner tuning or seed policy. On failure, output must include the seed, regression file path, or replay command needed to reproduce the generated case.
+
 Use `trybuild` for compile-time guarantees:
 
 ```rust
@@ -431,17 +433,18 @@ Coverage is evidence only when measured against the exercised module:
 <anti_patterns>
 Reject or rewrite these patterns:
 
-| Anti-pattern                                      | Why it fails                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------ |
-| generated mocks for the main seam                 | severs evidence from the real interface                      |
-| snapshots of hand-written values                  | proves serialization of the fixture more than governed logic |
-| example-only tests for property claims            | misses the universal claim stated by the spec                |
-| async tests holding locks across await            | creates deadlocks and hides the real concurrency design      |
-| browser tooling for non-browser code              | adds cost without stronger evidence                          |
-| compile-time claims tested at runtime             | misses the actual contract                                   |
-| source text read from tests                       | proves implementation text rather than behavior              |
-| missing harness cleanup                           | leaves shared state that changes later test outcomes         |
-| test-file-local constants for source-owned values | production module should export the value; refactor it       |
+| Anti-pattern                                      | Why it fails                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| generated mocks for the main seam                 | severs evidence from the real interface                                         |
+| snapshots of hand-written values                  | proves serialization of the fixture more than governed logic                    |
+| example-only tests for property claims            | misses the universal claim stated by the spec                                   |
+| async tests holding locks across await            | creates deadlocks and hides the real concurrency design                         |
+| browser tooling for non-browser code              | adds cost without stronger evidence                                             |
+| compile-time claims tested at runtime             | misses the actual contract                                                      |
+| source text read from tests                       | proves implementation text rather than behavior                                 |
+| missing harness cleanup                           | leaves shared state that changes later test outcomes                            |
+| test-file-local constants for source-owned values | production module should export the value; refactor it                          |
+| property runner tuning in a test file             | the property harness owns seed, case count, persistence, and replay diagnostics |
 
 Do not require `spx validation literal` for Rust tests. The literal validator is TypeScript-only. Enforce source-owned values through review and Rust test standards instead.
 

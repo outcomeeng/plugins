@@ -217,6 +217,8 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 | Complex algorithms      | invariant preservation   | `@given(...)` |
 
 `@given` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
+
+Property tests MUST run through a harness or wrapper that owns the Hypothesis profile, seed policy, run count, deadline, and replay diagnostics. The test file supplies the invariant and imports generated domains; it does not declare `@settings(...)`, seeds, example databases, run counts, or retry policy. On failure, the harness output must include the seed or Hypothesis replay directive needed to reproduce the generated case.
 </property_based_testing>
 
 <boundary_validation>
@@ -243,6 +245,7 @@ Reject or rewrite these patterns:
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer
 - Hand-copied artifact field names from YAML, HCL, bash, JSON schema, or IaC templates as substitutes for imports from the Python module that should render or consume the artifact
 - Test-runner tuning values (timeouts, retries, polling intervals) declared at test scope when the harness that owns the resource should own the value
+- Hypothesis settings, seeds, run counts, deadlines, or replay policy declared in a test file instead of the property-test harness
 - Production modules created only to aggregate values for tests
 - Co-located helpers under `tests/`, `tests/helpers/`, `tests/support/`, or node-local support modules
 - Fixture body code in `conftest.py`
@@ -262,6 +265,7 @@ Python test guidance follows this standard when:
 - Every test case has a documentable source outside the author's head — spec assertion text, source-owned enumeration, generator over a domain, external oracle, decision record, or inert fixture file
 - Source-owned values come from the owning production module; container keys are imported, not hand-written; runner-tuning values live on the harness that owns the resource
 - Generators vary, compose, shrink, or explore meaningful alternatives
+- Property tests route through a harness or wrapper that reports the seed or replay directive on failure
 - Harnesses live under `product_testing/harnesses/` and manage resource lifecycles
 - Inert fixture files live under `product_testing/fixtures/` and are consumed only as files
 - `conftest.py` is limited to pytest discovery, registration, and explicit imports from canonical harness modules

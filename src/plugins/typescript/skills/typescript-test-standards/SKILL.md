@@ -145,40 +145,19 @@ Use typed harness factories when tests require real infrastructure (Docker, brow
  * Setup: cp .env.test.example .env.test and fill in values
  */
 
-type Credentials = {
-  serverUrl: string;
-  token: string;
-};
-
-function requireCredentials(): Credentials {
-  const serverUrl = process.env.LHCI_SERVER_URL;
-  const token = process.env.LHCI_TOKEN;
-
-  if (!serverUrl || !token) {
-    throw new Error(
-      "Missing LHCI_SERVER_URL or LHCI_TOKEN. See test file header for setup instructions.",
-    );
-  }
-
-  return { serverUrl, token };
-}
+import { withLhciCredentials } from "@testing/harnesses/lhci/credentials";
 
 describe("LHCI", () => {
-  let credentials: Credentials;
-
-  beforeAll(() => {
-    credentials = requireCredentials();
-  });
-
-  it("uploads audit results to server", async () => {
-    const result = await uploadAuditResults({
-      serverUrl: credentials.serverUrl,
-      token: credentials.token,
-      results: testResults,
-    });
-
-    expect(result.success).toBe(true);
-  });
+  it(
+    "uploads audit results to server",
+    withLhciCredentials(async (credentials) => {
+      await expect(uploadAuditResults({
+        serverUrl: credentials.serverUrl,
+        token: credentials.token,
+        results: testResults,
+      })).resolves.toMatchObject({ success: true });
+    }),
+  );
 });
 ```
 
