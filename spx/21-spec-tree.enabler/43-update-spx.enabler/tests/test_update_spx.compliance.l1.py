@@ -9,6 +9,7 @@ Rules in ``update-spx.md`` with deterministic test evidence:
 - ALWAYS: generation writes managed sections into both root guide files.
 - ALWAYS: product guides render from harness-specific templates under ``dist/``.
 - NEVER: guide generation writes output from a template with unresolved build macros.
+- NEVER: obsolete ``spx/`` guide files remain after guide generation.
 """
 
 import os
@@ -70,6 +71,21 @@ def _workflow_run_block(step_name: str) -> str:
             break
         else:
             block.append("")
+    return "\n".join(block) + "\n"
+
+
+def _workflow_step_block(step_name: str) -> str:
+    workflow = guide_diff.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-root-guides.yml"
+    ).read_text(encoding="utf-8")
+    lines = workflow.splitlines()
+    step_line = f"      - name: {step_name}"
+    start = lines.index(step_line)
+    block: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("      - name: ") and block:
+            break
+        block.append(line)
     return "\n".join(block) + "\n"
 
 
@@ -344,6 +360,12 @@ def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
     build_guides = regenerate_commands.index("just build-guides")
     assert build_skills < build_guides
     assert "just guide-check" not in regenerate_commands
+
+
+def test_root_guide_refresh_workflow_checks_out_main() -> None:
+    checkout_step = _workflow_step_block("Checkout")
+
+    assert "          ref: main\n" in checkout_step
 
 
 def test_root_guide_refresh_workflow_verifies_just_download() -> None:

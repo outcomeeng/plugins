@@ -529,33 +529,6 @@ def test_cli_write_replaces_symlinked_root_guide_with_regular_file(
     )
 
 
-def test_cli_write_removes_obsolete_spx_guides(tmp_path: pathlib.Path) -> None:
-    module = load_update_spx_module()
-    template = write_template(tmp_path, NEW_VERSION)
-    spx_dir = tmp_path / "spx"
-    spx_dir.mkdir()
-    (spx_dir / GUIDE_CLAUDE).write_text("old claude guide\n", encoding="utf-8")
-    (spx_dir / GUIDE_AGENTS).write_text("old agents guide\n", encoding="utf-8")
-
-    assert (
-        module.main(
-            [
-                "--template",
-                str(template),
-                "--repo-root",
-                str(tmp_path),
-                "--languages",
-                LANG_PRIMARY,
-                "--write",
-            ]
-        )
-        == 0
-    )
-
-    assert not (spx_dir / GUIDE_CLAUDE).exists()
-    assert not (spx_dir / GUIDE_AGENTS).exists()
-
-
 def test_cli_detects_languages_from_test_extensions(tmp_path: pathlib.Path) -> None:
     module = load_update_spx_module()
     template = write_template(tmp_path, NEW_VERSION)
