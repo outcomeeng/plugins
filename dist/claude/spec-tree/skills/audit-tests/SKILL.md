@@ -39,7 +39,7 @@ The literal rule is applied by reading the test's literals against their sources
 
 **TEST FILES OWN NO DATA OR CONFIGURATION.**
 
-Before coupling, inspect every executed test file for declarations that bind test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior. A variable or constant declaration in a test file is an evidence-boundary failure when it owns any of those concerns. Do not classify by naming style: `MAPPING_RUNS`, `mappingRuns`, and `runs` are the same ownership problem.
+Before coupling, inspect every executed test file for declarations that bind test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior. A variable, constant, or local helper function declaration in a test file is an evidence-boundary failure when it owns any of those concerns. Do not classify by naming style or declaration shape: `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same ownership problem.
 
 The remediation target is part of the finding: source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, or curated eval case data when generation is wasteful and not tractable. Runner settings and property seeds belong in harnesses. Variable input domains belong in generators. Test files keep assertion flow.
 
@@ -95,7 +95,7 @@ Read the spec's Assertions section. For each assertion, extract:
 
 **Step 3a: Test-file declarations**
 
-Read each linked test file before coupling. Identify every variable or constant declaration and classify what it owns:
+Read each linked test file before coupling. Identify every variable, constant, or local helper function declaration and classify what it owns:
 
 | Owns                                       | Verdict                                   |
 | ------------------------------------------ | ----------------------------------------- |

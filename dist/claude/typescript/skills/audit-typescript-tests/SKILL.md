@@ -65,7 +65,7 @@ A test literal that re-declares a production-owned value instead of importing it
 
 Executed TypeScript test files are typed assertion files. They do not own data or configuration. Before judging the assertion method, read the test file for `const`, `let`, `var`, and local `function` declarations. Reject declarations that bind test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, credential loading, or source-owned singleton shapes.
 
-Do not use naming style as a proxy. `MAPPING_RUNS`, `mappingRuns`, and `runs` are the same failure when they own a run count. The finding code is `test_owned_declaration`; the message names the right owner: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert fixture path, or eval case data.
+Do not use naming style or declaration shape as a proxy. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` are the same failure when the declaration owns a run count. The finding code is `test_owned_declaration`; the message names the right owner: source contract, `@testing/harnesses/*`, `@testing/generators/*`, inert fixture path, or eval case data.
 
 Property-based tests must route `fc.assert` through a harness or wrapper that owns seed selection, `numRuns`, and replay diagnostics. A TypeScript property test is rejected when failure output would not include the seed and replay path, or when the test file owns the seed/run-count itself.
 
@@ -108,7 +108,7 @@ The test must exercise every clause with at least one `expect`. Single `expect` 
 
 **Step 3 — Test-file declarations**
 
-Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, or `var` declaration that owns data or configuration is a `test_owned_declaration` finding. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
+Apply `<test_file_declarations>` to each linked TypeScript test file before inspecting the property/mapping/scenario method. Any `const`, `let`, `var`, or local `function` declaration that owns data or configuration is a `test_owned_declaration` finding. For property assertions, missing seed/replay reporting is a `missing_property_seed_reporting` finding.
 
 </step>
 

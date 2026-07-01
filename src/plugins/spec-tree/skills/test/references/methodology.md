@@ -75,7 +75,7 @@ Use these ownership rules before writing the test:
 | Whole-payload samples            | Inert fixtures read, copied, or passed by path when the complete payload shape matters                                     |
 | Curated LLM/eval cases           | Eval case data when generating the case set as JSONL would be wasteful and not tractable                                   |
 
-Do not create variables or constants in the test file for runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, or source-owned singleton shapes. Naming a value does not make it evidence. A renamed test-local value is still owned by the wrong layer.
+Do not create variables, constants, or local helper functions in the test file for runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, or source-owned singleton shapes. Naming a value or wrapping it in a helper does not make it evidence. A renamed test-local declaration is still owned by the wrong layer.
 
 Property-based tests need reproducible failures. Use a harness that owns seed selection, `numRuns` or equivalent run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
 

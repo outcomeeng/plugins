@@ -137,7 +137,7 @@ This holds full-chain: a harness that exposes the authored path as a constant, o
 
 Executed test files are assertion files, not data/configuration homes. Read declarations before coupling so ownership failures cannot be hidden behind imports or naming style.
 
-Reject variable or constant declarations in test files when they own any of these concerns:
+Reject variable, constant, or local helper function declarations in test files when they own any of these concerns:
 
 - runner settings, seed policy, retries, or framework configuration
 - test data, boundary bags, expected outputs, or reusable cases
@@ -146,7 +146,7 @@ Reject variable or constant declarations in test files when they own any of thes
 - harness setup policy, reusable resources, cleanup policy, or diagnostics
 - source-owned singleton shapes, protocol tokens, status values, command names, rule identifiers, or message identifiers
 
-Casing is irrelevant. `MAPPING_RUNS`, `mappingRuns`, and `runs` carry the same ownership defect when the value is runner configuration.
+Casing and declaration shape are irrelevant. `MAPPING_RUNS`, `mappingRuns`, `runs`, and `function mappingRuns()` carry the same ownership defect when the declaration owns runner configuration.
 
 Property-based evidence must be reproducible. A property harness or wrapper owns seed selection, run counts, and failure reporting. The failure output must include the seed and replay path. A test file that declares its own seed/run-count or calls a property framework without reproducible seed reporting fails the declaration screen.
 
