@@ -216,7 +216,7 @@ def test_cli_write_replaces_markerless_generated_guide_body(
         f"{module.TEMPLATE_SOURCE_KEY}: {module.DEFAULT_TEMPLATE_SOURCE}\n"
         f"{module.LANGUAGES_KEY}: [{LANG_PRIMARY}]\n"
         f"{module.FRONTMATTER_DELIMITER}\n\n"
-        "# Spec Tree Guide\n\n"
+        "# spx/ Directory Guide (Spec Tree)\n\n"
         "Legacy generated guidance.\n"
     )
     for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):

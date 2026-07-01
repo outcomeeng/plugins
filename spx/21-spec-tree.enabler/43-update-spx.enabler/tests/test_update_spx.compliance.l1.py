@@ -137,15 +137,18 @@ def test_render_passes_brace_token_through_unchanged() -> None:
 def test_re_render_ignores_unmodeled_managed_section_edits() -> None:
     module = load_update_spx_module()
     template = build_template(VERSION)
-    section = module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
+    clean_section = module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
+    existing_document = f"{ROOT_GUIDE_SHARED_BODY}\n\n{clean_section}"
 
-    tampered = section + f"\n\n## Hand Section\n\n{JUNK_EDIT}\n"
-    updated = module.render(
-        template, module.parse_languages(tampered), VERSION, HARNESS_CLAUDE
+    tampered = existing_document.replace(
+        module.MANAGED_SECTION_END,
+        f"\n## Hand Section\n\n{JUNK_EDIT}\n{module.MANAGED_SECTION_END}",
     )
+    updated = module.upsert_managed_section(tampered, clean_section)
 
     assert JUNK_EDIT not in updated
-    assert updated == module.render(template, (LANG_PRIMARY,), VERSION, HARNESS_CLAUDE)
+    assert ROOT_GUIDE_SHARED_BODY.rstrip("\n") in updated
+    assert clean_section in updated
 
 
 def test_generation_writes_both_root_guide_files(tmp_path: pathlib.Path) -> None:

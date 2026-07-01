@@ -42,6 +42,10 @@ MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 AGENT_HARNESS_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
 OBSOLETE_SPX_GUIDE_FILENAMES = ("CLAUDE.md", "AGENTS.md")
 OBSOLETE_SPX_DIR_NAME = "spx"
+RETIRED_GENERATED_GUIDE_HEADINGS = (
+    "# Spec Tree Guide",
+    "# spx/ Directory Guide (Spec Tree)",
+)
 
 
 class CliInputError(ValueError):
@@ -354,10 +358,11 @@ def _is_markerless_generated_guide(document: str) -> bool:
     if _managed_section_text(document) is not None:
         return False
     frontmatter, body = _split_frontmatter(document)
+    stripped_body = body.lstrip()
     return (
         _frontmatter_value(frontmatter, TEMPLATE_SOURCE_KEY) == DEFAULT_TEMPLATE_SOURCE
         and _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY) is not None
-        and body.lstrip().startswith("# Spec Tree Guide")
+        and stripped_body.startswith(RETIRED_GENERATED_GUIDE_HEADINGS)
     )
 
 
