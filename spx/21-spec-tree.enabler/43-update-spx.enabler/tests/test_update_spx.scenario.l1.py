@@ -143,6 +143,71 @@ def test_cli_check_treats_language_order_as_a_set(
     assert capsys.readouterr().out.strip() == "current"
 
 
+def test_cli_check_ignores_unmanaged_metadata_comments(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    unmanaged_metadata = (
+        f"{ROOT_GUIDE_SHARED_BODY}\n"
+        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {NEW_VERSION} -->\n"
+        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_PRIMARY} -->\n"
+    )
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        (tmp_path / guide_name).write_text(unmanaged_metadata, encoding="utf-8")
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--check",
+                "--languages",
+                LANG_PRIMARY,
+            ]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "stale"
+
+
+def test_cli_check_uses_managed_metadata_not_root_prose_comments(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    module = load_update_spx_module()
+    template = write_template(tmp_path, NEW_VERSION)
+    unmanaged_metadata = (
+        f"{ROOT_GUIDE_SHARED_BODY}\n"
+        f"{module.MANAGED_TEMPLATE_VERSION_PREFIX} {OLD_VERSION} -->\n"
+        f"{module.MANAGED_LANGUAGES_PREFIX} {LANG_SECONDARY} -->\n"
+    )
+    _write_both_guides(module, tmp_path, (LANG_PRIMARY,), NEW_VERSION)
+    for guide_name in (GUIDE_CLAUDE, GUIDE_AGENTS):
+        guide_path = tmp_path / guide_name
+        guide_path.write_text(
+            f"{unmanaged_metadata}\n{guide_path.read_text(encoding='utf-8')}",
+            encoding="utf-8",
+        )
+
+    assert (
+        module.main(
+            [
+                "--template",
+                str(template),
+                "--repo-root",
+                str(tmp_path),
+                "--check",
+                "--languages",
+                LANG_PRIMARY,
+            ]
+        )
+        == 0
+    )
+    assert capsys.readouterr().out.strip() == "current"
+
+
 def test_cli_check_reports_stale_from_detected_language_drift(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

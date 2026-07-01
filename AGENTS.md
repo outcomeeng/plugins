@@ -578,11 +578,7 @@ Use this shape for a one-off implementation audit:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "auditor",
-    "message": "Repository: <absolute-repository-path>
-Scope: <changed files or diff range>
-Governing node(s): <full spx/... path(s)>
-Deterministic verification already run: <commands and results, or why this audit is being run before verification>
-Task: Audit the scoped implementation for conformance to the governing spec-tree and language methodology. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nScope: <changed files or diff range>\nGoverning node(s): <full spx/... path(s)>\nDeterministic verification already run: <commands and results, or why this audit is being run before verification>\nTask: Audit the scoped implementation for conformance to the governing spec-tree and language methodology. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
   }
 }
 ```
@@ -594,11 +590,7 @@ Use this shape for test-evidence audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "test-evidence-auditor",
-    "message": "Repository: <absolute-repository-path>
-Governing node: <full spx/... node path>
-Spec assertions: <full assertion text or exact spec file path plus assertion headings>
-Test files: <full paths to test files under the node>
-Task: Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, evidence property affected, and required fix."
+    "message": "Repository: <absolute-repository-path>\nGoverning node: <full spx/... node path>\nSpec assertions: <full assertion text or exact spec file path plus assertion headings>\nTest files: <full paths to test files under the node>\nTask: Audit whether the test evidence proves the listed assertions without weakening the evidence type. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, evidence property affected, and required fix."
   }
 }
 ```
@@ -610,9 +602,7 @@ Use this shape for spec-node audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "spec-auditor",
-    "message": "Repository: <absolute-repository-path>
-Node: <full spx/... node path>
-Task: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with full spx/... paths, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nNode: <full spx/... node path>\nTask: Audit the node spec for assertion quality, evidence tags, atemporal voice, decision alignment, and spec-tree structure. Return APPROVED or REJECTED. For REJECTED, list concrete findings with full spx/... paths, governing rule, and required fix."
   }
 }
 ```
@@ -624,10 +614,7 @@ Use this shape for decision audits:
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "adr-auditor",
-    "message": "Repository: <absolute-repository-path>
-Decision file: <full spx/.../*.adr.md path>
-Governing node: <full spx/... node path>
-Task: Audit the ADR for decision structure, atemporal voice, tag validity, downstream alignment, and language-specific architecture concerns when applicable. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.adr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the ADR for decision structure, atemporal voice, tag validity, downstream alignment, and language-specific architecture concerns when applicable. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
   }
 }
 ```
@@ -637,10 +624,7 @@ Task: Audit the ADR for decision structure, atemporal voice, tag validity, downs
   "tool": "multi_agent_v1.spawn_agent",
   "arguments": {
     "agent_type": "pdr-auditor",
-    "message": "Repository: <absolute-repository-path>
-Decision file: <full spx/.../*.pdr.md path>
-Governing node: <full spx/... node path>
-Task: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
+    "message": "Repository: <absolute-repository-path>\nDecision file: <full spx/.../*.pdr.md path>\nGoverning node: <full spx/... node path>\nTask: Audit the PDR for product-decision structure, atemporal voice, tag validity, downstream alignment, and evidence quality. Return APPROVED or REJECTED. For REJECTED, list concrete findings with file paths, line numbers, governing rule, and required fix."
   }
 }
 ```

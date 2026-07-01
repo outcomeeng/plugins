@@ -53,10 +53,6 @@ class CliInputError(ValueError):
 LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust"}
 
 _BLANK_RUN = re.compile(r"\n{3,}")
-_MANAGED_SECTION = re.compile(
-    rf"{re.escape(MANAGED_SECTION_START)}\n.*?\n{re.escape(MANAGED_SECTION_END)}\n?",
-    re.DOTALL,
-)
 
 
 def _split_frontmatter(text: str) -> tuple[list[str], str]:
@@ -91,9 +87,36 @@ def _frontmatter_block(frontmatter: list[str]) -> str:
     return "\n".join([FRONTMATTER_DELIMITER, *frontmatter, FRONTMATTER_DELIMITER])
 
 
+def _managed_section_bounds(text: str) -> tuple[int, int] | None:
+    """Return the managed section's start and end offsets when present."""
+    start = text.find(MANAGED_SECTION_START)
+    if start == -1:
+        return None
+    end_marker_start = text.find(
+        MANAGED_SECTION_END, start + len(MANAGED_SECTION_START)
+    )
+    if end_marker_start == -1:
+        return None
+    end = end_marker_start + len(MANAGED_SECTION_END)
+    if text[end : end + 1] == "\n":
+        end += 1
+    return start, end
+
+
+def _managed_section_text(text: str) -> str | None:
+    bounds = _managed_section_bounds(text)
+    if bounds is None:
+        return None
+    start, end = bounds
+    return text[start:end]
+
+
 def _managed_metadata_value(text: str, prefix: str) -> str | None:
-    """Return a metadata comment value from a managed section."""
-    for line in text.splitlines():
+    """Return a metadata comment value from inside the managed section."""
+    section = _managed_section_text(text)
+    if section is None:
+        return None
+    for line in section.splitlines():
         stripped = line.strip()
         if stripped.startswith(prefix) and stripped.endswith("-->"):
             return stripped[len(prefix) : -len("-->")].strip()
@@ -291,8 +314,10 @@ def guide_status(
 def upsert_managed_section(document: str, section: str) -> str:
     """Return ``document`` with exactly one managed Spec Tree guide section."""
     section = section.rstrip("\n") + "\n"
-    if _MANAGED_SECTION.search(document):
-        updated = _MANAGED_SECTION.sub(section, document, count=1)
+    bounds = _managed_section_bounds(document)
+    if bounds is not None:
+        start, end = bounds
+        updated = f"{document[:start]}{section}{document[end:]}"
         return updated.rstrip("\n") + "\n"
     base = document.rstrip("\n")
     if not base:
