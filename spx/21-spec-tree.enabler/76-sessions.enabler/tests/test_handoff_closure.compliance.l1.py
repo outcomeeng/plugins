@@ -92,6 +92,32 @@ def test_existing_owner_allows_no_duplicate_session() -> None:
     assert "no handoff file is created" in execute
 
 
+def test_transport_closeout_invokes_handoff_plain() -> None:
+    skill = _read("SKILL.md")
+    sessions_spec = SESSIONS_SPEC.read_text()
+
+    assert "merge lifecycle closeout" in skill
+    assert "Merge lifecycle closeout uses this skill" in skill
+    assert "transport's post-merge closure invokes `/handoff` plain" in sessions_spec
+    assert "automation passes `--no-session`" in sessions_spec
+    assert "without receiving `--no-session`" in skill
+
+
+def test_handoff_allows_branch_state_closeout_observations() -> None:
+    skill = _read("SKILL.md")
+
+    required_tools = (
+        "Bash(git rev-parse:*)",
+        "Bash(git worktree:*)",
+        "Bash(git show-ref:*)",
+        "Bash(git ls-remote:*)",
+        "Bash(git merge-base:*)",
+        "Bash(git cherry:*)",
+    )
+    for tool in required_tools:
+        assert tool in skill
+
+
 def test_handoff_reconciles_out_of_scope_wrong_notes() -> None:
     skill = _read("SKILL.md")
     reflect = _read("workflows/02-reflect.md")
@@ -145,6 +171,13 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         for field in required_summary_fields:
             assert field in execute
 
+        assert "Remaining Branches" in execute
+        assert "**Deleted locally**" in execute
+        assert "**Deleted remotely**" in execute
+        assert "**Retained, with reason**" in execute
+        assert "**Needs operator decision, with exact evidence**" in execute
+        assert "git cherry -v --abbrev=40" in execute
+        assert "Never delete a branch checked out in another live worktree" in execute
         assert "merge receipt" in execute
         assert "PR URL" in execute
         assert "running URL" in execute
@@ -163,6 +196,7 @@ def test_handoff_final_confirmation_is_operator_useful() -> None:
         "inspection surface when available",
         "delivered state",
         "remaining work when any exists",
+        "compact Remaining Branches section",
     ):
         assert spec_field in sessions_spec
     assert "operator-useful terms before mechanics" in sessions_spec

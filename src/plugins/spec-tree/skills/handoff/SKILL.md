@@ -1,9 +1,9 @@
 ---
 name: handoff
-description: ALWAYS invoke to close a claimed spec-tree session — archive it, decide session-file creation, prepare continuation context — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
+description: ALWAYS invoke to close a spec-tree session or merge lifecycle closeout — archive claimed sessions, decide session-file creation, prepare continuation context, and produce operator-useful closeout — only once its goal is met with no continuation remaining, the user halted work, context is exhausted, or an external blocker prevents the next action. NEVER invoke while do-able in-scope work remains, and NEVER create a spec-tree session file without this skill.
 argument-hint: "[--no-session] [--prune]"
 arguments: [session_mode, prune_mode]
-allowed-tools: Read, Edit, Write, Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(pwd), Bash(ls:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
+allowed-tools: Read, Edit, Write, Bash(spx session list:*), Bash(spx session show:*), Bash(spx session handoff), Bash(spx session archive:*), Bash(spx session delete:*), Bash(git status:*), Bash(git branch:*), Bash(git push:*), Bash(git switch:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git worktree:*), Bash(git show-ref:*), Bash(git ls-remote:*), Bash(git merge-base:*), Bash(git cherry:*), Bash(pwd), Bash(ls:*), {{! tool('ask_user') !}}, Glob, Grep, Skill
 ---
 
 <context>
@@ -23,6 +23,8 @@ allowed-tools: Read, Edit, Write, Bash(spx session list:*), Bash(spx session sho
 
 <precondition>
 **Handoff is not a voluntary close. Run this skill only when the session is genuinely over** — either the user's stated goal is met with no continuation remaining, or continuation by Claude now is impossible (the user halted the work, the context is exhausted, or an external blocker — operator input, a remote-state change Claude cannot effect — prevents the next action). Genuine completion is a valid reason to run this skill; it then archives the claimed session and decides session-file creation per the rules below. While in-scope work Claude could do now remains — an unresolved `PLAN.md` item authored or touched this session, a `spx/EXCLUDE` entry covering the scope, a declared-but-unimplemented assertion, a branch with committed changes ahead of its resolved base for default-branch work, or any named-but-unbuilt part of the user's stated goal — STOP: do not run this skill; return to the work and continue. A clean working tree, a merge, a passing gate, or a freshly written coordination note is not a reason to hand off while committed changes remain outside the default branch on origin. Writing a `PLAN.md` or a session file to defer do-able work and then handing off is the banned closing reflex this precondition exists to prevent. Persisting coordination is correct; persisting it and handing off while able to continue is not. The workflows below run only after this precondition holds — see the `<closing_protocol>` loaded by `/understand`.
+
+Merge lifecycle closeout uses this skill even when no session was claimed. The claimed-session set decides only which existing sessions are archived; it never decides whether a merge closeout is useful. A merge transport invokes this skill plain, without receiving `--no-session`, so the same workflow produces the operator-useful product summary and decides whether a continuation reader is needed.
 </precondition>
 
 <objective>
