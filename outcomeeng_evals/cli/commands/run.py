@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Final, Protocol, cast
