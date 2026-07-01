@@ -223,6 +223,7 @@ Property assertions about parsers, serializers, mathematical operations, or inva
 | Complex algorithms      | invariant preservation   | `fc.assert(fc.property)` |
 
 `fc.assert` that only checks "does not throw" is insufficient. The property must fail when the requirement is broken.
+Route property assertions through a harness or wrapper that owns seed selection, run count, and replay diagnostics; failure output must include the seed and replay path.
 </property_based_testing>
 
 <test_data_policy>
@@ -247,7 +248,7 @@ Most code under test Claude encounters will hardcode the same numbers and string
 
 This means the code is not testable in a maintainable way because any change to the source file will invalidate the test and lead to churn and extra work.
 
-ALWAYS refactor the code under test so that it defines all constants, including numbers and string literals, in a constant dict or other suitable data structure.
+ALWAYS refactor source-owned domain constants, protocol tokens, command names, status values, rule ids, message ids, option labels, and other closed vocabulary into a semantically named registry, tuple, constructor, schema, or other suitable data structure.
 
 Use a source-owned registry or tuple for status tokens, command names, rule ids, message ids, option labels, and other closed vocabulary. Derive unions, schemas, and arrays from that one declaration.
 
@@ -259,9 +260,7 @@ Reject test-owned copies of source vocabulary.
 
 Tests may need representative input domains that production code does not own. Those domains are still not a license to create shared constant bags.
 
-ALWAYS refactor the code under test so it exports the semantically structured constant the test asserts on.
-
-Then import one or very few of these constant objects into the test file. Any changes to the code under test are automatically reflected and the test requires zero maintenance.
+Variable domains move to generators; runner settings, seed policy, and replay diagnostics move to harnesses. Curated eval cases may live in eval case data when generating a JSONL case set would be wasteful and not tractable.
 
 </data_ownership_decision>
 
@@ -308,7 +307,7 @@ Valid direct imports include:
 
 <generators>
 
-Use generators for input domains that vary, compose, shrink, or explore more than one meaningful value. A generator is a pure function - it emits values, holds no state, and has no side effects. Use fast-check or faker.js for randomized scalars; use `fc.Arbitrary` for structured domain values.
+Use generators for input domains that vary, compose, shrink, or explore more than one meaningful value. A generator is a pure function - it emits values, holds no state, and has no side effects. Use fast-check for randomized scalars and `fc.Arbitrary` for structured domain values.
 
 ```typescript
 // testing/generators/{domain}.ts
@@ -317,7 +316,7 @@ export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
 export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
 ```
 
-Use `arbitrary*()` helpers for tests that should search a domain with `fc.assert`. Use `createGenerated*()` helpers only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
+Use `arbitrary*()` generator functions for tests that should search a domain with `fc.assert`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
 
 Reject generators that only rename constants:
 
@@ -491,6 +490,6 @@ TypeScript test guidance follows this standard when:
 - Doubles are passed through dependency injection and mapped to a Stage 5 exception
 - Property assertions use meaningful `fast-check` properties
 - Source-owned values come from the owning production module
-- Shared test infrastructure lives in test-owned code behind explicit fixtures or factories
+- Shared test infrastructure lives under `testing/` as spec-governed harnesses, generators, or inert fixtures
 
 </success_criteria>

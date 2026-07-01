@@ -6,9 +6,20 @@ Four properties define test evidence: coupling, falsifiability, alignment, cover
 
 </overview>
 
+<table_of_contents>
+
+- `<coupling_taxonomy>` — coupling categories and examples
+- `<coupling_verification>` — import and execution-path coupling procedure
+- `<test_file_declaration_model>` — test-file ownership screening before coupling
+- `<falsifiability_model>` — mutation analysis and double exceptions
+- `<alignment_verification>` — assertion-to-expectation alignment
+- `<coverage_protocol>` — coverage-by-reading procedure
+
+</table_of_contents>
+
 <coupling_taxonomy>
 
-Six coupling categories with definitions and code examples.
+Coupling categories with definitions and code examples.
 
 **Direct coupling** — Test imports the module under test and calls its functions directly.
 
@@ -121,6 +132,33 @@ This holds full-chain: a harness that exposes the authored path as a constant, o
    - Called but on wrong inputs or code paths → Partial coupling
 
 </coupling_verification>
+
+<test_file_declaration_model>
+
+Executed test files are assertion files, not data/configuration homes. Read declarations before coupling so ownership failures cannot be hidden behind imports or naming style.
+
+Reject variable or constant declarations in test files when they own any of these concerns:
+
+- runner settings, seed policy, retries, or framework configuration
+- test data, boundary bags, expected outputs, or reusable cases
+- fixture paths or fixture contents
+- generator choices, arbitrary domains, or singleton wrappers
+- harness setup policy, reusable resources, cleanup policy, or diagnostics
+- source-owned singleton shapes, protocol tokens, status values, command names, rule identifiers, or message identifiers
+
+Casing is irrelevant. `MAPPING_RUNS`, `mappingRuns`, and `runs` carry the same ownership defect when the value is runner configuration.
+
+Property-based evidence must be reproducible. A property harness or wrapper owns seed selection, run counts, and failure reporting. The failure output must include the seed and replay path. A test file that declares its own seed/run-count or calls a property framework without reproducible seed reporting fails the declaration screen.
+
+Valid remediation targets:
+
+- Source contract for source-owned vocabulary or singleton shapes
+- Spec-governed generator for variable input domains
+- Spec-governed harness for configuration, resource lifecycle, seed policy, and replay diagnostics
+- Inert fixture for real whole-payload samples read, copied, or passed by path
+- Eval case data when curated LLM/eval cases make generated JSONL wasteful and not tractable
+
+</test_file_declaration_model>
 
 <falsifiability_model>
 
