@@ -13,8 +13,10 @@ A reference is non-portable when it is either:
   ``spx/15-infra.enabler/65-startup.enabler``).  A non-numbered ``spx/`` path
   (``spx/EXCLUDE``, ``spx/local/...``, ``spx/sessions/``), a
   placeholder (``spx/{...}``, ``spx/<...>``), and the ``55-example`` illustrative
-  root sentinel (``spx/55-example.enabler/...``) are portable; other numeric
-  prefixes are product-specific because a consumer numbers its own nodes.
+  root sentinel (``spx/55-example.enabler/...``) are portable; retired generated
+  guide paths (``spx/CLAUDE.md`` and ``spx/AGENTS.md``) are non-portable because
+  the root managed guide surface replaces them. Other numeric prefixes are
+  product-specific because a consumer numbers its own nodes.
 * a path under one of this marketplace's own roots -- ``src/plugins/`` (authored
   source), ``dist/claude/`` or ``dist/codex/`` (generated runtime), or an
   ``outcomeeng`` toolchain package (``outcomeeng/validation/...``,
@@ -56,7 +58,7 @@ from typing import Final
 _NONPORTABLE_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"(?<![\w.-])"
     r"(?:"
-    r"spx/(?:NN-|(?!(?:55-example)(?:[./]|$))\d+-)[\w./-]*"
+    r"spx/(?:NN-|(?:CLAUDE|AGENTS)\.md|(?!(?:55-example)(?:[./]|$))\d+-)[\w./-]*"
     r"|src/plugins/[\w./-]*"  # marketplace authored-source tree
     r"|dist/(?:claude|codex)/[\w./-]*"  # marketplace generated runtime trees
     # marketplace toolchain package or repo path -- an 'outcomeeng_*' package, an
