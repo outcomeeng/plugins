@@ -17,7 +17,7 @@ The canonical template is the single copy in the understanding skill at `${CLAUD
 
 <workflow>
 
-1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Repository root: the product's root directory, referred to below as `<repo-root>`; the generator writes managed sections into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md` and removes obsolete `<repo-root>/spx/CLAUDE.md` and `<repo-root>/spx/AGENTS.md` when present.
+1. **Resolve the paths.** Template: `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`. Repository root: the product's root directory, referred to below as `<repo-root>`; the generator writes managed sections into `<repo-root>/CLAUDE.md` and `<repo-root>/AGENTS.md` and removes the retired generated guide files under `<repo-root>/spx/` when present.
 
 2. **Detect status.** Run:
 
@@ -45,7 +45,7 @@ The canonical template is the single copy in the understanding skill at `${CLAUD
 <constraints>
 - NEVER edit the deterministic parse, compare, filter, section replacement, or render logic here — it lives in `${CLAUDE_SKILL_DIR}/scripts/update_spx.py`, governed by the node's Guide Render Model ADR.
 - NEVER write only one of the two root guide files — `CLAUDE.md` and `AGENTS.md` are updated together, and symlinked root guides are replaced by regular file copies.
-- NEVER preserve `spx/CLAUDE.md` or `spx/AGENTS.md` after regeneration — the root managed section is the canonical guide surface.
+- NEVER preserve retired generated guide files under `spx/` after regeneration — the root managed section is the canonical guide surface.
 - NEVER hand-merge or section-diff a managed section against the template — re-render is the update mechanism.
 - NEVER substitute a product-specific string into a managed section — the section carries template content, language filtering, and per-harness blocks only.
 - The template has one home, the understanding skill's `templates/`. Read it through `${CLAUDE_SKILL_DIR}/../understand/templates/spx-claude.md`; never copy it into this skill.
@@ -59,7 +59,7 @@ The canonical template is the single copy in the understanding skill at `${CLAUD
 - Sections newly introduced by the template propagate into both guides on regenerate.
 - Product-owned root guide content outside the managed markers is preserved.
 - Root guide symlinks are replaced by regular file copies.
-- Obsolete `spx/CLAUDE.md` and `spx/AGENTS.md` are absent after regeneration.
+- Retired generated guide files under `spx/` are absent after regeneration.
 - No deterministic logic is duplicated in this skill body.
 
 </success_criteria>
