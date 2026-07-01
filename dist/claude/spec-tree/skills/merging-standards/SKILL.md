@@ -56,7 +56,7 @@ The `/handoff` invocation supplies the operator-useful product summary, verifica
 
 <branch_state_closeout>
 
-After a default-branch merge, every transport builds a branch-state closeout record before invoking `/handoff` or returning closeout-ready evidence to its owner. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
+After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR transport builds the full branch-state closeout record in `/manage-pr` Step 9 before returning closeout-ready evidence to `/manage-github-pr`. The direct-push transport preserves merge-time facts and delegates full record construction to `/handoff`, which computes the record from this section using its own closeout tool surface. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
 
 The closeout record includes:
 

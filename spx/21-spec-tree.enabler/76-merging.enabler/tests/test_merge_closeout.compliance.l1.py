@@ -54,6 +54,11 @@ def test_shared_merge_vocabulary_declares_branch_state_closeout(
     text = skill_path.read_text(encoding="utf-8")
 
     assert "<branch_state_closeout>" in text
+    assert "every transport produces branch-state closeout evidence" in text
+    assert "GitHub-PR transport builds the full branch-state closeout record" in text
+    assert "direct-push transport preserves merge-time facts" in text
+    assert "delegates full record construction to `/handoff`" in text
+    assert "every transport builds a branch-state closeout record" not in text
     assert "PR number and merge commit SHA" in text
     assert "Whether the local branch tracks a gone upstream" in text
     assert "git cherry -v --abbrev=40" in text
