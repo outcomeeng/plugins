@@ -90,6 +90,11 @@ def test_existing_owner_allows_no_duplicate_session() -> None:
     )
     assert "Path C is forbidden" in execute
     assert "no handoff file is created" in execute
+    assert "After archiving, confirm through `<confirm>`" in execute
+    assert (
+        "Closed without continuation. All approved items persisted and committed."
+        not in execute
+    )
 
 
 def test_transport_closeout_invokes_handoff_plain() -> None:
