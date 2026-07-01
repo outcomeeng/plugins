@@ -316,13 +316,35 @@ def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "schedule:" in workflow
-    assert "contents: write" in workflow
-    assert "pull-requests: write" in workflow
+    assert "\npermissions:" not in workflow
+    assert (
+        "    permissions:\n      contents: write\n      pull-requests: write"
+        in workflow
+    )
     regenerate_commands = _workflow_run_block("Regenerate guide sections").splitlines()
     build_skills = regenerate_commands.index("just build-skills")
     build_guides = regenerate_commands.index("just build-guides")
     assert build_skills < build_guides
     assert "just guide-check" not in regenerate_commands
+
+
+def test_root_guide_refresh_workflow_verifies_just_download() -> None:
+    workflow = guide_diff.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-root-guides.yml"
+    ).read_text(encoding="utf-8")
+    install_commands = _workflow_run_block("Install just")
+
+    assert (
+        'JUST_SHA256: "7fedeb22c7e14d9ef1551e8b793700866d80f409f9884b0e80ebb65c11d4874d"'
+        in workflow
+    )
+    assert 'tmp="$(mktemp -d)"' in install_commands
+    assert "trap 'rm -rf \"$tmp\"' EXIT" in install_commands
+    assert '-o "$tmp/just.tar.gz"' in install_commands
+    assert "sha256sum -c -" in install_commands
+    assert 'sudo install -m 0755 "$tmp/just" /usr/local/bin/just' in install_commands
+    assert "-o just.tar.gz" not in install_commands
+    assert "tar -xzf just.tar.gz" not in install_commands
 
 
 def test_root_guide_refresh_pr_step_exits_cleanly_without_drift(
