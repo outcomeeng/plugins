@@ -2,7 +2,7 @@
 name: merging-standards
 user-invocable: false
 description: >-
-  Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, the three authority gates (review / merge / production readiness), review classification, integration review surfaces, action tokens, delivered-value boundary, and repo-local overlay topics.
+  Shared vocabulary for the merge lifecycle — pre-flight predicates, branch topology gate, push command, authority gates, review classification, integration review surfaces, action tokens, delivered-value boundary, closeout, and repo-local overlay topics.
   Loaded by /merge, /manage-github-pr, /open-pr, and /manage-pr.
 allowed-tools: Read
 ---
@@ -42,6 +42,56 @@ For changes destined for a repository's default branch, value is delivered only 
 When a status assessment finds a determined changeset with commits ahead of its resolved base, Claude reports the evidence it found and continues through the merge lifecycle unless the user explicitly limited the task to proposal, review, analysis, or local-only work, or the lifecycle reaches an explicit action-token or structured base-sync stop with no independent local action remaining. Terse follow-ups such as "so?", "continue", "ship it", "finish", and "go on" mean continue the already-governed lifecycle.
 
 </delivered_value_boundary>
+
+<close_phase>
+
+`CLOSE` is the lifecycle disposition phase after the selected transport reaches the default branch on origin and every declared post-merge phase has completed, no-oped, or stopped at an explicit readiness gate. Close is not a receipt. Close has two valid outcomes:
+
+- continue remaining in-scope work directly when the user's stated goal still has do-able work; or
+- close by invoking `/handoff` plain when the session is genuinely over or continuation by Claude is impossible.
+
+The `/handoff` invocation supplies the operator-useful product summary, verification evidence, delivered state, remaining-work disposition, and session-file decision. Merge transports invoke `/handoff` without receiving `--no-session`; the handoff workflow decides whether a continuation reader is needed from live state. A merge transport MUST NOT replace this phase with a receipt-only response that lists PR state, branch cleanup, commit SHAs, or sync mechanics while leaving the operator to infer what changed or what happens next.
+
+</close_phase>
+
+<branch_state_closeout>
+
+After a default-branch merge, every transport produces branch-state closeout evidence before the final operator closeout. The GitHub-PR transport builds the full branch-state closeout record in `/manage-pr` Step 9 before returning closeout-ready evidence to `/manage-github-pr`. The direct-push transport preserves merge-time facts and delegates full record construction to `/handoff`, which computes the record from this section using its own closeout tool surface. The record removes ambiguity about which refs still exist, which are safe to delete, and which require operator attention.
+
+The closeout record includes:
+
+- PR number and merge commit SHA when the transport used a pull request; direct-push transports record the default-branch HEAD SHA after publication.
+- Merged branch name.
+- Whether the remote branch still exists.
+- Whether the local branch still exists.
+- Whether the local branch is fully merged into `origin/<base>`.
+- Whether the local branch tracks a gone upstream.
+- Whether any preservation branch was created.
+- For each preservation branch, whether its commits are exact ancestors of `origin/<base>`.
+- For each non-ancestor preservation branch, `git cherry -v --abbrev=40 origin/<base> <branch>` output as patch-equivalence evidence.
+- Final worktree state: clean or dirty, branch or detached, and current full HEAD SHA.
+- Release-source worktree state when a post-merge release or marketplace refresh used a separate source worktree: path, branch, full HEAD SHA, clean or dirty, and sync status.
+
+Use full branch names and full commit SHAs. Do not abbreviate identity values in the record, in commands, or in the final closeout.
+
+Safe cleanup policy:
+
+- If the remote feature branch exists after merge, delete it through the merge lifecycle's approved deletion command.
+- If the local feature branch exists, tracks a gone upstream, and is fully merged into `origin/<base>`, delete it locally.
+- If a preservation branch has no remote and all substantive commits are present on `origin/<base>` by ancestry or patch equivalence, report it as safe to delete and delete it unless the branch name or operator instruction marks it as retained evidence.
+- Never delete a branch checked out in another live worktree. Report the exact worktree path and branch instead.
+- Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`. Report the unmatched full SHAs and keep the branch.
+
+Use git state observations rather than memory for every record field. The patch-equivalence observation is `git cherry -v --abbrev=40 origin/<base> <branch>`.
+
+The final `/handoff` closeout includes a compact **Remaining Branches** section with exactly these groups:
+
+- **Deleted locally**
+- **Deleted remotely**
+- **Retained, with reason**
+- **Needs operator decision, with exact evidence**
+
+</branch_state_closeout>
 
 <local_deterministic_scope>
 
@@ -432,6 +482,7 @@ The flows that consume this vocabulary satisfy their contracts when, at minimum:
 - Merge runs only when `MERGE_READINESS` and `PRODUCTION_READINESS` both hold and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: the current-head CI review has no unresolved valid `BLOCKING` or `DEBT` finding, every other required check is terminal-green, branch hygiene and PR-state hold on the freshly inspected head, and the change is non-production-relevant or operator-approved. `MERGE_READINESS` carries no time-based settle.
 - A committed changeset ahead of its resolved base is treated as unfinished until it reaches the default branch on origin through the selected lifecycle, or stops at an explicit action-token emission or structured base-sync conflict report with no independent local action remaining.
 - Local readiness — clean working tree, committed changes, passing deterministic verification, tests, local review, or audits — is reported as evidence and then carried forward; it is never a reason to ask what to do next.
+- `CLOSE` continues in-scope work directly or invokes `/handoff` plain for operator-useful closeout and continuation disposition; a receipt-only response never satisfies the lifecycle.
 - No structured question or prose confirmation asks the operator to choose between auto-merge, hold-at-green, or pause; the only operator-facing pauses are explicit `<action_tokens>` emissions and structured base-sync conflict reports.
 - The changeset's git work runs in the assigned worktree per `<assigned_cwd_worktree_discipline>` — never in a worktree a live agent holds, no created worktree, no `git stash`; a branch conflict is resolved by branching in the assigned worktree and continuing.
 - `spx/local/merging.md` is read only when present, its absence applies the defaults with no blocker, and merge behavior is never reconstructed from incidental docs or changed by editing a generated guide.
