@@ -73,6 +73,17 @@ def _workflow_run_block(step_name: str) -> str:
     return "\n".join(block) + "\n"
 
 
+def _workflow_env_value(name: str) -> str:
+    workflow = guide_diff.REPO_ROOT.joinpath(
+        ".github", "workflows", "refresh-root-guides.yml"
+    ).read_text(encoding="utf-8")
+    prefix = f"      {name}: "
+    for line in workflow.splitlines():
+        if line.startswith(prefix):
+            return line.removeprefix(prefix).split(" #", maxsplit=1)[0].strip('"')
+    raise AssertionError(f"workflow env value not found: {name}")
+
+
 def _write_gh_stub(bin_dir: pathlib.Path, log_path: pathlib.Path) -> None:
     stub = bin_dir / "gh"
     stub.write_text(
@@ -333,18 +344,14 @@ def test_root_guide_refresh_workflow_regenerates_and_opens_pr() -> None:
 
 
 def test_root_guide_refresh_workflow_verifies_just_download() -> None:
-    workflow = guide_diff.REPO_ROOT.joinpath(
-        ".github", "workflows", "refresh-root-guides.yml"
-    ).read_text(encoding="utf-8")
     install_commands = _workflow_run_block("Install just")
+    just_sha256 = _workflow_env_value("JUST_SHA256")
 
-    assert (
-        'JUST_SHA256: "7fedeb22c7e14d9ef1551e8b793700866d80f409f9884b0e80ebb65c11d4874d"'
-        in workflow
-    )
+    assert just_sha256
     assert 'tmp="$(mktemp -d)"' in install_commands
     assert "trap 'rm -rf \"$tmp\"' EXIT" in install_commands
     assert '-o "$tmp/just.tar.gz"' in install_commands
+    assert 'printf \'%s  %s\\n\' "$JUST_SHA256" "$tmp/just.tar.gz"' in install_commands
     assert "sha256sum -c -" in install_commands
     assert 'sudo install -m 0755 "$tmp/just" /usr/local/bin/just' in install_commands
     assert "-o just.tar.gz" not in install_commands
