@@ -8,7 +8,7 @@ The active Python, TypeScript, and Rust test-standard skills mostly share the sa
 
 **Governing sources.** The primary governing sources are [spx/15-test-infrastructure.pdr.md](../spx/15-test-infrastructure.pdr.md), [spx/15-test-language.adr.md](../spx/15-test-language.adr.md), [spx/14-verification.pdr.md](../spx/14-verification.pdr.md), and the Python, TypeScript, and Rust nodes under `spx/43-*.enabler/`.
 
-**Product/surface boundary.** `spx/AGENTS.md` carrying `languages: [python]` is consistent with [spx/15-test-language.adr.md](../spx/15-test-language.adr.md):1, which selects Python and pytest for this product's `[test]` assertion tag. The marketplace also ships TypeScript and Rust language plugins; that plugin inventory is the audited skill surface, not evidence that this product's spec-tree guide needs TypeScript or Rust blocks.
+**Product/surface boundary.** The root managed sections in `AGENTS.md` and `CLAUDE.md` carry `languages: [python]`, which is consistent with [spx/15-test-language.adr.md](../spx/15-test-language.adr.md):1 and its selection of Python and pytest for this product's `[test]` assertion tag. The marketplace also ships TypeScript and Rust language plugins; that plugin inventory is the audited skill surface, not evidence that this product's root managed guide sections need TypeScript or Rust blocks.
 
 ## Drift report
 

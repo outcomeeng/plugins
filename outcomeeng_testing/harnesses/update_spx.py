@@ -3,7 +3,7 @@
 Exposes:
 
 - An importlib loader for ``update_spx.py``. The module ships under a
-  runtime-substituted plugin skill directory and is not importable by package
+  generated plugin skill directory and is not importable by package
   name; tests load it through ``importlib`` instead.
 - ``build_template``. Constructs a synthetic spx-claude.md-shaped template with a
   brace-delimited illustration token, a language-conditional block per language in
@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import importlib.util
 import pathlib
+from dataclasses import dataclass
 import sys
 from types import ModuleType
+from typing import Final
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 # Coupled to the update-spx skill directory name; a rename there must update this
 # path or load_update_spx_module raises RuntimeError at import time.
 UPDATE_SPX_MODULE_PATH = (
@@ -47,6 +49,12 @@ CANONICAL_SPX_TEMPLATE_PATH = (
     / "spx-claude.md"
 )
 
+GUIDE_CLAUDE: Final = "CLAUDE.md"
+GUIDE_AGENTS: Final = "AGENTS.md"
+ROOT_GUIDE_CLAUDE_BODY: Final = "# Claude Root\n\nClaude repository instructions.\n"
+ROOT_GUIDE_AGENTS_BODY: Final = "# Agents Root\n\nCodex repository instructions.\n"
+ROOT_GUIDE_SHARED_BODY: Final = "# Shared Root\n\nShared repository instructions.\n"
+
 # Source-template content probes for the rendered-output session-result check.
 SESSION_MANAGEMENT_HEADING = "## Session Management"
 SESSION_ARCHIVE_RESULT_INSTRUCTION = "Before archiving a claimed session"
@@ -61,24 +69,102 @@ NEW_SECTION = "Process Hygiene"
 # A brace-delimited illustration token the render must pass through unchanged.
 ILLUSTRATION_TOKEN = "{product-slug}"
 BUILD_MACRO_CAPABILITY = "ask_user"
-BUILD_MACRO_RUNTIME = "codex"
+BUILD_MACRO_HARNESS = "codex"
 
-# Runtime payload: the template carries a per-runtime block for each agent runtime,
-# rendered only into that runtime's guide file. The marker syntax mirrors the module's
-# ``_RUNTIME_BLOCK`` contract; a test that drifts from it fails to render.
-RUNTIME_CLAUDE = "claude"
-RUNTIME_CODEX = "codex"
-TEMPLATE_RUNTIMES = (RUNTIME_CLAUDE, RUNTIME_CODEX)
+# Harness payload: the template carries a per-harness block for each agent harness,
+# rendered only into that harness's guide file. The marker syntax mirrors the module's
+# ``_HARNESS_BLOCK`` contract; a test that drifts from it fails to render.
+HARNESS_CLAUDE = "claude"
+HARNESS_CODEX = "codex"
+TEMPLATE_HARNESSES = (HARNESS_CLAUDE, HARNESS_CODEX)
 
 
-def runtime_line(runtime: str) -> str:
-    """The body the harness emits inside a runtime block — what render keeps or drops."""
-    return f"{runtime.upper()} runs the audit as a subagent."
+@dataclass(frozen=True)
+class RootGuideTopology:
+    """Root-guide files and symlinks a consumer repository may already contain."""
+
+    files: dict[str, str]
+    symlinks: dict[str, str]
+
+
+def root_guide_topology_only_claude() -> RootGuideTopology:
+    """Return a root topology with only the Claude harness guide present."""
+    return RootGuideTopology(files={GUIDE_CLAUDE: ROOT_GUIDE_CLAUDE_BODY}, symlinks={})
+
+
+def root_guide_topology_only_agents() -> RootGuideTopology:
+    """Return a root topology with only the Codex harness guide present."""
+    return RootGuideTopology(files={GUIDE_AGENTS: ROOT_GUIDE_AGENTS_BODY}, symlinks={})
+
+
+def root_guide_topology_separate() -> RootGuideTopology:
+    """Return a root topology with two independent harness guide files."""
+    return RootGuideTopology(
+        files={
+            GUIDE_CLAUDE: ROOT_GUIDE_CLAUDE_BODY,
+            GUIDE_AGENTS: ROOT_GUIDE_AGENTS_BODY,
+        },
+        symlinks={},
+    )
+
+
+def root_guide_topology_symlinked() -> RootGuideTopology:
+    """Return a root topology matching a shared guide with a harness symlink."""
+    return RootGuideTopology(
+        files={GUIDE_AGENTS: ROOT_GUIDE_SHARED_BODY},
+        symlinks={GUIDE_CLAUDE: GUIDE_AGENTS},
+    )
+
+
+def _replace_path_with_text(path: pathlib.Path, body: str) -> None:
+    """Write ``body`` as a regular file, replacing a symlink or file at ``path``."""
+    if path.exists() or path.is_symlink():
+        path.unlink()
+    path.write_text(body, encoding="utf-8")
+
+
+def _seed_body(root: pathlib.Path, guide_name: str, fallback: str | None) -> str | None:
+    """Read a guide's body, following symlinks, or return ``fallback`` when absent."""
+    path = root / guide_name
+    if path.exists() or path.is_symlink():
+        return path.read_text(encoding="utf-8")
+    return fallback
+
+
+def materialize_root_guide_topology(
+    root: pathlib.Path, topology: RootGuideTopology
+) -> dict[str, str]:
+    """Create ``topology`` under ``root`` and normalize harness guides to files."""
+    root.mkdir(parents=True, exist_ok=True)
+    for name, body in topology.files.items():
+        _replace_path_with_text(root / name, body)
+    for name, target in topology.symlinks.items():
+        link_path = root / name
+        if link_path.exists() or link_path.is_symlink():
+            link_path.unlink()
+        link_path.symlink_to(target)
+
+    claude_seed = _seed_body(root, GUIDE_CLAUDE, None)
+    agents_seed = _seed_body(root, GUIDE_AGENTS, claude_seed)
+    if claude_seed is None:
+        claude_seed = agents_seed
+    if claude_seed is None or agents_seed is None:
+        claude_seed = agents_seed = ""
+
+    seeds = {GUIDE_CLAUDE: claude_seed, GUIDE_AGENTS: agents_seed}
+    for name, body in seeds.items():
+        _replace_path_with_text(root / name, body)
+    return seeds
+
+
+def harness_line(harness: str) -> str:
+    """The body the harness emits inside a harness block — what render keeps or drops."""
+    return f"{harness.upper()} runs the audit as a subagent."
 
 
 def render_build_macro() -> str:
     """Build an unresolved macro-shaped token owned by the render harness."""
-    return f"\n{{{{! tool('{BUILD_MACRO_CAPABILITY}', '{BUILD_MACRO_RUNTIME}') !}}}}\n"
+    return f"\n{{{{! tool('{BUILD_MACRO_CAPABILITY}', '{BUILD_MACRO_HARNESS}') !}}}}\n"
 
 
 def load_update_spx_module() -> ModuleType:
@@ -137,7 +223,7 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
     )
     parts = [
         "",
-        "# spx/ Directory Guide",
+        "# Spec Tree Guide",
         "",
         f"The root spec is `{ILLUSTRATION_TOKEN}.product.md`.",
         "",
@@ -153,13 +239,13 @@ def build_template(version: str, *, extra_section: bool = False) -> str:
             "",
             f"<!-- /lang:{language} -->",
         ]
-    for runtime in TEMPLATE_RUNTIMES:
+    for harness in TEMPLATE_HARNESSES:
         parts += [
-            f"<!-- runtime:{runtime} -->",
+            f"<!-- harness:{harness} -->",
             "",
-            runtime_line(runtime),
+            harness_line(harness),
             "",
-            f"<!-- /runtime:{runtime} -->",
+            f"<!-- /harness:{harness} -->",
         ]
     if extra_section:
         parts += ["", f"## {NEW_SECTION}", "", "new methodology guidance"]

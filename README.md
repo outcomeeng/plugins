@@ -7,7 +7,7 @@ This repository publishes two plugin surfaces from the same source tree:
 - `.claude-plugin` packages for Claude Code plugins, commands, and agents
 - `.codex-plugin` packages for Codex skill bundles
 
-`AGENTS.md` is a symlink to [`CLAUDE.md`](CLAUDE.md), so Codex and Claude Code read the same repo-level instructions.
+`AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Spec Tree sections.
 
 > `/bootstrap` interviews you about your product, then scaffolds a spec tree — the durable map that drives all implementation.
 
@@ -189,7 +189,7 @@ The pre-commit hook runs `build-skills` automatically, and `just check`'s `dist-
 
 ## Plugins
 
-Skills are available in both Claude Code and Codex. Commands and agents are Claude Code-only. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.
+Skills are available in both Claude Code and Codex, with generated plugin surfaces carrying the agents and commands their target supports. Every skill, agent, and command across every plugin is listed in the auto-generated catalog below — sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md`, `agents/*.md`, and `commands/*.md`. Run `just docs` to regenerate after touching any of those files; `just check` enforces freshness.
 
 <details>
 <summary><strong><code>/bootstrap</code> in action</strong> — interactive product interview and scaffold</summary>
@@ -327,7 +327,7 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 | Skill | `/task-tracking-standards` | Runtime task-tracking standards for skills that schedule heartbeats or timers                                                                                                                                                                                                                        |
 | Skill | `/test`                    | Writing tests or when learning the testing approach                                                                                                                                                                                                                                                  |
 | Skill | `/understand`              | ALWAYS invoke this skill at the beginning of each session, after every compaction, and before answering spec-tree workflow or session-continuity questions when the live SPEC_TREE_FOUNDATION marker is absent                                                                                       |
-| Skill | `/update-spx`              | Manually regenerating, refreshing, or scaffolding a product's two spx-level guide files (spx/CLAUDE.md and spx/AGENTS.md) from the installed spec-tree template                                                                                                                                      |
+| Skill | `/update-spx`              | Manually regenerating, refreshing, or scaffolding a product's root CLAUDE.md and AGENTS.md managed Spec Tree sections from the installed spec-tree template                                                                                                                                          |
 | Agent | `adr-auditor`              | Auditing ADR evidence quality after writing an ADR or before implementing from it                                                                                                                                                                                                                    |
 | Agent | `applier`                  | Running the full spec-tree 8-step flow with three audit gates after the user passes --agent to /apply                                                                                                                                                                                                |
 | Agent | `audit-orchestrator`       | ALWAYS invoke for a local audit run that carries findings across commits through the audit journal run set                                                                                                                                                                                           |
@@ -336,7 +336,7 @@ Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refact
 | Agent | `eval-evidence-auditor`    | Auditing eval evidence quality against spec assertions after writing evals for a spec node or before relying on eval evidence                                                                                                                                                                        |
 | Agent | `pdr-auditor`              | Auditing PDR evidence quality after writing a PDR or before implementing outcomes governed by the PDR                                                                                                                                                                                                |
 | Agent | `spec-auditor`             | Auditing a spec node's assertion quality after writing an enabler or outcome node spec or before closing it                                                                                                                                                                                          |
-| Agent | `spx-updater`              | Applying spec-tree template drift to a product's spx/CLAUDE.md and spx/AGENTS.md guide files in the background — it runs the /update-spx skill autonomously to regenerate stale guides from the installed template                                                                                   |
+| Agent | `spx-updater`              | Applying spec-tree template drift to a product's root CLAUDE.md and AGENTS.md managed guide sections in the background — it runs the /update-spx skill autonomously to regenerate stale guide sections from the installed template                                                                   |
 | Agent | `test-evidence-auditor`    | Auditing test evidence quality against spec assertions after writing tests for a spec node or before closing an outcome                                                                                                                                                                              |
 
 ### typescript

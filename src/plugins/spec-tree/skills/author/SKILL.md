@@ -234,7 +234,7 @@ Write the file directly.
 spx/{product-name}.product.md
 ```
 
-Write the file. If `{{! file('spx_guide') !}}` doesn't exist, note that product guide creation remains required.
+Write the file. If `{{! file('root_guide') !}}` doesn't exist, note that product guide creation remains required.
 
 </step>
 

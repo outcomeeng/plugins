@@ -43,7 +43,7 @@ Read before composing — read these directly each run. A present `<SPEC_TREE_FO
 If the target is `spx/`:
 
 1. Read the product spec and product-level ADRs/PDRs.
-2. Read `spx/CLAUDE.md` if present.
+2. Read `CLAUDE.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
 5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `what-goes-where.md` `<test_infrastructure>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.

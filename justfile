@@ -69,7 +69,7 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
-# Regenerate spx/CLAUDE.md + spx/AGENTS.md from rendered runtime templates
+# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections from rendered harness templates
 build-guides:
     uv run python -m outcomeeng.distribution.guide_diff --write
 
@@ -77,7 +77,7 @@ build-guides:
 fmt-python *args:
     uv run ruff format {{args}}
 
-# Regenerate spx/CLAUDE.md + spx/AGENTS.md from rendered runtime templates and fail on drift (CI gate)
+# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree sections and fail on drift (CI gate)
 guide-check:
     uv run python -m outcomeeng.distribution.guide_diff
 

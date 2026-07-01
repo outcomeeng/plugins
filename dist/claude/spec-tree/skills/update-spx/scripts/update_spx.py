@@ -1,19 +1,21 @@
-"""Deterministic generator for a product's two spx-level guide files.
+"""Deterministic generator for a product's root Spec Tree guide sections.
 
-One repository is worked by both Claude Code and Codex at once, and each reads its own
-filename from the same ``spx/`` directory, so the guide is two generated files —
-``CLAUDE.md`` for Claude Code and ``AGENTS.md`` for Codex. Both render from one canonical
-template: the body is shared, and the spans that differ by agent runtime are authored once
-as ``<!-- runtime:NAME -->`` blocks rendered only into that runtime's file, mirroring the
-``<!-- lang:NAME -->`` language blocks. The only per-product variation is the
-enabled-language list (see the node's Guide Render Model ADR).
+One repository is worked by both Claude Code and Codex at once, and each agent harness
+retains its root instruction file across compaction: ``CLAUDE.md`` for Claude Code and
+``AGENTS.md`` for Codex. The Spec Tree guide is therefore a managed section in those
+root files, not generated files under ``spx/``. Both sections render from one
+canonical template: the body is shared, and the spans that differ by agent harness
+are authored once as ``<!-- harness:NAME -->`` blocks rendered only into that
+harness's section, mirroring the ``<!-- lang:NAME -->`` language blocks. The only
+per-product variation inside the managed section is the enabled-language list.
 
 Generation is deterministic and needs no agent judgment: the enabled-language list is read
 from the product's ``spx/**/tests/`` test-file extensions, staleness is a dotted-version and
 language-set comparison, and the render is a pure string transformation. The parse,
-version-compare, language-filter, runtime-filter, and render functions take document strings
+version-compare, language-filter, harness-filter, and render functions take document strings
 and return document strings — no filesystem, environment, or subprocess access. The CLI edge
-reads the template, globs the test extensions, and writes both files.
+reads the template, globs the test extensions, replaces symlinked root guides with regular
+files, removes obsolete ``spx/`` guide files, and writes both root files.
 """
 
 from __future__ import annotations
@@ -23,28 +25,37 @@ import pathlib
 import re
 import sys
 from collections.abc import Iterable
+from collections.abc import Mapping
 
 FRONTMATTER_DELIMITER = "---"
 TEMPLATE_VERSION_KEY = "template_version"
 TEMPLATE_SOURCE_KEY = "template_source"
 LANGUAGES_KEY = "languages"
 DEFAULT_TEMPLATE_SOURCE = "spec-tree"
+MANAGED_SECTION_START = "<!-- BEGIN MANAGED SPEC TREE GUIDE -->"
+MANAGED_SECTION_END = "<!-- END MANAGED SPEC TREE GUIDE -->"
+MANAGED_TEMPLATE_VERSION_PREFIX = "<!-- spec-tree-template-version:"
+MANAGED_TEMPLATE_SOURCE_PREFIX = "<!-- spec-tree-template-source:"
+MANAGED_LANGUAGES_PREFIX = "<!-- spec-tree-languages:"
 
-# Each agent runtime reads its own guide filename from the product's spx/ directory.
-RUNTIME_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+# Each agent harness reads its own guide filename from the product root.
+AGENT_HARNESS_GUIDE_FILENAMES = {"claude": "CLAUDE.md", "codex": "AGENTS.md"}
+OBSOLETE_SPX_GUIDE_FILENAMES = ("CLAUDE.md", "AGENTS.md")
+OBSOLETE_SPX_DIR_NAME = "spx"
+RETIRED_GENERATED_GUIDE_HEADINGS = (
+    "# Spec Tree Guide",
+    "# spx/ Directory Guide (Spec Tree)",
+)
+
+
+class CliInputError(ValueError):
+    """Raised when CLI path input would make guide generation unsafe."""
+
 
 # Test-file extension -> the language it denotes. The enabled-language set is read from the
 # product's own test files, the in-use ground truth, rather than from agent judgment.
 LANGUAGE_BY_EXTENSION = {"py": "python", "ts": "typescript", "rs": "rust"}
 
-_LANG_BLOCK = re.compile(
-    r"[ \t]*<!-- lang:(?P<lang>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /lang:(?P=lang) -->\n?",
-    re.DOTALL,
-)
-_RUNTIME_BLOCK = re.compile(
-    r"[ \t]*<!-- runtime:(?P<runtime>[a-z0-9-]+) -->\n(?P<body>.*?)\n[ \t]*<!-- /runtime:(?P=runtime) -->\n?",
-    re.DOTALL,
-)
 _BLANK_RUN = re.compile(r"\n{3,}")
 
 
@@ -80,6 +91,42 @@ def _frontmatter_block(frontmatter: list[str]) -> str:
     return "\n".join([FRONTMATTER_DELIMITER, *frontmatter, FRONTMATTER_DELIMITER])
 
 
+def _managed_section_bounds(text: str) -> tuple[int, int] | None:
+    """Return the managed section's start and end offsets when present."""
+    start = text.find(MANAGED_SECTION_START)
+    if start == -1:
+        return None
+    end_marker_start = text.find(
+        MANAGED_SECTION_END, start + len(MANAGED_SECTION_START)
+    )
+    if end_marker_start == -1:
+        return None
+    end = end_marker_start + len(MANAGED_SECTION_END)
+    if text[end : end + 1] == "\n":
+        end += 1
+    return start, end
+
+
+def _managed_section_text(text: str) -> str | None:
+    bounds = _managed_section_bounds(text)
+    if bounds is None:
+        return None
+    start, end = bounds
+    return text[start:end]
+
+
+def _managed_metadata_value(text: str, prefix: str) -> str | None:
+    """Return a metadata comment value from inside the managed section."""
+    section = _managed_section_text(text)
+    if section is None:
+        return None
+    for line in section.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(prefix) and stripped.endswith("-->"):
+            return stripped[len(prefix) : -len("-->")].strip()
+    return None
+
+
 def _parse_languages(value: str | None) -> tuple[str, ...]:
     """Parse a ``languages`` value (``[a, b]`` or ``a, b``) into a tuple."""
     if not value:
@@ -98,13 +145,28 @@ def normalize_languages(languages: Iterable[str]) -> tuple[str, ...]:
 def parse_template_version(text: str) -> str | None:
     """Return the ``template_version`` value from a document's frontmatter, or None."""
     frontmatter, _ = _split_frontmatter(text)
-    return _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY)
+    return _frontmatter_value(
+        frontmatter, TEMPLATE_VERSION_KEY
+    ) or _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
+
+
+def parse_guide_version(text: str) -> str | None:
+    """Return a guide's managed-section ``template_version`` value, or None."""
+    return _managed_metadata_value(text, MANAGED_TEMPLATE_VERSION_PREFIX)
 
 
 def parse_languages(text: str) -> tuple[str, ...]:
     """Read the recorded enabled-language list from a guide's frontmatter."""
     frontmatter, _ = _split_frontmatter(text)
-    return _parse_languages(_frontmatter_value(frontmatter, LANGUAGES_KEY))
+    return _parse_languages(
+        _frontmatter_value(frontmatter, LANGUAGES_KEY)
+        or _managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX)
+    )
+
+
+def parse_guide_languages(text: str) -> tuple[str, ...]:
+    """Return a guide's managed-section language list."""
+    return _parse_languages(_managed_metadata_value(text, MANAGED_LANGUAGES_PREFIX))
 
 
 def _version_tuple(version: str) -> tuple[int, ...]:
@@ -123,26 +185,66 @@ def is_stale(product_version: str, template_version: str) -> bool:
         return True
 
 
+def _conditional_marker(line: str, marker: str, *, closing: bool) -> str | None:
+    prefix = f"<!-- {'/' if closing else ''}{marker}:"
+    stripped = line.strip()
+    if not stripped.startswith(prefix) or not stripped.endswith("-->"):
+        return None
+    return stripped[len(prefix) : -len("-->")].strip()
+
+
+def _filter_conditional_blocks(body: str, marker: str, allowed: set[str]) -> str:
+    lines = body.splitlines(keepends=True)
+    output: list[str] = []
+    index = 0
+    while index < len(lines):
+        name = _conditional_marker(lines[index], marker, closing=False)
+        if name is None:
+            output.append(lines[index])
+            index += 1
+            continue
+
+        next_index, block, closed = _conditional_block(lines, index, marker, name)
+        if not closed:
+            output.extend(block)
+            break
+        if name in allowed:
+            output.extend(_with_trailing_newline(block))
+        index = next_index
+
+    return "".join(output)
+
+
+def _conditional_block(
+    lines: list[str], start: int, marker: str, name: str
+) -> tuple[int, list[str], bool]:
+    """Return the next index, block body, and whether the block closed."""
+    block: list[str] = []
+    index = start + 1
+    while index < len(lines):
+        closing_name = _conditional_marker(lines[index], marker, closing=True)
+        if closing_name == name:
+            return index + 1, block, True
+        block.append(lines[index])
+        index += 1
+    return len(lines), lines[start:], False
+
+
+def _with_trailing_newline(block: list[str]) -> list[str]:
+    """Return a copy of ``block`` that ends with a newline."""
+    if block and block[-1].endswith("\n"):
+        return block
+    return [*block, "\n"]
+
+
 def _filter_languages(body: str, languages: tuple[str, ...]) -> str:
     """Keep each ``lang:NAME`` block whose NAME is enabled; drop the rest, markers and all."""
-
-    def replace(match: re.Match[str]) -> str:
-        if match.group("lang") in languages:
-            return match.group("body") + "\n"
-        return ""
-
-    return _LANG_BLOCK.sub(replace, body)
+    return _filter_conditional_blocks(body, "lang", set(languages))
 
 
-def _filter_runtime(body: str, runtime: str) -> str:
-    """Keep each ``runtime:NAME`` block whose NAME is the target runtime; drop the rest."""
-
-    def replace(match: re.Match[str]) -> str:
-        if match.group("runtime") == runtime:
-            return match.group("body") + "\n"
-        return ""
-
-    return _RUNTIME_BLOCK.sub(replace, body)
+def _filter_harness(body: str, harness: str) -> str:
+    """Keep each ``harness:NAME`` block whose NAME is the target harness; drop the rest."""
+    return _filter_conditional_blocks(body, "harness", {harness})
 
 
 def language_for_extension(extension: str) -> str | None:
@@ -168,14 +270,14 @@ def render(
     template_text: str,
     languages: tuple[str, ...],
     installed_version: str,
-    runtime: str,
+    harness: str,
 ) -> str:
-    """Render one runtime's guide from the template and the enabled-language list.
+    """Render one agent harness's managed section from the template and enabled languages.
 
-    Language-conditional blocks render only for enabled languages and runtime-conditional
-    blocks only for ``runtime``; nothing else is substituted, so brace-delimited illustration
-    tokens pass through unchanged. The output frontmatter records the version, source, and
-    language list so a later update reads the languages back.
+    Language-conditional blocks render only for enabled languages and harness-conditional
+    blocks only for ``harness``; nothing else is substituted, so brace-delimited illustration
+    tokens pass through unchanged. Metadata comments record the version, source, and language
+    list so a later update reads the languages back from any position in a root guide file.
     """
     languages = normalize_languages(languages)
     template_frontmatter, template_body = _split_frontmatter(template_text)
@@ -185,17 +287,19 @@ def render(
     )
 
     body = _filter_languages(template_body, languages)
-    body = _filter_runtime(body, runtime)
+    body = _filter_harness(body, harness)
     body = _BLANK_RUN.sub("\n\n", body)
 
-    out_frontmatter = [
-        f'{TEMPLATE_VERSION_KEY}: "{installed_version}"',
-        f"{TEMPLATE_SOURCE_KEY}: {source}",
-        f"{LANGUAGES_KEY}: [{', '.join(languages)}]",
-    ]
-    # `_split_frontmatter` uses `str.splitlines()`, which drops the template's trailing
-    # newline; normalize so the output always ends with exactly one.
-    rendered = f"{_frontmatter_block(out_frontmatter)}\n{body}"
+    metadata = "\n".join(
+        [
+            MANAGED_SECTION_START,
+            f"{MANAGED_TEMPLATE_VERSION_PREFIX} {installed_version} -->",
+            f"{MANAGED_TEMPLATE_SOURCE_PREFIX} {source} -->",
+            f"{MANAGED_LANGUAGES_PREFIX} {', '.join(languages)} -->",
+            "",
+        ]
+    )
+    rendered = f"{metadata}{body.rstrip()}\n\n{MANAGED_SECTION_END}"
     return rendered.rstrip("\n") + "\n"
 
 
@@ -211,7 +315,10 @@ def detect_languages_from_tree(spx_dir: pathlib.Path) -> tuple[str, ...]:
 
 
 def guide_status(
-    guide_path: pathlib.Path, installed_version: str, languages: tuple[str, ...]
+    guide_path: pathlib.Path,
+    installed_version: str,
+    languages: tuple[str, ...],
+    containment_root: pathlib.Path | None = None,
 ) -> str:
     """CLI-edge helper: return ``absent``, ``stale``, or ``current`` for one guide file.
 
@@ -219,26 +326,161 @@ def guide_status(
     """
     if not guide_path.is_file():
         return "absent"
+    if containment_root is not None:
+        _validate_read_target(guide_path, containment_root)
     text = guide_path.read_text(encoding="utf-8")
-    version = parse_template_version(text)
+    if _managed_section_text(text) is None:
+        return "stale"
+    version = parse_guide_version(text)
     if version is None or is_stale(version, installed_version):
         return "stale"
-    if parse_languages(text) != normalize_languages(languages):
+    if parse_guide_languages(text) != normalize_languages(languages):
         return "stale"
     return "current"
 
 
+def upsert_managed_section(document: str, section: str) -> str:
+    """Return ``document`` with exactly one managed Spec Tree guide section."""
+    section = section.rstrip("\n") + "\n"
+    bounds = _managed_section_bounds(document)
+    if bounds is not None:
+        start, end = bounds
+        updated = f"{document[:start]}{section}{document[end:]}"
+        return updated.rstrip("\n") + "\n"
+    base = document.rstrip("\n")
+    if not base:
+        return section
+    return f"{base}\n\n{section}"
+
+
+def _is_markerless_generated_guide(document: str) -> bool:
+    """Report whether ``document`` is the retired generated full-file guide shape."""
+    if _managed_section_text(document) is not None:
+        return False
+    frontmatter, body = _split_frontmatter(document)
+    stripped_body = body.lstrip()
+    return (
+        _frontmatter_value(frontmatter, TEMPLATE_SOURCE_KEY) == DEFAULT_TEMPLATE_SOURCE
+        and _frontmatter_value(frontmatter, TEMPLATE_VERSION_KEY) is not None
+        and stripped_body.startswith(RETIRED_GENERATED_GUIDE_HEADINGS)
+    )
+
+
+def _product_owned_root_document(document: str) -> str:
+    """Return product-owned root guide prose, excluding retired generated guide bodies."""
+    if _is_markerless_generated_guide(document):
+        return ""
+    return document
+
+
+def _validated_repo_root(raw_repo_root: str | None) -> pathlib.Path | None:
+    """Return a resolved repository root, rejecting missing or non-directory input."""
+    if raw_repo_root is None:
+        return None
+    try:
+        repo_root = pathlib.Path(raw_repo_root).expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise CliInputError(f"--repo-root does not exist: {raw_repo_root}") from exc
+    if not repo_root.is_dir():
+        raise CliInputError(f"--repo-root is not a directory: {raw_repo_root}")
+    return repo_root
+
+
+def _repo_child(repo_root: pathlib.Path, relative_path: str) -> pathlib.Path:
+    """Return a repo child path after validating its parent stays inside root."""
+    if pathlib.PurePath(relative_path).is_absolute():
+        raise CliInputError(f"repository-relative path is absolute: {relative_path}")
+    path = repo_root / relative_path
+    try:
+        path.parent.resolve(strict=True).relative_to(repo_root)
+    except (OSError, ValueError) as exc:
+        raise CliInputError(f"path escapes --repo-root: {relative_path}") from exc
+    return path
+
+
+def _validate_read_target(path: pathlib.Path, repo_root: pathlib.Path) -> None:
+    """Reject symlink reads that resolve outside the repository root."""
+    if not path.is_symlink():
+        return
+    try:
+        path.resolve(strict=True).relative_to(repo_root)
+    except (OSError, ValueError) as exc:
+        raise CliInputError(f"symlink target escapes --repo-root: {path}") from exc
+
+
+def _spx_dir(repo_root: pathlib.Path) -> pathlib.Path:
+    """Return the repository's spx directory after rejecting unsafe shapes."""
+    spx_dir = _repo_child(repo_root, OBSOLETE_SPX_DIR_NAME)
+    if spx_dir.is_symlink():
+        raise CliInputError(f"spx directory is a symlink: {spx_dir}")
+    if spx_dir.exists() and not spx_dir.is_dir():
+        raise CliInputError(f"spx path is not a directory: {spx_dir}")
+    return spx_dir
+
+
+def _read_text_if_present(path: pathlib.Path, repo_root: pathlib.Path) -> str | None:
+    """Read ``path`` when it exists or is a symlink; otherwise return None."""
+    if path.exists() or path.is_symlink():
+        _validate_read_target(path, repo_root)
+        return path.read_text(encoding="utf-8")
+    return None
+
+
+def _replace_path_with_text(path: pathlib.Path, text: str) -> None:
+    """Write ``text`` as a regular file, replacing any file or symlink."""
+    if path.exists() or path.is_symlink():
+        path.unlink()
+    path.write_text(text, encoding="utf-8")
+
+
+def _root_seed_documents(repo_root: pathlib.Path) -> dict[str, str]:
+    """Return root guide seed text for each agent harness, copying a sole existing guide."""
+    values = {
+        harness: _read_text_if_present(_repo_child(repo_root, filename), repo_root)
+        for harness, filename in AGENT_HARNESS_GUIDE_FILENAMES.items()
+    }
+    fallback = next((text for text in values.values() if text is not None), "")
+    return {
+        harness: text if text is not None else fallback
+        for harness, text in values.items()
+    }
+
+
+def write_root_guides(
+    repo_root: pathlib.Path, sections_by_harness: Mapping[str, str]
+) -> None:
+    """Insert managed sections into root guides, replacing symlinks with files."""
+    seeds = _root_seed_documents(repo_root)
+    for harness, filename in AGENT_HARNESS_GUIDE_FILENAMES.items():
+        output = upsert_managed_section(
+            _product_owned_root_document(seeds[harness]),
+            sections_by_harness[harness],
+        )
+        _replace_path_with_text(_repo_child(repo_root, filename), output)
+
+
+def remove_obsolete_spx_guides(repo_root: pathlib.Path) -> None:
+    """Remove retired ``spx/`` guide files when present."""
+    spx_dir = _spx_dir(repo_root)
+    if not spx_dir.exists():
+        return
+    for filename in OBSOLETE_SPX_GUIDE_FILENAMES:
+        path = spx_dir / filename
+        if path.exists() or path.is_symlink():
+            path.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Thin CLI edge: read the template, detect languages, render and write both guide files."""
+    """Thin CLI edge: read the template, detect languages, render and write both guides."""
     parser = argparse.ArgumentParser(
-        description="Generate a product's spx/CLAUDE.md and spx/AGENTS.md from the template."
+        description="Generate managed Spec Tree sections in root CLAUDE.md and AGENTS.md."
     )
     parser.add_argument(
         "--template", required=True, help="Path to the canonical template."
     )
     parser.add_argument(
-        "--spx-dir",
-        help="Path to the product's spx/ directory holding both guide files.",
+        "--repo-root",
+        help="Path to the product repository root holding root guide files.",
     )
     parser.add_argument(
         "--check",
@@ -248,7 +490,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Write both guide files under --spx-dir instead of stdout.",
+        help="Write both root guide files under --repo-root instead of stdout.",
     )
     parser.add_argument(
         "--languages",
@@ -262,23 +504,40 @@ def main(argv: list[str] | None = None) -> int:
         print("error: template has no template_version", file=sys.stderr)
         return 2
 
-    spx_dir = pathlib.Path(args.spx_dir) if args.spx_dir else None
+    try:
+        repo_root = _validated_repo_root(args.repo_root)
+    except CliInputError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     if args.languages is not None:
         languages = _parse_languages(args.languages)
-    elif spx_dir is not None:
-        languages = detect_languages_from_tree(spx_dir)
+    elif repo_root is not None:
+        try:
+            languages = detect_languages_from_tree(_spx_dir(repo_root))
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     else:
         languages = ()
 
     if args.check:
-        if spx_dir is None:
-            print("error: --check requires --spx-dir", file=sys.stderr)
+        if repo_root is None:
+            print("error: --check requires --repo-root", file=sys.stderr)
             return 2
-        statuses = {
-            guide_status(spx_dir / filename, installed, languages)
-            for filename in RUNTIME_GUIDE_FILENAMES.values()
-        }
+        try:
+            statuses = {
+                guide_status(
+                    _repo_child(repo_root, filename),
+                    installed,
+                    languages,
+                    repo_root,
+                )
+                for filename in AGENT_HARNESS_GUIDE_FILENAMES.values()
+            }
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
         # Absent dominates stale dominates current: report the worst across both files.
         for verdict in ("absent", "stale", "current"):
             if verdict in statuses:
@@ -286,21 +545,27 @@ def main(argv: list[str] | None = None) -> int:
                 break
         return 0
 
-    if args.write and spx_dir is None:
-        print("error: --write requires --spx-dir", file=sys.stderr)
+    if args.write and repo_root is None:
+        print("error: --write requires --repo-root", file=sys.stderr)
         return 2
 
     rendered = {
-        filename: render(template_text, languages, installed, runtime)
-        for runtime, filename in RUNTIME_GUIDE_FILENAMES.items()
+        harness: render(template_text, languages, installed, harness)
+        for harness in AGENT_HARNESS_GUIDE_FILENAMES
     }
 
-    if args.write and spx_dir is not None:
-        for filename, content in rendered.items():
-            (spx_dir / filename).write_text(content, encoding="utf-8")
+    if args.write and repo_root is not None:
+        try:
+            write_root_guides(repo_root, rendered)
+            remove_obsolete_spx_guides(repo_root)
+        except CliInputError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     else:
-        for filename, content in rendered.items():
-            sys.stdout.write(f"=== {filename} ===\n{content}")
+        for harness, content in rendered.items():
+            sys.stdout.write(
+                f"=== {AGENT_HARNESS_GUIDE_FILENAMES[harness]} ===\n{content}"
+            )
     return 0
 
 

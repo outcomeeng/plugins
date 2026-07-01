@@ -36,9 +36,9 @@ SKILL_NAME = "example-skill"
 TOOL_KIND = "tool"
 
 # The unique-token kind that carries per-runtime filenames, and the capability for
-# the spx-level agent guide that diverges across both runtimes.
+# the root agent guide that diverges across both runtimes.
 FILE_KIND = "file"
-GUIDE_CAPABILITY = "spx_guide"
+GUIDE_CAPABILITY = "root_guide"
 
 # A capability that diverges across both runtimes, and one that exists for Claude
 # with no Codex equivalent — both drawn from the source-owned registry so the test

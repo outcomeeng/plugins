@@ -6,11 +6,11 @@ Coordination note; not spec truth. Reconcile before use.
 
 Registry-backed `tool(...)` token + runtime-explicit form, implemented in
 `outcomeeng/distribution/build.py` with the registry populated from the `AGENTS.md` Agent
-Runtime Guidance table. Every plugin's content is converted to tokens, and the runtime-token
+Harness Guidance table. Every plugin's content is converted to tokens, and the runtime-token
 validation lint (`outcomeeng/validation/runtime_tokens.py`, governed by
 `spx/15-validation.enabler/32-runtime-token.enabler/runtime-token.md`) enforces every authored
 file under `src/plugins/` and `src/_shared/`, except the explicit files named in
-`RUNTIME_TOKEN_IGNORE` because they must name runtime guide filenames as data.
+`RUNTIME_TOKEN_IGNORE` because they must name harness guide filenames as data.
 The registry is seeded with `ask_user` (`AskUserQuestion`/`request_user_input`) and the
 no-Codex-equivalent `ScheduleWakeup`; the ignore-list mechanism remains as the tracked exemption
 surface for any future not-yet-converted plugin.

@@ -20,7 +20,7 @@ pre-commit:
       priority: 20
     regenerate-spx-guides:
       glob: "{src/plugins/spec-tree/skills/understand/templates/spx-claude.md,src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py,spx/**/tests/*}"
-      run: python3 src/plugins/spec-tree/skills/update-spx/scripts/update_spx.py --template src/plugins/spec-tree/skills/understand/templates/spx-claude.md --spx-dir spx --write
+      run: just build-guides
       stage_fixed: true
       priority: 25
     dprint:

@@ -143,13 +143,13 @@ class RuntimeTokenKind:
 # renders the current target's name from that kind's sub-registry. A capability
 # with no entry for a runtime (e.g. schedule_wakeup on codex) must be wrapped in a
 # per-runtime conditional so the token is never evaluated for the missing runtime.
-# The `tool` kind is seeded from the Agent Runtime Guidance table in AGENTS.md; the
-# `file` kind holds per-runtime filenames — the agent guide a consumer reads is
-# `CLAUDE.md` under Claude Code and `AGENTS.md` under Codex, and the spx-level guide
-# likewise. `field` and `term` carry the rendering mechanism ahead of their first
-# authored consumers. Enforcement that a raw name never appears in authored source is
-# the runtime-token validation lint (outcomeeng.validation.runtime_tokens), which
-# derives its forbidden set from the lint-enforced kinds only — not this module.
+# The `tool` kind is seeded from the Agent Harness Guidance table in AGENTS.md; the
+# `file` kind holds per-runtime filenames — the root agent guide a consumer reads
+# is `CLAUDE.md` under Claude Code and `AGENTS.md` under Codex. `field` and `term`
+# carry the rendering mechanism ahead of their first authored consumers. Enforcement
+# that a raw name never appears in authored source is the runtime-token validation
+# lint (outcomeeng.validation.runtime_tokens), which derives its forbidden set from
+# the lint-enforced kinds only — not this module.
 RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     "tool": RuntimeTokenKind(
         lint_enforced=True,
@@ -163,7 +163,6 @@ RUNTIME_TOKEN_REGISTRY: Final[dict[str, RuntimeTokenKind]] = {
     "file": RuntimeTokenKind(
         lint_enforced=True,
         names={
-            "spx_guide": {"claude": "spx/CLAUDE.md", "codex": "spx/AGENTS.md"},
             "root_guide": {"claude": "CLAUDE.md", "codex": "AGENTS.md"},
         },
     ),

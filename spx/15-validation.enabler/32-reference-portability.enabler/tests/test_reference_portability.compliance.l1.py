@@ -3,9 +3,10 @@
 Spec: spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md
 
 Rule: NEVER a committed file under ``src/plugins/`` references a concrete path into this
-marketplace's own files — a numbered ``spx/\\d+-`` node or decision, or a path under a
-marketplace root (``src/plugins/``, ``dist/claude/``, ``dist/codex/``, an ``outcomeeng``
-toolchain package, or the marketplace's own repo slug as in ``outcomeeng/plugins/AGENTS.md``).
+marketplace's own files — a numbered ``spx/\\d+-`` node or decision, a retired generated
+guide path under ``spx/``, or a path under a marketplace root (``src/plugins/``,
+``dist/claude/``, ``dist/codex/``, an ``outcomeeng`` toolchain package, or the
+marketplace's own repo slug as in ``outcomeeng/plugins/AGENTS.md``).
 The validator passes universal conventions a consumer checkout also resolves — the
 ``55-example`` illustrative root sentinel, a bare ``src/``/``dist/`` path, and the
 marketplace's own bare GitHub org/repo slug. The detection rule lives in the source module under
@@ -33,6 +34,8 @@ NONPORTABLE_SAMPLES = [
     "outcomeeng/spx/src/types.ts",  # path under a sibling repo slug, not the bare slug
     "/home/dev/checkout/dist/claude/spec-tree/agents/applier.md",  # absolute checkout path
     "spx/NN-infra.enabler/NN-parser.outcome",  # invalid index-placeholder path
+    "spx/CLAUDE.md",  # retired generated guide path
+    "spx/AGENTS.md",  # retired generated guide path
 ]
 
 # One reference per allowed category — none may be flagged.
@@ -43,7 +46,6 @@ PORTABLE_SAMPLES = [
     "spx/55-example.enabler/12-parser.outcome",  # illustrative root sentinel
     "spx/55-example.outcome/43-integration.outcome",  # illustrative root sentinel with outcome type
     "spx/EXCLUDE",  # methodology-universal file
-    "spx/CLAUDE.md",  # methodology-universal file
     "spx/local/python.md",  # methodology-universal directory
     "spx/sessions/todo/",  # methodology-universal directory
     "spx/1foo",  # 'spx/' + digit without the 'NN-' node prefix is not a node reference

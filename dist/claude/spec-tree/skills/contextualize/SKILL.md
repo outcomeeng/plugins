@@ -1,7 +1,8 @@
 ---
 name: contextualize
 description: ALWAYS invoke this skill when asking about status, progress, or what exists in the spec tree. NEVER work on any part of the spec tree without loading context through this skill first.
-allowed-tools: Read, Glob, Grep, Skill
+argument-hint: "<full-spx-node-path>"
+allowed-tools: Read, Glob, Grep, Skill, Bash(python3:*)
 ---
 
 <objective>
@@ -86,7 +87,7 @@ Extract the path segments from product root to target. Each segment is a directo
 Read: spx/{product-name}.product.md
 
 # Read runtime product guide if present
-Read: spx/CLAUDE.md  (if exists)
+Read: CLAUDE.md  (if exists)
 
 # Read ALL product-level ADRs and PDRs
 Glob: "spx/*-*.adr.md"
@@ -103,7 +104,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Verification**: Count files returned by globs. Count files actually read. These must match.
 
-**Guide files**: Read `spx/CLAUDE.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
+**Guide files**: Read `CLAUDE.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -121,7 +122,7 @@ For each directory along the path from product root to the target node:
 # The spec file is {slug}.md (no type suffix, no numeric prefix)
 Read: spx/{path-to-dir}/{slug}.md
 
-# Read runtime guide in this directory if present
+# Read harness guide in this directory if present
 Read: spx/{path-to-dir}/CLAUDE.md  (if exists)
 ```
 

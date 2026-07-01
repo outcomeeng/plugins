@@ -45,9 +45,11 @@ KILL_SWITCH_DISABLED = "1"
 # process; spx worktree status reads it back and checks liveness, so a claim is
 # `running` only while this process is alive. A test sets it to its own PID.
 WORKTREE_CONTROLLING_PID_ENV = "SPX_WORKTREE_CONTROLLING_PID"
+# The hook integration asserts that spx exports a worktree claim; the exact
+# export spelling follows the pinned spx floor installed by each gate.
 WORKTREE_CLAIMED_ENV = "CLAUDE_WORKTREE_CLAIMED"
 WORKTREE_CLAIM_PATH_ENV = "SPX_WORKTREE_CLAIM_PATH"
-_UNSET_ENV_VALUE = "<unset>"
+UNSET_ENV_VALUE = "<unset>"
 
 # Env vars dropped from the child so the hook command sees only what the call
 # provides — its own session identity, project dir, and env file, not the runner's.
@@ -185,7 +187,7 @@ def worktree_claim_path_from_env(env_file: Path, project_dir: Path) -> Path:
     """Return the worktree claim path exported or indicated by the hook runner."""
     env = read_env_exports(env_file, [WORKTREE_CLAIMED_ENV, WORKTREE_CLAIM_PATH_ENV])
     claim_path = env[WORKTREE_CLAIM_PATH_ENV]
-    if claim_path != _UNSET_ENV_VALUE:
+    if claim_path != UNSET_ENV_VALUE:
         return Path(claim_path)
     if env[WORKTREE_CLAIMED_ENV] == "1":
         claims = sorted((project_dir.resolve() / ".spx" / "worktrees").glob("*.claim"))
@@ -193,6 +195,18 @@ def worktree_claim_path_from_env(env_file: Path, project_dir: Path) -> Path:
             return claims[0].resolve()
     msg = "SessionStart hook did not export or indicate a worktree claim"
     raise AssertionError(msg)
+
+
+def has_worktree_claim_export(env: str | dict[str, str]) -> bool:
+    """Return whether hook env output carries a worktree-claim export."""
+    if isinstance(env, str):
+        return (
+            f"export {WORKTREE_CLAIMED_ENV}=1" in env
+            or f"export {WORKTREE_CLAIM_PATH_ENV}=" in env
+        )
+    return env.get(WORKTREE_CLAIMED_ENV) == "1" or env.get(
+        WORKTREE_CLAIM_PATH_ENV
+    ) not in (None, "", UNSET_ENV_VALUE)
 
 
 def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
@@ -221,7 +235,11 @@ __all__ = [
     "KILL_SWITCH_DISABLED",
     "KILL_SWITCH_ENV",
     "SESSION_START_EVENT",
+    "UNSET_ENV_VALUE",
+    "WORKTREE_CLAIMED_ENV",
+    "WORKTREE_CLAIM_PATH_ENV",
     "WORKTREE_CONTROLLING_PID_ENV",
+    "has_worktree_claim_export",
     "init_session_worktree",
     "read_env_exports",
     "run_session_start",

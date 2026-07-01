@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge.
   NEVER select a merge transport or drive a changeset to the default branch on origin without this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Skill, AskUserQuestion, Bash, Read
+allowed-tools: Skill, AskUserQuestion, Bash(git branch:*), Bash(git status:*), Bash(grep:*), Bash(python3:*classify_changeset.py*), Bash(echo:*), Read
 ---
 
 <objective>
@@ -43,7 +43,7 @@ The transport binds the gate predicates (which review attests `MERGE_READINESS`,
 
 <workflow>
 
-**Step 1 — Load foundation and vocabulary.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first. Invoke `/merging-standards` for the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Read `spx/local/merging.md` for the transport selector and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`CLAUDE.md`, `spx/CLAUDE.md`) to change it — `/merge` and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
+**Step 1 — Load foundation and vocabulary.** If `<SPEC_TREE_FOUNDATION>` is absent, invoke `/understand` first. Invoke `/merging-standards` for the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Read `spx/local/merging.md` for the transport selector and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`CLAUDE.md`) to change it — `/merge` and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
 
 **Step 2 — Select the transport.** Compute the changeset classification by running the classification script, which routes base-ref and committed branch-scope derivation through the canonical `changeset_scope` primitives:
 
