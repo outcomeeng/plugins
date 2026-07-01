@@ -230,7 +230,7 @@ def test_unsupported_prompt_source_kind_is_rejected(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "omitted_field",
-    (PRODUCER_FIELD, SECTION_FIELD, TEMPLATE_FIELD),
+    (KIND_FIELD, PRODUCER_FIELD, SECTION_FIELD, TEMPLATE_FIELD),
 )
 def test_missing_prompt_source_fields_are_rejected(
     tmp_path: Path,
@@ -299,6 +299,44 @@ def test_cli_materializes_and_checks_prompt_drift(tmp_path: Path) -> None:
     assert PROMPT_FILENAME in stale_result.output
     assert prompt_path.read_text(encoding="utf-8") == "stale prompt\n"
     assert prompt_path.stat().st_mtime_ns == stale_mtime_ns
+
+
+def test_cli_materializes_nested_eval_roots(tmp_path: Path) -> None:
+    repo_root, eval_toml = _write_eval_fixture(tmp_path)
+    evals_root = repo_root / "spx" / "node" / "evals"
+    prompt_path = eval_toml.parent / PROMPT_FILENAME
+    runner = CliRunner()
+
+    write_result = runner.invoke(
+        main,
+        [
+            "materialize-prompts",
+            str(evals_root),
+            "--repo-root",
+            str(repo_root),
+        ],
+    )
+
+    assert write_result.exit_code == EXIT_SUCCESS
+    assert str(prompt_path) in write_result.output
+    materialized_prompt = prompt_path.read_text(encoding="utf-8")
+    materialized_mtime_ns = prompt_path.stat().st_mtime_ns
+
+    check_result = runner.invoke(
+        main,
+        [
+            "materialize-prompts",
+            str(evals_root),
+            "--repo-root",
+            str(repo_root),
+            "--check",
+        ],
+    )
+
+    assert check_result.exit_code == EXIT_SUCCESS
+    assert str(prompt_path) in check_result.output
+    assert prompt_path.read_text(encoding="utf-8") == materialized_prompt
+    assert prompt_path.stat().st_mtime_ns == materialized_mtime_ns
 
 
 def _write_eval_fixture(
