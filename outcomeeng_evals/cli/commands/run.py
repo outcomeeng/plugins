@@ -8,6 +8,7 @@ import subprocess
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Final, Protocol, cast
 
 import click
 
@@ -16,7 +17,7 @@ from outcomeeng_evals.cli.wiring import build_claude_runner
 from outcomeeng_evals.definition import RUNS_DIRNAME, load_definition
 from outcomeeng_evals.history import HISTORY_FILENAME, HistoryRow, append_history_row
 from outcomeeng_evals.report import JSON_SCHEMA_VERSION, write_run_reports
-from outcomeeng_evals.runner import RunMetadata
+from outcomeeng_evals.runner import ModelRunner, RunMetadata
 from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 
 
@@ -26,6 +27,19 @@ from outcomeeng_evals.suite import SuiteResult, format_report, run_suite
 # plugin runtime conventions).
 MIN_WORKERS = 1
 MAX_WORKERS = 16
+RUNNER_FACTORY_KEY: Final = "runner_factory"
+
+
+class RunnerFactory(Protocol):
+    """Build a model runner for the run command."""
+
+    def __call__(
+        self,
+        *,
+        plugin_dir: Path,
+        max_budget_usd: float,
+        timeout_seconds: int,
+    ) -> ModelRunner: ...
 
 
 @click.command(name="run")
@@ -79,7 +93,8 @@ def run_command(
 ) -> None:
     """Replay one eval against Claude and write transcripts + history."""
     definition = load_definition(eval_toml)
-    runner = build_claude_runner(
+    runner_factory = _runner_factory_from_context()
+    runner = runner_factory(
         plugin_dir=plugin_dir,
         max_budget_usd=max_budget_usd,
         timeout_seconds=timeout_seconds,
@@ -118,6 +133,17 @@ def run_command(
     click.echo(f"JSON: {html_path.with_suffix('.json')}")
     ctx = click.get_current_context()
     ctx.exit(0 if result.passed else 1)
+
+
+def _runner_factory_from_context() -> RunnerFactory:
+    root_obj = click.get_current_context().find_root().obj
+    if isinstance(root_obj, dict) and RUNNER_FACTORY_KEY in root_obj:
+        candidate = root_obj[RUNNER_FACTORY_KEY]
+        if not callable(candidate):
+            msg = f"context object key {RUNNER_FACTORY_KEY!r} must be callable"
+            raise click.UsageError(msg)
+        return cast(RunnerFactory, candidate)
+    return build_claude_runner
 
 
 _FORMAT_SUFFIX = (
