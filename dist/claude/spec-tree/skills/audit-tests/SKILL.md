@@ -15,7 +15,7 @@ This audit runs in the test-evidence-auditor agent's isolated context. When this
 
 <objective>
 
-A verdict on whether a spec node's tests provide genuine evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
+A verdict on whether a spec node's tests provide behavior-coupled evidence its assertions are fulfilled — APPROVED, or REJECTED with each finding naming the assertion, the failed property, and the evidentiary gap.
 
 </objective>
 
@@ -213,7 +213,7 @@ Trace, by reading, whether the test drives execution into the assertion-relevant
 - **Imports the module but never drives execution into the assertion-relevant path**: REJECT — "no coverage." Name the specific assertion-relevant path the test fails to reach, traced from the code.
 - **The assertion-relevant path is trivially total** (the test obviously exercises every line the assertion claims): annotate as `saturated` in the verdict table. The test's evidentiary value comes from the other three properties.
 
-Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds genuine evidence reading captures and a line count would not.
+Coverage here is execution breadth (does the test reach the assertion-relevant lines), not assertion strength. A property-based test that exercises the same lines over a broader input domain adds behavior-coupled evidence that reading captures and a line count would not.
 
 The judgment is traced from the code and named in the finding — never a measured percentage, and never an unbacked "probably covers."
 

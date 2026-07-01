@@ -164,7 +164,7 @@ Valid remediation targets:
 
 **Mutation analysis**
 
-For each codebase import with genuine coupling, name a concrete mutation:
+For each codebase import with behavior coupling, name a concrete mutation:
 
 ```text
 Module: src/config-parser.ts
