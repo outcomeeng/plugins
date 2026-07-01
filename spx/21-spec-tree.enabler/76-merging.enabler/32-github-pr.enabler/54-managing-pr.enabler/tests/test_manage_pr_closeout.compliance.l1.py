@@ -32,3 +32,20 @@ def test_direct_manage_pr_routes_closeout_through_handoff(skill_path: Path) -> N
     assert "**Remaining Branches**" in text
     assert "Do not emit a receipt-only response" in text
     assert "/handoff --no-session" not in text
+
+
+@pytest.mark.parametrize("skill_path", MANAGE_PR_SKILL_FILES)
+def test_post_merge_verify_cannot_bypass_branch_closeout(skill_path: Path) -> None:
+    text = skill_path.read_text(encoding="utf-8")
+
+    assert (
+        "Do not emit `POST_MERGE_VERIFY` before the Step 9 branch-state closeout record exists"
+        in text
+    )
+    assert (
+        "the `POST_MERGE_VERIFY` token carries the branch-state closeout record" in text
+    )
+    assert (
+        "Step 9 has emitted `POST_MERGE_VERIFY` with branch-state closeout evidence"
+        in text
+    )
