@@ -4,9 +4,18 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
+
+from outcomeeng.test_evidence import (
+    AuditCase,
+    AuditStatus,
+    CouplingEvidence,
+    FindingCategory,
+    LiteralOrigin,
+    audit_case_after_testability,
+    audit_case_verdict,
+)
 
 
 class Declaration(Protocol):
@@ -18,108 +27,141 @@ class DeclarationScanner(Protocol):
     def scan_text(self, source: str, path: Path) -> list[Declaration]: ...
 
 
-@dataclass(frozen=True)
-class AuditVerdict:
-    status: str
-    finding_category: str
-
-
-@dataclass(frozen=True)
-class CoverageTrace:
-    code_path: str
-
-
 def untestable_source_targets_source() -> bool:
     return (
-        _verdict("REJECT", "untestable source").finding_category == "untestable source"
+        audit_case_verdict(_audit_case(source_exposes_assertion=False)).finding_category
+        is FindingCategory.UNTESTABLE_SOURCE
     )
 
 
 def testability_passes_to_coupling() -> bool:
-    return _verdict("APPROVED", "coupling pending").status == "APPROVED"
+    verdict = audit_case_after_testability(_audit_case())
+    return (
+        verdict.status is AuditStatus.APPROVED
+        and verdict.finding_category is FindingCategory.COUPLING_PENDING
+    )
 
 
 def no_coupling_is_rejected() -> bool:
-    return _verdict("REJECT", "no coupling").finding_category == "no coupling"
+    return (
+        audit_case_verdict(_audit_case(coupling=CouplingEvidence.NONE)).finding_category
+        is FindingCategory.NO_COUPLING
+    )
 
 
 def coupling_severed_is_rejected() -> bool:
-    return _verdict("REJECT", "coupling severed").finding_category == "coupling severed"
+    return (
+        audit_case_verdict(
+            _audit_case(coupling=CouplingEvidence.SEVERED)
+        ).finding_category
+        is FindingCategory.COUPLING_SEVERED
+    )
 
 
 def complete_evidence_is_approved() -> bool:
-    return _verdict("APPROVED", "").status == "APPROVED"
+    return audit_case_verdict(_audit_case()).status is AuditStatus.APPROVED
 
 
 def misaligned_evidence_is_rejected() -> bool:
-    return _verdict("REJECT", "misaligned").finding_category == "misaligned"
+    return (
+        audit_case_verdict(_audit_case(aligned=False)).finding_category
+        is FindingCategory.MISALIGNED
+    )
 
 
 def unfalsifiable_evidence_is_rejected() -> bool:
-    return _verdict("REJECT", "unfalsifiable").finding_category == "unfalsifiable"
+    return (
+        audit_case_verdict(_audit_case(mutation_named=False)).finding_category
+        is FindingCategory.UNFALSIFIABLE
+    )
 
 
 def no_coverage_is_rejected() -> bool:
-    return _verdict("REJECT", "no coverage").finding_category == "no coverage"
+    return (
+        audit_case_verdict(_audit_case(coverage_path="")).finding_category
+        is FindingCategory.NO_COVERAGE
+    )
 
 
 def coverage_trace_names_code_path() -> bool:
-    return CoverageTrace(code_path="product.audit.evaluate_assertion").code_path != ""
+    verdict = audit_case_verdict(_audit_case())
+    return (
+        verdict.coverage_trace is not None
+        and verdict.coverage_trace.code_path == audit_case_verdict.__qualname__
+    )
 
 
 def numeric_literal_is_rejected() -> bool:
     return (
-        _verdict("REJECT", "unsourced literal").finding_category == "unsourced literal"
+        audit_case_verdict(
+            _audit_case(literal_origin=LiteralOrigin.UNSOURCED)
+        ).finding_category
+        is FindingCategory.UNSOURCED_LITERAL
     )
 
 
 def string_literal_is_rejected() -> bool:
     return (
-        _verdict("REJECT", "unsourced literal").finding_category == "unsourced literal"
+        audit_case_verdict(
+            _audit_case(literal_origin=LiteralOrigin.UNSOURCED)
+        ).finding_category
+        is FindingCategory.UNSOURCED_LITERAL
     )
 
 
 def sourced_literals_pass() -> bool:
-    return _verdict("APPROVED", "literal rule passes").status == "APPROVED"
+    return (
+        audit_case_verdict(
+            _audit_case(literal_origin=LiteralOrigin.ALLOWLIST_OR_SOURCED)
+        ).status
+        is AuditStatus.APPROVED
+    )
 
 
 def fixture_laundering_is_rejected() -> bool:
     return (
-        _verdict("REJECT", "fixture laundering").finding_category
-        == "fixture laundering"
+        audit_case_verdict(
+            _audit_case(literal_origin=LiteralOrigin.STATIC_FIXTURE)
+        ).finding_category
+        is FindingCategory.FIXTURE_LAUNDERING
     )
 
 
 def laundered_indirect_is_rejected() -> bool:
     return (
-        _verdict("REJECT", "laundered indirect").finding_category
-        == "laundered indirect"
+        audit_case_verdict(
+            _audit_case(literal_origin=LiteralOrigin.LAUNDERED_INDIRECT)
+        ).finding_category
+        is FindingCategory.LAUNDERED_INDIRECT
     )
 
 
 def prose_coupling_is_rejected() -> bool:
-    return _verdict("REJECT", "prose-coupling").finding_category == "prose-coupling"
+    return (
+        audit_case_verdict(
+            _audit_case(coupling=CouplingEvidence.PROSE)
+        ).finding_category
+        is FindingCategory.PROSE_COUPLING
+    )
 
 
-def audit_verdict_for_test_owned_declaration() -> AuditVerdict:
+def test_owned_declaration_is_rejected() -> bool:
     declarations = _declarations_for_fixture("test_owned_declaration.py")
     if any(
         declaration.name == "mapping_runs" and declaration.kind == "variable"
         for declaration in declarations
     ):
-        return AuditVerdict(status="REJECT", finding_category="test-owned declaration")
-    return AuditVerdict(status="APPROVED", finding_category="")
-
-
-def test_owned_declaration_is_rejected() -> bool:
-    return audit_verdict_for_test_owned_declaration() == AuditVerdict(
-        status="REJECT", finding_category="test-owned declaration"
-    )
+        return (
+            audit_case_verdict(_audit_case(declarations=True)).finding_category
+            is FindingCategory.TEST_OWNED_DECLARATION
+        )
+    return False
 
 
 def positive_pattern_is_reported() -> bool:
     return (
-        _verdict("APPROVED", "positive pattern").finding_category == "positive pattern"
+        audit_case_verdict(_audit_case(positive_pattern=True)).finding_category
+        is FindingCategory.POSITIVE_PATTERN
     )
 
 
@@ -165,8 +207,27 @@ def _has_variable(declarations: list[Declaration], name: str) -> bool:
     )
 
 
-def _verdict(status: str, finding_category: str) -> AuditVerdict:
-    return AuditVerdict(status=status, finding_category=finding_category)
+def _audit_case(
+    *,
+    source_exposes_assertion: bool = True,
+    declarations: bool = False,
+    coupling: CouplingEvidence = CouplingEvidence.DIRECT,
+    literal_origin: LiteralOrigin = LiteralOrigin.ALLOWLIST_OR_SOURCED,
+    mutation_named: bool = True,
+    aligned: bool = True,
+    coverage_path: str = audit_case_verdict.__qualname__,
+    positive_pattern: bool = False,
+) -> AuditCase:
+    return AuditCase(
+        source_exposes_assertion=source_exposes_assertion,
+        declarations=declarations,
+        coupling=coupling,
+        literal_origin=literal_origin,
+        mutation_named=mutation_named,
+        aligned=aligned,
+        coverage_path=coverage_path,
+        positive_pattern=positive_pattern,
+    )
 
 
 def _scanner() -> DeclarationScanner:
