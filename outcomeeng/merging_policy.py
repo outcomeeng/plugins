@@ -15,8 +15,8 @@ FIELD_KIND = "kind"
 FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
 FIELD_ROWS = "rows"
-FIELD_SKIP_CAUSE = "skip_cause"
 FIELD_STATE = "state"
+FIELD_STATE_CATEGORY = "state_category"
 FIELD_STATUS = "status"
 FIELD_VERDICT = "verdict"
 
@@ -116,14 +116,15 @@ class ReviewCheckAction(StrEnum):
     WAIT_FOR_REVIEW = "WAIT_FOR_REVIEW"
 
 
-class ReviewCheckSkipCause(StrEnum):
-    """Observed causes for a skipped current-head review-kind check."""
+class ReviewCheckStateCategory(StrEnum):
+    """Current-head review-kind check state categories."""
 
-    BRANCH_FILTER = "branch-filter"
-    MANUAL_SKIP = "manual-skip"
-    PATH_FILTER = "path-filter"
-    SELF_MODIFYING_WORKFLOW = "self-modifying-workflow"
-    UNKNOWN = "unknown"
+    MISSING = "missing"
+    NON_TERMINAL = "non_terminal"
+    SKIPPED_NON_EXCEPTION = "skipped_non_exception"
+    SKIPPED_SELF_MODIFYING_WORKFLOW = "skipped_self_modifying_workflow"
+    TERMINAL_FAILURE = "terminal_failure"
+    TERMINAL_GREEN = "terminal_green"
 
 
 class AuditorOverall(StrEnum):
@@ -325,6 +326,8 @@ def decide_auditor_verdict(verdict: Mapping[str, Any]) -> AuditorVerdictDecision
 
 def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
     """Decide how merge readiness handles the current-head review-kind check."""
+    if state_category_decision := _decide_review_check_state_category(check):
+        return state_category_decision
     required_check = classify_required_check(check)
     if required_check.classification in {
         RequiredCheckClassification.ABSENT,
@@ -348,8 +351,39 @@ def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
     )
 
 
+def _decide_review_check_state_category(
+    check: Mapping[str, object],
+) -> ReviewCheckDecision | None:
+    state_category = check.get(FIELD_STATE_CATEGORY)
+    if state_category in {
+        ReviewCheckStateCategory.MISSING,
+        ReviewCheckStateCategory.NON_TERMINAL,
+    }:
+        return ReviewCheckDecision(required_action=ReviewCheckAction.WAIT_FOR_REVIEW)
+    if state_category == ReviewCheckStateCategory.TERMINAL_GREEN:
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
+        )
+    if state_category == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW:
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
+        )
+    if state_category == ReviewCheckStateCategory.SKIPPED_NON_EXCEPTION:
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_SKIPPED,
+        )
+    if state_category == ReviewCheckStateCategory.TERMINAL_FAILURE:
+        return ReviewCheckDecision(
+            required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
+        )
+    return None
+
+
 def _review_check_skipped_by_design(check: Mapping[str, object]) -> bool:
-    return check.get(FIELD_SKIP_CAUSE) == ReviewCheckSkipCause.SELF_MODIFYING_WORKFLOW
+    return (
+        check.get(FIELD_STATE_CATEGORY)
+        == ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
+    )
 
 
 def _classify_check_run(

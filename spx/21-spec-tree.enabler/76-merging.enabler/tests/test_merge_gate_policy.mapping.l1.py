@@ -19,8 +19,8 @@ from outcomeeng.merging_policy import (
     FIELD_OVERALL,
     FIELD_PRESENT,
     FIELD_ROWS,
-    FIELD_SKIP_CAUSE,
     FIELD_STATE,
+    FIELD_STATE_CATEGORY,
     FIELD_STATUS,
     FIELD_VERDICT,
     STATUS_CONTEXT_NON_TERMINAL_STATES,
@@ -39,7 +39,7 @@ from outcomeeng.merging_policy import (
     RequiredCheckClassification,
     RequiredCheckKind,
     ReviewCheckAction,
-    ReviewCheckSkipCause,
+    ReviewCheckStateCategory,
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
@@ -177,7 +177,7 @@ def test_non_design_skipped_review_check_maps_to_merge_blocked() -> None:
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
-            FIELD_SKIP_CAUSE: ReviewCheckSkipCause.PATH_FILTER,
+            FIELD_STATE_CATEGORY: ReviewCheckStateCategory.SKIPPED_NON_EXCEPTION,
         }
     )
 
@@ -193,11 +193,24 @@ def test_self_modifying_skipped_review_check_maps_to_mention_review() -> None:
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
-            FIELD_SKIP_CAUSE: ReviewCheckSkipCause.SELF_MODIFYING_WORKFLOW,
+            FIELD_STATE_CATEGORY: (
+                ReviewCheckStateCategory.SKIPPED_SELF_MODIFYING_WORKFLOW
+            ),
         }
     )
 
     assert decision.required_action is ReviewCheckAction.MENTION_REVIEW_NEEDED
+
+
+def test_review_check_missing_state_category_maps_to_wait_for_review() -> None:
+    decision = decide_review_check(
+        {
+            FIELD_KIND: RequiredCheckKind.CHECK_RUN,
+            FIELD_STATE_CATEGORY: ReviewCheckStateCategory.MISSING,
+        }
+    )
+
+    assert decision.required_action is ReviewCheckAction.WAIT_FOR_REVIEW
 
 
 @pytest.mark.parametrize("state", sorted(STATUS_CONTEXT_SUCCESS_STATES))
