@@ -386,6 +386,15 @@ def _completed_event(
 def _scope_coverage_error(
     *, metadata: dict[str, Any], prefix: list[dict[str, object]]
 ) -> str | None:
+    expected = _expected_scope_units(metadata)
+    if isinstance(expected, str):
+        return expected
+    advanced = _advanced_scope_units(prefix)
+
+    return _scope_unit_delta_message(expected=expected, advanced=advanced)
+
+
+def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
     scope = metadata.get(jp.RUN_STATE_SCOPE)
     if not isinstance(scope, dict):
         return "review run metadata missing scope"
@@ -395,7 +404,10 @@ def _scope_coverage_error(
     ):
         return "review run metadata scope.changedFiles must be non-empty strings"
 
-    expected = set(changed_files)
+    return set(changed_files)
+
+
+def _advanced_scope_units(prefix: list[dict[str, object]]) -> set[str]:
     advanced: set[str] = set()
     for event in prefix:
         if event.get("type") != jp.SCOPE_ADVANCED:
@@ -405,19 +417,20 @@ def _scope_coverage_error(
             unit = data.get("unit")
             if isinstance(unit, str) and unit:
                 advanced.add(unit)
+    return advanced
 
+
+def _scope_unit_delta_message(*, expected: set[str], advanced: set[str]) -> str | None:
     missing = sorted(expected - advanced)
     unexpected = sorted(advanced - expected)
-    if missing or unexpected:
-        parts: list[str] = []
-        if missing:
-            parts.append(f"missing scope-advanced events for: {', '.join(missing)}")
-        if unexpected:
-            parts.append(
-                f"scope-advanced events outside changed files: {', '.join(unexpected)}"
-            )
-        return "; ".join(parts)
-    return None
+    parts: list[str] = []
+    if missing:
+        parts.append(f"missing scope-advanced events for: {', '.join(missing)}")
+    if unexpected:
+        parts.append(
+            f"scope-advanced events outside changed files: {', '.join(unexpected)}"
+        )
+    return "; ".join(parts) if parts else None
 
 
 def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
