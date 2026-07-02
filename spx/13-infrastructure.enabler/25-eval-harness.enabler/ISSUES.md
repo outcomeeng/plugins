@@ -51,18 +51,9 @@ Resolved 2026-06-16: `.github/workflows/check.yml` now runs the validation packa
 `.github/workflows/spec-tree-evals.yml` commits the appended `history.jsonl`
 rows back to `main` using the org-level PAT secret `OUTCOMEENG_EVAL_STORE`
 rather than the built-in `GITHUB_TOKEN`, so the push keeps working once `main`
-is branch-protected (the built-in token cannot push to a protected branch).
-If the secret is not visible to this repo, the commit-back step skips with a
-warning and the eval gate still runs — so the gate stays unblocked, but no
-canonical `history.jsonl` baseline is recorded.
-
-Action required for commit-back to work on a protected `main`:
-
-- Ensure the org secret `OUTCOMEENG_EVAL_STORE` includes `outcomeeng/plugins`
-  in its repository-visibility scope (org → Secrets and variables → Actions →
-  the secret → Repository access).
-- When enabling branch protection on `main`, add the token's account to the
-  protection bypass-allowances so its push is not rejected.
+is branch-protected (the built-in token cannot push to a protected branch). The
+secret is visible to `outcomeeng/plugins`, and the token account can bypass
+`main` branch protection for commit-back pushes.
 
 ## Independent uv project for `outcomeeng_evals`
 

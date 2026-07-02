@@ -1,4 +1,4 @@
-# Eval Harness: Plan — selective eval CI workflow (active; follow-ups remain)
+# Eval Harness: Plan — prompt-caching implementation (gated)
 
 `.github/workflows/spec-tree-evals.yml` is authored and lint-clean. It
 plans each suite before running it: PRs use changed paths plus `owned_paths`
@@ -15,14 +15,11 @@ deterministic mapping tests at
 The CI eval workflow now covers the authored PR management,
 PR opening, review-changes, and TypeScript test-ownership evals directly.
 
-Remaining before this plan is resolved:
+The `OUTCOMEENG_EVAL_STORE` org secret is visible to `outcomeeng/plugins`, and
+the token account can bypass `main` branch protection for commit-back pushes.
 
-1. **Provision the commit-back secret** — see this node's `ISSUES.md`: confirm
-   the org secret `OUTCOMEENG_EVAL_STORE` is visible to `outcomeeng/plugins`
-   and bypasses branch protection once `main` is protected.
-
-Deferred follow-ups tracked in `ISSUES.md`: a CLI `--model` pin and
-cross-suite parallelism.
+Deferred follow-ups tracked in `ISSUES.md` include optional per-eval model
+pinning and cross-suite parallelism.
 
 ## Prompt-caching implementation (decided; gated on CLI regression #34629)
 
