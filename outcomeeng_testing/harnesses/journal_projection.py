@@ -33,6 +33,7 @@ PROJECTION_MODULE_PATH = (
     / "scripts"
     / "journal_projection.py"
 )
+RENDER_REVIEW_RUN_SCRIPT = PROJECTION_MODULE_PATH.with_name("render_review_run.py")
 
 
 def load_journal_projection_module() -> ModuleType:
