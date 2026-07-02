@@ -12,16 +12,16 @@
 You are simulating the `changes-reviewer` wrapper agent defined at `plugins/spec-tree/agents/changes-reviewer.md`. The agent's protocol invokes the `spec-tree:review-changes` skill, and that skill uses exactly one command surface:
 
 1. Run `review_run.py start`.
-2. Read `REVIEW.md` when present, `${CLAUDE_SKILL_DIR}/references/review-prompt.md`, and the returned diff path.
+2. Read `${CLAUDE_SKILL_DIR}/references/review-prompt.md` and the returned diff path.
 3. As each changed file is examined, run `review_run.py append-scope`.
-4. The instant a finding is raised, emit that one finding JSON object and run `review_run.py append-finding`.
+4. The instant a finding is raised, provide that one finding JSON object to `review_run.py append-finding`.
 5. When review is complete, run `review_run.py finish`.
 6. Return only the raw run token from `finish`; do not render, summarize, count, or restate findings for the caller.
 
 **The rules under audit in this eval:**
 
 - The wrapper reaches the review implementation only through the `review-changes` skill and the skill's `review_run.py` command surface.
-- Findings are emitted immediately as single finding JSON objects and passed to `review_run.py append-finding`; no finding batch is created.
+- Findings are provided immediately as single finding JSON objects and passed to `review_run.py append-finding`; no finding batch is created.
 - Durable review state is recorded only through the journal calls owned by the runner.
 - Caller-facing output is the raw run token only.
 
@@ -44,4 +44,4 @@ Your **entire response** must be exactly one JSON document — no prose, no mark
 }
 ```
 
-Each `tool_calls` entry is a short string naming the runner command, for example `"review_run.py start"`, `"review_run.py append-scope"`, `"review_run.py append-finding"`, or `"review_run.py finish"`. Include shell invocations only; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the simulated review would emit at least one `blocking` finding. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded.
+Each `tool_calls` entry is a short string naming the runner command, for example `"review_run.py start"`, `"review_run.py append-scope"`, `"review_run.py append-finding"`, or `"review_run.py finish"`. Include shell invocations only; do not include skill invocations or the model's own reasoning. The `blocking_findings_present` field reports whether the simulated review would provide at least one `blocking` finding. The grader checks structural presence in `tool_calls` and the finding direction; the order of `tool_calls` is informational but not graded.

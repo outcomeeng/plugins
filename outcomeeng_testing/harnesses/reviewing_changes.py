@@ -76,7 +76,6 @@ FIXTURE_ADR_RULE_CITATION = (
     "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
 )
 FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:critical-rules"
-FIXTURE_REVIEW_POLICY_RULE_CITATION = "REVIEW.md:finding-shape"
 FIXTURE_SKILL_RULE_CITATION = (
     "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
 )

@@ -155,7 +155,7 @@ _PLUGIN_SKILL_RE = re.compile(
     r"SKILL\.md:(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
 _ROOT_RULE_RE = re.compile(
-    r"(?P<path>(?:AGENTS|CLAUDE|REVIEW)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
+    r"(?P<path>(?:AGENTS|CLAUDE)\.md):(?P<slug>[A-Za-z0-9][A-Za-z0-9_-]*)"
 )
 _FINDING_ID_RE = re.compile(r"F-\d{3}", re.ASCII)
 _SECTION_TITLES = {
@@ -329,8 +329,7 @@ def _validate_rule_citation(rule: str) -> None:
         "finding 'rule' must be a verifiable citation such as "
         "'spx/<path>.md:ALWAYS:1', "
         "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
-        "'AGENTS.md:<rule-slug>', 'CLAUDE.md:<rule-slug>', "
-        "or 'REVIEW.md:<rule-slug>'; "
+        "or 'AGENTS.md:<rule-slug>'/'CLAUDE.md:<rule-slug>'; "
         f"got {rule!r}"
     )
 

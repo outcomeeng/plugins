@@ -378,6 +378,43 @@ class TestReviewRunnerBoundary:
             "overall": "approved",
         }
 
+    def test_runner_rejects_finish_before_scope_coverage(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = _init_repo_with_branch(repo)
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir()
+        journal_path = tmp_path / "journal.json"
+        write_fake_spx(bin_dir, journal_path)
+
+        env = _make_env(cwd=repo)
+        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env['PATH']}"
+        env["SPX_FAKE_JOURNAL_PATH"] = str(journal_path)
+        env["SPX_FAKE_NAMESPACE_KEYS"] = json.dumps(review_run_journal_env_keys())
+
+        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        assert started.returncode == 0, started.stderr
+        start_payload = json.loads(started.stdout)
+
+        finished = run_script(
+            REVIEW_RUN_SCRIPT,
+            "finish",
+            "--state",
+            start_payload["statePath"],
+            env=env,
+            cwd=repo,
+        )
+        assert finished.returncode == 1
+        assert "missing scope-advanced events for: README.md" in finished.stderr
+
+        journal = json.loads(journal_path.read_text(encoding="utf-8"))
+        event_types = [event["type"] for event in journal["events"]]
+        assert event_types == ["verification.scope.entered"]
+        assert journal["sealed"] is False
+
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
     """Manually set ``refs/remotes/origin/HEAD`` without needing a real remote.
