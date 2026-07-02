@@ -77,15 +77,14 @@ impl CommandRunner for RecordingRunner {
 <tempdir_pattern>
 
 ```rust
+use product_testing::fixtures::configs::fast_mode_config;
+use product_testing::harnesses::filesystem::with_temp_config;
+
 #[test]
 fn loads_config_from_temp_dir() {
-    let temp = tempfile::tempdir().unwrap();
-    let path = temp.path().join("app.toml");
-    std::fs::write(&path, "mode = \"fast\"\n").unwrap();
-
-    let config = load_config(&path).unwrap();
-
-    assert_eq!(config.mode, Mode::Fast);
+    with_temp_config(fast_mode_config(), |config_path, expected| {
+        assert_eq!(load_config(config_path).unwrap().mode, expected.mode);
+    });
 }
 ```
 
@@ -97,8 +96,7 @@ fn loads_config_from_temp_dir() {
 proptest! {
     #[test]
     fn canonical_key_roundtrips(input in "[a-z0-9_-]{1,32}") {
-        let parsed = CanonicalKey::parse(&input).unwrap();
-        prop_assert_eq!(parsed.as_str(), input);
+        prop_assert_eq!(CanonicalKey::parse(&input).unwrap().as_str(), input);
     }
 }
 ```

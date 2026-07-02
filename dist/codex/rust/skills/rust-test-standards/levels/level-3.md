@@ -43,15 +43,12 @@ Remote API contract:
 
 ```rust
 #[tokio::test]
-#[ignore = "requires REGISTRY_SANDBOX_TOKEN"]
 async fn package_can_be_published_and_fetched() {
-    let client = registry_client_from_env().unwrap();
-    let package_name = unique_package_name("l3");
+    product_testing::harnesses::registry::with_sandbox_package(async |client, package_name| {
+        client.publish_fixture(package_name).await.unwrap();
 
-    client.publish_fixture(&package_name).await.unwrap();
-    let fetched = client.fetch_package(&package_name).await.unwrap();
-
-    assert_eq!(fetched.name, package_name);
+        assert_eq!(client.fetch_package(package_name).await.unwrap().name, package_name);
+    }).await;
 }
 ```
 
@@ -59,18 +56,16 @@ CLI against a real sandbox:
 
 ```rust
 #[test]
-#[ignore = "requires sandbox credentials"]
 fn sync_command_uploads_to_remote_sandbox() {
-    let temp = tempfile::tempdir().unwrap();
-    write_fixture_project(temp.path());
-
-    assert_cmd::Command::cargo_bin("syncer")
-        .unwrap()
-        .current_dir(temp.path())
-        .args(["sync", "--target", "sandbox"])
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("uploaded"));
+    product_testing::harnesses::sandbox::with_sync_project(|project| {
+        assert_cmd::Command::cargo_bin("syncer")
+            .unwrap()
+            .current_dir(project.root())
+            .args(project.sync_args())
+            .assert()
+            .success()
+            .stdout(predicates::str::contains(project.success_output()));
+    });
 }
 ```
 

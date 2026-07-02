@@ -31,18 +31,21 @@ Integration evidence belongs in `spx/.../tests/{subject}.{evidence}.l2.rs`.
 <cli_binary_pattern>
 
 ```rust
+use product_testing::fixtures::projects::empty_project;
+use product_testing::harnesses::commands::with_temp_project;
+
 #[test]
 fn init_command_writes_project_files() {
-    let temp = tempfile::tempdir().unwrap();
+    with_temp_project(empty_project(), |project| {
+        assert_cmd::Command::cargo_bin("herder")
+            .unwrap()
+            .current_dir(project.root())
+            .args(project.init_args())
+            .assert()
+            .success();
 
-    assert_cmd::Command::cargo_bin("herder")
-        .unwrap()
-        .current_dir(temp.path())
-        .args(["init", "demo"])
-        .assert()
-        .success();
-
-    assert!(temp.path().join("demo/Cargo.toml").exists());
+        assert!(project.expected_manifest().exists());
+    });
 }
 ```
 
@@ -51,15 +54,19 @@ fn init_command_writes_project_files() {
 <async_adapter_pattern>
 
 ```rust
+use product_testing::fixtures::users::valid_user;
+use product_testing::harnesses::database::with_test_database;
+
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    let db = test_database().await;
-    let repo = UserRepository::new(db.pool());
+    with_test_database(valid_user(), async |db, user| {
+        UserRepository::new(db.pool()).save(user).await.unwrap();
 
-    repo.save(&user_fixture()).await.unwrap();
-    let loaded = repo.find(UserId::new(1)).await.unwrap();
-
-    assert_eq!(loaded.email(), "user@example.com");
+        assert_eq!(
+            UserRepository::new(db.pool()).find(user.id()).await.unwrap().email(),
+            user.email(),
+        );
+    }).await;
 }
 ```
 
@@ -70,12 +77,14 @@ async fn repository_persists_and_loads_user() {
 ```rust
 #[tokio::test]
 async fn worker_consumes_real_queue_messages() {
-    let harness = queue_harness().await;
-    harness.push(job_fixture()).await;
+    product_testing::harnesses::queue::with_queue_harness(job_fixture(), async |queue| {
+        queue.push_fixture().await;
 
-    let result = run_worker_once(&harness.config).await.unwrap();
-
-    assert_eq!(result.processed, 1);
+        assert_eq!(
+            run_worker_once(queue.config()).await.unwrap().processed,
+            queue.expected_processed_count(),
+        );
+    }).await;
 }
 ```
 

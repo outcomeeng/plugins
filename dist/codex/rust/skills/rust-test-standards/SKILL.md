@@ -159,6 +159,8 @@ Snapshot tests are valid only when the textual or structured output surface is i
 
 **THERE ARE NO VALID TEST-OWNED CONSTANTS.** A named constant in a test file that duplicates a value the production module should own means the production code needs refactoring.
 
+Executed Rust test files are typed assertion files. They do not own `const`, `static`, `let`, or helper declarations for test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, or source-owned singleton shapes. Put those choices in the `product-testing` workspace crate, source contracts, inert whole-payload fixtures, or justified eval case data.
+
 **1. Source-owned values**
 
 ALWAYS import command names, rule names, matcher tokens, status values, domain identifiers, and public constants from the owning production module. If the module does not export them yet, refactor it to export them before writing the test.
@@ -169,7 +171,7 @@ const PASS_STATUS: &str = "pass";
 
 // ✅ preferred: import from the production module
 use product::audit::GateStatus;
-let status = GateStatus::Pass;
+assert_eq!(GateStatus::Pass.as_str(), product::audit::PASS_STATUS_TOKEN);
 ```
 
 **2. Generator-produced values**
@@ -266,50 +268,35 @@ Pure function example:
 ```rust
 #[test]
 fn rejects_empty_url_sets() {
-    let result = validate_config(ConfigInput {
+    assert!(validate_config(ConfigInput {
         url_sets: BTreeMap::new(),
-    });
-
-    assert!(result.is_err());
+    }).is_err());
 }
 ```
 
 Dependency seam example:
 
 ```rust
-trait CommandRunner {
-    fn run(&self, program: &str, args: &[&str]) -> Result<CommandOutput, CommandError>;
-}
-
-struct SuccessRunner;
-
-impl CommandRunner for SuccessRunner {
-    fn run(&self, _: &str, _: &[&str]) -> Result<CommandOutput, CommandError> {
-        Ok(CommandOutput::success("done"))
-    }
-}
+use product_testing::harnesses::commands::success_runner;
+use product_testing::generators::repos::source_checkout_path;
 
 #[test]
 fn command_builder_reports_success() {
-    let runner = SuccessRunner;
-    let result = sync_repo(Path::new("/src"), "origin", &runner).unwrap();
-
-    assert!(result.success);
+    assert!(sync_repo(&source_checkout_path(), "origin", &success_runner()).unwrap().success);
 }
 ```
 
 Tempdir example:
 
 ```rust
+use product_testing::fixtures::configs::valid_site_config;
+use product_testing::harnesses::filesystem::with_temp_config;
+
 #[test]
 fn loads_yaml_from_temp_dir() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("config.yaml");
-    std::fs::write(&path, "site_dir: ./site\n").unwrap();
-
-    let config = load_config(&path).unwrap();
-
-    assert_eq!(config.site_dir, PathBuf::from("./site"));
+    with_temp_config(valid_site_config(), |config_path, expected| {
+        assert_eq!(load_config(config_path).unwrap().site_dir, expected.site_dir);
+    });
 }
 ```
 
@@ -322,10 +309,7 @@ Use `proptest` for universal invariants:
 proptest! {
     #[test]
     fn config_roundtrips(input in valid_config_strategy()) {
-        let encoded = encode_config(&input).unwrap();
-        let decoded = decode_config(&encoded).unwrap();
-
-        prop_assert_eq!(decoded, input);
+        prop_assert_eq!(decode_config(&encode_config(&input).unwrap()).unwrap(), input);
     }
 }
 ```
@@ -337,10 +321,10 @@ Use `trybuild` for compile-time guarantees:
 ```rust
 #[test]
 fn ui_contracts_hold() {
-    let cases = trybuild::TestCases::new();
-
-    cases.pass("tests/ui/valid_builder.rs");
-    cases.compile_fail("tests/ui/missing_required_field.rs");
+    product_testing::harnesses::trybuild::assert_ui_contracts(
+        product_testing::fixtures::ui::valid_builders(),
+        product_testing::fixtures::ui::invalid_builders(),
+    );
 }
 ```
 
@@ -352,33 +336,40 @@ Use Level 2 when governed behavior needs a real binary, runtime, adapter, or loc
 CLI binary example:
 
 ```rust
+use product_testing::fixtures::projects::empty_project;
+use product_testing::harnesses::commands::with_temp_project;
+
 #[test]
 fn init_command_writes_project_files() {
-    let temp = tempfile::tempdir().unwrap();
+    with_temp_project(empty_project(), |project| {
+        assert_cmd::Command::cargo_bin("herder")
+            .unwrap()
+            .current_dir(project.root())
+            .args(project.init_args())
+            .assert()
+            .success();
 
-    assert_cmd::Command::cargo_bin("herder")
-        .unwrap()
-        .current_dir(temp.path())
-        .args(["init", "demo"])
-        .assert()
-        .success();
-
-    assert!(temp.path().join("demo/Cargo.toml").exists());
+        assert!(project.expected_manifest().exists());
+    });
 }
 ```
 
 Async L2 example:
 
 ```rust
+use product_testing::fixtures::users::valid_user;
+use product_testing::harnesses::database::with_test_database;
+
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    let db = test_database().await;
-    let repo = UserRepository::new(db.pool());
+    with_test_database(async |db| {
+        UserRepository::new(db.pool()).save(&valid_user()).await.unwrap();
 
-    repo.save(&user_fixture()).await.unwrap();
-    let loaded = repo.find(UserId::new(1)).await.unwrap();
-
-    assert_eq!(loaded.email(), "user@example.com");
+        assert_eq!(
+            UserRepository::new(db.pool()).find(valid_user().id()).await.unwrap().email(),
+            valid_user().email(),
+        );
+    }).await;
 }
 ```
 
@@ -391,13 +382,10 @@ Remote API example:
 
 ```rust
 #[tokio::test]
-#[ignore = "requires credentialed sandbox"]
 async fn published_package_is_fetchable_from_registry() {
-    let client = registry_client_from_env().unwrap();
-
-    let package = client.fetch_package("example-package").await.unwrap();
-
-    assert_eq!(package.name, "example-package");
+    product_testing::harnesses::registry::with_registry_client(async |client, package_name| {
+        assert_eq!(client.fetch_package(package_name).await.unwrap().name, package_name);
+    }).await;
 }
 ```
 
@@ -405,15 +393,14 @@ Browser workflow example:
 
 ```rust
 #[tokio::test]
-#[ignore = "requires browser service and deployed app"]
 async fn login_flow_reaches_dashboard() {
-    let browser = browser_session_from_env().await.unwrap();
+    product_testing::harnesses::browser::with_login_flow(async |browser, flow| {
+        browser.goto(flow.login_path()).await.unwrap();
+        browser.fill(flow.email_selector(), flow.email()).await.unwrap();
+        browser.click(flow.submit_selector()).await.unwrap();
 
-    browser.goto("/login").await.unwrap();
-    browser.fill("#email", "user@example.com").await.unwrap();
-    browser.click("button[type=submit]").await.unwrap();
-
-    assert!(browser.text("main").await.unwrap().contains("Dashboard"));
+        assert!(browser.text(flow.main_selector()).await.unwrap().contains(flow.dashboard_text()));
+    }).await;
 }
 ```
 

@@ -80,6 +80,8 @@ Where the *values* the cases use live:
 | Whole-payload real-world sample                              | An inert fixture file under `product_testing/fixtures/`, read by path         |
 | One-off descriptive text (test titles, diagnostic messages)  | Inline in the test function body                                              |
 
+Executed Python test files are typed assertion files. They do not own variable or constant declarations for test data, expected outputs, runner settings, property-test configuration, setup policy, reusable cases, fixture paths, generator choices, harness handles, diagnostics, or source-owned singleton shapes. Put those choices in `product_testing/harnesses/`, `product_testing/generators/`, inert whole-payload fixtures, source contracts, or justified eval case data.
+
 **Container keys are vocabulary.** In dict literals, JSON-encoded strings, set or tuple members, and f-string templates, the *keys* and *members* are vocabulary — a hand-written key is a hand-picked case for the parser or consumer. Construct containers via `{LABEL: synthetic_value, ...}` with `LABEL` imported from the owning production module, then serialize with `json.dumps` if a string is needed.
 
 **Artifacts are downstream of Python.** A YAML, HCL, bash, JSON schema, or IaC template file is not a legitimate source-of-truth. A Python module either renders the artifact or consumes it; that module owns the artifact's vocabulary. A test that hand-copies an artifact field name has invented the case — the production-owning module is the source, even if it has to be created first.
@@ -121,7 +123,7 @@ Allowed JSON construction with imported keys:
 ```python
 from product.audit import VERDICT_STATUS_FIELD
 
-payload = json.dumps({VERDICT_STATUS_FIELD: status})
+assert parse_payload(json.dumps({VERDICT_STATUS_FIELD: status})).status == status
 ```
 
 </test_data_policy>
@@ -242,6 +244,7 @@ Reject or rewrite these patterns:
 - `INVALID_*_INPUTS` / `INVALID_*_CASES` tuples, or any module- or class-scope bag of invalid values — a hand-picked set standing in for the invalid domain. Remedy by domain: an open or infinite invalid space (arbitrary strings, identifiers, timestamps, keys, generated names) takes a Hypothesis strategy generating values *outside* the valid predicate; a closed, source-owned invalid set (enum variants, a defined protocol set, registry members) imports the source enum or registry rather than hand-copying members
 - Source-owned values copied into local constants
 - Test-file-local constants for values the production module owns
+- Variable or constant declarations in executed test files for data, expected outputs, runner settings, setup policy, fixture paths, generator choices, harness handles, diagnostics, or source-owned shapes
 - Hand-written keys in container literals (dict keys, JSON object keys, set or tuple members, f-string templates) — keys are vocabulary, and a hand-written key is an invented case for the parser or consumer
 - Hand-copied artifact field names from YAML, HCL, bash, JSON schema, or IaC templates as substitutes for imports from the Python module that should render or consume the artifact
 - Test-runner tuning values (timeouts, retries, polling intervals) declared at test scope when the harness that owns the resource should own the value

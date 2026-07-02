@@ -77,7 +77,7 @@ Use these ownership rules before writing the test:
 
 Do not create variables, constants, or local helper functions in the test file for runner settings, boundary bags, expected outputs, fixture paths, generated domains, reusable setup, diagnostics, or source-owned singleton shapes. Naming a value or wrapping it in a helper does not make it evidence. A renamed test-local declaration is still owned by the wrong layer.
 
-Property-based tests need reproducible failures. Use a harness that owns seed selection, `numRuns` or equivalent run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
+Property-based tests need reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. The failure output must include the seed and replay path so the failing generated case can be reproduced. Do not put seeds or run counts in the test file; amortize those choices in the harness.
 
 ## The evidence trap
 

@@ -272,9 +272,7 @@ Use the source-owned constructor directly:
 ```typescript
 import { createAbsentConfigReadResult, isAbsentConfigReadResult } from "@/config/read-result";
 
-const result = createAbsentConfigReadResult();
-
-expect(isAbsentConfigReadResult(result)).toBe(true);
+expect(isAbsentConfigReadResult(createAbsentConfigReadResult())).toBe(true);
 ```
 
 Valid direct imports include:
@@ -434,14 +432,12 @@ Playwright's `{ request }` fixture uses its own `APIRequestContext` that does NO
 ```typescript
 // WRONG: request fixture -- no cookie inheritance
 test("API returns flag-gated payload", async ({ request }) => {
-  const response = await request.get("/api/data"); // cookie absent
-  expect(await response.json()).toContain(FLAGGED_ITEM); // fails
+  await expect(request.get("/api/data").then((response) => response.json())).resolves.toContain(FLAGGED_ITEM); // fails
 });
 
 // RIGHT: context.request -- shares cookies with browser context
 test("API returns flag-gated payload", async ({ context }) => {
-  const response = await context.request.get("/api/data"); // cookie present
-  expect(await response.json()).toContain(FLAGGED_ITEM);
+  await expect(context.request.get("/api/data").then((response) => response.json())).resolves.toContain(FLAGGED_ITEM);
 });
 ```
 

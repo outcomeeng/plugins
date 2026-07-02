@@ -108,6 +108,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - Given a test file importing literals from a static-literal fixture file, when audited, then the verdict is REJECT with finding category "fixture laundering" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file importing literals from a test-infrastructure module that exists only to re-export hardcoded values, when audited, then the verdict is REJECT with finding category "laundered indirect" ([test](tests/test_test_auditing.scenario.l1.py))
 - Given a test file that reads an authored prose or documentation body (a skill body, a spec, a prompt) and asserts on its content, when audited by `/audit-tests`, then the verdict is REJECT with finding category "prose-coupling" ([test](tests/test_test_auditing.scenario.l1.py))
+- Given an executed test file declaring a variable or constant that owns test data, expected output, runner settings, property-test configuration, setup policy, reusable cases, fixtures, generators, or harness behavior, when audited by `/audit-tests`, then the verdict is REJECT with finding category "test-owned declaration" ([audit])
 - Given production defines and exports a typed constant used internally and the test imports the same symbol, when audited, then the literal rule passes and the verdict reports the positive pattern as the remediation reference ([test](tests/test_test_auditing.scenario.l1.py))
 
 ### Properties
@@ -123,7 +124,7 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 - ALWAYS: `/audit-tests` is reached only by dispatching the `test-evidence-auditor` agent; the main conversation does not invoke `/audit-tests` in place — the agent's isolated context produces the verdict, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: check testability before coupling — a test cannot evidence an assertion the source code cannot expose ([review])
 - ALWAYS: target findings against the source file when testability fails — the test cannot remediate untestable source ([review])
-- ALWAYS: check what the test imports from the codebase as the first audit phase after testability passes — coupling is prerequisite to all other evidence analysis ([review])
+- ALWAYS: screen executed test files for test-owned declarations before the coupling check — coupling remains prerequisite to falsifiability, alignment, and coverage analysis ([review])
 - ALWAYS: establish coverage by reading whether the test drives execution into the assertion-relevant code path — the main agent and CI own coverage measurement, per `spx/14-verification.pdr.md` ([review])
 - ALWAYS: provide falsifiability analysis by naming concrete mutations that would break each test — "can this test fail?" is not a judgment call ([review])
 - ALWAYS: apply the literal rule at testability, coupling, falsifiability, and rejection — bare literals outside `{-1, 0, 1, 2}` for numbers and `{""}` plus descriptive callsites for strings sever evidence quality regardless of test structure ([review])

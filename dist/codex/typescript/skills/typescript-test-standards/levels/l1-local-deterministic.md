@@ -32,9 +32,7 @@ import { describe, expect, it } from "vitest";
 
 describe("buildArchiveCommand", () => {
   it("maps the checksum option to the command flag", () => {
-    const command = buildArchiveCommand({ checksum: true });
-
-    expect(command).toContain(COMMAND_FLAGS.checksum);
+    expect(buildArchiveCommand({ checksum: true })).toContain(COMMAND_FLAGS.checksum);
   });
 });
 ```
@@ -56,9 +54,7 @@ describe("normalizeSourcePath", () => {
   it("normalizes generated source paths idempotently", () => {
     assertProperty(
       fc.property(arbitrarySourceFilePath(), (path) => {
-        const normalized = normalizeSourcePath(path);
-
-        expect(normalizeSourcePath(normalized)).toBe(normalized);
+        expect(normalizeSourcePath(normalizeSourcePath(path))).toBe(normalizeSourcePath(path));
       }),
     );
   });
@@ -73,35 +69,21 @@ This remains `l1` because the test calls deterministic source logic directly and
 
 ```typescript
 import { writeNormalizedSourceManifest } from "@/manifest";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { createManifestScenario } from "@testing/generators/manifests";
+import { withTempManifestProject } from "@testing/harnesses/manifest";
+import { describe, expect, it } from "vitest";
 
 describe("writeNormalizedSourceManifest", () => {
-  let projectDir: string | undefined;
-
-  afterEach(async () => {
-    if (projectDir) {
-      await rm(projectDir, { force: true, recursive: true });
-    }
-  });
-
   it("writes normalized source paths in a temp product", async () => {
-    projectDir = await mkdtemp(join(tmpdir(), "manifest-"));
-    const manifestPath = join(projectDir, "manifest.json");
-
-    await writeNormalizedSourceManifest({
-      outputPath: manifestPath,
-      sourcePaths: ["./src/index.ts", "src/lib/../lib/runtime.ts"],
+    await withTempManifestProject(createManifestScenario(), async (project) => {
+      await writeNormalizedSourceManifest(project.writeOptions);
+      await expect(project.readManifest()).resolves.toEqual(project.expectedManifest);
     });
-
-    await expect(readFile(manifestPath, "utf8")).resolves.toContain("src/index.ts");
   });
 });
 ```
 
-This remains `l1` because the test uses only local temp-dir state and calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, product binaries, or shared services.
+This remains `l1` because the harness owns local temp-dir lifecycle, the generator owns the manifest case and expected output, and the test calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, product binaries, or shared services.
 
 </temp_dir_example>
 
