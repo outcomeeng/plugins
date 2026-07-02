@@ -97,6 +97,12 @@ Read the spec's Assertions section. For each assertion, extract:
 
 Read each linked test file before coupling. Identify every variable, constant, or local helper function declaration and classify what it owns:
 
+Use the bundled declaration screen to enumerate declarations, then classify ownership by reading the declaration and its evidence role:
+
+```bash
+python3 "${SKILL_DIR}/scripts/declaration_scan.py" <test-file>...
+```
+
 | Owns                                       | Verdict                                   |
 | ------------------------------------------ | ----------------------------------------- |
 | Runner settings, seed policy, retries      | REJECT — test-owned configuration         |
