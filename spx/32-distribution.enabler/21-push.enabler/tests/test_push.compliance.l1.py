@@ -10,17 +10,14 @@ from __future__ import annotations
 
 import pytest
 
-from outcomeeng.distribution.push import REQUIRED_TOOLS, push
-from outcomeeng_testing.harnesses.push import ScriptedUpstreamProbe
-from outcomeeng_testing.harnesses.sync import RecordingRunner, ScriptedToolProbe
-
-ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
-SYNC_INVOCATION: tuple[str, ...] = (
-    "uv",
-    "run",
-    "python",
-    "-m",
-    "outcomeeng.distribution.sync",
+from outcomeeng.distribution.push import REQUIRED_TOOLS, UPSTREAM_REF_COMMAND, push
+from outcomeeng_testing.harnesses.push import (
+    ScriptedUpstreamProbe,
+    TracedRunner,
+    TracedToolProbe,
+    all_required_tools_available,
+    all_tool_probe_invocations,
+    sync_invocation,
 )
 
 
@@ -29,9 +26,10 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
     missing_tool: str,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    runner = RecordingRunner()
-    tool_probe = ScriptedToolProbe(
-        available=ALL_TOOLS_AVAILABLE - {missing_tool},
+    runner = TracedRunner()
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available() - {missing_tool},
+        trace=runner.trace,
     )
     upstream_probe = ScriptedUpstreamProbe(ref="abc123")
 
@@ -50,9 +48,11 @@ def test_missing_required_tool_fails_fast_with_diagnostic(
 
 
 def test_tool_availability_is_checked_before_upstream_or_push() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
 
     push(
         ("origin", "main"),
@@ -62,17 +62,19 @@ def test_tool_availability_is_checked_before_upstream_or_push() -> None:
     )
 
     assert set(tool_probe.queries) >= set(REQUIRED_TOOLS)
-    # Required tools were queried before either the upstream probe or the first
-    # runner call could have observed evidence of an out-of-order invocation.
+    assert runner.trace[: len(REQUIRED_TOOLS)] == list(all_tool_probe_invocations())
     assert upstream_probe.calls == 1
+    assert runner.trace[len(REQUIRED_TOOLS)] == UPSTREAM_REF_COMMAND
     assert runner.calls[0] == ("git", "push", "origin", "main")
 
 
 def test_upstream_probe_runs_before_git_push() -> None:
     """The recording doubles prove the order: upstream first, push second."""
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
 
     push(
         ("origin", "main"),
@@ -84,12 +86,15 @@ def test_upstream_probe_runs_before_git_push() -> None:
     # The probe was called exactly once and that one call happened before any
     # runner invocation — the runner's first recorded call is `git push`.
     assert upstream_probe.calls == 1
+    assert runner.trace[len(REQUIRED_TOOLS)] == UPSTREAM_REF_COMMAND
     assert runner.calls[0][:2] == ("git", "push")
 
 
 def test_sync_not_invoked_when_push_fails() -> None:
-    runner = RecordingRunner(exit_codes=(13,))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
+    runner = TracedRunner(exit_codes=(13,))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
     upstream_probe = ScriptedUpstreamProbe(ref="abc123")
 
     exit_code = push(
@@ -102,4 +107,4 @@ def test_sync_not_invoked_when_push_fails() -> None:
     assert exit_code == 13
     # Only the git push call was recorded — no sync invocation.
     assert runner.calls == [("git", "push", "origin", "main")]
-    assert all(call[:3] != SYNC_INVOCATION[:3] for call in runner.calls)
+    assert all(call[:3] != sync_invocation()[:3] for call in runner.calls)

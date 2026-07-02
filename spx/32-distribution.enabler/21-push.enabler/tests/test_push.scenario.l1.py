@@ -13,24 +13,24 @@ recording doubles in `outcomeeng_testing.harnesses.sync` and
 
 from __future__ import annotations
 
-from outcomeeng.distribution.push import REQUIRED_TOOLS, push
-from outcomeeng_testing.harnesses.push import ScriptedUpstreamProbe
-from outcomeeng_testing.harnesses.sync import RecordingRunner, ScriptedToolProbe
-
-ALL_TOOLS_AVAILABLE = frozenset(REQUIRED_TOOLS)
-SYNC_INVOCATION: tuple[str, ...] = (
-    "uv",
-    "run",
-    "python",
-    "-m",
-    "outcomeeng.distribution.sync",
+from outcomeeng.distribution.push import UPSTREAM_REF_COMMAND, parse_push_args, push
+from outcomeeng_testing.harnesses.push import (
+    ScriptedUpstreamProbe,
+    TracedRunner,
+    TracedToolProbe,
+    all_required_tools_available,
+    all_tool_probe_invocations,
+    force_with_lease_push_args,
+    sync_invocation,
 )
 
 
 def test_tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
 
     exit_code = push(
         ("origin", "main"),
@@ -43,14 +43,22 @@ def test_tracked_branch_captures_upstream_and_invokes_sync_with_ref() -> None:
     assert upstream_probe.calls == 1
     assert runner.calls == [
         ("git", "push", "origin", "main"),
-        (*SYNC_INVOCATION, "abc123"),
+        sync_invocation("abc123"),
+    ]
+    assert runner.trace == [
+        *all_tool_probe_invocations(),
+        UPSTREAM_REF_COMMAND,
+        ("git", "push", "origin", "main"),
+        sync_invocation("abc123"),
     ]
 
 
 def test_untracked_branch_invokes_sync_without_ref() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref=None)
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref=None, trace=runner.trace)
 
     exit_code = push(
         ("origin", "feature"),
@@ -63,14 +71,16 @@ def test_untracked_branch_invokes_sync_without_ref() -> None:
     assert upstream_probe.calls == 1
     assert runner.calls == [
         ("git", "push", "origin", "feature"),
-        SYNC_INVOCATION,
+        sync_invocation(),
     ]
 
 
 def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
-    runner = RecordingRunner(exit_codes=(7,))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    runner = TracedRunner(exit_codes=(7,))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
 
     exit_code = push(
         ("origin", "main"),
@@ -84,9 +94,11 @@ def test_failed_git_push_propagates_exit_code_and_skips_sync() -> None:
 
 
 def test_no_push_args_forwards_bare_git_push() -> None:
-    runner = RecordingRunner(exit_codes=(0, 0))
-    tool_probe = ScriptedToolProbe(available=ALL_TOOLS_AVAILABLE)
-    upstream_probe = ScriptedUpstreamProbe(ref="abc123")
+    runner = TracedRunner(exit_codes=(0, 0))
+    tool_probe = TracedToolProbe(
+        available=all_required_tools_available(), trace=runner.trace
+    )
+    upstream_probe = ScriptedUpstreamProbe(ref="abc123", trace=runner.trace)
 
     exit_code = push(
         (),
@@ -98,5 +110,9 @@ def test_no_push_args_forwards_bare_git_push() -> None:
     assert exit_code == 0
     assert runner.calls == [
         ("git", "push"),
-        (*SYNC_INVOCATION, "abc123"),
+        sync_invocation("abc123"),
     ]
+
+
+def test_cli_parser_forwards_leading_git_options_verbatim() -> None:
+    assert parse_push_args(force_with_lease_push_args()) == force_with_lease_push_args()

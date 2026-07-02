@@ -28,6 +28,14 @@ from collections.abc import Sequence
 from typing import Protocol
 
 REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
+UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
+SYNC_COMMAND: tuple[str, ...] = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.distribution.sync",
+)
 
 
 class StepRunner(Protocol):
@@ -64,13 +72,7 @@ def push(
     push_rc = runner(("git", "push", *push_args))
     if push_rc != 0:
         return push_rc
-    sync_argv: tuple[str, ...] = (
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "outcomeeng.distribution.sync",
-    )
+    sync_argv: tuple[str, ...] = SYNC_COMMAND
     if before_ref:
         sync_argv = (*sync_argv, before_ref)
     return runner(sync_argv)
@@ -78,13 +80,21 @@ def push(
 
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entrypoint. Forwards positional args to `git push` and runs `push`."""
-    args = _build_parser().parse_args(argv)
     return push(
-        args.push_args,
+        parse_push_args(argv),
         runner=_real_runner,
         tool_probe=_real_tool_probe,
         upstream_probe=_real_upstream_probe,
     )
+
+
+def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
+    """Return caller arguments exactly as `git push` should receive them."""
+    push_args = tuple(sys.argv[1:] if argv is None else argv)
+    if push_args in (("-h",), ("--help",)):
+        _build_parser().print_help()
+        raise SystemExit(0)
+    return push_args
 
 
 def _real_runner(argv: Sequence[str]) -> int:
@@ -97,7 +107,7 @@ def _real_tool_probe(name: str) -> bool:
 
 def _real_upstream_probe() -> str | None:
     result = subprocess.run(
-        ["git", "rev-parse", "@{upstream}"],
+        list(UPSTREAM_REF_COMMAND),
         capture_output=True,
         text=True,
         check=False,
@@ -118,18 +128,21 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "push_args",
-        nargs="*",
-        help="Positional arguments forwarded to `git push`.",
+        nargs=argparse.REMAINDER,
+        help="Arguments forwarded verbatim to `git push`.",
     )
     return parser
 
 
 __all__ = [
     "REQUIRED_TOOLS",
+    "SYNC_COMMAND",
     "StepRunner",
     "ToolProbe",
+    "UPSTREAM_REF_COMMAND",
     "UpstreamProbe",
     "main",
+    "parse_push_args",
     "push",
 ]
 
