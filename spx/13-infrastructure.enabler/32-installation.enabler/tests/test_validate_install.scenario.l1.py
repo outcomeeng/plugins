@@ -147,6 +147,8 @@ def test_codex_cache_missing_published_version_is_an_error(tmp_path: Path) -> No
     codex_cache = tmp_path / "codex_cache"
     _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
     _seed_cache(codex_cache, PLUGIN_NAME, "0.0.1")
+    target_path = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / PUBLISHED_VERSION
+    non_target_path = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / "0.0.1"
 
     def published_version(plugin: str) -> str | None:
         return PUBLISHED_VERSION if plugin == PLUGIN_NAME else None
@@ -160,8 +162,52 @@ def test_codex_cache_missing_published_version_is_an_error(tmp_path: Path) -> No
     )
 
     assert result.warnings == [], f"unexpected warnings: {result.warnings}"
-    assert len(result.errors) == 1
-    assert PUBLISHED_VERSION in result.errors[0]
+    assert len(result.errors) == 2
+    assert any(
+        str(target_path) in error and "missing target real directory" in error
+        for error in result.errors
+    )
+    assert any(
+        str(non_target_path) in error
+        and "non-target version is a real directory" in error
+        for error in result.errors
+    )
+
+
+def test_codex_cache_only_newer_non_target_real_dir_is_an_error(
+    tmp_path: Path,
+) -> None:
+    """When Codex resolves an older installed target but the cache only contains a
+    newer real directory, validation reports both the missing target and the
+    non-target real directory.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, WORKING_TREE_VERSION)
+    target_path = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / PUBLISHED_VERSION
+    non_target_path = (
+        codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / WORKING_TREE_VERSION
+    )
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 2
+    assert any(
+        str(target_path) in error and "missing target real directory" in error
+        for error in result.errors
+    )
+    assert any(
+        str(non_target_path) in error
+        and "non-target version is a real directory" in error
+        for error in result.errors
+    )
 
 
 def test_absent_codex_cache_for_installed_plugin_is_an_error(
@@ -251,6 +297,8 @@ def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
     codex_cache = tmp_path / "codex_cache"
     _write_manifest(repo_root, PLUGIN_NAME, WORKING_TREE_VERSION)
     _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    target_path = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / WORKING_TREE_VERSION
+    non_target_path = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / PUBLISHED_VERSION
 
     def no_published_version(plugin: str) -> str | None:
         return None
@@ -264,8 +312,16 @@ def test_missing_codex_marketplace_manifest_falls_back_to_strict_check(
     )
 
     assert result.warnings == [], f"unexpected warnings: {result.warnings}"
-    assert len(result.errors) == 1
-    assert WORKING_TREE_VERSION in result.errors[0]
+    assert len(result.errors) == 2
+    assert any(
+        str(target_path) in error and "missing target real directory" in error
+        for error in result.errors
+    )
+    assert any(
+        str(non_target_path) in error
+        and "non-target version is a real directory" in error
+        for error in result.errors
+    )
 
 
 def test_main_exits_zero_when_working_tree_ahead_of_local_marketplace_source(
@@ -486,6 +542,122 @@ def test_codex_cache_requires_lagging_resolved_version_symlink(
     assert stale_version in result.errors[0]
 
 
+def test_codex_cache_rejects_compatibility_symlink_to_older_real_dir(
+    tmp_path: Path,
+) -> None:
+    """When the current target is materialized but compatibility paths point at an
+    older real directory, validation reports the non-target real directory and the
+    wrong symlink target.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.0.1"
+    link_version = "0.0.2"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, stale_version)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, link_version, stale_version)
+    plugin_dir = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME
+    target_path = plugin_dir / PUBLISHED_VERSION
+    stale_path = plugin_dir / stale_version
+    link_path = plugin_dir / link_version
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 2
+    assert any(
+        str(stale_path) in error and "non-target version is a real directory" in error
+        for error in result.errors
+    )
+    assert any(
+        str(link_path) in error
+        and str(stale_path) in error
+        and str(target_path) in error
+        and "symlink points to" in error
+        for error in result.errors
+    )
+
+
+def test_codex_cache_rejects_indirect_compatibility_symlink(
+    tmp_path: Path,
+) -> None:
+    """When a compatibility symlink points at another compatibility symlink,
+    validation reports the indirect path, its direct target, and the expected
+    real target directory.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.0.1"
+    intermediate_version = "0.0.2"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, intermediate_version, PUBLISHED_VERSION)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, stale_version, intermediate_version)
+    plugin_dir = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME
+    target_path = plugin_dir / PUBLISHED_VERSION
+    stale_path = plugin_dir / stale_version
+    intermediate_path = plugin_dir / intermediate_version
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 1
+    error = result.errors[0]
+    assert str(stale_path) in error
+    assert str(intermediate_path) in error
+    assert str(target_path) in error
+    assert "symlink points to" in error
+
+
+def test_codex_cache_rejects_target_symlink_to_older_real_dir(
+    tmp_path: Path,
+) -> None:
+    """When the target version path is a symlink to an older real directory,
+    validation reports the symlink destination and the non-target real directory.
+    """
+    repo_root = tmp_path / "repo"
+    codex_cache = tmp_path / "codex_cache"
+    stale_version = "0.0.1"
+    _write_manifest(repo_root, PLUGIN_NAME, PUBLISHED_VERSION)
+    _seed_cache(codex_cache, PLUGIN_NAME, stale_version)
+    _seed_cache_link(codex_cache, PLUGIN_NAME, PUBLISHED_VERSION, stale_version)
+    plugin_dir = codex_cache / MARKETPLACE_NAME / PLUGIN_NAME
+    target_path = plugin_dir / PUBLISHED_VERSION
+    stale_path = plugin_dir / stale_version
+
+    result = validate_install.validate(
+        MARKETPLACE_NAME,
+        repo_root=repo_root,
+        codex_cache_override=codex_cache,
+        claude_cache_override=tmp_path / "empty_claude_cache",
+        codex_resolved_versions={PLUGIN_NAME: PUBLISHED_VERSION},
+    )
+
+    assert len(result.errors) == 2
+    assert any(
+        str(stale_path) in error and "non-target version is a real directory" in error
+        for error in result.errors
+    )
+    assert any(
+        str(target_path) in error
+        and str(stale_path) in error
+        and "target is a symlink to" in error
+        and "expected complete real directory" in error
+        for error in result.errors
+    )
+
+
 def test_codex_cache_multiple_real_version_dirs_is_an_error(
     tmp_path: Path,
 ) -> None:
@@ -508,9 +680,9 @@ def test_codex_cache_multiple_real_version_dirs_is_an_error(
 
     assert len(result.errors) == 1
     error = result.errors[0]
-    assert "MULTIPLE REAL" in error
+    assert "CODEX CACHE TOPOLOGY" in error
+    assert "non-target version is a real directory" in error
     assert str(codex_cache / MARKETPLACE_NAME / PLUGIN_NAME) in error
-    assert PUBLISHED_VERSION in error
     assert extra_version in error
 
 
@@ -532,7 +704,8 @@ def test_codex_cache_incomplete_entry_is_an_error(tmp_path: Path) -> None:
 
     assert len(result.errors) == 1
     error = result.errors[0]
-    assert "INCOMPLETE" in error
+    assert "CODEX CACHE TOPOLOGY" in error
+    assert "target missing" in error
     assert (
         str(codex_cache / MARKETPLACE_NAME / PLUGIN_NAME / PUBLISHED_VERSION) in error
     )

@@ -34,6 +34,7 @@ from pathlib import Path
 from outcomeeng.distribution.codex_cache import (
     CODEX_LIST_COMMAND,
     CommandRunner,
+    codex_cache_topology_errors,
     run_command_capture,
 )
 from outcomeeng.distribution.marketplace_sources import (
@@ -317,24 +318,6 @@ def print_cache(
     print()
 
 
-def check_version_present(
-    cache_root: Path,
-    marketplace: str,
-    plugin: str,
-    version: str,
-    errors: list[str],
-) -> bool:
-    """Assert the exact version directory exists and is a real directory."""
-    path = cache_root / marketplace / plugin / version
-    if not path.exists():
-        errors.append(f"MISSING  {path}")
-        return False
-    if path.is_symlink():
-        errors.append(f"SYMLINK  {path}  (expected a real directory)")
-        return False
-    return True
-
-
 def check_compatibility_symlink_present(
     cache_root: Path,
     marketplace: str,
@@ -359,47 +342,6 @@ def check_compatibility_symlink_present(
         errors.append(
             f"WRONG TARGET  {path}  (expected compatibility symlink to {target})"
         )
-
-
-def check_single_real_codex_version(
-    cache_root: Path,
-    marketplace: str,
-    plugin: str,
-    expected_version: str,
-    errors: list[str],
-) -> None:
-    """Assert the Codex cache has no extra real version roots for this plugin."""
-    plugin_dir = cache_root / marketplace / plugin
-    if not plugin_dir.is_dir():
-        return
-    real_versions = [
-        e for e in sorted(plugin_dir.iterdir()) if e.is_dir() and not e.is_symlink()
-    ]
-    if len(real_versions) <= 1:
-        return
-    found = ", ".join(entry.name for entry in real_versions)
-    errors.append(
-        f"MULTIPLE REAL  {plugin_dir}  "
-        f"(expected one real directory for {expected_version}; found {found})"
-    )
-
-
-def check_complete_codex_entries(
-    cache_root: Path,
-    marketplace: str,
-    plugin: str,
-    errors: list[str],
-) -> None:
-    """Assert every Codex version path resolves to a complete plugin root."""
-    plugin_dir = cache_root / marketplace / plugin
-    if not plugin_dir.is_dir():
-        return
-    for entry in sorted(plugin_dir.iterdir()):
-        if not entry.is_dir() and not entry.is_symlink():
-            continue
-        manifest = entry / CODEX_PLUGIN_MANIFEST
-        if not manifest.is_file():
-            errors.append(f"INCOMPLETE  {entry}  (missing {CODEX_PLUGIN_MANIFEST})")
 
 
 def check_any_real_version_present(
@@ -563,13 +505,14 @@ def validate(
             else:
                 target_version = version
         if target_version is not None:
-            check_version_present(codex, marketplace, plugin, target_version, errors)
-        if codex_plugin_dir.exists():
-            if target_version is not None:
-                check_single_real_codex_version(
-                    codex, marketplace, plugin, target_version, errors
+            errors.extend(
+                codex_cache_topology_errors(
+                    codex / marketplace,
+                    plugin,
+                    target_version,
                 )
-            check_complete_codex_entries(codex, marketplace, plugin, errors)
+            )
+        if codex_plugin_dir.exists():
             check_no_stale_symlinks(
                 codex, marketplace, plugin, max_age_days, resolved_now, errors
             )

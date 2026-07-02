@@ -5,7 +5,7 @@ Each scenario corresponds to one assertion in
 
 The direct preservation scenarios take a ``PluginHistory`` provider that names the
 working-tree plugin set and per-plugin published versions in the window. They
-inject a ``StaticHistory`` implementation (Stage 5 exception 2 -- interaction
+inject the harness ``StaticHistory`` provider (Stage 5 exception 2 -- interaction
 protocol DI) in place of the production git-history walker mandated by
 ``21-codex-cache-preservation.adr.md``. CLI-surface scenarios that verify
 ``main()`` output call ``main()`` directly with the production ``GitPluginHistory``
@@ -30,6 +30,8 @@ from outcomeeng.distribution.marketplace_sources import (
 )
 from outcomeeng_testing.harnesses.codex_cache import (
     MaterializingAddRunner,
+    StaticHistory,
+    StaticInstalled,
     write_plugin_root,
 )
 
@@ -46,46 +48,6 @@ NEW_CURRENT_VERSION = "0.26.7"
 NOT_INSTALLED_PLUGIN = "python"
 NOT_INSTALLED_STALE_VERSION = "0.18.6"
 NOT_INSTALLED_CURRENT_VERSION = "0.18.8"
-
-
-@dataclass(frozen=True)
-class StaticHistory:
-    """Explicit interaction-protocol stub for the plugin-history provider.
-
-    Maps to Stage 5 exception 2 in ``/test``: tests cannot drive a real git
-    walker against a synthetic working tree at l1, so the dependency is injected
-    as a typed Protocol with deterministic return values for the working-tree
-    plugin set, each plugin's published-in-window versions, and each plugin's
-    current working-tree manifest version.
-    """
-
-    plugins: frozenset[str]
-    versions_by_plugin: dict[str, frozenset[str]]
-    current_by_plugin: dict[str, str]
-
-    def working_tree_plugins(self) -> frozenset[str]:
-        return self.plugins
-
-    def published_versions(self, plugin: str) -> frozenset[str]:
-        return self.versions_by_plugin.get(plugin, frozenset())
-
-    def current_version(self, plugin: str) -> str | None:
-        return self.current_by_plugin.get(plugin)
-
-
-@dataclass(frozen=True)
-class StaticInstalled:
-    """Interaction-protocol stub for the Codex installed-version provider.
-
-    Stage 5 exception 2 (interaction-protocol DI): the real provider queries the
-    `codex` binary, which is absent at l1, so the installed set is injected as a
-    typed Protocol returning deterministic plugin-name to version data.
-    """
-
-    versions: dict[str, str]
-
-    def installed_plugin_versions(self, marketplace: str) -> dict[str, str]:
-        return self.versions
 
 
 @dataclass
@@ -442,6 +404,7 @@ def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
     assert older_link.resolve() == current_dir, (
         f"expected {older_link} to resolve to {current_dir}, got {older_link.resolve()}"
     )
+    assert os.readlink(older_link) == CURRENT_VERSION
     assert current_dir.is_dir() and not current_dir.is_symlink(), (
         f"expected {current_dir} to remain a real directory"
     )
@@ -451,6 +414,49 @@ def test_out_of_window_compatibility_symlink_is_retargeted_not_removed(
     assert older_link not in result.pruned_links, (
         f"expected {older_link} NOT pruned; got pruned_links={result.pruned_links}"
     )
+
+
+def test_indirect_compatibility_symlink_is_retargeted_to_direct_target(
+    tmp_path: Path,
+) -> None:
+    """When one compatibility symlink points at another version path that is also
+    retargeted in the same pass, preservation rewrites both links to the real
+    installed version instead of leaving an indirect chain.
+    """
+    cache_root = tmp_path / "cache"
+    older_version = "0.9.0"
+    prior_version = "0.10.0"
+    installed_version = "0.11.0"
+    write_plugin_root(cache_root, PLUGIN_NAME, prior_version, "prior content")
+    write_plugin_root(cache_root, PLUGIN_NAME, installed_version, "installed content")
+    plugin_dir = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME
+    older_link = plugin_dir / older_version
+    prior_link = plugin_dir / prior_version
+    installed_dir = plugin_dir / installed_version
+    older_link.symlink_to(prior_version, target_is_directory=True)
+    history = StaticHistory(
+        plugins=frozenset([PLUGIN_NAME]),
+        versions_by_plugin={
+            PLUGIN_NAME: frozenset([older_version, prior_version, installed_version]),
+        },
+        current_by_plugin={PLUGIN_NAME: installed_version},
+    )
+
+    result = preserve_codex_plugin_cache.refresh_installed_plugins(
+        DEFAULT_MARKETPLACE,
+        cache_root=cache_root,
+        history=history,
+        runner=_quiet_runner,
+    )
+
+    assert prior_link.is_symlink()
+    assert older_link.is_symlink()
+    assert os.readlink(prior_link) == installed_version
+    assert os.readlink(older_link) == installed_version
+    assert older_link.resolve() == installed_dir
+    assert prior_link.resolve() == installed_dir
+    assert older_link in result.linked_versions
+    assert prior_link in result.linked_versions
 
 
 def test_out_of_window_real_directory_retargeted_to_installed_version(
@@ -731,7 +737,7 @@ def test_refresh_without_current_real_dir_creates_no_current_symlink(
         f"expected removed real directory {older_dir} in "
         f"result.pruned_links={result.pruned_links}"
     )
-    assert result.missing_current_cache_entries == ()
+    assert result.current_cache_topology_errors == ()
 
 
 def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None:
@@ -742,6 +748,8 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
     write_plugin_root(cache_root, PLUGIN_NAME, OLDER_VERSION, "stale content")
+    target_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
+    older_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / OLDER_VERSION
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={
@@ -760,7 +768,15 @@ def test_strict_refresh_reports_missing_current_real_dir(tmp_path: Path) -> None
         strict_current_cache=True,
     )
 
-    assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
+    assert len(result.current_cache_topology_errors) == 2
+    assert any(
+        str(target_path) in error and "missing target real directory" in error
+        for error in result.current_cache_topology_errors
+    )
+    assert any(
+        str(older_path) in error and "non-target version is a real directory" in error
+        for error in result.current_cache_topology_errors
+    )
 
 
 def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
@@ -769,6 +785,7 @@ def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
     """
     repo_root = _repo_with_dist_codex_plugin(tmp_path, PLUGIN_NAME, CURRENT_VERSION)
     cache_root = tmp_path / "cache"
+    target_path = cache_root / DEFAULT_MARKETPLACE / PLUGIN_NAME / CURRENT_VERSION
     history = StaticHistory(
         plugins=frozenset([PLUGIN_NAME]),
         versions_by_plugin={PLUGIN_NAME: frozenset([CURRENT_VERSION])},
@@ -785,7 +802,9 @@ def test_strict_refresh_reports_absent_plugin_cache_dir(tmp_path: Path) -> None:
         strict_current_cache=True,
     )
 
-    assert result.missing_current_cache_entries == (f"{PLUGIN_NAME}@{CURRENT_VERSION}",)
+    assert len(result.current_cache_topology_errors) == 1
+    assert str(target_path) in result.current_cache_topology_errors[0]
+    assert "missing target real directory" in result.current_cache_topology_errors[0]
 
 
 def test_stale_current_version_symlink_is_removed_when_no_real_dir(
