@@ -20,7 +20,6 @@ The module's contract:
 
 from __future__ import annotations
 
-import argparse
 import shutil
 import subprocess
 import sys
@@ -90,11 +89,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
     """Return caller arguments exactly as `git push` should receive them."""
-    push_args = tuple(sys.argv[1:] if argv is None else argv)
-    if push_args in (("-h",), ("--help",)):
-        _build_parser().print_help()
-        raise SystemExit(0)
-    return push_args
+    return tuple(sys.argv[1:] if argv is None else argv)
 
 
 def _real_runner(argv: Sequence[str]) -> int:
@@ -116,22 +111,6 @@ def _real_upstream_probe() -> str | None:
         return None
     ref = result.stdout.strip()
     return ref or None
-
-
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog="outcomeeng.distribution.push",
-        description=(
-            "Push the current branch and refresh the local marketplace install "
-            "when plugin distribution paths changed in the pushed range."
-        ),
-    )
-    parser.add_argument(
-        "push_args",
-        nargs=argparse.REMAINDER,
-        help="Arguments forwarded verbatim to `git push`.",
-    )
-    return parser
 
 
 __all__ = [

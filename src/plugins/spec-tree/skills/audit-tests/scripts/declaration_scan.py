@@ -152,7 +152,9 @@ def _scan_line_language(
     declaration_pattern: re.Pattern[str],
 ) -> list[Declaration]:
     declarations: list[Declaration] = []
+    in_block_comment = False
     for index, line in enumerate(source.splitlines(), start=1):
+        line, in_block_comment = _strip_block_comments(line, in_block_comment)
         stripped = line.lstrip()
         if stripped.startswith(("//", "#")):
             continue
@@ -172,6 +174,27 @@ def _scan_line_language(
             )
         )
     return declarations
+
+
+def _strip_block_comments(line: str, in_block_comment: bool) -> tuple[str, bool]:
+    output = ""
+    index = 0
+    while index < len(line):
+        if in_block_comment:
+            end = line.find("*/", index)
+            if end == -1:
+                return output, True
+            index = end + 2
+            in_block_comment = False
+            continue
+        start = line.find("/*", index)
+        if start == -1:
+            output += line[index:]
+            return output, False
+        output += line[index:start]
+        index = start + 2
+        in_block_comment = True
+    return output, in_block_comment
 
 
 def _value_kind(name: str) -> DeclarationKind:

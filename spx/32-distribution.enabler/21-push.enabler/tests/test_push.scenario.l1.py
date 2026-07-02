@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.push import (
     all_required_tools_available,
     all_tool_probe_invocations,
     force_with_lease_push_args,
+    git_help_push_args,
     sync_invocation,
 )
 
@@ -117,3 +118,7 @@ def test_no_push_args_forwards_bare_git_push() -> None:
 
 def test_cli_parser_forwards_leading_git_options_verbatim() -> None:
     assert parse_push_args(force_with_lease_push_args()) == force_with_lease_push_args()
+
+
+def test_cli_parser_forwards_git_help_flag_verbatim() -> None:
+    assert parse_push_args(git_help_push_args()) == git_help_push_args()

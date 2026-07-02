@@ -55,6 +55,11 @@ def force_with_lease_push_args() -> tuple[str, ...]:
     )
 
 
+def git_help_push_args() -> tuple[str, ...]:
+    """Return the git-push help flag that must pass through the wrapper."""
+    return ("-h",)
+
+
 @dataclass
 class ScriptedUpstreamProbe:
     """UpstreamProbe that returns a scripted ref (or None) on each call."""
@@ -109,6 +114,7 @@ __all__ = [
     "all_required_tools_available",
     "all_tool_probe_invocations",
     "force_with_lease_push_args",
+    "git_help_push_args",
     "sync_invocation",
     "tool_probe_invocation",
 ]
