@@ -362,12 +362,12 @@ use product_testing::harnesses::database::with_test_database;
 
 #[tokio::test]
 async fn repository_persists_and_loads_user() {
-    with_test_database(async |db| {
-        UserRepository::new(db.pool()).save(&valid_user()).await.unwrap();
+    with_test_database(valid_user(), async |db, user| {
+        UserRepository::new(db.pool()).save(user).await.unwrap();
 
         assert_eq!(
-            UserRepository::new(db.pool()).find(valid_user().id()).await.unwrap().email(),
-            valid_user().email(),
+            UserRepository::new(db.pool()).find(user.id()).await.unwrap().email(),
+            user.email(),
         );
     }).await;
 }

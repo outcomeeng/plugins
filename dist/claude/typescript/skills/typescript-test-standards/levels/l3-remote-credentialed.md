@@ -27,8 +27,7 @@ Examples: `stripe-webhook.conformance.l3.test.ts`, `production-login.scenario.l3
 
 ```typescript
 import { WEBHOOK_ACCEPTED_STATUS } from "@/stripe-webhook";
-import { stripeEventFixturePath } from "@testing/fixtures/stripe";
-import { submitSignedFixture } from "@testing/harnesses/stripe";
+import { stripeEventFixturePath, submitSignedFixture } from "@testing/harnesses/stripe";
 import { withStripeCredentials } from "@testing/harnesses/stripe/credentials";
 import { describe, expect, it } from "vitest";
 
