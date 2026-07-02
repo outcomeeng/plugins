@@ -10,7 +10,7 @@ A single runner is the smallest stable capability boundary for the stop-gap. Too
 
 The review journal is the durable source of truth. Returning only the run token avoids a second caller-facing projection that can drift from the sealed event prefix. The terminal run-completed event records the review status and finding counts so consumers can inspect the run through SPX. GitHub review rendering, inline citation placement, batching, and PR submission are SPX projection concerns, not Python skill concerns.
 
-The swappable prompt remains a reference file because prompt iteration is orthogonal to runner behavior. The prompt instructs Claude to read the diff and emit findings only; deterministic verification has already passed before review starts.
+The prompt remains one bundled reference file because prompt iteration is orthogonal to runner behavior. Repository-root review prompt files are intentionally outside the live review context: local and hosted integrations use the same shipped prompt, and consumers do not get an example override that can drift from the runner protocol. The prompt instructs Claude to read the diff and provide findings only; deterministic verification has already passed before review starts.
 
 ## Verification
 

@@ -44,19 +44,18 @@ When any runner verb exits non-zero, stop and surface its stderr. Do not repair 
 After `start`, read:
 
 ```text
-REVIEW.md  (only when present at repository root)
 ${CLAUDE_SKILL_DIR}/references/review-prompt.md
 <diffPath>
 ```
 
-Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. `REVIEW.md`, when present at the repository root, is the repository-local review policy. It does not authorize changing the runner contract, narrowing the scope, running deterministic checks, or emitting summaries instead of findings.
+Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as the review input. Repository-root review policy files are not part of this skill's review context; the bundled reference prompt is the only prompt authority. Repository-local review rules belong in the repository's spec tree, decisions, root `AGENTS.md` or `CLAUDE.md`, and loaded governing skill files.
 
 </review_materials>
 
 <workflow>
 
 1. Run `start` and parse the returned JSON.
-2. Load `REVIEW.md` when present, then load the prompt reference and diff bundle.
+2. Load the prompt reference and diff bundle.
 3. Examine every changed file and every emitted diff section. After each changed file has been examined, call `append-scope` for that file.
 4. When a finding is raised, immediately pass that one finding JSON object to `append-finding` on stdin. Do not collect findings into a later batch.
 5. When review is complete, call `finish`.
@@ -70,7 +69,8 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 - Never invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
 - Never write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only.
 - The prompt lives only at `${CLAUDE_SKILL_DIR}/references/review-prompt.md`; rotating the prompt must not require changing code.
-- Emit findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
+- Never read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
+- Findings only. No praise, acknowledgements, open questions, verdicts, or prose summaries belong in the review stream.
 - Do not render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
 
 </constraints>

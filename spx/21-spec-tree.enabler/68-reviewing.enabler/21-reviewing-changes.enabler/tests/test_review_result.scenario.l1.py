@@ -35,7 +35,6 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_ADR_RULE_CITATION,
     FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_MALFORMED_RULE_CITATION,
-    FIXTURE_REVIEW_POLICY_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
     REPO_ROOT,
@@ -203,7 +202,6 @@ class TestRuleCitationValidation:
             FIXTURE_RULE_CITATION,
             FIXTURE_ADR_RULE_CITATION,
             FIXTURE_AGENTS_RULE_CITATION,
-            FIXTURE_REVIEW_POLICY_RULE_CITATION,
         ),
     )
     def test_parse_json_accepts_declared_rule_citation_forms(
@@ -312,8 +310,7 @@ class TestRuleCitationForm:
     ``spx/<path>/<n>-<slug>.adr.md``,
     ``spx/<path>/<n>-<slug>.pdr.md``,
     ``plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>``,
-    ``AGENTS.md:<rule-slug>``, ``CLAUDE.md:<rule-slug>``, and
-    ``REVIEW.md:<rule-slug>``.
+    ``AGENTS.md:<rule-slug>``, and ``CLAUDE.md:<rule-slug>``.
     The parser rejects citations whose file or rule slug cannot be
     verified mechanically.
     """
@@ -337,7 +334,6 @@ class TestRuleCitationForm:
             "plugins/spec-tree/skills/understand/SKILL.md:principles",
             "CLAUDE.md:critical-rules",
             FIXTURE_AGENTS_RULE_CITATION,
-            FIXTURE_REVIEW_POLICY_RULE_CITATION,
         ],
     )
     def test_parser_accepts_path_style_rule(self, rule: str) -> None:
@@ -406,7 +402,7 @@ class TestRuleCitationForm:
             "severity": "debt",
             "file": "x.py",
             "line": 1,
-            "rule": FIXTURE_REVIEW_POLICY_RULE_CITATION,
+            "rule": FIXTURE_AGENTS_RULE_CITATION,
             "message": "m",
             "action": "a",
         }

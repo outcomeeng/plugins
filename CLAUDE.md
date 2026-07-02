@@ -273,7 +273,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
 - `.spx/` — gitignored operational files (sessions, audit state).
 - `.claude/settings.json`, `.codex/config.toml` — product-scoped harness settings, committed for collaborators.
-- `CLAUDE.md` (this file), `AGENTS.md` (Codex counterpart), `REVIEW.md` — repo-level instruction and review-policy surfaces.
+- `CLAUDE.md` (this file), `AGENTS.md` (Codex counterpart) — repo-level instruction surfaces.
 
 For the contents of any plugin or `spx/` subdirectory, run `ls` or read the catalog. The authored directory layout under each plugin follows the conventions in `src/plugins/develop/skills/`.
 
