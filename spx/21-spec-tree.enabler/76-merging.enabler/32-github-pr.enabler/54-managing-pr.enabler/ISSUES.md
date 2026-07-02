@@ -21,6 +21,7 @@ because the operator instructed the session not to run evals.
 Unverified cases:
 
 - `self-modifying-review-skip-mentions-review`
+- `self-modifying-review-skip-with-current-review-uses-findings`
 - `non-design-review-skip-blocks`
 - `review-check-terminal-failure-blocks`
 - `host-mergeable-review-check-in-progress-waits`
