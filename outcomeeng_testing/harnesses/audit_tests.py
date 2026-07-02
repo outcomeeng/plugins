@@ -48,6 +48,13 @@ def async_helper_declarations_are_detected() -> bool:
     )
 
 
+def python_binding_declarations_are_detected() -> bool:
+    declarations = _declarations_for_fixture("python_binding_declaration.py")
+    return _has_variable(declarations, "project_dir") and _has_variable(
+        declarations, "case"
+    )
+
+
 def _declarations_for_fixture(name: str) -> list[Declaration]:
     fixture = _fixture(name)
     return _scanner().scan_text(fixture.read_text(encoding="utf-8"), fixture)
@@ -56,6 +63,13 @@ def _declarations_for_fixture(name: str) -> list[Declaration]:
 def _has_function(declarations: list[Declaration], name: str) -> bool:
     return any(
         declaration.name == name and declaration.kind == "function"
+        for declaration in declarations
+    )
+
+
+def _has_variable(declarations: list[Declaration], name: str) -> bool:
+    return any(
+        declaration.name == name and declaration.kind == "variable"
         for declaration in declarations
     )
 

@@ -1,14 +1,15 @@
 """Level-1 scenario evidence for `spx/32-distribution.enabler/21-push.enabler/`.
 
-Covers the three scenario assertions in `push.md`:
+Covers the scenario assertions in `push.md`:
 - Tracked branch: capture upstream, run `git push`, invoke sync with the
   captured ref as `base_ref`.
 - Untracked branch: run `git push`, invoke sync without a `base_ref`.
 - Push failure: propagate the non-zero exit code and do not invoke sync.
+- Leading flags: forward every argument to `git push` without parser
+  interpretation.
 
 Runner calls and upstream-probe interactions are observed through the
-recording doubles in `outcomeeng_testing.harnesses.sync` and
-`outcomeeng_testing.harnesses.push`.
+traced doubles in `outcomeeng_testing.harnesses.push`.
 """
 
 from __future__ import annotations

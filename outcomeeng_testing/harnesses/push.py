@@ -1,9 +1,8 @@
 """Recording doubles for the push orchestrator.
 
-Reuses `RecordingRunner` and `ScriptedToolProbe` from
-`outcomeeng_testing.harnesses.sync` (the protocol shapes are identical
-across the two orchestrators). Adds `ScriptedUpstreamProbe` for push's
-upstream-ref capture step.
+`TracedRunner`, `TracedToolProbe`, and `ScriptedUpstreamProbe` share one
+trace list so tests can assert invocation order across tool probes,
+upstream-ref capture, git push, and marketplace sync.
 
 Exception case per `plugins/spec-tree/skills/test/references/methodology.md`:
 - Stage 5 #2 (Interaction protocols): push's correctness depends on the

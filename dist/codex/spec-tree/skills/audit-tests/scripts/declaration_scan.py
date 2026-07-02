@@ -109,6 +109,18 @@ def _scan_python(source: str, path: Path) -> list[Declaration]:
             declarations.extend(
                 _python_target_declarations(node.target, path, node.lineno)
             )
+        elif isinstance(node, (ast.For, ast.AsyncFor)):
+            declarations.extend(
+                _python_target_declarations(node.target, path, node.lineno)
+            )
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            for item in node.items:
+                if item.optional_vars is not None:
+                    declarations.extend(
+                        _python_target_declarations(
+                            item.optional_vars, path, node.lineno
+                        )
+                    )
     return declarations
 
 
