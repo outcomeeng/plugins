@@ -14,6 +14,7 @@ import json
 import pathlib
 import subprocess
 
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -230,6 +231,46 @@ def _write_review_manifest(
     return path
 
 
+def _stub_review_metadata_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
+    monkeypatch.setattr(
+        je.changeset_scope, "branch_slug", lambda branch: "work__example"
+    )
+    monkeypatch.setattr(
+        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
+    )
+
+
+def _stub_review_refs(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    base_ref: str = "origin/main",
+    head_ref: str = "HEAD",
+    branch_name: str = "work/example",
+) -> None:
+    monkeypatch.setattr(je, "_resolve_base_ref", lambda: base_ref)
+    monkeypatch.setattr(je, "_resolve_head_ref", lambda: head_ref)
+    monkeypatch.setattr(je, "_resolve_branch_name", lambda: branch_name)
+
+
+def _stub_review_diff(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    changed_files: list[str] | None = None,
+    combined_diff: Callable[[str, str], str] | None = None,
+) -> None:
+    files = changed_files if changed_files is not None else ["README.md"]
+    diff = combined_diff
+    if diff is None:
+        diff = lambda base_ref, head_ref: "### Committed diff\n\nREADME change"
+    monkeypatch.setattr(
+        je.changeset_scope,
+        "expand_diff_range",
+        lambda range_spec, *, repo: list(files),
+    )
+    monkeypatch.setattr(je.compute_diff, "combined_diff", diff)
+
+
 def test_config_digest_changes_with_review_prompt(tmp_path: pathlib.Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -263,26 +304,9 @@ def test_metadata_config_digest_ignores_root_review_policy(
     (repo_root / "REVIEW.md").write_text("ignored review policy", encoding="utf-8")
 
     monkeypatch.chdir(subdir)
-    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
-    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
-    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: ["README.md"],
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
-    )
+    _stub_review_refs(monkeypatch)
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(monkeypatch)
 
     metadata = je.metadata_for_worktree(
         started_at="2026-06-23T00:00:00Z",
@@ -298,25 +322,12 @@ def test_metadata_scope_hash_includes_changed_file_set(
     changed_files = ["README.md"]
     review_input = "### Committed diff\n\nREADME change"
 
-    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
-    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
-    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: list(changed_files),
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: review_input,
+    _stub_review_refs(monkeypatch)
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(
+        monkeypatch,
+        changed_files=changed_files,
+        combined_diff=lambda base_ref, head_ref: review_input,
     )
 
     first = je.metadata_for_worktree(
@@ -350,13 +361,7 @@ def test_metadata_scope_uses_computed_review_manifest(
     )
 
     monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
+    _stub_review_metadata_identity(monkeypatch)
 
     metadata = je.metadata_for_worktree(
         started_at="2026-06-23T00:00:00Z",
@@ -378,26 +383,9 @@ def test_metadata_for_worktree_records_pull_request_target(
 ) -> None:
     monkeypatch.setenv("SPX_VERIFY_TARGET_KIND", "pull-request")
     monkeypatch.setenv("SPX_VERIFY_PULL_REQUEST_NUMBER", "123")
-    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
-    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "origin/work/example")
-    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: ["README.md"],
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
-    )
+    _stub_review_refs(monkeypatch, head_ref="origin/work/example")
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(monkeypatch)
 
     metadata = je.metadata_for_worktree(
         started_at="2026-06-23T00:00:00Z",
@@ -422,23 +410,8 @@ def test_metadata_for_worktree_uses_env_branch_in_detached_checkout(
     monkeypatch.setattr(
         je.changeset_scope, "detect_current_branch", fail_current_branch
     )
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: ["README.md"],
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
-    )
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(monkeypatch)
 
     metadata = je.metadata_for_worktree(
         started_at="2026-06-23T00:00:00Z",
@@ -456,25 +429,11 @@ def test_metadata_scope_hash_includes_full_review_input(
 ) -> None:
     review_inputs = ["### Staged diff\n\nfirst", "### Staged diff\n\nsecond"]
 
-    monkeypatch.setattr(je, "_resolve_base_ref", lambda: "origin/main")
-    monkeypatch.setattr(je, "_resolve_head_ref", lambda: "HEAD")
-    monkeypatch.setattr(je, "_resolve_branch_name", lambda: "work/example")
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: ["README.md"],
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: review_inputs.pop(0),
+    _stub_review_refs(monkeypatch)
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(
+        monkeypatch,
+        combined_diff=lambda base_ref, head_ref: review_inputs.pop(0),
     )
 
     first = je.metadata_for_worktree(
@@ -498,23 +457,8 @@ def test_metadata_cli_emits_env_derived_run_identity(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
 ) -> None:
-    monkeypatch.setattr(je, "review_config_digest", lambda: "cfg-abc123")
-    monkeypatch.setattr(
-        je.changeset_scope, "branch_slug", lambda branch: "work__example"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope, "commit_oid", lambda ref, repo: f"{ref}:sha"
-    )
-    monkeypatch.setattr(
-        je.changeset_scope,
-        "expand_diff_range",
-        lambda range_spec, *, repo: ["README.md"],
-    )
-    monkeypatch.setattr(
-        je.compute_diff,
-        "combined_diff",
-        lambda base_ref, head_ref: "### Committed diff\n\nREADME change",
-    )
+    _stub_review_metadata_identity(monkeypatch)
+    _stub_review_diff(monkeypatch)
 
     result = run_journal_emit_in_process(
         "metadata",
