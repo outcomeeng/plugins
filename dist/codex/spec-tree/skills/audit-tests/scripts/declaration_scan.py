@@ -37,11 +37,31 @@ _RUST_DECLARATION = re.compile(
 )
 
 
+class PathValidationError(ValueError):
+    """Raised when a scanner input path is outside the current repository tree."""
+
+
 def scan_paths(paths: Sequence[Path]) -> list[Declaration]:
     declarations: list[Declaration] = []
     for path in paths:
-        declarations.extend(scan_text(path.read_text(encoding="utf-8"), path))
+        safe_path = _validated_input_path(path)
+        declarations.extend(scan_text(safe_path.read_text(encoding="utf-8"), safe_path))
     return declarations
+
+
+def _validated_input_path(path: Path) -> Path:
+    root = Path.cwd().resolve(strict=True)
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError as error:
+        raise PathValidationError(f"input path is not readable: {path}") from error
+    if not resolved.is_relative_to(root):
+        raise PathValidationError(
+            f"input path escapes current working directory: {path}"
+        )
+    if not resolved.is_file():
+        raise PathValidationError(f"input path is not a regular file: {path}")
+    return resolved
 
 
 def scan_text(source: str, path: Path) -> list[Declaration]:
@@ -156,10 +176,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    try:
+        declarations = scan_paths(args.paths)
+    except PathValidationError as error:
+        sys.stderr.write(f"declaration_scan.py: {error}\n")
+        return 2
     json.dump(
-        [asdict(declaration) for declaration in scan_paths(args.paths)],
-        sys.stdout,
-        indent=2,
+        [asdict(declaration) for declaration in declarations], sys.stdout, indent=2
     )
     sys.stdout.write("\n")
     return 0
