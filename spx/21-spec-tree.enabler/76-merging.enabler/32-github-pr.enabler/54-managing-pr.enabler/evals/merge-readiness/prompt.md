@@ -13,8 +13,9 @@ Rules, in order:
 1. If `reviewing_kind_check.state_category` is `"non_terminal"` or `"missing"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-nonterminal"`, `guard_verdict: "WAIT_FOR_REVIEW"`, `merge_command_allowed: false`.
    If `reviewing_kind_check` is omitted, continue to the `ci_review.present` rule.
-2. Else if `reviewing_kind_check.state_category` is `"skipped_self_modifying_workflow"`, return:
+2. Else if `reviewing_kind_check.state_category` is `"skipped_self_modifying_workflow"` and `ci_review.present` is `false`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-skipped-self-modifying-workflow"`, `guard_verdict: "MENTION_REVIEW_NEEDED:<trigger_phrase>"`, `merge_command_allowed: false`.
+   If `ci_review.present` is `true`, continue to the review finding rules; the mention-triggered current-head review is already available for evaluation.
 3. Else if `reviewing_kind_check.state_category` is `"skipped_non_exception"`, return:
    `merge_readiness: "WITHHOLD"`, `blocking_predicate: "review-check-skipped"`, `guard_verdict: "MERGE_BLOCKED:review-check-skipped"`, `merge_command_allowed: false`.
 4. Else if `reviewing_kind_check.state_category` is `"terminal_failure"`, return:

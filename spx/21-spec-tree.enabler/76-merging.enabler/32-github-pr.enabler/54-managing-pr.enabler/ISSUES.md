@@ -23,6 +23,8 @@ Unverified cases:
 - `self-modifying-review-skip-mentions-review`
 - `non-design-review-skip-blocks`
 - `review-check-terminal-failure-blocks`
+- `host-mergeable-review-check-in-progress-waits`
+- `old-inline-comments-do-not-satisfy-current-review`
 
 Required handling:
 
