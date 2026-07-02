@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from outcomeeng.distribution.push import (
+    DRY_RUN_PUSH_FLAGS,
     REQUIRED_TOOLS,
     SYNC_COMMAND,
     UPSTREAM_REF_COMMAND,
@@ -46,6 +47,11 @@ def sync_invocation(*args: str) -> tuple[str, ...]:
     return (*SYNC_COMMAND, *args)
 
 
+def tracked_upstream_ref() -> str:
+    """Return a representative upstream ref captured before push."""
+    return "abc123"
+
+
 def force_with_lease_push_args() -> tuple[str, ...]:
     """Return a representative post-rebase git-push argument vector."""
     return (
@@ -58,6 +64,15 @@ def force_with_lease_push_args() -> tuple[str, ...]:
 def git_help_push_args() -> tuple[str, ...]:
     """Return the git-push help flag that must pass through the wrapper."""
     return ("-h",)
+
+
+def dry_run_push_args() -> tuple[str, ...]:
+    """Return representative git-push dry-run arguments."""
+    return (
+        next(iter(sorted(DRY_RUN_PUSH_FLAGS))),
+        "origin",
+        "HEAD:refs/heads/feature",
+    )
 
 
 @dataclass
@@ -113,10 +128,12 @@ __all__ = [
     "TracedToolProbe",
     "all_required_tools_available",
     "all_tool_probe_invocations",
+    "dry_run_push_args",
     "force_with_lease_push_args",
     "git_help_push_args",
     "sync_invocation",
     "tool_probe_invocation",
+    "tracked_upstream_ref",
 ]
 
 

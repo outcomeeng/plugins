@@ -32,16 +32,17 @@ import { withStripeCredentials } from "@testing/harnesses/stripe/credentials";
 import { describe, expect, it } from "vitest";
 
 describe("Stripe webhook contract", () => {
-  it("accepts signed fixture events through the remote contract endpoint", async () => {
-    await withStripeCredentials(async (credentials) => {
+  it(
+    "accepts signed fixture events through the remote contract endpoint",
+    withStripeCredentials(async (credentials) => {
       await expect(
         submitSignedFixture({
           token: credentials.token,
           fixturePath: stripeEventFixturePath(),
         }),
       ).resolves.toMatchObject({ status: WEBHOOK_ACCEPTED_STATUS });
-    });
-  });
+    }),
+  );
 });
 ```
 

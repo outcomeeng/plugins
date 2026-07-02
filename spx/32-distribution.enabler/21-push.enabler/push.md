@@ -14,6 +14,7 @@ The `outcomeeng.distribution.push` module captures the upstream commit reference
 - Given a branch with no upstream, when push runs and `git push` succeeds, then sync is invoked without a `base_ref` argument ([test](tests/test_push.scenario.l1.py))
 - Given `git push` returns a non-zero exit code, when push runs, then push exits with the same code and sync is not invoked ([test](tests/test_push.scenario.l1.py))
 - Given CLI arguments including leading flags, when push argument parsing runs, then every argument is forwarded verbatim to `git push` without parser interpretation ([test](tests/test_push.scenario.l1.py))
+- Given CLI arguments request a dry-run push, when `git push` succeeds, then sync is not invoked because no range was published ([test](tests/test_push.scenario.l1.py))
 
 ### Compliance
 

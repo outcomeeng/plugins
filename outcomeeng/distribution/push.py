@@ -28,6 +28,7 @@ from typing import Protocol
 
 REQUIRED_TOOLS: tuple[str, ...] = ("git", "claude", "codex", "ps", "uv")
 UPSTREAM_REF_COMMAND: tuple[str, ...] = ("git", "rev-parse", "@{upstream}")
+DRY_RUN_PUSH_FLAGS: frozenset[str] = frozenset(("-n", "--dry-run"))
 SYNC_COMMAND: tuple[str, ...] = (
     "uv",
     "run",
@@ -71,6 +72,8 @@ def push(
     push_rc = runner(("git", "push", *push_args))
     if push_rc != 0:
         return push_rc
+    if _is_dry_run(push_args):
+        return 0
     sync_argv: tuple[str, ...] = SYNC_COMMAND
     if before_ref:
         sync_argv = (*sync_argv, before_ref)
@@ -90,6 +93,10 @@ def main(argv: Sequence[str] | None = None) -> int:
 def parse_push_args(argv: Sequence[str] | None = None) -> tuple[str, ...]:
     """Return caller arguments exactly as `git push` should receive them."""
     return tuple(sys.argv[1:] if argv is None else argv)
+
+
+def _is_dry_run(push_args: Sequence[str]) -> bool:
+    return any(arg in DRY_RUN_PUSH_FLAGS for arg in push_args)
 
 
 def _real_runner(argv: Sequence[str]) -> int:
@@ -114,6 +121,7 @@ def _real_upstream_probe() -> str | None:
 
 
 __all__ = [
+    "DRY_RUN_PUSH_FLAGS",
     "REQUIRED_TOOLS",
     "SYNC_COMMAND",
     "StepRunner",

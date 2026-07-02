@@ -7,6 +7,7 @@ Covers the scenario assertions in `push.md`:
 - Push failure: propagate the non-zero exit code and do not invoke sync.
 - Leading flags: forward every argument to `git push` without parser
   interpretation.
+- Dry-run push: run `git push` without refreshing marketplace state.
 
 Runner calls and upstream-probe interactions are observed through the
 traced doubles in `outcomeeng_testing.harnesses.push`.
@@ -21,9 +22,11 @@ from outcomeeng_testing.harnesses.push import (
     TracedToolProbe,
     all_required_tools_available,
     all_tool_probe_invocations,
+    dry_run_push_args,
     force_with_lease_push_args,
     git_help_push_args,
     sync_invocation,
+    tracked_upstream_ref,
 )
 
 
@@ -122,3 +125,18 @@ def test_cli_parser_forwards_leading_git_options_verbatim() -> None:
 
 def test_cli_parser_forwards_git_help_flag_verbatim() -> None:
     assert parse_push_args(git_help_push_args()) == git_help_push_args()
+
+
+def test_dry_run_push_does_not_refresh_marketplace() -> None:
+    runner = TracedRunner()
+    trace = runner.trace
+
+    exit_code = push(
+        dry_run_push_args(),
+        runner=runner,
+        tool_probe=TracedToolProbe(all_required_tools_available(), trace),
+        upstream_probe=ScriptedUpstreamProbe(tracked_upstream_ref(), trace),
+    )
+
+    assert exit_code == 0
+    assert runner.calls == [("git", "push", *dry_run_push_args())]

@@ -181,7 +181,7 @@ def python_binding_declarations_are_detected() -> bool:
 
 
 def block_comment_declarations_are_ignored() -> bool:
-    return not _has_variable(
+    return not _has_constant(
         _declarations_for_fixture("block_comment_declaration.ts"), "CASES"
     ) and not _has_function(
         _declarations_for_fixture("block_comment_declaration.rs"), "setup"
@@ -203,6 +203,13 @@ def _has_function(declarations: list[Declaration], name: str) -> bool:
 def _has_variable(declarations: list[Declaration], name: str) -> bool:
     return any(
         declaration.name == name and declaration.kind == "variable"
+        for declaration in declarations
+    )
+
+
+def _has_constant(declarations: list[Declaration], name: str) -> bool:
+    return any(
+        declaration.name == name and declaration.kind == "constant"
         for declaration in declarations
     )
 
