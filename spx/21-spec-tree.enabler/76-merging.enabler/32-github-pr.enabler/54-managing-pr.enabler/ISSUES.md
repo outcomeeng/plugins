@@ -11,3 +11,23 @@ Required handling when an eval-coverage sweep happens:
 - Run the eval to populate `history.jsonl`.
 
 Surfaced by the local `changes-reviewer` gate on `fix/worktree-safe-branch-deletion` (2026-06-07).
+
+## 2. Merge-readiness review-check eval cases need execution evidence (FOLLOW-UP)
+
+The `merge-readiness` eval carries updated cases for the current-head
+review-kind check mapping, but the eval run is not recorded for this change
+because the operator instructed the session not to run evals.
+
+Unverified cases:
+
+- `self-modifying-review-skip-mentions-review`
+- `non-design-review-skip-blocks`
+- `review-check-terminal-failure-blocks`
+
+Required handling:
+
+- Run `just eval spx/21-spec-tree.enabler/76-merging.enabler/32-github-pr.enabler/54-managing-pr.enabler/evals/merge-readiness/eval.toml`.
+- Commit the resulting `history.jsonl` entry when the eval passes.
+- Remove this issue once the eval history records the updated case set passing.
+
+Surfaced by CI review on PR #398 (2026-07-01).
