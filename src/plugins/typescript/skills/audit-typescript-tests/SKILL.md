@@ -116,13 +116,13 @@ Apply `<test_file_declarations>` to each linked TypeScript test file before insp
 
 **Step 4 — Assertion type and method**
 
-| Type        | Required TypeScript pattern                                          | REJECT if                                               |
-| ----------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
-| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state  | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
-| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases              | Single example for a claimed mapping                    |
-| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                   | Manual `toEqual({...hardcoded...})` with no validator   |
+| Type        | Required TypeScript pattern                                              | REJECT if                                               |
+| ----------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| Scenario    | Concrete non-trivial inputs; assertions on assertion-relevant state      | Only `toBeDefined` / `toBeTruthy` / `expect.any`        |
+| Mapping     | `it.each` / `describe.each` / `test.each` over ≥2 cases                  | Single example for a claimed mapping                    |
+| Conformance | Schema validator (`zod.parse`, `ajv`, JSON Schema)                       | Manual `toEqual({...hardcoded...})` with no validator   |
 | Property    | `assertProperty(fc.property(arb, pred))` — meaningful arbitrary and body | `fc.constant`, body `return true`, only "doesn't throw" |
-| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit | `[test]` with no violating fixture                      |
+| Compliance  | `[test]`: exercises a violating fixture; `[review]`: skip this audit     | `[test]` with no violating fixture                      |
 
 Inspect the arbitrary's domain for Property assertions. `fc.constant(...)`, `fc.oneof(fc.constant(a), fc.constant(b))` with 2–3 hardcoded values, or narrow ranges like `fc.nat(1)` reduce the property to examples → REJECT.
 
