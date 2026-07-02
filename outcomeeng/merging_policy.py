@@ -15,7 +15,7 @@ FIELD_KIND = "kind"
 FIELD_OVERALL = "overall"
 FIELD_PRESENT = "present"
 FIELD_ROWS = "rows"
-FIELD_SKIPPED_BY_DESIGN = "skipped_by_design"
+FIELD_SKIP_CAUSE = "skip_cause"
 FIELD_STATE = "state"
 FIELD_STATUS = "status"
 FIELD_VERDICT = "verdict"
@@ -114,6 +114,16 @@ class ReviewCheckAction(StrEnum):
     MERGE_BLOCKED_REVIEW_CHECK_FAILED = "MERGE_BLOCKED:review-check-failed"
     MERGE_BLOCKED_REVIEW_CHECK_SKIPPED = "MERGE_BLOCKED:review-check-skipped"
     WAIT_FOR_REVIEW = "WAIT_FOR_REVIEW"
+
+
+class ReviewCheckSkipCause(StrEnum):
+    """Observed causes for a skipped current-head review-kind check."""
+
+    BRANCH_FILTER = "branch-filter"
+    MANUAL_SKIP = "manual-skip"
+    PATH_FILTER = "path-filter"
+    SELF_MODIFYING_WORKFLOW = "self-modifying-workflow"
+    UNKNOWN = "unknown"
 
 
 class AuditorOverall(StrEnum):
@@ -326,7 +336,7 @@ def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
             required_action=ReviewCheckAction.INSPECT_REVIEW_SURFACES,
         )
     if check.get(FIELD_CONCLUSION) == CheckRunConclusion.SKIPPED:
-        if check.get(FIELD_SKIPPED_BY_DESIGN) is True:
+        if _review_check_skipped_by_design(check):
             return ReviewCheckDecision(
                 required_action=ReviewCheckAction.MENTION_REVIEW_NEEDED,
             )
@@ -336,6 +346,10 @@ def decide_review_check(check: Mapping[str, object]) -> ReviewCheckDecision:
     return ReviewCheckDecision(
         required_action=ReviewCheckAction.MERGE_BLOCKED_REVIEW_CHECK_FAILED,
     )
+
+
+def _review_check_skipped_by_design(check: Mapping[str, object]) -> bool:
+    return check.get(FIELD_SKIP_CAUSE) == ReviewCheckSkipCause.SELF_MODIFYING_WORKFLOW
 
 
 def _classify_check_run(

@@ -19,7 +19,7 @@ from outcomeeng.merging_policy import (
     FIELD_OVERALL,
     FIELD_PRESENT,
     FIELD_ROWS,
-    FIELD_SKIPPED_BY_DESIGN,
+    FIELD_SKIP_CAUSE,
     FIELD_STATE,
     FIELD_STATUS,
     FIELD_VERDICT,
@@ -39,6 +39,7 @@ from outcomeeng.merging_policy import (
     RequiredCheckClassification,
     RequiredCheckKind,
     ReviewCheckAction,
+    ReviewCheckSkipCause,
     classify_required_check,
     decide_auditor_verdict,
     decide_deploy_action,
@@ -176,7 +177,7 @@ def test_non_design_skipped_review_check_maps_to_merge_blocked() -> None:
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
-            FIELD_SKIPPED_BY_DESIGN: False,
+            FIELD_SKIP_CAUSE: ReviewCheckSkipCause.PATH_FILTER,
         }
     )
 
@@ -192,7 +193,7 @@ def test_self_modifying_skipped_review_check_maps_to_mention_review() -> None:
             FIELD_PRESENT: True,
             FIELD_STATUS: CHECK_RUN_TERMINAL_STATUS,
             FIELD_CONCLUSION: CheckRunConclusion.SKIPPED,
-            FIELD_SKIPPED_BY_DESIGN: True,
+            FIELD_SKIP_CAUSE: ReviewCheckSkipCause.SELF_MODIFYING_WORKFLOW,
         }
     )
 
